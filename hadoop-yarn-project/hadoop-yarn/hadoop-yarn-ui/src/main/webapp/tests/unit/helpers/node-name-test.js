@@ -1,4 +1,4 @@
-{{!
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,11 +14,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-}}
-{{#if model}}
-  {{app-table table-id="apps-table" arr=model}}
-  {{simple-table table-id="apps-table" bFilter=true colsOrder="0,desc" colTypes="natural elapsed-time" colTargets="0 7"}}
-{{else}}
-  <h4 align = "center">Could not find any applications from this cluster</h4>
-{{/if}}
-{{outlet}}
+ */
+
+import { nodeName } from '../../../helpers/node-name';
+import { module, test } from 'qunit';
+
+module('Unit | Helper | node name');
+
+// Replace this with your real tests.
+test('it works', function(assert) {
+  let result = nodeName(42);
+  assert.ok(result);
+});

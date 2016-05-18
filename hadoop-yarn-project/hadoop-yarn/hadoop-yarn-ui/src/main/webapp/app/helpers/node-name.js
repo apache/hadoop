@@ -15,15 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import Ember from 'ember';
 
-/**
- * Create left hand side node manager menu with menu item activated based
- * on page being accessed.
- */
-export default Ember.Helper.helper(function(params,hash) {
+export function nodeName(params/*, hash*/) {
   // Place a menu within a panel inside col-md-2 container.
-  var nodeIdSplitAtPort = hash.nodeId;
+  console.log('nodes-uid', params[0]);
+  var nodeIdSplitAtPort = params[0];
   var portIndex = nodeIdSplitAtPort.indexOf(':');
   if (portIndex != -1) {
     nodeIdSplitAtPort = nodeIdSplitAtPort.substring(0, portIndex) +
@@ -42,25 +40,7 @@ export default Ember.Helper.helper(function(params,hash) {
   } else {
     normalizedNodeId = nodeIdSplitAtPort;
   }
+  return Ember.String.htmlSafe(normalizedNodeId);
+}
 
-  var html = '<div class="col-md-2 container-fluid"><div class="panel panel-default">'+
-      '<div class="panel-heading"><h4>Node Manager<br>(' + normalizedNodeId + ')</h4></div>'+
-      '<div class="panel-body"><ul class="nav nav-pills nav-stacked" id="stacked-menu">' +
-      '<ul class="nav nav-pills nav-stacked collapse in"><li';
-  if (hash.path == 'yarn-node') {
-    html = html + ' class="active"';
-  }
-  html = html + '><a href="#/yarn-node/' + hash.nodeId + '/' + hash.nodeAddr +
-      '">Node Information</a></li><li';
-  if (hash.path == 'yarn-node-apps') {
-    html = html + ' class="active"';
-  }
-  html = html + '><a href="#/yarn-node-apps/' + hash.nodeId + '/' + hash.nodeAddr +
-      '">List of Applications</a></li><li';
-  if (hash.path == 'yarn-node-containers') {
-    html = html + ' class="active"';
-  }
-  html = html + '><a href="#/yarn-node-containers/' +hash.nodeId + '/' + hash.nodeAddr +
-      '">List of Containers</a></li></ul></ul></div>';
-  return Ember.String.htmlSafe(html);
-});
+export default Ember.Helper.helper(nodeName);

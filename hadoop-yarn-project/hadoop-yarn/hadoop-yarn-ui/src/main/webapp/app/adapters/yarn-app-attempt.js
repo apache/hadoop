@@ -31,10 +31,8 @@ export default AbstractAdapter.extend({
 
   urlForFindRecord(id, modelName, snapshot) {
     var url = this._buildURL();
-    var url = url + '/apps/' + 
+    return url + '/apps/' +
            Converter.attemptIdToAppId(id) + "/appattempts/" + id;
-    console.log('app-attempt url:',url);
-    return url;
   }
 
 });

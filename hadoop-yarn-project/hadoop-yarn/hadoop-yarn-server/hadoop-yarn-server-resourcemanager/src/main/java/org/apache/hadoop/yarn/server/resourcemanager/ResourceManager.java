@@ -18,16 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
@@ -39,6 +29,10 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -119,6 +113,16 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.security.PrivilegedExceptionAction;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -1004,7 +1008,49 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
     }
   }
-  
+
+  /**
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * namenode can use to initialize their HTTP / HTTPS server.
+   *
+   */
+  public static HttpServer2.Builder httpServerTemplateForRM(Configuration conf,
+      final InetSocketAddress httpAddr, final InetSocketAddress httpsAddr,
+      String name) throws IOException {
+    HttpServer2.Builder builder = new HttpServer2.Builder().setName(name)
+        .setConf(conf).setSecurityEnabled(false);
+
+    if (httpAddr.getPort() == 0) {
+      builder.setFindPort(true);
+    }
+
+    URI uri = URI.create("http://" + NetUtils.getHostPortString(httpAddr));
+    builder.addEndpoint(uri);
+    LOG.info("Starting Web-server for " + name + " at: " + uri);
+
+    return builder;
+  }
+
+  protected void startWebAppV2() throws IOException {
+    Configuration config = getConfig();
+    final InetSocketAddress httpAddr = config.getSocketAddr(
+        YarnConfiguration.RM_WEBAPP_UI2_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_PORT);
+    final InetSocketAddress httpsAddr = config.getSocketAddr(
+        YarnConfiguration.RM_WEBAPP_UI2_HTTPS_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_HTTPS_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_HTTPS_PORT);
+
+    HttpServer2.Builder builder = httpServerTemplateForRM(config, httpAddr,
+        httpsAddr, "rm");
+
+    HttpServer2 infoServer = builder.build();
+    infoServer.start();
+
+    LOG.info("Web server init done");
+  }
+
   protected void startWepApp() {
 
     Configuration conf = getConfig();
@@ -1138,6 +1184,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
       transitionToStandby(false);
     } else {
       transitionToActive();
+    }
+
+    if (getConfig().getBoolean(YarnConfiguration.RM_WEBAPP_UI2_ENABLE,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_ENABLE)) {
+      try {
+        startWebAppV2();
+        LOG.info("Yarn WebApp UI 2 is started");
+      } catch (Exception e) {
+        LOG.error("Failed to start Yarn web app v2:" + e.getMessage());
+      }
     }
 
     startWepApp();

@@ -40,6 +40,13 @@ export default DS.Model.extend({
     return ts;
   }.property("finishedTime"),
 
+  validatedFinishedTs: function() {
+    if (this.get("finishedTs") < this.get("startTs")) {
+      return "";
+    }
+    return this.get("finishedTime");
+  }.property("finishedTime"),
+
   elapsedTime: function() {
     var elapsedMs = this.get("finishedTs") - this.get("startTs");
     if (elapsedMs <= 0) {

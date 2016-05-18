@@ -36,7 +36,7 @@
     {{#if arr}}
       {{#each arr as |app|}}
         <tr>
-          <td><a href="yarn-app/{{app.id}}">{{app.id}}</a></td>
+          <td><a href="#/yarn-app/{{app.id}}">{{app.id}}</a></td>
           <td>{{app.appName}}</td>
           <td>{{app.user}}</td>
           <td>{{app.queue}}</td>
@@ -44,7 +44,7 @@
           <td><span class={{app.finalStatusStyle}}>{{app.finalStatus}}</span></td>
           <td>{{app.startTime}}</td>
           <td>{{app.elapsedTime}}</td>
-          <td>{{app.finishedTime}}</td>
+          <td>{{app.validatedFinishedTs}}</td>
           <td>{{app.priority}}</td>
           <td>
             <div class="progress" style="margin-bottom: 0;">
@@ -57,7 +57,7 @@
       {{/each}}
     {{else}}
       <tr>
-          <td><a href="yarn-app/{{app.id}}">{{app.id}}</a></td>
+          <td><a href="#/yarn-app/{{app.id}}">{{app.id}}</a></td>
           <td>{{app.appName}}</td>
           <td>{{app.user}}</td>
           <td>{{app.queue}}</td>
@@ -65,7 +65,7 @@
           <td><span class={{app.finalStatusStyle}}>{{app.finalStatus}}</span></td>
           <td>{{app.startTime}}</td>
           <td>{{app.elapsedTime}}</td>
-          <td>{{app.finishedTime}}</td>
+          <td>{{app.validatedFinishedTs}}</td>
           <td>{{app.priority}}</td>
           <td>
             <div class="progress" style="margin-bottom: 0;">

@@ -64,10 +64,7 @@ export default DS.JSONAPISerializer.extend({
     } else {
       // No container reported inside containers.
       // Response of the form { "containers": null }
-      normalizedArrayResponse.data = Ember.makeArray({
-          id: "dummy",
-          type: primaryModelClass.modelName,
-          attributes: {}});
+      normalizedArrayResponse.data = [];
     }
     return normalizedArrayResponse;
   }

@@ -2328,6 +2328,7 @@ The Apache Hadoop YARN Web UI component bundles the following files under the MI
  - datatables v1.10.8 (https://datatables.net/)
  - moment v2.10.6 (http://momentjs.com/) - Copyright (c) 2011-2015 Tim Wood, Iskren Chernev, Moment.js contributors
  - em-helpers v0.5.8 (https://github.com/sreenaths/em-helpers)
+ - ember-array-contains-helper v1.0.2 (https://github.com/bmeurant/ember-array-contains-helper)
  - ember-cli-app-version v0.5.8 (https://github.com/EmberSherpa/ember-cli-app-version) - Authored by Taras Mankovski <tarasm@gmail.com>
  - ember-cli-babel v5.1.6 (https://github.com/babel/ember-cli-babel) - Authored by Stefan Penner <stefan.penner@gmail.com>
  - ember-cli-content-security-policy v0.4.0 (https://github.com/rwjblue/ember-cli-content-security-policy)
@@ -2341,6 +2342,7 @@ The Apache Hadoop YARN Web UI component bundles the following files under the MI
  - ember-cli-sri v1.2.1 (https://github.com/jonathanKingston/ember-cli-sri) - Authored by Jonathan Kingston
  - ember-cli-uglify v1.2.0 (github.com/ember-cli/ember-cli-uglify) - Authored by Robert Jackson <me@rwjblue.com>
  - ember-d3 v0.1.0 (https://github.com/brzpegasus/ember-d3) - Authored by Estelle DeBlois
+ - ember-truth-helpers v1.2.0 (https://github.com/jmurphyau/ember-truth-helpers)
  - select2 v4.0.0 (https://select2.github.io/)
 
 All rights reserved.

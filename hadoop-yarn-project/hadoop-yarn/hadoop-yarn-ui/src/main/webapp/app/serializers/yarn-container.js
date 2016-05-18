@@ -64,9 +64,10 @@ export default DS.JSONAPISerializer.extend({
             singleContainer, singleContainer.id, requestType);
         }, this);
         return normalizedArrayResponse;  
+      } else {
+        normalizedArrayResponse.data = [];
       }
 
-      normalizedArrayResponse.data = [];
       return normalizedArrayResponse;
     }
 });

@@ -18,12 +18,16 @@
 
 <div class="container-fluid">
   <div class="row">
+    {{#if model.attempt}}
     {{app-attempt-table attempt=model.attempt}}
+    {{/if}}
   </div>
 
   <!-- containers table -->
   <div class="row">
+     {{#if (or model.rmContainers model.tsContainers)}}
      {{timeline-view parent-id="containers-timeline-div" my-id="timeline-view" height="400" rmModel=model.rmContainers tsModel=model.tsContainers label="shortAppAttemptId" attemptModel=false}}
+     {{/if}}
   </div>
 </div>
 

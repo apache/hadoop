@@ -193,6 +193,13 @@
       <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-timelineservice-hbase/target/lib</directory>
       <outputDirectory>share/hadoop/${hadoop.component}/timelineservice/lib</outputDirectory>
     </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-ui/target/hadoop-yarn-ui-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps/rm</outputDirectory>
+      <includes>
+        <include>**/*</include>
+      </includes>
+    </fileSet>
   </fileSets>
   <moduleSets>
     <moduleSet>

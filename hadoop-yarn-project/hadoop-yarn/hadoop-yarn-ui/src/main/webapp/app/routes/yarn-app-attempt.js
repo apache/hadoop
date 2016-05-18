@@ -33,7 +33,11 @@ export default Ember.Route.extend({
         {
           app_attempt_id: param.app_attempt_id,
           is_rm: false
-        }),
+        }).catch (function() {
+         // Promise rejected, fulfill with some default value to
+         // use as the route's model and continue on with the transition
+          return [];
+        })
     });
   }
 });

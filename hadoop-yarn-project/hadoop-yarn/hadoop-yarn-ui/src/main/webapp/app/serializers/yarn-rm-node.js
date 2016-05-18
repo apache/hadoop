@@ -67,10 +67,7 @@ export default DS.JSONAPISerializer.extend({
           singleNode, singleNode.id);
           }, this);
     } else {
-      normalizedArrayResponse.data = Ember.makeArray({
-          id: "dummy",
-          type: primaryModelClass.modelName,
-          attributes: {}});
+      normalizedArrayResponse.data = [];
     }
     return normalizedArrayResponse;
   }

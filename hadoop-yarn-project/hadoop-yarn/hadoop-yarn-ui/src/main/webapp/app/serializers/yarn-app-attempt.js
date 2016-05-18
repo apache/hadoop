@@ -32,11 +32,14 @@ export default DS.JSONAPISerializer.extend({
         type: primaryModelClass.modelName, // yarn-app
         attributes: {
           startTime: Converter.timeStampToDate(payload.startTime),
+          startedTime: Converter.timeStampToDate(payload.startedTime),
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
           containerId: payload.containerId,
+          amContainerId: payload.amContainerId,
           nodeHttpAddress: payload.nodeHttpAddress,
           nodeId: payload.nodeId,
-          state: payload.nodeId,
+          hosts: payload.host,
+          state: payload.appAttemptState,
           logsLink: payload.logsLink
         }
       };

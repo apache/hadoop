@@ -51,6 +51,13 @@ export default DS.Model.extend({
     return this.get('finalStatus') == "FAILED"
   }.property("finalStatus"),
 
+  validatedFinishedTs: function() {
+    if (this.get("finishedTime") < this.get("startTime")) {
+      return "";
+    }
+    return this.get("finishedTime");
+  }.property("finishedTime"),
+
   allocatedResource: function() {
     return Converter.resourceToString(this.get("allocatedMB"), this.get("allocatedVCores"));
   }.property("allocatedMB", "allocatedVCores"),
@@ -65,6 +72,13 @@ export default DS.Model.extend({
 
   progressStyle: function() {
     return "width: " + this.get("progress") + "%";
+  }.property("progress"),
+
+  runningContainersNumber: function() {
+    if(this.get("runningContainers") < 0) {
+      return 0;
+    }
+    return this.get("runningContainers");
   }.property("progress"),
 
   finalStatusStyle: function() {
