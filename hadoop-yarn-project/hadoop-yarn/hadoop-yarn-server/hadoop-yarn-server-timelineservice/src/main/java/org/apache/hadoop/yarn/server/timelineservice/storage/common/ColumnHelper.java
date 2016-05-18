@@ -194,7 +194,9 @@ public class ColumnHelper<T> {
             .entrySet()) {
           String columnName = null;
           if (columnPrefixBytes == null) {
-            LOG.info("null prefix was specified; returning all columns");
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("null prefix was specified; returning all columns");
+            }
             // Decode the spaces we encoded in the column name.
             columnName = Separator.decode(entry.getKey(), Separator.SPACE);
           } else {
