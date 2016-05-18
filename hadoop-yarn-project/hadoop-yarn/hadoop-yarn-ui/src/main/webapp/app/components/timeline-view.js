@@ -225,18 +225,27 @@ export default Ember.Component.extend({
   didInsertElement: function() {
     // init tooltip
     this.initTooltip();
+    this.modelArr = [];
 
     // init model
     if (this.get("rmModel")) {
       this.get("rmModel").forEach(function(o) {
-        this.modelArr.push(o);
+        if(!this.modelArr.contains(o)) {
+          this.modelArr.push(o);
+        }
       }.bind(this));
     }
 
     if (this.get("tsModel")) {
-     this.get("tsModel").forEach(function(o) {
-        this.modelArr.push(o);
-      }.bind(this)); 
+      this.get("tsModel").forEach(function(o) {
+        if(!this.modelArr.contains(o)) {
+          this.modelArr.push(o);
+        }
+      }.bind(this));
+    }
+
+    if(this.modelArr.length == 0) {
+      return;
     }
 
     this.modelArr.sort(function(a, b) {

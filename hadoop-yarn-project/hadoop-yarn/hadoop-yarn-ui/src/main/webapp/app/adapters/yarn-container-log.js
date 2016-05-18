@@ -42,7 +42,7 @@ export default DS.RESTAdapter.extend({
     var nodeHttpAddr = splits[0];
     var containerId = splits[1];
     var filename = splits[2];
-    this.host = this.host + nodeHttpAddr;
+    this.host = this.get('host') + nodeHttpAddr;
     var url = this._buildURL();
     url = url + "/containerlogs/" + containerId + "/" + filename;
     return url;

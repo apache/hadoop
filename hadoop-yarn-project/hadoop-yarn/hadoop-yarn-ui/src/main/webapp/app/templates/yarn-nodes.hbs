@@ -16,6 +16,7 @@
   limitations under the License.
 --}}
 
+{{#if model}}
 <table id="nodes-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
   <thead>
     <tr>
@@ -35,11 +36,7 @@
     </tr>
   </thead>
   <tbody>
-    {{#if model}}
       {{#each model as |node|}}
-        {{#if node.isDummyNode}}
-          <tr><td colspan="13" align="center">No nodes found on this cluster</td></tr>
-        {{else}}
           <tr>
             <td>{{node.nodeLabelsAsString}}</td>
             <td>{{node.rack}}</td>
@@ -55,11 +52,12 @@
             <td>{{node.availableVirtualCores}}</td>
             <td>{{node.version}}</td>
           </tr>
-        {{/if}}
       {{/each}}
-    {{/if}}
   </tbody>
 </table>
 
 {{simple-table table-id="nodes-table" bFilter=true}}
+{{else}}
+  <h4 align = "center">No nodes found on this cluster</h4>
+{{/if}}
 {{outlet}}

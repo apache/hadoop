@@ -16,38 +16,29 @@
  * limitations under the License.
 }}
 
-<div class="col-md-12 container-fluid">
+<div class="col-md-2 container-fluid">
   <div class="panel panel-default">
     <div class="panel-heading">
-      {{#if attemptModel}}
-        Application Attempts
-      {{else}}
-        Containers
-      {{/if}}
+       <h4>Node Manager<br>({{node-name nodeId}})</h4>
     </div>
-    <div class="panel-body">
-      <div class="col-md-8 container-fluid" id={{parent-id}}>
-      </div>
-
-      <!-- diag info -->
-      <div class="col-md-4 container-fluid">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            {{#if selected.link}}
-              {{#link-to selected.linkname selected.id}}{{selected.id}}{{/link-to}}
-            {{else}}
-              {{selected.id}}
-            {{/if}}
-          </div>
-          {{#if attemptModel}}
-            {{app-attempt-table attempt=selected}}
-          {{else}}
-            {{container-table container=selected}}
-          {{/if}}
-        </div>
+      <div class="panel-body">
+        <ul class="nav nav-pills nav-stacked" id="stacked-menu">
+          <ul class="nav nav-pills nav-stacked collapse in">
+            {{#link-to 'yarn-node' tagName="li"}}
+              {{#link-to 'yarn-node' nodeId nodeAddr}}Node Information
+              {{/link-to}}
+            {{/link-to}}
+            {{#link-to 'yarn-node-apps' tagName="li"}}
+              {{#link-to 'yarn-node-apps' nodeId nodeAddr}}List of Applications
+              {{/link-to}}
+            {{/link-to}}
+            {{#link-to 'yarn-node-containers' tagName="li"}}
+              {{#link-to 'yarn-node-containers' nodeId nodeAddr}}List of Containers
+              {{/link-to}}
+            {{/link-to}}
+          </ul>
+        </ul>
       </div>
     </div>
   </div>
-</div>
-
 {{outlet}}
