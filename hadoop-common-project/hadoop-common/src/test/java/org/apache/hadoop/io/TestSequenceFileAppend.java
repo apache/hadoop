@@ -249,6 +249,73 @@ public class TestSequenceFileAppend {
   }
 
   @Test(timeout = 30000)
+  public void testAppendNoneCompression() throws Exception {
+    Path file = new Path(ROOT_PATH, "testseqappendnonecompr.seq");
+    fs.delete(file, true);
+
+    Option compressOption = Writer.compression(CompressionType.NONE);
+    Writer writer =
+        SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
+            SequenceFile.Writer.keyClass(Long.class),
+            SequenceFile.Writer.valueClass(String.class), compressOption);
+
+    writer.append(1L, "one");
+    writer.append(2L, "two");
+    writer.close();
+
+    verify2Values(file);
+
+    writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
+        SequenceFile.Writer.keyClass(Long.class),
+        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.appendIfExists(true), compressOption);
+
+    writer.append(3L, "three");
+    writer.append(4L, "four");
+    writer.close();
+
+    verifyAll4Values(file);
+
+    // Verify failure if the compression details are different or not Provided
+    try {
+      writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
+          SequenceFile.Writer.keyClass(Long.class),
+          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.appendIfExists(true));
+      writer.close();
+      fail("Expected IllegalArgumentException for compression options");
+    } catch (IllegalArgumentException iae) {
+      // Expected exception. Ignore it
+    }
+
+    // Verify failure if the compression details are different
+    try {
+      Option wrongCompressOption =
+          Writer.compression(CompressionType.RECORD, new GzipCodec());
+
+      writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
+          SequenceFile.Writer.keyClass(Long.class),
+          SequenceFile.Writer.valueClass(String.class),
+          SequenceFile.Writer.appendIfExists(true), wrongCompressOption);
+      writer.close();
+      fail("Expected IllegalArgumentException for compression options");
+    } catch (IllegalArgumentException iae) {
+      // Expected exception. Ignore it
+    }
+
+    // Codec should be ignored
+    Option noneWithCodec =
+        Writer.compression(CompressionType.NONE, new DefaultCodec());
+
+    writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(file),
+        SequenceFile.Writer.keyClass(Long.class),
+        SequenceFile.Writer.valueClass(String.class),
+        SequenceFile.Writer.appendIfExists(true), noneWithCodec);
+    writer.close();
+    fs.deleteOnExit(file);
+  }
+
+  @Test(timeout = 30000)
   public void testAppendSort() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
 

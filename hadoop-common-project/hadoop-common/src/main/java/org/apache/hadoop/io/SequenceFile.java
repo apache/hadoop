@@ -1115,9 +1115,12 @@ public class SequenceFile {
             CompressionOption readerCompressionOption = new CompressionOption(
                 reader.getCompressionType(), reader.getCompressionCodec());
 
+            // Codec comparison will be ignored if the compression is NONE
             if (readerCompressionOption.value != compressionTypeOption.value
-                || !readerCompressionOption.codec.getClass().getName()
-                    .equals(compressionTypeOption.codec.getClass().getName())) {
+                || (readerCompressionOption.value != CompressionType.NONE
+                    && readerCompressionOption.codec
+                        .getClass() != compressionTypeOption.codec
+                            .getClass())) {
               throw new IllegalArgumentException(
                   "Compression option provided does not match the file");
             }
