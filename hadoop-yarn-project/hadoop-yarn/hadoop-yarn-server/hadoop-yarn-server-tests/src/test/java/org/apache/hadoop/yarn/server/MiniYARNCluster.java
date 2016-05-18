@@ -861,6 +861,11 @@ public class MiniYARNCluster extends CompositeService {
           localToken);
       RequestInterceptor rt = getPipelines()
           .get(applicationAttemptId.getApplicationId()).getRootInterceptor();
+      // The DefaultRequestInterceptor will generally be the last
+      // interceptor
+      while (rt.getNextInterceptor() != null) {
+        rt = rt.getNextInterceptor();
+      }
       if (rt instanceof DefaultRequestInterceptor) {
         ((DefaultRequestInterceptor) rt)
             .setRMClient(getResourceManager().getApplicationMasterService());

@@ -291,7 +291,7 @@ public class TestAMRMProxy {
     }
   }
 
-  private ApplicationMasterProtocol createAMRMProtocol(YarnClient rmClient,
+  protected ApplicationMasterProtocol createAMRMProtocol(YarnClient rmClient,
       ApplicationId appId, MiniYARNCluster cluster,
       final Configuration yarnConf)
           throws IOException, InterruptedException, YarnException {
@@ -331,7 +331,7 @@ public class TestAMRMProxy {
         });
   }
 
-  private AllocateRequest createAllocateRequest(List<NodeReport> listNode) {
+  protected AllocateRequest createAllocateRequest(List<NodeReport> listNode) {
     // The test needs AMRMClient to create a real allocate request
     AMRMClientImpl<ContainerRequest> amClient =
         new AMRMClientImpl<ContainerRequest>();
@@ -361,7 +361,7 @@ public class TestAMRMProxy {
         new ArrayList<ContainerId>(), resourceBlacklistRequest);
   }
 
-  private ApplicationId createApp(YarnClient yarnClient,
+  protected ApplicationId createApp(YarnClient yarnClient,
       MiniYARNCluster yarnCluster) throws Exception {
 
     ApplicationSubmissionContext appContext =

@@ -23,9 +23,18 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
-import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
+    .AllocateResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
+    .FinishApplicationMasterRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
+    .FinishApplicationMasterResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
+    .RegisterApplicationMasterRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
+    .RegisterApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -43,6 +52,10 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
+    .DistSchedAllocateResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
+    .DistSchedRegisterResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .AMLivelinessMonitor;
 
@@ -139,18 +152,30 @@ public class TestDistributedSchedulingService {
     // ApplicationMasterProtocol clients
     RPC.setProtocolEngine(conf, ApplicationMasterProtocolPB.class,
         ProtobufRpcEngine.class);
-    ApplicationMasterProtocol ampProxy =
-        (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol
-            .class, NetUtils.getConnectAddress(server), conf);
-    RegisterApplicationMasterResponse regResp = ampProxy.registerApplicationMaster(
-            factory.newRecordInstance(RegisterApplicationMasterRequest.class));
+    ApplicationMasterProtocolPB ampProxy =
+        RPC.getProxy(ApplicationMasterProtocolPB
+        .class, 1, NetUtils.getConnectAddress(server), conf);
+    RegisterApplicationMasterResponse regResp =
+        new RegisterApplicationMasterResponsePBImpl(
+            ampProxy.registerApplicationMaster(null,
+                ((RegisterApplicationMasterRequestPBImpl)factory
+                    .newRecordInstance(
+                        RegisterApplicationMasterRequest.class)).getProto()));
     Assert.assertEquals("dummyQueue", regResp.getQueue());
-    FinishApplicationMasterResponse finishResp = ampProxy
-        .finishApplicationMaster(factory.newRecordInstance(
-            FinishApplicationMasterRequest.class));
+    FinishApplicationMasterResponse finishResp =
+        new FinishApplicationMasterResponsePBImpl(
+            ampProxy.finishApplicationMaster(null,
+                ((FinishApplicationMasterRequestPBImpl)factory
+                    .newRecordInstance(
+                        FinishApplicationMasterRequest.class)).getProto()
+            ));
     Assert.assertEquals(false, finishResp.getIsUnregistered());
-    AllocateResponse allocResp = ampProxy
-        .allocate(factory.newRecordInstance(AllocateRequest.class));
+    AllocateResponse allocResp =
+        new AllocateResponsePBImpl(
+            ampProxy.allocate(null,
+                ((AllocateRequestPBImpl)factory
+                    .newRecordInstance(AllocateRequest.class)).getProto())
+        );
     Assert.assertEquals(12345, allocResp.getNumClusterNodes());
 
 
@@ -158,17 +183,22 @@ public class TestDistributedSchedulingService {
     // DistributedSchedulerProtocol clients as well
     RPC.setProtocolEngine(conf, DistributedSchedulerProtocolPB.class,
         ProtobufRpcEngine.class);
-    DistributedSchedulerProtocol dsProxy =
-        (DistributedSchedulerProtocol) rpc.getProxy(DistributedSchedulerProtocol
-            .class, NetUtils.getConnectAddress(server), conf);
+    DistributedSchedulerProtocolPB dsProxy =
+        RPC.getProxy(DistributedSchedulerProtocolPB
+            .class, 1, NetUtils.getConnectAddress(server), conf);
 
     DistSchedRegisterResponse dsRegResp =
-        dsProxy.registerApplicationMasterForDistributedScheduling(
-        factory.newRecordInstance(RegisterApplicationMasterRequest.class));
+        new DistSchedRegisterResponsePBImpl(
+            dsProxy.registerApplicationMasterForDistributedScheduling(null,
+                ((RegisterApplicationMasterRequestPBImpl)factory
+                    .newRecordInstance(RegisterApplicationMasterRequest.class))
+                    .getProto()));
     Assert.assertEquals(54321l, dsRegResp.getContainerIdStart());
     DistSchedAllocateResponse dsAllocResp =
-        dsProxy.allocateForDistributedScheduling(
-            factory.newRecordInstance(AllocateRequest.class));
+        new DistSchedAllocateResponsePBImpl(
+            dsProxy.allocateForDistributedScheduling(null,
+                ((AllocateRequestPBImpl)factory
+                    .newRecordInstance(AllocateRequest.class)).getProto()));
     Assert.assertEquals(
         "h1", dsAllocResp.getNodesForScheduling().get(0).getHost());
   }
