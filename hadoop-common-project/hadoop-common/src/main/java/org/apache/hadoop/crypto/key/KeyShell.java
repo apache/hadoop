@@ -47,7 +47,8 @@ public class KeyShell extends Configured implements Tool {
       "   [" + DeleteCommand.USAGE + "]\n" +
       "   [" + ListCommand.USAGE + "]\n";
   private static final String LIST_METADATA = "keyShell.list.metadata";
-  @VisibleForTesting public static final String NO_VALID_PROVIDERS =
+  @VisibleForTesting
+  public static final String NO_VALID_PROVIDERS =
       "There are no valid (non-transient) providers configured.\n" +
       "No action has been taken. Use the -provider option to specify\n" +
       "a provider. If you want to use a transient provider then you\n" +
@@ -60,9 +61,11 @@ public class KeyShell extends Configured implements Tool {
   private boolean strict = false;
 
   /** allows stdout to be captured if necessary. */
-  @VisibleForTesting public PrintStream out = System.out;
+  @VisibleForTesting
+  public PrintStream out = System.out;
   /** allows stderr to be captured if necessary. */
-  @VisibleForTesting public PrintStream err = System.err;
+  @VisibleForTesting
+  public PrintStream err = System.err;
 
   private boolean userSuppliedProvider = false;
 

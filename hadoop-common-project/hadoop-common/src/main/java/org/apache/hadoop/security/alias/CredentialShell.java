@@ -58,9 +58,11 @@ public class CredentialShell extends Configured implements Tool {
   private boolean strict = false;
 
   /** Allows stdout to be captured if necessary. */
-  @VisibleForTesting public PrintStream out = System.out;
+  @VisibleForTesting
+  public PrintStream out = System.out;
   /** Allows stderr to be captured if necessary. */
-  @VisibleForTesting public PrintStream err = System.err;
+  @VisibleForTesting
+  public PrintStream err = System.err;
 
   private boolean userSuppliedProvider = false;
   private String value = null;
