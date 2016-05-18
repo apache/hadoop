@@ -162,7 +162,7 @@ public class TestShell extends Assert {
 
   private void testEnvHelper(boolean inheritParentEnv) throws Exception {
     Map<String, String> customEnv = Collections.singletonMap(
-        AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME, "foo");
+        AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_ENV_VAR, "foo");
     Shell.ShellCommandExecutor command = new ShellCommandExecutor(
         new String[]{"env"}, null, customEnv, 0L,
         inheritParentEnv);
@@ -179,9 +179,9 @@ public class TestShell extends Assert {
       expectedEnv.putAll(customEnv);
     } else {
       assertFalse("child process environment should not have contained "
-              + AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME,
+              + AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_ENV_VAR,
           vars.containsKey(
-              AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_NAME));
+              AbstractJavaKeyStoreProvider.CREDENTIAL_PASSWORD_ENV_VAR));
     }
     assertEquals(expectedEnv, vars);
   }
