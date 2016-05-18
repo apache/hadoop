@@ -102,6 +102,9 @@ Release 2.7.4 - UNRELEASED
     YARN-6304. Skip rm.transitionToActive call to RM if RM is already active.
     (Rohith Sharma K S via junping_du)
 
+    YARN-4925. ContainerRequest in AMRMClient, application should be able to
+    specify nodes/racks together with nodeLabelExpression. Bibin A Chundatt
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
