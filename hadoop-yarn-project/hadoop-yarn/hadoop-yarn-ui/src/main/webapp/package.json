@@ -22,6 +22,7 @@
     "broccoli-asset-rev": "2.4.2",
     "broccoli-funnel": "1.0.1",
     "ember-bootstrap": "0.5.1",
+    "ember-array-contains-helper": "1.0.2",
     "ember-cli": "1.13.13",
     "ember-cli-app-version": "1.0.0",
     "ember-cli-babel": "5.1.6",
@@ -42,6 +43,7 @@
     "ember-export-application-global": "1.0.5",
     "ember-resolver": "2.0.3",
     "ember-spin-spinner": "0.2.3",
+    "ember-truth-helpers": "1.2.0",
     "select2": "4.0.0"
   }
 }

@@ -25,14 +25,20 @@ export default AbstractAdapter.extend({
   serverName: "NM",
 
   urlForQuery(query) {
-    this.host = this.get("host") + query.nodeAddr;
+    var extension = this.get("host").split('/').pop();
+    if (extension != query.nodeAddr) {
+      this.host = this.get("host") + query.nodeAddr;
+    }
     var url = this._buildURL();
     url = url + "/apps";
     return url;
   },
 
   urlForQueryRecord: function (query) {
-    this.host = this.get("host")  + query.nodeAddr;
+    var extension = this.get("host").split('/').pop();
+    if (extension != query.nodeAddr) {
+      this.host = this.get("host") + query.nodeAddr;
+    }
     var url = this._buildURL();
     url = url + "/apps/" + query.appId;
     return url;

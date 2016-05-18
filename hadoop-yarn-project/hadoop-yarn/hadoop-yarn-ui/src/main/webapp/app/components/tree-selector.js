@@ -126,7 +126,7 @@ export default Ember.Component.extend({
       .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
       .on("click", function(d,i){
         if (d.queueData.get("name") != this.get("selected")) {
-            document.location.href = "yarn-queue/" + d.queueData.get("name");
+            document.location.href = "#/yarn-queue/" + d.queueData.get("name");
         }
       }.bind(this));
       // .on("click", click);
@@ -176,7 +176,7 @@ export default Ember.Component.extend({
       .attr("r", 20)
       .attr("href", 
         function(d) {
-          return "yarn-queues/" + d.queueData.get("name");
+          return "#/yarn-queues/" + d.queueData.get("name");
         })
       .style("stroke", function(d) {
         if (d.queueData.get("name") == this.get("selected")) {

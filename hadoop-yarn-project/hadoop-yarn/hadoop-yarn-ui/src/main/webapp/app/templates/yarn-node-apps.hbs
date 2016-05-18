@@ -18,7 +18,8 @@
 
 <div class="col-md-12 container-fluid">
   <div class="row">
-    {{node-menu path="yarn-node-apps" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{node-menu-panel path="yarn-node-apps" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
+    {{#if model.apps}}
     <div class="col-md-10 container-fluid">
       <table id="node-apps-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
         <thead>
@@ -31,21 +32,20 @@
         <tbody>
           {{#if model.apps}}
             {{#each model.apps as |app|}}
-              {{#if app.isDummyApp}}
-                <tr><td colspan="3" align="center">No apps found on this node</td></tr>
-              {{else}}
                 <tr>
-                  <td><a href="yarn-node-app/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{app.appId}}">{{app.appId}}</a></td>
+                  <td><a href="#/yarn-node-app/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{app.appId}}">{{app.appId}}</a></td>
                   <td><span class={{app.appStateStyle}}>{{app.state}}</span></td>
                   <td>{{app.user}}</td>
                 </tr>
-              {{/if}}
             {{/each}}
           {{/if}}
         </tbody>
       </table>
       {{simple-table table-id="node-apps-table" bFilter=true colsOrder="0,desc" colTypes="natural" colTargets="0"}}
     </div>
+    {{else}}
+      <h4 align = "center">No apps found on this node</h4>
+    {{/if}}
   </div>
 </div>
 {{outlet}}
