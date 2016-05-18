@@ -19,7 +19,6 @@
 package org.apache.hadoop.crypto.key;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -38,12 +37,10 @@ import com.google.common.annotations.VisibleForTesting;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URI;
-import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyStore;
@@ -139,43 +136,14 @@ public class JavaKeyStoreProvider extends KeyProvider {
   }
 
   /**
-   * The password is either found in the environment or in a file. This
-   * routine implements the logic for locating the password in these
-   * locations.
-   * @return The password as a char []; null if not found.
-   * @throws IOException
-   */
-  private char[] locatePassword() throws IOException {
-    char[] pass = null;
-    // Get the password file from the conf, if not present from the user's
-    // environment var
-    if (System.getenv().containsKey(KEYSTORE_PASSWORD_ENV_VAR)) {
-      pass = System.getenv(KEYSTORE_PASSWORD_ENV_VAR).toCharArray();
-    }
-    if (pass == null) {
-      String pwFile = getConf().get(KEYSTORE_PASSWORD_FILE_KEY);
-      if (pwFile != null) {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        URL pwdFile = cl.getResource(pwFile);
-        if (pwdFile == null) {
-          // Provided Password file does not exist
-          throw new IOException("Password file does not exists");
-        }
-        try (InputStream is = pwdFile.openStream()) {
-          pass = IOUtils.toString(is).trim().toCharArray();
-        }
-      }
-    }
-    return pass;
-  }
-
-  /**
    * Open up and initialize the keyStore.
-   * @throws IOException
+   * @throws IOException If there is a problem reading the password file
+   * or a problem reading the keystore.
    */
   private void locateKeystore() throws IOException {
     try {
-      password = locatePassword();
+      password = ProviderUtils.locatePassword(KEYSTORE_PASSWORD_ENV_VAR,
+          getConf().get(KEYSTORE_PASSWORD_FILE_KEY));
       if (password == null) {
         password = KEYSTORE_PASSWORD_DEFAULT;
       }
@@ -331,48 +299,31 @@ public class JavaKeyStoreProvider extends KeyProvider {
     }
   }
 
-  private Path constructNewPath(Path path) {
-    Path newPath = new Path(path.toString() + "_NEW");
-    return newPath;
+  private static Path constructNewPath(Path path) {
+    return new Path(path.toString() + "_NEW");
   }
 
-  private Path constructOldPath(Path path) {
-    Path oldPath = new Path(path.toString() + "_OLD");
-    return oldPath;
+  private static Path constructOldPath(Path path) {
+    return new Path(path.toString() + "_OLD");
   }
 
   @Override
   public boolean needsPassword() throws IOException {
-    return (null == locatePassword());
-  }
+    return (null == ProviderUtils.locatePassword(KEYSTORE_PASSWORD_ENV_VAR,
+        getConf().get(KEYSTORE_PASSWORD_FILE_KEY)));
 
-  @VisibleForTesting
-  public static final String NO_PASSWORD_WARN =
-      "WARNING: You have accepted the use of the default provider password\n" +
-      "by not configuring a password in one of the two following locations:\n";
-  public static final String NO_PASSWORD_ERROR =
-      "ERROR: The provider cannot find a password in the expected " +
-          "locations.\nPlease supply a password using one of the " +
-          "following two mechanisms:\n";
-  @VisibleForTesting public static final String NO_PASSWORD_INSTRUCTIONS =
-          "    o In the environment variable " +
-          KEYSTORE_PASSWORD_ENV_VAR + "\n" +
-          "    o In a file referred to by the configuration entry\n" +
-          "      " + KEYSTORE_PASSWORD_FILE_KEY + ".\n" +
-          "Please review the documentation regarding provider passwords at\n" +
-          "http://hadoop.apache.org/docs/current/hadoop-project-dist/" +
-              "hadoop-common/CredentialProviderAPI.html#Keystore_Passwords\n";
-  @VisibleForTesting public static final String NO_PASSWORD_CONT =
-      "Continuing with the default provider password.\n";
+  }
 
   @Override
   public String noPasswordWarning() {
-    return NO_PASSWORD_WARN + NO_PASSWORD_INSTRUCTIONS + NO_PASSWORD_CONT;
+    return ProviderUtils.noPasswordWarning(KEYSTORE_PASSWORD_ENV_VAR,
+        KEYSTORE_PASSWORD_FILE_KEY);
   }
 
   @Override
   public String noPasswordError() {
-    return NO_PASSWORD_ERROR + NO_PASSWORD_INSTRUCTIONS;
+    return ProviderUtils.noPasswordError(KEYSTORE_PASSWORD_ENV_VAR,
+        KEYSTORE_PASSWORD_FILE_KEY);
   }
 
   @Override
