@@ -25,7 +25,6 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -117,11 +116,11 @@ public class TestKeyShell {
     assertTrue(outContent.toString().contains(keyName + " has been " +
             "successfully created"));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_WARN));
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_WARN));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_INSTRUCTIONS_DOC));
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_INSTRUCTIONS));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_CONT));
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_CONT));
 
     String listOut = listKeys(ks, false);
     assertTrue(listOut.contains(keyName));
@@ -241,9 +240,9 @@ public class TestKeyShell {
     rc = ks.run(args1);
     assertEquals(1, rc);
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_ERROR));
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_ERROR));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_INSTRUCTIONS_DOC));
+        .contains(JavaKeyStoreProvider.NO_PASSWORD_INSTRUCTIONS));
   }
 
   @Test

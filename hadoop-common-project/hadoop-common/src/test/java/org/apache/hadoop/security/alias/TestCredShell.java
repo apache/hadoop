@@ -30,7 +30,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,11 +64,11 @@ public class TestCredShell {
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
     		"created."));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_WARN));
+        .contains(AbstractJavaKeyStoreProvider.NO_PASSWORD_WARN));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_INSTRUCTIONS_DOC));
+        .contains(AbstractJavaKeyStoreProvider.NO_PASSWORD_INSTRUCTIONS));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_CONT));
+        .contains(AbstractJavaKeyStoreProvider.NO_PASSWORD_CONT));
 
     outContent.reset();
     String[] args2 = {"list", "-provider",
@@ -247,9 +246,9 @@ public class TestCredShell {
     assertFalse(outContent.toString().contains("credential1 has been " +
         "successfully created."));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_ERROR));
+        .contains(AbstractJavaKeyStoreProvider.NO_PASSWORD_ERROR));
     assertTrue(outContent.toString()
-        .contains(ProviderUtils.NO_PASSWORD_INSTRUCTIONS_DOC));
+        .contains(AbstractJavaKeyStoreProvider.NO_PASSWORD_INSTRUCTIONS));
   }
 
   @Test
