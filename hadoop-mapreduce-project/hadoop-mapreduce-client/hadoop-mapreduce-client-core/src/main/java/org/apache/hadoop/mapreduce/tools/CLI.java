@@ -39,6 +39,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TIPStatus;
@@ -106,6 +108,7 @@ public class CLI extends Configured implements Tool {
     int fromEvent = 0;
     int nEvents = 0;
     int jpvalue = 0;
+    String configOutFile = null;
     boolean getStatus = false;
     boolean getCounter = false;
     boolean killJob = false;
@@ -121,6 +124,7 @@ public class CLI extends Configured implements Tool {
     boolean failTask = false;
     boolean setJobPriority = false;
     boolean logs = false;
+    boolean downloadConfig = false;
 
     if ("-submit".equals(cmd)) {
       if (argv.length != 2) {
@@ -295,6 +299,14 @@ public class CLI extends Configured implements Tool {
         displayUsage(cmd);
         return exitCode;
       }
+    } else if ("-config".equals(cmd)) {
+      downloadConfig = true;
+      if (argv.length != 3) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      jobid = argv[1];
+      configOutFile = argv[2];
     } else {
       displayUsage(cmd);
       return exitCode;
@@ -473,6 +485,22 @@ public class CLI extends Configured implements Tool {
             System.out.println(e.getMessage());
           }
         }
+      } else if (downloadConfig) {
+        Job job = getJob(JobID.forName(jobid));
+        if (job == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          String jobFile = job.getJobFile();
+          if (jobFile == null || jobFile.isEmpty()) {
+            System.out.println("Config file for job " + jobFile +
+                " could not be found.");
+          } else {
+            Path configPath = new Path(jobFile);
+            FileSystem fs = FileSystem.get(getConf());
+            fs.copyToLocalFile(configPath, new Path(configOutFile));
+            exitCode = 0;
+          }
+        }
       }
     } catch (RemoteException re) {
       IOException unwrappedException = re.unwrapRemoteException();
@@ -549,7 +577,9 @@ public class CLI extends Configured implements Tool {
     } else if ("-logs".equals(cmd)) {
       System.err.println(prefix + "[" + cmd +
           " <job-id> <task-attempt-id>]. " +
-          " <task-attempt-id> is optional to get task attempt logs.");      
+          " <task-attempt-id> is optional to get task attempt logs.");
+    } else if ("-config".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-id> <file>]");
     } else {
       System.err.printf(prefix + "<command> <args>%n");
       System.err.printf("\t[-submit <job-file>]%n");
@@ -571,7 +601,8 @@ public class CLI extends Configured implements Tool {
         "Valid values for <task-state> are " + taskStates);
       System.err.printf("\t[-kill-task <task-attempt-id>]%n");
       System.err.printf("\t[-fail-task <task-attempt-id>]%n");
-      System.err.printf("\t[-logs <job-id> <task-attempt-id>]%n%n");
+      System.err.printf("\t[-logs <job-id> <task-attempt-id>]%n");
+      System.err.printf("\t[-config <job-id> <file>%n%n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }
