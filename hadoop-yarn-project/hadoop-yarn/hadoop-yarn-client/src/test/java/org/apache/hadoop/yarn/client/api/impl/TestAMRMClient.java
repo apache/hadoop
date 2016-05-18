@@ -35,11 +35,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
@@ -706,6 +706,17 @@ public class TestAMRMClient {
         1), null, null, Priority.UNDEFINED, true,
         "y"));
     Assert.assertEquals(1, client.ask.size());
+    for (ResourceRequest req : client.ask) {
+      if (ResourceRequest.ANY.equals(req.getResourceName())) {
+        Assert.assertEquals("y", req.getNodeLabelExpression());
+      } else {
+        Assert.assertNull(req.getNodeLabelExpression());
+      }
+    }
+    // set container with nodes and racks with labels
+    client.addContainerRequest(new ContainerRequest(
+        Resource.newInstance(1024, 1), new String[] { "rack1" },
+        new String[] { "node1", "node2" }, Priority.UNDEFINED, true, "y"));
     for (ResourceRequest req : client.ask) {
       if (ResourceRequest.ANY.equals(req.getResourceName())) {
         Assert.assertEquals("y", req.getNodeLabelExpression());
