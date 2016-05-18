@@ -614,7 +614,7 @@ public abstract class BlockReportTestBase {
       // from this node.
       DataNode dn = cluster.getDataNodes().get(0);
       DatanodeProtocolClientSideTranslatorPB spy =
-        DataNodeTestUtils.spyOnBposToNN(dn, nn);
+        InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
 
       Mockito.doAnswer(delayer)
         .when(spy).blockReport(

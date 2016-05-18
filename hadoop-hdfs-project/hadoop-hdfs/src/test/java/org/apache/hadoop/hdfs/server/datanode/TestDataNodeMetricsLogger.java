@@ -89,7 +89,7 @@ public class TestDataNodeMetricsLogger {
     conf.setInt(DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY,
         enableMetricsLogging ? 1 : 0); // If enabled, log early and log often
 
-    dn = DataNodeTestUtils.startDNWithMockNN(conf, NN_ADDR, DATA_DIR);
+    dn = InternalDataNodeTestUtils.startDNWithMockNN(conf, NN_ADDR, DATA_DIR);
   }
 
   /**

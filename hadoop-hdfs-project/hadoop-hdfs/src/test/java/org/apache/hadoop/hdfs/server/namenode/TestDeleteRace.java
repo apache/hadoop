@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.Node;
@@ -299,7 +299,7 @@ public class TestDeleteRace {
         DataNode primaryDN = cluster.getDataNode(expectedPrimary.getIpcPort());
         DatanodeProtocolClientSideTranslatorPB nnSpy = dnMap.get(primaryDN);
         if (nnSpy == null) {
-          nnSpy = DataNodeTestUtils.spyOnBposToNN(primaryDN, nn);
+          nnSpy = InternalDataNodeTestUtils.spyOnBposToNN(primaryDN, nn);
           dnMap.put(primaryDN, nnSpy);
         }
 

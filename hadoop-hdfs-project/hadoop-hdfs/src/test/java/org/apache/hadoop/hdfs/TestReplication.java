@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.FsDatasetTestUtils.MaterializedReplica;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -571,7 +572,7 @@ public class TestReplication {
       NameNode nn = cluster.getNameNode();
       DataNode dn = cluster.getDataNodes().get(0);
       DatanodeProtocolClientSideTranslatorPB spy =
-          DataNodeTestUtils.spyOnBposToNN(dn, nn);
+          InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
       DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
       Mockito.doAnswer(delayer).when(spy).blockReceivedAndDeleted(
           Mockito.<DatanodeRegistration>anyObject(),
