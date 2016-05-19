@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.scheduler;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security
     .NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security
     .NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -196,9 +198,14 @@ public class TestLocalScheduler {
   }
 
   private Map<NodeId, List<ContainerId>> mapAllocs(AllocateResponse
-      allocateResponse) {
+      allocateResponse) throws Exception {
     Map<NodeId, List<ContainerId>> allocs = new HashMap<>();
     for (Container c : allocateResponse.getAllocatedContainers()) {
+      ContainerTokenIdentifier cTokId = BuilderUtils
+          .newContainerTokenIdentifier(c.getContainerToken());
+      Assert.assertEquals(
+          c.getNodeId().getHost() + ":" + c.getNodeId().getPort(),
+          cTokId.getNmHostAddress());
       List<ContainerId> cIds = allocs.get(c.getNodeId());
       if (cIds == null) {
         cIds = new ArrayList<>();
