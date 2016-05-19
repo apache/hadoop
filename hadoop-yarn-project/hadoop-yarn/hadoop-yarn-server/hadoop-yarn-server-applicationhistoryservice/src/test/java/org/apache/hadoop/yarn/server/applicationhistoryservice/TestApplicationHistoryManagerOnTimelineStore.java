@@ -537,6 +537,18 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     }
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
+    // send a YARN_APPLICATION_STATE_UPDATED event
+    // after YARN_APPLICATION_FINISHED
+    // The final YarnApplicationState should not be changed
+    tEvent = new TimelineEvent();
+    tEvent.setEventType(
+        ApplicationMetricsConstants.STATE_UPDATED_EVENT_TYPE);
+    tEvent.setTimestamp(Integer.MAX_VALUE + 4L + appId.getId());
+    eventInfo = new HashMap<String, Object>();
+    eventInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        YarnApplicationState.KILLED);
+    tEvent.setEventInfo(eventInfo);
+    entity.addEvent(tEvent);
     if (enableUpdateEvent) {
       tEvent = new TimelineEvent();
       createAppModifiedEvent(appId, tEvent, "changed queue", 5);
