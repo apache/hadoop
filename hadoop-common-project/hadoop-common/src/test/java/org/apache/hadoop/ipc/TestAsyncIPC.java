@@ -18,20 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +33,17 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class TestAsyncIPC {
 
@@ -87,26 +84,50 @@ public class TestAsyncIPC {
         try {
           final long param = TestIPC.RANDOM.nextLong();
           TestIPC.call(client, param, server, conf);
-          Future<LongWritable> returnFuture = Client.getReturnRpcResponse();
-          returnFutures.put(i, returnFuture);
+          returnFutures.put(i, Client.getAsyncRpcResponse());
           expectedValues.put(i, param);
         } catch (Exception e) {
-          LOG.fatal("Caught: " + StringUtils.stringifyException(e));
           failed = true;
+          throw new RuntimeException(e);
         }
       }
     }
 
-    public void waitForReturnValues() throws InterruptedException,
-        ExecutionException {
+    void assertReturnValues() throws InterruptedException, ExecutionException {
       for (int i = 0; i < count; i++) {
         LongWritable value = returnFutures.get(i).get();
-        if (expectedValues.get(i) != value.get()) {
-          LOG.fatal(String.format("Call-%d failed!", i));
-          failed = true;
-          break;
+        Assert.assertEquals("call" + i + " failed.",
+            expectedValues.get(i).longValue(), value.get());
+      }
+      Assert.assertFalse(failed);
+    }
+
+    void assertReturnValues(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException {
+      final boolean[] checked = new boolean[count];
+      for(boolean done = false; !done;) {
+        done = true;
+        for (int i = 0; i < count; i++) {
+          if (checked[i]) {
+            continue;
+          } else {
+            done = false;
+          }
+
+          final LongWritable value;
+          try {
+            value = returnFutures.get(i).get(timeout, unit);
+          } catch (TimeoutException e) {
+            LOG.info("call" + i + " caught ", e);
+            continue;
+          }
+
+          Assert.assertEquals("call" + i + " failed.",
+              expectedValues.get(i).longValue(), value.get());
+          checked[i] = true;
         }
       }
+      Assert.assertFalse(failed);
     }
   }
 
@@ -183,8 +204,7 @@ public class TestAsyncIPC {
 
     private void doCall(final int idx, final long param) throws IOException {
       TestIPC.call(client, param, server, conf);
-      Future<LongWritable> returnFuture = Client.getReturnRpcResponse();
-      returnFutures.put(idx, returnFuture);
+      returnFutures.put(idx, Client.getAsyncRpcResponse());
       expectedValues.put(idx, param);
     }
 
@@ -233,10 +253,7 @@ public class TestAsyncIPC {
     }
     for (int i = 0; i < callerCount; i++) {
       callers[i].join();
-      callers[i].waitForReturnValues();
-      String msg = String.format("Expected not failed for caller-%d: %s.", i,
-          callers[i]);
-      assertFalse(msg, callers[i].failed);
+      callers[i].assertReturnValues();
     }
     for (int i = 0; i < clientCount; i++) {
       clients[i].stop();
@@ -258,24 +275,36 @@ public class TestAsyncIPC {
     try {
       AsyncCaller caller = new AsyncCaller(client, addr, callCount);
       caller.run();
-
-      caller.waitForReturnValues();
-      String msg = String.format(
-          "First time, expected not failed for caller: %s.", caller);
-      assertFalse(msg, caller.failed);
-
-      caller.waitForReturnValues();
-      assertTrue(asyncCallCount == client.getAsyncCallCount());
-      msg = String.format("Second time, expected not failed for caller: %s.",
-          caller);
-      assertFalse(msg, caller.failed);
-
-      assertTrue(asyncCallCount == client.getAsyncCallCount());
+      caller.assertReturnValues();
+      caller.assertReturnValues();
+      caller.assertReturnValues();
+      Assert.assertEquals(asyncCallCount, client.getAsyncCallCount());
     } finally {
       client.stop();
       server.stop();
     }
   }
+
+  @Test(timeout = 60000)
+  public void testFutureGetWithTimeout() throws IOException,
+      InterruptedException, ExecutionException {
+//    GenericTestUtils.setLogLevel(AsyncGetFuture.LOG, Level.ALL);
+    final Server server = new TestIPC.TestServer(10, true, conf);
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    final Client client = new Client(LongWritable.class, conf);
+
+    try {
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
+      caller.run();
+      caller.assertReturnValues(10, TimeUnit.MILLISECONDS);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
 
   public void internalTestAsyncCallLimit(int handlerCount, boolean handlerSleep,
       int clientCount, int callerCount, int callCount) throws IOException,
@@ -367,9 +396,7 @@ public class TestAsyncIPC {
       server.start();
       final AsyncCaller caller = new AsyncCaller(client, addr, 4);
       caller.run();
-      caller.waitForReturnValues();
-      String msg = String.format("Expected not failed for caller: %s.", caller);
-      assertFalse(msg, caller.failed);
+      caller.assertReturnValues();
     } finally {
       client.stop();
       server.stop();
@@ -406,9 +433,7 @@ public class TestAsyncIPC {
       server.start();
       final AsyncCaller caller = new AsyncCaller(client, addr, 10);
       caller.run();
-      caller.waitForReturnValues();
-      String msg = String.format("Expected not failed for caller: %s.", caller);
-      assertFalse(msg, caller.failed);
+      caller.assertReturnValues();
     } finally {
       client.stop();
       server.stop();
@@ -443,9 +468,7 @@ public class TestAsyncIPC {
       server.start();
       final AsyncCaller caller = new AsyncCaller(client, addr, 10);
       caller.run();
-      caller.waitForReturnValues();
-      String msg = String.format("Expected not failed for caller: %s.", caller);
-      assertFalse(msg, caller.failed);
+      caller.assertReturnValues();
     } finally {
       client.stop();
       server.stop();
@@ -489,10 +512,7 @@ public class TestAsyncIPC {
       }
       for (int i = 0; i < callerCount; ++i) {
         callers[i].join();
-        callers[i].waitForReturnValues();
-        String msg = String.format("Expected not failed for caller-%d: %s.", i,
-            callers[i]);
-        assertFalse(msg, callers[i].failed);
+        callers[i].assertReturnValues();
       }
     } finally {
       client.stop();
