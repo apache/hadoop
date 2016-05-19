@@ -17,14 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_HANDLER_TYPE_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
 import static com.sun.jersey.api.core.ResourceConfig.FEATURE_TRACE;
 
@@ -37,6 +30,7 @@ import java.util.Map;
 import com.sun.jersey.api.container.ContainerFactory;
 import com.sun.jersey.api.core.ApplicationAdapter;
 
+import org.apache.hadoop.ozone.OzoneClientUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,11 +85,8 @@ public final class ObjectStoreHandler implements Closeable {
           ProtobufRpcEngine.class);
       long version =
           RPC.getProtocolVersion(StorageContainerLocationProtocolPB.class);
-      InetSocketAddress address = conf.getSocketAddr(
-          DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY,
-          DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY,
-          DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT,
-          DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT);
+      InetSocketAddress address =
+          OzoneClientUtils.getScmAddressForClients(conf);
       this.storageContainerLocationClient =
           new StorageContainerLocationProtocolClientSideTranslatorPB(
               RPC.getProxy(StorageContainerLocationProtocolPB.class, version,

@@ -26,6 +26,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.ozShell.bucket.UpdateBucketHandler;
 import org.apache.hadoop.ozone.web.ozShell.keys.DeleteKeyHandler;
@@ -97,7 +98,7 @@ public class Shell extends Configured implements Tool {
    */
   public static void main(String[] argv) throws Exception {
     Shell shell = new Shell();
-    Configuration conf = new Configuration();
+    Configuration conf = new OzoneConfiguration();
     conf.setQuietMode(false);
     shell.setConf(conf);
     int res = 0;

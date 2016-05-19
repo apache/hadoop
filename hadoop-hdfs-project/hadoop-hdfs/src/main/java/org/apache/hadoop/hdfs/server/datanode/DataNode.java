@@ -188,6 +188,7 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -511,7 +512,7 @@ public class DataNode extends ReconfigurableBase
 
   @Override  // ReconfigurableBase
   protected Configuration getNewConf() {
-    return new HdfsConfiguration();
+    return new OzoneConfiguration();
   }
 
   /**
@@ -2501,8 +2502,9 @@ public class DataNode extends ReconfigurableBase
    */
   public static DataNode instantiateDataNode(String args [], Configuration conf,
       SecureResources resources) throws IOException {
-    if (conf == null)
-      conf = new HdfsConfiguration();
+    if (conf == null) {
+      conf = new OzoneConfiguration();
+    }
     
     if (args != null) {
       // parse generic hadoop options
@@ -3326,6 +3328,10 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   ScheduledThreadPoolExecutor getMetricsLoggerTimer() {
     return metricsLoggerTimer;
+  }
+
+  public boolean isOzoneEnabled() {
+    return ozoneEnabled;
   }
 
   public Tracer getTracer() {
