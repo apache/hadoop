@@ -308,6 +308,7 @@ public class ApplicationHistoryServer extends CompositeService {
               .withAttribute(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
                  conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS))
               .withCSRFProtection(YarnConfiguration.TIMELINE_CSRF_PREFIX)
+              .withXFSProtection(YarnConfiguration.TIMELINE_XFS_PREFIX)
               .at(bindAddress).build(ahsWebApp);
        HttpServer2 httpServer = webApp.httpServer();
 
