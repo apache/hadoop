@@ -376,6 +376,9 @@ public class LogAggregationService extends AbstractService implements
       } else {
         appDirException = (YarnRuntimeException)e;
       }
+      appLogAggregators.remove(appId);
+      closeFileSystems(userUgi);
+      throw appDirException;
     }
 
     // TODO Get the user configuration for the list of containers that need log
@@ -393,10 +396,6 @@ public class LogAggregationService extends AbstractService implements
       }
     };
     this.threadPool.execute(aggregatorWrapper);
-
-    if (appDirException != null) {
-      throw appDirException;
-    }
   }
 
   protected void closeFileSystems(final UserGroupInformation userUgi) {
@@ -417,7 +416,6 @@ public class LogAggregationService extends AbstractService implements
 
     // A container is complete. Put this containers' logs up for aggregation if
     // this containers' logs are needed.
-
     AppLogAggregator aggregator = this.appLogAggregators.get(
         containerId.getApplicationAttemptId().getApplicationId());
     if (aggregator == null) {
@@ -437,6 +435,7 @@ public class LogAggregationService extends AbstractService implements
         new ContainerLogContext(containerId, containerType, exitCode));
   }
 
+  @SuppressWarnings("unchecked")
   private void stopApp(ApplicationId appId) {
 
     // App is complete. Finish up any containers' pending log aggregation and
@@ -446,6 +445,9 @@ public class LogAggregationService extends AbstractService implements
     if (aggregator == null) {
       LOG.warn("Log aggregation is not initialized for " + appId
           + ", did it fail to start?");
+      this.dispatcher.getEventHandler().handle(
+          new ApplicationEvent(appId,
+              ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
       return;
     }
     aggregator.finishLogAggregation();

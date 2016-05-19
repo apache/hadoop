@@ -96,8 +96,12 @@ fi
 if [[ -f "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" ]]; then
   if [[ -n "${HTTPFS_SSL_KEYSTORE_PASS+x}" ]] || [[ -n "${HTTPFS_SSL_TRUSTSTORE_PASS}" ]]; then
     export HTTPFS_SSL_KEYSTORE_PASS=${HTTPFS_SSL_KEYSTORE_PASS:-password}
-    sed -e 's/_httpfs_ssl_keystore_pass_/'${HTTPFS_SSL_KEYSTORE_PASS}'/g' \
-        -e 's/_httpfs_ssl_truststore_pass_/'${HTTPFS_SSL_TRUSTSTORE_PASS}'/g' \
+    HTTPFS_SSL_KEYSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
+      "$(hadoop_sed_escape "$HTTPFS_SSL_KEYSTORE_PASS")")
+    HTTPFS_SSL_TRUSTSTORE_PASS_ESCAPED=$(hadoop_xml_escape \
+      "$(hadoop_sed_escape "$HTTPFS_SSL_TRUSTSTORE_PASS")")
+    sed -e 's/"_httpfs_ssl_keystore_pass_"/'"\"${HTTPFS_SSL_KEYSTORE_PASS_ESCAPED}\""'/g' \
+        -e 's/"_httpfs_ssl_truststore_pass_"/'"\"${HTTPFS_SSL_TRUSTSTORE_PASS_ESCAPED}\""'/g' \
       "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" \
       > "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml"
     chmod 700 "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml" >/dev/null 2>&1

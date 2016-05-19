@@ -15,16 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.fs;
 
-package org.apache.hadoop.fs.s3native;
+import java.util.Collections;
+import java.util.Iterator;
 
-import java.io.IOException;
+/**
+ * EmptyStorageStatistics is a StorageStatistics implementation which has no
+ * data.
+ */
+class EmptyStorageStatistics extends StorageStatistics {
+  EmptyStorageStatistics(String name) {
+    super(name);
+  }
 
-public class Jets3tNativeS3FileSystemContractTest
-  extends NativeS3FileSystemContractBaseTest {
-  
-  @Override
-  NativeFileSystemStore getNativeFileSystemStore() throws IOException {
-    return new Jets3tNativeFileSystemStore();
+  public Iterator<LongStatistic> getLongStatistics() {
+    return Collections.emptyIterator();
+  }
+
+  public Long getLong(String key) {
+    return null;
+  }
+
+  public boolean isTracked(String key) {
+    return false;
   }
 }

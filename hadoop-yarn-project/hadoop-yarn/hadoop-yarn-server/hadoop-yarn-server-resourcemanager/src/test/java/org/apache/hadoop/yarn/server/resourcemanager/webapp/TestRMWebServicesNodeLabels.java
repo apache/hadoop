@@ -42,7 +42,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.inject.Guice;
@@ -50,6 +53,7 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
@@ -58,6 +62,8 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 public class TestRMWebServicesNodeLabels extends JerseyTestBase {
+
+  private static final int BAD_REQUEST_CODE = 400;
 
   private static final Log LOG = LogFactory
       .getLog(TestRMWebServicesNodeLabels.class);
@@ -562,6 +568,107 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals("z", nlsifo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nlsifo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nlsifo.getNodeLabels().size());
+  }
+
+  @Test
+  public void testLabelInvalidAddition()
+      throws UniformInterfaceException, Exception {
+    WebResource r = resource();
+    ClientResponse response;
+    // Add a invalid label
+    NodeLabelsInfo nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("a&"));
+    response = r.path("ws").path("v1").path("cluster").path("add-node-labels")
+        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
+        .entity(toJson(nlsifo, NodeLabelsInfo.class),
+            MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
+    String expectedmessage =
+        "java.io.IOException: label name should only contains"
+            + " {0-9, a-z, A-Z, -, _} and should not started with"
+            + " {-,_}, now it is=a&";
+    validateJsonExceptionContent(response, expectedmessage);
+  }
+
+  @Test
+  public void testLabelChangeExclusivity()
+      throws Exception, JSONException {
+    WebResource r = resource();
+    ClientResponse response;
+    NodeLabelsInfo nlsifo = new NodeLabelsInfo();
+    nlsifo.getNodeLabelsInfo().add(new NodeLabelInfo("newlabel", true));
+    response = r.path("ws").path("v1").path("cluster").path("add-node-labels")
+        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
+        .entity(toJson(nlsifo, NodeLabelsInfo.class),
+            MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
+    // new info and change exclusivity
+    NodeLabelsInfo nlsinfo2 = new NodeLabelsInfo();
+    nlsinfo2.getNodeLabelsInfo().add(new NodeLabelInfo("newlabel", false));
+    response = r.path("ws").path("v1").path("cluster").path("add-node-labels")
+        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
+        .entity(toJson(nlsinfo2, NodeLabelsInfo.class),
+            MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
+    String expectedmessage =
+        "java.io.IOException: Exclusivity cannot be modified for an existing"
+            + " label with : <newlabel:exclusivity=false>";
+    validateJsonExceptionContent(response, expectedmessage);
+  }
+
+  private void validateJsonExceptionContent(ClientResponse response,
+      String expectedmessage)
+      throws JSONException {
+    Assert.assertEquals(BAD_REQUEST_CODE, response.getStatus());
+    JSONObject msg = response.getEntity(JSONObject.class);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    String message = exception.getString("message");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    WebServicesTestUtils.checkStringMatch("exception type",
+        "BadRequestException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+        "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+    WebServicesTestUtils.checkStringContains("exception message",
+        expectedmessage, message);
+  }
+
+  @Test
+  public void testLabelInvalidReplace()
+      throws UniformInterfaceException, Exception {
+    WebResource r = resource();
+    ClientResponse response;
+    // replace label which doesnt exist
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("labels", "idontexist");
+    response = r.path("ws").path("v1").path("cluster").path("nodes")
+        .path("nid:0").path("replace-labels").queryParam("user.name", userName)
+        .queryParams(params).accept(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
+
+    String expectedmessage =
+        "Not all labels being replaced contained by known label"
+            + " collections, please check, new labels=[idontexist]";
+    validateJsonExceptionContent(response, expectedmessage);
+  }
+
+  @Test
+  public void testLabelInvalidRemove()
+      throws UniformInterfaceException, Exception {
+    WebResource r = resource();
+    ClientResponse response;
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("labels", "irealldontexist");
+    response =
+        r.path("ws").path("v1").path("cluster").path("remove-node-labels")
+            .queryParam("user.name", userName).queryParams(params)
+            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    String expectedmessage =
+        "java.io.IOException: Node label=irealldontexist to be"
+            + " removed doesn't existed in cluster node labels"
+            + " collection.";
+    validateJsonExceptionContent(response, expectedmessage);
   }
 
   @SuppressWarnings("rawtypes")

@@ -17,9 +17,19 @@
  */
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+/**
+ * File status for an S3A "file".
+ * Modification time is trouble, see {@link #getModificationTime()}.
+ *
+ * The subclass is private as it should not be created directly.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class S3AFileStatus extends FileStatus {
   private boolean isEmptyDirectory;
 
@@ -45,7 +55,7 @@ public class S3AFileStatus extends FileStatus {
     return System.getProperty("user.name");
   }
 
-  /** Compare if this object is equal to another object
+  /** Compare if this object is equal to another object.
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
    */

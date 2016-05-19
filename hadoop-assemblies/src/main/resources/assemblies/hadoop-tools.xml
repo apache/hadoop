@@ -24,6 +24,38 @@
   <includeBaseDirectory>false</includeBaseDirectory>
   <fileSets>
     <fileSet>
+      <directory>../hadoop-archive-logs/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>../hadoop-archives/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>../hadoop-distcp/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>../hadoop-extras/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-pipes/src/main/native/pipes/api/hadoop</directory>
       <includes>
         <include>*.hh</include>
@@ -94,6 +126,14 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>../hadoop-gridmix/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-rumen/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
@@ -101,11 +141,27 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>../hadoop-rumen/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>../hadoop-streaming/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
         <include>*-sources.jar</include>
       </includes>
+    </fileSet>
+    <fileSet>
+      <directory>../hadoop-streaming/src/main/shellprofile.d</directory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
       <directory>../hadoop-sls/target</directory>

@@ -83,10 +83,10 @@ public class JavaKeyStoreProvider extends AbstractJavaKeyStoreProvider {
     permissions = s.getPermission();
   }
 
-  protected void initFileSystem(URI uri, Configuration conf)
+  protected void initFileSystem(URI uri)
       throws IOException {
-    super.initFileSystem(uri, conf);
-    fs = getPath().getFileSystem(conf);
+    super.initFileSystem(uri);
+    fs = getPath().getFileSystem(getConf());
   }
 
   /**

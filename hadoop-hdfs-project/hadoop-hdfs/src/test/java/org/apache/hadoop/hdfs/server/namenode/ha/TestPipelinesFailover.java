@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
@@ -358,8 +358,8 @@ public class TestPipelinesFailover {
       // active.
       DataNode primaryDN = cluster.getDataNode(expectedPrimary.getIpcPort());
       DatanodeProtocolClientSideTranslatorPB nnSpy =
-          DataNodeTestUtils.spyOnBposToNN(primaryDN, nn0);
-      
+          InternalDataNodeTestUtils.spyOnBposToNN(primaryDN, nn0);
+
       // Delay the commitBlockSynchronization call
       DelayAnswer delayer = new DelayAnswer(LOG);
       Mockito.doAnswer(delayer).when(nnSpy).commitBlockSynchronization(

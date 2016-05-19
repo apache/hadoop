@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -154,8 +154,8 @@ public class TestFileCorruption {
       DataNode dataNode = datanodes.get(2);
       
       // report corrupted block by the third datanode
-      DatanodeRegistration dnR = 
-        DataNodeTestUtils.getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
+      DatanodeRegistration dnR = InternalDataNodeTestUtils.
+        getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
       FSNamesystem ns = cluster.getNamesystem();
       ns.writeLock();
       try {

@@ -18,15 +18,14 @@
 package org.apache.hadoop.security;
 
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 
-import javax.naming.CommunicationException;
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -35,6 +34,8 @@ import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.LdapName;
+import javax.naming.ldap.Rdn;
 
 import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
@@ -43,7 +44,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 
 /**
  * An implementation of {@link GroupMappingServiceProvider} which
@@ -138,6 +138,13 @@ public class LdapGroupsMapping
   public static final String GROUP_SEARCH_FILTER_DEFAULT = "(objectClass=group)";
 
   /*
+     * LDAP attribute to use for determining group membership
+     */
+  public static final String MEMBEROF_ATTR_KEY =
+      LDAP_CONFIG_PREFIX + ".search.attr.memberof";
+  public static final String MEMBEROF_ATTR_DEFAULT = "";
+
+  /*
    * LDAP attribute to use for determining group membership
    */
   public static final String GROUP_MEMBERSHIP_ATTR_KEY = LDAP_CONFIG_PREFIX + ".search.attr.member";
@@ -191,13 +198,15 @@ public class LdapGroupsMapping
   private String baseDN;
   private String groupSearchFilter;
   private String userSearchFilter;
+  private String memberOfAttr;
   private String groupMemberAttr;
   private String groupNameAttr;
   private String posixUidAttr;
   private String posixGidAttr;
   private boolean isPosix;
+  private boolean useOneQuery;
 
-  public static int RECONNECT_RETRY_COUNT = 3;
+  public static final int RECONNECT_RETRY_COUNT = 3;
   
   /**
    * Returns list of groups for a user.
@@ -210,93 +219,197 @@ public class LdapGroupsMapping
    * @return list of groups for a given user
    */
   @Override
-  public synchronized List<String> getGroups(String user) throws IOException {
-    List<String> emptyResults = new ArrayList<String>();
+  public synchronized List<String> getGroups(String user) {
     /*
      * Normal garbage collection takes care of removing Context instances when they are no longer in use. 
      * Connections used by Context instances being garbage collected will be closed automatically.
      * So in case connection is closed and gets CommunicationException, retry some times with new new DirContext/connection. 
      */
-    try {
-      return doGetGroups(user);
-    } catch (CommunicationException e) {
-      LOG.warn("Connection is closed, will try to reconnect");
-    } catch (NamingException e) {
-      LOG.warn("Exception trying to get groups for user " + user + ": "
-          + e.getMessage());
-      return emptyResults;
-    }
-
-    int retryCount = 0;
-    while (retryCount ++ < RECONNECT_RETRY_COUNT) {
-      //reset ctx so that new DirContext can be created with new connection
-      this.ctx = null;
-      
+    for(int retry = 0; retry < RECONNECT_RETRY_COUNT; retry++) {
       try {
         return doGetGroups(user);
-      } catch (CommunicationException e) {
-        LOG.warn("Connection being closed, reconnecting failed, retryCount = " + retryCount);
       } catch (NamingException e) {
-        LOG.warn("Exception trying to get groups for user " + user + ":"
-            + e.getMessage());
-        return emptyResults;
+        LOG.warn("Failed to get groups for user " + user + " (retry=" + retry
+            + ") by " + e);
+        LOG.trace("TRACE", e);
       }
+
+      //reset ctx so that new DirContext can be created with new connection
+      this.ctx = null;
     }
     
-    return emptyResults;
+    return Collections.emptyList();
   }
-  
-  List<String> doGetGroups(String user) throws NamingException {
+
+  /**
+   * A helper method to get the Relative Distinguished Name (RDN) from
+   * Distinguished name (DN). According to Active Directory documentation,
+   * a group object's RDN is a CN.
+   *
+   * @param distinguishedName A string representing a distinguished name.
+   * @throws NamingException if the DN is malformed.
+   * @return a string which represents the RDN
+   */
+  private String getRelativeDistinguishedName(String distinguishedName)
+      throws NamingException {
+    LdapName ldn = new LdapName(distinguishedName);
+    List<Rdn> rdns = ldn.getRdns();
+    if (rdns.isEmpty()) {
+      throw new NamingException("DN is empty");
+    }
+    Rdn rdn = rdns.get(rdns.size()-1);
+    if (rdn.getType().equalsIgnoreCase(groupNameAttr)) {
+      String groupName = (String)rdn.getValue();
+      return groupName;
+    }
+    throw new NamingException("Unable to find RDN: The DN " +
+    distinguishedName + " is malformed.");
+  }
+
+  /**
+   * Look up groups using posixGroups semantics. Use posix gid/uid to find
+   * groups of the user.
+   *
+   * @param result the result object returned from the prior user lookup.
+   * @param c the context object of the LDAP connection.
+   * @return an object representing the search result.
+   *
+   * @throws NamingException if the server does not support posixGroups
+   * semantics.
+   */
+  private NamingEnumeration<SearchResult> lookupPosixGroup(SearchResult result,
+      DirContext c) throws NamingException {
+    String gidNumber = null;
+    String uidNumber = null;
+    Attribute gidAttribute = result.getAttributes().get(posixGidAttr);
+    Attribute uidAttribute = result.getAttributes().get(posixUidAttr);
+    String reason = "";
+    if (gidAttribute == null) {
+      reason = "Can't find attribute '" + posixGidAttr + "'.";
+    } else {
+      gidNumber = gidAttribute.get().toString();
+    }
+    if (uidAttribute == null) {
+      reason = "Can't find attribute '" + posixUidAttr + "'.";
+    } else {
+      uidNumber = uidAttribute.get().toString();
+    }
+    if (uidNumber != null && gidNumber != null) {
+      return c.search(baseDN,
+              "(&"+ groupSearchFilter + "(|(" + posixGidAttr + "={0})" +
+                  "(" + groupMemberAttr + "={1})))",
+              new Object[] {gidNumber, uidNumber},
+              SEARCH_CONTROLS);
+    }
+    throw new NamingException("The server does not support posixGroups " +
+        "semantics. Reason: " + reason +
+        " Returned user object: " + result.toString());
+  }
+
+  /**
+   * Perform the second query to get the groups of the user.
+   *
+   * If posixGroups is enabled, use use posix gid/uid to find.
+   * Otherwise, use the general group member attribute to find it.
+   *
+   * @param result the result object returned from the prior user lookup.
+   * @param c the context object of the LDAP connection.
+   * @return a list of strings representing group names of the user.
+   * @throws NamingException if unable to find group names
+   */
+  private List<String> lookupGroup(SearchResult result, DirContext c)
+      throws NamingException {
     List<String> groups = new ArrayList<String>();
 
-    DirContext ctx = getDirContext();
-
-    // Search for the user. We'll only ever need to look at the first result
-    NamingEnumeration<SearchResult> results = ctx.search(baseDN,
-        userSearchFilter,
-        new Object[]{user},
-        SEARCH_CONTROLS);
-    if (results.hasMoreElements()) {
-      SearchResult result = results.nextElement();
+    NamingEnumeration<SearchResult> groupResults = null;
+    // perform the second LDAP query
+    if (isPosix) {
+      groupResults = lookupPosixGroup(result, c);
+    } else {
       String userDn = result.getNameInNamespace();
-
-      NamingEnumeration<SearchResult> groupResults = null;
-
-      if (isPosix) {
-        String gidNumber = null;
-        String uidNumber = null;
-        Attribute gidAttribute = result.getAttributes().get(posixGidAttr);
-        Attribute uidAttribute = result.getAttributes().get(posixUidAttr);
-        if (gidAttribute != null) {
-          gidNumber = gidAttribute.get().toString();
+      groupResults =
+          c.search(baseDN,
+              "(&" + groupSearchFilter + "(" + groupMemberAttr + "={0}))",
+              new Object[]{userDn},
+              SEARCH_CONTROLS);
+    }
+    // if the second query is successful, group objects of the user will be
+    // returned. Get group names from the returned objects.
+    if (groupResults != null) {
+      while (groupResults.hasMoreElements()) {
+        SearchResult groupResult = groupResults.nextElement();
+        Attribute groupName = groupResult.getAttributes().get(groupNameAttr);
+        if (groupName == null) {
+          throw new NamingException("The group object does not have " +
+              "attribute '" + groupNameAttr + "'.");
         }
-        if (uidAttribute != null) {
-          uidNumber = uidAttribute.get().toString();
-        }
-        if (uidNumber != null && gidNumber != null) {
-          groupResults =
-              ctx.search(baseDN,
-                  "(&"+ groupSearchFilter + "(|(" + posixGidAttr + "={0})" +
-                      "(" + groupMemberAttr + "={1})))",
-                  new Object[] { gidNumber, uidNumber },
-                  SEARCH_CONTROLS);
-        }
-      } else {
-        groupResults =
-            ctx.search(baseDN,
-                "(&" + groupSearchFilter + "(" + groupMemberAttr + "={0}))",
-                new Object[]{userDn},
-                SEARCH_CONTROLS);
-      }
-      if (groupResults != null) {
-        while (groupResults.hasMoreElements()) {
-          SearchResult groupResult = groupResults.nextElement();
-          Attribute groupName = groupResult.getAttributes().get(groupNameAttr);
-          groups.add(groupName.get().toString());
-        }
+        groups.add(groupName.get().toString());
       }
     }
+    return groups;
+  }
 
+  /**
+   * Perform LDAP queries to get group names of a user.
+   *
+   * Perform the first LDAP query to get the user object using the user's name.
+   * If one-query is enabled, retrieve the group names from the user object.
+   * If one-query is disabled, or if it failed, perform the second query to
+   * get the groups.
+   *
+   * @param user user name
+   * @return a list of group names for the user. If the user can not be found,
+   * return an empty string array.
+   * @throws NamingException if unable to get group names
+   */
+  List<String> doGetGroups(String user) throws NamingException {
+    DirContext c = getDirContext();
+
+    // Search for the user. We'll only ever need to look at the first result
+    NamingEnumeration<SearchResult> results = c.search(baseDN,
+        userSearchFilter, new Object[]{user}, SEARCH_CONTROLS);
+    // return empty list if the user can not be found.
+    if (!results.hasMoreElements()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("doGetGroups(" + user + ") return no groups because the " +
+            "user is not found.");
+      }
+      return new ArrayList<String>();
+    }
+    SearchResult result = results.nextElement();
+
+    List<String> groups = null;
+    if (useOneQuery) {
+      try {
+        /**
+         * For Active Directory servers, the user object has an attribute
+         * 'memberOf' that represents the DNs of group objects to which the
+         * user belongs. So the second query may be skipped.
+         */
+        Attribute groupDNAttr = result.getAttributes().get(memberOfAttr);
+        if (groupDNAttr == null) {
+          throw new NamingException("The user object does not have '" +
+              memberOfAttr + "' attribute." +
+              "Returned user object: " + result.toString());
+        }
+        groups = new ArrayList<String>();
+        NamingEnumeration groupEnumeration = groupDNAttr.getAll();
+        while (groupEnumeration.hasMore()) {
+          String groupDN = groupEnumeration.next().toString();
+          groups.add(getRelativeDistinguishedName(groupDN));
+        }
+      } catch (NamingException e) {
+        // If the first lookup failed, fall back to the typical scenario.
+        LOG.info("Failed to get groups from the first lookup. Initiating " +
+                "the second LDAP query using the user's DN.", e);
+      }
+    }
+    if (groups == null || groups.isEmpty()) {
+      groups = lookupGroup(result, c);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("doGetGroups(" + user + ") return " + groups);
+    }
     return groups;
   }
 
@@ -379,6 +492,11 @@ public class LdapGroupsMapping
         conf.get(USER_SEARCH_FILTER_KEY, USER_SEARCH_FILTER_DEFAULT);
     isPosix = groupSearchFilter.contains(POSIX_GROUP) && userSearchFilter
         .contains(POSIX_ACCOUNT);
+    memberOfAttr =
+        conf.get(MEMBEROF_ATTR_KEY, MEMBEROF_ATTR_DEFAULT);
+    // if memberOf attribute is set, resolve group names from the attribute
+    // of user objects.
+    useOneQuery = !memberOfAttr.isEmpty();
     groupMemberAttr =
         conf.get(GROUP_MEMBERSHIP_ATTR_KEY, GROUP_MEMBERSHIP_ATTR_DEFAULT);
     groupNameAttr =
@@ -392,8 +510,15 @@ public class LdapGroupsMapping
     SEARCH_CONTROLS.setTimeLimit(dirSearchTimeout);
     // Limit the attributes returned to only those required to speed up the search.
     // See HADOOP-10626 and HADOOP-12001 for more details.
-    SEARCH_CONTROLS.setReturningAttributes(
-        new String[] {groupNameAttr, posixUidAttr, posixGidAttr});
+    String[] returningAttributes;
+    if (useOneQuery) {
+      returningAttributes = new String[] {
+          groupNameAttr, posixUidAttr, posixGidAttr, memberOfAttr};
+    } else {
+      returningAttributes = new String[] {
+          groupNameAttr, posixUidAttr, posixGidAttr};
+    }
+    SEARCH_CONTROLS.setReturningAttributes(returningAttributes);
 
     this.conf = conf;
   }

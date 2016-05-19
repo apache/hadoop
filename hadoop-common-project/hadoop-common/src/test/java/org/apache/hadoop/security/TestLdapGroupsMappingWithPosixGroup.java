@@ -36,7 +36,6 @@ import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
-import javax.naming.directory.SearchResult;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
@@ -49,31 +48,26 @@ public class TestLdapGroupsMappingWithPosixGroup
 
   @Before
   public void setupMocks() throws NamingException {
-    SearchResult mockUserResult = mock(SearchResult.class);
-    when(mockUserNamingEnum.nextElement()).thenReturn(mockUserResult);
+    Attribute uidNumberAttr = mock(Attribute.class);
+    Attribute gidNumberAttr = mock(Attribute.class);
+    Attribute uidAttr = mock(Attribute.class);
+    Attributes attributes = getAttributes();
 
-    Attribute mockUidNumberAttr = mock(Attribute.class);
-    Attribute mockGidNumberAttr = mock(Attribute.class);
-    Attribute mockUidAttr = mock(Attribute.class);
-    Attributes mockAttrs = mock(Attributes.class);
-
-    when(mockUidAttr.get()).thenReturn("some_user");
-    when(mockUidNumberAttr.get()).thenReturn("700");
-    when(mockGidNumberAttr.get()).thenReturn("600");
-    when(mockAttrs.get(eq("uid"))).thenReturn(mockUidAttr);
-    when(mockAttrs.get(eq("uidNumber"))).thenReturn(mockUidNumberAttr);
-    when(mockAttrs.get(eq("gidNumber"))).thenReturn(mockGidNumberAttr);
-
-    when(mockUserResult.getAttributes()).thenReturn(mockAttrs);
+    when(uidAttr.get()).thenReturn("some_user");
+    when(uidNumberAttr.get()).thenReturn("700");
+    when(gidNumberAttr.get()).thenReturn("600");
+    when(attributes.get(eq("uid"))).thenReturn(uidAttr);
+    when(attributes.get(eq("uidNumber"))).thenReturn(uidNumberAttr);
+    when(attributes.get(eq("gidNumber"))).thenReturn(gidNumberAttr);
   }
 
   @Test
   public void testGetGroups() throws IOException, NamingException {
     // The search functionality of the mock context is reused, so we will
     // return the user NamingEnumeration first, and then the group
-    when(mockContext.search(anyString(), contains("posix"),
+    when(getContext().search(anyString(), contains("posix"),
         any(Object[].class), any(SearchControls.class)))
-        .thenReturn(mockUserNamingEnum, mockGroupNamingEnum);
+        .thenReturn(getUserNames(), getGroupNames());
 
     doTestGetGroups(Arrays.asList(testGroups), 2);
   }
@@ -92,19 +86,20 @@ public class TestLdapGroupsMappingWithPosixGroup
     conf.set(LdapGroupsMapping.POSIX_GID_ATTR_KEY, "gidNumber");
     conf.set(LdapGroupsMapping.GROUP_NAME_ATTR_KEY, "cn");
 
-    mappingSpy.setConf(conf);
+    LdapGroupsMapping groupsMapping = getGroupsMapping();
+    groupsMapping.setConf(conf);
     // Username is arbitrary, since the spy is mocked to respond the same,
     // regardless of input
-    List<String> groups = mappingSpy.getGroups("some_user");
+    List<String> groups = groupsMapping.getGroups("some_user");
 
     Assert.assertEquals(expectedGroups, groups);
 
-    mappingSpy.getConf().set(LdapGroupsMapping.POSIX_UID_ATTR_KEY, "uid");
+    groupsMapping.getConf().set(LdapGroupsMapping.POSIX_UID_ATTR_KEY, "uid");
 
     Assert.assertEquals(expectedGroups, groups);
 
     // We should have searched for a user, and then two groups
-    verify(mockContext, times(searchTimes)).search(anyString(),
+    verify(getContext(), times(searchTimes)).search(anyString(),
         anyString(),
         any(Object[].class),
         any(SearchControls.class));

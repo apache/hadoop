@@ -239,6 +239,105 @@ public class TestRMAdminService {
   }
 
   @Test
+  public void testRefreshNodesResourceWithResourceReturnInRegistration()
+      throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    //upload default configurations
+    uploadDefaultConfiguration();
+
+    MockNM nm = null;
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      nm = rm.registerNode("h1:1234", 2048, 2);
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    NodeId nid = ConverterUtils.toNodeId("h1:1234");
+    RMNode ni = rm.getRMContext().getRMNodes().get(nid);
+    Resource resource = ni.getTotalCapability();
+    Assert.assertEquals("<memory:2048, vCores:2>", resource.toString());
+
+    DynamicResourceConfiguration drConf =
+        new DynamicResourceConfiguration();
+    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
+    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
+    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    uploadConfiguration(drConf, "dynamic-resources.xml");
+
+    rm.adminService.refreshNodesResources(
+        RefreshNodesResourcesRequest.newInstance());
+
+    try {
+      // register the same node again with original resource.
+      // validate this will get new resource back;
+      nm.registerNode();
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
+    Resource resourceAfter = niAfter.getTotalCapability();
+    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+
+    Assert.assertEquals(4096, nm.getMemory());
+    Assert.assertEquals(4, nm.getvCores());
+  }
+
+  @Test
+  public void testRefreshNodesResourceWithResourceReturnInHeartbeat()
+      throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    //upload default configurations
+    uploadDefaultConfiguration();
+
+    MockNM nm = null;
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      nm = rm.registerNode("h1:1234", 2048, 2);
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    NodeId nid = ConverterUtils.toNodeId("h1:1234");
+    RMNode ni = rm.getRMContext().getRMNodes().get(nid);
+    Resource resource = ni.getTotalCapability();
+    Assert.assertEquals("<memory:2048, vCores:2>", resource.toString());
+
+    DynamicResourceConfiguration drConf =
+        new DynamicResourceConfiguration();
+    drConf.set("yarn.resource.dynamic.nodes", "h1:1234");
+    drConf.set("yarn.resource.dynamic.h1:1234.vcores", "4");
+    drConf.set("yarn.resource.dynamic.h1:1234.memory", "4096");
+    uploadConfiguration(drConf, "dynamic-resources.xml");
+
+    rm.adminService.refreshNodesResources(
+        RefreshNodesResourcesRequest.newInstance());
+
+    try {
+      // NM-RM heartbeat, validate that this will get new resource back.
+      nm.nodeHeartbeat(true);
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
+    Resource resourceAfter = niAfter.getTotalCapability();
+    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+
+    Assert.assertEquals(4096, nm.getMemory());
+    Assert.assertEquals(4, nm.getvCores());
+  }
+
+  @Test
   public void testResourcePersistentForNMRegistrationWithNewResource()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,

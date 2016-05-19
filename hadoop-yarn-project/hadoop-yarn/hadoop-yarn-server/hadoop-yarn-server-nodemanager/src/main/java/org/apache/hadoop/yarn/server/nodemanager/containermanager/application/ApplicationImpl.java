@@ -207,18 +207,18 @@ public class ApplicationImpl implements Application {
                   ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
                   ApplicationEventType.APPLICATION_INITED,
                   ApplicationEventType.FINISH_APPLICATION))
-           
+
            // Transitions from FINISHED state
            .addTransition(ApplicationState.FINISHED,
                ApplicationState.FINISHED,
-               ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
+               EnumSet.of(
+                   ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
+                   ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED),
                new AppLogsAggregatedTransition())
            .addTransition(ApplicationState.FINISHED, ApplicationState.FINISHED,
                EnumSet.of(
                   ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
-                  ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED,
                   ApplicationEventType.FINISH_APPLICATION))
-               
            // create the topology tables
            .installTopology();
 

@@ -21,11 +21,15 @@ package org.apache.hadoop.yarn.server.api.records.impl.pb;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
 import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 
+/**
+ * Protocol Buffer implementation of QueuedContainersStatus.
+ */
 public class QueuedContainersStatusPBImpl extends QueuedContainersStatus {
 
   private YarnServerCommonProtos.QueuedContainersStatusProto proto =
       YarnServerCommonProtos.QueuedContainersStatusProto.getDefaultInstance();
-  private YarnServerCommonProtos.QueuedContainersStatusProto.Builder builder = null;
+  private YarnServerCommonProtos.QueuedContainersStatusProto.Builder builder =
+      null;
   private boolean viaProto = false;
 
   public QueuedContainersStatusPBImpl() {

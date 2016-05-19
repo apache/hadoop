@@ -14,6 +14,10 @@
 
 # Hadoop-AWS module: Integration with Amazon Web Services
 
+<!-- MACRO{toc|fromDepth=0|toDepth=5} -->
+
+## Overview
+
 The `hadoop-aws` module provides support for AWS integration. The generated
 JAR file, `hadoop-aws.jar` also declares a transitive dependency on all
 external artifacts which are needed for this support —enabling downstream
@@ -22,18 +26,19 @@ applications to easily use this support.
 To make it part of Apache Hadoop's default classpath, simply make sure that
 HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-aws' in the list.
 
-Features
+### Features
 
-1. The "classic" `s3:` filesystem for storing objects in Amazon S3 Storage
+1. The "classic" `s3:` filesystem for storing objects in Amazon S3 Storage.
+**NOTE: `s3:` is being phased out. Use `s3n:` or `s3a:` instead.**
 1. The second-generation, `s3n:` filesystem, making it easy to share
-data between hadoop and other applications via the S3 object store
+data between hadoop and other applications via the S3 object store.
 1. The third generation, `s3a:` filesystem. Designed to be a switch in
 replacement for `s3n:`, this filesystem binding supports larger files and promises
 higher performance.
 
 The specifics of using these filesystems are documented below.
 
-## Warning #1: Object Stores are not filesystems.
+### Warning #1: Object Stores are not filesystems.
 
 Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
@@ -50,14 +55,14 @@ recursive file-by-file operations. They take time at least proportional to
 the number of files, during which time partial updates may be visible. If
 the operations are interrupted, the filesystem is left in an intermediate state.
 
-## Warning #2: Because Object stores don't track modification times of directories,
+### Warning #2: Because Object stores don't track modification times of directories,
 features of Hadoop relying on this can have unexpected behaviour. E.g. the
 AggregatedLogDeletionService of YARN will not remove the appropriate logfiles.
 
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-## Warning #3: your AWS credentials are valuable
+### Warning #3: your AWS credentials are valuable
 
 Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
@@ -101,6 +106,29 @@ If you do any of these: change your credentials immediately!
 
 ### Other properties
 
+    <property>
+      <name>fs.s3.buffer.dir</name>
+      <value>${hadoop.tmp.dir}/s3</value>
+      <description>Determines where on the local filesystem the s3:/s3n: filesystem
+      should store files before sending them to S3
+      (or after retrieving them from S3).
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3.maxRetries</name>
+      <value>4</value>
+      <description>The maximum number of retries for reading or writing files to
+        S3, before we signal failure to the application.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3.sleepTimeSeconds</name>
+      <value>10</value>
+      <description>The number of seconds to sleep between each S3 retry.
+      </description>
+    </property>
 
     <property>
       <name>fs.s3n.block.size</name>
@@ -138,7 +166,7 @@ If you do any of these: change your credentials immediately!
       <name>fs.s3n.server-side-encryption-algorithm</name>
       <value></value>
       <description>Specify a server-side encryption algorithm for S3.
-      The default is NULL, and the only other currently allowable value is AES256.
+      Unset by default, and the only other currently allowable value is AES256.
       </description>
     </property>
 
@@ -359,10 +387,39 @@ this capability.
     </property>
 
     <property>
+      <name>fs.s3a.server-side-encryption-algorithm</name>
+      <description>Specify a server-side encryption algorithm for s3a: file system.
+        Unset by default, and the only other currently allowable value is AES256.
+      </description>
+    </property>
+
+    <property>
       <name>fs.s3a.buffer.dir</name>
       <value>${hadoop.tmp.dir}/s3a</value>
       <description>Comma separated list of directories that will be used to buffer file
         uploads to. No effect if fs.s3a.fast.upload is true.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.block.size</name>
+      <value>33554432</value>
+      <description>Block size to use when reading files using s3a: file system.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3a.user.agent.prefix</name>
+      <value></value>
+      <description>
+        Sets a custom value that will be prepended to the User-Agent header sent in
+        HTTP requests to the S3 back-end by S3AFileSystem.  The User-Agent header
+        always includes the Hadoop version number followed by a string generated by
+        the AWS SDK.  An example is "User-Agent: Hadoop 2.8.0, aws-sdk-java/1.10.6".
+        If this optional property is set, then its value is prepended to create a
+        customized User-Agent.  For example, if this configuration property was set
+        to "MyApp", then an example of the resulting User-Agent would be
+        "User-Agent: MyApp, Hadoop 2.8.0, aws-sdk-java/1.10.6".
+      </description>
     </property>
 
     <property>
@@ -375,6 +432,14 @@ this capability.
       <name>fs.AbstractFileSystem.s3a.impl</name>
       <value>org.apache.hadoop.fs.s3a.S3A</value>
       <description>The implementation class of the S3A AbstractFileSystem.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.readahead.range</name>
+      <value>65536</value>
+      <description>Bytes to read ahead during a seek() before closing and
+      re-opening the S3 HTTP connection. This option will be overridden if
+      any call to setReadahead() is made to an open stream.</description>
     </property>
 
 ### S3AFastOutputStream
@@ -406,7 +471,7 @@ settings could cause memory overflow. Up to `fs.s3a.threads.max` parallel
 (part)uploads are active. Furthermore, up to `fs.s3a.max.total.tasks`
 additional part(uploads) can be waiting (and thus memory buffers are created).
 The memory buffer is uploaded as a single upload if it is not larger than
-`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiatated and
+`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiated and
 parts of size `fs.s3a.multipart.size` are used to protect against overflowing
 the available memory. These settings should be tuned to the envisioned
 workflow (some large files, many small ones, ...) and the physical
@@ -506,7 +571,7 @@ Example:
       </property>
     </configuration>
 
-## File `contract-test-options.xml`
+### File `contract-test-options.xml`
 
 The file `hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml`
 must be created and configured for the test filesystems.
@@ -518,7 +583,7 @@ The standard S3 authentication details must also be provided. This can be
 through copy-and-paste of the `auth-keys.xml` credentials, or it can be
 through direct XInclude inclusion.
 
-#### s3://
+### s3://
 
 The filesystem name must be defined in the property `fs.contract.test.fs.s3`. 
 
@@ -587,7 +652,7 @@ Example:
     <configuration>
     
       <include xmlns="http://www.w3.org/2001/XInclude"
-        href="auth-keys.xml"/>
+        href="/home/testuser/.ssh/auth-keys.xml"/>
     
       <property>
         <name>fs.contract.test.fs.s3</name>
@@ -607,7 +672,83 @@ Example:
 
     </configuration>
 
-This example pulls in the `auth-keys.xml` file for the credentials. 
+This example pulls in the `~/.ssh/auth-keys.xml` file for the credentials.
 This provides one single place to keep the keys up to date —and means
 that the file `contract-test-options.xml` does not contain any
-secret credentials itself.
+secret credentials itself. As the auth keys XML file is kept out of the
+source code tree, it is not going to get accidentally committed.
+
+### Running Performance Tests against non-AWS storage infrastructures
+
+
+#### CSV Data source
+
+The `TestS3AInputStreamPerformance` tests require read access to a multi-MB
+text file. The default file for these tests is one published by amazon,
+[s3a://landsat-pds.s3.amazonaws.com/scene_list.gz](http://landsat-pds.s3.amazonaws.com/scene_list.gz).
+This is a gzipped CSV index of other files which amazon serves for open use.
+
+The path to this object is set in the option `fs.s3a.scale.test.csvfile`:
+
+    <property>
+      <name>fs.s3a.scale.test.csvfile</name>
+      <value>s3a://landsat-pds/scene_list.gz</value>
+    </property>
+
+1. If the option is not overridden, the default value is used. This
+is hosted in Amazon's US-east datacenter.
+1. If the property is empty, tests which require it will be skipped.
+1. If the data cannot be read for any reason then the test will fail.
+1. If the property is set to a different path, then that data must be readable
+and "sufficiently" large.
+
+To test on different S3 endpoints, or alternate infrastructures supporting
+the same APIs, the option `fs.s3a.scale.test.csvfile` must therefore be
+set to " ", or an object of at least 10MB is uploaded to the object store, and
+the `fs.s3a.scale.test.csvfile` option set to its path.
+
+      <property>
+        <name>fs.s3a.scale.test.csvfile</name>
+        <value> </value>
+      </property>
+
+
+#### Scale test operation count
+
+Some scale tests perform multiple operations (such as creating many directories).
+
+The exact number of operations to perform is configurable in the option
+`scale.test.operation.count`
+
+      <property>
+        <name>scale.test.operation.count</name>
+        <value>10</value>
+      </property>
+
+Larger values generate more load, and are recommended when testing locally,
+or in batch runs.
+
+Smaller values should result in faster test runs, especially when the object
+store is a long way away.
+
+### Running the Tests
+
+After completing the configuration, execute the test run through Maven.
+
+    mvn clean test
+
+It's also possible to execute multiple test suites in parallel by enabling the
+`parallel-tests` Maven profile.  The tests spend most of their time blocked on
+network I/O with the S3 service, so running in parallel tends to complete full
+test runs faster.
+
+    mvn -Pparallel-tests clean test
+
+Some tests must run with exclusive access to the S3 bucket, so even with the
+`parallel-tests` profile enabled, several test suites will run in serial in a
+separate Maven execution step after the parallel tests.
+
+By default, the `parallel-tests` profile runs 4 test suites concurrently.  This
+can be tuned by passing the `testsThreadCount` argument.
+
+    mvn -Pparallel-tests -DtestsThreadCount=8 clean test

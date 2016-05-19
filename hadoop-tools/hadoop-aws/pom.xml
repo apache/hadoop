@@ -19,11 +19,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0-alpha1-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-aws</artifactId>
-  <version>3.0.0-SNAPSHOT</version>
+  <version>3.0.0-alpha1-SNAPSHOT</version>
   <name>Apache Hadoop Amazon Web Services support</name>
   <description>
     This module contains code to support integration with Amazon Web Services.
@@ -34,6 +34,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
   </properties>
 
   <profiles>
@@ -59,7 +60,109 @@
         <maven.test.skip>false</maven.test.skip>
       </properties>
     </profile>
+    <profile>
+      <id>parallel-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>create-parallel-tests-dirs</id>
+                <phase>test-compile</phase>
+                <configuration>
+                  <target>
+                    <script language="javascript"><![CDATA[
+                      var baseDirs = [
+                          "${test.build.data}",
+                          "${test.build.dir}",
+                          "${hadoop.tmp.dir}" ];
+                      for (var i in baseDirs) {
+                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
+                          var mkdir = project.createTask("mkdir");
+                          mkdir.setDir(new java.io.File(baseDirs[i], j));
+                          mkdir.perform();
+                        }
+                      }
+                    ]]></script>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <forkCount>${testsThreadCount}</forkCount>
+                  <reuseForks>false</reuseForks>
+                  <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                  <systemPropertyVariables>
+                    <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
+                    <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
+                    <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
 
+                    <!-- Due to a Maven quirk, setting this to just -->
+                    <!-- surefire.forkNumber won't do the parameter -->
+                    <!-- substitution.  Putting a prefix in front of it like -->
+                    <!-- "fork-" makes it work. -->
+                    <test.unique.fork.id>fork-${surefire.forkNumber}</test.unique.fork.id>
+                  </systemPropertyVariables>
+                  <!-- Some tests cannot run in parallel.  Tests that cover -->
+                  <!-- access to the root directory must run in isolation -->
+                  <!-- from anything else that could modify the bucket. -->
+                  <!-- S3A tests that cover multi-part upload must run in -->
+                  <!-- isolation, because the file system is configured to -->
+                  <!-- purge existing multi-part upload data on -->
+                  <!-- initialization.  MiniYARNCluster has not yet been -->
+                  <!-- changed to handle parallel test execution gracefully. -->
+                  <!-- Exclude all of these tests from parallel execution, -->
+                  <!-- and instead run them sequentially in a separate -->
+                  <!-- Surefire execution step later. -->
+                  <excludes>
+                    <exclude>**/TestJets3tNativeS3FileSystemContract.java</exclude>
+                    <exclude>**/TestS3ABlockingThreadPool.java</exclude>
+                    <exclude>**/TestS3AFastOutputStream.java</exclude>
+                    <exclude>**/TestS3AFileSystemContract.java</exclude>
+                    <exclude>**/TestS3AMiniYarnCluster.java</exclude>
+                    <exclude>**/Test*Root*.java</exclude>
+                  </excludes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>sequential-tests</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <!-- Do a sequential run for tests that cannot handle -->
+                  <!-- parallel execution. -->
+                  <includes>
+                    <include>**/TestJets3tNativeS3FileSystemContract.java</include>
+                    <include>**/TestS3ABlockingThreadPool.java</include>
+                    <include>**/TestS3AFastOutputStream.java</include>
+                    <include>**/TestS3AFileSystemContract.java</include>
+                    <include>**/TestS3AMiniYarnCluster.java</include>
+                    <include>**/Test*Root*.java</include>
+                  </includes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
   <build>
@@ -116,30 +219,17 @@
       <artifactId>hadoop-common</artifactId>
       <scope>compile</scope>
     </dependency>
-
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
-
-    <!-- see ../../hadoop-project/pom.xml for versions -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-s3</artifactId>
       <scope>compile</scope>
     </dependency>
-
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

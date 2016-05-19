@@ -60,9 +60,30 @@ public class DelegationTokenIdentifier
 
   @Override
   public String toString() {
-    return getKind() + " token " + getSequenceNumber()
-        + " for " + getUser().getShortUserName() + " with renewer " +
-        getRenewer();
+    StringBuilder sbld = new StringBuilder();
+    sbld
+        .append("token for ").append(getUser().getShortUserName())
+        .append(": ").append(super.toString());
+    return sbld.toString();
+  }
+
+  /*
+   * A frozen version of toString() to be used to be backward compatible.
+   * When backward compatibility is not needed, use toString(), which provides
+   * more info and is supposed to evolve, see HDFS-9732.
+   * Don't change this method except for major revisions.
+   *
+   * NOTE:
+   * Currently this method is used by CLI for backward compatibility.
+   */
+  @Override
+  public String toStringStable() {
+    StringBuilder sbld = new StringBuilder();
+    sbld
+        .append(getKind()).append(" token ").append(getSequenceNumber())
+        .append(" for ").append(getUser().getShortUserName())
+        .append(" with renewer ").append(getRenewer());
+    return sbld.toString();
   }
 
   /** @return a string representation of the token */

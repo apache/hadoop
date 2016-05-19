@@ -321,10 +321,10 @@ Usage:
 
     hdfs cacheadmin [-addDirective -path <path> -pool <pool-name> [-force] [-replication <replication>] [-ttl <time-to-live>]]
     hdfs cacheadmin [-modifyDirective -id <id> [-path <path>] [-force] [-replication <replication>] [-pool <pool-name>] [-ttl <time-to-live>]]
-    hdfs cacheadmin [-listDirectives [-stats] [-path <path>] [-pool <pool>] [-id <id>]
+    hdfs cacheadmin [-listDirectives [-stats] [-path <path>] [-pool <pool>] [-id <id>]]
     hdfs cacheadmin [-removeDirective <id>]
     hdfs cacheadmin [-removeDirectives -path <path>]
-    hdfs cacheadmin [-addPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-maxTtl <maxTtl>]
+    hdfs cacheadmin [-addPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-maxTtl <maxTtl>]]
     hdfs cacheadmin [-modifyPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-maxTtl <maxTtl>]]
     hdfs cacheadmin [-removePool <name>]
     hdfs cacheadmin [-listPools [-stats] [<name>]]
@@ -338,6 +338,7 @@ Usage:
 
       hdfs crypto -createZone -keyName <keyName> -path <path>
       hdfs crypto -listZones
+      hdfs crypto -provisionTrash -path <path>
       hdfs crypto -help <command-name>
 
 See the [HDFS Transparent Encryption Documentation](./TransparentEncryption.html#crypto_command-line_interface) for more information.

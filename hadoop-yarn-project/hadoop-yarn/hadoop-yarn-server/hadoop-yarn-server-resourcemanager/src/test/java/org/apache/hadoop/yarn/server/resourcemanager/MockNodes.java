@@ -264,6 +264,15 @@ public class MockNodes {
     public QueuedContainersStatus getQueuedContainersStatus() {
       return null;
     }
+
+    @Override
+    public long getUntrackedTimeStamp() {
+      return 0;
+    }
+
+    @Override
+    public void setUntrackedTimeStamp(long timeStamp) {
+    }
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode,

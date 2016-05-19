@@ -1116,4 +1116,27 @@ public class NNStorage extends Storage implements Closeable,
     nameDirSizeMap.clear();
     nameDirSizeMap.putAll(nnDirSizeMap);
   }
+
+  /**
+   * Write all data storage files.
+   * @throws IOException When all the storage directory fails to write
+   * VERSION file
+   */
+  @Override
+  public void writeAll() throws IOException {
+    this.layoutVersion = getServiceLayoutVersion();
+    for (StorageDirectory sd : storageDirs) {
+      try {
+        writeProperties(sd);
+      } catch (Exception e) {
+        LOG.warn("Error during write properties to the VERSION file to " +
+            sd.toString(), e);
+        reportErrorsOnDirectory(sd);
+        if (storageDirs.isEmpty()) {
+          throw new IOException("All the storage failed while writing " +
+              "properties to VERSION file");
+        }
+      }
+    }
+  }
 }

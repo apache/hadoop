@@ -167,6 +167,32 @@ public class TestDataStorage {
   }
 
   @Test
+  public void testMissingVersion() throws IOException,
+      URISyntaxException {
+    final int numLocations = 1;
+    final int numNamespace = 1;
+    List<StorageLocation> locations = createStorageLocations(numLocations);
+
+    StorageLocation firstStorage = locations.get(0);
+    Storage.StorageDirectory sd = new Storage.StorageDirectory(
+        firstStorage.getFile());
+    // the directory is not initialized so VERSION does not exist
+    // create a fake directory under current/
+    File currentDir = new File(sd.getCurrentDir(),
+        "BP-787466439-172.26.24.43-1462305406642");
+    assertTrue("unable to mkdir " + currentDir.getName(), currentDir.mkdirs());
+
+    // Add volumes for multiple namespaces.
+    List<NamespaceInfo> namespaceInfos = createNamespaceInfos(numNamespace);
+    for (NamespaceInfo ni : namespaceInfos) {
+      storage.addStorageLocations(mockDN, ni, locations, START_OPT);
+    }
+
+    // It should not format the directory because VERSION is missing.
+    assertTrue("Storage directory was formatted", currentDir.exists());
+  }
+
+  @Test
   public void testRecoverTransitionReadFailure() throws IOException {
     final int numLocations = 3;
     List<StorageLocation> locations =

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.junit.Assert;
@@ -27,7 +28,10 @@ import org.mockito.Mockito;
 
 import java.util.List;
 
-public class TestTopKNodeSelector {
+/**
+ * Unit tests for NodeQueueLoadMonitor.
+ */
+public class TestNodeQueueLoadMonitor {
 
   static class FakeNodeId extends NodeId {
     final String host;
@@ -62,12 +66,12 @@ public class TestTopKNodeSelector {
   }
 
   @Test
-  public void testQueueTimeSort() {
-    TopKNodeSelector selector = new TopKNodeSelector(5,
-        TopKNodeSelector.TopKComparator.WAIT_TIME);
-    selector.nodeUpdate(createRMNode("h1", 1, 15, 10));
-    selector.nodeUpdate(createRMNode("h2", 2, 5, 10));
-    selector.nodeUpdate(createRMNode("h3", 3, 10, 10));
+  public void testWaitTimeSort() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_WAIT_TIME);
+    selector.updateNode(createRMNode("h1", 1, 15, 10));
+    selector.updateNode(createRMNode("h2", 2, 5, 10));
+    selector.updateNode(createRMNode("h3", 3, 10, 10));
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
     System.out.println("1-> " + nodeIds);
@@ -76,7 +80,7 @@ public class TestTopKNodeSelector {
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now update node3
-    selector.nodeUpdate(createRMNode("h3", 3, 2, 10));
+    selector.updateNode(createRMNode("h3", 3, 2, 10));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("2-> "+ nodeIds);
@@ -85,7 +89,7 @@ public class TestTopKNodeSelector {
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now send update with -1 wait time
-    selector.nodeUpdate(createRMNode("h4", 4, -1, 10));
+    selector.updateNode(createRMNode("h4", 4, -1, 10));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("3-> "+ nodeIds);
@@ -97,11 +101,11 @@ public class TestTopKNodeSelector {
 
   @Test
   public void testQueueLengthSort() {
-    TopKNodeSelector selector = new TopKNodeSelector(5,
-        TopKNodeSelector.TopKComparator.QUEUE_LENGTH);
-    selector.nodeUpdate(createRMNode("h1", 1, -1, 15));
-    selector.nodeUpdate(createRMNode("h2", 2, -1, 5));
-    selector.nodeUpdate(createRMNode("h3", 3, -1, 10));
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    selector.updateNode(createRMNode("h1", 1, -1, 15));
+    selector.updateNode(createRMNode("h2", 2, -1, 5));
+    selector.updateNode(createRMNode("h3", 3, -1, 10));
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
     System.out.println("1-> " + nodeIds);
@@ -110,7 +114,7 @@ public class TestTopKNodeSelector {
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now update node3
-    selector.nodeUpdate(createRMNode("h3", 3, -1, 2));
+    selector.updateNode(createRMNode("h3", 3, -1, 2));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("2-> "+ nodeIds);
@@ -119,7 +123,7 @@ public class TestTopKNodeSelector {
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
 
     // Now send update with -1 wait time but valid length
-    selector.nodeUpdate(createRMNode("h4", 4, -1, 20));
+    selector.updateNode(createRMNode("h4", 4, -1, 20));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("3-> "+ nodeIds);
@@ -128,6 +132,50 @@ public class TestTopKNodeSelector {
     Assert.assertEquals("h2:2", nodeIds.get(1).toString());
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
     Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+  }
+
+  @Test
+  public void testContainerQueuingLimit() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    selector.updateNode(createRMNode("h1", 1, -1, 15));
+    selector.updateNode(createRMNode("h2", 2, -1, 5));
+    selector.updateNode(createRMNode("h3", 3, -1, 10));
+
+    // Test Mean Calculation
+    selector.initThresholdCalculator(0, 6, 100);
+    QueueLimitCalculator calculator = selector.getThresholdCalculator();
+    ContainerQueuingLimit containerQueuingLimit = calculator
+        .createContainerQueuingLimit();
+    Assert.assertEquals(6, containerQueuingLimit.getMaxQueueLength());
+    Assert.assertEquals(-1, containerQueuingLimit.getMaxQueueWaitTimeInMs());
+    selector.computeTask.run();
+    containerQueuingLimit = calculator.createContainerQueuingLimit();
+    Assert.assertEquals(10, containerQueuingLimit.getMaxQueueLength());
+    Assert.assertEquals(-1, containerQueuingLimit.getMaxQueueWaitTimeInMs());
+
+    // Test Limits do not exceed specified max
+    selector.updateNode(createRMNode("h1", 1, -1, 110));
+    selector.updateNode(createRMNode("h2", 2, -1, 120));
+    selector.updateNode(createRMNode("h3", 3, -1, 130));
+    selector.updateNode(createRMNode("h4", 4, -1, 140));
+    selector.updateNode(createRMNode("h5", 5, -1, 150));
+    selector.updateNode(createRMNode("h6", 6, -1, 160));
+    selector.computeTask.run();
+    containerQueuingLimit = calculator.createContainerQueuingLimit();
+    Assert.assertEquals(100, containerQueuingLimit.getMaxQueueLength());
+
+    // Test Limits do not go below specified min
+    selector.updateNode(createRMNode("h1", 1, -1, 1));
+    selector.updateNode(createRMNode("h2", 2, -1, 2));
+    selector.updateNode(createRMNode("h3", 3, -1, 3));
+    selector.updateNode(createRMNode("h4", 4, -1, 4));
+    selector.updateNode(createRMNode("h5", 5, -1, 5));
+    selector.updateNode(createRMNode("h6", 6, -1, 6));
+    selector.computeTask.run();
+    containerQueuingLimit = calculator.createContainerQueuingLimit();
+    Assert.assertEquals(6, containerQueuingLimit.getMaxQueueLength());
+
   }
 
   private RMNode createRMNode(String host, int port,

@@ -92,6 +92,7 @@ public class TestApplicationMasterLauncher {
     String nmHostAtContainerManager = null;
     long submitTimeAtContainerManager;
     int maxAppAttempts;
+    private String queueName;
 
     @Override
     public StartContainersResponse
@@ -120,6 +121,8 @@ public class TestApplicationMasterLauncher {
       submitTimeAtContainerManager =
           Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
       maxAppAttempts = YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS;
+      queueName = env.get(ApplicationConstants.Environment
+              .YARN_RESOURCEMANAGER_APPLICATION_QUEUE.key());
       return StartContainersResponse.newInstance(
         new HashMap<String, ByteBuffer>(), new ArrayList<ContainerId>(),
         new HashMap<ContainerId, SerializedException>());
@@ -182,6 +185,8 @@ public class TestApplicationMasterLauncher {
       containerManager.nmHostAtContainerManager);
     Assert.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
         containerManager.maxAppAttempts);
+    Assert.assertEquals(YarnConfiguration.DEFAULT_QUEUE_NAME,
+        containerManager.queueName);
 
     MockAM am = new MockAM(rm.getRMContext(), rm
         .getApplicationMasterService(), appAttemptId);

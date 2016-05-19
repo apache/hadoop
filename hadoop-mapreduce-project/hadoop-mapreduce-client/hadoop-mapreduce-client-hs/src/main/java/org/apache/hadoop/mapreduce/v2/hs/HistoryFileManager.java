@@ -55,6 +55,9 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -346,7 +349,7 @@ public class HistoryFileManager extends AbstractService {
     private Path confFile;
     private Path summaryFile;
     private JobIndexInfo jobIndexInfo;
-    private HistoryInfoState state;
+    private volatile HistoryInfoState state;
 
     @VisibleForTesting
     protected HistoryFileInfo(Path historyFile, Path confFile,
@@ -360,20 +363,20 @@ public class HistoryFileManager extends AbstractService {
     }
 
     @VisibleForTesting
-    synchronized boolean isMovePending() {
+    boolean isMovePending() {
       return state == HistoryInfoState.IN_INTERMEDIATE
           || state == HistoryInfoState.MOVE_FAILED;
     }
 
     @VisibleForTesting
-    synchronized boolean didMoveFail() {
+    boolean didMoveFail() {
       return state == HistoryInfoState.MOVE_FAILED;
     }
-    
+
     /**
      * @return true if the files backed by this were deleted.
      */
-    public synchronized boolean isDeleted() {
+    public boolean isDeleted() {
       return state == HistoryInfoState.DELETED;
     }
 
@@ -566,13 +569,15 @@ public class HistoryFileManager extends AbstractService {
     int numMoveThreads = conf.getInt(
         JHAdminConfig.MR_HISTORY_MOVE_THREAD_COUNT,
         JHAdminConfig.DEFAULT_MR_HISTORY_MOVE_THREAD_COUNT);
+    moveToDoneExecutor = createMoveToDoneThreadPool(numMoveThreads);
+    super.serviceInit(conf);
+  }
+
+  protected ThreadPoolExecutor createMoveToDoneThreadPool(int numMoveThreads) {
     ThreadFactory tf = new ThreadFactoryBuilder().setNameFormat(
         "MoveIntermediateToDone Thread #%d").build();
-    moveToDoneExecutor = new HadoopThreadPoolExecutor(numMoveThreads,
-        numMoveThreads, 1, TimeUnit.HOURS,
-        new LinkedBlockingQueue<Runnable>(), tf);
-
-    super.serviceInit(conf);
+    return new HadoopThreadPoolExecutor(numMoveThreads, numMoveThreads,
+        1, TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
   }
 
   @VisibleForTesting
@@ -597,12 +602,19 @@ public class HistoryFileManager extends AbstractService {
   }
 
   /**
+   * Check if the NameNode is still not started yet as indicated by the
+   * exception type and message.
    * DistributedFileSystem returns a RemoteException with a message stating
    * SafeModeException in it. So this is only way to check it is because of
-   * being in safe mode.
+   * being in safe mode. In addition, Name Node may have not started yet, in
+   * which case, the message contains "NameNode still not started".
    */
-  private boolean isBecauseSafeMode(Throwable ex) {
-    return ex.toString().contains("SafeModeException");
+  private boolean isNameNodeStillNotStarted(Exception ex) {
+    String nameNodeNotStartedMsg = NameNode.composeNotStartedMessage(
+        HdfsServerConstants.NamenodeRole.NAMENODE);
+    return ex.toString().contains("SafeModeException") ||
+        (ex instanceof RetriableException && ex.getMessage().contains(
+            nameNodeNotStartedMsg));
   }
 
   /**
@@ -629,7 +641,7 @@ public class HistoryFileManager extends AbstractService {
       }
       succeeded = false;
     } catch (IOException e) {
-      if (isBecauseSafeMode(e)) {
+      if (isNameNodeStillNotStarted(e)) {
         succeeded = false;
         if (logWait) {
           LOG.info("Waiting for FileSystem at " +
@@ -659,7 +671,7 @@ public class HistoryFileManager extends AbstractService {
               "to be available");
         }
       } catch (IOException e) {
-        if (isBecauseSafeMode(e)) {
+        if (isNameNodeStillNotStarted(e)) {
           succeeded = false;
           if (logWait) {
             LOG.info("Waiting for FileSystem at " +
@@ -706,6 +718,13 @@ public class HistoryFileManager extends AbstractService {
         LOG.info("Directory: [" + path + "] already exists.");
       }
     }
+  }
+
+  protected HistoryFileInfo createHistoryFileInfo(Path historyFile,
+      Path confFile, Path summaryFile, JobIndexInfo jobIndexInfo,
+      boolean isInDone) {
+    return new HistoryFileInfo(
+        historyFile, confFile, summaryFile, jobIndexInfo, isInDone);
   }
 
   /**
@@ -782,7 +801,7 @@ public class HistoryFileManager extends AbstractService {
           .getIntermediateConfFileName(jobIndexInfo.getJobId());
       String summaryFileName = JobHistoryUtils
           .getIntermediateSummaryFileName(jobIndexInfo.getJobId());
-      HistoryFileInfo fileInfo = new HistoryFileInfo(fs.getPath(), new Path(fs
+      HistoryFileInfo fileInfo = createHistoryFileInfo(fs.getPath(), new Path(fs
           .getPath().getParent(), confFileName), new Path(fs.getPath()
           .getParent(), summaryFileName), jobIndexInfo, true);
       jobListCache.addIfAbsent(fileInfo);
@@ -880,7 +899,7 @@ public class HistoryFileManager extends AbstractService {
           .getIntermediateConfFileName(jobIndexInfo.getJobId());
       String summaryFileName = JobHistoryUtils
           .getIntermediateSummaryFileName(jobIndexInfo.getJobId());
-      HistoryFileInfo fileInfo = new HistoryFileInfo(fs.getPath(), new Path(fs
+      HistoryFileInfo fileInfo = createHistoryFileInfo(fs.getPath(), new Path(fs
           .getPath().getParent(), confFileName), new Path(fs.getPath()
           .getParent(), summaryFileName), jobIndexInfo, false);
 
@@ -940,7 +959,7 @@ public class HistoryFileManager extends AbstractService {
             .getIntermediateConfFileName(jobIndexInfo.getJobId());
         String summaryFileName = JobHistoryUtils
             .getIntermediateSummaryFileName(jobIndexInfo.getJobId());
-        HistoryFileInfo fileInfo = new HistoryFileInfo(fs.getPath(), new Path(
+        HistoryFileInfo fileInfo = createHistoryFileInfo(fs.getPath(), new Path(
             fs.getPath().getParent(), confFileName), new Path(fs.getPath()
             .getParent(), summaryFileName), jobIndexInfo, true);
         return fileInfo;
@@ -1105,7 +1124,7 @@ public class HistoryFileManager extends AbstractService {
             String confFileName = JobHistoryUtils
                 .getIntermediateConfFileName(jobIndexInfo.getJobId());
 
-            fileInfo = new HistoryFileInfo(historyFile.getPath(), new Path(
+            fileInfo = createHistoryFileInfo(historyFile.getPath(), new Path(
                 historyFile.getPath().getParent(), confFileName), null,
                 jobIndexInfo, true);
           }

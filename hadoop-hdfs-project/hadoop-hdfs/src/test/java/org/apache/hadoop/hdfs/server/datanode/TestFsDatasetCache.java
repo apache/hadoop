@@ -140,7 +140,7 @@ public class TestFsDatasetCache {
     dn = cluster.getDataNodes().get(0);
     fsd = dn.getFSDataset();
 
-    spyNN = DataNodeTestUtils.spyOnBposToNN(dn, nn);
+    spyNN = InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
 
   }
 

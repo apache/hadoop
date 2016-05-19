@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,6 +64,12 @@ public class TestCredShell {
     assertEquals(outContent.toString(), 0, rc);
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
     		"created."));
+    assertTrue(outContent.toString()
+        .contains(ProviderUtils.NO_PASSWORD_WARN));
+    assertTrue(outContent.toString()
+        .contains(ProviderUtils.NO_PASSWORD_INSTRUCTIONS_DOC));
+    assertTrue(outContent.toString()
+        .contains(ProviderUtils.NO_PASSWORD_CONT));
 
     outContent.reset();
     String[] args2 = {"list", "-provider",
@@ -97,8 +104,8 @@ public class TestCredShell {
     cs.setConf(new Configuration());
     rc = cs.run(args1);
     assertEquals(1, rc);
-    assertTrue(outContent.toString().contains("There are no valid " +
-    		"CredentialProviders configured."));
+    assertTrue(outContent.toString().contains(
+        CredentialShell.NO_VALID_PROVIDERS));
   }
 
   @Test
@@ -132,8 +139,8 @@ public class TestCredShell {
     cs.setConf(config);
     rc = cs.run(args1);
     assertEquals(1, rc);
-    assertTrue(outContent.toString().contains("There are no valid " +
-    		"CredentialProviders configured."));
+    assertTrue(outContent.toString().contains(
+        CredentialShell.NO_VALID_PROVIDERS));
   }
   
   @Test
@@ -225,6 +232,47 @@ public class TestCredShell {
       assertEquals("Expected empty argument on " + cmd + " to return 1", 1,
           shell.init(new String[] { cmd }));
     }
+  }
 
+  @Test
+  public void testStrict() throws Exception {
+    outContent.reset();
+    String[] args1 = {"create", "credential1", "-value", "p@ssw0rd",
+        "-provider", jceksProvider, "-strict"};
+    int rc = 1;
+    CredentialShell cs = new CredentialShell();
+    cs.setConf(new Configuration());
+    rc = cs.run(args1);
+    assertEquals(outContent.toString(), 1, rc);
+    assertFalse(outContent.toString().contains("credential1 has been " +
+        "successfully created."));
+    assertTrue(outContent.toString()
+        .contains(ProviderUtils.NO_PASSWORD_ERROR));
+    assertTrue(outContent.toString()
+        .contains(ProviderUtils.NO_PASSWORD_INSTRUCTIONS_DOC));
+  }
+
+  @Test
+  public void testHelp() throws Exception {
+    outContent.reset();
+    String[] args1 = {"-help"};
+    int rc = 0;
+    CredentialShell cs = new CredentialShell();
+    cs.setConf(new Configuration());
+    rc = cs.run(args1);
+    assertEquals(outContent.toString(), 0, rc);
+    assertTrue(outContent.toString().contains("Usage"));
+  }
+
+  @Test
+  public void testHelpCreate() throws Exception {
+    outContent.reset();
+    String[] args1 = {"create", "-help"};
+    int rc = 0;
+    CredentialShell cs = new CredentialShell();
+    cs.setConf(new Configuration());
+    rc = cs.run(args1);
+    assertEquals(outContent.toString(), 0, rc);
+    assertTrue(outContent.toString().contains("Usage"));
   }
 }

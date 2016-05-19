@@ -29,6 +29,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**
  * A JUnit test to test {@link SysInfoLinux}
@@ -110,10 +111,55 @@ public class TestSysInfoLinux {
     "VmallocTotal: 34359738367 kB\n" +
     "VmallocUsed:      1632 kB\n" +
     "VmallocChunk: 34359736375 kB\n" +
-    "HugePages_Total:     0\n" +
+    "HugePages_Total:     %d\n" +
     "HugePages_Free:      0\n" +
     "HugePages_Rsvd:      0\n" +
     "Hugepagesize:     2048 kB";
+
+  static final String MEMINFO_FORMAT_2 =
+    "MemTotal:       %d kB\n" +
+    "MemFree:        %d kB\n" +
+    "Buffers:          129976 kB\n" +
+    "Cached:         32317676 kB\n" +
+    "SwapCached:            0 kB\n" +
+    "Active:         88938588 kB\n" +
+    "Inactive:       %d kB\n" +
+    "Active(anon):   77502200 kB\n" +
+    "Inactive(anon):  6385336 kB\n" +
+    "Active(file):   11436388 kB\n" +
+    "Inactive(file): %d kB\n" +
+    "Unevictable:           0 kB\n" +
+    "Mlocked:               0 kB\n" +
+    "SwapTotal:      %d kB\n" +
+    "SwapFree:       %d kB\n" +
+    "Dirty:            575864 kB\n" +
+    "Writeback:            16 kB\n" +
+    "AnonPages:      83886180 kB\n" +
+    "Mapped:           108640 kB\n" +
+    "Shmem:              1880 kB\n" +
+    "Slab:            2413448 kB\n" +
+    "SReclaimable:    2194488 kB\n" +
+    "SUnreclaim:       218960 kB\n" +
+    "KernelStack:       31496 kB\n" +
+    "PageTables:       195176 kB\n" +
+    "NFS_Unstable:          0 kB\n" +
+    "Bounce:                0 kB\n" +
+    "WritebackTmp:          0 kB\n" +
+    "CommitLimit:    97683468 kB\n" +
+    "Committed_AS:   94553560 kB\n" +
+    "VmallocTotal:   34359738367 kB\n" +
+    "VmallocUsed:      498580 kB\n" +
+    "VmallocChunk:   34256922296 kB\n" +
+    "HardwareCorrupted: %d kB\n" +
+    "AnonHugePages:         0 kB\n" +
+    "HugePages_Total:       %d\n" +
+    "HugePages_Free:        0\n" +
+    "HugePages_Rsvd:        0\n" +
+    "HugePages_Surp:        0\n" +
+    "Hugepagesize:       2048 kB\n" +
+    "DirectMap4k:        4096 kB\n" +
+    "DirectMap2M:     2027520 kB\n" +
+    "DirectMap1G:    132120576 kB\n";
 
   static final String CPUINFO_FORMAT =
     "processor : %s\n" +
@@ -285,19 +331,57 @@ public class TestSysInfoLinux {
     long inactive = 567732L;
     long swapTotal = 2096472L;
     long swapFree = 1818480L;
+    int nrHugePages = 10;
     File tempFile = new File(FAKE_MEMFILE);
     tempFile.deleteOnExit();
     FileWriter fWriter = new FileWriter(FAKE_MEMFILE);
     fWriter.write(String.format(MEMINFO_FORMAT,
-      memTotal, memFree, inactive, swapTotal, swapFree));
+      memTotal, memFree, inactive, swapTotal, swapFree, nrHugePages));
 
     fWriter.close();
     assertEquals(plugin.getAvailablePhysicalMemorySize(),
                  1024L * (memFree + inactive));
     assertEquals(plugin.getAvailableVirtualMemorySize(),
                  1024L * (memFree + inactive + swapFree));
-    assertEquals(plugin.getPhysicalMemorySize(), 1024L * memTotal);
-    assertEquals(plugin.getVirtualMemorySize(), 1024L * (memTotal + swapTotal));
+    assertEquals(plugin.getPhysicalMemorySize(),
+        1024L * (memTotal - (nrHugePages * 2048)));
+    assertEquals(plugin.getVirtualMemorySize(),
+        1024L * (memTotal - (nrHugePages * 2048) + swapTotal));
+  }
+
+  /**
+   * Test parsing /proc/meminfo with Inactive(file) present
+   * @throws IOException
+   */
+  @Test
+  public void parsingProcMemFile2() throws IOException {
+    long memTotal = 131403836L;
+    long memFree = 11257036L;
+    long inactive = 27396032L;
+    long inactiveFile = 21010696L;
+    long swapTotal = 31981552L;
+    long swapFree = 1818480L;
+    long hardwareCorrupt = 31960904L;
+    int nrHugePages = 10;
+    File tempFile = new File(FAKE_MEMFILE);
+    tempFile.deleteOnExit();
+    FileWriter fWriter = new FileWriter(FAKE_MEMFILE);
+    fWriter.write(String.format(MEMINFO_FORMAT_2,
+      memTotal, memFree, inactive, inactiveFile, swapTotal, swapFree,
+      hardwareCorrupt, nrHugePages));
+
+    fWriter.close();
+    assertEquals(plugin.getAvailablePhysicalMemorySize(),
+                 1024L * (memFree + inactiveFile));
+    assertFalse(plugin.getAvailablePhysicalMemorySize() ==
+                 1024L * (memFree + inactive));
+    assertEquals(plugin.getAvailableVirtualMemorySize(),
+                 1024L * (memFree + inactiveFile + swapFree));
+    assertEquals(plugin.getPhysicalMemorySize(),
+                 1024L * (memTotal - hardwareCorrupt - (nrHugePages * 2048)));
+    assertEquals(plugin.getVirtualMemorySize(),
+                 1024L * (memTotal - hardwareCorrupt -
+                          (nrHugePages * 2048) + swapTotal));
   }
 
   @Test

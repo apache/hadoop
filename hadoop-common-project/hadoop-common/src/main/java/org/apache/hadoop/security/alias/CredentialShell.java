@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
@@ -37,24 +38,36 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class CredentialShell extends Configured implements Tool {
   final static private String USAGE_PREFIX = "Usage: hadoop credential " +
-  		"[generic options]\n";
+      "[generic options]\n";
   final static private String COMMANDS =
-      "   [--help]\n" +
+      "   [-help]\n" +
       "   [" + CreateCommand.USAGE + "]\n" +
       "   [" + DeleteCommand.USAGE + "]\n" +
       "   [" + ListCommand.USAGE + "]\n";
+  @VisibleForTesting
+  public static final String NO_VALID_PROVIDERS =
+      "There are no valid (non-transient) providers configured.\n" +
+      "No action has been taken. Use the -provider option to specify\n" +
+      "a provider. If you want to use a transient provider then you\n" +
+      "MUST use the -provider argument.";
 
   private boolean interactive = true;
   private Command command = null;
 
-  /** allows stdout to be captured if necessary */
+  /** If true, fail if the provider requires a password and none is given. */
+  private boolean strict = false;
+
+  /** Allows stdout to be captured if necessary. */
+  @VisibleForTesting
   public PrintStream out = System.out;
-  /** allows stderr to be captured if necessary */
+  /** Allows stderr to be captured if necessary. */
+  @VisibleForTesting
   public PrintStream err = System.err;
 
   private boolean userSuppliedProvider = false;
   private String value = null;
   private PasswordReader passwordReader;
+  private boolean isHelp = false;
 
   @Override
   public int run(String[] args) throws Exception {
@@ -64,10 +77,12 @@ public class CredentialShell extends Configured implements Tool {
       if (exitCode != 0) {
         return exitCode;
       }
-      if (command.validate()) {
+      if (!isHelp) {
+        if (command.validate()) {
           command.execute();
-      } else {
-        exitCode = 1;
+        } else {
+          exitCode = 1;
+        }
       }
     } catch (Exception e) {
       e.printStackTrace(err);
@@ -77,7 +92,7 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   /**
-   * Parse the command line arguments and initialize the data
+   * Parse the command line arguments and initialize the data.
    * <pre>
    * % hadoop credential create alias [-provider providerPath]
    * % hadoop credential list [-provider providerPath]
@@ -130,6 +145,8 @@ public class CredentialShell extends Configured implements Tool {
             args[++i]);
       } else if (args[i].equals("-f") || (args[i].equals("-force"))) {
         interactive = false;
+      } else if (args[i].equals("-strict")) {
+        strict = true;
       } else if (args[i].equals("-v") || (args[i].equals("-value"))) {
         value = args[++i];
       } else if (args[i].equals("-help")) {
@@ -145,13 +162,13 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private void printCredShellUsage() {
+    isHelp = true;
     out.println(USAGE_PREFIX + COMMANDS);
     if (command != null) {
       out.println(command.getUsage());
-    }
-    else {
+    } else {
       out.println("=========================================================" +
-      		"======");
+          "======");
       out.println(CreateCommand.USAGE + ":\n\n" + CreateCommand.DESC);
       out.println("=========================================================" +
           "======");
@@ -170,17 +187,16 @@ public class CredentialShell extends Configured implements Tool {
     }
 
     protected CredentialProvider getCredentialProvider() {
-      CredentialProvider provider = null;
+      CredentialProvider prov = null;
       List<CredentialProvider> providers;
       try {
         providers = CredentialProviderFactory.getProviders(getConf());
         if (userSuppliedProvider) {
-          provider = providers.get(0);
-        }
-        else {
+          prov = providers.get(0);
+        } else {
           for (CredentialProvider p : providers) {
             if (!p.isTransient()) {
-              provider = p;
+              prov = p;
               break;
             }
           }
@@ -188,11 +204,14 @@ public class CredentialShell extends Configured implements Tool {
       } catch (IOException e) {
         e.printStackTrace(err);
       }
-      return provider;
+      if (prov == null) {
+        out.println(NO_VALID_PROVIDERS);
+      }
+      return prov;
     }
 
     protected void printProviderWritten() {
-        out.println(provider.getClass().getName() + " has been updated.");
+      out.println("Provider " + provider.toString() + " has been updated.");
     }
 
     protected void warnIfTransientProvider() {
@@ -207,35 +226,32 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private class ListCommand extends Command {
-    public static final String USAGE = "list [-provider provider-path]";
+    public static final String USAGE =
+        "list [-provider provider-path] [-strict]";
     public static final String DESC =
         "The list subcommand displays the aliases contained within \n" +
-        "a particular provider - as configured in core-site.xml or " +
-        "indicated\nthrough the -provider argument.";
+        "a particular provider - as configured in core-site.xml or\n" +
+        "indicated through the -provider argument. If -strict is supplied,\n" +
+        "fail immediately if the provider requires a password and none is\n" +
+        "provided.";
 
     public boolean validate() {
-      boolean rc = true;
       provider = getCredentialProvider();
-      if (provider == null) {
-        out.println("There are no non-transient CredentialProviders configured.\n"
-            + "Consider using the -provider option to indicate the provider\n"
-            + "to use. If you want to list a transient provider then you\n"
-            + "you MUST use the -provider argument.");
-        rc = false;
-      }
-      return rc;
+      return (provider != null);
     }
 
     public void execute() throws IOException {
       List<String> aliases;
       try {
         aliases = provider.getAliases();
-        out.println("Listing aliases for CredentialProvider: " + provider.toString());
+        out.println("Listing aliases for CredentialProvider: " +
+            provider.toString());
         for (String alias : aliases) {
           out.println(alias);
         }
       } catch (IOException e) {
-        out.println("Cannot list aliases for CredentialProvider: " + provider.toString()
+        out.println("Cannot list aliases for CredentialProvider: " +
+            provider.toString()
             + ": " + e.getMessage());
         throw e;
       }
@@ -249,15 +265,17 @@ public class CredentialShell extends Configured implements Tool {
 
   private class DeleteCommand extends Command {
     public static final String USAGE =
-        "delete <alias> [-f] [-provider provider-path]";
+        "delete <alias> [-f] [-provider provider-path] [-strict]";
     public static final String DESC =
         "The delete subcommand deletes the credential\n" +
         "specified as the <alias> argument from within the provider\n" +
         "indicated through the -provider argument. The command asks for\n" +
-        "confirmation unless the -f option is specified.";
+        "confirmation unless the -f option is specified. If -strict is\n" +
+        "supplied, fail immediately if the provider requires a password\n" +
+        "and none is given.";
 
-    String alias = null;
-    boolean cont = true;
+    private String alias = null;
+    private boolean cont = true;
 
     public DeleteCommand(String alias) {
       this.alias = alias;
@@ -267,10 +285,6 @@ public class CredentialShell extends Configured implements Tool {
     public boolean validate() {
       provider = getCredentialProvider();
       if (provider == null) {
-        out.println("There are no valid CredentialProviders configured.\n"
-            + "Nothing will be deleted.\n"
-            + "Consider using the -provider option to indicate the provider"
-            + " to use.");
         return false;
       }
       if (alias == null) {
@@ -298,16 +312,17 @@ public class CredentialShell extends Configured implements Tool {
 
     public void execute() throws IOException {
       warnIfTransientProvider();
-      out.println("Deleting credential: " + alias + " from CredentialProvider: "
-          + provider.toString());
+      out.println("Deleting credential: " + alias +
+          " from CredentialProvider: " + provider.toString());
       if (cont) {
         try {
           provider.deleteCredentialEntry(alias);
-          out.println(alias + " has been successfully deleted.");
+          out.println("Credential " + alias +
+              " has been successfully deleted.");
           provider.flush();
           printProviderWritten();
         } catch (IOException e) {
-          out.println(alias + " has NOT been deleted.");
+          out.println("Credential " + alias + " has NOT been deleted.");
           throw e;
         }
       }
@@ -320,14 +335,17 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private class CreateCommand extends Command {
-    public static final String USAGE =
-        "create <alias> [-provider provider-path]";
+    public static final String USAGE = "create <alias> [-value alias-value] " +
+        "[-provider provider-path] [-strict]";
     public static final String DESC =
-        "The create subcommand creates a new credential for the name specified\n" +
-        "as the <alias> argument within the provider indicated through\n" +
-        "the -provider argument.";
+        "The create subcommand creates a new credential for the name\n" +
+        "specified as the <alias> argument within the provider indicated\n" +
+        "through the -provider argument. If -strict is supplied, fail\n" +
+        "immediately if the provider requires a password and none is given.\n" +
+        "If -value is provided, use that for the value of the credential\n" +
+        "instead of prompting the user.";
 
-    String alias = null;
+    private String alias = null;
 
     public CreateCommand(String alias) {
       this.alias = alias;
@@ -335,13 +353,20 @@ public class CredentialShell extends Configured implements Tool {
 
     public boolean validate() {
       boolean rc = true;
-      provider = getCredentialProvider();
-      if (provider == null) {
-        out.println("There are no valid CredentialProviders configured." +
-        		"\nCredential will not be created.\n"
-            + "Consider using the -provider option to indicate the provider" +
-            " to use.");
-        rc = false;
+      try {
+        provider = getCredentialProvider();
+        if (provider == null) {
+          rc = false;
+        } else if (provider.needsPassword()) {
+          if (strict) {
+            out.println(provider.noPasswordError());
+            rc = false;
+          } else {
+            out.println(provider.noPasswordWarning());
+          }
+        }
+      } catch (IOException e) {
+        e.printStackTrace(err);
       }
       if (alias == null) {
         out.println("There is no alias specified. Please provide the" +
@@ -358,19 +383,20 @@ public class CredentialShell extends Configured implements Tool {
         if (value != null) {
           // testing only
           credential = value.toCharArray();
-        }
-        else {
-           credential = promptForCredential();
+        } else {
+          credential = promptForCredential();
         }
         provider.createCredentialEntry(alias, credential);
-        out.println(alias + " has been successfully created.");
         provider.flush();
+        out.println(alias + " has been successfully created.");
         printProviderWritten();
       } catch (InvalidParameterException e) {
-        out.println(alias + " has NOT been created. " + e.getMessage());
+        out.println("Credential " + alias + " has NOT been created. " +
+            e.getMessage());
         throw e;
       } catch (IOException e) {
-        out.println(alias + " has NOT been created. " + e.getMessage());
+        out.println("Credential " + alias + " has NOT been created. " +
+            e.getMessage());
         throw e;
       }
     }
@@ -391,16 +417,20 @@ public class CredentialShell extends Configured implements Tool {
 
     boolean noMatch;
     do {
-      char[] newPassword1 = c.readPassword("Enter password: ");
-      char[] newPassword2 = c.readPassword("Enter password again: ");
+      char[] newPassword1 = c.readPassword("Enter alias password: ");
+      char[] newPassword2 = c.readPassword("Enter alias password again: ");
       noMatch = !Arrays.equals(newPassword1, newPassword2);
       if (noMatch) {
-        if (newPassword1 != null) Arrays.fill(newPassword1, ' ');
+        if (newPassword1 != null) {
+          Arrays.fill(newPassword1, ' ');
+        }
         c.format("Passwords don't match. Try again.%n");
       } else {
         cred = newPassword1;
       }
-      if (newPassword2 != null) Arrays.fill(newPassword2, ' ');
+      if (newPassword2 != null) {
+        Arrays.fill(newPassword2, ' ');
+      }
     } while (noMatch);
     return cred;
   }
@@ -416,7 +446,7 @@ public class CredentialShell extends Configured implements Tool {
     passwordReader = reader;
   }
   
-  // to facilitate testing since Console is a final class...
+  /** To facilitate testing since Console is a final class. */
   public static class PasswordReader {
     public char[] readPassword(String prompt) {
       Console console = System.console();

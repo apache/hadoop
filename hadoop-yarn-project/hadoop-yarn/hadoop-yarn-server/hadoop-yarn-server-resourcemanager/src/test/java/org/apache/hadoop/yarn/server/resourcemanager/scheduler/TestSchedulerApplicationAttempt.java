@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.After;
@@ -144,7 +145,7 @@ public class TestSchedulerApplicationAttempt {
   private RMContainer createRMContainer(ApplicationAttemptId appAttId, int id,
       Resource resource) {
     ContainerId containerId = ContainerId.newContainerId(appAttId, id);
-    RMContainer rmContainer = mock(RMContainer.class);
+    RMContainer rmContainer = mock(RMContainerImpl.class);
     Container container = mock(Container.class);
     when(container.getResource()).thenReturn(resource);
     when(container.getNodeId()).thenReturn(nodeId);

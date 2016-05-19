@@ -49,6 +49,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -74,6 +75,7 @@ import org.apache.htrace.core.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 
 /****************************************************************
@@ -210,7 +212,13 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param conf the configuration
    */
   public void initialize(URI name, Configuration conf) throws IOException {
-    statistics = getStatistics(name.getScheme(), getClass());    
+    final String scheme;
+    if (name.getScheme() == null || name.getScheme().isEmpty()) {
+      scheme = getDefaultUri(conf).getScheme();
+    } else {
+      scheme = name.getScheme();
+    }
+    statistics = getStatistics(scheme, getClass());
     resolveSymlinks = conf.getBoolean(
         CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY,
         CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT);
@@ -3560,7 +3568,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Get the Map of Statistics object indexed by URI Scheme.
    * @return a Map having a key as URI scheme and value as Statistics object
-   * @deprecated use {@link #getAllStatistics} instead
+   * @deprecated use {@link #getGlobalStorageStatistics()}
    */
   @Deprecated
   public static synchronized Map<String, Statistics> getStatistics() {
@@ -3572,8 +3580,10 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Return the FileSystem classes that have Statistics
+   * Return the FileSystem classes that have Statistics.
+   * @deprecated use {@link #getGlobalStorageStatistics()}
    */
+  @Deprecated
   public static synchronized List<Statistics> getAllStatistics() {
     return new ArrayList<Statistics>(statisticsTable.values());
   }
@@ -3582,13 +3592,25 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Get the statistics for a particular file system
    * @param cls the class to lookup
    * @return a statistics object
+   * @deprecated use {@link #getGlobalStorageStatistics()}
    */
-  public static synchronized 
-  Statistics getStatistics(String scheme, Class<? extends FileSystem> cls) {
+  @Deprecated
+  public static synchronized Statistics getStatistics(final String scheme,
+      Class<? extends FileSystem> cls) {
+    checkArgument(scheme != null,
+        "No statistics is allowed for a file system with null scheme!");
     Statistics result = statisticsTable.get(cls);
     if (result == null) {
-      result = new Statistics(scheme);
-      statisticsTable.put(cls, result);
+      final Statistics newStats = new Statistics(scheme);
+      statisticsTable.put(cls, newStats);
+      result = newStats;
+      GlobalStorageStatistics.INSTANCE.put(scheme,
+          new StorageStatisticsProvider() {
+            @Override
+            public StorageStatistics provide() {
+              return new FileSystemStorageStatistics(scheme, newStats);
+            }
+          });
     }
     return result;
   }
@@ -3627,5 +3649,27 @@ public abstract class FileSystem extends Configured implements Closeable {
   @VisibleForTesting
   public static void enableSymlinks() {
     symlinksEnabled = true;
+  }
+
+  /**
+   * Get the StorageStatistics for this FileSystem object.  These statistics are
+   * per-instance.  They are not shared with any other FileSystem object.
+   *
+   * <p>This is a default method which is intended to be overridden by
+   * subclasses. The default implementation returns an empty storage statistics
+   * object.</p>
+   *
+   * @return    The StorageStatistics for this FileSystem instance.
+   *            Will never be null.
+   */
+  public StorageStatistics getStorageStatistics() {
+    return new EmptyStorageStatistics(getUri().toString());
+  }
+
+  /**
+   * Get the global storage statistics.
+   */
+  public static GlobalStorageStatistics getGlobalStorageStatistics() {
+    return GlobalStorageStatistics.INSTANCE;
   }
 }

@@ -2752,4 +2752,17 @@
     <name>yarn.timeline-service.webapp.rest-csrf.methods-to-ignore</name>
     <value>GET,OPTIONS,HEAD</value>
   </property>
+
+  <property>
+    <description>
+    The least amount of time(msec.) an inactive (decommissioned or shutdown) node can
+    stay in the nodes list of the resourcemanager after being declared untracked.
+    A node is marked untracked if and only if it is absent from both include and
+    exclude nodemanager lists on the RM. All inactive nodes are checked twice per
+    timeout interval or every 10 minutes, whichever is lesser, and marked appropriately.
+    The same is done when refreshNodes command (graceful or otherwise) is invoked.
+    </description>
+    <name>yarn.resourcemanager.node-removal-untracked.timeout-ms</name>
+    <value>60000</value>
+  </property>
 </configuration>

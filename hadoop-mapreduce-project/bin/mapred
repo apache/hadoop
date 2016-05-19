@@ -16,13 +16,15 @@
 # limitations under the License.
 
 MYNAME="${BASH_SOURCE-$0}"
+HADOOP_SHELL_EXECNAME="${MYNAME##*/}"
 
+## @description  build up the mapred command's usage text.
+## @audience     public
+## @stability    stable
+## @replaceable  no
 function hadoop_usage
 {
-  hadoop_add_subcommand "archive" "create a hadoop archive"
-  hadoop_add_subcommand "archive-logs" "combine aggregated logs into hadoop archives"
   hadoop_add_subcommand "classpath" "prints the class path needed for running mapreduce subcommands"
-  hadoop_add_subcommand "distcp" "copy file or directories recursively"
   hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "historyserver" "run job history servers as a standalone daemon"
   hadoop_add_subcommand "hsadmin" "job history server admin interface"
@@ -31,7 +33,85 @@ function hadoop_usage
   hadoop_add_subcommand "queue" "get information regarding JobQueues"
   hadoop_add_subcommand "sampler" "sampler"
   hadoop_add_subcommand "version" "print the version"
-  hadoop_generate_usage "${MYNAME}" true
+  hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
+}
+
+## @description  Default command handler for hadoop command
+## @audience     public
+## @stability    stable
+## @replaceable  no
+## @param        CLI arguments
+function mapredcmd_case
+{
+  subcmd=$1
+  shift
+
+  case ${subcmd} in
+    mradmin|jobtracker|tasktracker|groups)
+      hadoop_error "Sorry, the ${subcmd} command is no longer supported."
+      hadoop_error "You may find similar functionality with the \"yarn\" shell command."
+      hadoop_exit_with_usage 1
+    ;;
+    classpath)
+      hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
+    ;;
+    envvars)
+      echo "JAVA_HOME='${JAVA_HOME}'"
+      echo "HADOOP_MAPRED_HOME='${HADOOP_MAPRED_HOME}'"
+      echo "MAPRED_DIR='${MAPRED_DIR}'"
+      echo "MAPRED_LIB_JARS_DIR='${MAPRED_LIB_JARS_DIR}'"
+      echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
+      echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
+      echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
+      echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
+      exit 0
+    ;;
+    historyserver)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
+      hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
+      if [ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]; then
+        # shellcheck disable=SC2034
+        HADOOP_HEAPSIZE_MAX="${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}"
+      fi
+      HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_JHS_LOGGER:-$HADOOP_DAEMON_ROOT_LOGGER}
+    ;;
+    hsadmin)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    job)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapred.JobClient
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    pipes)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapred.pipes.Submitter
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    queue)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapred.JobQueueClient
+    ;;
+    sampler)
+      HADOOP_CLASSNAME=org.apache.hadoop.mapred.lib.InputSampler
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    version)
+      HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    *)
+      HADOOP_CLASSNAME="${subcmd}"
+      if ! hadoop_validate_classname "${HADOOP_CLASSNAME}"; then
+        hadoop_exit_with_usage 1
+      fi
+    ;;
+  esac
 }
 
 bin=$(cd -P -- "$(dirname -- "${MYNAME}")" >/dev/null && pwd -P)
@@ -58,125 +138,71 @@ if [ $# = 0 ]; then
   hadoop_exit_with_usage 1
 fi
 
-COMMAND=$1
+HADOOP_SUBCMD=$1
 shift
 
-case ${COMMAND} in
-  mradmin|jobtracker|tasktracker|groups)
-    hadoop_error "Sorry, the ${COMMAND} command is no longer supported."
-    hadoop_error "You may find similar functionality with the \"yarn\" shell command."
-    hadoop_exit_with_usage 1
-  ;;
-  archive)
-    CLASS=org.apache.hadoop.tools.HadoopArchives
-    hadoop_add_to_classpath_tools hadoop-archives
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  archive-logs)
-    CLASS=org.apache.hadoop.tools.HadoopArchiveLogs
-    hadoop_add_to_classpath_tools hadoop-archive-logs
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  classpath)
-    hadoop_do_classpath_subcommand CLASS "$@"
-  ;;
-  distcp)
-    CLASS=org.apache.hadoop.tools.DistCp
-    hadoop_add_to_classpath_tools hadoop-distcp
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  envvars)
-    echo "JAVA_HOME='${JAVA_HOME}'"
-    echo "HADOOP_MAPRED_HOME='${HADOOP_MAPRED_HOME}'"
-    echo "MAPRED_DIR='${MAPRED_DIR}'"
-    echo "MAPRED_LIB_JARS_DIR='${MAPRED_LIB_JARS_DIR}'"
-    echo "HADOOP_CONF_DIR='${HADOOP_CONF_DIR}'"
-    echo "HADOOP_TOOLS_HOME='${HADOOP_TOOLS_HOME}'"
-    echo "HADOOP_TOOLS_DIR='${HADOOP_TOOLS_DIR}'"
-    echo "HADOOP_TOOLS_LIB_JARS_DIR='${HADOOP_TOOLS_LIB_JARS_DIR}'"
-    exit 0
-  ;;
-  historyserver)
-    supportdaemonization="true"
-    CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
-    hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
-    if [ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]; then
-      HADOOP_HEAPSIZE_MAX="${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}"
-    fi
-    HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_JHS_LOGGER:-$HADOOP_DAEMON_ROOT_LOGGER}
-  ;;
-  hsadmin)
-    CLASS=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  job)
-    CLASS=org.apache.hadoop.mapred.JobClient
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  pipes)
-    CLASS=org.apache.hadoop.mapred.pipes.Submitter
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  queue)
-    CLASS=org.apache.hadoop.mapred.JobQueueClient
-  ;;
-  sampler)
-    CLASS=org.apache.hadoop.mapred.lib.InputSampler
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  version)
-    CLASS=org.apache.hadoop.util.VersionInfo
-    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-  ;;
-  *)
-    CLASS="${COMMAND}"
-    if ! hadoop_validate_classname "${CLASS}"; then
-      hadoop_exit_with_usage 1
-    fi
-  ;;
-esac
+HADOOP_SUBCMD_ARGS=("$@")
 
-hadoop_verify_user "${COMMAND}"
+if declare -f mapred_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
+  hadoop_debug "Calling dynamically: mapred_subcommand_${HADOOP_SUBCMD} ${HADOOP_SUBCMD_ARGS[*]}"
+  "mapred_subcommand_${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+else
+  mapredcmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
+fi
+
+hadoop_verify_user "${HADOOP_SUBCMD}"
 
 if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
   hadoop_common_slave_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
-daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
-daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
-
+if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
+  HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
+  hadoop_verify_secure_prereq
+  hadoop_setup_secure_service
+  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.err"
+  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+else
+  daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
+  daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}.pid"
+fi
 
 if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   # shellcheck disable=SC2034
   HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
   hadoop_add_param HADOOP_OPTS mapred.jobsummary.logger "-Dmapred.jobsummary.logger=${HADOOP_ROOT_LOGGER}"
   # shellcheck disable=SC2034
-  HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
+  HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
 fi
 
 hadoop_finalize
 
-if [[ -n "${supportdaemonization}" ]]; then
-  if [[ -n "${secure_service}" ]]; then
-    hadoop_secure_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}"\
-    "${CLASS}" "${daemon_pidfile}" "${daemon_outfile}" \
-    "${priv_pidfile}" "${priv_outfile}" "${priv_errfile}" "$@"
+if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = true ]]; then
+  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
+    hadoop_secure_daemon_handler \
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${priv_pidfile}" \
+      "${priv_outfile}" \
+      "${priv_errfile}" \
+      "${HADOOP_SUBCMD_ARGS[@]}"
   else
-    hadoop_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}" \
-    "${daemon_pidfile}" "${daemon_outfile}" "$@"
+    hadoop_daemon_handler \
+      "${HADOOP_DAEMON_MODE}" \
+      "${HADOOP_SUBCMD}" \
+      "${HADOOP_CLASSNAME}" \
+      "${daemon_pidfile}" \
+      "${daemon_outfile}" \
+      "${HADOOP_SUBCMD_ARGS[@]}"
   fi
   exit $?
 else
-  hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"
+  hadoop_java_exec "${HADOOP_SUBCMD}" "${HADOOP_CLASSNAME}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
-

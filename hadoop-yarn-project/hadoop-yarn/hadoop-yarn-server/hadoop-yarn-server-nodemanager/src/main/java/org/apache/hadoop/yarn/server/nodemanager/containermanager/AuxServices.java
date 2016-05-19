@@ -118,21 +118,40 @@ public class AuxServices extends AbstractService
                 YarnConfiguration.NM_AUX_SERVICES +" is invalid." +
                 "The valid service name should only contain a-zA-Z0-9_ " +
                 "and can not start with numbers");
-        Class<? extends AuxiliaryService> sClass = conf.getClass(
-              String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, sName), null,
-              AuxiliaryService.class);
-        if (null == sClass) {
-          throw new RuntimeException("No class defined for " + sName);
+        String classKey = String.format(
+            YarnConfiguration.NM_AUX_SERVICE_FMT, sName);
+        String className = conf.get(classKey);
+        final String appClassPath = conf.get(String.format(
+            YarnConfiguration.NM_AUX_SERVICES_CLASSPATH, sName));
+        AuxiliaryService s = null;
+        boolean useCustomerClassLoader = appClassPath != null
+            && !appClassPath.isEmpty() && className != null
+            && !className.isEmpty();
+        if (useCustomerClassLoader) {
+          s = AuxiliaryServiceWithCustomClassLoader.getInstance(
+              conf, className, appClassPath);
+          LOG.info("The aux service:" + sName
+              + " are using the custom classloader");
+        } else {
+          Class<? extends AuxiliaryService> sClass = conf.getClass(
+              classKey, null, AuxiliaryService.class);
+
+          if (sClass == null) {
+            throw new RuntimeException("No class defined for " + sName);
+          }
+          s = ReflectionUtils.newInstance(sClass, conf);
         }
-        AuxiliaryService s = ReflectionUtils.newInstance(sClass, conf);
+        if (s == null) {
+          throw new RuntimeException("No object created for " + sName);
+        }
         // TODO better use s.getName()?
         if(!sName.equals(s.getName())) {
           LOG.warn("The Auxilurary Service named '"+sName+"' in the "
-                  +"configuration is for "+sClass+" which has "
-                  +"a name of '"+s.getName()+"'. Because these are "
-                  +"not the same tools trying to send ServiceData and read "
-                  +"Service Meta Data may have issues unless the refer to "
-                  +"the name in the config.");
+              +"configuration is for "+s.getClass()+" which has "
+              +"a name of '"+s.getName()+"'. Because these are "
+              +"not the same tools trying to send ServiceData and read "
+              +"Service Meta Data may have issues unless the refer to "
+              +"the name in the config.");
         }
         addService(sName, s);
         if (recoveryEnabled) {

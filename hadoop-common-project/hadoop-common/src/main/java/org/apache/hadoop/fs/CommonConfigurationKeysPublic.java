@@ -111,7 +111,12 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_TRASH_INTERVAL_KEY = "fs.trash.interval";
   /** Default value for FS_TRASH_INTERVAL_KEY */
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
-
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final String  FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED =
+      "fs.client.resolve.topology.enabled";
+  /** Default value for FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED. */
+  public static final boolean FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED_DEFAULT =
+      false;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IO_MAPFILE_BLOOM_SIZE_KEY =
     "io.mapfile.bloom.size";

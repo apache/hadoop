@@ -122,7 +122,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
 
     // Insert a spy object for the NN RPC.
     DatanodeProtocolClientSideTranslatorPB nnSpy =
-        DataNodeTestUtils.spyOnBposToNN(dn, nn);
+        InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
 
     // Trigger a block report so there is an interaction with the spy
     // object.
@@ -154,7 +154,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
 
     // Insert a spy object for the NN RPC.
     DatanodeProtocolClientSideTranslatorPB nnSpy =
-        DataNodeTestUtils.spyOnBposToNN(dn, nn);
+        InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
 
     // Trigger a block report so there is an interaction with the spy
     // object.
@@ -186,7 +186,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
 
     // Insert a spy object for the NN RPC.
     DatanodeProtocolClientSideTranslatorPB nnSpy =
-        DataNodeTestUtils.spyOnBposToNN(dn, nn);
+        InternalDataNodeTestUtils.spyOnBposToNN(dn, nn);
 
     // Trigger a block report so there is an interaction with the spy
     // object.

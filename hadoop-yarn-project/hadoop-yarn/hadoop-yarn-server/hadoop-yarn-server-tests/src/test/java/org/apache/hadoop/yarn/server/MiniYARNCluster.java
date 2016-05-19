@@ -75,6 +75,9 @@ import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.DefaultRequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.queuing.QueuingContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
@@ -713,8 +716,14 @@ public class MiniYARNCluster extends CompositeService {
         ContainerExecutor exec, DeletionService del,
         NodeStatusUpdater nodeStatusUpdater, ApplicationACLsManager aclsManager,
         LocalDirsHandlerService dirsHandler) {
-      return new CustomContainerManagerImpl(context, exec, del,
-          nodeStatusUpdater, metrics, dirsHandler);
+      if (getConfig().getBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED,
+          YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED_DEFAULT)) {
+        return new CustomQueueingContainerManagerImpl(context, exec, del,
+            nodeStatusUpdater, metrics, dirsHandler);
+      } else {
+        return new CustomContainerManagerImpl(context, exec, del,
+            nodeStatusUpdater, metrics, dirsHandler);
+      }
     }
   }
 
@@ -846,6 +855,55 @@ public class MiniYARNCluster extends CompositeService {
     }
   }
 
+  private class CustomQueueingContainerManagerImpl extends
+      QueuingContainerManagerImpl {
+
+    public CustomQueueingContainerManagerImpl(Context context,
+        ContainerExecutor exec, DeletionService del, NodeStatusUpdater
+        nodeStatusUpdater, NodeManagerMetrics metrics,
+        LocalDirsHandlerService dirsHandler) {
+      super(context, exec, del, nodeStatusUpdater, metrics, dirsHandler);
+    }
+
+    @Override
+    protected ContainersMonitor createContainersMonitor(ContainerExecutor
+        exec) {
+      return new ContainersMonitorImpl(exec, dispatcher, this.context) {
+
+        @Override
+        public void increaseContainersAllocation(ProcessTreeInfo pti) { }
+
+        @Override
+        public void decreaseContainersAllocation(ProcessTreeInfo pti) { }
+
+        @Override
+        public boolean hasResourcesAvailable(
+            ContainersMonitorImpl.ProcessTreeInfo pti) {
+          return true;
+        }
+      };
+    }
+
+    @Override
+    protected void createAMRMProxyService(Configuration conf) {
+      this.amrmProxyEnabled =
+          conf.getBoolean(YarnConfiguration.AMRM_PROXY_ENABLED,
+              YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED);
+
+      if (this.amrmProxyEnabled) {
+        LOG.info("CustomAMRMProxyService is enabled. "
+            + "All the AM->RM requests will be intercepted by the proxy");
+        AMRMProxyService amrmProxyService =
+            useRpc ? new AMRMProxyService(getContext(), dispatcher)
+                : new ShortCircuitedAMRMProxy(getContext(), dispatcher);
+        this.setAMRMProxyService(amrmProxyService);
+        addService(this.getAMRMProxyService());
+      } else {
+        LOG.info("CustomAMRMProxyService is disabled");
+      }
+    }
+  }
+
   private class ShortCircuitedAMRMProxy extends AMRMProxyService {
 
     public ShortCircuitedAMRMProxy(Context context,
@@ -861,6 +919,11 @@ public class MiniYARNCluster extends CompositeService {
           localToken);
       RequestInterceptor rt = getPipelines()
           .get(applicationAttemptId.getApplicationId()).getRootInterceptor();
+      // The DefaultRequestInterceptor will generally be the last
+      // interceptor
+      while (rt.getNextInterceptor() != null) {
+        rt = rt.getNextInterceptor();
+      }
       if (rt instanceof DefaultRequestInterceptor) {
         ((DefaultRequestInterceptor) rt)
             .setRMClient(getResourceManager().getApplicationMasterService());

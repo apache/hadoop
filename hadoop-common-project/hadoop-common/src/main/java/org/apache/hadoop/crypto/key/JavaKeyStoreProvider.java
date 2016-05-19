@@ -19,7 +19,6 @@
 package org.apache.hadoop.crypto.key;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -38,12 +37,11 @@ import com.google.common.annotations.VisibleForTesting;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URI;
-import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -88,7 +86,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @InterfaceAudience.Private
 public class JavaKeyStoreProvider extends KeyProvider {
   private static final String KEY_METADATA = "KeyMetadata";
-  private static Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(JavaKeyStoreProvider.class);
 
   public static final String SCHEME_NAME = "jceks";
@@ -103,8 +101,8 @@ public class JavaKeyStoreProvider extends KeyProvider {
   private final URI uri;
   private final Path path;
   private final FileSystem fs;
-  private final FsPermission permissions;
-  private final KeyStore keyStore;
+  private FsPermission permissions;
+  private KeyStore keyStore;
   private char[] password;
   private boolean changed = false;
   private Lock readLock;
@@ -131,29 +129,24 @@ public class JavaKeyStoreProvider extends KeyProvider {
     this.uri = uri;
     path = ProviderUtils.unnestUri(uri);
     fs = path.getFileSystem(conf);
-    // Get the password file from the conf, if not present from the user's
-    // environment var
-    if (System.getenv().containsKey(KEYSTORE_PASSWORD_ENV_VAR)) {
-      password = System.getenv(KEYSTORE_PASSWORD_ENV_VAR).toCharArray();
-    }
-    if (password == null) {
-      String pwFile = conf.get(KEYSTORE_PASSWORD_FILE_KEY);
-      if (pwFile != null) {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
-        URL pwdFile = cl.getResource(pwFile);
-        if (pwdFile == null) {
-          // Provided Password file does not exist
-          throw new IOException("Password file does not exists");
-        }
-        try (InputStream is = pwdFile.openStream()) {
-          password = IOUtils.toString(is).trim().toCharArray();
-        }
-      }
-    }
-    if (password == null) {
-      password = KEYSTORE_PASSWORD_DEFAULT;
-    }
+    locateKeystore();
+    ReadWriteLock lock = new ReentrantReadWriteLock(true);
+    readLock = lock.readLock();
+    writeLock = lock.writeLock();
+  }
+
+  /**
+   * Open up and initialize the keyStore.
+   * @throws IOException If there is a problem reading the password file
+   * or a problem reading the keystore.
+   */
+  private void locateKeystore() throws IOException {
     try {
+      password = ProviderUtils.locatePassword(KEYSTORE_PASSWORD_ENV_VAR,
+          getConf().get(KEYSTORE_PASSWORD_FILE_KEY));
+      if (password == null) {
+        password = KEYSTORE_PASSWORD_DEFAULT;
+      }
       Path oldPath = constructOldPath(path);
       Path newPath = constructNewPath(path);
       keyStore = KeyStore.getInstance(SCHEME_NAME);
@@ -175,19 +168,14 @@ public class JavaKeyStoreProvider extends KeyProvider {
       permissions = perm;
     } catch (KeyStoreException e) {
       throw new IOException("Can't create keystore", e);
-    } catch (NoSuchAlgorithmException e) {
-      throw new IOException("Can't load keystore " + path, e);
-    } catch (CertificateException e) {
+    } catch (GeneralSecurityException e) {
       throw new IOException("Can't load keystore " + path, e);
     }
-    ReadWriteLock lock = new ReentrantReadWriteLock(true);
-    readLock = lock.readLock();
-    writeLock = lock.writeLock();
   }
 
   /**
    * Try loading from the user specified path, else load from the backup
-   * path in case Exception is not due to bad/wrong password
+   * path in case Exception is not due to bad/wrong password.
    * @param path Actual path to load from
    * @param backupPath Backup path (_OLD)
    * @return The permissions of the loaded file
@@ -256,7 +244,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
     if (perm == null) {
       keyStore.load(null, password);
       LOG.debug("KeyStore initialized anew successfully !!");
-      perm = new FsPermission("700");
+      perm = new FsPermission("600");
     }
     return perm;
   }
@@ -311,14 +299,31 @@ public class JavaKeyStoreProvider extends KeyProvider {
     }
   }
 
-  private Path constructNewPath(Path path) {
-    Path newPath = new Path(path.toString() + "_NEW");
-    return newPath;
+  private static Path constructNewPath(Path path) {
+    return new Path(path.toString() + "_NEW");
   }
 
-  private Path constructOldPath(Path path) {
-    Path oldPath = new Path(path.toString() + "_OLD");
-    return oldPath;
+  private static Path constructOldPath(Path path) {
+    return new Path(path.toString() + "_OLD");
+  }
+
+  @Override
+  public boolean needsPassword() throws IOException {
+    return (null == ProviderUtils.locatePassword(KEYSTORE_PASSWORD_ENV_VAR,
+        getConf().get(KEYSTORE_PASSWORD_FILE_KEY)));
+
+  }
+
+  @Override
+  public String noPasswordWarning() {
+    return ProviderUtils.noPasswordWarning(KEYSTORE_PASSWORD_ENV_VAR,
+        KEYSTORE_PASSWORD_FILE_KEY);
+  }
+
+  @Override
+  public String noPasswordError() {
+    return ProviderUtils.noPasswordError(KEYSTORE_PASSWORD_ENV_VAR,
+        KEYSTORE_PASSWORD_FILE_KEY);
   }
 
   @Override

@@ -18,15 +18,18 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
@@ -103,12 +106,13 @@ public class CryptoAdmin extends Configured implements Tool {
     public String getLongUsage() {
       final TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the encryption zone to create. " +
-        "It must be an empty directory.");
+          "It must be an empty directory. A trash directory is provisioned " +
+          "under this path.");
       listing.addRow("<keyName>", "Name of the key to use for the " +
           "encryption zone.");
       return getShortUsage() + "\n" +
-        "Create a new encryption zone.\n\n" +
-        listing.toString();
+          "Create a new encryption zone.\n\n" +
+          listing.toString();
     }
 
     @Override
@@ -131,15 +135,16 @@ public class CryptoAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      HdfsAdmin admin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      EnumSet<CreateEncryptionZoneFlag> flags =
+          EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
       try {
-        dfs.createEncryptionZone(new Path(path), keyName);
+        admin.createEncryptionZone(new Path(path), keyName, flags);
         System.out.println("Added encryption zone " + path);
       } catch (IOException e) {
         System.err.println(prettifyException(e));
         return 2;
       }
-
       return 0;
     }
   }
@@ -168,12 +173,12 @@ public class CryptoAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      HdfsAdmin admin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
       try {
         final TableListing listing = new TableListing.Builder()
           .addField("").addField("", true)
           .wrapWidth(AdminHelper.MAX_LINE_WIDTH).hideHeaders().build();
-        final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
+        final RemoteIterator<EncryptionZone> it = admin.listEncryptionZones();
         while (it.hasNext()) {
           EncryptionZone ez = it.next();
           listing.addRow(ez.getPath(), ez.getKeyName());
@@ -188,8 +193,50 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
+  private static class ProvisionTrashCommand implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-provisionTrash";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -path <path>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      final TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<path>", "The path to the root of the encryption zone. ");
+      return getShortUsage() + "\n" +
+          "Provision a trash directory for an encryption zone.\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String path = StringUtils.popOptionWithArgument("-path", args);
+
+      if (!args.isEmpty()) {
+        System.err.println("Can't understand argument: " + args.get(0));
+        return 1;
+      }
+
+      HdfsAdmin admin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      try {
+        admin.provisionEncryptionZoneTrash(new Path(path));
+        System.out.println("Created a trash directory for " + path);
+      } catch (IOException ioe) {
+        System.err.println(prettifyException(ioe));
+        return 2;
+      }
+      return 0;
+    }
+  }
+
   private static final AdminHelper.Command[] COMMANDS = {
-    new CreateZoneCommand(),
-    new ListZonesCommand()
+      new CreateZoneCommand(),
+      new ListZonesCommand(),
+      new ProvisionTrashCommand()
   };
 }

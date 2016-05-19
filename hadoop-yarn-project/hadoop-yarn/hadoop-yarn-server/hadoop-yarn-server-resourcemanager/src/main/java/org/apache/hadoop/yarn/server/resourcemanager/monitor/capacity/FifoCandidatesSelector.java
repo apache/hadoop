@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -55,7 +54,7 @@ public class FifoCandidatesSelector
     super(preemptionContext);
 
     preemptableAmountCalculator = new PreemptableResourceCalculator(
-        preemptionContext);
+        preemptionContext, false);
   }
 
   @Override
@@ -66,8 +65,13 @@ public class FifoCandidatesSelector
     preemptableAmountCalculator.computeIdealAllocation(clusterResource,
         totalPreemptionAllowed);
 
-    Map<ApplicationAttemptId, Set<RMContainer>> preemptMap =
-        new HashMap<>();
+    // Previous selectors (with higher priority) could have already
+    // selected containers. We need to deduct preemptable resources
+    // based on already selected candidates.
+    CapacitySchedulerPreemptionUtils
+        .deductPreemptableResourcesBasedSelectedCandidates(preemptionContext,
+            selectedCandidates);
+
     List<RMContainer> skippedAMContainerlist = new ArrayList<>();
 
     // Loop all leaf queues
@@ -109,7 +113,7 @@ public class FifoCandidatesSelector
                 continue;
               }
               boolean preempted = tryPreemptContainerAndDeductResToObtain(
-                  resToObtainByPartition, c, clusterResource, preemptMap,
+                  resToObtainByPartition, c, clusterResource, selectedCandidates,
                   totalPreemptionAllowed);
               if (!preempted) {
                 continue;
@@ -132,7 +136,7 @@ public class FifoCandidatesSelector
           }
 
           preemptFrom(fc, clusterResource, resToObtainByPartition,
-              skippedAMContainerlist, skippedAMSize, preemptMap,
+              skippedAMContainerlist, skippedAMSize, selectedCandidates,
               totalPreemptionAllowed);
         }
 
@@ -144,13 +148,13 @@ public class FifoCandidatesSelector
                 leafQueue.getAbsoluteCapacity()),
             leafQueue.getMaxAMResourcePerQueuePercent());
 
-        preemptAMContainers(clusterResource, preemptMap, skippedAMContainerlist,
+        preemptAMContainers(clusterResource, selectedCandidates, skippedAMContainerlist,
             resToObtainByPartition, skippedAMSize, maxAMCapacityForThisQueue,
             totalPreemptionAllowed);
       }
     }
 
-    return preemptMap;
+    return selectedCandidates;
   }
 
   /**
@@ -236,9 +240,9 @@ public class FifoCandidatesSelector
         resourceToObtainByPartitions.remove(nodePartition);
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Marked container=" + rmContainer.getContainerId()
-            + " in partition=" + nodePartition
-            + " to be preemption candidates");
+        LOG.debug(this.getClass().getName() + " Marked container=" + rmContainer
+            .getContainerId() + " from partition=" + nodePartition + " queue="
+            + rmContainer.getQueueName() + " to be preemption candidates");
       }
       // Add to preemptMap
       addToPreemptMap(preemptMap, attemptId, rmContainer);

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
 
+import java.util.Collection;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 
 /**
  * Space balanced block placement policy.
@@ -68,9 +70,12 @@ public class AvailableSpaceBlockPlacementPolicy extends
   }
 
   @Override
-  protected DatanodeDescriptor chooseDataNode(String scope) {
-    DatanodeDescriptor a = (DatanodeDescriptor) clusterMap.chooseRandom(scope);
-    DatanodeDescriptor b = (DatanodeDescriptor) clusterMap.chooseRandom(scope);
+  protected DatanodeDescriptor chooseDataNode(final String scope,
+      final Collection<Node> excludedNode) {
+    DatanodeDescriptor a =
+        (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
+    DatanodeDescriptor b =
+        (DatanodeDescriptor) clusterMap.chooseRandom(scope, excludedNode);
     int ret = compareDataNode(a, b);
     if (ret == 0) {
       return a;

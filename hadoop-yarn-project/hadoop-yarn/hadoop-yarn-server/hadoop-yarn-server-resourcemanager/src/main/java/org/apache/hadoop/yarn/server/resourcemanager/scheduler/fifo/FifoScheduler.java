@@ -944,7 +944,7 @@ public class FifoScheduler extends
       return;
     }
     // Kill running containers
-    for(RMContainer container : node.getRunningContainers()) {
+    for(RMContainer container : node.getCopiedListOfRunningContainers()) {
       super.completedContainer(container,
           SchedulerUtils.createAbnormalContainerStatus(
               container.getContainerId(), 

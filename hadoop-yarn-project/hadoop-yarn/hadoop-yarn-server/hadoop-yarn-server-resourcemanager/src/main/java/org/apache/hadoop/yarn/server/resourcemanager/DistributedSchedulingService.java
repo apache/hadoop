@@ -46,8 +46,10 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ApplicationMasterProtocol.ApplicationMasterProtocolService;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed
-    .TopKNodeSelector;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.NodeQueueLoadMonitor;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.QueueLimitCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
@@ -57,7 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,30 +77,64 @@ public class DistributedSchedulingService extends ApplicationMasterService
   private static final Log LOG =
       LogFactory.getLog(DistributedSchedulingService.class);
 
-  private final TopKNodeSelector clusterMonitor;
+  private final NodeQueueLoadMonitor nodeMonitor;
 
   private final ConcurrentHashMap<String, Set<NodeId>> rackToNode =
       new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, Set<NodeId>> hostToNode =
       new ConcurrentHashMap<>();
+  private final int k;
 
   public DistributedSchedulingService(RMContext rmContext,
       YarnScheduler scheduler) {
     super(DistributedSchedulingService.class.getName(), rmContext, scheduler);
-    int k = rmContext.getYarnConfiguration().getInt(
+    this.k = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.DIST_SCHEDULING_TOP_K,
         YarnConfiguration.DIST_SCHEDULING_TOP_K_DEFAULT);
-    long topKComputationInterval = rmContext.getYarnConfiguration().getLong(
-        YarnConfiguration.DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS,
-        YarnConfiguration.DIST_SCHEDULING_TOP_K_COMPUTE_INT_MS_DEFAULT);
-    TopKNodeSelector.TopKComparator comparator =
-        TopKNodeSelector.TopKComparator.valueOf(
+    long nodeSortInterval = rmContext.getYarnConfiguration().getLong(
+        YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS,
+        YarnConfiguration.
+            NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT);
+    NodeQueueLoadMonitor.LoadComparator comparator =
+        NodeQueueLoadMonitor.LoadComparator.valueOf(
             rmContext.getYarnConfiguration().get(
-                YarnConfiguration.DIST_SCHEDULING_TOP_K_COMPARATOR,
-                YarnConfiguration.DIST_SCHEDULING_TOP_K_COMPARATOR_DEFAULT));
-    TopKNodeSelector topKSelector =
-        new TopKNodeSelector(k, topKComputationInterval, comparator);
-    this.clusterMonitor = topKSelector;
+                YarnConfiguration.NM_CONTAINER_QUEUING_LOAD_COMPARATOR,
+                YarnConfiguration.
+                    NM_CONTAINER_QUEUING_LOAD_COMPARATOR_DEFAULT));
+
+    NodeQueueLoadMonitor topKSelector =
+        new NodeQueueLoadMonitor(nodeSortInterval, comparator);
+
+    float sigma = rmContext.getYarnConfiguration()
+        .getFloat(YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV,
+            YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV_DEFAULT);
+
+    int limitMin, limitMax;
+
+    if (comparator == NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH) {
+      limitMin = rmContext.getYarnConfiguration()
+          .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH,
+              YarnConfiguration.
+                  NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH_DEFAULT);
+      limitMax = rmContext.getYarnConfiguration()
+          .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH,
+              YarnConfiguration.
+                  NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH_DEFAULT);
+    } else {
+      limitMin = rmContext.getYarnConfiguration()
+          .getInt(
+              YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS,
+              YarnConfiguration.
+                  NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS_DEFAULT);
+      limitMax = rmContext.getYarnConfiguration()
+          .getInt(
+              YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS,
+              YarnConfiguration.
+                  NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS_DEFAULT);
+    }
+
+    topKSelector.initThresholdCalculator(sigma, limitMin, limitMax);
+    this.nodeMonitor = topKSelector;
   }
 
   @Override
@@ -189,7 +224,7 @@ public class DistributedSchedulingService extends ApplicationMasterService
 
     // Set nodes to be used for scheduling
     dsResp.setNodesForScheduling(
-        new ArrayList<>(this.clusterMonitor.selectNodes()));
+        this.nodeMonitor.selectLeastLoadedNodes(this.k));
     return dsResp;
   }
 
@@ -201,7 +236,7 @@ public class DistributedSchedulingService extends ApplicationMasterService
         (DistSchedAllocateResponse.class);
     dsResp.setAllocateResponse(response);
     dsResp.setNodesForScheduling(
-        new ArrayList<>(this.clusterMonitor.selectNodes()));
+        this.nodeMonitor.selectLeastLoadedNodes(this.k));
     return dsResp;
   }
 
@@ -229,67 +264,72 @@ public class DistributedSchedulingService extends ApplicationMasterService
   @Override
   public void handle(SchedulerEvent event) {
     switch (event.getType()) {
-      case NODE_ADDED:
-        if (!(event instanceof NodeAddedSchedulerEvent)) {
-          throw new RuntimeException("Unexpected event type: " + event);
-        }
-        NodeAddedSchedulerEvent nodeAddedEvent = (NodeAddedSchedulerEvent)event;
-        clusterMonitor.addNode(nodeAddedEvent.getContainerReports(),
-            nodeAddedEvent.getAddedRMNode());
-        addToMapping(rackToNode, nodeAddedEvent.getAddedRMNode().getRackName(),
-            nodeAddedEvent.getAddedRMNode().getNodeID());
-        addToMapping(hostToNode, nodeAddedEvent.getAddedRMNode().getHostName(),
-            nodeAddedEvent.getAddedRMNode().getNodeID());
-        break;
-      case NODE_REMOVED:
-        if (!(event instanceof NodeRemovedSchedulerEvent)) {
-          throw new RuntimeException("Unexpected event type: " + event);
-        }
-        NodeRemovedSchedulerEvent nodeRemovedEvent =
-            (NodeRemovedSchedulerEvent)event;
-        clusterMonitor.removeNode(nodeRemovedEvent.getRemovedRMNode());
-        removeFromMapping(rackToNode,
-            nodeRemovedEvent.getRemovedRMNode().getRackName(),
-            nodeRemovedEvent.getRemovedRMNode().getNodeID());
-        removeFromMapping(hostToNode,
-            nodeRemovedEvent.getRemovedRMNode().getHostName(),
-            nodeRemovedEvent.getRemovedRMNode().getNodeID());
-        break;
-      case NODE_UPDATE:
-        if (!(event instanceof NodeUpdateSchedulerEvent)) {
-          throw new RuntimeException("Unexpected event type: " + event);
-        }
-        NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
-        clusterMonitor.nodeUpdate(nodeUpdatedEvent.getRMNode());
-        break;
-      case NODE_RESOURCE_UPDATE:
-        if (!(event instanceof NodeResourceUpdateSchedulerEvent)) {
-          throw new RuntimeException("Unexpected event type: " + event);
-        }
-        NodeResourceUpdateSchedulerEvent nodeResourceUpdatedEvent =
-            (NodeResourceUpdateSchedulerEvent)event;
-        clusterMonitor.updateNodeResource(nodeResourceUpdatedEvent.getRMNode(),
-            nodeResourceUpdatedEvent.getResourceOption());
-        break;
+    case NODE_ADDED:
+      if (!(event instanceof NodeAddedSchedulerEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      NodeAddedSchedulerEvent nodeAddedEvent = (NodeAddedSchedulerEvent) event;
+      nodeMonitor.addNode(nodeAddedEvent.getContainerReports(),
+          nodeAddedEvent.getAddedRMNode());
+      addToMapping(rackToNode, nodeAddedEvent.getAddedRMNode().getRackName(),
+          nodeAddedEvent.getAddedRMNode().getNodeID());
+      addToMapping(hostToNode, nodeAddedEvent.getAddedRMNode().getHostName(),
+          nodeAddedEvent.getAddedRMNode().getNodeID());
+      break;
+    case NODE_REMOVED:
+      if (!(event instanceof NodeRemovedSchedulerEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      NodeRemovedSchedulerEvent nodeRemovedEvent =
+          (NodeRemovedSchedulerEvent) event;
+      nodeMonitor.removeNode(nodeRemovedEvent.getRemovedRMNode());
+      removeFromMapping(rackToNode,
+          nodeRemovedEvent.getRemovedRMNode().getRackName(),
+          nodeRemovedEvent.getRemovedRMNode().getNodeID());
+      removeFromMapping(hostToNode,
+          nodeRemovedEvent.getRemovedRMNode().getHostName(),
+          nodeRemovedEvent.getRemovedRMNode().getNodeID());
+      break;
+    case NODE_UPDATE:
+      if (!(event instanceof NodeUpdateSchedulerEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)
+          event;
+      nodeMonitor.updateNode(nodeUpdatedEvent.getRMNode());
+      break;
+    case NODE_RESOURCE_UPDATE:
+      if (!(event instanceof NodeResourceUpdateSchedulerEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      NodeResourceUpdateSchedulerEvent nodeResourceUpdatedEvent =
+          (NodeResourceUpdateSchedulerEvent) event;
+      nodeMonitor.updateNodeResource(nodeResourceUpdatedEvent.getRMNode(),
+          nodeResourceUpdatedEvent.getResourceOption());
+      break;
 
-      // <-- IGNORED EVENTS : START -->
-      case APP_ADDED:
-        break;
-      case APP_REMOVED:
-        break;
-      case APP_ATTEMPT_ADDED:
-        break;
-      case APP_ATTEMPT_REMOVED:
-        break;
-      case CONTAINER_EXPIRED:
-        break;
-      case NODE_LABELS_UPDATE:
-        break;
-      // <-- IGNORED EVENTS : END -->
-      default:
-        LOG.error("Unknown event arrived at DistributedSchedulingService: "
-            + event.toString());
+    // <-- IGNORED EVENTS : START -->
+    case APP_ADDED:
+      break;
+    case APP_REMOVED:
+      break;
+    case APP_ATTEMPT_ADDED:
+      break;
+    case APP_ATTEMPT_REMOVED:
+      break;
+    case CONTAINER_EXPIRED:
+      break;
+    case NODE_LABELS_UPDATE:
+      break;
+    // <-- IGNORED EVENTS : END -->
+    default:
+      LOG.error("Unknown event arrived at DistributedSchedulingService: "
+          + event.toString());
     }
+
   }
 
+  public QueueLimitCalculator getNodeManagerQueueLimitCalculator() {
+    return nodeMonitor.getThresholdCalculator();
+  }
 }

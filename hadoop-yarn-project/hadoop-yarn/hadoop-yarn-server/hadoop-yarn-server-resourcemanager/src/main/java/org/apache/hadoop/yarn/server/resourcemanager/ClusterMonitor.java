@@ -24,13 +24,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 import java.util.List;
 
+/**
+ * Implementations of this class are notified of changes to the cluster's state,
+ * such as node addition, removal and updates.
+ */
 public interface ClusterMonitor {
 
   void addNode(List<NMContainerStatus> containerStatuses, RMNode rmNode);
 
   void removeNode(RMNode removedRMNode);
 
-  void nodeUpdate(RMNode rmNode);
+  void updateNode(RMNode rmNode);
 
   void updateNodeResource(RMNode rmNode, ResourceOption resourceOption);
 }

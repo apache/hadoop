@@ -80,9 +80,11 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     store = createStore(SCALE);
     TimelineEntities entities = new TimelineEntities();
     entities.addEntity(createApplicationTimelineEntity(
-        ApplicationId.newInstance(0, SCALE + 1), true, true, false, false));
+        ApplicationId.newInstance(0, SCALE + 1), true, true, false, false,
+        YarnApplicationState.FINISHED));
     entities.addEntity(createApplicationTimelineEntity(
-        ApplicationId.newInstance(0, SCALE + 2), true, false, true, false));
+        ApplicationId.newInstance(0, SCALE + 2), true, false, true, false,
+        YarnApplicationState.FINISHED));
     store.put(entities);
   }
 
@@ -140,10 +142,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       if (i == 2) {
         entities.addEntity(createApplicationTimelineEntity(
-            appId, true, false, false, true));
+            appId, true, false, false, true, YarnApplicationState.FINISHED));
       } else {
         entities.addEntity(createApplicationTimelineEntity(
-            appId, false, false, false, false));
+            appId, false, false, false, false, YarnApplicationState.FINISHED));
       }
       store.put(entities);
       for (int j = 1; j <= scale; ++j) {
@@ -160,6 +162,16 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         }
       }
     }
+    TimelineEntities entities = new TimelineEntities();
+    ApplicationId appId = ApplicationId.newInstance(1234, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
+    entities.addEntity(createApplicationTimelineEntity(
+        appId, true, false, false, false, YarnApplicationState.RUNNING));
+    entities.addEntity(createAppAttemptTimelineEntity(appAttemptId));
+    entities.addEntity(createContainerEntity(containerId));
+    store.put(entities);
   }
 
   @Test
@@ -355,7 +367,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         historyManager.getApplications(Long.MAX_VALUE, 0L, Long.MAX_VALUE)
           .values();
     Assert.assertNotNull(apps);
-    Assert.assertEquals(SCALE + 1, apps.size());
+    Assert.assertEquals(SCALE + 2, apps.size());
     ApplicationId ignoredAppId = ApplicationId.newInstance(0, SCALE + 2);
     for (ApplicationReport app : apps) {
       Assert.assertNotEquals(ignoredAppId, app.getApplicationId());
@@ -467,7 +479,8 @@ public class TestApplicationHistoryManagerOnTimelineStore {
 
   private static TimelineEntity createApplicationTimelineEntity(
       ApplicationId appId, boolean emptyACLs, boolean noAttemptId,
-      boolean wrongAppId, boolean enableUpdateEvent) {
+      boolean wrongAppId, boolean enableUpdateEvent,
+      YarnApplicationState state) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     if (wrongAppId) {
@@ -517,11 +530,23 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     eventInfo.put(ApplicationMetricsConstants.FINAL_STATUS_EVENT_INFO,
         FinalApplicationStatus.UNDEFINED.toString());
     eventInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
-        YarnApplicationState.FINISHED.toString());
+        state.toString());
     if (!noAttemptId) {
       eventInfo.put(ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO,
           ApplicationAttemptId.newInstance(appId, 1));
     }
+    tEvent.setEventInfo(eventInfo);
+    entity.addEvent(tEvent);
+    // send a YARN_APPLICATION_STATE_UPDATED event
+    // after YARN_APPLICATION_FINISHED
+    // The final YarnApplicationState should not be changed
+    tEvent = new TimelineEvent();
+    tEvent.setEventType(
+        ApplicationMetricsConstants.STATE_UPDATED_EVENT_TYPE);
+    tEvent.setTimestamp(Integer.MAX_VALUE + 4L + appId.getId());
+    eventInfo = new HashMap<String, Object>();
+    eventInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
+        YarnApplicationState.KILLED);
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     if (enableUpdateEvent) {
@@ -610,6 +635,8 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO, 100);
     entityInfo
         .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO, -1);
+    entityInfo.put(ContainerMetricsConstants
+        .ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO, "http://test:1234");
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ContainerMetricsConstants.CREATED_EVENT_TYPE);

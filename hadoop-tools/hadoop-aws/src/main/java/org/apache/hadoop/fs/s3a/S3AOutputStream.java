@@ -21,14 +21,14 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -46,6 +46,11 @@ import static com.amazonaws.event.ProgressEventType.TRANSFER_COMPLETED_EVENT;
 import static com.amazonaws.event.ProgressEventType.TRANSFER_PART_STARTED_EVENT;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
+/**
+ * Output stream to save data to S3.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class S3AOutputStream extends OutputStream {
   private OutputStream backupStream;
   private File backupFile;
@@ -65,9 +70,9 @@ public class S3AOutputStream extends OutputStream {
   public static final Logger LOG = S3AFileSystem.LOG;
 
   public S3AOutputStream(Configuration conf, TransferManager transfers,
-    S3AFileSystem fs, String bucket, String key, Progressable progress, 
-    CannedAccessControlList cannedACL, FileSystem.Statistics statistics, 
-    String serverSideEncryptionAlgorithm)
+      S3AFileSystem fs, String bucket, String key, Progressable progress,
+      CannedAccessControlList cannedACL, FileSystem.Statistics statistics,
+      String serverSideEncryptionAlgorithm)
       throws IOException {
     this.bucket = bucket;
     this.key = key;
@@ -78,9 +83,8 @@ public class S3AOutputStream extends OutputStream {
     this.statistics = statistics;
     this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
 
-    partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    partSizeThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
-        DEFAULT_MIN_MULTIPART_THRESHOLD);
+    partSize = fs.getPartitionSize();
+    partSizeThreshold = fs.getMultiPartThreshold();
 
     if (conf.get(BUFFER_DIR, null) != null) {
       lDirAlloc = new LocalDirAllocator(BUFFER_DIR);
@@ -91,10 +95,8 @@ public class S3AOutputStream extends OutputStream {
     backupFile = lDirAlloc.createTmpFileForWrite("output-", LocalDirAllocator.SIZE_UNKNOWN, conf);
     closed = false;
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("OutputStream for key '" + key + "' writing to tempfile: " +
-                this.backupFile);
-    }
+    LOG.debug("OutputStream for key '{}' writing to tempfile: {}",
+        key, backupFile);
 
     this.backupStream = new BufferedOutputStream(new FileOutputStream(backupFile));
   }
@@ -111,10 +113,9 @@ public class S3AOutputStream extends OutputStream {
     }
 
     backupStream.close();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("OutputStream for key '" + key + "' closed. Now beginning upload");
-      LOG.debug("Minimum upload part size: " + partSize + " threshold " + partSizeThreshold);
-    }
+    LOG.debug("OutputStream for key '{}' closed. Now beginning upload", key);
+    LOG.debug("Minimum upload part size: {} threshold {}" , partSize,
+        partSizeThreshold);
 
 
     try {
@@ -129,7 +130,7 @@ public class S3AOutputStream extends OutputStream {
       Upload upload = transfers.upload(putObjectRequest);
 
       ProgressableProgressListener listener = 
-        new ProgressableProgressListener(upload, progress, statistics);
+          new ProgressableProgressListener(upload, progress, statistics);
       upload.addProgressListener(listener);
 
       upload.waitForUploadResult();
@@ -168,6 +169,9 @@ public class S3AOutputStream extends OutputStream {
     backupStream.write(b, off, len);
   }
 
+  /**
+   * Listener to progress from AWS regarding transfers.
+   */
   public static class ProgressableProgressListener implements ProgressListener {
     private Progressable progress;
     private FileSystem.Statistics statistics;
@@ -175,7 +179,7 @@ public class S3AOutputStream extends OutputStream {
     private Upload upload;
 
     public ProgressableProgressListener(Upload upload, Progressable progress, 
-      FileSystem.Statistics statistics) {
+        FileSystem.Statistics statistics) {
       this.upload = upload;
       this.progress = progress;
       this.statistics = statistics;

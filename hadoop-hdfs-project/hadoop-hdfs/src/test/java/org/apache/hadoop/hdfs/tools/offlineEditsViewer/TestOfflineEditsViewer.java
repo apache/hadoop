@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -306,6 +307,35 @@ public class TestOfflineEditsViewer {
     } finally {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
+    }
+  }
+
+  @Test
+  public void testStatisticsStrWithNullOpCodeCount() throws IOException {
+    String editFilename = nnHelper.generateEdits();
+    String outFilename = editFilename + ".stats";
+    FileOutputStream fout = new FileOutputStream(outFilename);
+    StatisticsEditsVisitor visitor = new StatisticsEditsVisitor(fout);
+    OfflineEditsViewer oev = new OfflineEditsViewer();
+
+    String statisticsStr = null;
+    if (oev.go(editFilename, outFilename, "stats", new Flags(), visitor) == 0) {
+      statisticsStr = visitor.getStatisticsString();
+    }
+    Assert.assertNotNull(statisticsStr);
+
+    String str;
+    Long count;
+    Map<FSEditLogOpCodes, Long> opCodeCount = visitor.getStatistics();
+    for (FSEditLogOpCodes opCode : FSEditLogOpCodes.values()) {
+      count = opCodeCount.get(opCode);
+      // Verify the str when the opCode's count is null
+      if (count == null) {
+        str =
+            String.format("    %-30.30s (%3d): %d%n", opCode.toString(),
+                opCode.getOpCode(), Long.valueOf(0L));
+        assertTrue(statisticsStr.contains(str));
+      }
     }
   }
 }

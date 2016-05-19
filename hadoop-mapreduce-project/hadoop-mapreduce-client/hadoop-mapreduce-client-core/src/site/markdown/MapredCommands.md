@@ -81,7 +81,7 @@ Copy file or directories recursively. More information can be found at
 
 Command to interact with Map Reduce Jobs.
 
-Usage: `mapred job | [GENERIC_OPTIONS] | [-submit <job-file>] | [-status <job-id>] | [-counter <job-id> <group-name> <counter-name>] | [-kill <job-id>] | [-events <job-id> <from-event-#> <#-of-events>] | [-history [all] <jobHistoryFile|jobId> [-outfile <file>] [-format <human|json>]] | [-list [all]] | [-kill-task <task-id>] | [-fail-task <task-id>] | [-set-priority <job-id> <priority>] | [-list-active-trackers] | [-list-blacklisted-trackers] | [-list-attempt-ids <job-id> <task-type> <task-state>] [-logs <job-id> <task-attempt-id>]`
+Usage: `mapred job | [GENERIC_OPTIONS] | [-submit <job-file>] | [-status <job-id>] | [-counter <job-id> <group-name> <counter-name>] | [-kill <job-id>] | [-events <job-id> <from-event-#> <#-of-events>] | [-history [all] <jobHistoryFile|jobId> [-outfile <file>] [-format <human|json>]] | [-list [all]] | [-kill-task <task-id>] | [-fail-task <task-id>] | [-set-priority <job-id> <priority>] | [-list-active-trackers] | [-list-blacklisted-trackers] | [-list-attempt-ids <job-id> <task-type> <task-state>] [-logs <job-id> <task-attempt-id>] [-config <job-id> <file>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -99,6 +99,7 @@ Usage: `mapred job | [GENERIC_OPTIONS] | [-submit <job-file>] | [-status <job-id
 | -list-blacklisted-trackers | List the black listed task trackers in the cluster. This command is not supported in MRv2 based cluster. |
 | -list-attempt-ids *job-id* *task-type* *task-state* | List the attempt-ids based on the task type and the status given. Valid values for task-type are REDUCE, MAP. Valid values for task-state are running, pending, completed, failed, killed. |
 | -logs *job-id* *task-attempt-id* | Dump the container log for a job if taskAttemptId is not specified, otherwise dump the log for the task with the specified taskAttemptId. The logs will be dumped in system out. |
+| -config *job-id* *file* | Download the job configuration file. |
 
 ### `pipes`
 

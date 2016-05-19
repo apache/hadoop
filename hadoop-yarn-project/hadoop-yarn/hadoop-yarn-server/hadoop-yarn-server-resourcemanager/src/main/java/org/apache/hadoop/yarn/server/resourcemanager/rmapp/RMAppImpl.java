@@ -250,7 +250,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.MOVE, new RMAppMoveTransition())
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
-        RMAppEventType.ATTEMPT_REGISTERED)
+        RMAppEventType.ATTEMPT_REGISTERED, new RMAppStateUpdateTransition(
+            YarnApplicationState.RUNNING))
     .addTransition(RMAppState.ACCEPTED,
         EnumSet.of(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING),
         // ACCEPTED state is possible to receive ATTEMPT_FAILED/ATTEMPT_FINISHED
@@ -928,7 +929,21 @@ public class RMAppImpl implements RMApp, Recoverable {
           nodeUpdateEvent.getNode());
     };
   }
-  
+
+  private static final class RMAppStateUpdateTransition
+      extends RMAppTransition {
+    private YarnApplicationState stateToATS;
+
+    public RMAppStateUpdateTransition(YarnApplicationState state) {
+      stateToATS = state;
+    }
+
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      app.rmContext.getSystemMetricsPublisher().appStateUpdated(
+          app, stateToATS, app.systemClock.getTime());
+    };
+  }
+
   private static final class AppRunningOnNodeTransition extends RMAppTransition {
     public void transition(RMAppImpl app, RMAppEvent event) {
       RMAppRunningOnNodeEvent nodeAddedEvent = (RMAppRunningOnNodeEvent) event;

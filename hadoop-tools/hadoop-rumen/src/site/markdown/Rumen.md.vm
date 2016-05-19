@@ -50,8 +50,8 @@ but a simulation of the scheduler elects to run that task on a remote
 rack, the simulator requires a runtime its input cannot provide. 
 To fill in these gaps, Rumen performs a statistical analysis of the 
 digest to estimate the variables the trace doesn't supply. Rumen traces 
-drive both Gridmix (a benchmark of Hadoop MapReduce clusters) and Mumak 
-(a simulator for the JobTracker).
+drive both Gridmix (a benchmark of Hadoop MapReduce clusters) and SLS
+(a simulator for the resource manager scheduler).
 
 
 $H3 Motivation
@@ -126,16 +126,13 @@ can use the `Folder` utility to fold the current trace to the
 desired length. The remaining part of this section explains these 
 utilities in detail.
     
-Examples in this section assumes that certain libraries are present 
-in the java CLASSPATH. See [Dependencies](#Dependencies) for more details.
-
 
 $H3 Trace Builder
       
 $H4 Command
 
 ```
-java org.apache.hadoop.tools.rumen.TraceBuilder [options] <jobtrace-output> <topology-output> <inputs>
+hadoop rumentrace [options] <jobtrace-output> <topology-output> <inputs>
 ```
   
 This command invokes the `TraceBuilder` utility of *Rumen*.
@@ -205,12 +202,8 @@ $H4 Options
 
 $H4 Example
 
-*Rumen* expects certain library *JARs* to be present in  the *CLASSPATH*.
-One simple way to run Rumen is to use
-`$HADOOP_HOME/bin/hadoop jar` command to run it as example below.
-
 ```
-java org.apache.hadoop.tools.rumen.TraceBuilder \
+hadoop rumentrace \
   file:///tmp/job-trace.json \
   file:///tmp/job-topology.json \
   hdfs:///tmp/hadoop-yarn/staging/history/done_intermediate/testuser
@@ -229,7 +222,7 @@ $H3 Folder
 $H4 Command
 
 ```
-java org.apache.hadoop.tools.rumen.Folder [options] [input] [output]
+hadoop rumenfolder [options] [input] [output]
 ```
       
 This command invokes the `Folder` utility of 
@@ -350,7 +343,7 @@ $H4 Examples
 $H5 Folding an input trace with 10 hours of total runtime to generate an output trace with 1 hour of total runtime
 
 ```
-java org.apache.hadoop.tools.rumen.Folder \
+hadoop rumenfolder \
   -output-duration 1h \
   -input-cycle 20m \
   file:///tmp/job-trace.json \
@@ -362,7 +355,7 @@ If the folded jobs are out of order then the command will bail out.
 $H5 Folding an input trace with 10 hours of total runtime to generate an output trace with 1 hour of total runtime and tolerate some skewness
 
 ```
-java org.apache.hadoop.tools.rumen.Folder \
+hadoop rumenfolder \
   -output-duration 1h \
   -input-cycle 20m \
   -allow-missorting \
@@ -378,7 +371,7 @@ If the folded jobs are out of order, then atmost
 $H5 Folding an input trace with 10 hours of total runtime to generate an output trace with 1 hour of total runtime in debug mode
 
 ```
-java org.apache.hadoop.tools.rumen.Folder \
+hadoop rumenfolder \
   -output-duration 1h \
   -input-cycle 20m \
   -debug -temp-directory file:///tmp/debug \
@@ -395,7 +388,7 @@ up.
 $H5 Folding an input trace with 10 hours of total runtime to generate an output trace with 1 hour of total runtime with custom concentration.
 
 ```
-java org.apache.hadoop.tools.rumen.Folder \
+hadoop rumenfolder \
   -output-duration 1h \
   -input-cycle 20m \
   -concentration 2 \
@@ -421,18 +414,3 @@ Look at the MapReduce
 <a href="https://issues.apache.org/jira/browse/MAPREDUCE/component/12313617">rumen-component</a>
 for further details.
 
-
-$H3 Dependencies
-
-*Rumen* expects certain library *JARs* to be present in  the *CLASSPATH*.
-One simple way to run Rumen is to use
-`hadoop jar` command to run it as example below.
-
-```
-$HADOOP_HOME/bin/hadoop jar \
-  $HADOOP_HOME/share/hadoop/tools/lib/hadoop-rumen-2.5.1.jar \
-  org.apache.hadoop.tools.rumen.TraceBuilder \
-  file:///tmp/job-trace.json \
-  file:///tmp/job-topology.json \
-  hdfs:///tmp/hadoop-yarn/staging/history/done_intermediate/testuser
-```

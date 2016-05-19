@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 
@@ -84,10 +85,17 @@ public class SchedulingMonitor extends AbstractService {
     @Override
     public void run() {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
-        //invoke the preemption policy at a regular pace
-        //the policy will generate preemption or kill events
-        //managed by the dispatcher
-        invokePolicy();
+        try {
+          //invoke the preemption policy at a regular pace
+          //the policy will generate preemption or kill events
+          //managed by the dispatcher
+          invokePolicy();
+        } catch (YarnRuntimeException e) {
+          LOG.error("YarnRuntimeException raised while executing preemption"
+              + " checker, skip this run..., exception=", e);
+        }
+
+        // Wait before next run
         try {
           Thread.sleep(monitorInterval);
         } catch (InterruptedException e) {

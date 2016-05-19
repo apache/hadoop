@@ -234,7 +234,7 @@ public class IOUtils {
   }
   
   /**
-   * Close the Closeable objects and <b>ignore</b> any {@link IOException} or 
+   * Close the Closeable objects and <b>ignore</b> any {@link Throwable} or
    * null pointers. Must only be used for cleanup in exception handlers.
    *
    * @param log the log to record problems to at debug level. Can be null.
@@ -255,7 +255,7 @@ public class IOUtils {
   }
 
   /**
-   * Closes the stream ignoring {@link IOException}.
+   * Closes the stream ignoring {@link Throwable}.
    * Must only be called in cleaning up from exception handlers.
    *
    * @param stream the Stream to close

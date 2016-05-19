@@ -132,6 +132,7 @@ public class TestFilterFileSystem {
     public Path fixRelativePart(Path p);
     public ContentSummary getContentSummary(Path f);
     public QuotaUsage getQuotaUsage(Path f);
+    StorageStatistics getStorageStatistics();
   }
 
   @Test

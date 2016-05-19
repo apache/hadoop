@@ -74,7 +74,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -950,7 +950,7 @@ public class TestBlockManager {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final String poolId = namesystem.getBlockPoolId();
       final DatanodeRegistration nodeReg =
-        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().
+        InternalDataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().
         		get(0), poolId);
       final DatanodeDescriptor dd = NameNodeAdapter.getDatanode(namesystem,
     		  nodeReg);

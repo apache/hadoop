@@ -59,7 +59,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public enum AdminStates {
     NORMAL("In Service"),
     DECOMMISSION_INPROGRESS("Decommission In Progress"),
-    DECOMMISSIONED("Decommissioned");
+    DECOMMISSIONED("Decommissioned"),
+    ENTERING_MAINTENANCE("Entering Maintenance"),
+    IN_MAINTENANCE("In Maintenance");
 
     final String value;
 
@@ -378,6 +380,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append("Decommissioned\n");
     } else if (isDecommissionInProgress()) {
       buffer.append("Decommission in progress\n");
+    } else if (isInMaintenance()) {
+      buffer.append("In maintenance\n");
+    } else if (isEnteringMaintenance()) {
+      buffer.append("Entering maintenance\n");
     } else {
       buffer.append("Normal\n");
     }
@@ -430,6 +436,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append(" DD");
     } else if (isDecommissionInProgress()) {
       buffer.append(" DP");
+    } else if (isInMaintenance()) {
+      buffer.append(" IM");
+    } else if (isEnteringMaintenance()) {
+      buffer.append(" EM");
     } else {
       buffer.append(" IN");
     }
@@ -486,6 +496,53 @@ public class DatanodeInfo extends DatanodeID implements Node {
    */
   public void setDecommissioned() {
     adminState = AdminStates.DECOMMISSIONED;
+  }
+
+  /**
+   * Put a node to maintenance mode.
+   */
+  public void startMaintenance() {
+    adminState = AdminStates.ENTERING_MAINTENANCE;
+  }
+
+  /**
+   * Put a node to maintenance mode.
+   */
+  public void setInMaintenance() {
+    adminState = AdminStates.IN_MAINTENANCE;
+  }
+
+  /**
+   * Take the node out of maintenance mode.
+   */
+  public void stopMaintenance() {
+    adminState = null;
+  }
+
+  /**
+   * Returns true if the node is is entering_maintenance
+   */
+  public boolean isEnteringMaintenance() {
+    return adminState == AdminStates.ENTERING_MAINTENANCE;
+  }
+
+  /**
+   * Returns true if the node is in maintenance
+   */
+  public boolean isInMaintenance() {
+    return adminState == AdminStates.IN_MAINTENANCE;
+  }
+
+  /**
+   * Returns true if the node is entering or in maintenance
+   */
+  public boolean isMaintenance() {
+    return (adminState == AdminStates.ENTERING_MAINTENANCE ||
+        adminState == AdminStates.IN_MAINTENANCE);
+  }
+
+  public boolean isInService() {
+    return getAdminState() == AdminStates.NORMAL;
   }
 
   /**

@@ -111,6 +111,29 @@ public class TestSaveNamespace {
     }
   }
 
+  private static class FaultyWriteProperties implements Answer<Void> {
+    private int count = 0;
+    private Fault faultType;
+
+    FaultyWriteProperties(Fault faultType) {
+      this.faultType = faultType;
+    }
+
+    @Override
+    public Void answer(InvocationOnMock invocation) throws Throwable {
+      Object[] args = invocation.getArguments();
+      StorageDirectory sd = (StorageDirectory)args[0];
+
+      if (faultType == Fault.WRITE_STORAGE_ALL ||
+          (faultType==Fault.WRITE_STORAGE_ONE && count++==1)) {
+        LOG.info("Injecting fault for sd: " + sd);
+        throw new IOException("Injected fault: writeProperties second time");
+      }
+      LOG.info("Not injecting fault for sd: " + sd);
+      return (Void)invocation.callRealMethod();
+    }
+  }
+
   private enum Fault {
     SAVE_SECOND_FSIMAGE_RTE,
     SAVE_SECOND_FSIMAGE_IOE,
@@ -164,17 +187,15 @@ public class TestSaveNamespace {
       break;
     case WRITE_STORAGE_ALL:
       // The spy throws an exception before writing any VERSION files
-      doThrow(new RuntimeException("Injected"))
-        .when(spyStorage).writeAll();
+      doAnswer(new FaultyWriteProperties(Fault.WRITE_STORAGE_ALL))
+          .when(spyStorage).writeProperties((StorageDirectory)anyObject());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ONE:
       // The spy throws on exception on one particular storage directory
-      doAnswer(new FaultySaveImage(true))
+      doAnswer(new FaultyWriteProperties(Fault.WRITE_STORAGE_ONE))
         .when(spyStorage).writeProperties((StorageDirectory)anyObject());
-      // TODO: unfortunately this fails -- should be improved.
-      // See HDFS-2173.
-      shouldFail = true;
+      shouldFail = false;
       break;
     }
 

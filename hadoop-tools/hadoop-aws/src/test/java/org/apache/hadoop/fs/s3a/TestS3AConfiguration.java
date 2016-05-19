@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.reflect.FieldUtils;
 import com.amazonaws.AmazonClientException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +48,7 @@ import java.lang.reflect.Field;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 import org.junit.rules.TemporaryFolder;
 
@@ -370,10 +373,13 @@ public class TestS3AConfiguration {
 
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
-      final Object object = getClientOptionsField(fs.getAmazonS3Client(), "clientOptions");
-      assertNotNull(object);
-      assertTrue("Unexpected type found for clientOptions!", object instanceof S3ClientOptions);
-      assertTrue("Expected to find path style access to be switched on!", ((S3ClientOptions) object).isPathStyleAccess());
+      assertNotNull(fs);
+      AmazonS3Client s3 = fs.getAmazonS3Client();
+      assertNotNull(s3);
+      S3ClientOptions clientOptions = getField(s3, S3ClientOptions.class,
+          "clientOptions");
+      assertTrue("Expected to find path style access to be switched on!",
+          clientOptions.isPathStyleAccess());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs, new Path("/path/style/access/testFile"), file, file.length, conf.getInt(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
     } catch (final AmazonS3Exception e) {
@@ -385,14 +391,53 @@ public class TestS3AConfiguration {
     }
   }
 
-  private Object getClientOptionsField(AmazonS3Client s3client, String field)
-      throws NoSuchFieldException, IllegalAccessException {
-    final Field clientOptionsProps = s3client.getClass().getDeclaredField(field);
-    assertNotNull(clientOptionsProps);
-    if (!clientOptionsProps.isAccessible()) {
-      clientOptionsProps.setAccessible(true);
-    }
-    final Object object = clientOptionsProps.get(s3client);
-    return object;
+  @Test
+  public void testDefaultUserAgent() throws Exception {
+    conf = new Configuration();
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    assertNotNull(fs);
+    AmazonS3Client s3 = fs.getAmazonS3Client();
+    assertNotNull(s3);
+    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+        "clientConfiguration");
+    assertEquals("Hadoop " + VersionInfo.getVersion(), awsConf.getUserAgent());
+  }
+
+  @Test
+  public void testCustomUserAgent() throws Exception {
+    conf = new Configuration();
+    conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    assertNotNull(fs);
+    AmazonS3Client s3 = fs.getAmazonS3Client();
+    assertNotNull(s3);
+    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+        "clientConfiguration");
+    assertEquals("MyApp, Hadoop " + VersionInfo.getVersion(),
+        awsConf.getUserAgent());
+  }
+
+  /**
+   * Reads and returns a field from an object using reflection.  If the field
+   * cannot be found, is null, or is not the expected type, then this method
+   * fails the test.
+   *
+   * @param target object to read
+   * @param fieldType type of field to read, which will also be the return type
+   * @param fieldName name of field to read
+   * @return field that was read
+   * @throws IllegalAccessException if access not allowed
+   */
+  private static <T> T getField(Object target, Class<T> fieldType,
+      String fieldName) throws IllegalAccessException {
+    Object obj = FieldUtils.readField(target, fieldName, true);
+    assertNotNull(String.format(
+        "Could not read field named %s in object with class %s.", fieldName,
+        target.getClass().getName()), obj);
+    assertTrue(String.format(
+        "Unexpected type found for field named %s, expected %s, actual %s.",
+        fieldName, fieldType.getName(), obj.getClass().getName()),
+        fieldType.isAssignableFrom(obj.getClass()));
+    return fieldType.cast(obj);
   }
 }

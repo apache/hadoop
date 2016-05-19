@@ -14,7 +14,7 @@
 package org.apache.hadoop.util;
 
 import com.google.common.base.Preconditions;
-
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -172,5 +172,29 @@ public class JarFinder {
       }
     }
     return null;
+  }
+
+  public static File makeClassLoaderTestJar(Class<?> target, File rootDir,
+      String jarName, int buffSize, String... clsNames) throws IOException {
+    File jarFile = new File(rootDir, jarName);
+    JarOutputStream jstream =
+        new JarOutputStream(new FileOutputStream(jarFile));
+    for (String clsName: clsNames) {
+      String name = clsName.replace('.', '/') + ".class";
+      InputStream entryInputStream = target.getResourceAsStream(
+          "/" + name);
+      ZipEntry entry = new ZipEntry(name);
+      jstream.putNextEntry(entry);
+      BufferedInputStream bufInputStream = new BufferedInputStream(
+          entryInputStream, buffSize);
+      int count;
+      byte[] data = new byte[buffSize];
+      while ((count = bufInputStream.read(data, 0, buffSize)) != -1) {
+        jstream.write(data, 0, count);
+      }
+      jstream.closeEntry();
+    }
+    jstream.close();
+    return jarFile;
   }
 }

@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
@@ -31,6 +32,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -61,6 +63,8 @@ public class TestReservedRawPaths {
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
+  protected static final EnumSet< CreateEncryptionZoneFlag > NO_TRASH =
+      EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
   @Before
   public void setup() throws Exception {
@@ -114,7 +118,7 @@ public class TestReservedRawPaths {
     // Create the first enc file
     final Path zone = new Path("/zone");
     fs.mkdirs(zone);
-    dfsAdmin.createEncryptionZone(zone, TEST_KEY);
+    dfsAdmin.createEncryptionZone(zone, TEST_KEY, NO_TRASH);
     final Path encFile1 = new Path(zone, "myfile");
     DFSTestUtil.createFile(fs, encFile1, len, (short) 1, 0xFEED);
     // Read them back in and compare byte-by-byte
@@ -154,7 +158,7 @@ public class TestReservedRawPaths {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
     fs.mkdirs(slashZone);
-    dfsAdmin.createEncryptionZone(slashZone, TEST_KEY);
+    dfsAdmin.createEncryptionZone(slashZone, TEST_KEY, NO_TRASH);
 
     final Path base = new Path("base");
     final Path reservedRaw = new Path("/.reserved/raw");
@@ -186,7 +190,7 @@ public class TestReservedRawPaths {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
     fs.mkdirs(slashZone);
-    dfsAdmin.createEncryptionZone(slashZone, TEST_KEY);
+    dfsAdmin.createEncryptionZone(slashZone, TEST_KEY, NO_TRASH);
     final Path rawRoot = new Path("/.reserved/raw");
     final Path dir1 = new Path("dir1");
     final Path rawDir1 = new Path(rawRoot, dir1);
@@ -224,7 +228,7 @@ public class TestReservedRawPaths {
     final Path zone = new Path("zone");
     final Path slashZone = new Path("/", zone);
     fs.mkdirs(slashZone);
-    dfsAdmin.createEncryptionZone(slashZone, TEST_KEY);
+    dfsAdmin.createEncryptionZone(slashZone, TEST_KEY, NO_TRASH);
     final Path base = new Path("base");
     final Path reservedRaw = new Path("/.reserved/raw");
     final int len = 8192;

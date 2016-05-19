@@ -2073,7 +2073,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   private void checkNNStartup() throws IOException {
     if (!this.nn.isStarted()) {
-      throw new RetriableException(this.nn.getRole() + " still not started");
+      String message = NameNode.composeNotStartedMessage(this.nn.getRole());
+      throw new RetriableException(message);
     }
   }
 

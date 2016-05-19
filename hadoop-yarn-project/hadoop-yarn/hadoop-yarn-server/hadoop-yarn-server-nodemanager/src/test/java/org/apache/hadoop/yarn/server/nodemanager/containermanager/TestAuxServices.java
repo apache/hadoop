@@ -27,13 +27,21 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.Sets;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-
+import java.util.Map.Entry;
+import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +50,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ApplicationClassLoader;
+import org.apache.hadoop.util.JarFinder;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -147,6 +159,111 @@ public class TestAuxServices {
   static class ServiceB extends LightService {
     public ServiceB() { 
       super("B", 'B', 66, ByteBuffer.wrap("B".getBytes()));
+    }
+  }
+
+  // Override getMetaData() method to return current
+  // class path. This class would be used for
+  // testCustomizedAuxServiceClassPath.
+  static class ServiceC extends LightService {
+    public ServiceC() {
+      super("C", 'C', 66, ByteBuffer.wrap("C".getBytes()));
+    }
+
+    @Override
+    public ByteBuffer getMetaData() {
+      ClassLoader loader = Thread.currentThread().getContextClassLoader();
+      URL[] urls = ((URLClassLoader)loader).getURLs();
+      List<String> urlString = new ArrayList<String>();
+      for (URL url : urls) {
+        urlString.add(url.toString());
+      }
+      String joinedString = StringUtils.join(",", urlString);
+      return ByteBuffer.wrap(joinedString.getBytes());
+    }
+  }
+
+  // To verify whether we could load class from customized class path.
+  // We would use ServiceC in this test. Also create a separate jar file
+  // including ServiceC class, and add this jar to customized directory.
+  // By setting some proper configurations, we should load ServiceC class
+  // from customized class path.
+  @Test (timeout = 15000)
+  public void testCustomizedAuxServiceClassPath() throws Exception {
+    // verify that we can load AuxService Class from default Class path
+    Configuration conf = new YarnConfiguration();
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
+        new String[] {"ServiceC"});
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT,
+        "ServiceC"), ServiceC.class, Service.class);
+    @SuppressWarnings("resource")
+    AuxServices aux = new AuxServices();
+    aux.init(conf);
+    aux.start();
+    Map<String, ByteBuffer> meta = aux.getMetaData();
+    String auxName = "";
+    Set<String> defaultAuxClassPath = null;
+    Assert.assertTrue(meta.size() == 1);
+    for(Entry<String, ByteBuffer> i : meta.entrySet()) {
+      auxName = i.getKey();
+      String auxClassPath = Charsets.UTF_8.decode(i.getValue()).toString();
+      defaultAuxClassPath = new HashSet<String>(Arrays.asList(StringUtils
+          .getTrimmedStrings(auxClassPath)));
+    }
+    Assert.assertTrue(auxName.equals("ServiceC"));
+    aux.serviceStop();
+
+    // create a new jar file, and configure it as customized class path
+    // for this AuxService, and make sure that we could load the class
+    // from this configured customized class path
+    File rootDir = GenericTestUtils.getTestDir(getClass()
+        .getSimpleName());
+    if (!rootDir.exists()) {
+      rootDir.mkdirs();
+    }
+    File testJar = null;
+    try {
+      testJar = JarFinder.makeClassLoaderTestJar(this.getClass(), rootDir,
+          "test-runjar.jar", 2048, ServiceC.class.getName());
+      conf = new YarnConfiguration();
+      conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
+          new String[] {"ServiceC"});
+      conf.set(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, "ServiceC"),
+          ServiceC.class.getName());
+      conf.set(String.format(
+          YarnConfiguration.NM_AUX_SERVICES_CLASSPATH, "ServiceC"),
+          testJar.getAbsolutePath());
+      // remove "-org.apache.hadoop." from system classes
+      String systemClasses = "-org.apache.hadoop." + "," +
+              ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
+      conf.set(String.format(
+          YarnConfiguration.NM_AUX_SERVICES_SYSTEM_CLASSES,
+          "ServiceC"), systemClasses);
+      aux = new AuxServices();
+      aux.init(conf);
+      aux.start();
+      meta = aux.getMetaData();
+      Assert.assertTrue(meta.size() == 1);
+      Set<String> customizedAuxClassPath = null;
+      for(Entry<String, ByteBuffer> i : meta.entrySet()) {
+        Assert.assertTrue(auxName.equals(i.getKey()));
+        String classPath = Charsets.UTF_8.decode(i.getValue()).toString();
+        customizedAuxClassPath = new HashSet<String>(Arrays.asList(StringUtils
+            .getTrimmedStrings(classPath)));
+        Assert.assertTrue(classPath.contains(testJar.getName()));
+      }
+      aux.stop();
+
+      // Verify that we do not have any overlap between customized class path
+      // and the default class path.
+      Set<String> mutalClassPath = Sets.intersection(defaultAuxClassPath,
+          customizedAuxClassPath);
+      Assert.assertTrue(mutalClassPath.isEmpty());
+    } finally {
+      if (testJar != null) {
+        testJar.delete();
+        rootDir.delete();
+      }
     }
   }
 

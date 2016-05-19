@@ -126,6 +126,11 @@ public class DataNodeMetrics {
   @Metric MutableRate sendDataPacketTransferNanos;
   final MutableQuantiles[] sendDataPacketTransferNanosQuantiles;
 
+  @Metric("Count of erasure coding reconstruction tasks")
+  MutableCounterLong ecReconstructionTasks;
+  @Metric("Count of erasure coding failed reconstruction tasks")
+  MutableCounterLong ecFailedReconstructionTasks;
+
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   final String name;
   JvmMetrics jvmMetrics = null;
@@ -415,4 +420,13 @@ public class DataNodeMetrics {
       q.add(latencyMs);
     }
   }
+
+  public void incrECReconstructionTasks() {
+    ecReconstructionTasks.incr();
+  }
+
+  public void incrECFailedReconstructionTasks() {
+    ecFailedReconstructionTasks.incr();
+  }
+
 }

@@ -113,6 +113,15 @@ public class NodeBase implements Node {
     return node.getNetworkLocation() + PATH_SEPARATOR_STR + node.getName();
   }
 
+  /**
+   * Get the path components of a node.
+   * @param node a non-null node
+   * @return the path of a node
+   */
+  public static String[] getPathComponents(Node node) {
+    return getPath(node).split(PATH_SEPARATOR_STR);
+  }
+
   @Override
   public boolean equals(Object to) {
     if (this == to) {

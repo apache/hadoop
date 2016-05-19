@@ -216,8 +216,11 @@ public class DelegationTokenAuthenticationFilter
 
   @VisibleForTesting
   static String getDoAs(HttpServletRequest request) {
-    List<NameValuePair> list = URLEncodedUtils.parse(request.getQueryString(),
-        UTF8_CHARSET);
+    String queryString = request.getQueryString();
+    if (queryString == null) {
+      return null;
+    }
+    List<NameValuePair> list = URLEncodedUtils.parse(queryString, UTF8_CHARSET);
     if (list != null) {
       for (NameValuePair nv : list) {
         if (DelegationTokenAuthenticatedURL.DO_AS.

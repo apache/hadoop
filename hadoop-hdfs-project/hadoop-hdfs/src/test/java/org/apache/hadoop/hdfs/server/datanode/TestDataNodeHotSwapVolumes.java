@@ -822,7 +822,7 @@ public class TestDataNodeHotSwapVolumes {
 
     final DataNode dn = cluster.getDataNodes().get(0);
     DatanodeProtocolClientSideTranslatorPB spy =
-        DataNodeTestUtils.spyOnBposToNN(dn, cluster.getNameNode());
+        InternalDataNodeTestUtils.spyOnBposToNN(dn, cluster.getNameNode());
 
     // Remove a data dir from datanode
     File dataDirToKeep = new File(cluster.getDataDirectory(), "data1");

@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.Progressable;
@@ -64,6 +65,7 @@ import java.util.concurrent.ExecutorService;
  * <p>
  * Unstable: statistics and error handling might evolve
  */
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class S3AFastOutputStream extends OutputStream {
 
@@ -102,7 +104,8 @@ public class S3AFastOutputStream extends OutputStream {
    * @param partSize size of a single part in a multi-part upload (except
    * last part)
    * @param multiPartThreshold files at least this size use multi-part upload
-   * @throws IOException
+   * @param threadPoolExecutor thread factory
+   * @throws IOException on any problem
    */
   public S3AFastOutputStream(AmazonS3Client client, S3AFileSystem fs,
       String bucket, String key, Progressable progress,
@@ -159,7 +162,7 @@ public class S3AFastOutputStream extends OutputStream {
    * Writes a byte to the memory buffer. If this causes the buffer to reach
    * its limit, the actual upload is submitted to the threadpool.
    * @param b the int of which the lowest byte is written
-   * @throws IOException
+   * @throws IOException on any problem
    */
   @Override
   public synchronized void write(int b) throws IOException {
@@ -177,10 +180,10 @@ public class S3AFastOutputStream extends OutputStream {
    * @param b byte array containing
    * @param off offset in array where to start
    * @param len number of bytes to be written
-   * @throws IOException
+   * @throws IOException on any problem
    */
   @Override
-  public synchronized void write(byte b[], int off, int len)
+  public synchronized void write(byte[] b, int off, int len)
       throws IOException {
     if (b == null) {
       throw new NullPointerException();
