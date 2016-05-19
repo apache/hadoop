@@ -423,11 +423,14 @@ public class WebAppProxyServlet extends HttpServlet {
 
       // Append the user-provided path and query parameter to the original
       // tracking url.
-      List<NameValuePair> queryPairs =
-          URLEncodedUtils.parse(req.getQueryString(), null);
       UriBuilder builder = UriBuilder.fromUri(trackingUri);
-      for (NameValuePair pair : queryPairs) {
-        builder.queryParam(pair.getName(), pair.getValue());
+      String queryString = req.getQueryString();
+      if (queryString != null) {
+        List<NameValuePair> queryPairs =
+            URLEncodedUtils.parse(queryString, null);
+        for (NameValuePair pair : queryPairs) {
+          builder.queryParam(pair.getName(), pair.getValue());
+        }
       }
       URI toFetch = builder.path(rest).build();
 
