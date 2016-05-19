@@ -261,6 +261,18 @@
 </property>
 
 <property>
+    <name>hadoop.security.group.mapping.ldap.search.attr.memberof</name>
+    <value></value>
+    <description>
+      The attribute of the user object that identifies its group objects. By
+      default, Hadoop makes two LDAP queries per user if this value is empty. If
+      set, Hadoop will attempt to resolve group names from this attribute,
+      instead of making the second LDAP query to get group objects. The value
+      should be 'memberOf' for an MS AD installation.
+    </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
   <value>member</value>
   <description>
