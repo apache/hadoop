@@ -375,10 +375,12 @@ public class TestShortCircuitLocalRead {
       try {
         proxy.getBlockLocalPathInfo(blk, token);
         Assert.fail("The call should have failed as this user "
-            + " is not allowed to call getBlockLocalPathInfo");
+            + " is not configured in "
+            + DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
       } catch (IOException ex) {
         Assert.assertTrue(ex.getMessage().contains(
-            "not allowed to call getBlockLocalPathInfo"));
+            "not configured in "
+            + DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
       }
     } finally {
       fs.close();
