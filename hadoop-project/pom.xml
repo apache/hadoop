@@ -1159,6 +1159,7 @@
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
             <HADOOP_HOME>${hadoop.common.build.dir}</HADOOP_HOME>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</LD_LIBRARY_PATH>
+            <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <systemPropertyVariables>
