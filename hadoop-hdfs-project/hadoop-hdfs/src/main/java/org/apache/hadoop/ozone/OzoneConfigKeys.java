@@ -19,15 +19,17 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This class contains constants for configuration keys used in Ozone.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class OzoneConfigKeys {
   public static final String DFS_CONTAINER_IPC_PORT =
       "dfs.container.ipc";
-  public static final int DFS_CONTAINER_IPC_PORT_DEFAULT =  50011;
+  public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 50011;
   public static final String OZONE_LOCALSTORAGE_ROOT =
       "ozone.localstorage.root";
   public static final String OZONE_LOCALSTORAGE_ROOT_DEFAULT = "/tmp/ozone";
@@ -37,16 +39,6 @@ public final class OzoneConfigKeys {
   public static final String OZONE_HANDLER_TYPE_KEY =
       "ozone.handler.type";
   public static final String OZONE_HANDLER_TYPE_DEFAULT = "distributed";
-  public static final String DFS_CONTAINER_LOCATION_RPC_ADDRESS_KEY =
-      "dfs.container.location.rpc-address";
-  public static final int DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT = 50200;
-  public static final String DFS_CONTAINER_LOCATION_RPC_ADDRESS_DEFAULT =
-      "0.0.0.0:" + DFS_CONTAINER_LOCATION_RPC_DEFAULT_PORT;
-  public static final String DFS_CONTAINER_LOCATION_RPC_BIND_HOST_KEY =
-      "dfs.container.rpc-bind-host";
-  public static final String DFS_CONTAINER_LOCATION_HANDLER_COUNT_KEY =
-      "dfs.container.handler.count";
-  public static final int DFS_CONTAINER_HANDLER_COUNT_DEFAULT = 10;
   public static final String OZONE_TRACE_ENABLED_KEY =
       "ozone.trace.enabled";
   public static final boolean OZONE_TRACE_ENABLED_DEFAULT = false;
@@ -57,7 +49,26 @@ public final class OzoneConfigKeys {
   public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
   public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
 
+  public static final int OZONE_SCM_CLIENT_PORT_DEFAULT = 9860;
+  public static final int OZONE_SCM_DATANODE_PORT_DEFAULT = 9861;
 
+  public static final String OZONE_SCM_CLIENT_ADDRESS_KEY =
+      "ozone.scm.client.address";
+  public static final String OZONE_SCM_CLIENT_BIND_HOST_KEY =
+      "ozone.scm.client.bind.host";
+  public static final String OZONE_SCM_CLIENT_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  public static final String OZONE_SCM_DATANODE_ADDRESS_KEY =
+      "ozone.scm.datanode.address";
+  public static final String OZONE_SCM_DATANODE_BIND_HOST_KEY =
+      "ozone.scm.datanode.bind.host";
+  public static final String OZONE_SCM_DATANODE_BIND_HOST_DEFAULT =
+      "0.0.0.0";
+
+  public static final String OZONE_SCM_HANDLER_COUNT_KEY =
+      "ozone.scm.handler.count.key";
+  public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
 
   /**
    * There is no need to instantiate this class.

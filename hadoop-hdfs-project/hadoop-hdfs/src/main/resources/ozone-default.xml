@@ -23,5 +23,91 @@
 <!-- there.  If ozone-site.xml does not already exist, create it.      -->
 
 <configuration>
+  <property>
+    <name>ozone.enabled</name>
+    <value>false</value>
+    <description>
+      Status of the Ozone Object Storage service is enabled.
+      Set to true to enable Ozone.
+      Set to false to disable Ozone.
+    </description>
+  </property>
 
+  <property>
+    <name>ozone.handler.type</name>
+    <value>local</value>
+    <description>
+      The second key dfs.storage.handler.type tells ozone which storage
+      handler to use. The possible values are:
+      ozone - The Ozone distributed storage handler.
+      local - Local Storage handler strictly for testing.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.client.address</name>
+    <value></value>
+    <description>
+      The address of the Ozone SCM client service. This is a required
+      setting.
+
+      It is a string in the host:port format. The port number is optional
+      and defaults to 9860.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.datanode.address</name>
+    <value></value>
+    <description>
+      The address of the Ozone SCM service used for internal communication
+      between the DataNodes and the SCM.
+
+      It is a string in the host:port format. The port number is optional
+      and defaults to 9861.
+
+      This setting is optional. If unspecified then the hostname portion
+      is picked from the ozone.scm.client.address setting and the
+      default service port of 9861 is chosen.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.client.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The hostname or IP address used by the SCM client endpoint to bind.
+      This setting is used by the SCM only and never used by clients.
+
+      The setting can be useful in multi-homed setups to restrict the
+      availability of the SCM client service to a specific interface.
+
+      The default is appropriate for most clusters.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.internal.bind.host</name>
+    <value>0.0.0.0</value>
+    <description>
+      The hostname or IP address used by the SCM DataNode handler service
+      to bind. This setting is used by the SCM only and never used by
+      clients or Data Nodes.
+
+      The setting can be useful in multi-homed setups to restrict the
+      availability of the SCM to a specific interface.
+
+      The default is appropriate for most clusters.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.scm.handler.count.key</name>
+    <value>20</value>
+    <description>
+      The number of RPC handler threads for each SCM service endpoint.
+
+      The default is appropriate for small clusters (tens of nodes).
+    </description>
+  </property>
 </configuration>
