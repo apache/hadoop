@@ -41,5 +41,5 @@ public abstract class QueuedContainersStatus {
 
   public abstract int getWaitQueueLength();
 
-  public abstract void setWaitQueueLength(int queueWaitTime);
+  public abstract void setWaitQueueLength(int waitQueueLength);
 }

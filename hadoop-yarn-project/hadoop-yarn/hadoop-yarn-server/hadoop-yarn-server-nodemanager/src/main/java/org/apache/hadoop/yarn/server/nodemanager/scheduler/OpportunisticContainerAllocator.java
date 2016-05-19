@@ -84,14 +84,14 @@ public class OpportunisticContainerAllocator {
       Map<String, NodeId> allNodes, String userName) throws YarnException {
     Map<Resource, List<Container>> containers = new HashMap<>();
     Set<String> nodesAllocated = new HashSet<>();
-    int numAsks = resourceAsks.size();
     for (ResourceRequest anyAsk : resourceAsks) {
       allocateOpportunisticContainers(appParams, idCounter, blacklist, appAttId,
           allNodes, userName, containers, nodesAllocated, anyAsk);
-    }
-    if (numAsks > 0) {
-      LOG.info("Opportunistic allocation requested for: " + numAsks
-          + " containers; allocated = " + containers.size());
+      LOG.info("Opportunistic allocation requested for ["
+          + "priority=" + anyAsk.getPriority()
+          + ", num_containers=" + anyAsk.getNumContainers()
+          + ", capability=" + anyAsk.getCapability() + "]"
+          + " allocated = " + containers.get(anyAsk.getCapability()).size());
     }
     return containers;
   }
@@ -129,8 +129,9 @@ public class OpportunisticContainerAllocator {
       }
       cList.add(container);
       numAllocated++;
-      LOG.info("Allocated " + numAllocated + " opportunistic containers.");
+      LOG.info("Allocated [" + container.getId() + "] as opportunistic.");
     }
+    LOG.info("Allocated " + numAllocated + " opportunistic containers.");
   }
 
   private Container buildContainer(DistSchedulerParams appParams,
@@ -146,8 +147,8 @@ public class OpportunisticContainerAllocator {
     long currTime = System.currentTimeMillis();
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(
-            cId, nodeId.getHost(), userName, capability,
-            currTime + appParams.containerTokenExpiryInterval,
+            cId, nodeId.getHost() + ":" + nodeId.getPort(), userName,
+            capability, currTime + appParams.containerTokenExpiryInterval,
             context.getContainerTokenSecretManager().getCurrentKey().getKeyId(),
             nodeStatusUpdater.getRMIdentifier(), rr.getPriority(), currTime,
             null, CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK,

@@ -200,6 +200,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
         .getContainerTokenIdentifier().getContainerID();
     this.context.getQueuingContext().getQueuedContainers().remove(containerId);
     try {
+      LOG.info("Starting container [" + containerId + "]");
       super.startContainerInternal(
           allocatedContainerInfo.getContainerTokenIdentifier(),
           allocatedContainerInfo.getStartRequest());

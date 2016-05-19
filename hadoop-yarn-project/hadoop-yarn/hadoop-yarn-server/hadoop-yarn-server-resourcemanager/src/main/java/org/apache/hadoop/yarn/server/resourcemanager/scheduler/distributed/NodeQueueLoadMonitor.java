@@ -195,11 +195,11 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
               new ClusterNode(rmNode.getNodeID())
                   .setQueueWaitTime(estimatedQueueWaitTime)
                   .setQueueLength(waitQueueLength));
-          LOG.info("Inserting ClusterNode [" + rmNode.getNodeID() + "]" +
+          LOG.info("Inserting ClusterNode [" + rmNode.getNodeID() + "] " +
               "with queue wait time [" + estimatedQueueWaitTime + "] and " +
               "wait queue length [" + waitQueueLength + "]");
         } else {
-          LOG.warn("IGNORING ClusterNode [" + rmNode.getNodeID() + "]" +
+          LOG.warn("IGNORING ClusterNode [" + rmNode.getNodeID() + "] " +
               "with queue wait time [" + estimatedQueueWaitTime + "] and " +
               "wait queue length [" + waitQueueLength + "]");
         }
@@ -210,12 +210,14 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
               .setQueueWaitTime(estimatedQueueWaitTime)
               .setQueueLength(waitQueueLength)
               .updateTimestamp();
-          LOG.info("Updating ClusterNode [" + rmNode.getNodeID() + "]" +
-              "with queue wait time [" + estimatedQueueWaitTime + "] and " +
-              "wait queue length [" + waitQueueLength + "]");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Updating ClusterNode [" + rmNode.getNodeID() + "] " +
+                "with queue wait time [" + estimatedQueueWaitTime + "] and " +
+                "wait queue length [" + waitQueueLength + "]");
+          }
         } else {
           this.clusterNodes.remove(rmNode.getNodeID());
-          LOG.info("Deleting ClusterNode [" + rmNode.getNodeID() + "]" +
+          LOG.info("Deleting ClusterNode [" + rmNode.getNodeID() + "] " +
               "with queue wait time [" + currentNode.queueWaitTime + "] and " +
               "wait queue length [" + currentNode.queueLength + "]");
         }
