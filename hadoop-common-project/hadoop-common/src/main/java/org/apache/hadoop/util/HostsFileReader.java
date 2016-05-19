@@ -21,6 +21,9 @@ package org.apache.hadoop.util;
 import java.io.*;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +41,8 @@ public class HostsFileReader {
   private Set<String> excludes;
   private String includesFile;
   private String excludesFile;
+  private WriteLock writeLock;
+  private ReadLock readLock;
   
   private static final Log LOG = LogFactory.getLog(HostsFileReader.class);
 
@@ -47,6 +52,9 @@ public class HostsFileReader {
     excludes = new HashSet<String>();
     includesFile = inFile;
     excludesFile = exFile;
+    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+    this.writeLock = rwLock.writeLock();
+    this.readLock = rwLock.readLock();
     refresh();
   }
 
@@ -57,6 +65,9 @@ public class HostsFileReader {
     excludes = new HashSet<String>();
     this.includesFile = includesFile;
     this.excludesFile = excludesFile;
+    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+    this.writeLock = rwLock.writeLock();
+    this.readLock = rwLock.readLock();
     refresh(inFileInputStream, exFileInputStream);
   }
 
@@ -101,80 +112,126 @@ public class HostsFileReader {
     }
   }
 
-  public synchronized void refresh() throws IOException {
-    LOG.info("Refreshing hosts (include/exclude) list");
-    Set<String> newIncludes = new HashSet<String>();
-    Set<String> newExcludes = new HashSet<String>();
-    boolean switchIncludes = false;
-    boolean switchExcludes = false;
-    if (!includesFile.isEmpty()) {
-      readFileToSet("included", includesFile, newIncludes);
-      switchIncludes = true;
+  public void refresh() throws IOException {
+    this.writeLock.lock();
+    try {
+      refresh(includesFile, excludesFile);
+    } finally {
+      this.writeLock.unlock();
     }
-    if (!excludesFile.isEmpty()) {
-      readFileToSet("excluded", excludesFile, newExcludes);
-      switchExcludes = true;
-    }
+  }
 
-    if (switchIncludes) {
-      // switch the new hosts that are to be included
-      includes = newIncludes;
-    }
-    if (switchExcludes) {
-      // switch the excluded hosts
-      excludes = newExcludes;
+  public void refresh(String includeFiles, String excludeFiles)
+      throws IOException {
+    LOG.info("Refreshing hosts (include/exclude) list");
+    this.writeLock.lock();
+    try {
+      // update instance variables
+      updateFileNames(includeFiles, excludeFiles);
+      Set<String> newIncludes = new HashSet<String>();
+      Set<String> newExcludes = new HashSet<String>();
+      boolean switchIncludes = false;
+      boolean switchExcludes = false;
+      if (includeFiles != null && !includeFiles.isEmpty()) {
+        readFileToSet("included", includeFiles, newIncludes);
+        switchIncludes = true;
+      }
+      if (excludeFiles != null && !excludeFiles.isEmpty()) {
+        readFileToSet("excluded", excludeFiles, newExcludes);
+        switchExcludes = true;
+      }
+
+      if (switchIncludes) {
+        // switch the new hosts that are to be included
+        includes = newIncludes;
+      }
+      if (switchExcludes) {
+        // switch the excluded hosts
+        excludes = newExcludes;
+      }
+    } finally {
+      this.writeLock.unlock();
     }
   }
 
   @Private
-  public synchronized void refresh(InputStream inFileInputStream,
+  public void refresh(InputStream inFileInputStream,
       InputStream exFileInputStream) throws IOException {
     LOG.info("Refreshing hosts (include/exclude) list");
-    Set<String> newIncludes = new HashSet<String>();
-    Set<String> newExcludes = new HashSet<String>();
-    boolean switchIncludes = false;
-    boolean switchExcludes = false;
-    if (inFileInputStream != null) {
-      readFileToSetWithFileInputStream("included", includesFile,
-          inFileInputStream, newIncludes);
-      switchIncludes = true;
-    }
-    if (exFileInputStream != null) {
-      readFileToSetWithFileInputStream("excluded", excludesFile,
-          exFileInputStream, newExcludes);
-      switchExcludes = true;
-    }
-    if (switchIncludes) {
-      // switch the new hosts that are to be included
-      includes = newIncludes;
-    }
-    if (switchExcludes) {
-      // switch the excluded hosts
-      excludes = newExcludes;
+    this.writeLock.lock();
+    try {
+      Set<String> newIncludes = new HashSet<String>();
+      Set<String> newExcludes = new HashSet<String>();
+      boolean switchIncludes = false;
+      boolean switchExcludes = false;
+      if (inFileInputStream != null) {
+        readFileToSetWithFileInputStream("included", includesFile,
+            inFileInputStream, newIncludes);
+        switchIncludes = true;
+      }
+      if (exFileInputStream != null) {
+        readFileToSetWithFileInputStream("excluded", excludesFile,
+            exFileInputStream, newExcludes);
+        switchExcludes = true;
+      }
+      if (switchIncludes) {
+        // switch the new hosts that are to be included
+        includes = newIncludes;
+      }
+      if (switchExcludes) {
+        // switch the excluded hosts
+        excludes = newExcludes;
+      }
+    } finally {
+      this.writeLock.unlock();
     }
   }
 
-  public synchronized Set<String> getHosts() {
-    return includes;
+  public Set<String> getHosts() {
+    this.readLock.lock();
+    try {
+      return includes;
+    } finally {
+      this.readLock.unlock();
+    }
   }
 
-  public synchronized Set<String> getExcludedHosts() {
-    return excludes;
+  public Set<String> getExcludedHosts() {
+    this.readLock.lock();
+    try {
+      return excludes;
+    } finally {
+      this.readLock.unlock();
+    }
   }
 
-  public synchronized void setIncludesFile(String includesFile) {
+  public void getHostDetails(Set<String> includes, Set<String> excludes) {
+    this.readLock.lock();
+    try {
+      includes.addAll(this.includes);
+      excludes.addAll(this.excludes);
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void setIncludesFile(String includesFile) {
     LOG.info("Setting the includes file to " + includesFile);
     this.includesFile = includesFile;
   }
   
-  public synchronized void setExcludesFile(String excludesFile) {
+  public void setExcludesFile(String excludesFile) {
     LOG.info("Setting the excludes file to " + excludesFile);
     this.excludesFile = excludesFile;
   }
 
-  public synchronized void updateFileNames(String includesFile,
-      String excludesFile) {
-    setIncludesFile(includesFile);
-    setExcludesFile(excludesFile);
+  public void updateFileNames(String includeFiles, String excludeFiles) {
+    this.writeLock.lock();
+    try {
+      setIncludesFile(includeFiles);
+      setExcludesFile(excludeFiles);
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 }

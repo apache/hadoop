@@ -183,10 +183,15 @@ public class NodesListManager extends CompositeService implements
         YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH) + " out=" +
         conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, 
             YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
-    for (String include : hostsReader.getHosts()) {
+
+    Set<String> hostsList = new HashSet<String>();
+    Set<String> excludeList = new HashSet<String>();
+    hostsReader.getHostDetails(hostsList, excludeList);
+
+    for (String include : hostsList) {
       LOG.debug("include: " + include);
     }
-    for (String exclude : hostsReader.getExcludedHosts()) {
+    for (String exclude : excludeList) {
       LOG.debug("exclude: " + exclude);
     }
   }
@@ -208,25 +213,17 @@ public class NodesListManager extends CompositeService implements
 
   private void refreshHostsReader(Configuration yarnConf) throws IOException,
       YarnException {
-    synchronized (hostsReader) {
-      if (null == yarnConf) {
-        yarnConf = new YarnConfiguration();
-      }
-      includesFile =
-          yarnConf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
-              YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
-      excludesFile =
-          yarnConf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
-              YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
-      hostsReader.updateFileNames(includesFile, excludesFile);
-      hostsReader.refresh(
-          includesFile.isEmpty() ? null : this.rmContext
-              .getConfigurationProvider().getConfigurationInputStream(
-                  this.conf, includesFile), excludesFile.isEmpty() ? null
-              : this.rmContext.getConfigurationProvider()
-                  .getConfigurationInputStream(this.conf, excludesFile));
-      printConfiguredHosts();
+    if (null == yarnConf) {
+      yarnConf = new YarnConfiguration();
     }
+    includesFile =
+        yarnConf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+            YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
+    excludesFile =
+        yarnConf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+            YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
+    hostsReader.refresh(includesFile, excludesFile);
+    printConfiguredHosts();
   }
 
   private void setDecomissionedNMs() {
@@ -364,13 +361,13 @@ public class NodesListManager extends CompositeService implements
 
   public boolean isValidNode(String hostName) {
     String ip = resolver.resolve(hostName);
-    synchronized (hostsReader) {
-      Set<String> hostsList = hostsReader.getHosts();
-      Set<String> excludeList = hostsReader.getExcludedHosts();
-      return (hostsList.isEmpty() || hostsList.contains(hostName) || hostsList
-          .contains(ip))
-          && !(excludeList.contains(hostName) || excludeList.contains(ip));
-    }
+    Set<String> hostsList = new HashSet<String>();
+    Set<String> excludeList = new HashSet<String>();
+    hostsReader.getHostDetails(hostsList, excludeList);
+
+    return (hostsList.isEmpty() || hostsList.contains(hostName) || hostsList
+        .contains(ip))
+        && !(excludeList.contains(hostName) || excludeList.contains(ip));
   }
 
   @Override
@@ -467,17 +464,15 @@ public class NodesListManager extends CompositeService implements
   }
 
   public boolean isUntrackedNode(String hostName) {
-    boolean untracked;
     String ip = resolver.resolve(hostName);
 
-    synchronized (hostsReader) {
-      Set<String> hostsList = hostsReader.getHosts();
-      Set<String> excludeList = hostsReader.getExcludedHosts();
-      untracked = !hostsList.isEmpty() &&
-          !hostsList.contains(hostName) && !hostsList.contains(ip) &&
-          !excludeList.contains(hostName) && !excludeList.contains(ip);
-    }
-    return untracked;
+    Set<String> hostsList = new HashSet<String>();
+    Set<String> excludeList = new HashSet<String>();
+    hostsReader.getHostDetails(hostsList, excludeList);
+
+    return !hostsList.isEmpty() && !hostsList.contains(hostName)
+        && !hostsList.contains(ip) && !excludeList.contains(hostName)
+        && !excludeList.contains(ip);
   }
 
   /**
