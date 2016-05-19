@@ -2755,6 +2755,38 @@
 
   <property>
     <description>
+      Enable the XFS filter for YARN
+    </description>
+    <name>yarn.webapp.xfs-filter.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      Property specifying the xframe options value.
+    </description>
+    <name>yarn.resourcemanager.webapp.xfs-filter.xframe-options</name>
+    <value>SAMEORIGIN</value>
+  </property>
+
+  <property>
+    <description>
+      Property specifying the xframe options value.
+    </description>
+    <name>yarn.nodemanager.webapp.xfs-filter.xframe-options</name>
+    <value>SAMEORIGIN</value>
+  </property>
+
+  <property>
+    <description>
+      Property specifying the xframe options value.
+    </description>
+    <name>yarn.timeline-service.webapp.xfs-filter.xframe-options</name>
+    <value>SAMEORIGIN</value>
+  </property>
+
+  <property>
+    <description>
     The least amount of time(msec.) an inactive (decommissioned or shutdown) node can
     stay in the nodes list of the resourcemanager after being declared untracked.
     A node is marked untracked if and only if it is absent from both include and

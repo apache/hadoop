@@ -78,8 +78,9 @@ public class WebServer extends AbstractService {
             .withHttpSpnegoPrincipalKey(
               YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
-              YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-            .withCSRFProtection(YarnConfiguration.NM_CSRF_PREFIX)
+                YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+              .withCSRFProtection(YarnConfiguration.NM_CSRF_PREFIX)
+              .withXFSProtection(YarnConfiguration.NM_XFS_PREFIX)
             .start(this.nmWebApp);
       this.port = this.webApp.httpServer().getConnectorAddress(0).getPort();
     } catch (Exception e) {
