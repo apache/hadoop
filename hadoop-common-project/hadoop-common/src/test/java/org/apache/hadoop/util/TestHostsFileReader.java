@@ -20,6 +20,8 @@ package org.apache.hadoop.util;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -96,6 +98,30 @@ public class TestHostsFileReader {
     assertTrue(hfp.getExcludedHosts().contains("somehost5"));
     assertFalse(hfp.getExcludedHosts().contains("host4"));
 
+    // test for refreshing hostreader wit new include/exclude host files
+    String newExcludesFile = HOSTS_TEST_DIR + "/dfs1.exclude";
+    String newIncludesFile = HOSTS_TEST_DIR + "/dfs1.include";
+
+    efw = new FileWriter(newExcludesFile);
+    ifw = new FileWriter(newIncludesFile);
+
+    efw.write("#DFS-Hosts-excluded\n");
+    efw.write("node1\n");
+    efw.close();
+
+    ifw.write("#Hosts-in-DFS\n");
+    ifw.write("node2\n");
+    ifw.close();
+
+    hfp.refresh(newIncludesFile, newExcludesFile);
+    assertTrue(hfp.getExcludedHosts().contains("node1"));
+    assertTrue(hfp.getHosts().contains("node2"));
+
+    Set<String> hostsList = new HashSet<String>();
+    Set<String> excludeList = new HashSet<String>();
+    hfp.getHostDetails(hostsList, excludeList);
+    assertTrue(excludeList.contains("node1"));
+    assertTrue(hostsList.contains("node2"));
   }
 
   /*
