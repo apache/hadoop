@@ -358,6 +358,9 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           createdTime = event.getTimestamp();
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
+          // TODO: YARN-5101. This type of events are parsed in
+          // time-stamp descending order which means the previous event
+          // could override the information from the later same type of event.
           Map<String, Object> eventInfo = event.getEventInfo();
           if (eventInfo == null) {
             continue;
@@ -376,8 +379,10 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           }
           if (eventInfo.containsKey(
               ApplicationMetricsConstants.STATE_EVENT_INFO)) {
-            state = YarnApplicationState.valueOf(eventInfo.get(
-                ApplicationMetricsConstants.STATE_EVENT_INFO).toString());
+            if (!isFinalState(state)) {
+              state = YarnApplicationState.valueOf(eventInfo.get(
+                  ApplicationMetricsConstants.STATE_EVENT_INFO).toString());
+            }
           }
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
@@ -427,6 +432,12 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         appResources, null, progress, type, null, appTags, unmanagedApplication,
         Priority.newInstance(applicationPriority), appNodeLabelExpression,
         amNodeLabelExpression), appViewACLs);
+  }
+
+  private static boolean isFinalState(YarnApplicationState state) {
+    return state == YarnApplicationState.FINISHED
+        || state == YarnApplicationState.FAILED
+        || state == YarnApplicationState.KILLED;
   }
 
   private static ApplicationAttemptReport convertToApplicationAttemptReport(
