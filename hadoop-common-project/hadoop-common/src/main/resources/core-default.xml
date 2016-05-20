@@ -757,12 +757,17 @@
 
 <property>
   <name>fs.s3a.access.key</name>
-  <description>AWS access key ID used by S3A file system. Omit for Role-based authentication.</description>
+  <description>AWS access key ID used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
 </property>
 
 <property>
   <name>fs.s3a.secret.key</name>
-  <description>AWS secret key used by S3A file system. Omit for Role-based authentication.</description>
+  <description>AWS secret key used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <description>Class name of a credentials provider that implements com.amazonaws.auth.AWSCredentialsProvider. Omit if using access/secret keys or another authentication mechanism.</description>
 </property>
 
 <property>

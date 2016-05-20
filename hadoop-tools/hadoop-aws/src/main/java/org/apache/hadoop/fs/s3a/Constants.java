@@ -37,6 +37,10 @@ public final class Constants {
   // s3 secret key
   public static final String SECRET_KEY = "fs.s3a.secret.key";
 
+  // aws credentials provider
+  public static final String AWS_CREDENTIALS_PROVIDER =
+      "fs.s3a.aws.credentials.provider";
+
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
