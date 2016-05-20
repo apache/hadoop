@@ -425,6 +425,13 @@ public interface MRJobConfig {
       "mapreduce.job.running.reduce.limit";
   public static final int DEFAULT_JOB_RUNNING_REDUCE_LIMIT = 0;
 
+  /* Config for Limit on the number of map tasks allowed per job
+   * There is no limit if this value is negative.
+   */
+  public static final String JOB_MAX_MAP =
+      "mapreduce.job.max.map";
+  public static final int DEFAULT_JOB_MAX_MAP = -1;
+
   /* config for tracking the local file where all the credentials for the job
    * credentials.
    */

@@ -91,6 +91,14 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.max.map</name>
+  <value>-1</value>
+  <description>Limit on the number of map tasks allowed per job.
+  There is no limit if this value is negative.
+  </description>
+</property>
+
   <property>
     <name>mapreduce.job.reducer.preempt.delay.sec</name>
     <value>0</value>
