@@ -731,6 +731,15 @@ or in batch runs.
 Smaller values should result in faster test runs, especially when the object
 store is a long way away.
 
+DistCp tests targeting S3A support a configurable file size.  The default is
+10 MB, but the configuration value is expressed in KB so that it can be tuned
+smaller to achieve faster test runs.
+
+      <property>
+        <name>scale.test.distcp.file.size.kb</name>
+        <value>10240</value>
+      </property>
+
 ### Running the Tests
 
 After completing the configuration, execute the test run through Maven.
