@@ -135,6 +135,8 @@ public class TestDistributedShell {
 
     conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
+    // reduce the teardown waiting time
+    conf.setLong(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT, 1000);
     conf.set("yarn.log.dir", "target");
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     // mark if we need to launch the v1 timeline server
@@ -183,9 +185,6 @@ public class TestDistributedShell {
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
       conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
         + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
-      conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
-      conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
-          false);
     } else {
       Assert.fail("Wrong timeline version number: " + timelineVersion);
     }
@@ -280,7 +279,7 @@ public class TestDistributedShell {
     testDSShell(true);
   }
 
-  @Test(timeout=90000)
+  @Test
   @TimelineVersion(2.0f)
   public void testDSShellWithoutDomainV2() throws Exception {
     testDSShell(false);
@@ -290,12 +289,14 @@ public class TestDistributedShell {
     testDSShell(haveDomain, true);
   }
 
-  @Test(timeout=90000)
+  @Test
+  @TimelineVersion(2.0f)
   public void testDSShellWithoutDomainV2DefaultFlow() throws Exception {
     testDSShell(false, true);
   }
 
-  @Test(timeout=90000)
+  @Test
+  @TimelineVersion(2.0f)
   public void testDSShellWithoutDomainV2CustomizedFlow() throws Exception {
     testDSShell(false, false);
   }
