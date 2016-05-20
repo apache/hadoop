@@ -893,6 +893,11 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "container-diagnostics-maximum-size";
   public static final int DEFAULT_NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE = 10000;
 
+  /** Minimum container restart interval. */
+  public static final String NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS =
+      NM_PREFIX + "container-retry-minimum-interval-ms";
+  public static final int DEFAULT_NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS = 1000;
+
   /** Interval at which the delayed token removal thread runs */
   public static final String RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
       RM_PREFIX + "delayed.delegation-token.removal-interval-ms";
