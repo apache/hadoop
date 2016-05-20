@@ -18,8 +18,8 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -27,7 +27,9 @@ import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -39,9 +41,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 public class TestBuckets {
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
 
-  static MiniDFSCluster cluster = null;
-  static int port = 0;
+  private static MiniOzoneCluster cluster = null;
   private static OzoneClient client = null;
 
   /**
@@ -64,13 +70,10 @@ public class TestBuckets {
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
-
-    cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
+    cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local").build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    port = dataNode.getInfoPort();
+    final int port = dataNode.getInfoPort();
     client = new OzoneClient(String.format("http://localhost:%d", port));
   }
 

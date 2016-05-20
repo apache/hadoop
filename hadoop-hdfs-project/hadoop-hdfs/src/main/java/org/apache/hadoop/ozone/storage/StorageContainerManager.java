@@ -155,7 +155,7 @@ public class StorageContainerManager
         DatanodeProtocolPB.class, dnProtoPbService, handlerCount);
     datanodeRpcAddress = updateListenAddress(conf,
         OZONE_SCM_DATANODE_ADDRESS_KEY, datanodeRpcAddr, datanodeRpcServer);
-    LOG.info(buildRpcServerStartMessage("Service RPC server",
+    LOG.info(buildRpcServerStartMessage("RPC server for DataNodes",
         datanodeRpcAddress));
 
     BlockingService storageProtoPbService =
@@ -522,7 +522,7 @@ public class StorageContainerManager
     InetSocketAddress updatedAddr = new InetSocketAddress(
         addr.getHostString(), listenAddr.getPort());
     conf.set(rpcAddressKey,
-        addr.getHostString() + ":" + listenAddr.getPort());
+        addr.getHostString() + ":" + updatedAddr.getPort());
     return updatedAddr;
   }
 

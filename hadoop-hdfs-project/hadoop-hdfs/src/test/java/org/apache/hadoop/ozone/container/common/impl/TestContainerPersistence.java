@@ -20,9 +20,10 @@ package org.apache.hadoop.ozone.container.common.impl;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -41,6 +42,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,21 +71,26 @@ import static org.junit.Assert.fail;
  * Simple tests to verify that container persistence works as expected.
  */
 public class TestContainerPersistence {
-
-  static String path;
-  static ContainerManagerImpl containerManager;
-  static ChunkManagerImpl chunkManager;
-  static KeyManagerImpl keyManager;
-  static OzoneConfiguration conf;
-  static FsDatasetSpi fsDataSet;
-  static MiniDFSCluster cluster;
-  static List<Path> pathLists = new LinkedList<>();
-
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
+
+  private static String path;
+  private static ContainerManagerImpl containerManager;
+  private static ChunkManagerImpl chunkManager;
+  private static KeyManagerImpl keyManager;
+  private static OzoneConfiguration conf;
+  private static FsDatasetSpi<? extends FsVolumeSpi> fsDataSet;
+  private static MiniOzoneCluster cluster;
+  private static List<Path> pathLists = new LinkedList<>();
+
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Throwable {
     conf = new OzoneConfiguration();
     URL p = conf.getClass().getResource("");
     path = p.getPath().concat(
@@ -91,8 +98,6 @@ public class TestContainerPersistence {
     path += conf.getTrimmed(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT,
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
 
     File containerDir = new File(path);
     if (containerDir.exists()) {
@@ -101,8 +106,8 @@ public class TestContainerPersistence {
 
     Assert.assertTrue(containerDir.mkdirs());
 
-    cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
+    cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local").build();
     fsDataSet = cluster.getDataNodes().get(0).getFSDataset();
     containerManager = new ContainerManagerImpl();
     chunkManager = new ChunkManagerImpl(containerManager);

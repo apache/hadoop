@@ -31,17 +31,22 @@ import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.client.OzoneBucket;
 import org.apache.hadoop.ozone.web.client.OzoneClient;
 import org.apache.hadoop.ozone.web.client.OzoneVolume;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
+import org.junit.rules.Timeout;
 
 /**
  * End-to-end testing of Ozone REST operations.
  */
 public class TestOzoneRestWithMiniCluster {
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
@@ -54,11 +59,8 @@ public class TestOzoneRestWithMiniCluster {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "distributed");
-    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3).build();
-    cluster.waitOzoneReady();
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
+        .setHandlerType("distributed").build();
     ozoneClient = cluster.createOzoneClient();
   }
 

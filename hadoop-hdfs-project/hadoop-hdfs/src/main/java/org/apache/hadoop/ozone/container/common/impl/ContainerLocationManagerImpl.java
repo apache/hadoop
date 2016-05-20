@@ -49,7 +49,7 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
 
 
   private final Configuration conf;
-  private final FsDatasetSpi dataset;
+  private final FsDatasetSpi<? extends FsVolumeSpi> dataset;
   private final Path[] volumePaths;
   private int currentIndex;
   private final List<Path> locations;
@@ -59,8 +59,9 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
    * Constructs a Location Manager.
    * @param conf - Configuration.
    */
-  public ContainerLocationManagerImpl(Configuration conf, List<Path> locations,
-                                      FsDatasetSpi dataset) throws IOException {
+  public ContainerLocationManagerImpl(
+      Configuration conf, List<Path> locations,
+      FsDatasetSpi<? extends FsVolumeSpi> dataset) throws IOException {
     this.conf = conf;
     this.dataset = dataset;
     List<Path> pathList = new LinkedList<>();

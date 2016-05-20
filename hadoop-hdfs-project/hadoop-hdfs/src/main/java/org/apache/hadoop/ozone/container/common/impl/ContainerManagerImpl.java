@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
@@ -83,9 +84,9 @@ public class ContainerManagerImpl implements ContainerManager {
    * @throws IOException
    */
   @Override
-  public void init(Configuration config, List<Path> containerDirs,
-                   FsDatasetSpi dataset)
-      throws IOException {
+  public void init(
+      Configuration config, List<Path> containerDirs,
+      FsDatasetSpi<? extends FsVolumeSpi> dataset) throws IOException {
 
     Preconditions.checkNotNull(config);
     Preconditions.checkNotNull(containerDirs);

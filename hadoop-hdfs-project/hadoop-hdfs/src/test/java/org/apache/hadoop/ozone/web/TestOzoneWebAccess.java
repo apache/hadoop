@@ -18,43 +18,43 @@
 
 package org.apache.hadoop.ozone.web;
 
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static org.apache.hadoop.ozone.web.utils.OzoneUtils.*;
-import static org.junit.Assert.assertEquals;
-
-import java.io.IOException;
-import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import javax.ws.rs.core.HttpHeaders;
-
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.web.headers.Header;
 import org.apache.hadoop.util.Time;
-
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import javax.ws.rs.core.HttpHeaders;
+import java.io.IOException;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+import static java.net.HttpURLConnection.HTTP_CREATED;
+import static org.apache.hadoop.ozone.web.utils.OzoneUtils.getRequestID;
+import static org.junit.Assert.assertEquals;
+
 public class TestOzoneWebAccess {
-
-  private static MiniDFSCluster cluster;
-  private static int port;
-
+  /**
+   * Set the timeout for every test
+   */
   @Rule
-  public Timeout timeout = new Timeout(30000);
+  public Timeout testTimeout = new Timeout(300000);
+
+  private static MiniOzoneCluster cluster;
+  private static int port;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -66,23 +66,21 @@ public class TestOzoneWebAccess {
    * @throws IOException
    */
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     URL p = conf.getClass().getResource("");
     String path = p.getPath().concat(TestOzoneWebAccess.class.getSimpleName());
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
 
-    cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
+    cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local").build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     port = dataNode.getInfoPort();
   }
 
   /**
-   * shutdown MiniDFSCluster
+   * shutdown MiniOzoneCluster.
    */
   @AfterClass
   public static void shutdown() {

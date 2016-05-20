@@ -19,8 +19,8 @@
 package org.apache.hadoop.ozone.web.client;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
@@ -36,7 +36,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 
@@ -46,8 +45,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public class TestVolume {
-  private static MiniDFSCluster cluster = null;
-  private static int port = 0;
+  private static MiniOzoneCluster cluster = null;
   private static OzoneClient client = null;
 
   /**
@@ -60,8 +58,7 @@ public class TestVolume {
    * @throws IOException
    */
   @BeforeClass
-  public static void init() throws IOException, OzoneException,
-      URISyntaxException {
+  public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     URL p = conf.getClass().getResource("");
@@ -71,15 +68,12 @@ public class TestVolume {
     FileUtils.deleteDirectory(new File(path));
 
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
-    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
-    cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
+    cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local").build();
     DataNode dataNode = cluster.getDataNodes().get(0);
-    port = dataNode.getInfoPort();
+    final int port = dataNode.getInfoPort();
 
     client = new OzoneClient(String.format("http://localhost:%d", port));
   }
