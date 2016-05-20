@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -45,9 +46,12 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.net.NetUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
-class JournalNodeRpcServer implements QJournalProtocol {
+@InterfaceAudience.Private
+@VisibleForTesting
+public class JournalNodeRpcServer implements QJournalProtocol {
 
   private static final int HANDLER_COUNT = 5;
   private final JournalNode jn;
