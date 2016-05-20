@@ -725,6 +725,40 @@ public class TestContainer {
     }
   }
 
+  @Test
+  public void testContainerRestartInterval() throws IOException {
+    conf.setInt(YarnConfiguration.NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS, 2000);
+
+    ContainerRetryContext containerRetryContext1 = ContainerRetryContext
+        .newInstance(ContainerRetryPolicy.NEVER_RETRY, null, 3, 0);
+    testContainerRestartInterval(containerRetryContext1, 0);
+
+    ContainerRetryContext containerRetryContext2 = ContainerRetryContext
+        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, 3, 0);
+    testContainerRestartInterval(containerRetryContext2, 2000);
+
+    ContainerRetryContext containerRetryContext3 = ContainerRetryContext
+        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, 3, 4000);
+    testContainerRestartInterval(containerRetryContext3, 4000);
+  }
+
+  private void testContainerRestartInterval(
+      ContainerRetryContext containerRetryContext,
+      int expectedRestartInterval) throws IOException {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(25, 314159265358980L, 4345,
+          "yak", containerRetryContext);
+      Assert.assertEquals(
+          ((ContainerImpl)wc.c).getContainerRetryContext().getRetryInterval(),
+          expectedRestartInterval);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
   private void verifyCleanupCall(WrappedContainer wc) throws Exception {
     ResourcesReleasedMatcher matchesReq =
         new ResourcesReleasedMatcher(wc.localResources, EnumSet.of(

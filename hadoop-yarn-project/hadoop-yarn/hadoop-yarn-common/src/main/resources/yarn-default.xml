@@ -1589,6 +1589,12 @@
   </property>
 
   <property>
+    <description>Minimum container restart interval in milliseconds.</description>
+    <name>yarn.nodemanager.container-retry-minimum-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
     <description>Max number of threads in NMClientAsync to process container
     management events</description>
     <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>
