@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.Command;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.ExecuteCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.PlanCommand;
+import org.apache.hadoop.hdfs.server.diskbalancer.command.QueryCommand;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -101,6 +102,11 @@ public class DiskBalancer extends Configured implements Tool {
   public static final String VERBOSE = "v";
   public static final int PLAN_VERSION = 1;
   /**
+   * Reports the status of disk balancer operation.
+   */
+  public static final String QUERY = "query";
+
+  /**
    * Template for the Before File. It is node.before.json.
    */
   public static final String BEFORE_TEMPLATE = "%s.before.json";
@@ -160,6 +166,8 @@ public class DiskBalancer extends Configured implements Tool {
   private Options getOpts() {
     Options opts = new Options();
     addPlanCommands(opts);
+    addExecuteCommands(opts);
+    addQueryCommands(opts);
     return opts;
   }
 
@@ -216,6 +224,16 @@ public class DiskBalancer extends Configured implements Tool {
   }
 
   /**
+   * Adds query command options.
+   * @param opt Options
+   */
+  private void addQueryCommands(Options opt) {
+    Option query = new Option(QUERY, true, "Queries the disk balancer " +
+        "status of a given datanode. e.g. -query <nodename>");
+    opt.addOption(query);
+  }
+
+  /**
    * This function parses all command line arguments and returns the appropriate
    * values.
    *
@@ -247,6 +265,10 @@ public class DiskBalancer extends Configured implements Tool {
 
       if(cmd.hasOption(DiskBalancer.EXECUTE)) {
         currentCommand = new ExecuteCommand(getConf());
+      }
+
+      if(cmd.hasOption(DiskBalancer.QUERY)) {
+        currentCommand = new QueryCommand(getConf());
       }
 
       if(currentCommand == null) {
