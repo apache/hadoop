@@ -24,6 +24,7 @@
 #include "common/libhdfs_events_impl.h"
 #include "common/logging.h"
 #include "common/util.h"
+#include "common/new_delete.h"
 
 #include "asio.hpp"
 
@@ -31,12 +32,13 @@ namespace hdfs {
 
 class DataNodeConnection : public AsyncStream {
 public:
-    std::string uuid_;
-    std::unique_ptr<hadoop::common::TokenProto> token_;
+  MEMCHECKED_CLASS(DataNodeConnection)
+  std::string uuid_;
+  std::unique_ptr<hadoop::common::TokenProto> token_;
 
-    virtual ~DataNodeConnection();
-    virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
-    virtual void Cancel() = 0;
+  virtual ~DataNodeConnection();
+  virtual void Connect(std::function<void(Status status, std::shared_ptr<DataNodeConnection> dn)> handler) = 0;
+  virtual void Cancel() = 0;
 };
 
 

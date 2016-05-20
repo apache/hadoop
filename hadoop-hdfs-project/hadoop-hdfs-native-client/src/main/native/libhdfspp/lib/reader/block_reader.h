@@ -21,6 +21,7 @@
 #include "hdfspp/status.h"
 #include "common/async_stream.h"
 #include "common/cancel_tracker.h"
+#include "common/new_delete.h"
 #include "datatransfer.pb.h"
 #include "connection/datanodeconnection.h"
 
@@ -67,6 +68,7 @@ struct BlockReaderOptions {
  */
 class BlockReader {
 public:
+  MEMCHECKED_CLASS(BlockReader)
   virtual void AsyncReadBlock(
     const std::string & client_name,
     const hadoop::hdfs::LocatedBlockProto &block, size_t offset,

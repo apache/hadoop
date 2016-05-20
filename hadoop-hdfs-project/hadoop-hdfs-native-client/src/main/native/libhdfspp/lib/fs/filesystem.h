@@ -22,6 +22,7 @@
 #include "common/libhdfs_events_impl.h"
 #include "common/hdfs_public_api.h"
 #include "common/async_stream.h"
+#include "common/new_delete.h"
 #include "hdfspp/hdfspp.h"
 #include "fs/bad_datanode_tracker.h"
 #include "rpc/rpc_engine.h"
@@ -47,6 +48,7 @@ namespace hdfs {
  */
 class NameNodeOperations {
 public:
+  MEMCHECKED_CLASS(NameNodeOperations);
   NameNodeOperations(::asio::io_service *io_service, const Options &options,
             const std::string &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version) :
@@ -83,6 +85,7 @@ private:
  */
 class FileSystemImpl : public FileSystem {
 public:
+  MEMCHECKED_CLASS(FileSystemImpl)
   FileSystemImpl(IoService *&io_service, const std::string& user_name, const Options &options);
   ~FileSystemImpl() override;
 
