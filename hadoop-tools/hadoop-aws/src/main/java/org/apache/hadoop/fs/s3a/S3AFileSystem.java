@@ -38,8 +38,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSCredentialsProviderChain;
-
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
@@ -58,11 +58,10 @@ import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.event.ProgressEvent;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -188,16 +187,9 @@ public class S3AFileSystem extends FileSystem {
     workingDir = new Path("/user", System.getProperty("user.name"))
         .makeQualified(this.uri, this.getWorkingDirectory());
 
-    AWSAccessKeys creds = getAWSAccessKeys(name, conf);
-
-    AWSCredentialsProviderChain credentials = new AWSCredentialsProviderChain(
-        new BasicAWSCredentialsProvider(
-            creds.getAccessKey(), creds.getAccessSecret()),
-        new InstanceProfileCredentialsProvider(),
-        new AnonymousAWSCredentialsProvider()
-    );
-
     bucket = name.getHost();
+
+    AWSCredentialsProvider credentials = getAWSCredentialsProvider(name, conf);
 
     ClientConfiguration awsConf = new ClientConfiguration();
     awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
@@ -343,7 +335,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   private void initAmazonS3Client(Configuration conf,
-      AWSCredentialsProviderChain credentials, ClientConfiguration awsConf)
+      AWSCredentialsProvider credentials, ClientConfiguration awsConf)
       throws IllegalArgumentException {
     s3 = new AmazonS3Client(credentials, awsConf);
     String endPoint = conf.getTrimmed(ENDPOINT, "");
@@ -456,6 +448,48 @@ public class S3AFileSystem extends FileSystem {
       }
     }
     return new AWSAccessKeys(accessKey, secretKey);
+  }
+
+  /**
+   * Create the standard credential provider, or load in one explicitly
+   * identified in the configuration.
+   * @param binding the S3 binding/bucket.
+   * @param conf configuration
+   * @return a credential provider
+   * @throws IOException on any problem. Class construction issues may be
+   * nested inside the IOE.
+   */
+  private AWSCredentialsProvider getAWSCredentialsProvider(URI binding,
+      Configuration conf) throws IOException {
+    AWSCredentialsProvider credentials;
+
+    String className = conf.getTrimmed(AWS_CREDENTIALS_PROVIDER);
+    if (StringUtils.isEmpty(className)) {
+      AWSAccessKeys creds = getAWSAccessKeys(binding, conf);
+      credentials = new AWSCredentialsProviderChain(
+          new BasicAWSCredentialsProvider(
+              creds.getAccessKey(), creds.getAccessSecret()),
+          new InstanceProfileCredentialsProvider(),
+          new AnonymousAWSCredentialsProvider()
+      );
+
+    } else {
+      try {
+        LOG.debug("Credential provider class is {}", className);
+        credentials = (AWSCredentialsProvider) Class.forName(className)
+            .getDeclaredConstructor(URI.class, Configuration.class)
+            .newInstance(this.uri, conf);
+      } catch (ClassNotFoundException e) {
+        throw new IOException(className + " not found.", e);
+      } catch (NoSuchMethodException | SecurityException e) {
+        throw new IOException(className + " constructor exception.", e);
+      } catch (ReflectiveOperationException | IllegalArgumentException e) {
+        throw new IOException(className + " instantiation exception.", e);
+      }
+      LOG.debug("Using {} for {}.", credentials, this.uri);
+    }
+
+    return credentials;
   }
 
   /**
@@ -1455,7 +1489,7 @@ public class S3AFileSystem extends FileSystem {
           .append('\'');
     }
     sb.append(", statistics {")
-        .append(statistics.toString())
+        .append(statistics)
         .append("}");
     sb.append(", metrics {")
         .append(instrumentation.dump("{", "=", "} ", true))

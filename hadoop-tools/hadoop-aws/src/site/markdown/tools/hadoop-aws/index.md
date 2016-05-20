@@ -174,20 +174,27 @@ If you do any of these: change your credentials immediately!
 
     <property>
       <name>fs.s3a.access.key</name>
-      <description>AWS access key ID. Omit for Role-based authentication.</description>
+      <description>AWS access key ID. Omit for IAM role-based or provider-based authentication.</description>
     </property>
 
     <property>
       <name>fs.s3a.secret.key</name>
-      <description>AWS secret key. Omit for Role-based authentication.</description>
+      <description>AWS secret key. Omit for IAM role-based or provider-based authentication.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.aws.credentials.provider</name>
+      <description>Class name of a credentials provider that implements com.amazonaws.auth.AWSCredentialsProvider.
+      Omit if using access/secret keys or another authentication mechanism.</description>
     </property>
 
 #### Protecting the AWS Credentials in S3A
 
-To protect these credentials from prying eyes, it is recommended that you use
+To protect the access/secret keys from prying eyes, it is recommended that you
+use either IAM role-based authentication (such as EC2 instance profile) or
 the credential provider framework securely storing them and accessing them
- through configuration. The following describes its use for AWS credentials
-in S3A FileSystem.
+through configuration. The following describes using the latter for AWS
+credentials in S3AFileSystem.
 
 For additional reading on the credential provider API see:
 [Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
@@ -563,13 +570,13 @@ Example:
 
       <property>
         <name>fs.s3a.access.key</name>
-        <description>AWS access key ID. Omit for Role-based authentication.</description>
+        <description>AWS access key ID. Omit for IAM role-based authentication.</description>
         <value>DONOTCOMMITTHISKEYTOSCM</value>
       </property>
   
       <property>
         <name>fs.s3a.secret.key</name>
-        <description>AWS secret key. Omit for Role-based authentication.</description>
+        <description>AWS secret key. Omit for IAM role-based authentication.</description>
         <value>DONOTEVERSHARETHISSECRETKEY!</value>
       </property>
     </configuration>
