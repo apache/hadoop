@@ -110,8 +110,10 @@ public final class OzoneClientUtils {
     final Optional<Integer> port = getPortNumberFromConfigKeys(conf,
         OZONE_SCM_DATANODE_ADDRESS_KEY);
 
-    return NetUtils.createSocketAddr(host.get() + ":" +
+    InetSocketAddress addr = NetUtils.createSocketAddr(host.get() + ":" +
         port.or(OZONE_SCM_DATANODE_PORT_DEFAULT));
+
+    return addr;
   }
 
   /**

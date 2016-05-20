@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
 import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
@@ -42,11 +43,10 @@ public interface ContainerManager extends RwLock {
    *
    * @param config        - Configuration.
    * @param containerDirs - List of Metadata Container locations.
-   * @param dataset       - FSDataset.
    * @throws IOException
    */
   void init(Configuration config, List<Path> containerDirs,
-            FsDatasetSpi dataset)
+            FsDatasetSpi<? extends FsVolumeSpi> dataset)
       throws IOException;
 
   /**

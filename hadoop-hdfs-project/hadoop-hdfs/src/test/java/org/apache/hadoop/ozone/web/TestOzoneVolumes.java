@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.ozone.web;
 
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfiguration;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
@@ -35,7 +35,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import javax.ws.rs.core.HttpHeaders;
 import java.io.IOException;
@@ -49,8 +51,14 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.Assert.assertEquals;
 
 public class TestOzoneVolumes {
-  static MiniDFSCluster cluster = null;
-  static int port = 0;
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
+
+  private static MiniOzoneCluster cluster = null;
+  private static int port = 0;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -62,7 +70,7 @@ public class TestOzoneVolumes {
    * @throws IOException
    */
   @BeforeClass
-  public static void init() throws IOException {
+  public static void init() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
 
     URL p = conf.getClass().getResource("");
@@ -71,13 +79,10 @@ public class TestOzoneVolumes {
         OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT_DEFAULT);
 
     conf.set(OzoneConfigKeys.OZONE_LOCALSTORAGE_ROOT, path);
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "local");
-    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
     Logger.getLogger("log4j.logger.org.apache.http").setLevel(Level.DEBUG);
 
-    cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
+    cluster = new MiniOzoneCluster.Builder(conf)
+        .setHandlerType("local").build();
     DataNode dataNode = cluster.getDataNodes().get(0);
     port = dataNode.getInfoPort();
   }

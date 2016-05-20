@@ -48,7 +48,7 @@ public class OzoneContainer {
       LoggerFactory.getLogger(OzoneContainer.class);
 
   private final Configuration ozoneConfig;
-  private final FsDatasetSpi dataSet;
+  private final FsDatasetSpi<? extends FsVolumeSpi> dataSet;
   private final ContainerDispatcher dispatcher;
   private final ContainerManager manager;
   private final XceiverServer server;
@@ -62,8 +62,9 @@ public class OzoneContainer {
    * @param dataSet     - FsDataset.
    * @throws IOException
    */
-  public OzoneContainer(Configuration ozoneConfig, FsDatasetSpi dataSet) throws
-      Exception {
+  public OzoneContainer(
+      Configuration ozoneConfig,
+      FsDatasetSpi<? extends FsVolumeSpi> dataSet) throws Exception {
     List<Path> locations = new LinkedList<>();
     String[] paths = ozoneConfig.getStrings(OzoneConfigKeys
         .OZONE_METADATA_DIRS);
@@ -150,8 +151,9 @@ public class OzoneContainer {
    * @param pathList - List of paths.
    * @throws IOException
    */
-  private void getDataDir(FsDatasetSpi dataset, List<Path> pathList) throws
-      IOException {
+  private void getDataDir(
+      FsDatasetSpi<? extends FsVolumeSpi> dataset,
+      List<Path> pathList) throws IOException {
     FsDatasetSpi.FsVolumeReferences references;
     try {
       synchronized (dataset) {

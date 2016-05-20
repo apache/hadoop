@@ -33,8 +33,17 @@ import org.junit.rules.ExpectedException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ozone.protocol.LocatedContainer;
 import org.apache.hadoop.ozone.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.junit.rules.Timeout;
 
+/**
+ * Test class that exercises the StorageContainerManager.
+ */
 public class TestStorageContainerManager {
+  /**
+   * Set the timeout for every test.
+   */
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf;
@@ -47,9 +56,6 @@ public class TestStorageContainerManager {
   @BeforeClass
   public static void init() throws IOException {
     conf = new OzoneConfiguration();
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    conf.set(OzoneConfigKeys.OZONE_HANDLER_TYPE_KEY, "distributed");
-    conf.setBoolean(OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY, true);
   }
 
   @After
@@ -58,9 +64,9 @@ public class TestStorageContainerManager {
   }
 
   @Test
-  public void testLocationsForSingleKey() throws IOException {
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitOzoneReady();
+  public void testLocationsForSingleKey() throws Exception {
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+        .setHandlerType("distributed").build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     Set<LocatedContainer> containers =
@@ -72,9 +78,9 @@ public class TestStorageContainerManager {
   }
 
   @Test
-  public void testLocationsForMultipleKeys() throws IOException {
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitOzoneReady();
+  public void testLocationsForMultipleKeys() throws Exception {
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(1)
+        .setHandlerType("distributed").build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     Set<LocatedContainer> containers =
@@ -88,9 +94,9 @@ public class TestStorageContainerManager {
   }
 
   @Test
-  public void testNoDataNodes() throws IOException {
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(0).build();
-    cluster.waitOzoneReady();
+  public void testNoDataNodes() throws Exception {
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(0)
+        .setHandlerType("distributed").build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     exception.expect(IOException.class);
@@ -100,9 +106,9 @@ public class TestStorageContainerManager {
   }
 
   @Test
-  public void testMultipleDataNodes() throws IOException {
-    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3).build();
-    cluster.waitOzoneReady();
+  public void testMultipleDataNodes() throws Exception {
+    cluster = new MiniOzoneCluster.Builder(conf).numDataNodes(3)
+        .setHandlerType("distributed").build();
     storageContainerLocationClient =
         cluster.createStorageContainerLocationClient();
     Set<LocatedContainer> containers =
