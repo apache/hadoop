@@ -57,7 +57,7 @@ public class TestLocalJobSubmission {
 
   /**
    * test the local job submission options of
-   * -jt local -libjars
+   * -jt local -libjars.
    * @throws IOException
    */
   @Test
@@ -104,6 +104,28 @@ public class TestLocalJobSubmission {
       fail("Job failed");
     }
     assertEquals("dist job res is not 0:", 0, res);
+  }
+
+  /**
+   * test JOB_MAX_MAP configuration.
+   * @throws Exception
+   */
+  @Test
+  public void testJobMaxMapConfig() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(MRConfig.FRAMEWORK_NAME, "local");
+    conf.setInt(MRJobConfig.JOB_MAX_MAP, 0);
+    final String[] args = {
+        "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
+    };
+    int res = -1;
+    try {
+      res = ToolRunner.run(conf, new SleepJob(), args);
+      fail("Job should fail");
+    } catch (IllegalArgumentException e) {
+      assertTrue(e.getLocalizedMessage().contains(
+          "The number of map tasks 1 exceeded limit"));
+    }
   }
 
   private Path makeJar(Path p) throws IOException {
