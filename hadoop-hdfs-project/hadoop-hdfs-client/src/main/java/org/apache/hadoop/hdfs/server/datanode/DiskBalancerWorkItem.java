@@ -34,7 +34,7 @@ import java.io.IOException;
 @InterfaceStability.Unstable
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class DiskBalancerWorkItem {
-  private final long bytesToCopy;
+  private long bytesToCopy;
   private long bytesCopied;
   private long errorCount;
   private String errMsg;
@@ -43,6 +43,14 @@ public class DiskBalancerWorkItem {
   private long maxDiskErrors;
   private long tolerancePercent;
   private long bandwidth;
+
+  /**
+   * Empty constructor for Json serialization.
+   */
+  public DiskBalancerWorkItem() {
+
+  }
+
 
   /**
    * Constructs a DiskBalancerWorkItem.

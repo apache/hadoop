@@ -189,6 +189,12 @@ public class TestDiskBalancer {
 
       // Submit the plan and wait till the execution is done.
       newDN.submitDiskBalancerPlan(planID, 1, planJson, false);
+      String jmxString = newDN.getDiskBalancerStatus();
+      assertNotNull(jmxString);
+      DiskBalancerWorkStatus status =
+          DiskBalancerWorkStatus.parseJson(jmxString);
+      DiskBalancerWorkStatus realStatus = newDN.queryDiskBalancerPlan();
+      assertEquals(realStatus.getPlanID(), status.getPlanID());
 
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override

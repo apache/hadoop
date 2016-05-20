@@ -90,4 +90,12 @@ public interface DataNodeMXBean {
    * Gets the network error counts on a per-Datanode basis.
    */
   public Map<String, Map<String, Long>> getDatanodeNetworkCounts();
+
+  /**
+   * Gets the diskBalancer Status.
+   * Please see implementation for the format of the returned information.
+   *
+   * @return  DiskBalancer Status
+   */
+  String getDiskBalancerStatus();
 }

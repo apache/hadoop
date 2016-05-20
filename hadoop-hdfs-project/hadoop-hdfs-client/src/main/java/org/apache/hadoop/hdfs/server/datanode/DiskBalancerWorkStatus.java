@@ -126,9 +126,27 @@ public class DiskBalancerWorkStatus {
    *
    * @throws IOException
    **/
-  public String getCurrentStateString() throws IOException {
+  public String currentStateString() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     return mapper.writeValueAsString(currentState);
+  }
+
+  public String toJsonString() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.writeValueAsString(this);
+
+  }
+
+  /**
+   * Returns a DiskBalancerWorkStatus object from the Json .
+   * @param json - json String
+   * @return DiskBalancerWorkStatus
+   * @throws IOException
+   */
+  public static DiskBalancerWorkStatus parseJson(String json) throws
+      IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    return mapper.readValue(json, DiskBalancerWorkStatus.class);
   }
 
 
@@ -175,6 +193,16 @@ public class DiskBalancerWorkStatus {
     private String sourcePath;
     private String destPath;
     private DiskBalancerWorkItem workItem;
+
+    /**
+     * Constructor needed for json serialization.
+     */
+    public DiskBalancerWorkEntry() {
+    }
+
+    public DiskBalancerWorkEntry(String workItem) throws IOException {
+      this.workItem = DiskBalancerWorkItem.parseJson(workItem);
+    }
 
     /**
      * Constructs a Work Entry class.

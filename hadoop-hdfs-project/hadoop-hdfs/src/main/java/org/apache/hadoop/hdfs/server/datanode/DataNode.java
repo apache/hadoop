@@ -2958,6 +2958,16 @@ public class DataNode extends ReconfigurableBase
   public synchronized String getClusterId() {
     return clusterId;
   }
+
+  @Override // DataNodeMXBean
+  public String getDiskBalancerStatus() {
+    try {
+      return this.diskBalancer.queryWorkStatus().toJsonString();
+    } catch (IOException ex) {
+      LOG.debug("Reading diskbalancer Status failed. ex:{}", ex);
+      return "";
+    }
+  }
   
   public void refreshNamenodes(Configuration conf) throws IOException {
     blockPoolManager.refreshNamenodes(conf);

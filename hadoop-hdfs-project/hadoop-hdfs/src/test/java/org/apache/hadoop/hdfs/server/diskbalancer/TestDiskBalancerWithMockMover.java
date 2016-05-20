@@ -20,6 +20,7 @@
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.MoveStep;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
@@ -53,7 +55,6 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
-import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_DONE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -156,15 +157,20 @@ public class TestDiskBalancerWithMockMover {
   public void testSubmitDiskBalancerPlan() throws Exception {
     MockMoverHelper mockMoverHelper = new MockMoverHelper().invoke();
     NodePlan plan = mockMoverHelper.getPlan();
-    DiskBalancer balancer = mockMoverHelper.getBalancer();
+    final DiskBalancer balancer = mockMoverHelper.getBalancer();
 
     executeSubmitPlan(plan, balancer);
-    int counter = 0;
-    while ((balancer.queryWorkStatus().getResult() != PLAN_DONE) &&
-        (counter < 3)) {
-      Thread.sleep(1000);
-      counter++;
-    }
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          return balancer.queryWorkStatus().getResult() ==
+              DiskBalancerWorkStatus.Result.PLAN_DONE;
+        } catch (IOException ex) {
+          return false;
+        }
+      }
+    }, 1000, 100000);
 
     // Asserts that submit plan caused an execution in the background.
     assertTrue(mockMoverHelper.getBlockMover().getRunCount() == 1);

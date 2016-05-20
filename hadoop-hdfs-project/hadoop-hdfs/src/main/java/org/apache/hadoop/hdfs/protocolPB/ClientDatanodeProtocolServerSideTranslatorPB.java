@@ -298,7 +298,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
           .newBuilder()
           .setResult(result.getResult().getIntResult())
           .setPlanID(result.getPlanID())
-          .setCurrentStatus(result.getCurrentStateString())
+          .setCurrentStatus(result.currentStateString())
           .build();
     } catch (Exception e) {
       throw new ServiceException(e);
