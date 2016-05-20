@@ -94,6 +94,10 @@ Release 2.7.3 - UNRELEASED
     HADOOP-13084. Fix ASF License warnings in branch-2.7.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-13154. S3AFileSystem
+    printAmazonServiceException/printAmazonClientException appear copy & paste
+    of AWS examples. (Steve Loughran via cnauroth)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
