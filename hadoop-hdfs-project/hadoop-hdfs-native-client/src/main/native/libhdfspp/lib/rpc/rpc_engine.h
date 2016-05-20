@@ -23,6 +23,7 @@
 
 #include "common/retry_policy.h"
 #include "common/libhdfs_events_impl.h"
+#include "common/new_delete.h"
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -64,6 +65,7 @@ class RpcConnection;
  */
 class Request {
  public:
+  MEMCHECKED_CLASS(Request)
   typedef std::function<void(::google::protobuf::io::CodedInputStream *is,
                              const Status &status)> Handler;
 
@@ -108,6 +110,7 @@ class Request {
  */
 class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
  public:
+  MEMCHECKED_CLASS(RpcConnection)
   RpcConnection(LockFreeRpcEngine *engine);
   virtual ~RpcConnection();
 
@@ -212,6 +215,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
  */
 class LockFreeRpcEngine {
 public:
+  MEMCHECKED_CLASS(LockFreeRpcEngine)
   /* Enqueues a CommsError without acquiring a lock*/
   virtual void AsyncRpcCommsError(const Status &status,
                       std::shared_ptr<RpcConnection> failedConnection,
@@ -238,6 +242,7 @@ public:
  */
 class RpcEngine : public LockFreeRpcEngine {
  public:
+  MEMCHECKED_CLASS(RpcEngine)
   enum { kRpcVersion = 9 };
   enum {
     kCallIdAuthorizationFailed = -1,

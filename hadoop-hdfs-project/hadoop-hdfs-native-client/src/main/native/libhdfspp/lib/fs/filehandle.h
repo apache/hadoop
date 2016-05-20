@@ -22,6 +22,7 @@
 #include "common/async_stream.h"
 #include "common/cancel_tracker.h"
 #include "common/libhdfs_events_impl.h"
+#include "common/new_delete.h"
 #include "reader/fileinfo.h"
 #include "reader/readergroup.h"
 
@@ -49,6 +50,7 @@ class DataNodeConnection;
  */
 class FileHandleImpl : public FileHandle {
 public:
+  MEMCHECKED_CLASS(FileHandleImpl)
   FileHandleImpl(const std::string & cluster_name,
                  const std::string & path,
                  ::asio::io_service *io_service, const std::string &client_name,
