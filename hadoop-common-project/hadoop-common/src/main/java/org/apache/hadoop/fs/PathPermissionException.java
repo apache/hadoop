@@ -26,4 +26,18 @@ public class PathPermissionException extends PathIOException {
   public PathPermissionException(String path) {
     super(path, "Operation not permitted");
   }
+
+  public PathPermissionException(String path, Throwable cause) {
+    super(path, cause);
+  }
+
+  public PathPermissionException(String path, String error) {
+    super(path, error);
+  }
+
+  public PathPermissionException(String path,
+      String error,
+      Throwable cause) {
+    super(path, error, cause);
+  }
 }

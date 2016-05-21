@@ -15,22 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
-
-import java.io.IOException;
 
 /**
- * Thrown when the user makes a malformed request, for example missing required
- * parameters or parameters that are not valid.
+ * S3A Filesystem. Except for the exceptions, it should
+ * all be hidden as implementation details.
  */
-public class InvalidRequestException extends IOException {
-  static final long serialVersionUID = 0L;
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+package org.apache.hadoop.fs.s3a;
 
-  public InvalidRequestException(String str) {
-    super(str);
-  }
-
-  public InvalidRequestException(String message, Throwable cause) {
-    super(message, cause);
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

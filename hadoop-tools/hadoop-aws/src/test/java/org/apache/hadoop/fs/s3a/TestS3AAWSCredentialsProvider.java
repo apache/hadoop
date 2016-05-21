@@ -23,8 +23,10 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
 import com.amazonaws.auth.AWSCredentials;
@@ -32,7 +34,6 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,13 +50,25 @@ public class TestS3AAWSCredentialsProvider {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER, "no.such.class");
     try {
-      S3ATestUtils.createTestFileSystem(conf);
+      createFailingFS(conf);
     } catch (IOException e) {
       if (!(e.getCause() instanceof ClassNotFoundException)) {
         LOG.error("Unexpected nested cause: {} in {}", e.getCause(), e, e);
         throw e;
       }
     }
+  }
+
+  /**
+   * Create a filesystem, expect it to fail by raising an IOException.
+   * Raises an assertion exception if in fact the FS does get instantiated.
+   * @param conf configuration
+   * @throws IOException an expected exception.
+   */
+  private void createFailingFS(Configuration conf) throws IOException {
+    S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf);
+    fs.listStatus(new Path("/"));
+    fail("Expected exception - got " + fs);
   }
 
   static class BadCredentialsProvider implements AWSCredentialsProvider {
@@ -79,12 +92,9 @@ public class TestS3AAWSCredentialsProvider {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER, BadCredentialsProvider.class.getName());
     try {
-      S3ATestUtils.createTestFileSystem(conf);
-    } catch (AmazonS3Exception e) {
-      if (e.getStatusCode() != 403) {
-        LOG.error("Unexpected status code: {}", e.getStatusCode(), e);
-        throw e;
-      }
+      createFailingFS(conf);
+    } catch (AccessDeniedException e) {
+      // expected
     }
   }
 
