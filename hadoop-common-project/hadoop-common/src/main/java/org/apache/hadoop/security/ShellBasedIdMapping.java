@@ -85,7 +85,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   private static final Pattern EMPTY_LINE = Pattern.compile("^\\s*$");
   private static final Pattern COMMENT_LINE = Pattern.compile("^\\s*#.*$");
   private static final Pattern MAPPING_LINE =
-      Pattern.compile("^(uid|gid)\\s+(\\d+)\\s+(\\d+)\\s*(#.*)?$");
+      Pattern.compile("^(uid|gid)\\s+(\\d+)\\s+(0|-?[1-9]\\d*)\\s*(#.*)?$");
 
   final private long timeout;
   
