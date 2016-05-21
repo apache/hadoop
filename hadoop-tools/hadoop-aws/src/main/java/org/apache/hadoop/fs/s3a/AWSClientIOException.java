@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,22 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+
+package org.apache.hadoop.fs.s3a;
+
+import com.amazonaws.AmazonClientException;
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 
 /**
- * Thrown when the user makes a malformed request, for example missing required
- * parameters or parameters that are not valid.
+ * IOException equivalent of an {@link AmazonClientException}.
  */
-public class InvalidRequestException extends IOException {
-  static final long serialVersionUID = 0L;
+public class AWSClientIOException extends IOException {
 
-  public InvalidRequestException(String str) {
-    super(str);
+  private final String operation;
+
+  public AWSClientIOException(String operation,
+      AmazonClientException cause) {
+    super(cause);
+    Preconditions.checkArgument(operation != null, "Null 'operation' argument");
+    Preconditions.checkArgument(cause != null, "Null 'cause' argument");
+    this.operation = operation;
   }
 
-  public InvalidRequestException(String message, Throwable cause) {
-    super(message, cause);
+  public AmazonClientException getCause() {
+    return (AmazonClientException) super.getCause();
   }
+
+  @Override
+  public String getMessage() {
+    return operation + ": " + getCause().getMessage();
+  }
+
 }

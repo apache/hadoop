@@ -24,4 +24,14 @@ public class PathAccessDeniedException extends PathIOException {
   public PathAccessDeniedException(String path) {
     super(path, "Permission denied");
   }
+
+  public PathAccessDeniedException(String path, Throwable cause) {
+    super(path, cause);
+  }
+
+  public PathAccessDeniedException(String path,
+      String error,
+      Throwable cause) {
+    super(path, error, cause);
+  }
 }
