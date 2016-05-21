@@ -148,8 +148,9 @@ public class TestShellBasedIdMapping {
     // getUid()
     incrIdMapping.clearNameMaps();
     uidNameMap = refIdMapping.getUidNameMap();
-    {
-      BiMap.Entry<Integer, String> me = uidNameMap.entrySet().iterator().next();
+    for (BiMap.Entry<Integer, String> me : uidNameMap.entrySet()) {
+      tempStaticMapFile.delete();
+      incrIdMapping.clearNameMaps();
       Integer id = me.getKey();
       String name = me.getValue();
 
@@ -174,8 +175,9 @@ public class TestShellBasedIdMapping {
     // getGid()
     incrIdMapping.clearNameMaps();
     gidNameMap = refIdMapping.getGidNameMap();
-    {
-      BiMap.Entry<Integer, String> me = gidNameMap.entrySet().iterator().next();
+    for (BiMap.Entry<Integer, String> me : gidNameMap.entrySet()) {
+      tempStaticMapFile.delete();
+      incrIdMapping.clearNameMaps();
       Integer id = me.getKey();
       String name = me.getValue();
 
@@ -189,7 +191,11 @@ public class TestShellBasedIdMapping {
       Integer rid = id + 10000;
       String smapStr = "gid " + rid + " " + id;
       // Sleep a bit to avoid that two changes have the same modification time
-      try {Thread.sleep(1000);} catch (InterruptedException e) {}
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        // Do nothing
+      }
       createStaticMapFile(tempStaticMapFile, smapStr);
 
       // Now the id found for "name" should be the id specified by
