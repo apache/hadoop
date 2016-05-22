@@ -95,11 +95,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   // NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS.
   private static final String NM_LOG_AGGREGATION_DEBUG_ENABLED
       = YarnConfiguration.NM_PREFIX + "log-aggregation.debug-enabled";
-  private static final boolean
-      DEFAULT_NM_LOG_AGGREGATION_DEBUG_ENABLED = false;
-
-  private static final long
-      NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS = 3600;
 
   private final LocalDirsHandlerService dirsHandler;
   private final Dispatcher dispatcher;
@@ -142,7 +137,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       LocalDirsHandlerService dirsHandler, Path remoteNodeLogFileForApp,
       Map<ApplicationAccessType, String> appAcls,
       LogAggregationContext logAggregationContext, Context context,
-      FileContext lfs) {
+      FileContext lfs, long rollingMonitorInterval) {
     this.dispatcher = dispatcher;
     this.conf = conf;
     this.delService = deletionService;
@@ -167,43 +162,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     } else {
       this.retentionSize = configuredRentionSize;
     }
-    long configuredRollingMonitorInterval = conf.getLong(
-      YarnConfiguration
-        .NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
-      YarnConfiguration
-        .DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS);
-    boolean debug_mode =
-        conf.getBoolean(NM_LOG_AGGREGATION_DEBUG_ENABLED,
-          DEFAULT_NM_LOG_AGGREGATION_DEBUG_ENABLED);
-    if (configuredRollingMonitorInterval > 0
-        && configuredRollingMonitorInterval <
-          NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS) {
-      if (debug_mode) {
-        this.rollingMonitorInterval = configuredRollingMonitorInterval;
-      } else {
-        LOG.warn(
-            "rollingMonitorIntervall should be more than or equal to "
-            + NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS
-            + " seconds. Using "
-            + NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS
-            + " seconds instead.");
-        this.rollingMonitorInterval =
-            NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS;
-      }
-    } else {
-      if (configuredRollingMonitorInterval <= 0) {
-        LOG.info("rollingMonitorInterval is set as "
-            + configuredRollingMonitorInterval + ". "
-            + "The log rolling monitoring interval is disabled. "
-            + "The logs will be aggregated after this application is finished.");
-      } else {
-        LOG.info("rollingMonitorInterval is set as "
-            + configuredRollingMonitorInterval + ". "
-            + "The logs will be aggregated every "
-            + configuredRollingMonitorInterval + " seconds");
-      }
-      this.rollingMonitorInterval = configuredRollingMonitorInterval;
-    }
+    this.rollingMonitorInterval = rollingMonitorInterval;
     this.logAggregationInRolling =
         this.rollingMonitorInterval <= 0 || this.logAggregationContext == null
             || this.logAggregationContext.getRolledLogsIncludePattern() == null
