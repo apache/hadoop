@@ -131,7 +131,7 @@ truncate              | NO        | N/A             | N/A                 | WRIT
 
 [2] Any operation that checks WRITE permission on the parent directory also checks ownership if the [sticky bit](#Overview) is set.
 
-[3] Calling `setOwner` to change the user that owns a file requires [HDFS super-user](#The_Super-User) access.  HDFS super-user access is not required to change the group, but the caller must be a member of the specified group.
+[3] Calling `setOwner` to change the user that owns a file requires [HDFS super-user](#The_Super-User) access.  HDFS super-user access is not required to change the group, but the caller must be the owner of the file and a member of the specified group.
 
 Understanding the Implementation
 --------------------------------
