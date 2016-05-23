@@ -121,6 +121,7 @@ WebHDFS REST API
         * [Token Kind](#Token_Kind)
         * [Token Service](#Token_Service)
         * [Username](#Username)
+        * [NoRedirect](#NoRedirect)
 
 Document Conventions
 --------------------
@@ -326,15 +327,21 @@ File and Directory Operations
 
         curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=CREATE
                             [&overwrite=<true |false>][&blocksize=<LONG>][&replication=<SHORT>]
-                            [&permission=<OCTAL>][&buffersize=<INT>]"
+                            [&permission=<OCTAL>][&buffersize=<INT>][&noredirect=<true|false>]"
 
-    The request is redirected to a datanode where the file data is to be written:
+    Usually the request is redirected to a datanode where the file data is to be written.
 
         HTTP/1.1 307 TEMPORARY_REDIRECT
         Location: http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=CREATE...
         Content-Length: 0
 
-* Step 2: Submit another HTTP PUT request using the URL in the `Location` header with the file data to be written.
+    However, if you do not want to be automatically redirected, you can set the noredirect flag.
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        {"Location":"http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=CREATE..."}
+
+* Step 2: Submit another HTTP PUT request using the URL in the `Location` header (or the returned response in case you specified noredirect) with the file data to be written.
 
         curl -i -X PUT -T <LOCAL_FILE> "http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=CREATE..."
 
@@ -354,15 +361,22 @@ See also: [`overwrite`](#Overwrite), [`blocksize`](#Block_Size), [`replication`]
 
 * Step 1: Submit a HTTP POST request without automatically following redirects and without sending the file data.
 
-        curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=APPEND[&buffersize=<INT>]"
+        curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=APPEND[&buffersize=<INT>][&noredirect=<true|false>]"
 
-    The request is redirected to a datanode where the file data is to be appended:
+    Usually the request is redirected to a datanode where the file data is to be appended:
 
         HTTP/1.1 307 TEMPORARY_REDIRECT
         Location: http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=APPEND...
         Content-Length: 0
 
-* Step 2: Submit another HTTP POST request using the URL in the `Location` header with the file data to be appended.
+   However, if you do not want to be automatically redirected, you can set the noredirect flag.
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        {"Location":"http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=APPEND..."}
+
+
+* Step 2: Submit another HTTP POST request using the URL in the `Location` header (or the returned response in case you specified noredirect) with the file data to be appended.
 
         curl -i -X POST -T <LOCAL_FILE> "http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=APPEND..."
 
@@ -393,13 +407,19 @@ See also: [`sources`](#Sources), [FileSystem](../../api/org/apache/hadoop/fs/Fil
 * Submit a HTTP GET request with automatically following redirects.
 
         curl -i -L "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=OPEN
-                            [&offset=<LONG>][&length=<LONG>][&buffersize=<INT>]"
+                            [&offset=<LONG>][&length=<LONG>][&buffersize=<INT>][&noredirect=<true|false>]"
 
-    The request is redirected to a datanode where the file data can be read:
+    Usually the request is redirected to a datanode where the file data can be read:
 
         HTTP/1.1 307 TEMPORARY_REDIRECT
         Location: http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=OPEN...
         Content-Length: 0
+
+    However if you do not want to be automatically redirected, you can set the noredirect flag.
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        {"Location":"http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=OPEN..."}
 
     The client follows the redirect to the datanode and receives the file data:
 
@@ -623,11 +643,18 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getConten
 
         curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETFILECHECKSUM"
 
-    The request is redirected to a datanode:
+    Usually the request is redirected to a datanode:
 
         HTTP/1.1 307 TEMPORARY_REDIRECT
         Location: http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=GETFILECHECKSUM...
         Content-Length: 0
+
+    However, if you do not want to be automatically redirected, you can set the noredirect flag.
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        {"Location":"http://<DATANODE>:<PORT>/webhdfs/v1/<PATH>?op=GETFILECHECKSUM..."}
+
 
     The client follows the redirect to the datanode and receives a [`FileChecksum` JSON object](#FileChecksum_JSON_Schema):
 
@@ -2048,3 +2075,15 @@ See also: [`GETDELEGATIONTOKEN`](#Get_Delegation_Token)
 | Syntax | Any string. |
 
 See also: [Authentication](#Authentication)
+
+### NoRedirect
+
+| Name | `noredirect` |
+|:---- |:---- |
+| Description | Whether the response should return an HTTP 307 redirect or HTTP 200 OK. See [Create and Write to a File](#Create_and_Write_to_a_File). |
+| Type | boolean |
+| Default Value | false |
+| Valid Values | true |
+| Syntax | true |
+
+See also: [Create and Write to a File](#Create_and_Write_to_a_File)
