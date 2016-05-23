@@ -19,7 +19,6 @@
 package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -27,17 +26,19 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.commons.lang.StringUtils;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.crypto.key.KeyProvider.Metadata;
 import org.apache.hadoop.crypto.key.KeyProvider.Options;
-import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.tools.CommandShell;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This program is the CLI utility for the KeyProvider facilities in Hadoop.
  */
-public class KeyShell extends Configured implements Tool {
+public class KeyShell extends CommandShell {
   final static private String USAGE_PREFIX = "Usage: hadoop key " +
       "[generic options]\n";
   final static private String COMMANDS =
@@ -55,49 +56,11 @@ public class KeyShell extends Configured implements Tool {
       "MUST use the -provider argument.";
 
   private boolean interactive = true;
-  private Command command = null;
 
   /** If true, fail if the provider requires a password and none is given. */
   private boolean strict = false;
 
-  /** allows stdout to be captured if necessary. */
-  @VisibleForTesting
-  public PrintStream out = System.out;
-  /** allows stderr to be captured if necessary. */
-  @VisibleForTesting
-  public PrintStream err = System.err;
-
   private boolean userSuppliedProvider = false;
-
-  /**
-   * Primary entry point for the KeyShell; called via main().
-   *
-   * @param args Command line arguments.
-   * @return 0 on success and 1 on failure.  This value is passed back to
-   * the unix shell, so we must follow shell return code conventions:
-   * the return code is an unsigned character, and 0 means success, and
-   * small positive integers mean failure.
-   * @throws Exception
-   */
-  @Override
-  public int run(String[] args) throws Exception {
-    int exitCode = 0;
-    try {
-      exitCode = init(args);
-      if (exitCode != 0) {
-        return exitCode;
-      }
-      if (command.validate()) {
-        command.execute();
-      } else {
-        exitCode = 1;
-      }
-    } catch (Exception e) {
-      e.printStackTrace(err);
-      return 1;
-    }
-    return exitCode;
-  }
 
   /**
    * Parse the command line arguments and initialize the data.
@@ -112,7 +75,8 @@ public class KeyShell extends Configured implements Tool {
    * @return 0 on success, 1 on failure.
    * @throws IOException
    */
-  private int init(String[] args) throws IOException {
+  @Override
+  protected int init(String[] args) throws IOException {
     final Options options = KeyProvider.options(getConf());
     final Map<String, String> attributes = new HashMap<String, String>();
 
@@ -123,10 +87,8 @@ public class KeyShell extends Configured implements Tool {
         if (moreTokens) {
           keyName = args[++i];
         }
-
-        command = new CreateCommand(keyName, options);
+        setSubCommand(new CreateCommand(keyName, options));
         if ("-help".equals(keyName)) {
-          printKeyShellUsage();
           return 1;
         }
       } else if (args[i].equals("delete")) {
@@ -134,10 +96,8 @@ public class KeyShell extends Configured implements Tool {
         if (moreTokens) {
           keyName = args[++i];
         }
-
-        command = new DeleteCommand(keyName);
+        setSubCommand(new DeleteCommand(keyName));
         if ("-help".equals(keyName)) {
-          printKeyShellUsage();
           return 1;
         }
       } else if (args[i].equals("roll")) {
@@ -145,14 +105,12 @@ public class KeyShell extends Configured implements Tool {
         if (moreTokens) {
           keyName = args[++i];
         }
-
-        command = new RollCommand(keyName);
+        setSubCommand(new RollCommand(keyName));
         if ("-help".equals(keyName)) {
-          printKeyShellUsage();
           return 1;
         }
       } else if ("list".equals(args[i])) {
-        command = new ListCommand();
+        setSubCommand(new ListCommand());
       } else if ("-size".equals(args[i]) && moreTokens) {
         options.setBitLength(Integer.parseInt(args[++i]));
       } else if ("-cipher".equals(args[i]) && moreTokens) {
@@ -164,15 +122,13 @@ public class KeyShell extends Configured implements Tool {
         final String attr = attrval[0].trim();
         final String val = attrval[1].trim();
         if (attr.isEmpty() || val.isEmpty()) {
-          out.println("\nAttributes must be in attribute=value form, " +
-                  "or quoted\nlike \"attribute = value\"\n");
-          printKeyShellUsage();
+          getOut().println("\nAttributes must be in attribute=value form, " +
+              "or quoted\nlike \"attribute = value\"\n");
           return 1;
         }
         if (attributes.containsKey(attr)) {
-          out.println("\nEach attribute must correspond to only one value:\n" +
-                  "atttribute \"" + attr + "\" was repeated\n" );
-          printKeyShellUsage();
+          getOut().println("\nEach attribute must correspond to only one " +
+              "value:\natttribute \"" + attr + "\" was repeated\n");
           return 1;
         }
         attributes.put(attr, val);
@@ -186,18 +142,11 @@ public class KeyShell extends Configured implements Tool {
       } else if (args[i].equals("-strict")) {
         strict = true;
       } else if ("-help".equals(args[i])) {
-        printKeyShellUsage();
         return 1;
       } else {
-        printKeyShellUsage();
-        ToolRunner.printGenericCommandUsage(System.err);
+        ToolRunner.printGenericCommandUsage(getErr());
         return 1;
       }
-    }
-
-    if (command == null) {
-      printKeyShellUsage();
-      return 1;
     }
 
     if (!attributes.isEmpty()) {
@@ -207,32 +156,23 @@ public class KeyShell extends Configured implements Tool {
     return 0;
   }
 
-  private void printKeyShellUsage() {
-    out.println(USAGE_PREFIX + COMMANDS);
-    if (command != null) {
-      out.println(command.getUsage());
-    } else {
-      out.println("=========================================================" +
-          "======");
-      out.println(CreateCommand.USAGE + ":\n\n" + CreateCommand.DESC);
-      out.println("=========================================================" +
-          "======");
-      out.println(RollCommand.USAGE + ":\n\n" + RollCommand.DESC);
-      out.println("=========================================================" +
-          "======");
-      out.println(DeleteCommand.USAGE + ":\n\n" + DeleteCommand.DESC);
-      out.println("=========================================================" +
-          "======");
-      out.println(ListCommand.USAGE + ":\n\n" + ListCommand.DESC);
-    }
+  @Override
+  public String getCommandUsage() {
+    StringBuffer sbuf = new StringBuffer(USAGE_PREFIX + COMMANDS);
+    String banner = StringUtils.repeat("=", 66);
+    sbuf.append(banner + "\n");
+    sbuf.append(CreateCommand.USAGE + ":\n\n" + CreateCommand.DESC + "\n");
+    sbuf.append(banner + "\n");
+    sbuf.append(RollCommand.USAGE + ":\n\n" + RollCommand.DESC + "\n");
+    sbuf.append(banner + "\n");
+    sbuf.append(DeleteCommand.USAGE + ":\n\n" + DeleteCommand.DESC + "\n");
+    sbuf.append(banner + "\n");
+    sbuf.append(ListCommand.USAGE + ":\n\n" + ListCommand.DESC + "\n");
+    return sbuf.toString();
   }
 
-  private abstract class Command {
+  private abstract class Command extends SubCommand {
     protected KeyProvider provider = null;
-
-    public boolean validate() {
-      return true;
-    }
 
     protected KeyProvider getKeyProvider() {
       KeyProvider prov = null;
@@ -250,21 +190,21 @@ public class KeyShell extends Configured implements Tool {
           }
         }
       } catch (IOException e) {
-        e.printStackTrace(err);
+        e.printStackTrace(getErr());
       }
       if (prov == null) {
-        out.println(NO_VALID_PROVIDERS);
+        getOut().println(NO_VALID_PROVIDERS);
       }
       return prov;
     }
 
     protected void printProviderWritten() {
-      out.println(provider + " has been updated.");
+      getOut().println(provider + " has been updated.");
     }
 
     protected void warnIfTransientProvider() {
       if (provider.isTransient()) {
-        out.println("WARNING: you are modifying a transient provider.");
+        getOut().println("WARNING: you are modifying a transient provider.");
       }
     }
 
@@ -298,20 +238,20 @@ public class KeyShell extends Configured implements Tool {
     public void execute() throws IOException {
       try {
         final List<String> keys = provider.getKeys();
-        out.println("Listing keys for KeyProvider: " + provider);
+        getOut().println("Listing keys for KeyProvider: " + provider);
         if (metadata) {
           final Metadata[] meta =
             provider.getKeysMetadata(keys.toArray(new String[keys.size()]));
           for (int i = 0; i < meta.length; ++i) {
-            out.println(keys.get(i) + " : " + meta[i]);
+            getOut().println(keys.get(i) + " : " + meta[i]);
           }
         } else {
           for (String keyName : keys) {
-            out.println(keyName);
+            getOut().println(keyName);
           }
         }
       } catch (IOException e) {
-        out.println("Cannot list keys for KeyProvider: " + provider
+        getOut().println("Cannot list keys for KeyProvider: " + provider
             + ": " + e.toString());
         throw e;
       }
@@ -345,7 +285,7 @@ public class KeyShell extends Configured implements Tool {
         rc = false;
       }
       if (keyName == null) {
-        out.println("Please provide a <keyname>.\n" +
+        getOut().println("Please provide a <keyname>.\n" +
             "See the usage description by using -help.");
         rc = false;
       }
@@ -355,20 +295,20 @@ public class KeyShell extends Configured implements Tool {
     public void execute() throws NoSuchAlgorithmException, IOException {
       try {
         warnIfTransientProvider();
-        out.println("Rolling key version from KeyProvider: "
+        getOut().println("Rolling key version from KeyProvider: "
             + provider + "\n  for key name: " + keyName);
         try {
           provider.rollNewVersion(keyName);
           provider.flush();
-          out.println(keyName + " has been successfully rolled.");
+          getOut().println(keyName + " has been successfully rolled.");
           printProviderWritten();
         } catch (NoSuchAlgorithmException e) {
-          out.println("Cannot roll key: " + keyName + " within KeyProvider: "
-              + provider + ". " + e.toString());
+          getOut().println("Cannot roll key: " + keyName +
+              " within KeyProvider: " + provider + ". " + e.toString());
           throw e;
         }
       } catch (IOException e1) {
-        out.println("Cannot roll key: " + keyName + " within KeyProvider: "
+        getOut().println("Cannot roll key: " + keyName + " within KeyProvider: "
             + provider + ". " + e1.toString());
         throw e1;
       }
@@ -405,7 +345,7 @@ public class KeyShell extends Configured implements Tool {
         return false;
       }
       if (keyName == null) {
-        out.println("There is no keyName specified. Please specify a " +
+        getOut().println("There is no keyName specified. Please specify a " +
             "<keyname>. See the usage description with -help.");
         return false;
       }
@@ -416,12 +356,12 @@ public class KeyShell extends Configured implements Tool {
                   + " key " + keyName + " from KeyProvider "
                   + provider + ". Continue? ");
           if (!cont) {
-            out.println(keyName + " has not been deleted.");
+            getOut().println(keyName + " has not been deleted.");
           }
           return cont;
         } catch (IOException e) {
-          out.println(keyName + " will not be deleted.");
-          e.printStackTrace(err);
+          getOut().println(keyName + " will not be deleted.");
+          e.printStackTrace(getErr());
         }
       }
       return true;
@@ -429,16 +369,16 @@ public class KeyShell extends Configured implements Tool {
 
     public void execute() throws IOException {
       warnIfTransientProvider();
-      out.println("Deleting key: " + keyName + " from KeyProvider: "
+      getOut().println("Deleting key: " + keyName + " from KeyProvider: "
           + provider);
       if (cont) {
         try {
           provider.deleteKey(keyName);
           provider.flush();
-          out.println(keyName + " has been successfully deleted.");
+          getOut().println(keyName + " has been successfully deleted.");
           printProviderWritten();
         } catch (IOException e) {
-          out.println(keyName + " has not been deleted. " + e.toString());
+          getOut().println(keyName + " has not been deleted. " + e.toString());
           throw e;
         }
       }
@@ -483,18 +423,18 @@ public class KeyShell extends Configured implements Tool {
           rc = false;
         } else if (provider.needsPassword()) {
           if (strict) {
-            out.println(provider.noPasswordError());
+            getOut().println(provider.noPasswordError());
             rc = false;
           } else {
-            out.println(provider.noPasswordWarning());
+            getOut().println(provider.noPasswordWarning());
           }
         }
       } catch (IOException e) {
-        e.printStackTrace(err);
+        e.printStackTrace(getErr());
       }
       if (keyName == null) {
-        out.println("Please provide a <keyname>. See the usage description" +
-            " with -help.");
+        getOut().println("Please provide a <keyname>. " +
+            " See the usage description with -help.");
         rc = false;
       }
       return rc;
@@ -505,17 +445,17 @@ public class KeyShell extends Configured implements Tool {
       try {
         provider.createKey(keyName, options);
         provider.flush();
-        out.println(keyName + " has been successfully created with options "
-            + options.toString() + ".");
+        getOut().println(keyName + " has been successfully created " +
+            "with options " + options.toString() + ".");
         printProviderWritten();
       } catch (InvalidParameterException e) {
-        out.println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created. " + e.toString());
         throw e;
       } catch (IOException e) {
-        out.println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created. " + e.toString());
         throw e;
       } catch (NoSuchAlgorithmException e) {
-        out.println(keyName + " has not been created. " + e.toString());
+        getOut().println(keyName + " has not been created. " + e.toString());
         throw e;
       }
     }
