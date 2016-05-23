@@ -326,8 +326,9 @@ public class TestApplicationLimits {
         queue.getAbsoluteCapacity());
     assertEquals(expectedMaxApps, queue.getMaxApplications());
 
-    int expectedMaxAppsPerUser = (int)(expectedMaxApps *
-        (queue.getUserLimit()/100.0f) * queue.getUserLimitFactor());
+    int expectedMaxAppsPerUser = Math.min(expectedMaxApps,
+        (int)(expectedMaxApps * (queue.getUserLimit()/100.0f) *
+        queue.getUserLimitFactor()));
     assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
 
     // should default to global setting if per queue setting not set
@@ -377,8 +378,8 @@ public class TestApplicationLimits {
     assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
     assertEquals(9999, queue.getMaxApplications());
 
-    expectedMaxAppsPerUser = (int)(9999 *
-        (queue.getUserLimit()/100.0f) * queue.getUserLimitFactor());
+    expectedMaxAppsPerUser = Math.min(9999, (int)(9999 *
+        (queue.getUserLimit()/100.0f) * queue.getUserLimitFactor()));
     assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
   }
   
