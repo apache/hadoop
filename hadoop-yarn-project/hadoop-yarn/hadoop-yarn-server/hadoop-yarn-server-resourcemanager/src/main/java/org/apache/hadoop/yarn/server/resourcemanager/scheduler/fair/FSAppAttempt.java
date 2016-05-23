@@ -929,7 +929,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     // Add up outstanding resource requests
     synchronized (this) {
       for (Priority p : getPriorities()) {
-        for (ResourceRequest r : getResourceRequests(p).values()) {
+        ResourceRequest r = getResourceRequest(p, ResourceRequest.ANY);
+        if (r != null) {
           Resources.multiplyAndAddTo(demand,
               r.getCapability(), r.getNumContainers());
         }

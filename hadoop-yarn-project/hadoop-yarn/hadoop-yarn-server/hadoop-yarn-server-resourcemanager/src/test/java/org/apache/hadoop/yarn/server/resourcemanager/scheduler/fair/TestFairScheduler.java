@@ -1691,28 +1691,31 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ask1.add(request1);
     scheduler.allocate(id11, ask1, new ArrayList<ContainerId>(), null, null, null, null);
 
-    // Second ask, queue2 requests 1 large + (2 * minReqSize)
+    // Second ask, queue2 requests 1 large.
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ResourceRequest request2 = createResourceRequest(2 * minReqSize, "foo", 1, 1,
         false);
-    ResourceRequest request3 = createResourceRequest(minReqSize, "bar", 1, 2,
-        false);
+    ResourceRequest request3 = createResourceRequest(2 * minReqSize,
+            ResourceRequest.ANY, 1, 1, false);
     ask2.add(request2);
     ask2.add(request3);
     scheduler.allocate(id21, ask2, new ArrayList<ContainerId>(), null, null, null, null);
 
-    // Third ask, queue2 requests 1 large
+    // Third ask, queue2 requests 2 small (minReqSize).
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
-    ResourceRequest request4 =
-        createResourceRequest(2 * minReqSize, ResourceRequest.ANY, 1, 1, true);
+    ResourceRequest request4 = createResourceRequest(minReqSize, "bar", 2, 2,
+            true);
+    ResourceRequest request5 = createResourceRequest(minReqSize,
+            ResourceRequest.ANY, 2, 2, true);
     ask3.add(request4);
+    ask3.add(request5);
     scheduler.allocate(id22, ask3, new ArrayList<ContainerId>(), null, null, null, null);
 
     scheduler.update();
 
     assertEquals(2 * minReqSize, scheduler.getQueueManager().getQueue("root.queue1")
         .getDemand().getMemory());
-    assertEquals(2 * minReqSize + 2 * minReqSize + (2 * minReqSize), scheduler
+    assertEquals(2 * minReqSize + 2 * minReqSize, scheduler
         .getQueueManager().getQueue("root.queue2").getDemand()
         .getMemory());
   }
