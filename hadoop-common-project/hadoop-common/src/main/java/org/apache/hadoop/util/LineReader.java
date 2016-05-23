@@ -318,7 +318,7 @@ public class LineReader implements Closeable {
             break;
           }
         } else if (delPosn != 0) {
-          bufferPosn--;
+          bufferPosn -= delPosn;
           delPosn = 0;
         }
       }
