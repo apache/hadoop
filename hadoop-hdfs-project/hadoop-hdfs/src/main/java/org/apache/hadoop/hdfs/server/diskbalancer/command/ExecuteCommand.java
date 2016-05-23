@@ -27,9 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
-import org.apache.htrace.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.hdfs.tools.DiskBalancer;
+
 import java.io.IOException;
 
 
@@ -94,17 +94,7 @@ public class ExecuteCommand extends Command {
     }
   }
 
-  /**
-   * Returns a plan from the Json Data.
-   *
-   * @param planData - Json String
-   * @return NodePlan
-   * @throws IOException
-   */
-  private NodePlan readPlan(String planData) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(planData, NodePlan.class);
-  }
+
 
   /**
    * Gets extended help for this command.

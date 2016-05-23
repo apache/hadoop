@@ -24,6 +24,7 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.diskbalancer.command.CancelCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.Command;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.ExecuteCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.PlanCommand;
@@ -105,7 +106,10 @@ public class DiskBalancer extends Configured implements Tool {
    * Reports the status of disk balancer operation.
    */
   public static final String QUERY = "query";
-
+  /**
+   * Cancels a running plan.
+   */
+  public static final String CANCEL = "cancel";
   /**
    * Template for the Before File. It is node.before.json.
    */
@@ -168,6 +172,7 @@ public class DiskBalancer extends Configured implements Tool {
     addPlanCommands(opts);
     addExecuteCommands(opts);
     addQueryCommands(opts);
+    addCancelCommands(opts);
     return opts;
   }
 
@@ -234,6 +239,19 @@ public class DiskBalancer extends Configured implements Tool {
   }
 
   /**
+   * Adds cancel command options.
+   * @param opt Options
+   */
+  private void addCancelCommands(Options opt) {
+    Option cancel = new Option(CANCEL, true, "Cancels a running plan. -cancel" +
+        " <planFile> or -cancel <planID> -node <datanode:port>");
+    opt.addOption(cancel);
+    Option node = new Option(NODE, true, "Name of the datanode in name:port " +
+        "format");
+    opt.addOption(node);
+  }
+
+  /**
    * This function parses all command line arguments and returns the appropriate
    * values.
    *
@@ -269,6 +287,10 @@ public class DiskBalancer extends Configured implements Tool {
 
       if(cmd.hasOption(DiskBalancer.QUERY)) {
         currentCommand = new QueryCommand(getConf());
+      }
+
+      if(cmd.hasOption(DiskBalancer.CANCEL)) {
+        currentCommand = new CancelCommand(getConf());
       }
 
       if(currentCommand == null) {
