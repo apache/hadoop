@@ -438,8 +438,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
     int maxSystemApps = csConf.getMaximumSystemApplications();
     int expectedMaxApps = (int)(maxSystemApps * (info.absoluteCapacity/100));
-    int expectedMaxAppsPerUser =
-      (int)(expectedMaxApps * (info.userLimit/100.0f) * info.userLimitFactor);
+    int expectedMaxAppsPerUser = Math.min(expectedMaxApps,
+        (int)(expectedMaxApps * (info.userLimit/100.0f) *
+        info.userLimitFactor));
 
     // TODO: would like to use integer comparisons here but can't due to
     //       roundoff errors in absolute capacity calculations
