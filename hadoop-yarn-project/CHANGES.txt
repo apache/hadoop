@@ -139,6 +139,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4747. AHS error 500 due to NPE when container start event is missing
     (Varun Saxena via jlowe)
 
+    YARN-5055. max apps per user can be larger than max per queue (Eric Badger
+    via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
