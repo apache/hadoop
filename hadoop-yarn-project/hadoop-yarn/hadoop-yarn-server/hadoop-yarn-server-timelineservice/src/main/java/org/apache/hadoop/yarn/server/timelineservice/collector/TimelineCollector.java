@@ -60,6 +60,8 @@ public abstract class TimelineCollector extends CompositeService {
   private static Set<String> entityTypesSkipAggregation
       = new HashSet<>();
 
+  private volatile boolean readyToAggregate = false;
+
   public TimelineCollector(String name) {
     super(name);
   }
@@ -89,6 +91,14 @@ public abstract class TimelineCollector extends CompositeService {
 
   protected Map<String, AggregationStatusTable> getAggregationGroups() {
     return aggregationGroups;
+  }
+
+  protected void setReadyToAggregate() {
+    readyToAggregate = true;
+  }
+
+  protected boolean isReadyToAggregate() {
+    return readyToAggregate;
   }
 
   /**
@@ -258,7 +268,7 @@ public abstract class TimelineCollector extends CompositeService {
 
   // Note: In memory aggregation is performed in an eventually consistent
   // fashion.
-  private static class AggregationStatusTable {
+  protected static class AggregationStatusTable {
     // On aggregation, for each metric, aggregate all per-entity accumulated
     // metrics. We only use the id and type for TimelineMetrics in the key set
     // of this table.
