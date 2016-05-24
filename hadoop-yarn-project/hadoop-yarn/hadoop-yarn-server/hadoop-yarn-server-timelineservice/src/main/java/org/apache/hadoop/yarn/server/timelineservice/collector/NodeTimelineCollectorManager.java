@@ -87,7 +87,7 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
   }
 
   @Override
-  public void postPut(ApplicationId appId, TimelineCollector collector) {
+  protected void doPostPut(ApplicationId appId, TimelineCollector collector) {
     try {
       // Get context info from NM
       updateTimelineCollectorContext(appId, collector);

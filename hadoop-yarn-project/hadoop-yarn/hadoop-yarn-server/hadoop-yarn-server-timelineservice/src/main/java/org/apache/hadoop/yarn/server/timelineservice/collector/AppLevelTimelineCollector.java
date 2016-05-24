@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import com.google.common.base.Preconditions;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -93,7 +94,8 @@ public class AppLevelTimelineCollector extends TimelineCollector {
         new ThreadFactoryBuilder()
             .setNameFormat("TimelineCollector Aggregation thread #%d")
             .build());
-    appAggregationExecutor.scheduleAtFixedRate(new AppLevelAggregator(), 0,
+    appAggregationExecutor.scheduleAtFixedRate(new AppLevelAggregator(),
+        AppLevelTimelineCollector.AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS,
         AppLevelTimelineCollector.AGGREGATION_EXECUTOR_EXEC_INTERVAL_SECS,
         TimeUnit.SECONDS);
     super.serviceStart();
@@ -126,10 +128,21 @@ public class AppLevelTimelineCollector extends TimelineCollector {
       if (LOG.isDebugEnabled()) {
         LOG.debug("App-level real-time aggregating");
       }
+      if (!isReadyToAggregate()) {
+        LOG.warn("App-level collector is not ready, skip aggregation. ");
+        return;
+      }
       try {
         TimelineCollectorContext currContext = getTimelineEntityContext();
+        Map<String, AggregationStatusTable> aggregationGroups
+            = getAggregationGroups();
+        if (aggregationGroups == null
+            || aggregationGroups.isEmpty()) {
+          LOG.debug("App-level collector is empty, skip aggregation. ");
+          return;
+        }
         TimelineEntity resultEntity = TimelineCollector.aggregateWithoutGroupId(
-            getAggregationGroups(), currContext.getAppId(),
+            aggregationGroups, currContext.getAppId(),
             TimelineEntityType.YARN_APPLICATION.toString());
         TimelineEntities entities = new TimelineEntities();
         entities.addEntity(resultEntity);

@@ -136,8 +136,24 @@ public class TimelineCollectorManager extends AbstractService {
     return collectorInTable;
   }
 
-  protected void postPut(ApplicationId appId, TimelineCollector collector) {
+  /**
+   * Callback handler for the timeline collector manager when a collector has
+   * been added into the collector map.
+   * @param appId Application id of the collector.
+   * @param collector The actual timeline collector that has been added.
+   */
+  public void postPut(ApplicationId appId, TimelineCollector collector) {
+    doPostPut(appId, collector);
+    collector.setReadyToAggregate();
+  }
 
+  /**
+   * A template method that will be called by
+   * {@link  #postPut(ApplicationId, TimelineCollector)}.
+   * @param appId Application id of the collector.
+   * @param collector The actual timeline collector that has been added.
+   */
+  protected void doPostPut(ApplicationId appId, TimelineCollector collector) {
   }
 
   /**
