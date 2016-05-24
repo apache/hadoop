@@ -37,7 +37,7 @@ import org.junit.Test;
 
 public class TestMover {
   static Mover newMover(Configuration conf) throws IOException {
-    final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+    final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     Assert.assertEquals(1, namenodes.size());
 
     final List<NameNodeConnector> nncs = NameNodeConnector.newNameNodeConnectors(
@@ -104,7 +104,7 @@ public class TestMover {
       }
 
       Map<URI, List<Path>> movePaths = Mover.Cli.getNameNodePathsToMove(conf);
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
       Assert.assertEquals(1, namenodes.size());
       Assert.assertEquals(1, movePaths.size());
       URI nn = namenodes.iterator().next();
@@ -112,7 +112,7 @@ public class TestMover {
       Assert.assertNull(movePaths.get(nn));
 
       movePaths = Mover.Cli.getNameNodePathsToMove(conf, "-p", "/foo", "/bar");
-      namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      namenodes = DFSUtil.getInternalNsRpcUris(conf);
       Assert.assertEquals(1, movePaths.size());
       nn = namenodes.iterator().next();
       Assert.assertTrue(movePaths.containsKey(nn));
@@ -133,7 +133,7 @@ public class TestMover {
     try {
       Map<URI, List<Path>> movePaths = Mover.Cli.getNameNodePathsToMove(conf,
           "-p", "/foo", "/bar");
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
       Assert.assertEquals(1, namenodes.size());
       Assert.assertEquals(1, movePaths.size());
       URI nn = namenodes.iterator().next();
@@ -154,7 +154,7 @@ public class TestMover {
     final Configuration conf = new HdfsConfiguration();
     DFSTestUtil.setFederatedConfiguration(cluster, conf);
     try {
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
       Assert.assertEquals(3, namenodes.size());
 
       try {
@@ -202,7 +202,7 @@ public class TestMover {
     final Configuration conf = new HdfsConfiguration();
     DFSTestUtil.setFederatedHAConfiguration(cluster, conf);
     try {
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
       Assert.assertEquals(3, namenodes.size());
 
       Iterator<URI> iter = namenodes.iterator();

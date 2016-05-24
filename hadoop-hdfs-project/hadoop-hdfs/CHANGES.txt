@@ -42,6 +42,9 @@ Release 2.6.5 - UNRELEASED
     HDFS-10178. Permanent write failures can happen if pipeline recoveries
     occur for the first packet (kihwal)
 
+    HDFS-9365. Balancer does not work with the HDFS-6376 HA setup. (Tsz Wo
+    Nicholas Sze)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
