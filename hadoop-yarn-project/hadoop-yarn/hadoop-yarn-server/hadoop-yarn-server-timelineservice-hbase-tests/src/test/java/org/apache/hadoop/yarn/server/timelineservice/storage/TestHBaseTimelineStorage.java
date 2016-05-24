@@ -488,7 +488,7 @@ public class TestHBaseTimelineStorage {
     ApplicationEntity entity = new ApplicationEntity();
     String appId = "application_1000178881110_2002";
     entity.setId(appId);
-    long cTime = 1425016501000L;
+    Long cTime = 1425016501000L;
     entity.setCreatedTime(cTime);
 
     // add the info map in Timeline Entity
@@ -546,7 +546,6 @@ public class TestHBaseTimelineStorage {
     aggEntity.setId(appId);
     aggEntity.setType(type);
     long cTime2 = 1425016502000L;
-    long mTime2 = 1425026902000L;
     aggEntity.setCreatedTime(cTime2);
 
     TimelineMetric aggMetric = new TimelineMetric();
@@ -574,8 +573,21 @@ public class TestHBaseTimelineStorage {
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
       hbi.write(cluster, user, flow, flowVersion, runid, appId, te);
+
+      // Write entity again, this time without created time.
+      entity = new ApplicationEntity();
+      appId = "application_1000178881110_2002";
+      entity.setId(appId);
+      // add the info map in Timeline Entity
+      Map<String, Object> infoMap1 = new HashMap<>();
+      infoMap1.put("infoMapKey3", "infoMapValue1");
+      entity.addInfo(infoMap1);
+      te = new TimelineEntities();
+      te.addEntity(entity);
+      hbi.write(cluster, user, flow, flowVersion, runid, appId, te);
       hbi.stop();
 
+      infoMap.putAll(infoMap1);
       // retrieve the row
       byte[] rowKey =
           ApplicationRowKey.getRowKey(cluster, user, flow, runid, appId);
@@ -585,7 +597,7 @@ public class TestHBaseTimelineStorage {
       Result result = new ApplicationTable().getResult(c1, conn, get);
 
       assertTrue(result != null);
-      assertEquals(16, result.size());
+      assertEquals(17, result.size());
 
       // check the row key
       byte[] row1 = result.getRow();
@@ -596,10 +608,9 @@ public class TestHBaseTimelineStorage {
       String id1 = ApplicationColumn.ID.readResult(result).toString();
       assertEquals(appId, id1);
 
-      Number val =
-          (Number) ApplicationColumn.CREATED_TIME.readResult(result);
-      long cTime1 = val.longValue();
-      assertEquals(cTime1, cTime);
+      Long cTime1 =
+          (Long) ApplicationColumn.CREATED_TIME.readResult(result);
+      assertEquals(cTime, cTime1);
 
       Map<String, Object> infoColumns =
           ApplicationColumnPrefix.INFO.readResults(result);
@@ -701,7 +712,7 @@ public class TestHBaseTimelineStorage {
     String type = "world";
     entity.setId(id);
     entity.setType(type);
-    long cTime = 1425016501000L;
+    Long cTime = 1425016501000L;
     entity.setCreatedTime(cTime);
 
     // add the info map in Timeline Entity
@@ -796,8 +807,7 @@ public class TestHBaseTimelineStorage {
           String type1 = EntityColumn.TYPE.readResult(result).toString();
           assertEquals(type, type1);
 
-          Number val = (Number) EntityColumn.CREATED_TIME.readResult(result);
-          long cTime1 = val.longValue();
+          Long cTime1 = (Long) EntityColumn.CREATED_TIME.readResult(result);
           assertEquals(cTime1, cTime);
 
           Map<String, Object> infoColumns =
