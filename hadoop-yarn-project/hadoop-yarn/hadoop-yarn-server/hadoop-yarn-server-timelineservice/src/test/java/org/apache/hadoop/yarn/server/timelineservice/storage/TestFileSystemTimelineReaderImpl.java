@@ -278,7 +278,7 @@ public class TestFileSystemTimelineReaderImpl {
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    Assert.assertEquals(1425016502000L, result.getCreatedTime());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
     Assert.assertEquals(0, result.getConfigs().size());
     Assert.assertEquals(0, result.getMetrics().size());
   }
@@ -293,7 +293,7 @@ public class TestFileSystemTimelineReaderImpl {
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    Assert.assertEquals(1425016502000L, result.getCreatedTime());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
     Assert.assertEquals(0, result.getConfigs().size());
     Assert.assertEquals(0, result.getMetrics().size());
   }
@@ -310,7 +310,7 @@ public class TestFileSystemTimelineReaderImpl {
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_5")).toString(),
         result.getIdentifier().toString());
-    Assert.assertEquals(1425016502050L, result.getCreatedTime());
+    Assert.assertEquals((Long)1425016502050L, result.getCreatedTime());
   }
 
   @Test
@@ -324,7 +324,7 @@ public class TestFileSystemTimelineReaderImpl {
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    Assert.assertEquals(1425016502000L, result.getCreatedTime());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
     Assert.assertEquals(3, result.getConfigs().size());
     Assert.assertEquals(3, result.getMetrics().size());
     Assert.assertEquals(2, result.getInfo().size());
@@ -342,7 +342,7 @@ public class TestFileSystemTimelineReaderImpl {
     Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    Assert.assertEquals(1425016502000L, result.getCreatedTime());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
     Assert.assertEquals(3, result.getConfigs().size());
     Assert.assertEquals(3, result.getMetrics().size());
     // All fields including events will be returned.

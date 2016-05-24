@@ -397,9 +397,8 @@ class ApplicationEntityReader extends GenericEntityReader {
 
     TimelineEntityFilters filters = getFilters();
     // fetch created time
-    Number createdTime =
-        (Number)ApplicationColumn.CREATED_TIME.readResult(result);
-    entity.setCreatedTime(createdTime.longValue());
+    Long createdTime = (Long) ApplicationColumn.CREATED_TIME.readResult(result);
+    entity.setCreatedTime(createdTime);
 
     EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
     // fetch is related to entities and match isRelatedTo filter. If isRelatedTo

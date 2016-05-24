@@ -144,7 +144,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   private NavigableSet<TimelineEvent> events = new TreeSet<>();
   private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
   private HashMap<String, Set<String>> relatesToEntities = new HashMap<>();
-  private long createdTime;
+  private Long createdTime;
 
   public TimelineEntity() {
     identifier = new Identifier();
@@ -490,7 +490,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   @XmlElement(name = "createdtime")
-  public long getCreatedTime() {
+  public Long getCreatedTime() {
     if (real == null) {
       return createdTime;
     } else {
@@ -499,7 +499,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   }
 
   @JsonSetter("createdtime")
-  public void setCreatedTime(long createdTs) {
+  public void setCreatedTime(Long createdTs) {
     if (real == null) {
       this.createdTime = createdTs;
     } else {
@@ -547,6 +547,16 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   public int compareTo(TimelineEntity other) {
     int comparison = getType().compareTo(other.getType());
     if (comparison == 0) {
+      if (getCreatedTime() == null) {
+        if (other.getCreatedTime() == null) {
+          return getId().compareTo(other.getId());
+        } else {
+          return 1;
+        }
+      }
+      if (other.getCreatedTime() == null) {
+        return -1;
+      }
       if (getCreatedTime() > other.getCreatedTime()) {
         // Order by created time desc
         return -1;
