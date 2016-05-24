@@ -86,7 +86,14 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     String queueName = "root.queue1";
     when(scheduler.allocConf.getMaxResources(queueName)).thenReturn(maxResource);
     when(scheduler.allocConf.getMinResources(queueName)).thenReturn(Resources.none());
+    when(scheduler.allocConf.getQueueMaxApps(queueName)).
+        thenReturn(Integer.MAX_VALUE);
+    when(scheduler.allocConf.getSchedulingPolicy(queueName))
+        .thenReturn(SchedulingPolicy.DEFAULT_POLICY);
     FSLeafQueue schedulable = new FSLeafQueue(queueName, scheduler, null);
+    assertEquals(schedulable.getMetrics().getMaxApps(), Integer.MAX_VALUE);
+    assertEquals(schedulable.getMetrics().getSchedulingPolicy(),
+        SchedulingPolicy.DEFAULT_POLICY.getName());
 
     FSAppAttempt app = mock(FSAppAttempt.class);
     Mockito.when(app.getDemand()).thenReturn(maxResource);
@@ -118,6 +125,11 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     resourceManager = new MockRM(conf);
     resourceManager.start();
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
+    for(FSQueue queue: scheduler.getQueueManager().getQueues()) {
+      assertEquals(queue.getMetrics().getMaxApps(), Integer.MAX_VALUE);
+      assertEquals(queue.getMetrics().getSchedulingPolicy(),
+          SchedulingPolicy.DEFAULT_POLICY.getName());
+    }
 
     // Add one big node (only care about aggregate capacity)
     RMNode node1 =

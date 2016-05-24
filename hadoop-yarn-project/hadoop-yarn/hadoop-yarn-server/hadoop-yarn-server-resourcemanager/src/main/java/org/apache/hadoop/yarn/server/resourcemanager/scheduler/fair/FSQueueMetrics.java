@@ -39,7 +39,10 @@ public class FSQueueMetrics extends QueueMetrics {
   @Metric("Minimum share of CPU in vcores") MutableGaugeInt minShareVCores;
   @Metric("Maximum share of memory in MB") MutableGaugeInt maxShareMB;
   @Metric("Maximum share of CPU in vcores") MutableGaugeInt maxShareVCores;
-  
+  @Metric("Maximum number of applications") MutableGaugeInt maxApps;
+
+  private String schedulingPolicy;
+
   FSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     super(ms, queueName, parent, enableUserMetrics, conf);
@@ -96,8 +99,24 @@ public class FSQueueMetrics extends QueueMetrics {
   public int getMaxShareVirtualCores() {
     return maxShareVCores.value();
   }
-  
-  public synchronized 
+
+  public int getMaxApps() {
+    return maxApps.value();
+  }
+
+  public void setMaxApps(int max) {
+    maxApps.set(max);
+  }
+
+  public String getSchedulingPolicy() {
+    return schedulingPolicy;
+  }
+
+  public void setSchedulingPolicy(String policy) {
+    schedulingPolicy = policy;
+  }
+
+  public synchronized
   static FSQueueMetrics forQueue(String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
