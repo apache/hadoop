@@ -284,4 +284,18 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return resourceUsage
    */
   public ResourceUsage getQueueResourceUsage();
+
+  /**
+   * Get used capacity for the specified label.
+   * @param nodeLabel
+   * @return used capacity
+   */
+  public float getUsedCapacity(String nodeLabel);
+
+  /**
+   * Get absolute used capacity for the specified label.
+   * @param nodeLabel
+   * @return absolute used capacity
+   */
+  public float getAbsoluteUsedCapacity(String nodeLabel);
 }

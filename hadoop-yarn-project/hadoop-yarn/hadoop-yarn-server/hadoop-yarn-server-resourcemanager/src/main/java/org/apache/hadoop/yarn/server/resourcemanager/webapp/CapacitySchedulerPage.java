@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
@@ -319,8 +318,7 @@ class CapacitySchedulerPage extends RmView {
             String nodeLabel =
                 csqinfo.label.length() == 0 ? "<DEFAULT_PARTITION>"
                     : csqinfo.label;
-            QueueCapacities queueCapacities = root.getQueueCapacities();
-            used = queueCapacities.getUsedCapacity(label.getLabelName());
+            used = root.getUsedCapacity(label.getLabelName());
             String partitionUiTag =
                 "Partition: " + nodeLabel + " " + label.getResource();
             ul.li().

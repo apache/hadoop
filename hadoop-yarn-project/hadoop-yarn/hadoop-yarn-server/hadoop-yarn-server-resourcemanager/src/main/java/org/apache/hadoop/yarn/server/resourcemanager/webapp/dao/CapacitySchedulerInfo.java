@@ -58,7 +58,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     String label = nodeLabel.getLabelName();
     QueueCapacities parentQueueCapacities = parent.getQueueCapacities();
     this.queueName = parent.getQueueName();
-    this.usedCapacity = parentQueueCapacities.getUsedCapacity(label) * 100;
+    this.usedCapacity = parent.getUsedCapacity(label) * 100;
     this.capacity = parentQueueCapacities.getCapacity(label) * 100;
     float max = parentQueueCapacities.getMaximumCapacity(label);
     if (max < EPSILON || max > 1f)
@@ -106,8 +106,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     List<CSQueue> childNonLeafQueues = new ArrayList<>();
     for (CSQueue queue : parent.getChildQueues()) {
       if (!((AbstractCSQueue) queue).accessibleToPartition(nodeLabel
-              .getLabelName())) {
-        // Skip displaying the hierarchy for the queues for which the exclusive
+          .getLabelName())) {
+        // Skip displaying the hierarchy for the queues for which the
         // labels are not accessible
         continue;
       }

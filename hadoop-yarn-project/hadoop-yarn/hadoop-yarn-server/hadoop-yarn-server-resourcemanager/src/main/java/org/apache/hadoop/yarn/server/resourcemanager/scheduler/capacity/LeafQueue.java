@@ -424,13 +424,33 @@ public class LeafQueue extends AbstractCSQueue {
     ArrayList<UserInfo> usersToReturn = new ArrayList<UserInfo>();
     for (Map.Entry<String, User> entry : users.entrySet()) {
       User user = entry.getValue();
-      usersToReturn.add(new UserInfo(entry.getKey(), Resources.clone(user
-          .getUsed()), user.getActiveApplications(), user
+      Resource usedRes = Resource.newInstance(0, 0);
+      for (String nl : getAccessibleLabelSet()) {
+        Resources.addTo(usedRes, user.getUsed(nl));
+      }
+      usersToReturn.add(new UserInfo(entry.getKey(), usedRes,
+          user.getActiveApplications(), user
           .getPendingApplications(), Resources.clone(user
           .getConsumedAMResources()), Resources.clone(user
           .getUserResourceLimit())));
     }
     return usersToReturn;
+  }
+
+  /**
+   * Gets the labels which are accessible by this queue. If ANY label can be
+   * accessed, put all labels in the set.
+   * @return accessiglbe node labels
+   */
+  protected final Set<String> getAccessibleLabelSet() {
+    Set<String> nodeLabels = new HashSet<String>();
+    if (this.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
+      nodeLabels.addAll(labelManager.getClusterNodeLabels());
+    } else {
+      nodeLabels.addAll(this.getAccessibleNodeLabels());
+    }
+    nodeLabels.add(RMNodeLabelsManager.NO_LABEL);
+    return nodeLabels;
   }
 
   @Override

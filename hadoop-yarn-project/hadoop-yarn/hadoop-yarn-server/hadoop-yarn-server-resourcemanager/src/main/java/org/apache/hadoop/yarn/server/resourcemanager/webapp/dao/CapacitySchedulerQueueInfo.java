@@ -71,7 +71,7 @@ public class CapacitySchedulerQueueInfo {
 
     queuePath = q.getQueuePath();
     capacity = qCapacities.getCapacity(nodeLabel) * 100;
-    usedCapacity = qCapacities.getUsedCapacity(nodeLabel) * 100;
+    usedCapacity = q.getUsedCapacity(nodeLabel) * 100;
 
     maxCapacity = qCapacities.getMaximumCapacity(nodeLabel);
     if (maxCapacity < EPSILON || maxCapacity > 1f)
@@ -82,8 +82,7 @@ public class CapacitySchedulerQueueInfo {
         cap(qCapacities.getAbsoluteCapacity(nodeLabel), 0f, 1f) * 100;
     absoluteMaxCapacity =
         cap(qCapacities.getAbsoluteMaximumCapacity(nodeLabel), 0f, 1f) * 100;
-    absoluteUsedCapacity =
-        cap(qCapacities.getAbsoluteUsedCapacity(nodeLabel), 0f, 1f) * 100;
+    absoluteUsedCapacity = q.getAbsoluteUsedCapacity(nodeLabel) * 100;
     numApplications = q.getNumApplications();
     queueName = q.getQueueName();
     state = q.getState();
