@@ -1499,7 +1499,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidAppAttempts() throws JSONException, Exception {
+  public void testInvalidAppIdGetAttempts() throws JSONException, Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app = rm.submitApp(CONTAINER_MB);
@@ -1508,8 +1508,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
-          .path(app.getApplicationId().toString()).path("appattempts")
-          .path("appattempt_invalid_12_000001")
+          .path("application_invalid_12").path("appattempts")
           .accept(MediaType.APPLICATION_JSON)
           .get(JSONObject.class);
       fail("should have thrown exception on invalid appAttempt");
@@ -1525,8 +1524,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "java.lang.IllegalArgumentException: Invalid AppAttemptId:"
-              + " appattempt_invalid_12_000001",
+          "java.lang.IllegalArgumentException: Invalid ApplicationId:"
+              + " application_invalid_12",
           message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "BadRequestException", type);
