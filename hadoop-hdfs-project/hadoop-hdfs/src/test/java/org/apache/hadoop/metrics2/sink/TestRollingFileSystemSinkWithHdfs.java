@@ -20,8 +20,6 @@ package org.apache.hadoop.metrics2.sink;
 
 import java.io.IOException;
 import java.net.URI;
-import org.junit.After;
-import org.junit.Before;
 import java.util.Calendar;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,9 +28,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.sink.RollingFileSystemSinkTestBase.MyMetrics1;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of HDFS.
@@ -58,7 +59,6 @@ public class TestRollingFileSystemSinkWithHdfs
         new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
 
     // Also clear sink flags
-    RollingFileSystemSink.flushQuickly = false;
     RollingFileSystemSink.hasFlushed = false;
   }
 
@@ -251,10 +251,12 @@ public class TestRollingFileSystemSinkWithHdfs
    */
   @Test
   public void testFlushThread() throws Exception {
-    RollingFileSystemSink.flushQuickly = true;
+    // Cause the sink's flush thread to be run immediately after the second
+    // metrics log is written
+    RollingFileSystemSink.forceFlush = true;
 
     String path = "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp";
-    MetricsSystem ms = initMetricsSystem(path, true, false);
+    MetricsSystem ms = initMetricsSystem(path, true, false, false);
 
     new MyMetrics1().registerWith(ms);
 
@@ -264,14 +266,21 @@ public class TestRollingFileSystemSinkWithHdfs
     // regardless.
     ms.publishMetricsNow();
 
-    // Sleep until the flusher has run
+    int count = 0;
+
+    // Sleep until the flusher has run. This should never actually need to
+    // sleep, but the sleep is here to make sure this test isn't flakey.
     while (!RollingFileSystemSink.hasFlushed) {
-      Thread.sleep(50L);
+      Thread.sleep(10L);
+
+      if (++count > 1000) {
+        fail("Flush thread did not run within 10 seconds");
+      }
     }
 
-    Calendar now = getNowNotTopOfHour();
+    Calendar now = Calendar.getInstance();
+    Path currentDir = new Path(path, DATE_FORMAT.format(now.getTime()) + "00");
     FileSystem fs = FileSystem.newInstance(new URI(path), new Configuration());
-    Path currentDir = new Path(path, DATE_FORMAT.format(now.getTime()));
     Path currentFile =
         findMostRecentLogFile(fs, new Path(currentDir, getLogFilename()));
     FileStatus status = fs.getFileStatus(currentFile);

@@ -31,6 +31,10 @@ import java.util.Date;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.configuration.SubsetConfiguration;
 import org.apache.commons.lang.time.FastDateFormat;
@@ -53,14 +57,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * <p>This class is a metrics sink that uses
  * {@link org.apache.hadoop.fs.FileSystem} to write the metrics logs.  Every
- * hour a new directory will be created under the path specified by the
+ * roll interval a new directory will be created under the path specified by the
  * <code>basepath</code> property. All metrics will be logged to a file in the
- * current hour's directory in a file named &lt;hostname&gt;.log, where
+ * current interval's directory in a file named &lt;hostname&gt;.log, where
  * &lt;hostname&gt; is the name of the host on which the metrics logging
  * process is running. The base path is set by the
  * <code>&lt;prefix&gt;.sink.&lt;instance&gt;.basepath</code> property.  The
- * time zone used to create the current hour's directory name is GMT.  If the
- * <code>basepath</code> property isn't specified, it will default to
+ * time zone used to create the current interval's directory name is GMT.  If
+ * the <code>basepath</code> property isn't specified, it will default to
  * &quot;/tmp&quot;, which is the temp directory on whatever default file
  * system is configured for the cluster.</p>
  *
@@ -68,6 +72,26 @@ import org.apache.hadoop.security.UserGroupInformation;
  * property controls whether an exception is thrown when an error is encountered
  * writing a log file.  The default value is <code>true</code>.  When set to
  * <code>false</code>, file errors are quietly swallowed.</p>
+ *
+ * <p>The <code>roll-interval</code> property sets the amount of time before
+ * rolling the directory. The default value is 1 hour. The roll interval may
+ * not be less than 1 minute. The property's value should be given as
+ * <i>number unit</i>, where <i>number</i> is an integer value, and
+ * <i>unit</i> is a valid unit.  Valid units are <i>minute</i>, <i>hour</i>,
+ * and <i>day</i>.  The units are case insensitive and may be abbreviated or
+ * plural. If no units are specified, hours are assumed. For example,
+ * &quot;2&quot;, &quot;2h&quot;, &quot;2 hour&quot;, and
+ * &quot;2 hours&quot; are all valid ways to specify two hours.</p>
+ *
+ * <p>The <code>roll-offset-interval-millis</code> property sets the upper
+ * bound on a random time interval (in milliseconds) that is used to delay
+ * before the initial roll.  All subsequent rolls will happen an integer
+ * number of roll intervals after the initial roll, hence retaining the original
+ * offset. The purpose of this property is to insert some variance in the roll
+ * times so that large clusters using this sink on every node don't cause a
+ * performance impact on HDFS by rolling simultaneously.  The default value is
+ * 30000 (30s).  When writing to HDFS, as a rule of thumb, the roll offset in
+ * millis should be no less than the number of sink instances times 5.
  *
  * <p>The primary use of this class is for logging to HDFS.  As it uses
  * {@link org.apache.hadoop.fs.FileSystem} to access the target file system,
@@ -79,7 +103,8 @@ import org.apache.hadoop.security.UserGroupInformation;
  * <p>Not all file systems support the ability to append to files.  In file
  * systems without the ability to append to files, only one writer can write to
  * a file at a time.  To allow for concurrent writes from multiple daemons on a
- * single host, the <code>source</code> property should be set to the name of
+ * single host, the <code>source</code> property is used to set unique headers
+ * for the log files.  The property should be set to the name of
  * the source daemon, e.g. <i>namenode</i>.  The value of the
  * <code>source</code> property should typically be the same as the property's
  * prefix.  If this property is not set, the source is taken to be
@@ -105,7 +130,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * 3.</p>
  *
  * <p>Note also that when writing to HDFS, the file size information is not
- * updated until the file is closed (e.g. at the top of the hour) even though
+ * updated until the file is closed (at the end of the interval) even though
  * the data is being written successfully. This is a known HDFS limitation that
  * exists because of the performance cost of updating the metadata.  See
  * <a href="https://issues.apache.org/jira/browse/HDFS-5478">HDFS-5478</a>.</p>
@@ -124,21 +149,32 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   private static final String BASEPATH_KEY = "basepath";
   private static final String SOURCE_KEY = "source";
   private static final String IGNORE_ERROR_KEY = "ignore-error";
+  private static final boolean DEFAULT_IGNORE_ERROR = false;
   private static final String ALLOW_APPEND_KEY = "allow-append";
+  private static final boolean DEFAULT_ALLOW_APPEND = false;
   private static final String KEYTAB_PROPERTY_KEY = "keytab-key";
   private static final String USERNAME_PROPERTY_KEY = "principal-key";
+  private static final String ROLL_INTERVAL_KEY = "roll-interval";
+  private static final String DEFAULT_ROLL_INTERVAL = "1h";
+  private static final String ROLL_OFFSET_INTERVAL_MILLIS_KEY =
+      "roll-offset-interval-millis";
+  private static final int DEFAULT_ROLL_OFFSET_INTERVAL_MILLIS = 30000;
   private static final String SOURCE_DEFAULT = "unknown";
   private static final String BASEPATH_DEFAULT = "/tmp";
   private static final FastDateFormat DATE_FORMAT =
-      FastDateFormat.getInstance("yyyyMMddHH", TimeZone.getTimeZone("GMT"));
+      FastDateFormat.getInstance("yyyyMMddHHmm", TimeZone.getTimeZone("GMT"));
   private final Object lock = new Object();
   private boolean initialized = false;
   private SubsetConfiguration properties;
   private Configuration conf;
-  private String source;
-  private boolean ignoreError;
-  private boolean allowAppend;
-  private Path basePath;
+  @VisibleForTesting
+  protected String source;
+  @VisibleForTesting
+  protected boolean ignoreError;
+  @VisibleForTesting
+  protected boolean allowAppend;
+  @VisibleForTesting
+  protected Path basePath;
   private FileSystem fileSystem;
   // The current directory path into which we're writing files
   private Path currentDirPath;
@@ -149,11 +185,21 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   // We keep this only to be able to call hsynch() on it.
   private FSDataOutputStream currentFSOutStream;
   private Timer flushTimer;
-
-  // This flag is used during testing to make the flusher thread run after only
-  // a short pause instead of waiting for the top of the hour.
+  // The amount of time between rolls
   @VisibleForTesting
-  protected static boolean flushQuickly = false;
+  protected long rollIntervalMillis;
+  // The maximum amount of random time to add to the initial roll
+  @VisibleForTesting
+  protected long rollOffsetIntervalMillis;
+  // The time for the nextFlush
+  @VisibleForTesting
+  protected Calendar nextFlush = null;
+  // This flag when true causes a metrics write to schedule a flush thread to
+  // run immediately, but only if a flush thread is already scheduled. (It's a
+  // timing thing.  If the first write forces the flush, it will strand the
+  // second write.)
+  @VisibleForTesting
+  protected static boolean forceFlush = false;
   // This flag is used by the flusher thread to indicate that it has run. Used
   // only for testing purposes.
   @VisibleForTesting
@@ -165,13 +211,36 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   @VisibleForTesting
   protected static FileSystem suppliedFilesystem = null;
 
+  /**
+   * Create an empty instance.  Required for reflection.
+   */
+  public RollingFileSystemSink() {
+  }
+
+  /**
+   * Create an instance for testing.
+   *
+   * @param flushIntervalMillis the roll interval in millis
+   * @param flushOffsetIntervalMillis the roll offset interval in millis
+   */
+  @VisibleForTesting
+  protected RollingFileSystemSink(long flushIntervalMillis,
+      long flushOffsetIntervalMillis) {
+    this.rollIntervalMillis = flushIntervalMillis;
+    this.rollOffsetIntervalMillis = flushOffsetIntervalMillis;
+  }
+
   @Override
   public void init(SubsetConfiguration metrics2Properties) {
     properties = metrics2Properties;
     basePath = new Path(properties.getString(BASEPATH_KEY, BASEPATH_DEFAULT));
     source = properties.getString(SOURCE_KEY, SOURCE_DEFAULT);
-    ignoreError = properties.getBoolean(IGNORE_ERROR_KEY, false);
-    allowAppend = properties.getBoolean(ALLOW_APPEND_KEY, false);
+    ignoreError = properties.getBoolean(IGNORE_ERROR_KEY, DEFAULT_IGNORE_ERROR);
+    allowAppend = properties.getBoolean(ALLOW_APPEND_KEY, DEFAULT_ALLOW_APPEND);
+    rollOffsetIntervalMillis =
+        getNonNegative(ROLL_OFFSET_INTERVAL_MILLIS_KEY,
+          DEFAULT_ROLL_OFFSET_INTERVAL_MILLIS);
+    rollIntervalMillis = getRollInterval();
 
     conf = loadConf();
     UserGroupInformation.setConfiguration(conf);
@@ -179,8 +248,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
     // Don't do secure setup if it's not needed.
     if (UserGroupInformation.isSecurityEnabled()) {
       // Validate config so that we don't get an NPE
-      checkForProperty(properties, KEYTAB_PROPERTY_KEY);
-      checkForProperty(properties, USERNAME_PROPERTY_KEY);
+      checkIfPropertyExists(KEYTAB_PROPERTY_KEY);
+      checkIfPropertyExists(USERNAME_PROPERTY_KEY);
 
 
       try {
@@ -228,6 +297,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
       }
 
       flushTimer = new Timer("RollingFileSystemSink Flusher", true);
+      setInitialFlushTime(new Date());
     }
 
     return success;
@@ -238,8 +308,6 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * strings, allowing for either the property or the configuration not to be
    * set.
    *
-   * @param properties the sink properties
-   * @param conf the conf
    * @param property the property to stringify
    * @return the stringified property
    */
@@ -265,14 +333,97 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
   }
 
   /**
+   * Extract the roll interval from the configuration and return it in
+   * milliseconds.
+   *
+   * @return the roll interval in millis
+   */
+  @VisibleForTesting
+  protected long getRollInterval() {
+    String rollInterval =
+        properties.getString(ROLL_INTERVAL_KEY, DEFAULT_ROLL_INTERVAL);
+    Pattern pattern = Pattern.compile("^\\s*(\\d+)\\s*([A-Za-z]*)\\s*$");
+    Matcher match = pattern.matcher(rollInterval);
+    long millis;
+
+    if (match.matches()) {
+      String flushUnit = match.group(2);
+      int rollIntervalInt;
+
+      try {
+        rollIntervalInt = Integer.parseInt(match.group(1));
+      } catch (NumberFormatException ex) {
+        throw new MetricsException("Unrecognized flush interval: "
+            + rollInterval + ". Must be a number followed by an optional "
+            + "unit. The unit must be one of: minute, hour, day", ex);
+      }
+
+      if ("".equals(flushUnit)) {
+        millis = TimeUnit.HOURS.toMillis(rollIntervalInt);
+      } else {
+        switch (flushUnit.toLowerCase()) {
+        case "m":
+        case "min":
+        case "minute":
+        case "minutes":
+          millis = TimeUnit.MINUTES.toMillis(rollIntervalInt);
+          break;
+        case "h":
+        case "hr":
+        case "hour":
+        case "hours":
+          millis = TimeUnit.HOURS.toMillis(rollIntervalInt);
+          break;
+        case "d":
+        case "day":
+        case "days":
+          millis = TimeUnit.DAYS.toMillis(rollIntervalInt);
+          break;
+        default:
+          throw new MetricsException("Unrecognized unit for flush interval: "
+              + flushUnit + ". Must be one of: minute, hour, day");
+        }
+      }
+    } else {
+      throw new MetricsException("Unrecognized flush interval: "
+          + rollInterval + ". Must be a number followed by an optional unit."
+          + " The unit must be one of: minute, hour, day");
+    }
+
+    if (millis < 60000) {
+      throw new MetricsException("The flush interval property must be "
+          + "at least 1 minute. Value was " + rollInterval);
+    }
+
+    return millis;
+  }
+
+  /**
+   * Return the property value if it's non-negative and throw an exception if
+   * it's not.
+   *
+   * @param key the property key
+   * @param defaultValue the default value
+   */
+  private long getNonNegative(String key, int defaultValue) {
+    int flushOffsetIntervalMillis = properties.getInt(key, defaultValue);
+
+    if (flushOffsetIntervalMillis < 0) {
+      throw new MetricsException("The " + key + " property must be "
+          + "non-negative. Value was " + flushOffsetIntervalMillis);
+    }
+
+    return flushOffsetIntervalMillis;
+  }
+
+  /**
    * Throw a {@link MetricsException} if the given property is not set.
    *
-   * @param conf the configuration to test
    * @param key the key to validate
    */
-  private static void checkForProperty(SubsetConfiguration conf, String key) {
-    if (!conf.containsKey(key)) {
-      throw new MetricsException("Configuration is missing " + key
+  private void checkIfPropertyExists(String key) {
+    if (!properties.containsKey(key)) {
+      throw new MetricsException("Metrics2 configuration is missing " + key
           + " property");
     }
   }
@@ -301,7 +452,6 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * Return the supplied file system for testing or otherwise get a new file
    * system.
    *
-   * @param conf the configuration
    * @return the file system to use
    * @throws MetricsException thrown if the file system could not be retrieved
    */
@@ -327,6 +477,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
 
   /**
    * Test whether the file system supports append and return the answer.
+   *
    * @param fs the target file system
    */
   private boolean checkAppend(FileSystem fs) {
@@ -351,14 +502,14 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * new directory or new log file
    */
   private void rollLogDirIfNeeded() throws MetricsException {
+    // Because we're working relative to the clock, we use a Date instead
+    // of Time.monotonicNow().
     Date now = new Date();
-    String currentDir = DATE_FORMAT.format(now);
-    Path path = new Path(basePath, currentDir);
 
     // We check whether currentOutStream is null instead of currentDirPath,
     // because if currentDirPath is null, then currentOutStream is null, but
-    // currentOutStream can be null for other reasons.
-    if ((currentOutStream == null) || !path.equals(currentDirPath)) {
+    // currentOutStream can be null for other reasons.  Same for nextFlush.
+    if ((currentOutStream == null) || now.after(nextFlush.getTime())) {
       // If we're not yet connected to HDFS, create the connection
       if (!initialized) {
         initialized = initFs();
@@ -372,7 +523,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
           currentOutStream.close();
         }
 
-        currentDirPath = path;
+        currentDirPath = findCurrentDirectory(now);
 
         try {
           rollLogDir();
@@ -380,34 +531,41 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
           throwMetricsException("Failed to create new log file", ex);
         }
 
-        scheduleFlush(now);
+        // Update the time of the next flush
+        updateFlushTime(now);
+        // Schedule the next flush at that time
+        scheduleFlush(nextFlush.getTime());
       }
+    } else if (forceFlush) {
+      scheduleFlush(new Date());
     }
   }
 
   /**
-   * Schedule the current hour's directory to be flushed at the top of the next
-   * hour. If this ends up running after the top of the next hour, it will
-   * execute immediately.
+   * Use the given time to determine the current directory. The current
+   * directory will be based on the {@link #rollIntervalMinutes}.
    *
    * @param now the current time
+   * @return the current directory
    */
-  private void scheduleFlush(Date now) {
+  private Path findCurrentDirectory(Date now) {
+    long offset = ((now.getTime() - nextFlush.getTimeInMillis())
+        / rollIntervalMillis) * rollIntervalMillis;
+    String currentDir =
+        DATE_FORMAT.format(new Date(nextFlush.getTimeInMillis() + offset));
+
+    return new Path(basePath, currentDir);
+  }
+
+  /**
+   * Schedule the current interval's directory to be flushed. If this ends up
+   * running after the top of the next interval, it will execute immediately.
+   *
+   * @param when the time the thread should run
+   */
+  private void scheduleFlush(Date when) {
     // Store the current currentDirPath to close later
     final PrintStream toClose = currentOutStream;
-    Calendar next = Calendar.getInstance();
-
-    next.setTime(now);
-
-    if (flushQuickly) {
-      // If we're running unit tests, flush after a short pause
-      next.add(Calendar.MILLISECOND, 400);
-    } else {
-      // Otherwise flush at the top of the hour
-      next.set(Calendar.SECOND, 0);
-      next.set(Calendar.MINUTE, 0);
-      next.add(Calendar.HOUR, 1);
-    }
 
     flushTimer.schedule(new TimerTask() {
       @Override
@@ -420,11 +578,81 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
 
         hasFlushed = true;
       }
-    }, next.getTime());
+    }, when);
   }
 
   /**
-   * Create a new directory based on the current hour and a new log file in
+   * Update the {@link #nextFlush} variable to the next flush time. Add
+   * an integer number of flush intervals, preserving the initial random offset.
+   *
+   * @param now the current time
+   */
+  @VisibleForTesting
+  protected void updateFlushTime(Date now) {
+    // In non-initial rounds, add an integer number of intervals to the last
+    // flush until a time in the future is achieved, thus preserving the
+    // original random offset.
+    int millis =
+        (int) (((now.getTime() - nextFlush.getTimeInMillis())
+        / rollIntervalMillis + 1) * rollIntervalMillis);
+
+    nextFlush.add(Calendar.MILLISECOND, millis);
+  }
+
+  /**
+   * Set the {@link #nextFlush} variable to the initial flush time. The initial
+   * flush will be an integer number of flush intervals past the beginning of
+   * the current hour and will have a random offset added, up to
+   * {@link #rollOffsetIntervalMillis}. The initial flush will be a time in
+   * past that can be used from which to calculate future flush times.
+   *
+   * @param now the current time
+   */
+  @VisibleForTesting
+  protected void setInitialFlushTime(Date now) {
+    // Start with the beginning of the current hour
+    nextFlush = Calendar.getInstance();
+    nextFlush.setTime(now);
+    nextFlush.set(Calendar.MILLISECOND, 0);
+    nextFlush.set(Calendar.SECOND, 0);
+    nextFlush.set(Calendar.MINUTE, 0);
+
+    // In the first round, calculate the first flush as the largest number of
+    // intervals from the beginning of the current hour that's not in the
+    // future by:
+    // 1. Subtract the beginning of the hour from the current time
+    // 2. Divide by the roll interval and round down to get the number of whole
+    //    intervals that have passed since the beginning of the hour
+    // 3. Multiply by the roll interval to get the number of millis between
+    //    the beginning of the current hour and the beginning of the current
+    //    interval.
+    int millis = (int) (((now.getTime() - nextFlush.getTimeInMillis())
+        / rollIntervalMillis) * rollIntervalMillis);
+
+    // Then add some noise to help prevent all the nodes from
+    // closing their files at the same time.
+    if (rollOffsetIntervalMillis > 0) {
+      millis += ThreadLocalRandom.current().nextLong(rollOffsetIntervalMillis);
+
+      // If the added time puts us into the future, step back one roll interval
+      // because the code to increment nextFlush to the next flush expects that
+      // nextFlush is the next flush from the previous interval.  There wasn't
+      // a previous interval, so we just fake it with the time in the past that
+      // would have been the previous interval if there had been one.
+      //
+      // It's OK if millis comes out negative.
+      while (nextFlush.getTimeInMillis() + millis > now.getTime()) {
+        millis -= rollIntervalMillis;
+      }
+    }
+
+    // Adjust the next flush time by millis to get the time of our ficticious
+    // previous next flush
+    nextFlush.add(Calendar.MILLISECOND, millis);
+  }
+
+  /**
+   * Create a new directory based on the current interval and a new log file in
    * that directory.
    *
    * @throws IOException thrown if an error occurs while creating the
@@ -451,7 +679,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * path is found.
    *
    * Once the file is open, update {@link #currentFSOutStream},
-   * {@link #currentOutStream}, and {@#link #currentFile} are set appropriately.
+   * {@link #currentOutStream}, and {@#link #currentFilePath} are set
+   * appropriately.
    *
    * @param initial the target path
    * @throws IOException thrown if the call to see if the exists fails
@@ -552,7 +781,7 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * instead.
    *
    * Once the file is open, update {@link #currentFSOutStream},
-   * {@link #currentOutStream}, and {@#link #currentFile} are set appropriately.
+   * {@link #currentOutStream}, and {@#link #currentFilePath}.
    *
    * @param initial the target path
    * @throws IOException thrown if the call to see the append operation fails.
@@ -615,9 +844,9 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
         currentOutStream.println();
 
         // If we don't hflush(), the data may not be written until the file is
-        // closed. The file won't be closed until the top of the hour *AND*
+        // closed. The file won't be closed until the end of the interval *AND*
         // another record is received. Calling hflush() makes sure that the data
-        // is complete at the top of the hour.
+        // is complete at the end of the interval.
         try {
           currentFSOutStream.hflush();
         } catch (IOException ex) {
@@ -668,8 +897,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * as the new exception's message with the current file name
    * ({@link #currentFilePath}) appended to it.
    *
-   * @param message the exception message. The message will have the current
-   * file name ({@link #currentFilePath}) appended to it.
+   * @param message the exception message. The message will have a colon and
+   * the current file name ({@link #currentFilePath}) appended to it.
    * @throws MetricsException thrown if there was an error and the sink isn't
    * ignoring errors
    */
@@ -687,9 +916,9 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * ({@link #currentFilePath}) and the Throwable's string representation
    * appended to it.
    *
-   * @param message the exception message. The message will have the current
-   * file name ({@link #currentFilePath}) and the Throwable's string
-   * representation appended to it.
+   * @param message the exception message. The message will have a colon, the
+   * current file name ({@link #currentFilePath}), and the Throwable's string
+   * representation (wrapped in square brackets) appended to it.
    * @param t the Throwable to wrap
    */
   private void throwMetricsException(String message, Throwable t) {
@@ -705,8 +934,8 @@ public class RollingFileSystemSink implements MetricsSink, Closeable {
    * new exception's message with the current file name
    * ({@link #currentFilePath}) appended to it.
    *
-   * @param message the exception message. The message will have the current
-   * file name ({@link #currentFilePath}) appended to it.
+   * @param message the exception message. The message will have a colon and
+   * the current file name ({@link #currentFilePath}) appended to it.
    */
   private void throwMetricsException(String message) {
     if (!ignoreError) {

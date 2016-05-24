@@ -49,8 +49,11 @@ import org.apache.hadoop.security.NullGroupsMapping;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -66,6 +69,75 @@ public class TestRollingFileSystemSinkWithSecureHdfs
   private static String hdfsPrincipal;
   private static String hdfsKeytab;
   private static String spnegoPrincipal;
+  private MiniDFSCluster cluster = null;
+  private UserGroupInformation sink = null;
+
+  /**
+   * Setup the KDC for testing a secure HDFS cluster.
+   *
+   * @throws Exception thrown if the KDC setup fails
+   */
+  @BeforeClass
+  public static void initKdc() throws Exception {
+    Properties kdcConf = MiniKdc.createConf();
+    kdc = new MiniKdc(kdcConf, ROOT_TEST_DIR);
+    kdc.start();
+
+    File sinkKeytabFile = new File(ROOT_TEST_DIR, "sink.keytab");
+    sinkKeytab = sinkKeytabFile.getAbsolutePath();
+    kdc.createPrincipal(sinkKeytabFile, "sink/localhost");
+    sinkPrincipal = "sink/localhost@" + kdc.getRealm();
+
+    File hdfsKeytabFile = new File(ROOT_TEST_DIR, "hdfs.keytab");
+    hdfsKeytab = hdfsKeytabFile.getAbsolutePath();
+    kdc.createPrincipal(hdfsKeytabFile, "hdfs/localhost",
+        "HTTP/localhost");
+    hdfsPrincipal = "hdfs/localhost@" + kdc.getRealm();
+    spnegoPrincipal = "HTTP/localhost@" + kdc.getRealm();
+  }
+
+  /**
+   * Setup the mini-DFS cluster.
+   *
+   * @throws Exception thrown if the cluster setup fails
+   */
+  @Before
+  public void initCluster() throws Exception {
+    HdfsConfiguration conf = createSecureConfig("authentication,privacy");
+
+    RollingFileSystemSink.hasFlushed = false;
+    RollingFileSystemSink.suppliedConf = conf;
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
+        .build();
+    cluster.waitActive();
+    createDirectoriesSecurely();
+  }
+
+  /**
+   * Stop the mini-DFS cluster.
+   */
+  @After
+  public void stopCluster() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+
+    // Restore non-secure conf
+    UserGroupInformation.setConfiguration(new Configuration());
+    RollingFileSystemSink.suppliedConf = null;
+    RollingFileSystemSink.suppliedFilesystem = null;
+  }
+
+  /**
+   * Stop the mini-KDC.
+   */
+  @AfterClass
+  public static void shutdownKdc() {
+    if (kdc != null) {
+      kdc.stop();
+    }
+  }
 
   /**
    * Do a basic write test against an HDFS cluster with Kerberos enabled. We
@@ -76,46 +148,18 @@ public class TestRollingFileSystemSinkWithSecureHdfs
    */
   @Test
   public void testWithSecureHDFS() throws Exception {
-    RollingFileSystemSink.flushQuickly = false;
-    RollingFileSystemSink.hasFlushed = false;
-    initKdc();
+    final String path =
+        "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp/test";
+    final MetricsSystem ms =
+        initMetricsSystem(path, true, false, true);
 
-    MiniDFSCluster cluster = null;
-
-    try {
-      HdfsConfiguration conf = createSecureConfig("authentication,privacy");
-
-      RollingFileSystemSink.suppliedConf = conf;
-
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
-          .build();
-
-      cluster.waitActive();
-
-      UserGroupInformation sink = createDirectoriesSecurely(cluster);
-      final String path =
-          "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp/test";
-      final MetricsSystem ms = initMetricsSystem(path, true, false, true);
-
-      assertMetricsContents(
-          sink.doAs(new PrivilegedExceptionAction<String>() {
-            @Override
-            public String run() throws Exception {
-              return doWriteTest(ms, path, 1);
-            }
-          }));
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-
-      shutdownKdc();
-
-      // Restore non-secure conf
-      UserGroupInformation.setConfiguration(new Configuration());
-      RollingFileSystemSink.suppliedConf = null;
-      RollingFileSystemSink.suppliedFilesystem = null;
-    }
+    assertMetricsContents(
+        sink.doAs(new PrivilegedExceptionAction<String>() {
+          @Override
+          public String run() throws Exception {
+            return doWriteTest(ms, path, 1);
+          }
+        }));
   }
 
   /**
@@ -126,54 +170,25 @@ public class TestRollingFileSystemSinkWithSecureHdfs
    */
   @Test
   public void testMissingPropertiesWithSecureHDFS() throws Exception {
-    RollingFileSystemSink.flushQuickly = false;
-    RollingFileSystemSink.hasFlushed = false;
-    initKdc();
+    final String path =
+        "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp/test";
 
-    MiniDFSCluster cluster = null;
+    initMetricsSystem(path, true, false);
 
-    try {
-      HdfsConfiguration conf = createSecureConfig("authentication,privacy");
-
-      RollingFileSystemSink.suppliedConf = conf;
-
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
-          .build();
-
-      final String path =
-          "hdfs://" + cluster.getNameNode().getHostAndPort() + "/tmp/test";
-
-      createDirectoriesSecurely(cluster);
-      initMetricsSystem(path, true, false);
-
-      assertTrue("No exception was generated initializing the sink against a "
-          + "secure cluster even though the principal and keytab properties "
-          + "were missing", MockSink.errored);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-
-      shutdownKdc();
-
-      // Restore non-secure conf
-      UserGroupInformation.setConfiguration(new Configuration());
-      RollingFileSystemSink.suppliedConf = null;
-      RollingFileSystemSink.suppliedFilesystem = null;
-    }
+    assertTrue("No exception was generated initializing the sink against a "
+        + "secure cluster even though the principal and keytab properties "
+        + "were missing", MockSink.errored);
   }
 
   /**
    * Create the /tmp directory as <i>hdfs</i> and /tmp/test as <i>sink</i> and
    * return the UGI for <i>sink</i>.
    *
-   * @param cluster the mini-cluster
-   * @return the UGI for <i>sink</i>
    * @throws IOException thrown if login or directory creation fails
    * @throws InterruptedException thrown if interrupted while creating a
    * file system handle
    */
-  protected UserGroupInformation createDirectoriesSecurely(final MiniDFSCluster cluster)
+  protected void createDirectoriesSecurely()
       throws IOException, InterruptedException {
     Path tmp = new Path("/tmp");
     Path test = new Path(tmp, "test");
@@ -192,9 +207,9 @@ public class TestRollingFileSystemSinkWithSecureHdfs
     fsForSuperUser.mkdirs(tmp);
     fsForSuperUser.setPermission(tmp, new FsPermission((short)0777));
 
-    UserGroupInformation sink =
-        UserGroupInformation.loginUserFromKeytabAndReturnUGI(sinkPrincipal,
+    sink = UserGroupInformation.loginUserFromKeytabAndReturnUGI(sinkPrincipal,
             sinkKeytab);
+
     FileSystem fsForSink =
         sink.doAs(new PrivilegedExceptionAction<FileSystem>() {
           @Override
@@ -205,40 +220,6 @@ public class TestRollingFileSystemSinkWithSecureHdfs
 
     fsForSink.mkdirs(test);
     RollingFileSystemSink.suppliedFilesystem = fsForSink;
-
-    return sink;
-  }
-
-  /**
-   * Setup the KDC for testing a secure HDFS cluster
-   *
-   * @throws Exception thrown if the KDC setup fails
-   */
-  public static void initKdc() throws Exception {
-    Properties kdcConf = MiniKdc.createConf();
-    kdc = new MiniKdc(kdcConf, methodDir);
-    kdc.start();
-
-    File sinkKeytabFile = new File(methodDir, "sink.keytab");
-    sinkKeytab = sinkKeytabFile.getAbsolutePath();
-    kdc.createPrincipal(sinkKeytabFile, "sink/localhost");
-    sinkPrincipal = "sink/localhost@" + kdc.getRealm();
-
-    File hdfsKeytabFile = new File(methodDir, "hdfs.keytab");
-    hdfsKeytab = hdfsKeytabFile.getAbsolutePath();
-    kdc.createPrincipal(hdfsKeytabFile, "hdfs/localhost",
-        "HTTP/localhost");
-    hdfsPrincipal = "hdfs/localhost@" + kdc.getRealm();
-    spnegoPrincipal = "HTTP/localhost@" + kdc.getRealm();
-  }
-
-  /**
-   * Stop the mini-KDC.
-   */
-  public static void shutdownKdc() {
-    if (kdc != null) {
-      kdc.stop();
-    }
   }
 
   /**
