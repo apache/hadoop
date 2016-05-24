@@ -2528,4 +2528,8 @@ public class DistributedFileSystem extends FileSystem {
   Statistics getFsStatistics() {
     return statistics;
   }
+
+  DFSOpsCountStatistics getDFSOpsCountStatistics() {
+    return storageStatistics;
+  }
 }
