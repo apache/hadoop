@@ -204,7 +204,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private static void mergeEntities(TimelineEntity entity1,
       TimelineEntity entity2) {
     // Ideally created time wont change except in the case of issue from client.
-    if (entity2.getCreatedTime() > 0) {
+    if (entity2.getCreatedTime() != null && entity2.getCreatedTime() > 0) {
       entity1.setCreatedTime(entity2.getCreatedTime());
     }
     for (Entry<String, String> configEntry : entity2.getConfigs().entrySet()) {

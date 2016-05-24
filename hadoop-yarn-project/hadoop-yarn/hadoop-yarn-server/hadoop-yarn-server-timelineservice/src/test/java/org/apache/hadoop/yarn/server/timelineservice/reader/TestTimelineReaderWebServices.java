@@ -173,7 +173,7 @@ public class TestTimelineReaderWebServices {
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
-      assertEquals(1425016502000L, entity.getCreatedTime());
+      assertEquals((Long)1425016502000L, entity.getCreatedTime());
       // Default view i.e. when no fields are specified, entity contains only
       // entity id, entity type and created time.
       assertEquals(0, entity.getConfigs().size());
@@ -196,7 +196,7 @@ public class TestTimelineReaderWebServices {
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
-      assertEquals(1425016502000L, entity.getCreatedTime());
+      assertEquals((Long)1425016502000L, entity.getCreatedTime());
     } finally {
       client.destroy();
     }
