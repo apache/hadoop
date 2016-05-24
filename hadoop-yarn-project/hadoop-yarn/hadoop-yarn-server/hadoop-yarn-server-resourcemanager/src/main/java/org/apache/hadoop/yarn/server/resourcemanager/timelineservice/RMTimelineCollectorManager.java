@@ -49,7 +49,7 @@ public class RMTimelineCollectorManager extends TimelineCollectorManager {
   }
 
   @Override
-  public void postPut(ApplicationId appId, TimelineCollector collector) {
+  protected void doPostPut(ApplicationId appId, TimelineCollector collector) {
     RMApp app = rmContext.getRMApps().get(appId);
     if (app == null) {
       throw new YarnRuntimeException(
