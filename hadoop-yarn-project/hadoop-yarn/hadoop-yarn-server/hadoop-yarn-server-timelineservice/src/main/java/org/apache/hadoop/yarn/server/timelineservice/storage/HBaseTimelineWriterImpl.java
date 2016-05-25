@@ -118,6 +118,15 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       TimelineEntities data) throws IOException {
 
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
+    // defensive coding to avoid NPE during row key construction
+    if ((flowName == null) || (appId == null) || (clusterId == null)
+        || (userId == null)) {
+      LOG.warn("Found null for one of: flowName=" + flowName + " appId=" + appId
+          + " userId=" + userId + " clusterId=" + clusterId
+          + " . Not proceeding with writing to hbase");
+      return putStatus;
+    }
+
     for (TimelineEntity te : data.getEntities()) {
 
       // a set can have at most 1 null
