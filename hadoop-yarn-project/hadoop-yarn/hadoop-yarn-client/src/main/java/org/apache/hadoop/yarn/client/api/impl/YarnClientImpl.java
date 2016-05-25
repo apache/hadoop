@@ -65,6 +65,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -786,6 +788,14 @@ public class YarnClientImpl extends YarnClient {
     MoveApplicationAcrossQueuesRequest request =
         MoveApplicationAcrossQueuesRequest.newInstance(appId, queue);
     rmClient.moveApplicationAcrossQueues(request);
+  }
+
+  @Override
+  public GetNewReservationResponse createReservation() throws YarnException,
+      IOException {
+    GetNewReservationRequest request =
+        Records.newRecord(GetNewReservationRequest.class);
+    return rmClient.getNewReservation(request);
   }
 
   @Override
