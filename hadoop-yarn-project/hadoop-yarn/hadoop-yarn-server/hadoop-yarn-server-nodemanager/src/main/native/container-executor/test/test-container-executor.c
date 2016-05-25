@@ -431,42 +431,6 @@ void run_test_in_child(const char* test_name, void (*func)()) {
   }
 }
 
-void test_signal_container() {
-  printf("\nTesting signal_container\n");
-  fflush(stdout);
-  fflush(stderr);
-  pid_t child = fork();
-  if (child == -1) {
-    printf("FAIL: fork failed\n");
-    exit(1);
-  } else if (child == 0) {
-    if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
-      exit(1);
-    }
-    sleep(3600);
-    exit(0);
-  } else {
-    printf("Child container launched as %d\n", child);
-    if (signal_container_as_user(yarn_username, child, SIGQUIT) != 0) {
-      exit(1);
-    }
-    int status = 0;
-    if (waitpid(child, &status, 0) == -1) {
-      printf("FAIL: waitpid failed - %s\n", strerror(errno));
-      exit(1);
-    }
-    if (!WIFSIGNALED(status)) {
-      printf("FAIL: child wasn't signalled - %d\n", status);
-      exit(1);
-    }
-    if (WTERMSIG(status) != SIGQUIT) {
-      printf("FAIL: child was killed with %d instead of %d\n", 
-	     WTERMSIG(status), SIGQUIT);
-      exit(1);
-    }
-  }
-}
-
 void test_signal_container_group() {
   printf("\nTesting group signal_container\n");
   fflush(stdout);
@@ -782,7 +746,6 @@ int main(int argc, char **argv) {
 
   // the tests that change user need to be run in a subshell, so that
   // when they change user they don't give up our privs
-  run_test_in_child("test_signal_container", test_signal_container);
   run_test_in_child("test_signal_container_group", test_signal_container_group);
 
   // init app and run container can't be run if you aren't testing as root
