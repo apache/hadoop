@@ -142,6 +142,9 @@ Release 2.7.3 - UNRELEASED
     YARN-5055. max apps per user can be larger than max per queue (Eric Badger
     via jlowe)
 
+    YARN-4459. container-executor should only kill process groups (Jun Gong
+    via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
