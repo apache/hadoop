@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -29,6 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ReadOption;
+import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.PeerCache;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -55,13 +58,13 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @deprecated this is an old implementation that is being left around
- * in case any issues spring up with the new {@link RemoteBlockReader2}
+ * in case any issues spring up with the new {@link BlockReaderRemote2}
  * implementation.
  * It will be removed in the next release.
  */
 @InterfaceAudience.Private
 @Deprecated
-public class RemoteBlockReader extends FSInputChecker implements BlockReader {
+public class BlockReaderRemote extends FSInputChecker implements BlockReader {
   static final Logger LOG = LoggerFactory.getLogger(FSInputChecker.class);
 
   private final Peer peer;
@@ -213,7 +216,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       int len, byte[] checksumBuf)
       throws IOException {
     try (TraceScope ignored = tracer.newScope(
-        "RemoteBlockReader#readChunk(" + blockId + ")")) {
+        "BlockReaderRemote#readChunk(" + blockId + ")")) {
       return readChunkImpl(pos, buf, offset, len, checksumBuf);
     }
   }
@@ -339,7 +342,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     return bytesToRead;
   }
 
-  private RemoteBlockReader(String file, String bpid, long blockId,
+  private BlockReaderRemote(String file, String bpid, long blockId,
       DataInputStream in, DataChecksum checksum, boolean verifyChecksum,
       long startOffset, long firstChunkOffset, long bytesToRead, Peer peer,
       DatanodeID datanodeID, PeerCache peerCache, Tracer tracer) {
@@ -391,7 +394,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
    * @param clientName  Client name
    * @return New BlockReader instance, or null on error.
    */
-  public static RemoteBlockReader newBlockReader(String file,
+  public static BlockReaderRemote newBlockReader(String file,
       ExtendedBlock block,
       Token<BlockTokenIdentifier> blockToken,
       long startOffset, long len,
@@ -417,7 +420,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         PBHelperClient.vintPrefixed(in));
-    RemoteBlockReader2.checkSuccess(status, peer, block, file);
+    BlockReaderRemote2.checkSuccess(status, peer, block, file);
     ReadOpChecksumInfoProto checksumInfo =
         status.getReadOpChecksumInfo();
     DataChecksum checksum = DataTransferProtoUtil.fromProto(
@@ -434,7 +437,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
           startOffset + " for file " + file);
     }
 
-    return new RemoteBlockReader(file, block.getBlockPoolId(), block.getBlockId(),
+    return new BlockReaderRemote(file, block.getBlockPoolId(), block.getBlockId(),
         in, checksum, verifyChecksum, startOffset, firstChunkOffset, len,
         peer, datanodeID, peerCache, tracer);
   }
@@ -472,7 +475,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   void sendReadResult(Peer peer, Status statusCode) {
     assert !sentStatusCode : "already sent status code to " + peer;
     try {
-      RemoteBlockReader2.writeReadResult(peer.getOutputStream(), statusCode);
+      BlockReaderRemote2.writeReadResult(peer.getOutputStream(), statusCode);
       sentStatusCode = true;
     } catch (IOException e) {
       // It's ok not to be able to send this. But something is probably wrong.
@@ -483,14 +486,14 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
   @Override
   public int read(ByteBuffer buf) throws IOException {
-    throw new UnsupportedOperationException("readDirect unsupported in RemoteBlockReader");
+    throw new UnsupportedOperationException("readDirect unsupported in BlockReaderRemote");
   }
 
   @Override
   public int available() {
     // An optimistic estimate of how much data is available
     // to us without doing network I/O.
-    return RemoteBlockReader2.TCP_WINDOW_SIZE;
+    return BlockReaderRemote2.TCP_WINDOW_SIZE;
   }
 
   @Override

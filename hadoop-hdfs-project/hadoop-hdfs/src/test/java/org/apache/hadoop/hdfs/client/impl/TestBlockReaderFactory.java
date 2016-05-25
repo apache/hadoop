@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
@@ -41,6 +41,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSInputStream;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -125,7 +130,7 @@ public class TestBlockReaderFactory {
     cluster.shutdown();
     sockDir.close();
   }
-  
+
   /**
    * Test the case where we have multiple threads waiting on the
    * ShortCircuitCache delivering a certain ShortCircuitReplica.
@@ -200,7 +205,7 @@ public class TestBlockReaderFactory {
    * Test the case where we have a failure to complete a short circuit read
    * that occurs, and then later on, we have a success.
    * Any thread waiting on a cache load should receive the failure (if it
-   * occurs);  however, the failure result should not be cached.  We want 
+   * occurs);  however, the failure result should not be cached.  We want
    * to be able to retry later and succeed.
    */
   @Test(timeout=60000)
@@ -244,7 +249,7 @@ public class TestBlockReaderFactory {
       public void run() {
         try {
           // First time should fail.
-          List<LocatedBlock> locatedBlocks = 
+          List<LocatedBlock> locatedBlocks =
               cluster.getNameNode().getRpcServer().getBlockLocations(
               TEST_FILE, 0, TEST_FILE_LEN).getLocatedBlocks();
           LocatedBlock lblock = locatedBlocks.get(0); // first block
@@ -253,7 +258,7 @@ public class TestBlockReaderFactory {
             blockReader = BlockReaderTestUtil.
                 getBlockReader(cluster, lblock, 0, TEST_FILE_LEN);
             Assert.fail("expected getBlockReader to fail the first time.");
-          } catch (Throwable t) { 
+          } catch (Throwable t) {
             Assert.assertTrue("expected to see 'TCP reads were disabled " +
                 "for testing' in exception " + t, t.getMessage().contains(
                 "TCP reads were disabled for testing"));
@@ -267,7 +272,7 @@ public class TestBlockReaderFactory {
           try {
             blockReader = BlockReaderTestUtil.
                 getBlockReader(cluster, lblock, 0, TEST_FILE_LEN);
-          } catch (Throwable t) { 
+          } catch (Throwable t) {
             LOG.error("error trying to retrieve a block reader " +
                 "the second time.", t);
             throw t;
@@ -327,7 +332,7 @@ public class TestBlockReaderFactory {
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
-        fs.dfs.getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache();
     final DatanodeInfo datanode =
         new DatanodeInfo(cluster.getDataNodes().get(0).getDatanodeId());
     cache.getDfsClientShmManager().visit(new Visitor() {
@@ -344,7 +349,7 @@ public class TestBlockReaderFactory {
     cluster.shutdown();
     sockDir.close();
   }
- 
+
   /**
    * Test that a client which does not support short-circuit reads using
    * shared memory can talk with a server which supports it.
@@ -375,12 +380,12 @@ public class TestBlockReaderFactory {
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
-        fs.dfs.getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache();
     Assert.assertEquals(null, cache.getDfsClientShmManager());
     cluster.shutdown();
     sockDir.close();
   }
-  
+
   /**
    * Test shutting down the ShortCircuitCache while there are things in it.
    */
@@ -407,7 +412,7 @@ public class TestBlockReaderFactory {
         calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
     Assert.assertTrue(Arrays.equals(contents, expected));
     final ShortCircuitCache cache =
-        fs.dfs.getClientContext().getShortCircuitCache();
+        fs.getClient().getClientContext().getShortCircuitCache();
     cache.close();
     Assert.assertTrue(cache.getDfsClientShmManager().
         getDomainSocketWatcher().isClosed());

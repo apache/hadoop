@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.client.impl;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -30,6 +30,9 @@ import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
+import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.PeerCache;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -79,13 +82,13 @@ import org.slf4j.LoggerFactory;
  *
  * This is a new implementation introduced in Hadoop 0.23 which
  * is more efficient and simpler than the older BlockReader
- * implementation. It should be renamed to RemoteBlockReader
+ * implementation. It should be renamed to BlockReaderRemote
  * once we are confident in it.
  */
 @InterfaceAudience.Private
-public class RemoteBlockReader2  implements BlockReader {
+public class BlockReaderRemote2 implements BlockReader {
 
-  static final Logger LOG = LoggerFactory.getLogger(RemoteBlockReader2.class);
+  static final Logger LOG = LoggerFactory.getLogger(BlockReaderRemote2.class);
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB;
 
   final private Peer peer;
@@ -142,7 +145,7 @@ public class RemoteBlockReader2  implements BlockReader {
     if (curDataSlice == null ||
         curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
       try (TraceScope ignored = tracer.newScope(
-          "RemoteBlockReader2#readNextPacket(" + blockId + ")")) {
+          "BlockReaderRemote2#readNextPacket(" + blockId + ")")) {
         readNextPacket();
       }
     }
@@ -166,7 +169,7 @@ public class RemoteBlockReader2  implements BlockReader {
     if (curDataSlice == null ||
         (curDataSlice.remaining() == 0 && bytesNeededToFinish > 0)) {
       try (TraceScope ignored = tracer.newScope(
-          "RemoteBlockReader2#readNextPacket(" + blockId + ")")) {
+          "BlockReaderRemote2#readNextPacket(" + blockId + ")")) {
         readNextPacket();
       }
     }
@@ -277,7 +280,7 @@ public class RemoteBlockReader2  implements BlockReader {
     }
   }
 
-  protected RemoteBlockReader2(String file, long blockId,
+  protected BlockReaderRemote2(String file, long blockId,
       DataChecksum checksum, boolean verifyChecksum,
       long startOffset, long firstChunkOffset, long bytesToRead, Peer peer,
       DatanodeID datanodeID, PeerCache peerCache, Tracer tracer) {
@@ -428,7 +431,7 @@ public class RemoteBlockReader2  implements BlockReader {
           startOffset + " for file " + file);
     }
 
-    return new RemoteBlockReader2(file, block.getBlockId(), checksum,
+    return new BlockReaderRemote2(file, block.getBlockId(), checksum,
         verifyChecksum, startOffset, firstChunkOffset, len, peer, datanodeID,
         peerCache, tracer);
   }
