@@ -745,8 +745,8 @@ public class ApplicationMaster {
     FinalApplicationStatus appStatus;
     String appMessage = null;
     boolean success = true;
-    if (numFailedContainers.get() == 0 && 
-        numCompletedContainers.get() == numTotalContainers) {
+    if (numCompletedContainers.get() - numFailedContainers.get()
+        >= numTotalContainers) {
       appStatus = FinalApplicationStatus.SUCCEEDED;
     } else {
       appStatus = FinalApplicationStatus.FAILED;
