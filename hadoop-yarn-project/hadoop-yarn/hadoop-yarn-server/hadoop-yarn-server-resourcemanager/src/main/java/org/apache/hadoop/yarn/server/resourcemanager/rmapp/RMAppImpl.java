@@ -416,8 +416,19 @@ public class RMAppImpl implements RMApp, Recoverable {
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
       ApplicationMasterService masterService, long submitTime,
-      String applicationType, Set<String> applicationTags, 
+      String applicationType, Set<String> applicationTags,
       ResourceRequest amReq) {
+    this(applicationId, rmContext, config, name, user, queue, submissionContext,
+      scheduler, masterService, submitTime, applicationType, applicationTags,
+      amReq, -1);
+  }
+
+  public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
+      Configuration config, String name, String user, String queue,
+      ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime,
+      String applicationType, Set<String> applicationTags,
+      ResourceRequest amReq, long startTime) {
 
     this.systemClock = SystemClock.getInstance();
 
@@ -433,7 +444,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.submitTime = submitTime;
-    this.startTime = this.systemClock.getTime();
+    if (startTime <= 0) {
+      this.startTime = this.systemClock.getTime();
+    } else {
+      this.startTime = startTime;
+    }
     this.applicationType = applicationType;
     this.applicationTags = applicationTags;
     this.amReq = amReq;

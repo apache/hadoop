@@ -288,8 +288,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       String user) throws YarnException, AccessControlException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
-    RMAppImpl application =
-        createAndPopulateNewRMApp(submissionContext, submitTime, user, false);
+    // Passing start time as -1. It will be eventually set in RMAppImpl
+    // constructor.
+    RMAppImpl application = createAndPopulateNewRMApp(
+        submissionContext, submitTime, user, false, -1);
     Credentials credentials = null;
     try {
       credentials = parseCredentials(submissionContext);
@@ -327,14 +329,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true);
+            appState.getUser(), true, appState.getStartTime());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery)
+      String user, boolean isRecovery, long startTime)
       throws YarnException, AccessControlException {
     // Do queue mapping
     if (!isRecovery) {
@@ -391,7 +393,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             submissionContext.getQueue(),
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType(),
-            submissionContext.getApplicationTags(), amReq);
+            submissionContext.getApplicationTags(), amReq, startTime);
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not
     // influence each other
