@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.secu
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ContainerLocalizer {
@@ -117,14 +119,16 @@ public class ContainerLocalizer {
     this.pendingResources = new HashMap<LocalResource,Future<Path>>();
   }
 
-  LocalizationProtocol getProxy(final InetSocketAddress nmAddr) {
+  @Private
+  @VisibleForTesting
+  public LocalizationProtocol getProxy(final InetSocketAddress nmAddr) {
     YarnRPC rpc = YarnRPC.create(conf);
     return (LocalizationProtocol)
       rpc.getProxy(LocalizationProtocol.class, nmAddr, conf);
   }
 
   @SuppressWarnings("deprecation")
-  public int runLocalization(final InetSocketAddress nmAddr)
+  public void runLocalization(final InetSocketAddress nmAddr)
       throws IOException, InterruptedException {
     // load credentials
     initDirs(conf, user, appId, lfs, localDirs);
@@ -168,12 +172,9 @@ public class ContainerLocalizer {
       exec = createDownloadThreadPool();
       CompletionService<Path> ecs = createCompletionService(exec);
       localizeFiles(nodeManager, ecs, ugi);
-      return 0;
+      return;
     } catch (Throwable e) {
-      // Print traces to stdout so that they can be logged by the NM address
-      // space.
-      e.printStackTrace(System.out);
-      return -1;
+      throw new IOException(e);
     } finally {
       try {
         if (exec != null) {
@@ -229,7 +230,7 @@ public class ContainerLocalizer {
 
   protected void localizeFiles(LocalizationProtocol nodemanager,
       CompletionService<Path> cs, UserGroupInformation ugi)
-      throws IOException {
+      throws IOException, YarnException {
     while (true) {
       try {
         LocalizerStatus status = createStatus();
@@ -251,10 +252,15 @@ public class ContainerLocalizer {
             pending.cancel(true);
           }
           status = createStatus();
-          // ignore response
+          // ignore response while dying.
           try {
             nodemanager.heartbeat(status);
-          } catch (YarnException e) { }
+          } catch (YarnException e) {
+            // Cannot do anything about this during death stage, let's just log
+            // it.
+            e.printStackTrace(System.out);
+            LOG.error("Heartbeat failed while dying: ", e);
+          }
           return;
         }
         cs.poll(1000, TimeUnit.MILLISECONDS);
@@ -262,7 +268,7 @@ public class ContainerLocalizer {
         return;
       } catch (YarnException e) {
         // TODO cleanup
-        return;
+        throw e;
       }
     }
   }
@@ -380,16 +386,14 @@ public class ContainerLocalizer {
           new ContainerLocalizer(FileContext.getLocalFSFileContext(), user,
               appId, locId, localDirs,
               RecordFactoryProvider.getRecordFactory(null));
-      int nRet = localizer.runLocalization(nmAddr);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(String.format("nRet: %d", nRet));
-      }
-      System.exit(nRet);
+      localizer.runLocalization(nmAddr);
+      return;
     } catch (Throwable e) {
-      // Print error to stdout so that LCE can use it.
+      // Print traces to stdout so that they can be logged by the NM address
+      // space in both DefaultCE and LCE cases
       e.printStackTrace(System.out);
       LOG.error("Exception in main:", e);
-      throw e;
+      System.exit(-1);
     }
   }
 
