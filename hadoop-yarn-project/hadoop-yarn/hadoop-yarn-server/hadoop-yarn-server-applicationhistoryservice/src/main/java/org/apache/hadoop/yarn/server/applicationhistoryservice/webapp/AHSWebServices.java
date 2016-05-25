@@ -312,8 +312,6 @@ public class AHSWebServices extends WebServices {
     ResponseBuilder response = Response.ok(stream);
     if (downloadFile) {
       response.header("Content-Type", "application/octet-stream");
-      response.header("Content-Disposition", "attachment; filename="
-          + fileName);
     }
     return response.build();
   }
