@@ -26,15 +26,22 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.proto.YarnProtos;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
@@ -47,13 +54,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -79,18 +86,35 @@ public class ApplicationImpl implements Application {
   Map<ContainerId, Container> containers =
       new HashMap<ContainerId, Container>();
 
-  public ApplicationImpl(Dispatcher dispatcher, String user, ApplicationId appId,
-      Credentials credentials, Context context) {
+  /**
+   * The timestamp when the log aggregation has started for this application.
+   * Used to determine the age of application log files during log aggregation.
+   * When logAggregationRentention policy is enabled, log files older than
+   * the retention policy will not be uploaded but scheduled for deletion.
+   */
+  private long applicationLogInitedTimestamp = -1;
+  private final NMStateStoreService appStateStore;
+
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      ApplicationId appId, Credentials credentials,
+      Context context, long recoveredLogInitedTime) {
     this.dispatcher = dispatcher;
     this.user = user;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = context.getApplicationACLsManager();
     this.context = context;
+    this.appStateStore = context.getNMStateStore();
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
     stateMachine = stateMachineFactory.make(this);
+    setAppLogInitedTimestamp(recoveredLogInitedTime);
+  }
+
+  public ApplicationImpl(Dispatcher dispatcher, String user,
+      ApplicationId appId, Credentials credentials, Context context) {
+    this(dispatcher, user, appId, credentials, context, -1);
   }
 
   @Override
@@ -242,7 +266,7 @@ public class ApplicationImpl implements Application {
       app.dispatcher.getEventHandler().handle(
           new LogHandlerAppStartedEvent(app.appId, app.user,
               app.credentials, app.applicationACLs,
-              app.logAggregationContext));
+              app.logAggregationContext, app.applicationLogInitedTimestamp));
     }
   }
 
@@ -262,7 +286,55 @@ public class ApplicationImpl implements Application {
       app.dispatcher.getEventHandler().handle(
           new ApplicationLocalizationEvent(
               LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
+      app.setAppLogInitedTimestamp(event.getTimestamp());
+      try {
+        app.appStateStore.storeApplication(app.appId, buildAppProto(app));
+      } catch (Exception ex) {
+        LOG.warn("failed to update application state in state store", ex);
+      }
     }
+  }
+
+  @VisibleForTesting
+  void setAppLogInitedTimestamp(long appLogInitedTimestamp) {
+    this.applicationLogInitedTimestamp = appLogInitedTimestamp;
+  }
+
+  static ContainerManagerApplicationProto buildAppProto(ApplicationImpl app)
+      throws IOException {
+    ContainerManagerApplicationProto.Builder builder =
+        ContainerManagerApplicationProto.newBuilder();
+    builder.setId(((ApplicationIdPBImpl) app.appId).getProto());
+    builder.setUser(app.getUser());
+
+    if (app.logAggregationContext != null) {
+      builder.setLogAggregationContext((
+          (LogAggregationContextPBImpl)app.logAggregationContext).getProto());
+    }
+
+    builder.clearCredentials();
+    if (app.credentials != null) {
+      DataOutputBuffer dob = new DataOutputBuffer();
+      app.credentials.writeTokenStorageToStream(dob);
+      builder.setCredentials(ByteString.copyFrom(dob.getData()));
+    }
+
+    builder.clearAcls();
+    if (app.applicationACLs != null) {
+      for (Map.Entry<ApplicationAccessType, String> acl :  app
+          .applicationACLs.entrySet()) {
+        YarnProtos.ApplicationACLMapProto p = YarnProtos
+            .ApplicationACLMapProto.newBuilder()
+            .setAccessType(ProtoUtils.convertToProtoFormat(acl.getKey()))
+            .setAcl(acl.getValue())
+            .build();
+        builder.addAcls(p);
+      }
+    }
+
+    builder.setAppLogAggregationInitedTime(app.applicationLogInitedTimestamp);
+
+    return builder.build();
   }
 
   /**
