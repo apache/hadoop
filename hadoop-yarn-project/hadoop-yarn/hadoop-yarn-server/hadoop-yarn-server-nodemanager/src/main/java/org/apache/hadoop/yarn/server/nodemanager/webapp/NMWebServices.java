@@ -255,8 +255,6 @@ public class NMWebServices {
       ResponseBuilder resp = Response.ok(stream);
       if (downloadFile) {
         resp.header("Content-Type", "application/octet-stream");
-        resp.header("Content-Disposition", "attachment; filename="
-            + logFile.getName());
       }
       return resp.build();
     } catch (IOException ex) {
