@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -38,11 +39,13 @@ public abstract class ReservationSubmissionRequest {
   @Public
   @Unstable
   public static ReservationSubmissionRequest newInstance(
-      ReservationDefinition reservationDefinition, String queueName) {
+      ReservationDefinition reservationDefinition, String queueName,
+      ReservationId reservationId) {
     ReservationSubmissionRequest request =
         Records.newRecord(ReservationSubmissionRequest.class);
     request.setReservationDefinition(reservationDefinition);
     request.setQueue(queueName);
+    request.setReservationId(reservationId);
     return request;
   }
 
@@ -93,5 +96,25 @@ public abstract class ReservationSubmissionRequest {
   @Public
   @Unstable
   public abstract void setQueue(String queueName);
+
+  /**
+   * Get the reservation id that corresponds to the reservation submission.
+   *
+   * @return reservation id that will be used to identify the reservation
+   * submission.
+   */
+  @Public
+  @Unstable
+  public abstract ReservationId getReservationId();
+
+  /**
+   * Set the reservation id that corresponds to the reservation submission.
+   *
+   * @param reservationId reservation id that will be used to identify the
+   *                      reservation submission.
+   */
+  @Public
+  @Unstable
+  public abstract void setReservationId(ReservationId reservationId);
 
 }

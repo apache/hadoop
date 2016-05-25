@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
@@ -433,6 +434,12 @@ public class ResourceMgrDelegate extends YarnClient {
   public void moveApplicationAcrossQueues(ApplicationId appId, String queue)
       throws YarnException, IOException {
     client.moveApplicationAcrossQueues(appId, queue);
+  }
+
+  @Override
+  public GetNewReservationResponse createReservation() throws YarnException,
+      IOException {
+    return client.createReservation();
   }
 
   @Override
