@@ -357,12 +357,13 @@ public class LogAggregationService extends AbstractService implements
   @SuppressWarnings("unchecked")
   private void initApp(final ApplicationId appId, String user,
       Credentials credentials, Map<ApplicationAccessType, String> appAcls,
-      LogAggregationContext logAggregationContext) {
+      LogAggregationContext logAggregationContext,
+      long recoveredLogInitedTime) {
     ApplicationEvent eventResponse;
     try {
       verifyAndCreateRemoteLogDir(getConfig());
       initAppAggregator(appId, user, credentials, appAcls,
-          logAggregationContext);
+          logAggregationContext, recoveredLogInitedTime);
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_INITED);
     } catch (YarnRuntimeException e) {
@@ -381,10 +382,10 @@ public class LogAggregationService extends AbstractService implements
     }
   }
 
-
   protected void initAppAggregator(final ApplicationId appId, String user,
       Credentials credentials, Map<ApplicationAccessType, String> appAcls,
-      LogAggregationContext logAggregationContext) {
+      LogAggregationContext logAggregationContext,
+      long recoveredLogInitedTime) {
 
     // Get user's FileSystem credentials
     final UserGroupInformation userUgi =
@@ -399,7 +400,8 @@ public class LogAggregationService extends AbstractService implements
             getConfig(), appId, userUgi, this.nodeId, dirsHandler,
             getRemoteNodeLogFileForApp(appId, user),
             appAcls, logAggregationContext, this.context,
-            getLocalFileContext(getConfig()), this.rollingMonitorInterval);
+            getLocalFileContext(getConfig()), this.rollingMonitorInterval,
+            recoveredLogInitedTime);
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
       throw new YarnRuntimeException("Duplicate initApp for " + appId);
     }
@@ -501,7 +503,8 @@ public class LogAggregationService extends AbstractService implements
         initApp(appStartEvent.getApplicationId(), appStartEvent.getUser(),
             appStartEvent.getCredentials(),
             appStartEvent.getApplicationAcls(),
-            appStartEvent.getLogAggregationContext());
+            appStartEvent.getLogAggregationContext(),
+            appStartEvent.getRecoveredAppLogInitedTime());
         break;
       case CONTAINER_FINISHED:
         LogHandlerContainerFinishedEvent containerFinishEvent =
