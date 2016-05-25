@@ -367,13 +367,20 @@ message ReleaseSharedCacheResourceResponseProto {
 //  reservation_protocol
 //////////////////////////////////////////////////////
 
+message GetNewReservationRequestProto {
+}
+
+message GetNewReservationResponseProto {
+  optional ReservationIdProto reservation_id = 1;
+}
+
 message ReservationSubmissionRequestProto {
   optional string queue = 1;
   optional ReservationDefinitionProto reservation_definition = 2;
+  optional ReservationIdProto reservation_id = 3;
 }
 
 message ReservationSubmissionResponseProto {
-    optional ReservationIdProto reservation_id = 1;
 }
 
 message ReservationUpdateRequestProto {

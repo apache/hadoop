@@ -18,31 +18,24 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The response sent by the <code>ResourceManager</code> to a client on
- * reservation submission.</p>
+ * <p>The request sent by clients to get a new {@code ReservationId} for
+ * submitting an reservation.</p>
  *
- * <p>Currently, this is empty.</p>
- *
- * {@code ApplicationClientProtocol#submitReservation(
- * ReservationSubmissionRequest)}
- *
+ * {@code ApplicationClientProtocol#getNewReservation(GetNewReservationRequest)}
  */
 @Public
 @Unstable
-public abstract class ReservationSubmissionResponse {
-
-  @Private
+public abstract class GetNewReservationRequest {
+  @Public
   @Unstable
-  public static ReservationSubmissionResponse newInstance() {
-    ReservationSubmissionResponse response =
-        Records.newRecord(ReservationSubmissionResponse.class);
-    return response;
+  public static GetNewReservationRequest newInstance() {
+    GetNewReservationRequest request =
+        Records.newRecord(GetNewReservationRequest.class);
+    return request;
   }
-
 }

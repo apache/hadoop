@@ -206,10 +206,17 @@ public class ReservationInputValidator {
       ReservationSystem reservationSystem,
       ReservationSubmissionRequest request, ReservationId reservationId)
       throws YarnException {
+    String message;
+    if (reservationId == null) {
+      message = "Reservation id cannot be null. Please try again " +
+        "specifying a valid reservation id by creating a new reservation id.";
+      throw RPCUtil.getRemoteException(message);
+    }
     // Check if it is a managed queue
     String queue = request.getQueue();
     Plan plan = getPlanFromQueue(reservationSystem, queue,
             AuditConstants.SUBMIT_RESERVATION_REQUEST);
+
     validateReservationDefinition(reservationId,
         request.getReservationDefinition(), plan,
         AuditConstants.SUBMIT_RESERVATION_REQUEST);

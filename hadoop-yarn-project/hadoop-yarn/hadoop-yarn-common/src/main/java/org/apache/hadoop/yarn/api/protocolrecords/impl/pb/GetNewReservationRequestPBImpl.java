@@ -18,30 +18,37 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionResponseProto;
 
 import com.google.protobuf.TextFormat;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewReservationRequestProto;
 
-public class ReservationSubmissionResponsePBImpl extends
-    ReservationSubmissionResponse {
+/**
+ * <p>The implementation of the request sent by clients to get a
+ * new {@code ReservationId} for submitting an reservation.</p>
+ *
+ * {@code ApplicationClientProtocol#getNewReservation(GetNewReservationRequest)}
+ */
+@Private
+@Unstable
+public class GetNewReservationRequestPBImpl extends GetNewReservationRequest {
+  private GetNewReservationRequestProto proto =
+      GetNewReservationRequestProto.getDefaultInstance();
+  private GetNewReservationRequestProto.Builder builder = null;
+  private boolean viaProto = false;
 
-  ReservationSubmissionResponseProto proto = ReservationSubmissionResponseProto
-      .getDefaultInstance();
-  ReservationSubmissionResponseProto.Builder builder = null;
-  boolean viaProto = false;
-
-  public ReservationSubmissionResponsePBImpl() {
-    builder = ReservationSubmissionResponseProto.newBuilder();
-  }
-
-  public ReservationSubmissionResponsePBImpl(
-      ReservationSubmissionResponseProto proto) {
+  public GetNewReservationRequestPBImpl(GetNewReservationRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public ReservationSubmissionResponseProto getProto() {
+  public GetNewReservationRequestPBImpl() {
+    builder = GetNewReservationRequestProto.newBuilder();
+  }
+
+  public GetNewReservationRequestProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -54,8 +61,9 @@ public class ReservationSubmissionResponsePBImpl extends
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -66,5 +74,4 @@ public class ReservationSubmissionResponsePBImpl extends
   public String toString() {
     return TextFormat.shortDebugString(getProto());
   }
-
 }

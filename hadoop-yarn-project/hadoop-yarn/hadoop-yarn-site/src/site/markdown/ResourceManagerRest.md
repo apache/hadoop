@@ -34,6 +34,7 @@ ResourceManager REST API's.
 * [Cluster Application Priority API](#Cluster_Application_Priority_API)
 * [Cluster Delegation Tokens API](#Cluster_Delegation_Tokens_API)
 * [Cluster Reservation API List](#Cluster_Reservation_API_List)
+* [Cluster Reservation API Create](#Cluster_Reservation_API_Create)
 * [Cluster Reservation API Submit](#Cluster_Reservation_API_Submit)
 * [Cluster Reservation API Update](#Cluster_Reservation_API_Update)
 * [Cluster Reservation API Delete](#Cluster_Reservation_API_Delete)
@@ -3385,10 +3386,82 @@ Response Body:
 </reservationListInfo>
 ```
 
+Cluster Reservation API Create
+---------------------------
+
+Use the New Reservation API, to obtain a reservation-id which can then be used as part of the [Cluster Reservation API Submit](#Cluster_Reservation_API_Submit) to submit reservations.
+
+This feature is currently in the alpha stage and may change in the future.
+
+### URI
+
+      * http://<rm http address:port>/ws/v1/cluster/reservation/new-reservation
+
+### HTTP Operations Supported
+
+      * POST
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the new-reservation object
+
+The new-reservation response contains the following elements:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| reservation-id | string | The newly created reservation id |
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      POST http://<rm http address:port>/ws/v1/cluster/reservation/new-reservation
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "reservation-id":"reservation_1404198295326_0003"
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      POST http://<rm http address:port>/ws/v1/cluster/reservation/new-reservation
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 248
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<new-reservation>
+  <reservation-id>reservation_1404198295326_0003</reservation-id>
+</new-reservation>
+```
+
 Cluster Reservation API Submit
 ------------------------------
 
-The Cluster Reservation API can be used to submit reservations.When submitting a reservation the user specify the constraints in terms of resources, and time that are required, the resulting page returns a reservation-id that the user can use to get access to the resources by specifying it as part of [Cluster Submit Applications API](#Cluster_Applications_APISubmit_Application).
+The Cluster Reservation API can be used to submit reservations. When submitting a reservation the user specifies the constraints in terms of resources, and time that is required. The resulting response is successful if the reservation can be made. If a reservation-id is used to submit a reservation multiple times, the request will succeed if the reservation definition is the same, but only one reservation will be created. If the reservation definition is different, the server will respond with an error response. When the reservation is made, the user can use the reservation-id used to submit the reservation to get access to the resources by specifying it as part of [Cluster Submit Applications API](#Cluster_Applications_APISubmit_Application).
 
 ### URI
 
@@ -3410,6 +3483,7 @@ Please note that this feature is currently in the alpha stage and may change in 
 |:---- |:---- |:---- |
 | queue | string | The (reservable) queue you are submitting to|
 | reservation-definition | object | A set of constraints representing the need for resources over time of a user. |
+| reservation-id | string | The reservation id to use to submit the reservation. |
 
 Elements of the *reservation-definition* object
 
@@ -3456,6 +3530,7 @@ POST http://rmdns:8088/ws/v1/cluster/reservation/submit
 Content-Type: application/json
 {
   "queue" : "dedicated",
+  "reservation-id":"reservation_1404198295326_0003"
   "reservation-definition" : {
      "arrival" : 1765541532000,
      "deadline" : 1765542252000,
@@ -3501,9 +3576,7 @@ Server:  Jetty(6.1.26)
 
 Response Body:
 
-```json
-{"reservation-id":"reservation_1448064217915_0009"}
-```
+      No response body
 
 **XML response**
 
@@ -3515,6 +3588,7 @@ Accept: application/xml
 Content-Type: application/xml
 <reservation-submission-context>
   <queue>dedicated</queue>
+  <reservation-id>reservation_1404198295326_0003</reservation-id>
   <reservation-definition>
      <arrival>1765541532000</arrival>
      <deadline>1765542252000</deadline>
@@ -3558,13 +3632,7 @@ Server:  Jetty(6.1.26)
 
 Response Body:
 
-```xml
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<reservation-submission-response>
-   <reservation-id>reservation_1448064217915_0010</reservation-id>
-</reservation-submission-response>
-```
-
+      No response body
 
 Cluster Reservation API Update
 ------------------------------
