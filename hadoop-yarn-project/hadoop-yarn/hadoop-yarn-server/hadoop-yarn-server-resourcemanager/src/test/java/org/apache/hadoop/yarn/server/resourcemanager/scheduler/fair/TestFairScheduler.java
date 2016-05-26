@@ -3287,6 +3287,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   @Test
   public void testQueueMaxAMShareDefault() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 6);
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -3297,11 +3298,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     out.println("<maxAMShare>0.4</maxAMShare>");
     out.println("</queue>");
     out.println("<queue name=\"queue3\">");
+    out.println("<maxResources>10240 mb 4 vcores</maxResources>");
     out.println("</queue>");
     out.println("<queue name=\"queue4\">");
     out.println("</queue>");
     out.println("<queue name=\"queue5\">");
     out.println("</queue>");
+    out.println(
+        "<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
     out.println("</allocations>");
     out.close();
 
@@ -3310,7 +3314,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     RMNode node =
-        MockNodes.newNodeInfo(1, Resources.createResource(8192, 20),
+        MockNodes.newNodeInfo(1, Resources.createResource(8192, 10),
             0, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
@@ -3378,6 +3382,44 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         0, app2.getLiveContainers().size());
     assertEquals("Queue2's AM resource usage should be 0 MB memory",
         0, queue2.getAmResourceUsage().getMemory());
+
+    // Remove the app2
+    AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
+        new AppAttemptRemovedSchedulerEvent(attId2,
+                RMAppAttemptState.FINISHED, false);
+    scheduler.handle(appRemovedEvent2);
+    scheduler.update();
+
+    // AM3 can pass the fair share checking, but it takes all available VCore,
+    // So the AM3 is not accepted.
+    ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
+    createApplicationWithAMResource(attId3, "queue3", "test1", amResource1);
+    createSchedulingRequestExistingApplication(1024, 6, amPriority, attId3);
+    FSAppAttempt app3 = scheduler.getSchedulerApp(attId3);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application3's AM resource shouldn't be updated",
+            0, app3.getAMResource().getMemory());
+    assertEquals("Application3's AM should not be running",
+            0, app3.getLiveContainers().size());
+    assertEquals("Queue3's AM resource usage should be 0 MB memory",
+            0, queue3.getAmResourceUsage().getMemory());
+
+    // AM4 can pass the fair share checking and it doesn't takes all
+    // available VCore, but it need 5 VCores which are more than
+    // maxResources(4 VCores). So the AM4 is not accepted.
+    ApplicationAttemptId attId4 = createAppAttemptId(4, 1);
+    createApplicationWithAMResource(attId4, "queue3", "test1", amResource1);
+    createSchedulingRequestExistingApplication(1024, 5, amPriority, attId4);
+    FSAppAttempt app4 = scheduler.getSchedulerApp(attId4);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application4's AM resource shouldn't be updated",
+            0, app4.getAMResource().getMemory());
+    assertEquals("Application4's AM should not be running",
+            0, app4.getLiveContainers().size());
+    assertEquals("Queue3's AM resource usage should be 0 MB memory",
+            0, queue3.getAmResourceUsage().getMemory());
   }
 
   /**
