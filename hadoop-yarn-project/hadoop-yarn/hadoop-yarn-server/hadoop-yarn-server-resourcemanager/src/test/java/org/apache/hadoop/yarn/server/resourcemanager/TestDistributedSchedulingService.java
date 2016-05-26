@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
     .RegisterApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
     .RegisterApplicationMasterResponsePBImpl;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -132,6 +133,9 @@ public class TestDistributedSchedulingService {
             DistSchedRegisterResponse resp = factory.newRecordInstance(
                 DistSchedRegisterResponse.class);
             resp.setContainerIdStart(54321l);
+            resp.setMaxAllocatableCapabilty(Resource.newInstance(4096, 4));
+            resp.setMinAllocatableCapabilty(Resource.newInstance(1024, 1));
+            resp.setIncrAllocatableCapabilty(Resource.newInstance(2048, 2));
             return resp;
           }
 
@@ -194,6 +198,13 @@ public class TestDistributedSchedulingService {
                     .newRecordInstance(RegisterApplicationMasterRequest.class))
                     .getProto()));
     Assert.assertEquals(54321l, dsRegResp.getContainerIdStart());
+    Assert.assertEquals(4,
+        dsRegResp.getMaxAllocatableCapabilty().getVirtualCores());
+    Assert.assertEquals(1024,
+        dsRegResp.getMinAllocatableCapabilty().getMemory());
+    Assert.assertEquals(2,
+        dsRegResp.getIncrAllocatableCapabilty().getVirtualCores());
+
     DistSchedAllocateResponse dsAllocResp =
         new DistSchedAllocateResponsePBImpl(
             dsProxy.allocateForDistributedScheduling(null,
@@ -201,5 +212,14 @@ public class TestDistributedSchedulingService {
                     .newRecordInstance(AllocateRequest.class)).getProto()));
     Assert.assertEquals(
         "h1", dsAllocResp.getNodesForScheduling().get(0).getHost());
+
+    FinishApplicationMasterResponse dsfinishResp =
+        new FinishApplicationMasterResponsePBImpl(
+            dsProxy.finishApplicationMaster(null,
+                ((FinishApplicationMasterRequestPBImpl) factory
+                    .newRecordInstance(FinishApplicationMasterRequest.class))
+                    .getProto()));
+    Assert.assertEquals(
+        false, dsfinishResp.getIsUnregistered());
   }
 }

@@ -21,16 +21,16 @@ package org.apache.hadoop.yarn.server.api;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.proto.ApplicationMasterProtocol.ApplicationMasterProtocolService;
-
-
-import org.apache.hadoop.yarn.proto.DistributedSchedulerProtocol;
+import org.apache.hadoop.yarn.proto.DistributedSchedulerProtocol.DistributedSchedulerProtocolService;
 
 @Private
 @Unstable
 @ProtocolInfo(protocolName = "org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB",
     protocolVersion = 1)
 public interface DistributedSchedulerProtocolPB extends
-    DistributedSchedulerProtocol.DistributedSchedulerProtocolService.BlockingInterface,
-    ApplicationMasterProtocolService.BlockingInterface {
+    DistributedSchedulerProtocolService.BlockingInterface,
+    ApplicationMasterProtocolService.BlockingInterface,
+    ApplicationMasterProtocolPB {
 }
