@@ -37,6 +37,7 @@ HDFS Commands Guide
     * [crypto](#crypto)
     * [datanode](#datanode)
     * [dfsadmin](#dfsadmin)
+    * [diskbalancer](#diskbalancer)
     * [erasurecode](#erasurecode)
     * [haadmin](#haadmin)
     * [journalnode](#journalnode)
@@ -429,6 +430,27 @@ Usage:
 | `-help` [cmd] | Displays help for the given command or all commands if none is specified. |
 
 Runs a HDFS dfsadmin client.
+
+### `diskbalancer`
+
+Usage:
+
+       hdfs diskbalancer
+         [-plan <datanode> -uri <namenodeURI>]
+         [-execute <planfile>]
+         [-query <datanode>]
+         [-cancel <planfile>]
+         [-cancel <planID> -node <datanode>]
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+|-plan| Creates a disbalancer plan|
+|-execute| Executes a given plan on a datanode|
+|-query| Gets the current diskbalancer status from a datanode|
+|-cancel| Cancels a running plan|
+
+
+Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for more information on this command.
 
 ### `erasurecode`
 
