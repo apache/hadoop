@@ -94,8 +94,12 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
           ProtoUtils.convertToProtoFormat(this.maxAllocatableCapability));
     }
     if (this.minAllocatableCapability != null) {
-      builder.setMaxAllocCapability(
+      builder.setMinAllocCapability(
           ProtoUtils.convertToProtoFormat(this.minAllocatableCapability));
+    }
+    if (this.incrAllocatableCapability != null) {
+      builder.setIncrAllocCapability(
+          ProtoUtils.convertToProtoFormat(this.incrAllocatableCapability));
     }
     if (this.registerApplicationMasterResponse != null) {
       builder.setRegisterResponse(
