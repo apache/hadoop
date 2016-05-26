@@ -242,7 +242,7 @@ public class DecommissionManager {
    */
   private boolean isSufficient(BlockInfo block, BlockCollection bc,
       NumberReplicas numberReplicas) {
-    final int numExpected = blockManager.getExpectedReplicaNum(block);
+    final int numExpected = blockManager.getExpectedRedundancyNum(block);
     final int numLive = numberReplicas.liveReplicas();
     if (numLive >= numExpected
         && blockManager.isPlacementPolicySatisfied(block)) {
@@ -286,7 +286,7 @@ public class DecommissionManager {
     }
 
     int curReplicas = num.liveReplicas();
-    int curExpectedReplicas = blockManager.getExpectedReplicaNum(block);
+    int curExpectedRedundancy = blockManager.getExpectedRedundancyNum(block);
     StringBuilder nodeList = new StringBuilder();
     for (DatanodeStorageInfo storage : storages) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
@@ -295,7 +295,7 @@ public class DecommissionManager {
     }
     NameNode.blockStateChangeLog.info(
         "Block: " + block + ", Expected Replicas: "
-        + curExpectedReplicas + ", live replicas: " + curReplicas
+        + curExpectedRedundancy + ", live replicas: " + curReplicas
         + ", corrupt replicas: " + num.corruptReplicas()
         + ", decommissioned replicas: " + num.decommissioned()
         + ", decommissioning replicas: " + num.decommissioning()
@@ -547,7 +547,7 @@ public class DecommissionManager {
             blockManager.neededReconstruction.add(block,
                 liveReplicas, num.readOnlyReplicas(),
                 num.decommissionedAndDecommissioning(),
-                blockManager.getExpectedReplicaNum(block));
+                blockManager.getExpectedRedundancyNum(block));
           }
         }
 

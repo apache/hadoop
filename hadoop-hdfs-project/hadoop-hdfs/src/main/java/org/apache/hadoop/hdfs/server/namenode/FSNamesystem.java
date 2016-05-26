@@ -3322,7 +3322,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // close file and persist block allocations for this file
     closeFile(src, pendingFile);
 
-    blockManager.checkReplication(pendingFile);
+    blockManager.checkRedundancy(pendingFile);
   }
 
   @VisibleForTesting
