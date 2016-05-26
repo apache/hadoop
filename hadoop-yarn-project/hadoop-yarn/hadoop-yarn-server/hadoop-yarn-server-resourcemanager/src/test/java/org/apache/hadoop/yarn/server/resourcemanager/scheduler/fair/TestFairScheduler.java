@@ -998,6 +998,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // set reservable-nodes to 0 which make reservation exceed
     conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 0f);
     conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    conf.setBoolean(FairSchedulerConfiguration.DYNAMIC_MAX_ASSIGN, false);
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
@@ -3193,8 +3194,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test(timeout = 3000)
-  public void testMaxAssign() throws Exception {
+  public void testFixedMaxAssign() throws Exception {
     conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    conf.setBoolean(FairSchedulerConfiguration.DYNAMIC_MAX_ASSIGN, false);
     scheduler.init(conf);
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
@@ -3224,10 +3226,59 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Incorrect number of containers allocated", 8, app
         .getLiveContainers().size());
   }
-  
+
+
+  /**
+   * Test to verify the behavior of dynamic-max-assign.
+   * 1. Verify the value of maxassign doesn't affect number of containers
+   * affected.
+   * 2. Verify the node is fully allocated.
+   */
+  @Test(timeout = 3000)
+  public void testDynamicMaxAssign() throws Exception {
+    conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node =
+        MockNodes.newNodeInfo(1, Resources.createResource(8192, 8), 0,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    scheduler.handle(nodeEvent);
+
+    ApplicationAttemptId attId =
+        createSchedulingRequest(1024, 1, "root.default", "user", 12);
+    FSAppAttempt app = scheduler.getSchedulerApp(attId);
+
+    // Set maxassign to a value smaller than half the remaining resources
+    scheduler.maxAssign = 2;
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    // New container allocations should be floor(8/2) + 1 = 5
+    assertEquals("Incorrect number of containers allocated", 5,
+        app.getLiveContainers().size());
+
+    // Set maxassign to a value larger than half the remaining resources
+    scheduler.maxAssign = 4;
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    // New container allocations should be floor(3/2) + 1 = 2
+    assertEquals("Incorrect number of containers allocated", 7,
+        app.getLiveContainers().size());
+
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    // New container allocations should be 1
+    assertEquals("Incorrect number of containers allocated", 8,
+        app.getLiveContainers().size());
+  }
+
   @Test(timeout = 3000)
   public void testMaxAssignWithZeroMemoryContainers() throws Exception {
     conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    conf.setBoolean(FairSchedulerConfiguration.DYNAMIC_MAX_ASSIGN, false);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
     
     scheduler.init(conf);

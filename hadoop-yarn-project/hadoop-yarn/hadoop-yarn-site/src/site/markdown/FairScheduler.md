@@ -80,7 +80,8 @@ Customizing the Fair Scheduler typically involves altering two files. First, sch
 | `yarn.scheduler.fair.preemption.cluster-utilization-threshold` | The utilization threshold after which preemption kicks in. The utilization is computed as the maximum ratio of usage to capacity among all resources. Defaults to 0.8f. |
 | `yarn.scheduler.fair.sizebasedweight` | Whether to assign shares to individual apps based on their size, rather than providing an equal share to all apps regardless of size. When set to true, apps are weighted by the natural logarithm of one plus the app's total requested memory, divided by the natural logarithm of 2. Defaults to false. |
 | `yarn.scheduler.fair.assignmultiple` | Whether to allow multiple container assignments in one heartbeat. Defaults to false. |
-| `yarn.scheduler.fair.max.assign` | If assignmultiple is true, the maximum amount of containers that can be assigned in one heartbeat. Defaults to -1, which sets no limit. |
+| `yarn.scheduler.fair.dynamic.max.assign` | If assignmultiple is true, whether to dynamically determine the amount of resources that can be assigned in one heartbeat. When turned on, about half of the un-allocated resources on the node are allocated to containers in a single heartbeat. Defaults to true. |
+| `yarn.scheduler.fair.max.assign` | If assignmultiple is true and dynamic.max.assign is false, the maximum amount of containers that can be assigned in one heartbeat. Defaults to -1, which sets no limit. |
 | `yarn.scheduler.fair.locality.threshold.node` | For applications that request containers on particular nodes, the number of scheduling opportunities since the last container assignment to wait before accepting a placement on another node. Expressed as a float between 0 and 1, which, as a fraction of the cluster size, is the number of scheduling opportunities to pass up. The default value of -1.0 means don't pass up any scheduling opportunities. |
 | `yarn.scheduler.fair.locality.threshold.rack` | For applications that request containers on particular racks, the number of scheduling opportunities since the last container assignment to wait before accepting a placement on another rack. Expressed as a float between 0 and 1, which, as a fraction of the cluster size, is the number of scheduling opportunities to pass up. The default value of -1.0 means don't pass up any scheduling opportunities. |
 | `yarn.scheduler.fair.allow-undeclared-pools` | If this is true, new queues can be created at application submission time, whether because they are specified as the application's queue by the submitter or because they are placed there by the user-as-default-queue property. If this is false, any time an app would be placed in a queue that is not specified in the allocations file, it is placed in the "default" queue instead. Defaults to true. If a queue placement policy is given in the allocations file, this property is ignored. |
@@ -174,12 +175,12 @@ The allocation file must be in XML format. The format contains five types of ele
   <queue name="secondary_group_queue" type="parent">
   <weight>3.0</weight>
   </queue>
-  
+
   <user name="sample_user">
     <maxRunningApps>30</maxRunningApps>
   </user>
   <userMaxAppsDefault>5</userMaxAppsDefault>
-  
+
   <queuePlacementPolicy>
     <rule name="specified" />
     <rule name="primaryGroup" create="false" />
