@@ -88,6 +88,6 @@ message AuthMethodResponseProto {
   required string mechanismName = 2;
 }
 
-message AuthUserResponseProto {
-  required string authUser = 1;
+message UserResponseProto {
+  required string user = 1;
 }

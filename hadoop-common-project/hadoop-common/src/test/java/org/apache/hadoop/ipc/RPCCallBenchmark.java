@@ -17,13 +17,8 @@
  */
 package org.apache.hadoop.ipc;
 
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
-import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.google.common.base.Joiner;
+import com.google.protobuf.BlockingService;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -34,7 +29,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.ipc.TestRPC.TestProtocol;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
@@ -45,8 +39,12 @@ import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Joiner;
-import com.google.protobuf.BlockingService;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Benchmark for protobuf RPC.
@@ -68,7 +66,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     public int secondsToRun = 15;
     private int msgSize = 1024;
     public Class<? extends RpcEngine> rpcEngine =
-      WritableRpcEngine.class;
+        ProtobufRpcEngine.class;
     
     private MyOptions(String args[]) {
       try {
@@ -135,7 +133,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
       
       opts.addOption(
           OptionBuilder.withLongOpt("engine").hasArg(true)
-          .withArgName("writable|protobuf")
+          .withArgName("protobuf")
           .withDescription("engine to use")
           .create('e'));
       
@@ -184,8 +182,6 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
         String eng = line.getOptionValue('e');
         if ("protobuf".equals(eng)) {
           rpcEngine = ProtobufRpcEngine.class;
-        } else if ("writable".equals(eng)) {
-          rpcEngine = WritableRpcEngine.class;
         } else {
           throw new ParseException("invalid engine: " + eng);
         }
@@ -237,11 +233,6 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
       server = new RPC.Builder(conf).setProtocol(TestRpcService.class)
           .setInstance(service).setBindAddress(opts.host).setPort(opts.getPort())
           .setNumHandlers(opts.serverThreads).setVerbose(false).build();
-    } else if (opts.rpcEngine == WritableRpcEngine.class) {
-      server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
-          .setInstance(new TestRPC.TestImpl()).setBindAddress(opts.host)
-          .setPort(opts.getPort()).setNumHandlers(opts.serverThreads)
-          .setVerbose(false).build();
     } else {
       throw new RuntimeException("Bad engine: " + opts.rpcEngine);
     }
@@ -397,15 +388,6 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
             .build();
           EchoResponseProto responseProto = proxy.echo(null, req);
           return responseProto.getMessage();
-        }
-      };
-    } else if (opts.rpcEngine == WritableRpcEngine.class) {
-      final TestProtocol proxy = RPC.getProxy(
-          TestProtocol.class, TestProtocol.versionID, addr, conf);
-      return new RpcServiceWrapper() {
-        @Override
-        public String doEcho(String msg) throws Exception {
-          return proxy.echo(msg);
         }
       };
     } else {

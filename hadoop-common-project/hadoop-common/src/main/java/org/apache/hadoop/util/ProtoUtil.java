@@ -146,7 +146,6 @@ public abstract class ProtoUtil {
   static RpcKindProto convert(RPC.RpcKind kind) {
     switch (kind) {
     case RPC_BUILTIN: return RpcKindProto.RPC_BUILTIN;
-    case RPC_WRITABLE: return RpcKindProto.RPC_WRITABLE;
     case RPC_PROTOCOL_BUFFER: return RpcKindProto.RPC_PROTOCOL_BUFFER;
     }
     return null;
@@ -156,7 +155,6 @@ public abstract class ProtoUtil {
   public static RPC.RpcKind convert( RpcKindProto kind) {
     switch (kind) {
     case RPC_BUILTIN: return RPC.RpcKind.RPC_BUILTIN;
-    case RPC_WRITABLE: return RPC.RpcKind.RPC_WRITABLE;
     case RPC_PROTOCOL_BUFFER: return RPC.RpcKind.RPC_PROTOCOL_BUFFER;
     }
     return null;

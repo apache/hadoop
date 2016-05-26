@@ -44,10 +44,10 @@ package hadoop.common;
 
 /**
  * RpcKind determine the rpcEngine and the serialization of the rpc request
+ * Note: 1 for RPC_WRITABLE, WritableRpcEngine, obsolete and removed
  */
 enum RpcKindProto {
   RPC_BUILTIN          = 0;  // Used for built in calls by tests
-  RPC_WRITABLE         = 1;  // Use WritableRpcEngine 
   RPC_PROTOCOL_BUFFER  = 2;  // Use ProtobufRpcEngine
 }
 
