@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
-
 /**
  * Represents a rowkey for the app_flow table.
  */
@@ -50,9 +46,8 @@ public class AppToFlowRowKey {
    * @return byte array with the row key
    */
   public static byte[] getRowKey(String clusterId, String appId) {
-    byte[] first = Bytes.toBytes(clusterId);
-    byte[] second = TimelineStorageUtils.encodeAppId(appId);
-    return Separator.QUALIFIERS.join(first, second);
+    return AppToFlowRowKeyConverter.getInstance().encode(
+        new AppToFlowRowKey(clusterId, appId));
   }
 
   /**
@@ -62,15 +57,6 @@ public class AppToFlowRowKey {
    * @return an <cite>AppToFlowRowKey</cite> object.
    */
   public static AppToFlowRowKey parseRowKey(byte[] rowKey) {
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
-
-    if (rowKeyComponents.length < 2) {
-      throw new IllegalArgumentException("the row key is not valid for " +
-          "the app-to-flow table");
-    }
-
-    String clusterId = Bytes.toString(rowKeyComponents[0]);
-    String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[1]);
-    return new AppToFlowRowKey(clusterId, appId);
+    return AppToFlowRowKeyConverter.getInstance().decode(rowKey);
   }
 }

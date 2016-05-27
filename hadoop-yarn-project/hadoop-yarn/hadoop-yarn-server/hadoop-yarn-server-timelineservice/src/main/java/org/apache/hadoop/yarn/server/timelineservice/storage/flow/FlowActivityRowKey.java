@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
 /**
@@ -27,11 +25,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStor
 public class FlowActivityRowKey {
 
   private final String clusterId;
-  private final long dayTs;
+  private final Long dayTs;
   private final String userId;
   private final String flowName;
 
-  public FlowActivityRowKey(String clusterId, long dayTs, String userId,
+  public FlowActivityRowKey(String clusterId, Long dayTs, String userId,
       String flowName) {
     this.clusterId = clusterId;
     this.dayTs = dayTs;
@@ -43,7 +41,7 @@ public class FlowActivityRowKey {
     return clusterId;
   }
 
-  public long getDayTimestamp() {
+  public Long getDayTimestamp() {
     return dayTs;
   }
 
@@ -63,7 +61,8 @@ public class FlowActivityRowKey {
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId) {
-    return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, ""));
+    return FlowActivityRowKeyConverter.getInstance().encode(
+        new FlowActivityRowKey(clusterId, null, null, null));
   }
 
   /**
@@ -75,9 +74,8 @@ public class FlowActivityRowKey {
    * @return byte array with the row key prefix
    */
   public static byte[] getRowKeyPrefix(String clusterId, long dayTs) {
-    return Separator.QUALIFIERS.join(
-        Bytes.toBytes(Separator.QUALIFIERS.encode(clusterId)),
-        Bytes.toBytes(TimelineStorageUtils.invertLong(dayTs)), new byte[0]);
+    return FlowActivityRowKeyConverter.getInstance().encode(
+        new FlowActivityRowKey(clusterId, dayTs, null, null));
   }
 
   /**
@@ -94,12 +92,8 @@ public class FlowActivityRowKey {
       String flowName) {
     // convert it to Day's time stamp
     eventTs = TimelineStorageUtils.getTopOfTheDayTimestamp(eventTs);
-
-    return Separator.QUALIFIERS.join(
-        Bytes.toBytes(Separator.QUALIFIERS.encode(clusterId)),
-        Bytes.toBytes(TimelineStorageUtils.invertLong(eventTs)),
-        Bytes.toBytes(Separator.QUALIFIERS.encode(userId)),
-        Bytes.toBytes(Separator.QUALIFIERS.encode(flowName)));
+    return FlowActivityRowKeyConverter.getInstance().encode(
+        new FlowActivityRowKey(clusterId, eventTs, userId, flowName));
   }
 
   /**
@@ -109,21 +103,6 @@ public class FlowActivityRowKey {
    * @return A <cite>FlowActivityRowKey</cite> object.
    */
   public static FlowActivityRowKey parseRowKey(byte[] rowKey) {
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
-
-    if (rowKeyComponents.length < 4) {
-      throw new IllegalArgumentException("the row key is not valid for "
-          + "a flow activity");
-    }
-
-    String clusterId = Separator.QUALIFIERS.decode(Bytes
-        .toString(rowKeyComponents[0]));
-    long dayTs =
-        TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[1]));
-    String userId = Separator.QUALIFIERS.decode(Bytes
-        .toString(rowKeyComponents[2]));
-    String flowName = Separator.QUALIFIERS.decode(Bytes
-        .toString(rowKeyComponents[3]));
-    return new FlowActivityRowKey(clusterId, dayTs, userId, flowName);
+    return FlowActivityRowKeyConverter.getInstance().decode(rowKey);
   }
 }

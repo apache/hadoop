@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -37,7 +36,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
-import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
@@ -46,7 +44,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlow
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnName;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnNameConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
@@ -194,7 +196,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       long activityTimeStamp) throws IOException {
     byte[] rowKey = FlowActivityRowKey.getRowKey(clusterId, activityTimeStamp,
         userId, flowName);
-    byte[] qualifier = GenericObjectMapper.write(flowRunId);
+    byte[] qualifier = LongKeyConverter.getInstance().encode(flowRunId);
     FlowActivityColumnPrefix.RUN_ID.store(rowKey, flowActivityTable, qualifier,
         null, flowVersion,
         AggregationCompactionDimension.APPLICATION_ID.getAttribute(appId));
@@ -278,7 +280,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   private void storeFlowMetrics(byte[] rowKey, Set<TimelineMetric> metrics,
       Attribute... attributes) throws IOException {
     for (TimelineMetric metric : metrics) {
-      String metricColumnQualifier = metric.getId();
+      byte[] metricColumnQualifier =
+          StringKeyConverter.getInstance().encode(metric.getId());
       Map<Long, Number> timeseries = metric.getValues();
       for (Map.Entry<Long, Number> timeseriesEntry : timeseries.entrySet()) {
         Long timestamp = timeseriesEntry.getKey();
@@ -316,8 +319,9 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       // id3?id4?id5
       String compoundValue =
           Separator.VALUES.joinEncoded(connectedEntity.getValue());
-      columnPrefix.store(rowKey, table, connectedEntity.getKey(), null,
-          compoundValue);
+      columnPrefix.store(rowKey, table,
+          StringKeyConverter.getInstance().encode(connectedEntity.getKey()),
+          null, compoundValue);
     }
   }
 
@@ -337,7 +341,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       if (info != null) {
         for (Map.Entry<String, Object> entry : info.entrySet()) {
           ApplicationColumnPrefix.INFO.store(rowKey, applicationTable,
-              entry.getKey(), null, entry.getValue());
+              StringKeyConverter.getInstance().encode(entry.getKey()), null,
+              entry.getValue());
         }
       }
     } else {
@@ -349,8 +354,9 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       Map<String, Object> info = te.getInfo();
       if (info != null) {
         for (Map.Entry<String, Object> entry : info.entrySet()) {
-          EntityColumnPrefix.INFO.store(rowKey, entityTable, entry.getKey(),
-              null, entry.getValue());
+          EntityColumnPrefix.INFO.store(rowKey, entityTable,
+              StringKeyConverter.getInstance().encode(entry.getKey()), null,
+              entry.getValue());
         }
       }
     }
@@ -365,11 +371,13 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       return;
     }
     for (Map.Entry<String, String> entry : config.entrySet()) {
+      byte[] configKey =
+          StringKeyConverter.getInstance().encode(entry.getKey());
       if (isApplication) {
         ApplicationColumnPrefix.CONFIG.store(rowKey, applicationTable,
-            entry.getKey(), null, entry.getValue());
+            configKey, null, entry.getValue());
       } else {
-        EntityColumnPrefix.CONFIG.store(rowKey, entityTable, entry.getKey(),
+        EntityColumnPrefix.CONFIG.store(rowKey, entityTable, configKey,
             null, entry.getValue());
       }
     }
@@ -383,7 +391,8 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       boolean isApplication) throws IOException {
     if (metrics != null) {
       for (TimelineMetric metric : metrics) {
-        String metricColumnQualifier = metric.getId();
+        byte[] metricColumnQualifier =
+            StringKeyConverter.getInstance().encode(metric.getId());
         Map<Long, Number> timeseries = metric.getValues();
         for (Map.Entry<Long, Number> timeseriesEntry : timeseries.entrySet()) {
           Long timestamp = timeseriesEntry.getKey();
@@ -416,41 +425,31 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
                   "! Using the current timestamp");
               eventTimestamp = System.currentTimeMillis();
             }
-            byte[] eventTs =
-                Bytes.toBytes(TimelineStorageUtils.invertLong(eventTimestamp));
+            EventColumnNameConverter converter =
+                EventColumnNameConverter.getInstance();
             Map<String, Object> eventInfo = event.getInfo();
             if ((eventInfo == null) || (eventInfo.size() == 0)) {
+              byte[] columnQualifierBytes = converter.encode(
+                  new EventColumnName(eventId, eventTimestamp, null));
               if (isApplication) {
-                byte[] compoundColumnQualifierBytes =
-                    ApplicationColumnPrefix.EVENT.
-                        getCompoundColQualBytes(eventId, eventTs, null);
                 ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
-                    compoundColumnQualifierBytes, null,
-                    TimelineStorageUtils.EMPTY_BYTES);
+                    columnQualifierBytes, null, Separator.EMPTY_BYTES);
               } else {
-                byte[] compoundColumnQualifierBytes =
-                    EntityColumnPrefix.EVENT.
-                        getCompoundColQualBytes(eventId, eventTs, null);
                 EntityColumnPrefix.EVENT.store(rowKey, entityTable,
-                    compoundColumnQualifierBytes, null,
-                    TimelineStorageUtils.EMPTY_BYTES);
+                    columnQualifierBytes, null, Separator.EMPTY_BYTES);
               }
             } else {
               for (Map.Entry<String, Object> info : eventInfo.entrySet()) {
-                // eventId?infoKey
-                byte[] infoKey = Bytes.toBytes(info.getKey());
+                // eventId=infoKey
+                byte[] columnQualifierBytes = converter.encode(
+                    new EventColumnName(eventId, eventTimestamp,
+                        info.getKey()));
                 if (isApplication) {
-                  byte[] compoundColumnQualifierBytes =
-                      ApplicationColumnPrefix.EVENT.
-                          getCompoundColQualBytes(eventId, eventTs, infoKey);
                   ApplicationColumnPrefix.EVENT.store(rowKey, applicationTable,
-                      compoundColumnQualifierBytes, null, info.getValue());
+                      columnQualifierBytes, null, info.getValue());
                 } else {
-                  byte[] compoundColumnQualifierBytes =
-                      EntityColumnPrefix.EVENT.
-                          getCompoundColQualBytes(eventId, eventTs, infoKey);
                   EntityColumnPrefix.EVENT.store(rowKey, entityTable,
-                      compoundColumnQualifierBytes, null, info.getValue());
+                      columnQualifierBytes, null, info.getValue());
                 }
               } // for info: eventInfo
             }

@@ -166,19 +166,22 @@ public class ColumnHelper<T> {
    * @param result from which to reads data with timestamps
    * @param columnPrefixBytes optional prefix to limit columns. If null all
    *          columns are returned.
+   * @param <K> identifies the type of column name(indicated by type of key
+   *     converter).
    * @param <V> the type of the values. The values will be cast into that type.
+   * @param keyConverter used to convert column bytes to the appropriate key
+   *     type.
    * @return the cell values at each respective time in for form
    *         {@literal {idA={timestamp1->value1}, idA={timestamp2->value2},
    *         idB={timestamp3->value3}, idC={timestamp1->value4}}}
    * @throws IOException if any problem occurs while reading results.
    */
   @SuppressWarnings("unchecked")
-  public <V> NavigableMap<String, NavigableMap<Long, V>>
-      readResultsWithTimestamps(Result result, byte[] columnPrefixBytes)
-          throws IOException {
+  public <K, V> NavigableMap<K, NavigableMap<Long, V>>
+      readResultsWithTimestamps(Result result, byte[] columnPrefixBytes,
+          KeyConverter<K> keyConverter) throws IOException {
 
-    NavigableMap<String, NavigableMap<Long, V>> results =
-        new TreeMap<String, NavigableMap<Long, V>>();
+    NavigableMap<K, NavigableMap<Long, V>> results = new TreeMap<>();
 
     if (result != null) {
       NavigableMap<
@@ -192,13 +195,17 @@ public class ColumnHelper<T> {
       if (columnCellMap != null) {
         for (Entry<byte[], NavigableMap<Long, byte[]>> entry : columnCellMap
             .entrySet()) {
-          String columnName = null;
+          K converterColumnKey = null;
           if (columnPrefixBytes == null) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("null prefix was specified; returning all columns");
             }
-            // Decode the spaces we encoded in the column name.
-            columnName = Separator.decode(entry.getKey(), Separator.SPACE);
+            try {
+              converterColumnKey = keyConverter.decode(entry.getKey());
+            } catch (IllegalArgumentException iae) {
+              LOG.error("Illegal column found, skipping this column.", iae);
+              continue;
+            }
           } else {
             // A non-null prefix means columns are actually of the form
             // prefix!columnNameRemainder
@@ -207,13 +214,18 @@ public class ColumnHelper<T> {
             byte[] actualColumnPrefixBytes = columnNameParts[0];
             if (Bytes.equals(columnPrefixBytes, actualColumnPrefixBytes)
                 && columnNameParts.length == 2) {
-              // This is the prefix that we want
-              columnName = Separator.decode(columnNameParts[1]);
+              try {
+                // This is the prefix that we want
+                converterColumnKey = keyConverter.decode(columnNameParts[1]);
+              } catch (IllegalArgumentException iae) {
+                LOG.error("Illegal column found, skipping this column.", iae);
+                continue;
+              }
             }
           }
 
           // If this column has the prefix we want
-          if (columnName != null) {
+          if (converterColumnKey != null) {
             NavigableMap<Long, V> cellResults =
                 new TreeMap<Long, V>();
             NavigableMap<Long, byte[]> cells = entry.getValue();
@@ -226,7 +238,7 @@ public class ColumnHelper<T> {
                     value);
               }
             }
-            results.put(columnName, cellResults);
+            results.put(converterColumnKey, cellResults);
           }
         } // for entry : columnCellMap
       } // if columnCellMap != null
@@ -235,66 +247,13 @@ public class ColumnHelper<T> {
   }
 
   /**
+   * @param <K> identifies the type of column name(indicated by type of key
+   *     converter).
    * @param result from which to read columns
    * @param columnPrefixBytes optional prefix to limit columns. If null all
    *        columns are returned.
-   * @return the latest values of columns in the column family. This assumes
-   *         that the column name parts are all Strings by default. If the
-   *         column name parts should be treated natively and not be converted
-   *         back and forth from Strings, you should use
-   *         {@link #readResultsHavingCompoundColumnQualifiers(Result, byte[])}
-   *         instead.
-   * @throws IOException if any problem occurs while reading results.
-   */
-  public Map<String, Object> readResults(Result result,
-      byte[] columnPrefixBytes) throws IOException {
-    Map<String, Object> results = new HashMap<String, Object>();
-
-    if (result != null) {
-      Map<byte[], byte[]> columns = result.getFamilyMap(columnFamilyBytes);
-      for (Entry<byte[], byte[]> entry : columns.entrySet()) {
-        byte[] columnKey = entry.getKey();
-        if (columnKey != null && columnKey.length > 0) {
-
-          String columnName = null;
-          if (columnPrefixBytes == null) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("null prefix was specified; returning all columns");
-            }
-            // Decode the spaces we encoded in the column name.
-            columnName = Separator.decode(columnKey, Separator.SPACE);
-          } else {
-            // A non-null prefix means columns are actually of the form
-            // prefix!columnNameRemainder
-            byte[][] columnNameParts =
-                Separator.QUALIFIERS.split(columnKey, 2);
-            byte[] actualColumnPrefixBytes = columnNameParts[0];
-            if (Bytes.equals(columnPrefixBytes, actualColumnPrefixBytes)
-                && columnNameParts.length == 2) {
-              // This is the prefix that we want
-              // if the column name is a compound qualifier
-              // with non string datatypes, the following decode will not
-              // work correctly since it considers all components to be String
-              // invoke the readResultsHavingCompoundColumnQualifiers function
-              columnName = Separator.decode(columnNameParts[1]);
-            }
-          }
-
-          // If this column has the prefix we want
-          if (columnName != null) {
-            Object value = converter.decodeValue(entry.getValue());
-            results.put(columnName, value);
-          }
-        }
-      } // for entry
-    }
-    return results;
-  }
-
-  /**
-   * @param result from which to read columns
-   * @param columnPrefixBytes optional prefix to limit columns. If null all
-   *        columns are returned.
+   * @param keyConverter used to convert column bytes to the appropriate key
+   *          type.
    * @return the latest values of columns in the column family. If the column
    *         prefix is null, the column qualifier is returned as Strings. For a
    *         non-null column prefix bytes, the column qualifier is returned as
@@ -302,38 +261,51 @@ public class ColumnHelper<T> {
    *         returning byte arrays of values that were not Strings.
    * @throws IOException if any problem occurs while reading results.
    */
-  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result,
-      byte[] columnPrefixBytes) throws IOException {
-    // handle the case where the column prefix is null
-    // it is the same as readResults() so simply delegate to that implementation
-    if (columnPrefixBytes == null) {
-      return readResults(result, null);
-    }
-
-    Map<byte[][], Object> results = new HashMap<byte[][], Object>();
+  public <K> Map<K, Object> readResults(Result result,
+      byte[] columnPrefixBytes, KeyConverter<K> keyConverter)
+      throws IOException {
+    Map<K, Object> results = new HashMap<K, Object>();
 
     if (result != null) {
       Map<byte[], byte[]> columns = result.getFamilyMap(columnFamilyBytes);
       for (Entry<byte[], byte[]> entry : columns.entrySet()) {
         byte[] columnKey = entry.getKey();
         if (columnKey != null && columnKey.length > 0) {
-          // A non-null prefix means columns are actually of the form
-          // prefix!columnNameRemainder
-          // with a compound column qualifier, we are presuming existence of a
-          // prefix
-          byte[][] columnNameParts = Separator.QUALIFIERS.split(columnKey, 2);
-          if (columnNameParts.length > 0) {
-            byte[] actualColumnPrefixBytes = columnNameParts[0];
-            if (Bytes.equals(columnPrefixBytes, actualColumnPrefixBytes)
-                && columnNameParts.length == 2) {
-              // This is the prefix that we want
-              byte[][] columnQualifierParts =
-                  Separator.VALUES.split(columnNameParts[1]);
-              Object value = converter.decodeValue(entry.getValue());
-              // we return the columnQualifier in parts since we don't know
-              // which part is of which data type
-              results.put(columnQualifierParts, value);
+
+          K converterColumnKey = null;
+          if (columnPrefixBytes == null) {
+            try {
+              converterColumnKey = keyConverter.decode(columnKey);
+            } catch (IllegalArgumentException iae) {
+              LOG.error("Illegal column found, skipping this column.", iae);
+              continue;
             }
+          } else {
+            // A non-null prefix means columns are actually of the form
+            // prefix!columnNameRemainder
+            byte[][] columnNameParts = Separator.QUALIFIERS.split(columnKey, 2);
+            if (columnNameParts.length > 0) {
+              byte[] actualColumnPrefixBytes = columnNameParts[0];
+              // If this is the prefix that we want
+              if (Bytes.equals(columnPrefixBytes, actualColumnPrefixBytes)
+                  && columnNameParts.length == 2) {
+                try {
+                  converterColumnKey = keyConverter.decode(columnNameParts[1]);
+                } catch (IllegalArgumentException iae) {
+                  LOG.error("Illegal column found, skipping this column.", iae);
+                  continue;
+                }
+              }
+            }
+          } // if-else
+
+          // If the columnPrefix is null (we want all columns), or the actual
+          // prefix matches the given prefix we want this column
+          if (converterColumnKey != null) {
+            Object value = converter.decodeValue(entry.getValue());
+            // we return the columnQualifier in parts since we don't know
+            // which part is of which data type.
+            results.put(converterColumnKey, value);
           }
         }
       } // for entry
@@ -353,8 +325,9 @@ public class ColumnHelper<T> {
   public static byte[] getColumnQualifier(byte[] columnPrefixBytes,
       String qualifier) {
 
-    // We don't want column names to have spaces
-    byte[] encodedQualifier = Bytes.toBytes(Separator.SPACE.encode(qualifier));
+    // We don't want column names to have spaces / tabs.
+    byte[] encodedQualifier =
+        Separator.encode(qualifier, Separator.SPACE, Separator.TAB);
     if (columnPrefixBytes == null) {
       return encodedQualifier;
     }
@@ -364,22 +337,6 @@ public class ColumnHelper<T> {
     byte[] columnQualifier =
         Separator.QUALIFIERS.join(columnPrefixBytes, encodedQualifier);
     return columnQualifier;
-  }
-
-  /**
-   * Create a compound column qualifier by combining qualifier and components.
-   *
-   * @param qualifier Column QUalifier.
-   * @param components Other components.
-   * @return a byte array representing compound column qualifier.
-   */
-  public static byte[] getCompoundColumnQualifierBytes(String qualifier,
-      byte[]...components) {
-    byte[] colQualBytes = Bytes.toBytes(Separator.VALUES.encode(qualifier));
-    for (int i = 0; i < components.length; i++) {
-      colQualBytes = Separator.VALUES.join(colQualBytes, components[i]);
-    }
-    return colQualBytes;
   }
 
   /**
