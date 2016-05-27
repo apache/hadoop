@@ -98,6 +98,12 @@ To secure the connection, the implementation supports LDAP over SSL (LDAPS). SSL
 In addition, specify the path to the keystore file for SSL connection in `hadoop.security.group.mapping.ldap.ssl.keystore` and keystore password in `hadoop.security.group.mapping.ldap.ssl.keystore.password`.
 Alternatively, store the keystore password in a file, and point `hadoop.security.group.mapping.ldap.ssl.keystore.password.file` to that file. For security purposes, this file should be readable only by the Unix user running the daemons.
 
+### Low latency group mapping resolution ###
+Typically, Hadoop resolves a user's group names by making two LDAP queries: the first query gets the user object, and the second query uses the user's Distinguished Name to find the groups.
+For some LDAP servers, such as Active Directory, the user object returned in the first query also contains the DN of the user's groups in its `memberOf` attribute, and the name of a group is its Relative Distinguished Name.
+Therefore, it is possible to infer the user's groups from the first query without sending the second one, and it may reduce group name resolution latency incurred by the second query. If it fails to get group names, it will fall back to the typical two-query scenario and send the second query to get group names.
+To enable this feature, set `hadoop.security.group.mapping.ldap.search.attr.memberof` to `memberOf`, and Hadoop will resolve group names using this attribute in the user object.
+
 Composite Groups Mapping
 --------
 `CompositeGroupsMapping` works by enumerating a list of service providers in `hadoop.security.group.mapping.providers`.
