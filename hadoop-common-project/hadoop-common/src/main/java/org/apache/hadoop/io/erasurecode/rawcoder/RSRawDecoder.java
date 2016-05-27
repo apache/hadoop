@@ -19,7 +19,7 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.rawcoder.util.CoderUtil;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.DumpUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.GF256;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
@@ -34,7 +34,7 @@ import java.util.Arrays;
  * from HDFS-RAID, and also compatible with the native/ISA-L coder.
  */
 @InterfaceAudience.Private
-public class RSRawDecoder extends AbstractRawErasureDecoder {
+public class RSRawDecoder extends RawErasureDecoder {
   //relevant to schema and won't change during decode calls
   private byte[] encodeMatrix;
 
@@ -54,52 +54,54 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
   private int numErasedDataUnits;
   private boolean[] erasureFlags;
 
-  public RSRawDecoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
-    if (numDataUnits + numParityUnits >= RSUtil.GF.getFieldSize()) {
+  public RSRawDecoder(ErasureCoderOptions coderOptions) {
+    super(coderOptions);
+
+    int numAllUnits = getNumAllUnits();
+    if (getNumAllUnits() >= RSUtil.GF.getFieldSize()) {
       throw new HadoopIllegalArgumentException(
               "Invalid getNumDataUnits() and numParityUnits");
     }
 
-    int numAllUnits = getNumDataUnits() + numParityUnits;
     encodeMatrix = new byte[numAllUnits * getNumDataUnits()];
     RSUtil.genCauchyMatrix(encodeMatrix, numAllUnits, getNumDataUnits());
-    if (isAllowingVerboseDump()) {
-      DumpUtil.dumpMatrix(encodeMatrix, numDataUnits, numAllUnits);
+    if (allowVerboseDump()) {
+      DumpUtil.dumpMatrix(encodeMatrix, getNumDataUnits(), numAllUnits);
     }
   }
 
   @Override
-  protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
-                          ByteBuffer[] outputs) {
-    prepareDecoding(inputs, erasedIndexes);
+  protected void doDecode(ByteBufferDecodingState decodingState) {
+    CoderUtil.resetOutputBuffers(decodingState.outputs,
+        decodingState.decodeLength);
+    prepareDecoding(decodingState.inputs, decodingState.erasedIndexes);
 
     ByteBuffer[] realInputs = new ByteBuffer[getNumDataUnits()];
     for (int i = 0; i < getNumDataUnits(); i++) {
-      realInputs[i] = inputs[validIndexes[i]];
+      realInputs[i] = decodingState.inputs[validIndexes[i]];
     }
-    RSUtil.encodeData(gfTables, realInputs, outputs);
+    RSUtil.encodeData(gfTables, realInputs, decodingState.outputs);
   }
 
   @Override
-  protected void doDecode(byte[][] inputs, int[] inputOffsets,
-                          int dataLen, int[] erasedIndexes,
-                          byte[][] outputs, int[] outputOffsets) {
-    prepareDecoding(inputs, erasedIndexes);
+  protected void doDecode(ByteArrayDecodingState decodingState) {
+    int dataLen = decodingState.decodeLength;
+    CoderUtil.resetOutputBuffers(decodingState.outputs,
+        decodingState.outputOffsets, dataLen);
+    prepareDecoding(decodingState.inputs, decodingState.erasedIndexes);
 
     byte[][] realInputs = new byte[getNumDataUnits()][];
     int[] realInputOffsets = new int[getNumDataUnits()];
     for (int i = 0; i < getNumDataUnits(); i++) {
-      realInputs[i] = inputs[validIndexes[i]];
-      realInputOffsets[i] = inputOffsets[validIndexes[i]];
+      realInputs[i] = decodingState.inputs[validIndexes[i]];
+      realInputOffsets[i] = decodingState.inputOffsets[validIndexes[i]];
     }
     RSUtil.encodeData(gfTables, dataLen, realInputs, realInputOffsets,
-            outputs, outputOffsets);
+        decodingState.outputs, decodingState.outputOffsets);
   }
 
   private <T> void prepareDecoding(T[] inputs, int[] erasedIndexes) {
-    int[] tmpValidIndexes = new int[getNumDataUnits()];
-    CoderUtil.makeValidIndexes(inputs, tmpValidIndexes);
+    int[] tmpValidIndexes = CoderUtil.getValidIndexes(inputs);
     if (Arrays.equals(this.cachedErasedIndexes, erasedIndexes) &&
         Arrays.equals(this.validIndexes, tmpValidIndexes)) {
       return; // Optimization. Nothing to do
@@ -132,7 +134,7 @@ public class RSRawDecoder extends AbstractRawErasureDecoder {
 
     RSUtil.initTables(getNumDataUnits(), erasedIndexes.length,
         decodeMatrix, 0, gfTables);
-    if (isAllowingVerboseDump()) {
+    if (allowVerboseDump()) {
       System.out.println(DumpUtil.bytesToHex(gfTables, -1));
     }
   }

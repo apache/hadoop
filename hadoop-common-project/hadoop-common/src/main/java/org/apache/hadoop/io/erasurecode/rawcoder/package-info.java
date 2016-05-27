@@ -15,29 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
 
 /**
- * Supported erasure coder options.
+ *
+ * Raw erasure coders.
+ *
+ * Raw erasure coder is part of erasure codec framework, where erasure coder is
+ * used to encode/decode a group of blocks (BlockGroup) according to the codec
+ * specific BlockGroup layout and logic. An erasure coder extracts chunks of
+ * data from the blocks and can employ various low level raw erasure coders to
+ * perform encoding/decoding against the chunks.
+ *
+ * To distinguish from erasure coder, here raw erasure coder is used to mean the
+ * low level constructs, since it only takes care of the math calculation with
+ * a group of byte buffers.
  */
-public enum CoderOption {
-  /* If direct buffer is preferred, for perf consideration */
-  PREFER_DIRECT_BUFFER(true),    // READ-ONLY
-  /**
-   * Allow changing input buffer content (not positions).
-   * Maybe better perf if allowed
-   */
-  ALLOW_CHANGE_INPUTS(false),    // READ-WRITE
-  /* Allow dump verbose debug info or not */
-  ALLOW_VERBOSE_DUMP(false);     // READ-WRITE
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.io.erasurecode.rawcoder;
 
-  private boolean isReadOnly = false;
-
-  CoderOption(boolean isReadOnly) {
-    this.isReadOnly = isReadOnly;
-  }
-
-  public boolean isReadOnly() {
-    return isReadOnly;
-  }
-};
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

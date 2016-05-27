@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+
+import java.nio.ByteBuffer;
 
 /**
  * A raw decoder in XOR code scheme in pure Java, adapted from HDFS-RAID.
@@ -29,55 +30,57 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * deployed independently.
  */
 @InterfaceAudience.Private
-public class XORRawDecoder extends AbstractRawErasureDecoder {
+public class XORRawDecoder extends RawErasureDecoder {
 
-  public XORRawDecoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
+  public XORRawDecoder(ErasureCoderOptions coderOptions) {
+    super(coderOptions);
   }
 
   @Override
-  protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
-                          ByteBuffer[] outputs) {
-    ByteBuffer output = outputs[0];
+  protected void doDecode(ByteBufferDecodingState decodingState) {
+    CoderUtil.resetOutputBuffers(decodingState.outputs,
+        decodingState.decodeLength);
+    ByteBuffer output = decodingState.outputs[0];
 
-    int erasedIdx = erasedIndexes[0];
+    int erasedIdx = decodingState.erasedIndexes[0];
 
     // Process the inputs.
     int iIdx, oIdx;
-    for (int i = 0; i < inputs.length; i++) {
+    for (int i = 0; i < decodingState.inputs.length; i++) {
       // Skip the erased location.
       if (i == erasedIdx) {
         continue;
       }
 
-      for (iIdx = inputs[i].position(), oIdx = output.position();
-           iIdx < inputs[i].limit();
+      for (iIdx = decodingState.inputs[i].position(), oIdx = output.position();
+           iIdx < decodingState.inputs[i].limit();
            iIdx++, oIdx++) {
-        output.put(oIdx, (byte) (output.get(oIdx) ^ inputs[i].get(iIdx)));
+        output.put(oIdx, (byte) (output.get(oIdx) ^
+            decodingState.inputs[i].get(iIdx)));
       }
     }
   }
 
   @Override
-  protected void doDecode(byte[][] inputs, int[] inputOffsets, int dataLen,
-                          int[] erasedIndexes, byte[][] outputs,
-                          int[] outputOffsets) {
-    byte[] output = outputs[0];
-    resetBuffer(output, outputOffsets[0], dataLen);
-
-    int erasedIdx = erasedIndexes[0];
+  protected void doDecode(ByteArrayDecodingState decodingState) {
+    byte[] output = decodingState.outputs[0];
+    int dataLen = decodingState.decodeLength;
+    CoderUtil.resetOutputBuffers(decodingState.outputs,
+        decodingState.outputOffsets, dataLen);
+    int erasedIdx = decodingState.erasedIndexes[0];
 
     // Process the inputs.
     int iIdx, oIdx;
-    for (int i = 0; i < inputs.length; i++) {
+    for (int i = 0; i < decodingState.inputs.length; i++) {
       // Skip the erased location.
       if (i == erasedIdx) {
         continue;
       }
 
-      for (iIdx = inputOffsets[i], oIdx = outputOffsets[0];
-           iIdx < inputOffsets[i] + dataLen; iIdx++, oIdx++) {
-        output[oIdx] ^= inputs[i][iIdx];
+      for (iIdx = decodingState.inputOffsets[i],
+               oIdx = decodingState.outputOffsets[0];
+           iIdx < decodingState.inputOffsets[i] + dataLen; iIdx++, oIdx++) {
+        output[oIdx] ^= decodingState.inputs[i][iIdx];
       }
     }
   }

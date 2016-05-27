@@ -17,29 +17,28 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
- * A dummy raw decoder that does no real computation.
- * Instead, it just returns zero bytes.
- * This decoder can be used to isolate the performance issue to HDFS side logic
- * instead of codec, and is intended for test only.
+ * A utility class that maintains encoding state during an encode call.
  */
 @InterfaceAudience.Private
-public class DummyRawDecoder extends RawErasureDecoder {
+abstract class EncodingState {
+  RawErasureEncoder encoder;
+  int encodeLength;
 
-  public DummyRawDecoder(ErasureCoderOptions coderOptions) {
-    super(coderOptions);
-  }
-
-  @Override
-  protected void doDecode(ByteBufferDecodingState decodingState) {
-    // Nothing to do. Output buffers have already been reset
-  }
-
-  @Override
-  protected void doDecode(ByteArrayDecodingState decodingState) {
-    // Nothing to do. Output buffers have already been reset
+  /**
+   * Check and validate decoding parameters, throw exception accordingly.
+   * @param inputs input buffers to check
+   * @param outputs output buffers to check
+   */
+  <T> void checkParameters(T[] inputs, T[] outputs) {
+    if (inputs.length != encoder.getNumDataUnits()) {
+      throw new HadoopIllegalArgumentException("Invalid inputs length");
+    }
+    if (outputs.length != encoder.getNumParityUnits()) {
+      throw new HadoopIllegalArgumentException("Invalid outputs length");
+    }
   }
 }

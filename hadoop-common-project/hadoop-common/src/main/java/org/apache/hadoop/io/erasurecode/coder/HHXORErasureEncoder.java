@@ -22,7 +22,8 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.CoderOption;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
@@ -64,17 +65,21 @@ public class HHXORErasureEncoder extends AbstractErasureEncoder {
 
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rsRawEncoder == null) {
-      rsRawEncoder = CodecUtil.createRSRawEncoder(getConf(),
+      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
           getNumDataUnits(), getNumParityUnits());
+      rsRawEncoder = CodecUtil.createRawEncoder(getConf(),
+          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
     }
     return rsRawEncoder;
   }
 
   private RawErasureEncoder checkCreateXorRawEncoder() {
     if (xorRawEncoder == null) {
-      xorRawEncoder = CodecUtil.createXORRawEncoder(getConf(),
-              getNumDataUnits(), getNumParityUnits());
-      xorRawEncoder.setCoderOption(CoderOption.ALLOW_CHANGE_INPUTS, false);
+      ErasureCoderOptions erasureCoderOptions = new ErasureCoderOptions(
+          getNumDataUnits(), getNumParityUnits());
+      xorRawEncoder = CodecUtil.createRawEncoder(getConf(),
+          ErasureCodeConstants.XOR_CODEC_NAME,
+          erasureCoderOptions);
     }
     return xorRawEncoder;
   }

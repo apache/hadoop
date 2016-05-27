@@ -46,37 +46,42 @@ public class TestCodecRawCoderMapping {
 
   @Test
   public void testRSDefaultRawCoder() {
+    ErasureCoderOptions coderOptions = new ErasureCoderOptions(
+        numDataUnit, numParityUnit);
     // should return default raw coder of rs-default codec
-    RawErasureEncoder encoder = CodecUtil.createRSRawEncoder(
-        conf, numDataUnit, numParityUnit);
+    RawErasureEncoder encoder = CodecUtil.createRawEncoder(
+        conf, ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
     Assert.assertTrue(encoder instanceof RSRawEncoder);
-    RawErasureDecoder decoder = CodecUtil.createRSRawDecoder(
-        conf, numDataUnit, numParityUnit);
+    RawErasureDecoder decoder = CodecUtil.createRawDecoder(
+        conf, ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
     Assert.assertTrue(decoder instanceof RSRawDecoder);
 
     // should return default raw coder of rs-legacy codec
-    encoder = CodecUtil.createRSRawEncoder(conf, numDataUnit, numParityUnit,
-        ErasureCodeConstants.RS_LEGACY_CODEC_NAME);
+    encoder = CodecUtil.createRawEncoder(conf,
+        ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
     Assert.assertTrue(encoder instanceof RSRawEncoderLegacy);
-    decoder = CodecUtil.createRSRawDecoder(conf, numDataUnit, numParityUnit,
-        ErasureCodeConstants.RS_LEGACY_CODEC_NAME);
+    decoder = CodecUtil.createRawDecoder(conf,
+        ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
     Assert.assertTrue(decoder instanceof RSRawDecoderLegacy);
   }
 
   @Test
   public void testDedicatedRawCoderKey() {
+    ErasureCoderOptions coderOptions = new ErasureCoderOptions(
+        numDataUnit, numParityUnit);
+
     String dummyFactName = "DummyNoneExistingFactory";
     // set the dummy factory to rs-legacy and create a raw coder
     // with rs-default, which is OK as the raw coder key is not used
     conf.set(CommonConfigurationKeys.
         IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODER_KEY, dummyFactName);
-    RawErasureEncoder encoder = CodecUtil.createRSRawEncoder(conf, numDataUnit,
-        numParityUnit, ErasureCodeConstants.RS_DEFAULT_CODEC_NAME);
+    RawErasureEncoder encoder = CodecUtil.createRawEncoder(conf,
+        ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
     Assert.assertTrue(encoder instanceof RSRawEncoder);
     // now create the raw coder with rs-legacy, which should throw exception
     try {
-      CodecUtil.createRSRawEncoder(conf, numDataUnit, numParityUnit,
-          ErasureCodeConstants.RS_LEGACY_CODEC_NAME);
+      CodecUtil.createRawEncoder(conf,
+          ErasureCodeConstants.RS_LEGACY_CODEC_NAME, coderOptions);
       Assert.fail();
     } catch (Exception e) {
       GenericTestUtils.assertExceptionContains("Failed to create raw coder", e);

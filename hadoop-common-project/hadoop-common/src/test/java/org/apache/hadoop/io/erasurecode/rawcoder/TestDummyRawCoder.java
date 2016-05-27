@@ -50,7 +50,7 @@ public class TestDummyRawCoder extends TestRawCoderBase {
   @Override
   protected void testCoding(boolean usingDirectBuffer) {
     this.usingDirectBuffer = usingDirectBuffer;
-    prepareCoders();
+    prepareCoders(true);
 
     prepareBufferAllocator(true);
     setAllowChangeInputs(false);

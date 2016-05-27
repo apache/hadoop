@@ -19,18 +19,34 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECChunk;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 import java.nio.ByteBuffer;
 
 /**
- * RawErasureDecoder performs decoding given chunks of input data and generates
- * missing data that corresponds to an erasure code scheme, like XOR and
- * Reed-Solomon.
+ * An abstract raw erasure decoder that's to be inherited by new decoders.
  *
- * It extends the {@link RawErasureCoder} interface.
+ * Raw erasure coder is part of erasure codec framework, where erasure coder is
+ * used to encode/decode a group of blocks (BlockGroup) according to the codec
+ * specific BlockGroup layout and logic. An erasure coder extracts chunks of
+ * data from the blocks and can employ various low level raw erasure coders to
+ * perform encoding/decoding against the chunks.
+ *
+ * To distinguish from erasure coder, here raw erasure coder is used to mean the
+ * low level constructs, since it only takes care of the math calculation with
+ * a group of byte buffers.
+ *
+ * Note it mainly provides decode() calls, which should be stateless and may be
+ * made thread-safe in future.
  */
 @InterfaceAudience.Private
-public interface RawErasureDecoder extends RawErasureCoder {
+public abstract class RawErasureDecoder {
+
+  private final ErasureCoderOptions coderOptions;
+
+  public RawErasureDecoder(ErasureCoderOptions coderOptions) {
+    this.coderOptions = coderOptions;
+  }
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs.
@@ -64,8 +80,44 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call
    */
-  void decode(ByteBuffer[] inputs, int[] erasedIndexes,
-                     ByteBuffer[] outputs);
+  public void decode(ByteBuffer[] inputs, int[] erasedIndexes,
+                     ByteBuffer[] outputs) {
+    ByteBufferDecodingState decodingState = new ByteBufferDecodingState(this,
+        inputs, erasedIndexes, outputs);
+
+    boolean usingDirectBuffer = decodingState.usingDirectBuffer;
+    int dataLen = decodingState.decodeLength;
+    if (dataLen == 0) {
+      return;
+    }
+
+    int[] inputPositions = new int[inputs.length];
+    for (int i = 0; i < inputPositions.length; i++) {
+      if (inputs[i] != null) {
+        inputPositions[i] = inputs[i].position();
+      }
+    }
+
+    if (usingDirectBuffer) {
+      doDecode(decodingState);
+    } else {
+      ByteArrayDecodingState badState = decodingState.convertToByteArrayState();
+      doDecode(badState);
+    }
+
+    for (int i = 0; i < inputs.length; i++) {
+      if (inputs[i] != null) {
+        // dataLen bytes consumed
+        inputs[i].position(inputPositions[i] + dataLen);
+      }
+    }
+  }
+
+  /**
+   * Perform the real decoding using Direct ByteBuffer.
+   * @param decodingState the decoding state
+   */
+  protected abstract void doDecode(ByteBufferDecodingState decodingState);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
@@ -75,7 +127,23 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call
    */
-  void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs);
+  public void decode(byte[][] inputs, int[] erasedIndexes, byte[][] outputs) {
+    ByteArrayDecodingState decodingState = new ByteArrayDecodingState(this,
+        inputs, erasedIndexes, outputs);
+
+    if (decodingState.decodeLength == 0) {
+      return;
+    }
+
+    doDecode(decodingState);
+  }
+
+  /**
+   * Perform the real decoding using bytes array, supporting offsets and
+   * lengths.
+   * @param decodingState the decoding state
+   */
+  protected abstract void doDecode(ByteArrayDecodingState decodingState);
 
   /**
    * Decode with inputs and erasedIndexes, generates outputs. More see above.
@@ -88,6 +156,57 @@ public interface RawErasureDecoder extends RawErasureCoder {
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call
    */
-  void decode(ECChunk[] inputs, int[] erasedIndexes, ECChunk[] outputs);
+  public void decode(ECChunk[] inputs, int[] erasedIndexes,
+                     ECChunk[] outputs) {
+    ByteBuffer[] newInputs = CoderUtil.toBuffers(inputs);
+    ByteBuffer[] newOutputs = CoderUtil.toBuffers(outputs);
+    decode(newInputs, erasedIndexes, newOutputs);
+  }
 
+  public int getNumDataUnits() {
+    return coderOptions.getNumDataUnits();
+  }
+
+  public int getNumParityUnits() {
+    return coderOptions.getNumParityUnits();
+  }
+
+  protected int getNumAllUnits() {
+    return coderOptions.getNumAllUnits();
+  }
+
+  /**
+   * Tell if direct buffer is preferred or not. It's for callers to
+   * decide how to allocate coding chunk buffers, using DirectByteBuffer or
+   * bytes array. It will return false by default.
+   * @return true if native buffer is preferred for performance consideration,
+   * otherwise false.
+   */
+  public boolean preferDirectBuffer() {
+    return false;
+  }
+
+  /**
+   * Allow change into input buffers or not while perform encoding/decoding.
+   * @return true if it's allowed to change inputs, false otherwise
+   */
+  public boolean allowChangeInputs() {
+    return coderOptions.allowChangeInputs();
+  }
+
+  /**
+   * Allow to dump verbose info during encoding/decoding.
+   * @return true if it's allowed to do verbose dump, false otherwise.
+   */
+  public boolean allowVerboseDump() {
+    return coderOptions.allowVerboseDump();
+  }
+
+  /**
+   * Should be called when release this coder. Good chance to release encoding
+   * or decoding buffers
+   */
+  public void release() {
+    // Nothing to do here.
+  }
 }

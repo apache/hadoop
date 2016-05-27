@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Implementation of Galois field arithmetic with 2^p elements. The input must
