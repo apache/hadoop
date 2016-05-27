@@ -741,9 +741,9 @@ public abstract class YarnClient extends AbstractService {
    *
    * @return cluster node labels collection
    * @throws YarnException when there is a failure in
-   *           {@see ApplicationClientProtocol}
+   *           {@link ApplicationClientProtocol}
    * @throws IOException when there is a failure in
-   *           {@see ApplicationClientProtocol}
+   *           {@link ApplicationClientProtocol}
    */
   @Public
   @Unstable
