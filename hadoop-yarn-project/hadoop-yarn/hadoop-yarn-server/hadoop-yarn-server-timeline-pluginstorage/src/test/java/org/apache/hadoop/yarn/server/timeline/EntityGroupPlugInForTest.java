@@ -18,7 +18,9 @@
 package org.apache.hadoop.yarn.server.timeline;
 
 import com.google.common.collect.Sets;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.util.Collection;
 import java.util.Set;
@@ -26,31 +28,32 @@ import java.util.SortedSet;
 
 class EntityGroupPlugInForTest extends TimelineEntityGroupPlugin {
 
-  private static TimelineEntityGroupId timelineEntityGroupId
-      = TimelineEntityGroupId.newInstance(
-      TestEntityGroupFSTimelineStore.TEST_APPLICATION_ID, "test");
+  static final String APP_ID_FILTER_NAME = "appid";
 
   @Override
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityType,
       NameValuePair primaryFilter,
       Collection<NameValuePair> secondaryFilters) {
-    return Sets.newHashSet(timelineEntityGroupId);
+    ApplicationId appId
+        = ConverterUtils.toApplicationId(primaryFilter.getValue().toString());
+    return Sets.newHashSet(getStandardTimelineGroupId(appId));
   }
 
   @Override
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityId,
       String entityType) {
-    return Sets.newHashSet(timelineEntityGroupId);
+    ApplicationId appId = ConverterUtils.toApplicationId(entityId);
+    return Sets.newHashSet(getStandardTimelineGroupId(appId));
   }
 
   @Override
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityType,
       SortedSet<String> entityIds,
       Set<String> eventTypes) {
-    return Sets.newHashSet(timelineEntityGroupId);
+    return Sets.newHashSet();
   }
 
-  static TimelineEntityGroupId getStandardTimelineGroupId() {
-    return timelineEntityGroupId;
+  static TimelineEntityGroupId getStandardTimelineGroupId(ApplicationId appId) {
+    return TimelineEntityGroupId.newInstance(appId, "test");
   }
 }
