@@ -229,17 +229,37 @@ Commands useful for administrators of a hadoop cluster.
 
 Usage:
 
-    hadoop daemonlog -getlevel <host:httpport> <classname>
-    hadoop daemonlog -setlevel <host:httpport> <classname> <level>
+    hadoop daemonlog -getlevel <host:port> <classname> [-protocol (http|https)]
+    hadoop daemonlog -setlevel <host:port> <classname> <level> [-protocol (http|https)]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-getlevel` *host:httpport* *classname* | Prints the log level of the log identified by a qualified *classname*, in the daemon running at *host:httpport*. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>` |
-| `-setlevel` *host:httpport* *classname* *level* | Sets the log level of the log identified by a qualified *classname*, in the daemon running at *host:httpport*. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>&level=<level>` |
+| `-getlevel` *host:port* *classname* [-protocol (http|https)] | Prints the log level of the log identified by a qualified *classname*, in the daemon running at *host:port*. The `-protocol` flag specifies the protocol for connection. |
+| `-setlevel` *host:port* *classname* *level* [-protocol (http|https)] | Sets the log level of the log identified by a qualified *classname*, in the daemon running at *host:port*.  The `-protocol` flag specifies the protocol for connection. |
 
-Get/Set the log level for a Log identified by a qualified class name in the daemon.
+Get/Set the log level for a Log identified by a qualified class name in the daemon dynamically.
+By default, the command sends a HTTP request, but this can be overridden by using argument `-protocol https` to send a HTTPS request.
 
-	Example: $ bin/hadoop daemonlog -setlevel 127.0.0.1:9870 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
+Example:
+
+    $ bin/hadoop daemonlog -setlevel 127.0.0.1:9870 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
+    $ bin/hadoop daemonlog -getlevel 127.0.0.1:9871 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG -protocol https
+
+Note that the setting is not permanent and will be reset when the daemon is restarted.
+This command works by sending a HTTP/HTTPS request to the daemon's internal Jetty servlet, so it supports the following daemons:
+
+* HDFS
+    * name node
+    * secondary name node
+    * data node
+    * journal node
+* YARN
+    * resource manager
+    * node manager
+    * Timeline server
+
+However, the command does not support KMS server, because its web interface is based on Tomcat, which does not support the servlet.
+
 
 Files
 -----
