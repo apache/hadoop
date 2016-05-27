@@ -196,9 +196,9 @@ class FSPermissionChecker implements AccessControlEnforcer {
    * Check whether exception e is due to an ancestor inode's not being
    * directory.
    */
-  private void checkAncestorType(INode[] inodes, int ancestorIndex,
+  private void checkAncestorType(INode[] inodes, int checkedAncestorIndex,
       AccessControlException e) throws AccessControlException {
-    for (int i = 0; i <= ancestorIndex; i++) {
+    for (int i = 0; i <= checkedAncestorIndex; i++) {
       if (inodes[i] == null) {
         break;
       }
@@ -221,11 +221,8 @@ class FSPermissionChecker implements AccessControlEnforcer {
       throws AccessControlException {
     for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
         ancestorIndex--);
-    try {
-      checkTraverse(inodeAttrs, path, ancestorIndex);
-    } catch (AccessControlException e) {
-      checkAncestorType(inodes, ancestorIndex, e);
-    }
+
+    checkTraverse(inodeAttrs, inodes, path, ancestorIndex);
 
     final INodeAttributes last = inodeAttrs[inodeAttrs.length - 1];
     if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
@@ -276,10 +273,15 @@ class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkTraverse(INodeAttributes[] inodes, String path, int last
-      ) throws AccessControlException {
-    for(int j = 0; j <= last; j++) {
-      check(inodes[j], path, FsAction.EXECUTE);
+  private void checkTraverse(INodeAttributes[] inodeAttrs, INode[] inodes,
+      String path, int last) throws AccessControlException {
+    int j = 0;
+    try {
+      for (; j <= last; j++) {
+        check(inodeAttrs[j], path, FsAction.EXECUTE);
+      }
+    } catch (AccessControlException e) {
+      checkAncestorType(inodes, j, e);
     }
   }
 
