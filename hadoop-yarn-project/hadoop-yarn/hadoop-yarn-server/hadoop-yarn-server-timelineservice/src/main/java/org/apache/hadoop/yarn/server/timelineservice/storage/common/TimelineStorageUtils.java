@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -48,18 +46,17 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareOp;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineExistsFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilter.TimelineFilterType;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * A bunch of utility functions used across TimelineReader and TimelineWriter.
@@ -72,107 +69,8 @@ public final class TimelineStorageUtils {
 
   private static final Log LOG = LogFactory.getLog(TimelineStorageUtils.class);
 
-  /** empty bytes. */
-  public static final byte[] EMPTY_BYTES = new byte[0];
-
-  /** indicator for no limits for splitting. */
-  public static final int NO_LIMIT_SPLIT = -1;
-
   /** milliseconds in one day. */
   public static final long MILLIS_ONE_DAY = 86400000L;
-
-  /**
-   * Splits the source array into multiple array segments using the given
-   * separator, up to a maximum of count items. This will naturally produce
-   * copied byte arrays for each of the split segments. To identify the split
-   * ranges without the array copies, see {@link #splitRanges(byte[], byte[])}.
-   *
-   * @param source Source array.
-   * @param separator Separator represented as a byte array.
-   * @return byte[][] after splitting the source
-   */
-  public static byte[][] split(byte[] source, byte[] separator) {
-    return split(source, separator, NO_LIMIT_SPLIT);
-  }
-
-  /**
-   * Splits the source array into multiple array segments using the given
-   * separator, up to a maximum of count items. This will naturally produce
-   * copied byte arrays for each of the split segments. To identify the split
-   * ranges without the array copies, see {@link #splitRanges(byte[], byte[])}.
-   *
-   * @param source Source array.
-   * @param separator Separator represented as a byte array.
-   * @param limit a non-positive value indicates no limit on number of segments.
-   * @return byte[][] after splitting the input source.
-   */
-  public static byte[][] split(byte[] source, byte[] separator, int limit) {
-    List<Range> segments = splitRanges(source, separator, limit);
-
-    byte[][] splits = new byte[segments.size()][];
-    for (int i = 0; i < segments.size(); i++) {
-      Range r = segments.get(i);
-      byte[] tmp = new byte[r.length()];
-      if (tmp.length > 0) {
-        System.arraycopy(source, r.start(), tmp, 0, r.length());
-      }
-      splits[i] = tmp;
-    }
-    return splits;
-  }
-
-  /**
-   * Returns a list of ranges identifying [start, end) -- closed, open --
-   * positions within the source byte array that would be split using the
-   * separator byte array.
-   *
-   * @param source Source array.
-   * @param separator Separator represented as a byte array.
-   * @return a list of ranges.
-   */
-  public static List<Range> splitRanges(byte[] source, byte[] separator) {
-    return splitRanges(source, separator, NO_LIMIT_SPLIT);
-  }
-
-  /**
-   * Returns a list of ranges identifying [start, end) -- closed, open --
-   * positions within the source byte array that would be split using the
-   * separator byte array.
-   *
-   * @param source the source data
-   * @param separator the separator pattern to look for
-   * @param limit the maximum number of splits to identify in the source
-   * @return a list of ranges.
-   */
-  public static List<Range> splitRanges(byte[] source, byte[] separator,
-      int limit) {
-    List<Range> segments = new ArrayList<Range>();
-    if ((source == null) || (separator == null)) {
-      return segments;
-    }
-    int start = 0;
-    itersource: for (int i = 0; i < source.length; i++) {
-      for (int j = 0; j < separator.length; j++) {
-        if (source[i + j] != separator[j]) {
-          continue itersource;
-        }
-      }
-      // all separator elements matched
-      if (limit > 0 && segments.size() >= (limit - 1)) {
-        // everything else goes in one final segment
-        break;
-      }
-      segments.add(new Range(start, i));
-      start = i + separator.length;
-      // i will be incremented again in outer for loop
-      i += separator.length - 1;
-    }
-    // add in remaining to a final range
-    if (start <= source.length) {
-      segments.add(new Range(start, source.length));
-    }
-    return segments;
-  }
 
   /**
    * Converts a timestamp into it's inverse timestamp to be used in (row) keys
@@ -198,53 +96,6 @@ public final class TimelineStorageUtils {
    */
   public static int invertInt(int key) {
     return Integer.MAX_VALUE - key;
-  }
-
-
-  /**
-   * Converts/encodes a string app Id into a byte representation for (row) keys.
-   * For conversion, we extract cluster timestamp and sequence id from the
-   * string app id (calls {@link ConverterUtils#toApplicationId(String)} for
-   * conversion) and then store it in a byte array of length 12 (8 bytes (long)
-   * for cluster timestamp followed 4 bytes(int) for sequence id). Both cluster
-   * timestamp and sequence id are inverted so that the most recent cluster
-   * timestamp and highest sequence id appears first in the table (i.e.
-   * application id appears in a descending order).
-   *
-   * @param appIdStr application id in string format i.e.
-   * application_{cluster timestamp}_{sequence id with min 4 digits}
-   *
-   * @return encoded byte representation of app id.
-   */
-  public static byte[] encodeAppId(String appIdStr) {
-    ApplicationId appId = ConverterUtils.toApplicationId(appIdStr);
-    byte[] appIdBytes = new byte[Bytes.SIZEOF_LONG + Bytes.SIZEOF_INT];
-    byte[] clusterTs = Bytes.toBytes(invertLong(appId.getClusterTimestamp()));
-    System.arraycopy(clusterTs, 0, appIdBytes, 0, Bytes.SIZEOF_LONG);
-    byte[] seqId = Bytes.toBytes(invertInt(appId.getId()));
-    System.arraycopy(seqId, 0, appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT);
-    return appIdBytes;
-  }
-
-  /**
-   * Converts/decodes a 12 byte representation of app id for (row) keys to an
-   * app id in string format which can be returned back to client.
-   * For decoding, 12 bytes are interpreted as 8 bytes of inverted cluster
-   * timestamp(long) followed by 4 bytes of inverted sequence id(int). Calls
-   * {@link ApplicationId#toString} to generate string representation of app id.
-   *
-   * @param appIdBytes application id in byte representation.
-   *
-   * @return decoded app id in string format.
-   */
-  public static String decodeAppId(byte[] appIdBytes) {
-    if (appIdBytes.length != (Bytes.SIZEOF_LONG + Bytes.SIZEOF_INT)) {
-      throw new IllegalArgumentException("Invalid app id in byte format");
-    }
-    long clusterTs = invertLong(Bytes.toLong(appIdBytes, 0, Bytes.SIZEOF_LONG));
-    int seqId =
-        invertInt(Bytes.toInt(appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT));
-    return ApplicationId.newInstance(clusterTs, seqId).toString();
   }
 
   /**
@@ -810,7 +661,8 @@ public final class TimelineStorageUtils {
       TimelineEntity entity, Result result, ColumnPrefix<T> prefix,
       boolean isRelatedTo) throws IOException {
     // isRelatedTo and relatesTo are of type Map<String, Set<String>>
-    Map<String, Object> columns = prefix.readResults(result);
+    Map<String, Object> columns =
+        prefix.readResults(result, StringKeyConverter.getInstance());
     for (Map.Entry<String, Object> column : columns.entrySet()) {
       for (String id : Separator.VALUES.splitEncoded(
           column.getValue().toString())) {
@@ -837,7 +689,8 @@ public final class TimelineStorageUtils {
       TimelineEntity entity, Result result, ColumnPrefix<T> prefix,
       boolean isConfig) throws IOException {
     // info and configuration are of type Map<String, Object or String>
-    Map<String, Object> columns = prefix.readResults(result);
+    Map<String, Object> columns =
+        prefix.readResults(result, StringKeyConverter.getInstance());
     if (isConfig) {
       for (Map.Entry<String, Object> column : columns.entrySet()) {
         entity.addConfig(column.getKey(), column.getValue().toString());
@@ -861,30 +714,24 @@ public final class TimelineStorageUtils {
   public static <T> void readEvents(TimelineEntity entity, Result result,
       ColumnPrefix<T> prefix) throws IOException {
     Map<String, TimelineEvent> eventsMap = new HashMap<>();
-    Map<?, Object> eventsResult =
-        prefix.readResultsHavingCompoundColumnQualifiers(result);
-    for (Map.Entry<?, Object> eventResult : eventsResult.entrySet()) {
-      byte[][] karr = (byte[][])eventResult.getKey();
-      // the column name is of the form "eventId=timestamp=infoKey"
-      if (karr.length == 3) {
-        String id = Bytes.toString(karr[0]);
-        long ts = TimelineStorageUtils.invertLong(Bytes.toLong(karr[1]));
-        String key = Separator.VALUES.joinEncoded(id, Long.toString(ts));
-        TimelineEvent event = eventsMap.get(key);
-        if (event == null) {
-          event = new TimelineEvent();
-          event.setId(id);
-          event.setTimestamp(ts);
-          eventsMap.put(key, event);
-        }
-        // handle empty info
-        String infoKey = karr[2].length == 0 ? null : Bytes.toString(karr[2]);
-        if (infoKey != null) {
-          event.addInfo(infoKey, eventResult.getValue());
-        }
-      } else {
-        LOG.warn("incorrectly formatted column name: it will be discarded");
-        continue;
+    Map<EventColumnName, Object> eventsResult =
+        prefix.readResults(result, EventColumnNameConverter.getInstance());
+    for (Map.Entry<EventColumnName, Object>
+             eventResult : eventsResult.entrySet()) {
+      EventColumnName eventColumnName = eventResult.getKey();
+      String key = eventColumnName.getId() +
+          Long.toString(eventColumnName.getTimestamp());
+      // Retrieve previously seen event to add to it
+      TimelineEvent event = eventsMap.get(key);
+      if (event == null) {
+        // First time we're seeing this event, add it to the eventsMap
+        event = new TimelineEvent();
+        event.setId(eventColumnName.getId());
+        event.setTimestamp(eventColumnName.getTimestamp());
+        eventsMap.put(key, event);
+      }
+      if (eventColumnName.getInfoKey() != null) {
+        event.addInfo(eventColumnName.getInfoKey(), eventResult.getValue());
       }
     }
     Set<TimelineEvent> eventsSet = new HashSet<>(eventsMap.values());

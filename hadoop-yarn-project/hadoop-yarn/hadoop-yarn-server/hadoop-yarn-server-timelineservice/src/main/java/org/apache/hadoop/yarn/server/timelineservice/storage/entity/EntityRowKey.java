@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
-
 /**
  * Represents a rowkey for the entity table.
  */
@@ -28,13 +24,13 @@ public class EntityRowKey {
   private final String clusterId;
   private final String userId;
   private final String flowName;
-  private final long flowRunId;
+  private final Long flowRunId;
   private final String appId;
   private final String entityType;
   private final String entityId;
 
   public EntityRowKey(String clusterId, String userId, String flowName,
-      long flowRunId, String appId, String entityType, String entityId) {
+      Long flowRunId, String appId, String entityType, String entityId) {
     this.clusterId = clusterId;
     this.userId = userId;
     this.flowName = flowName;
@@ -56,7 +52,7 @@ public class EntityRowKey {
     return flowName;
   }
 
-  public long getFlowRunId() {
+  public Long getFlowRunId() {
     return flowRunId;
   }
 
@@ -85,14 +81,8 @@ public class EntityRowKey {
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName, Long flowRunId, String appId) {
-    byte[] first =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
-            flowName));
-    // Note that flowRunId is a long, so we can't encode them all at the same
-    // time.
-    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
-    byte[] third = TimelineStorageUtils.encodeAppId(appId);
-    return Separator.QUALIFIERS.join(first, second, third, new byte[0]);
+    return EntityRowKeyConverter.getInstance().encode(new EntityRowKey(
+        clusterId, userId, flowName, flowRunId, appId, null, null));
   }
 
   /**
@@ -111,16 +101,8 @@ public class EntityRowKey {
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName, Long flowRunId, String appId, String entityType) {
-    byte[] first =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
-            flowName));
-    // Note that flowRunId is a long, so we can't encode them all at the same
-    // time.
-    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
-    byte[] third = TimelineStorageUtils.encodeAppId(appId);
-    byte[] fourth =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(entityType, ""));
-    return Separator.QUALIFIERS.join(first, second, third, fourth);
+    return EntityRowKeyConverter.getInstance().encode(new EntityRowKey(
+        clusterId, userId, flowName, flowRunId, appId, entityType, null));
   }
 
   /**
@@ -140,16 +122,8 @@ public class EntityRowKey {
   public static byte[] getRowKey(String clusterId, String userId,
       String flowName, Long flowRunId, String appId, String entityType,
       String entityId) {
-    byte[] first =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(userId, clusterId,
-            flowName));
-    // Note that flowRunId is a long, so we can't encode them all at the same
-    // time.
-    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
-    byte[] third = TimelineStorageUtils.encodeAppId(appId);
-    byte[] fourth =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(entityType, entityId));
-    return Separator.QUALIFIERS.join(first, second, third, fourth);
+    return EntityRowKeyConverter.getInstance().encode(new EntityRowKey(
+        clusterId, userId, flowName, flowRunId, appId, entityType, entityId));
   }
 
   /**
@@ -159,27 +133,6 @@ public class EntityRowKey {
    * @return An <cite>EntityRowKey</cite> object.
    */
   public static EntityRowKey parseRowKey(byte[] rowKey) {
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
-
-    if (rowKeyComponents.length < 7) {
-      throw new IllegalArgumentException("the row key is not valid for " +
-          "an entity");
-    }
-
-    String userId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
-    String clusterId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
-    String flowName =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
-    long flowRunId =
-        TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
-    String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[4]);
-    String entityType =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[5]));
-    String entityId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[6]));
-    return new EntityRowKey(clusterId, userId, flowName, flowRunId, appId,
-        entityType, entityId);
+    return EntityRowKeyConverter.getInstance().decode(rowKey);
   }
 }

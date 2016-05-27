@@ -31,10 +31,14 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Column;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
-
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnName;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnNameConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 
@@ -205,6 +209,17 @@ public final class TimelineFilterUtils {
     return singleColValFilter;
   }
 
+  private static <T> byte[] createColQualifierPrefix(ColumnPrefix<T> colPrefix,
+      String column) {
+    if (colPrefix == ApplicationColumnPrefix.EVENT ||
+        colPrefix == EntityColumnPrefix.EVENT) {
+      return EventColumnNameConverter.getInstance().encode(
+          new EventColumnName(column, null, null));
+    } else {
+      return StringKeyConverter.getInstance().encode(column);
+    }
+  }
+
   /**
    * Create a filter list of qualifier filters based on passed set of columns.
    *
@@ -219,8 +234,7 @@ public final class TimelineFilterUtils {
     for (String column : columns) {
       // For columns which have compound column qualifiers (eg. events), we need
       // to include the required separator.
-      byte[] compoundColQual =
-          colPrefix.getCompoundColQualBytes(column, (byte[])null);
+      byte[] compoundColQual = createColQualifierPrefix(colPrefix, column);
       list.addFilter(new QualifierFilter(CompareOp.EQUAL,
           new BinaryPrefixComparator(
               colPrefix.getColumnPrefixBytes(compoundColQual))));

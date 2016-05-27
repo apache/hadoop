@@ -27,9 +27,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
@@ -56,7 +57,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
   /**
    * Lifecycle events for an application.
    */
-  EVENT(ApplicationColumnFamily.INFO, "e", true),
+  EVENT(ApplicationColumnFamily.INFO, "e"),
 
   /**
    * Config column stores configuration with config key as the column name.
@@ -78,7 +79,6 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    */
   private final String columnPrefix;
   private final byte[] columnPrefixBytes;
-  private final boolean compoundColQual;
 
   /**
    * Private constructor, meant to be used by the enum definition.
@@ -88,18 +88,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    */
   private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
       String columnPrefix) {
-    this(columnFamily, columnPrefix, false, GenericConverter.getInstance());
-  }
-
-  private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
-      String columnPrefix, boolean compoundColQual) {
-    this(columnFamily, columnPrefix, compoundColQual,
-        GenericConverter.getInstance());
-  }
-
-  private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
-      String columnPrefix, ValueConverter converter) {
-    this(columnFamily, columnPrefix, false, converter);
+    this(columnFamily, columnPrefix, GenericConverter.getInstance());
   }
 
   /**
@@ -111,7 +100,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    * this column prefix.
    */
   private ApplicationColumnPrefix(ColumnFamily<ApplicationTable> columnFamily,
-      String columnPrefix, boolean compoundColQual, ValueConverter converter) {
+      String columnPrefix, ValueConverter converter) {
     column = new ColumnHelper<ApplicationTable>(columnFamily, converter);
     this.columnFamily = columnFamily;
     this.columnPrefix = columnPrefix;
@@ -122,7 +111,6 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
       this.columnPrefixBytes =
           Bytes.toBytes(Separator.SPACE.encode(columnPrefix));
     }
-    this.compoundColQual = compoundColQual;
   }
 
   /**
@@ -147,15 +135,6 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
   @Override
   public byte[] getColumnFamilyBytes() {
     return columnFamily.getBytes();
-  }
-
-  @Override
-  public byte[] getCompoundColQualBytes(String qualifier,
-      byte[]...components) {
-    if (!compoundColQual) {
-      return ColumnHelper.getColumnQualifier(null, qualifier);
-    }
-    return ColumnHelper.getCompoundColumnQualifierBytes(qualifier, components);
   }
 
   /*
@@ -232,25 +211,12 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    *
    * @see
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
-   * #readResults(org.apache.hadoop.hbase.client.Result)
+   * #readResults(org.apache.hadoop.hbase.client.Result,
+   * org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter)
    */
-  public Map<String, Object> readResults(Result result) throws IOException {
-    return column.readResults(result, columnPrefixBytes);
-  }
-
-  /**
-   * @param result from which to read columns
-   * @return the latest values of columns in the column family. The column
-   *         qualifier is returned as a list of parts, each part a byte[]. This
-   *         is to facilitate returning byte arrays of values that were not
-   *         Strings. If they can be treated as Strings, you should use
-   *         {@link #readResults(Result)} instead.
-   * @throws IOException if any problem occurs while reading results.
-   */
-  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
-      throws IOException {
-    return column.readResultsHavingCompoundColumnQualifiers(result,
-        columnPrefixBytes);
+  public <K> Map<K, Object> readResults(Result result,
+      KeyConverter<K> keyConverter) throws IOException {
+    return column.readResults(result, columnPrefixBytes, keyConverter);
   }
 
   /*
@@ -258,11 +224,14 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
    *
    * @see
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
-   * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result)
+   * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result,
+   * org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter)
    */
-  public <V> NavigableMap<String, NavigableMap<Long, V>>
-      readResultsWithTimestamps(Result result) throws IOException {
-    return column.readResultsWithTimestamps(result, columnPrefixBytes);
+  public <K, V> NavigableMap<K, NavigableMap<Long, V>>
+      readResultsWithTimestamps(Result result, KeyConverter<K> keyConverter)
+      throws IOException {
+    return column.readResultsWithTimestamps(result, columnPrefixBytes,
+        keyConverter);
   }
 
   /**

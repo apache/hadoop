@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilter
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
 
 /**
  * The base class for reading and deserializing timeline entities from the
@@ -329,7 +330,8 @@ public abstract class TimelineEntityReader {
   protected void readMetrics(TimelineEntity entity, Result result,
       ColumnPrefix<?> columnPrefix) throws IOException {
     NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-        columnPrefix.readResultsWithTimestamps(result);
+        columnPrefix.readResultsWithTimestamps(
+            result, StringKeyConverter.getInstance());
     for (Map.Entry<String, NavigableMap<Long, Number>> metricResult:
         metricsResult.entrySet()) {
       TimelineMetric metric = new TimelineMetric();

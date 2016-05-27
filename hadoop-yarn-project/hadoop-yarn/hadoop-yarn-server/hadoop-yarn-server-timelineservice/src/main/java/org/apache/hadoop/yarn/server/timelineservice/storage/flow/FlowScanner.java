@@ -44,9 +44,10 @@ import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.NumericValueConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -193,7 +194,7 @@ class FlowScanner implements RegionScanner, Closeable {
     // So all cells in one qualifier come one after the other before we see the
     // next column qualifier
     ByteArrayComparator comp = new ByteArrayComparator();
-    byte[] currentColumnQualifier = TimelineStorageUtils.EMPTY_BYTES;
+    byte[] currentColumnQualifier = Separator.EMPTY_BYTES;
     AggregationOperation currentAggOp = null;
     SortedSet<Cell> currentColumnCells = new TreeSet<>(KeyValue.COMPARATOR);
     Set<String> alreadySeenAggDim = new HashSet<>();
@@ -314,7 +315,7 @@ class FlowScanner implements RegionScanner, Closeable {
             + " cell qualifier="
             + Bytes.toString(CellUtil.cloneQualifier(cell))
             + " cell value= "
-            + (Number) converter.decodeValue(CellUtil.cloneValue(cell))
+            + converter.decodeValue(CellUtil.cloneValue(cell))
             + " timestamp=" + cell.getTimestamp());
       }
 
@@ -480,7 +481,7 @@ class FlowScanner implements RegionScanner, Closeable {
             LOG.trace("MAJOR COMPACTION loop sum= " + sum
                 + " discarding now: " + " qualifier="
                 + Bytes.toString(CellUtil.cloneQualifier(cell)) + " value="
-                + (Number) converter.decodeValue(CellUtil.cloneValue(cell))
+                + converter.decodeValue(CellUtil.cloneValue(cell))
                 + " timestamp=" + cell.getTimestamp() + " " + this.action);
           }
         } else {

@@ -91,37 +91,33 @@ public interface ColumnPrefix<T> {
   Object readResult(Result result, String qualifier) throws IOException;
 
   /**
-   * @param result from which to read columns
+   *
+   * @param <K> identifies the type of key converter.
+   * @param result from which to read columns.
+   * @param keyConverter used to convert column bytes to the appropriate key
+   *          type
    * @return the latest values of columns in the column family with this prefix
    *         (or all of them if the prefix value is null).
    * @throws IOException if there is any exception encountered while reading
-   *     results.
+   *           results.
    */
-  Map<String, Object> readResults(Result result) throws IOException;
+  <K> Map<K, Object> readResults(Result result, KeyConverter<K> keyConverter)
+      throws IOException;
 
   /**
-   * @param result from which to reads data with timestamps
+   * @param result from which to reads data with timestamps.
+   * @param <K> identifies the type of key converter.
    * @param <V> the type of the values. The values will be cast into that type.
+   * @param keyConverter used to convert column bytes to the appropriate key
+   *     type.
    * @return the cell values at each respective time in for form
    *         {@literal {idA={timestamp1->value1}, idA={timestamp2->value2},
    *         idB={timestamp3->value3}, idC={timestamp1->value4}}}
    * @throws IOException if there is any exception encountered while reading
    *     result.
    */
-  <V> NavigableMap<String, NavigableMap<Long, V>>
-      readResultsWithTimestamps(Result result) throws IOException;
-
-  /**
-   * @param result from which to read columns
-   * @return the latest values of columns in the column family. The column
-   *         qualifier is returned as a list of parts, each part a byte[]. This
-   *         is to facilitate returning byte arrays of values that were not
-   *         Strings. If they can be treated as Strings, you should use
-   *         {@link #readResults(Result)} instead.
-   * @throws IOException if any problem occurs while reading results.
-   */
-  Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
-      throws IOException;
+  <K, V> NavigableMap<K, NavigableMap<Long, V>> readResultsWithTimestamps(
+      Result result, KeyConverter<K> keyConverter) throws IOException;
 
   /**
    * @param qualifierPrefix Column qualifier or prefix of qualifier.
@@ -146,15 +142,4 @@ public interface ColumnPrefix<T> {
    * @return a {@link ValueConverter} implementation.
    */
   ValueConverter getValueConverter();
-
-  /**
-   * Get compound column qualifier bytes if the column qualifier is a compound
-   * qualifier. Returns the qualifier passed as bytes if the column is not a
-   * compound column qualifier.
-   *
-   * @param qualifier Column Qualifier.
-   * @param components Other components.
-   * @return byte array representing compound column qualifier.
-   */
-  byte[] getCompoundColQualBytes(String qualifier, byte[]...components);
 }

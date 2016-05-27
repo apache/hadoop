@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrie
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
@@ -125,7 +126,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
   protected TimelineEntity parseEntity(Result result) throws IOException {
     FlowActivityRowKey rowKey = FlowActivityRowKey.parseRowKey(result.getRow());
 
-    long time = rowKey.getDayTimestamp();
+    Long time = rowKey.getDayTimestamp();
     String user = rowKey.getUserId();
     String flowName = rowKey.getFlowName();
 
@@ -135,10 +136,11 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     flowActivity.setId(flowActivity.getId());
     // get the list of run ids along with the version that are associated with
     // this flow on this day
-    Map<String, Object> runIdsMap =
-        FlowActivityColumnPrefix.RUN_ID.readResults(result);
-    for (Map.Entry<String, Object> e : runIdsMap.entrySet()) {
-      Long runId = Long.valueOf(e.getKey());
+    Map<Long, Object> runIdsMap =
+        FlowActivityColumnPrefix.RUN_ID.readResults(result,
+            LongKeyConverter.getInstance());
+    for (Map.Entry<Long, Object> e : runIdsMap.entrySet()) {
+      Long runId = e.getKey();
       String version = (String)e.getValue();
       FlowRunEntity flowRun = new FlowRunEntity();
       flowRun.setUser(user);
