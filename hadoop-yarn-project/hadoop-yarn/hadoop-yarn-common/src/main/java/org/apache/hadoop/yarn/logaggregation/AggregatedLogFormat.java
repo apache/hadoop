@@ -875,23 +875,25 @@ public class AggregatedLogFormat {
     }
 
     @Private
-    public static void readContainerMetaDataAndSkipData(
+    public static String readContainerMetaDataAndSkipData(
         DataInputStream valueStream, PrintStream out) throws IOException {
 
       String fileType = valueStream.readUTF();
       String fileLengthStr = valueStream.readUTF();
       long fileLength = Long.parseLong(fileLengthStr);
-      out.print("LogType:");
-      out.println(fileType);
-      out.print("LogLength:");
-      out.println(fileLengthStr);
-
+      if (out != null) {
+        out.print("LogType:");
+        out.println(fileType);
+        out.print("LogLength:");
+        out.println(fileLengthStr);
+      }
       long totalSkipped = 0;
       long currSkipped = 0;
       while (currSkipped != -1 && totalSkipped < fileLength) {
         currSkipped = valueStream.skip(fileLength - totalSkipped);
         totalSkipped += currSkipped;
       }
+      return fileType;
     }
 
     public void close() {
