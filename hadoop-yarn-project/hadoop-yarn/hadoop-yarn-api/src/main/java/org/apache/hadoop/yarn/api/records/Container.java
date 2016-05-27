@@ -66,6 +66,15 @@ public abstract class Container implements Comparable<Container> {
   public static Container newInstance(ContainerId containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority,
       Token containerToken) {
+    return newInstance(containerId, nodeId, nodeHttpAddress, resource, priority,
+        containerToken, ExecutionType.GUARANTEED);
+  }
+
+  @Private
+  @Unstable
+  public static Container newInstance(ContainerId containerId, NodeId nodeId,
+      String nodeHttpAddress, Resource resource, Priority priority,
+      Token containerToken, ExecutionType executionType) {
     Container container = Records.newRecord(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -73,6 +82,7 @@ public abstract class Container implements Comparable<Container> {
     container.setResource(resource);
     container.setPriority(priority);
     container.setContainerToken(containerToken);
+    container.setExecutionType(executionType);
     return container;
   }
 
@@ -163,4 +173,20 @@ public abstract class Container implements Comparable<Container> {
   @Private
   @Unstable
   public abstract void setContainerToken(Token containerToken);
+
+  /**
+   * Get the <code>ExecutionType</code> for the container.
+   * @return <code>ExecutionType</code> for the container.
+   */
+  @Private
+  @Unstable
+  public abstract ExecutionType getExecutionType();
+
+  /**
+   * Set the <code>ExecutionType</code> for the container.
+   * @param executionType ExecutionType
+   */
+  @Private
+  @Unstable
+  public abstract void setExecutionType(ExecutionType executionType);
 }

@@ -92,6 +92,7 @@ message ContainerProto {
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
   optional hadoop.common.TokenProto container_token = 6;
+  optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
 }
 
 message ContainerReportProto {
