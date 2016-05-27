@@ -41,7 +41,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.TwoDArrayWritable;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils.SleepAnswer;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -671,7 +674,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     // nothing should happen
     webSvc.dumpSchedulerLogs("1", mockHsr);
-    Thread.sleep(1000);
+    waitforLogDump(50);
     checkSchedulerLogFileAndCleanup();
 
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
@@ -709,7 +712,7 @@ public class TestRMWebServices extends JerseyTestBase {
       }
     });
     webSvc.dumpSchedulerLogs("1", mockHsr);
-    Thread.sleep(1000);
+    waitforLogDump(50);
     checkSchedulerLogFileAndCleanup();
   }
 
@@ -726,5 +729,15 @@ public class TestRMWebServices extends JerseyTestBase {
     File logFile = new File(System.getProperty("yarn.log.dir"), targetFile);
     assertTrue("scheduler log file doesn't exist", logFile.exists());
     FileUtils.deleteQuietly(logFile);
+  }
+
+  private void waitforLogDump(int tickcount) throws InterruptedException {
+    while (tickcount > 0) {
+      Thread.sleep(100);
+      if (!AdHocLogDumper.getState()) {
+        return;
+      }
+      tickcount--;
+    }
   }
 }
