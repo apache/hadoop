@@ -546,6 +546,19 @@ public class TestDFSPermission {
               + "a directory, when checked on /existing_file/non_existing_name",
           e.getMessage().contains("is not a directory"));
     }
+
+    rootFs.setPermission(p4, new FsPermission("600"));
+    try {
+      fs.exists(nfpath);
+      fail("The exists call should have failed.");
+    } catch (AccessControlException e) {
+      assertTrue("Permission denied messages must carry file path",
+          e.getMessage().contains(fpath.getName()));
+      assertFalse("Permission denied messages should not specify existing_file"
+              + " is not a directory, since the user does not have permission"
+              + " on /p4",
+          e.getMessage().contains("is not a directory"));
+    }
   }
 
   /* Check if namenode performs permission checking correctly
