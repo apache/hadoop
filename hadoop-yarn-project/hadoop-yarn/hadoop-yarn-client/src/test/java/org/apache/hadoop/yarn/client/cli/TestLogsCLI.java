@@ -181,7 +181,8 @@ public class TestLogsCLI {
     pw.println(" -logFiles <Log File Name>       Work with -am/-containerId and specify");
     pw.println("                                 comma-separated value to get specified");
     pw.println("                                 container log files. Use \"ALL\" to fetch");
-    pw.println("                                 all the log files for the container.");
+    pw.println("                                 all the log files for the container. It");
+    pw.println("                                 also supports Java Regex.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
     pw.println(" -out <Local Directory>          Local directory for storing individual");
     pw.println("                                 container logs. The container logs will");
@@ -287,6 +288,39 @@ public class TestLogsCLI {
     assertTrue(sysOutStream.toString().contains(
       "Hello container_0_0001_01_000003 in stdout!"));
     sysOutStream.reset();
+
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-logFiles", ".*"});
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000001 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000002 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in stdout!"));
+    sysOutStream.reset();
+
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-logFiles", "std*"});
+    assertTrue(exitCode == 0);
+    assertFalse(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000001 in syslog!"));
+    assertFalse(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000002 in syslog!"));
+    assertFalse(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in stdout!"));
+    sysOutStream.reset();
+
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-logFiles", "123"});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "Can not find any log file matching the pattern: [123]"));
+    sysErrStream.reset();
 
     // uploaded two logs for container1. The first log is empty.
     // The second one is not empty.
