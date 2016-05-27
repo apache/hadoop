@@ -34,13 +34,18 @@ RpcEngine::RpcEngine(::asio::io_service *io_service, const Options &options,
     : io_service_(io_service),
       options_(options),
       client_name_(client_name),
-      user_name_(user_name),
       protocol_name_(protocol_name),
       protocol_version_(protocol_version),
       retry_policy_(std::move(MakeRetryPolicy(options))),
       call_id_(0),
       retry_timer(*io_service),
       event_handlers_(std::make_shared<LibhdfsEvents>()) {
+
+    auth_info_.setUser(user_name);
+    if (options.authentication == Options::kKerberos) {
+        auth_info_.setMethod(AuthInfo::kKerberos);
+    }
+
     LOG_DEBUG(kRPC, << "RpcEngine::RpcEngine called");
 }
 
@@ -54,7 +59,7 @@ void RpcEngine::Connect(const std::string &cluster_name,
   cluster_name_ = cluster_name;
 
   conn_ = InitializeConnection();
-  conn_->Connect(last_endpoints_, handler);
+  conn_->Connect(last_endpoints_, auth_info_, handler);
 }
 
 void RpcEngine::Shutdown() {
@@ -120,6 +125,7 @@ std::shared_ptr<RpcConnection> RpcEngine::InitializeConnection()
   result->SetClusterName(cluster_name_);
   return result;
 }
+
 
 void RpcEngine::AsyncRpcCommsError(
     const Status &status,

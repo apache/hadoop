@@ -58,6 +58,17 @@ struct Options {
    */
   URI defaultFS;
 
+  /**
+   * Which form of authentication to use with the server
+   * Default: simple
+   */
+  enum Authentication {
+      kSimple,
+      kKerberos
+  };
+  Authentication authentication;
+  static const Authentication kDefaultAuthentication = kSimple;
+
   Options();
 };
 }

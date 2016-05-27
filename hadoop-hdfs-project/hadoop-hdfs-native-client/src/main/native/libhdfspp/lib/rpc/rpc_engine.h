@@ -21,6 +21,7 @@
 #include "hdfspp/options.h"
 #include "hdfspp/status.h"
 
+#include "common/auth_info.h"
 #include "common/retry_policy.h"
 #include "common/libhdfs_events_impl.h"
 #include "common/new_delete.h"
@@ -56,6 +57,7 @@ typedef const std::function<void(const Status &)> RpcCallback;
 
 class LockFreeRpcEngine;
 class RpcConnection;
+class SaslProtocol;
 
 /*
  * Internal bookkeeping for an outstanding request from the consumer.
@@ -69,9 +71,9 @@ class Request {
   typedef std::function<void(::google::protobuf::io::CodedInputStream *is,
                              const Status &status)> Handler;
 
-  Request(LockFreeRpcEngine *engine, const std::string &method_name,
+  Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
           const std::string &request, Handler &&callback);
-  Request(LockFreeRpcEngine *engine, const std::string &method_name,
+  Request(LockFreeRpcEngine *engine, const std::string &method_name, int call_id,
           const ::google::protobuf::MessageLite *request, Handler &&callback);
 
   // Null request (with no actual message) used to track the state of an
@@ -79,6 +81,7 @@ class Request {
   Request(LockFreeRpcEngine *engine, Handler &&handler);
 
   int call_id() const { return call_id_; }
+  std::string  method_name() const { return method_name_; }
   ::asio::deadline_timer &timer() { return timer_; }
   int IncrementRetryCount() { return retry_count_++; }
   void GetPacket(std::string *res) const;
@@ -117,9 +120,9 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   // Note that a single server can have multiple endpoints - especially both
   //   an ipv4 and ipv6 endpoint
   virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+                       const AuthInfo & auth_info,
                        RpcCallback &handler) = 0;
   virtual void ConnectAndFlush(const std::vector<::asio::ip::tcp::endpoint> &server) = 0;
-  virtual void Handshake(RpcCallback &handler) = 0;
   virtual void Disconnect() = 0;
 
   void StartReading();
@@ -157,18 +160,33 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   };
 
 
-  LockFreeRpcEngine *const engine_;
+  // Initial handshaking protocol: connect->handshake-->(auth)?-->context->connected
+  virtual void SendHandshake(RpcCallback &handler) = 0;
+  void HandshakeComplete(const Status &s);
+  void AuthComplete(const Status &s, const AuthInfo & new_auth_info);
+  void AuthComplete_locked(const Status &s, const AuthInfo & new_auth_info);
+  virtual void SendContext(RpcCallback &handler) = 0;
+  void ContextComplete(const Status &s);
+
+
   virtual void OnSendCompleted(const ::asio::error_code &ec,
                                size_t transferred) = 0;
   virtual void OnRecvCompleted(const ::asio::error_code &ec,
                                size_t transferred) = 0;
   virtual void FlushPendingRequests()=0;      // Synchronously write the next request
 
+  void AsyncRpc_locked(
+                const std::string &method_name,
+                const ::google::protobuf::MessageLite *req,
+                std::shared_ptr<::google::protobuf::MessageLite> resp,
+                const RpcCallback &handler);
+  void SendRpcRequests(const std::vector<std::shared_ptr<Request> > & requests);
   void AsyncFlushPendingRequests(); // Queue requests to be flushed at a later time
 
 
 
   std::shared_ptr<std::string> PrepareHandshakePacket();
+  std::shared_ptr<std::string> PrepareContextPacket();
   static std::string SerializeRpcRequest(
       const std::string &method_name,
       const ::google::protobuf::MessageLite *req);
@@ -180,23 +198,31 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   void ClearAndDisconnect(const ::asio::error_code &ec);
   std::shared_ptr<Request> RemoveFromRunningQueue(int call_id);
 
-  std::shared_ptr<Response> response_;
+  LockFreeRpcEngine *const engine_;
+  std::shared_ptr<Response> current_response_state_;
+  AuthInfo auth_info_;
 
   // Connection can have deferred connection, especially when we're pausing
   //   during retry
   enum ConnectedState {
       kNotYetConnected,
       kConnecting,
+      kAuthenticating,
       kConnected,
       kDisconnected
   };
   static std::string ToString(ConnectedState connected);
-
   ConnectedState connected_;
+
+  // State machine for performing a SASL handshake
+  std::shared_ptr<SaslProtocol> sasl_protocol_;
   // The request being sent over the wire; will also be in requests_on_fly_
   std::shared_ptr<Request> request_over_the_wire_;
   // Requests to be sent over the wire
   std::vector<std::shared_ptr<Request>> pending_requests_;
+  // Requests to be sent over the wire during authentication; not retried if
+  //   there is a connection error
+  std::vector<std::shared_ptr<Request>> auth_requests_;
   // Requests that are waiting for responses
   typedef std::unordered_map<int, std::shared_ptr<Request>> RequestOnFlyMap;
   RequestOnFlyMap requests_on_fly_;
@@ -206,6 +232,8 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
 
   // Lock for mutable parts of this class that need to be thread safe
   std::mutex connection_state_lock_;
+
+  friend class SaslProtocol;
 };
 
 
@@ -248,7 +276,8 @@ class RpcEngine : public LockFreeRpcEngine {
     kCallIdAuthorizationFailed = -1,
     kCallIdInvalid = -2,
     kCallIdConnectionContext = -3,
-    kCallIdPing = -4
+    kCallIdPing = -4,
+    kCallIdSasl = -33
   };
 
   RpcEngine(::asio::io_service *io_service, const Options &options,
@@ -286,7 +315,7 @@ class RpcEngine : public LockFreeRpcEngine {
   void TEST_SetRpcConnection(std::shared_ptr<RpcConnection> conn);
 
   const std::string &client_name() const override { return client_name_; }
-  const std::string &user_name() const override { return user_name_; }
+  const std::string &user_name() const override { return auth_info_.getUser(); }
   const std::string &protocol_name() const override { return protocol_name_; }
   int protocol_version() const override { return protocol_version_; }
   ::asio::io_service &io_service() override { return *io_service_; }
@@ -307,10 +336,10 @@ private:
   ::asio::io_service * const io_service_;
   const Options options_;
   const std::string client_name_;
-  const std::string user_name_;
   const std::string protocol_name_;
   const int protocol_version_;
   const std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
+  AuthInfo auth_info_;
   std::string cluster_name_;
   std::atomic_int call_id_;
   ::asio::deadline_timer retry_timer;

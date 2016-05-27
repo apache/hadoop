@@ -37,7 +37,8 @@ class Status {
   static Status Unimplemented();
   static Status Exception(const char *expception_class_name, const char *error_message);
   static Status Error(const char *error_message);
-  static Status Canceled();
+  static Status AuthenticationFailed();
+    static Status Canceled();
 
   // success
   bool ok() const { return code_ == 0; }
@@ -55,7 +56,8 @@ class Status {
     kUnimplemented = static_cast<unsigned>(std::errc::function_not_supported),
     kOperationCanceled = static_cast<unsigned>(std::errc::operation_canceled),
     kPermissionDenied = static_cast<unsigned>(std::errc::permission_denied),
-    kException = 255,
+    kException = 256,
+    kAuthenticationFailed = 257,
   };
 
  private:

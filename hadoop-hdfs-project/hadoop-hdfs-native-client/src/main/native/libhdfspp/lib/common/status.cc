@@ -25,6 +25,7 @@
 namespace hdfs {
 
 const char * kStatusAccessControlException = "org.apache.hadoop.security.AccessControlException";
+const char * kStatusSaslException = "javax.security.sasl.SaslException";
 
 Status::Status(int code, const char *msg1) : code_(code) {
   if(msg1) {
@@ -63,12 +64,18 @@ Status Status::Unimplemented() {
 Status Status::Exception(const char *exception_class_name, const char *error_message) {
   if (exception_class_name && (strcmp(exception_class_name, kStatusAccessControlException) == 0) )
     return Status(kPermissionDenied, error_message);
+  else if (exception_class_name && (strcmp(exception_class_name, kStatusSaslException) == 0))
+    return AuthenticationFailed();
   else
     return Status(kException, exception_class_name, error_message);
 }
 
 Status Status::Error(const char *error_message) {
-  return Exception("Exception", error_message);
+  return Status(kAuthenticationFailed, error_message);
+}
+
+Status Status::AuthenticationFailed() {
+  return Status(kAuthenticationFailed, "Authentication failed");
 }
 
 Status Status::Canceled() {

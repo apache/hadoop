@@ -66,6 +66,7 @@ void parse_uri(const char * uri_string, struct Uri * uri) {
 
         char * host_port_separator = strstr(authority, ":");
         if (host_port_separator != NULL) {
+          errno = 0;
           uri->port = strtol(host_port_separator + 1, NULL, 10);
           if (errno != 0)
             return;
