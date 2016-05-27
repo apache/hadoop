@@ -41,6 +41,10 @@ class HdfsConfiguration : public Configuration {
     static constexpr const char * kDfsClientSocketTimeoutKey = "dfs.client.socket-timeout";
     static constexpr const char * kIpcClientConnectMaxRetriesKey = "ipc.client.connect.max.retries";
     static constexpr const char * kIpcClientConnectRetryIntervalKey = "ipc.client.connect.retry.interval";
+    static constexpr const char * kHadoopSecurityAuthentication = "hadoop.security.authentication";
+    static constexpr const char * kHadoopSecurityAuthentication_simple = "simple";
+    static constexpr const char * kHadoopSecurityAuthentication_kerberos = "kerberos";
+
 private:
     friend class ConfigurationLoader;
 

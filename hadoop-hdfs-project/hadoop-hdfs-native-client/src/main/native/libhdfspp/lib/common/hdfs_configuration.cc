@@ -49,6 +49,15 @@ Options HdfsConfiguration::GetOptions() {
   OptionalSet(result.rpc_retry_delay_ms, GetInt(kIpcClientConnectRetryIntervalKey));
   OptionalSet(result.defaultFS, GetUri(kFsDefaultFsKey));
 
+  optional<std::string> authentication_value = Get(kHadoopSecurityAuthentication);
+  if (authentication_value ) {
+      std::string fixed_case_value = fixCase(authentication_value.value());
+      if (fixed_case_value == fixCase(kHadoopSecurityAuthentication_kerberos))
+          result.authentication = Options::kKerberos;
+      else
+          result.authentication = Options::kSimple;
+  }
+
   return result;
 }
 

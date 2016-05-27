@@ -15,22 +15,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "hdfspp/options.h"
-
-namespace hdfs {
-
-// The linker needs a place to put all of those constants
-const int Options::kDefaultRpcTimeout;
-const int Options::kNoRetry;
-const int Options::kDefaultMaxRpcRetries;
-const int Options::kDefaultRpcRetryDelayMs;
-const unsigned int Options::kDefaultHostExclusionDuration;
-
-Options::Options() : rpc_timeout(kDefaultRpcTimeout), max_rpc_retries(kDefaultMaxRpcRetries),
-                     rpc_retry_delay_ms(kDefaultRpcRetryDelayMs),
-                     host_exclusion_duration(kDefaultHostExclusionDuration),
-                     defaultFS(),
-                     authentication(kDefaultAuthentication)
-{}
-}
+#include "auth_info.h"
