@@ -27,9 +27,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.GenericConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ValueConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
 
@@ -78,7 +79,6 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    */
   private final String columnPrefix;
   private final byte[] columnPrefixBytes;
-  private final boolean compoundColQual;
 
   /**
    * Private constructor, meant to be used by the enum definition.
@@ -122,7 +122,6 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
       this.columnPrefixBytes =
           Bytes.toBytes(Separator.SPACE.encode(columnPrefix));
     }
-    this.compoundColQual = compondColQual;
   }
 
   /**
@@ -152,14 +151,6 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
   @Override
   public ValueConverter getValueConverter() {
     return column.getValueConverter();
-  }
-
-  public byte[] getCompoundColQualBytes(String qualifier,
-      byte[]...components) {
-    if (!compoundColQual) {
-      return ColumnHelper.getColumnQualifier(null, qualifier);
-    }
-    return ColumnHelper.getCompoundColumnQualifierBytes(qualifier, components);
   }
 
   /*
@@ -233,26 +224,12 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    *
    * @see
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
-   * #readResults(org.apache.hadoop.hbase.client.Result)
+   * #readResults(org.apache.hadoop.hbase.client.Result,
+   * org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter)
    */
-  public Map<String, Object> readResults(Result result) throws IOException {
-    return column.readResults(result, columnPrefixBytes);
-  }
-
-  /**
-   * @param result from which to read columns
-   * @return the latest values of columns in the column family. The column
-   *         qualifier is returned as a list of parts, each part a byte[]. This
-   *         is to facilitate returning byte arrays of values that were not
-   *         Strings. If they can be treated as Strings, you should use
-   *         {@link #readResults(Result)} instead.
-   * @throws IOException if there is any exception encountered while reading
-   *     result.
-   */
-  public Map<?, Object> readResultsHavingCompoundColumnQualifiers(Result result)
-          throws IOException {
-    return column.readResultsHavingCompoundColumnQualifiers(result,
-        columnPrefixBytes);
+  public <K> Map<K, Object> readResults(Result result,
+      KeyConverter<K> keyConverter) throws IOException {
+    return column.readResults(result, columnPrefixBytes, keyConverter);
   }
 
   /*
@@ -260,11 +237,14 @@ public enum EntityColumnPrefix implements ColumnPrefix<EntityTable> {
    *
    * @see
    * org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix
-   * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result)
+   * #readResultsWithTimestamps(org.apache.hadoop.hbase.client.Result,
+   * org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter)
    */
-  public <V> NavigableMap<String, NavigableMap<Long, V>>
-      readResultsWithTimestamps(Result result) throws IOException {
-    return column.readResultsWithTimestamps(result, columnPrefixBytes);
+  public <K, V> NavigableMap<K, NavigableMap<Long, V>>
+      readResultsWithTimestamps(Result result, KeyConverter<K> keyConverter)
+      throws IOException {
+    return column.readResultsWithTimestamps(result, columnPrefixBytes,
+        keyConverter);
   }
 
   /**

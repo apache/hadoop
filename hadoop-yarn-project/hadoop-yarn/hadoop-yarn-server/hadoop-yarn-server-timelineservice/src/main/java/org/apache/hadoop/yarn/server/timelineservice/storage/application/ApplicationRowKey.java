@@ -15,11 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+package org.apache.hadoop.yarn.server.timelineservice.storage.application;
 
 /**
  * Represents a rowkey for the application table.
@@ -28,11 +25,11 @@ public class ApplicationRowKey {
   private final String clusterId;
   private final String userId;
   private final String flowName;
-  private final long flowRunId;
+  private final Long flowRunId;
   private final String appId;
 
   public ApplicationRowKey(String clusterId, String userId, String flowName,
-      long flowRunId, String appId) {
+      Long flowRunId, String appId) {
     this.clusterId = clusterId;
     this.userId = userId;
     this.flowName = flowName;
@@ -52,7 +49,7 @@ public class ApplicationRowKey {
     return flowName;
   }
 
-  public long getFlowRunId() {
+  public Long getFlowRunId() {
     return flowRunId;
   }
 
@@ -71,9 +68,8 @@ public class ApplicationRowKey {
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName) {
-    byte[] first = Bytes.toBytes(
-        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowName));
-    return Separator.QUALIFIERS.join(first, new byte[0]);
+    return ApplicationRowKeyConverter.getInstance().encode(
+        new ApplicationRowKey(clusterId, userId, flowName, null, null));
   }
 
   /**
@@ -88,10 +84,8 @@ public class ApplicationRowKey {
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName, Long flowRunId) {
-    byte[] first = Bytes.toBytes(
-        Separator.QUALIFIERS.joinEncoded(clusterId, userId, flowName));
-    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
-    return Separator.QUALIFIERS.join(first, second, new byte[0]);
+    return ApplicationRowKeyConverter.getInstance().encode(
+        new ApplicationRowKey(clusterId, userId, flowName, flowRunId, null));
   }
 
   /**
@@ -107,14 +101,8 @@ public class ApplicationRowKey {
    */
   public static byte[] getRowKey(String clusterId, String userId,
       String flowName, Long flowRunId, String appId) {
-    byte[] first =
-        Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, userId,
-            flowName));
-    // Note that flowRunId is a long, so we can't encode them all at the same
-    // time.
-    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
-    byte[] third = TimelineStorageUtils.encodeAppId(appId);
-    return Separator.QUALIFIERS.join(first, second, third);
+    return ApplicationRowKeyConverter.getInstance().encode(
+        new ApplicationRowKey(clusterId, userId, flowName, flowRunId, appId));
   }
 
   /**
@@ -124,22 +112,6 @@ public class ApplicationRowKey {
    * @return An <cite>ApplicationRowKey</cite> object.
    */
   public static ApplicationRowKey parseRowKey(byte[] rowKey) {
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
-
-    if (rowKeyComponents.length < 5) {
-      throw new IllegalArgumentException("the row key is not valid for " +
-          "an application");
-    }
-
-    String clusterId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
-    String userId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
-    String flowName =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
-    long flowRunId =
-        TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
-    String appId = TimelineStorageUtils.decodeAppId(rowKeyComponents[4]);
-    return new ApplicationRowKey(clusterId, userId, flowName, flowRunId, appId);
+    return ApplicationRowKeyConverter.getInstance().decode(rowKey);
   }
 }

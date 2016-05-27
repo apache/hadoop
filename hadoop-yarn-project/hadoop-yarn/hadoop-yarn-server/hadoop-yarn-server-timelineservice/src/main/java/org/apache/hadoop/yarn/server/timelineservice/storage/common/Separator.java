@@ -45,7 +45,13 @@ public enum Separator {
    * getting a + for a space, which may already occur in strings, so we don't
    * want that.
    */
-  SPACE(" ", "%2$");
+  SPACE(" ", "%2$"),
+
+  /**
+   * separator in values, often used to avoid having these in qualifiers and
+   * names.
+   */
+  TAB("\t", "%3$");
 
   /**
    * The string value of this separator.
@@ -67,7 +73,22 @@ public enum Separator {
    */
   private final String quotedValue;
 
-  private static final byte[] EMPTY_BYTES = new byte[0];
+  /**
+   * Indicator for variable size of an individual segment in a split. The
+   * segment ends wherever separator is encountered.
+   * Typically used for string.
+   * Also used to indicate that there is no fixed number of splits which need to
+   * be returned. If split limit is specified as this, all possible splits are
+   * returned.
+   */
+  public static final int VARIABLE_SIZE = 0;
+
+
+  /** empty string. */
+  public static final String EMPTY_STRING = "";
+
+  /** empty bytes. */
+  public static final byte[] EMPTY_BYTES = new byte[0];
 
   /**
    * @param value of the separator to use. Cannot be null or empty string.
@@ -222,7 +243,6 @@ public enum Separator {
         System.arraycopy(this.bytes, 0, buf, offset, this.value.length());
         offset += this.value.length();
       }
-
     }
     return buf;
   }
@@ -307,7 +327,25 @@ public enum Separator {
    * @return source split by this separator.
    */
   public byte[][] split(byte[] source, int limit) {
-    return TimelineStorageUtils.split(source, this.bytes, limit);
+    return split(source, this.bytes, limit);
+  }
+
+  /**
+   * Splits the source array into multiple array segments using this separator.
+   * The sizes indicate the sizes of the relative components/segments.
+   * In case one of the segments contains this separator before the specified
+   * size is reached, the separator will be considered part of that segment and
+   * we will continue till size is reached.
+   * Variable length strings cannot contain this separator and are indiced with
+   * a size of {@value #VARIABLE_SIZE}. Such strings are encoded for this
+   * separator and decoded after the results from split is returned.
+   *
+   * @param source byte array to be split.
+   * @param sizes sizes of relative components/segments.
+   * @return source split by this separator as per the sizes specified..
+   */
+  public byte[][] split(byte[] source, int[] sizes) {
+    return split(source, this.bytes, sizes);
   }
 
   /**
@@ -315,10 +353,158 @@ public enum Separator {
    * as many times as splits are found. This will naturally produce copied byte
    * arrays for each of the split segments.
    *
-   * @param source to be split
+   * @param source byte array to be split
    * @return source split by this separator.
    */
   public byte[][] split(byte[] source) {
-    return TimelineStorageUtils.split(source, this.bytes);
+    return split(source, this.bytes);
+  }
+
+  /**
+   * Returns a list of ranges identifying [start, end) -- closed, open --
+   * positions within the source byte array that would be split using the
+   * separator byte array.
+   * The sizes indicate the sizes of the relative components/segments.
+   * In case one of the segments contains this separator before the specified
+   * size is reached, the separator will be considered part of that segment and
+   * we will continue till size is reached.
+   * Variable length strings cannot contain this separator and are indiced with
+   * a size of {@value #VARIABLE_SIZE}. Such strings are encoded for this
+   * separator and decoded after the results from split is returned.
+   *
+   * @param source the source data
+   * @param separator the separator pattern to look for
+   * @param sizes indicate the sizes of the relative components/segments.
+   * @return a list of ranges.
+   */
+  private static List<Range> splitRanges(byte[] source, byte[] separator,
+      int[] sizes) {
+    List<Range> segments = new ArrayList<Range>();
+    if (source == null || separator == null) {
+      return segments;
+    }
+    // VARIABLE_SIZE here indicates that there is no limit to number of segments
+    // to return.
+    int limit = VARIABLE_SIZE;
+    if (sizes != null && sizes.length > 0) {
+      limit = sizes.length;
+    }
+    int start = 0;
+    int currentSegment = 0;
+    itersource: for (int i = 0; i < source.length; i++) {
+      for (int j = 0; j < separator.length; j++) {
+        if (source[i + j] != separator[j]) {
+          continue itersource;
+        }
+      }
+      // all separator elements matched
+      if (limit > VARIABLE_SIZE) {
+        if (segments.size() >= (limit - 1)) {
+          // everything else goes in one final segment
+          break;
+        }
+        if (sizes != null) {
+          int currentSegExpectedSize = sizes[currentSegment];
+          if (currentSegExpectedSize > VARIABLE_SIZE) {
+            int currentSegSize = i - start;
+            if (currentSegSize < currentSegExpectedSize) {
+              // Segment not yet complete. More bytes to parse.
+              continue itersource;
+            } else if (currentSegSize > currentSegExpectedSize) {
+              // Segment is not as per size.
+              throw new IllegalArgumentException(
+                  "Segments not separated as per expected sizes");
+            }
+          }
+        }
+      }
+      segments.add(new Range(start, i));
+      start = i + separator.length;
+      // i will be incremented again in outer for loop
+      i += separator.length - 1;
+      currentSegment++;
+    }
+    // add in remaining to a final range
+    if (start <= source.length) {
+      if (sizes != null) {
+        // Check if final segment is as per size specified.
+        if (sizes[currentSegment] > VARIABLE_SIZE &&
+            source.length - start > sizes[currentSegment]) {
+          // Segment is not as per size.
+          throw new IllegalArgumentException(
+              "Segments not separated as per expected sizes");
+        }
+      }
+      segments.add(new Range(start, source.length));
+    }
+    return segments;
+  }
+
+  /**
+   * Splits based on segments calculated based on limit/sizes specified for the
+   * separator.
+   *
+   * @param source byte array to be split.
+   * @param segments specifies the range for each segment.
+   * @return a byte[][] split as per the segment ranges.
+   */
+  private static byte[][] split(byte[] source, List<Range> segments) {
+    byte[][] splits = new byte[segments.size()][];
+    for (int i = 0; i < segments.size(); i++) {
+      Range r = segments.get(i);
+      byte[] tmp = new byte[r.length()];
+      if (tmp.length > 0) {
+        System.arraycopy(source, r.start(), tmp, 0, r.length());
+      }
+      splits[i] = tmp;
+    }
+    return splits;
+  }
+
+  /**
+   * Splits the source array into multiple array segments using the given
+   * separator based on the sizes. This will naturally produce copied byte
+   * arrays for each of the split segments.
+   *
+   * @param source source array.
+   * @param separator separator represented as a byte array.
+   * @param sizes sizes of relative components/segments.
+   * @return byte[][] after splitting the source.
+   */
+  private static byte[][] split(byte[] source, byte[] separator, int[] sizes) {
+    List<Range> segments = splitRanges(source, separator, sizes);
+    return split(source, segments);
+  }
+
+  /**
+   * Splits the source array into multiple array segments using the given
+   * separator. This will naturally produce copied byte arrays for each of the
+   * split segments.
+   *
+   * @param source Source array.
+   * @param separator Separator represented as a byte array.
+   * @return byte[][] after splitting the source.
+   */
+  private static byte[][] split(byte[] source, byte[] separator) {
+    return split(source, separator, (int[]) null);
+  }
+
+  /**
+   * Splits the source array into multiple array segments using the given
+   * separator, up to a maximum of count items. This will naturally produce
+   * copied byte arrays for each of the split segments.
+   *
+   * @param source Source array.
+   * @param separator Separator represented as a byte array.
+   * @param limit a non-positive value indicates no limit on number of segments.
+   * @return byte[][] after splitting the input source.
+   */
+  private static byte[][] split(byte[] source, byte[] separator, int limit) {
+    int[] sizes = null;
+    if (limit > VARIABLE_SIZE) {
+      sizes = new int[limit];
+    }
+    List<Range> segments = splitRanges(source, separator, sizes);
+    return split(source, segments);
   }
 }

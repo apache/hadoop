@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
-
 /**
  * Represents a rowkey for the flow run table.
  */
@@ -28,10 +24,10 @@ public class FlowRunRowKey {
   private final String clusterId;
   private final String userId;
   private final String flowName;
-  private final long flowRunId;
+  private final Long flowRunId;
 
   public FlowRunRowKey(String clusterId, String userId, String flowName,
-      long flowRunId) {
+      Long flowRunId) {
     this.clusterId = clusterId;
     this.userId = userId;
     this.flowName = flowName;
@@ -50,7 +46,7 @@ public class FlowRunRowKey {
     return flowName;
   }
 
-  public long getFlowRunId() {
+  public Long getFlowRunId() {
     return flowRunId;
   }
 
@@ -65,13 +61,13 @@ public class FlowRunRowKey {
    */
   public static byte[] getRowKeyPrefix(String clusterId, String userId,
       String flowName) {
-    return Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId, userId,
-        flowName, ""));
+    return FlowRunRowKeyConverter.getInstance().encode(new FlowRunRowKey(
+        clusterId, userId, flowName, null));
   }
 
   /**
    * Constructs a row key for the entity table as follows: {
-   * clusterId!userI!flowName!Inverted Flow Run Id}.
+   * clusterId!userId!flowName!Inverted Flow Run Id}.
    *
    * @param clusterId Cluster Id.
    * @param userId User Id.
@@ -81,12 +77,8 @@ public class FlowRunRowKey {
    */
   public static byte[] getRowKey(String clusterId, String userId,
       String flowName, Long flowRunId) {
-    byte[] first = Bytes.toBytes(Separator.QUALIFIERS.joinEncoded(clusterId,
-        userId, flowName));
-    // Note that flowRunId is a long, so we can't encode them all at the same
-    // time.
-    byte[] second = Bytes.toBytes(TimelineStorageUtils.invertLong(flowRunId));
-    return Separator.QUALIFIERS.join(first, second);
+    return FlowRunRowKeyConverter.getInstance().encode(new FlowRunRowKey(
+        clusterId, userId, flowName, flowRunId));
   }
 
   /**
@@ -96,22 +88,7 @@ public class FlowRunRowKey {
    * @return A <cite>FlowRunRowKey</cite> object.
    */
   public static FlowRunRowKey parseRowKey(byte[] rowKey) {
-    byte[][] rowKeyComponents = Separator.QUALIFIERS.split(rowKey);
-
-    if (rowKeyComponents.length < 4) {
-      throw new IllegalArgumentException("the row key is not valid for " +
-          "a flow run");
-    }
-
-    String clusterId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[0]));
-    String userId =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[1]));
-    String flowName =
-        Separator.QUALIFIERS.decode(Bytes.toString(rowKeyComponents[2]));
-    long flowRunId =
-        TimelineStorageUtils.invertLong(Bytes.toLong(rowKeyComponents[3]));
-    return new FlowRunRowKey(clusterId, userId, flowName, flowRunId);
+    return FlowRunRowKeyConverter.getInstance().decode(rowKey);
   }
 
   /**
