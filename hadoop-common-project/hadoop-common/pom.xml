@@ -295,6 +295,11 @@
       <artifactId>bcprov-jdk16</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.kerby</groupId>
+      <artifactId>kerb-simplekdc</artifactId>
+      <version>1.0.0-RC2</version>
+    </dependency>
   </dependencies>
 
   <build>

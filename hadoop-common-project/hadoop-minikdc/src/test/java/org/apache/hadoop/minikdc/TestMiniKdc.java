@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.minikdc;
 
-import org.apache.directory.server.kerberos.shared.keytab.Keytab;
-import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
+import org.apache.kerby.kerberos.kerb.keytab.Keytab;
+import org.apache.kerby.kerberos.kerb.type.base.PrincipalName;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,6 +30,7 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import java.io.File;
 import java.security.Principal;
+import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashSet;
@@ -51,16 +52,16 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
     File workDir = getWorkDir();
 
     kdc.createPrincipal(new File(workDir, "keytab"), "foo/bar", "bar/foo");
-    Keytab kt = Keytab.read(new File(workDir, "keytab"));
+    List<PrincipalName> principalNameList =
+            Keytab.loadKeytab(new File(workDir, "keytab")).getPrincipals();
+
     Set<String> principals = new HashSet<String>();
-    for (KeytabEntry entry : kt.getEntries()) {
-      principals.add(entry.getPrincipalName());
+    for (PrincipalName principalName : principalNameList) {
+      principals.add(principalName.getName());
     }
-    //here principals use \ instead of /
-    //because org.apache.directory.server.kerberos.shared.keytab.KeytabDecoder
-    // .getPrincipalName(IoBuffer buffer) use \\ when generates principal
+
     Assert.assertEquals(new HashSet<String>(Arrays.asList(
-            "foo\\bar@" + kdc.getRealm(), "bar\\foo@" + kdc.getRealm())),
+            "foo/bar@" + kdc.getRealm(), "bar/foo@" + kdc.getRealm())),
             principals);
   }
 
