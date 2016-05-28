@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.Collections;
-import java.util.Map;
-import java.util.TreeMap;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
  * This class contains the information of a metric that is related to some
@@ -89,6 +90,8 @@ public class TimelineMetric {
    *
    * @return Real time aggregation operation
    */
+  // required by JAXB
+  @XmlElement(name = "aggregationOp")
   public TimelineMetricOperation getRealtimeAggregationOp() {
     return realtimeAggregationOp;
   }
