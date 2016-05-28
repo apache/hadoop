@@ -769,12 +769,14 @@ public class ContainersMonitorImpl extends AbstractService implements
         (int) (getVmemAllocatedForContainers() >> 20), 1.0f);
   }
 
+  /**
+   * Calculates the vCores CPU usage that is assigned to the given
+   * {@link ProcessTreeInfo}. In particular, it takes into account the number of
+   * vCores that are allowed to be used by the NM and returns the CPU usage
+   * as a normalized value between {@literal >=} 0 and {@literal <=} 1.
+   */
   private float allocatedCpuUsage(ProcessTreeInfo pti) {
-    float cpuUsagePercentPerCore = pti.getCpuVcores() * 100.0f;
-    float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore
-        / resourceCalculatorPlugin.getNumProcessors();
-    return (cpuUsageTotalCoresPercentage * 1000 *
-        maxVCoresAllottedForContainers / nodeCpuPercentageForYARN) / 1000.0f;
+    return (float) pti.getCpuVcores() / getVCoresAllocatedForContainers();
   }
 
   @Override
