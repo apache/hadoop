@@ -1369,6 +1369,30 @@ public class YarnConfiguration extends Configuration {
   /** Default list for users allowed to run privileged containers is empty. */
   public static final String DEFAULT_NM_DOCKER_PRIVILEGED_CONTAINERS_ACL = "";
 
+  /** The set of networks allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String NM_DOCKER_ALLOWED_CONTAINER_NETWORKS =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "allowed-container-networks";
+
+  /** The set of networks allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String[] DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_NETWORKS =
+      {"host", "none", "bridge"};
+
+  /** The network used when launching containers using the
+   * DockerContainerRuntime when no network is specified in the request. This
+   *  network must be one of the (configurable) set of allowed container
+   *  networks. */
+  public static final String NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "default-container-network";
+
+  /** The network used when launching containers using the
+   * DockerContainerRuntime when no network is specified in the request and
+   * no default network is configured.
+   * . */
+  public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
+      "host";
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
