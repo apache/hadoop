@@ -94,9 +94,9 @@ public class RMNMInfo implements RMNMInfoBeans {
                 ni.getNodeManagerVersion());
         if(report != null) {
           info.put("NumContainers", report.getNumContainers());
-          info.put("UsedMemoryMB", report.getUsedResource().getMemory());
+          info.put("UsedMemoryMB", report.getUsedResource().getMemorySize());
           info.put("AvailableMemoryMB",
-              report.getAvailableResource().getMemory());
+              report.getAvailableResource().getMemorySize());
         }
 
         nodesInfo.add(info);

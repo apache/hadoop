@@ -142,7 +142,7 @@ public class RMServerUtils {
     // example, you cannot request target resource of a <10G, 10> container to
     // <20G, 8>
     if (increase) {
-      if (originalResource.getMemory() > targetResource.getMemory()
+      if (originalResource.getMemorySize() > targetResource.getMemorySize()
           || originalResource.getVirtualCores() > targetResource
               .getVirtualCores()) {
         String msg =
@@ -153,7 +153,7 @@ public class RMServerUtils {
         throw new InvalidResourceRequestException(msg);
       }
     } else {
-      if (originalResource.getMemory() < targetResource.getMemory()
+      if (originalResource.getMemorySize() < targetResource.getMemorySize()
           || originalResource.getVirtualCores() < targetResource
               .getVirtualCores()) {
         String msg =
@@ -243,15 +243,15 @@ public class RMServerUtils {
       return;
     }
     for (ContainerResourceChangeRequest request : requests) {
-      if (request.getCapability().getMemory() < 0
-          || request.getCapability().getMemory() > maximumAllocation
-              .getMemory()) {
+      if (request.getCapability().getMemorySize() < 0
+          || request.getCapability().getMemorySize() > maximumAllocation
+              .getMemorySize()) {
         throw new InvalidResourceRequestException("Invalid "
             + (increase ? "increase" : "decrease") + " request"
             + ", requested memory < 0"
             + ", or requested memory > max configured" + ", requestedMemory="
-            + request.getCapability().getMemory() + ", maxMemory="
-            + maximumAllocation.getMemory());
+            + request.getCapability().getMemorySize() + ", maxMemory="
+            + maximumAllocation.getMemorySize());
       }
       if (request.getCapability().getVirtualCores() < 0
           || request.getCapability().getVirtualCores() > maximumAllocation

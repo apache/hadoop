@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class NormalizedResourceEvent implements HistoryEvent {
-  private int memory;
+  private long memory;
   private TaskType taskType;
   
   /**
@@ -36,7 +36,7 @@ public class NormalizedResourceEvent implements HistoryEvent {
    * @param taskType the tasktype of the request.
    * @param memory the normalized memory requirements.
    */
-  public NormalizedResourceEvent(TaskType taskType, int memory) {
+  public NormalizedResourceEvent(TaskType taskType, long memory) {
     this.memory = memory;
     this.taskType = taskType;
   }
@@ -53,7 +53,7 @@ public class NormalizedResourceEvent implements HistoryEvent {
    * the normalized memory
    * @return the normalized memory
    */
-  public int getMemory() {
+  public long getMemory() {
     return this.memory;
   }
   

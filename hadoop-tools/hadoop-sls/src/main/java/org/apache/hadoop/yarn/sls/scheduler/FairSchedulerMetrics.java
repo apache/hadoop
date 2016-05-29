@@ -67,10 +67,10 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
     FairScheduler fair = (FairScheduler) scheduler;
     final FSAppAttempt app = fair.getSchedulerApp(appAttemptId);
     metrics.register("variable.app." + oldAppId + ".demand.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return app.getDemand().getMemory();
+        public Long getValue() {
+          return app.getDemand().getMemorySize();
         }
       }
     );
@@ -83,10 +83,10 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       }
     );
     metrics.register("variable.app." + oldAppId + ".usage.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return app.getResourceUsage().getMemory();
+        public Long getValue() {
+          return app.getResourceUsage().getMemorySize();
         }
       }
     );
@@ -99,26 +99,26 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       }
     );
     metrics.register("variable.app." + oldAppId + ".minshare.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return app.getMinShare().getMemory();
+        public Long getValue() {
+          return app.getMinShare().getMemorySize();
         }
       }
     );
     metrics.register("variable.app." + oldAppId + ".minshare.vcores",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return app.getMinShare().getMemory();
+        public Long getValue() {
+          return app.getMinShare().getMemorySize();
         }
       }
     );
     metrics.register("variable.app." + oldAppId + ".maxshare.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return Math.min(app.getMaxShare().getMemory(), totalMemoryMB);
+        public Long getValue() {
+          return Math.min(app.getMaxShare().getMemorySize(), totalMemoryMB);
         }
       }
     );
@@ -154,10 +154,10 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
     FairScheduler fair = (FairScheduler) scheduler;
     final FSQueue queue = fair.getQueueManager().getQueue(queueName);
     metrics.register("variable.queue." + queueName + ".demand.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return queue.getDemand().getMemory();
+        public Long getValue() {
+          return queue.getDemand().getMemorySize();
         }
       }
     );
@@ -170,10 +170,10 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       }
     );
     metrics.register("variable.queue." + queueName + ".usage.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return queue.getResourceUsage().getMemory();
+        public Long getValue() {
+          return queue.getResourceUsage().getMemorySize();
         }
       }
     );
@@ -186,10 +186,10 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       }
     );
     metrics.register("variable.queue." + queueName + ".minshare.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return queue.getMinShare().getMemory();
+        public Long getValue() {
+          return queue.getMinShare().getMemorySize();
         }
       }
     );
@@ -202,9 +202,9 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       }
     );
     metrics.register("variable.queue." + queueName + ".maxshare.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
+        public Long getValue() {
           if (! maxReset &&
                   SLSRunner.simulateInfoMap.containsKey("Number of nodes") &&
                   SLSRunner.simulateInfoMap.containsKey("Node memory (MB)") &&
@@ -221,7 +221,7 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
             maxReset = false;
           }
 
-          return Math.min(queue.getMaxShare().getMemory(), totalMemoryMB);
+          return Math.min(queue.getMaxShare().getMemorySize(), totalMemoryMB);
         }
       }
     );
@@ -234,10 +234,10 @@ public class FairSchedulerMetrics extends SchedulerMetrics {
       }
     );
     metrics.register("variable.queue." + queueName + ".fairshare.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
-          return queue.getFairShare().getMemory();
+        public Long getValue() {
+          return queue.getFairShare().getMemorySize();
         }
       }
     );

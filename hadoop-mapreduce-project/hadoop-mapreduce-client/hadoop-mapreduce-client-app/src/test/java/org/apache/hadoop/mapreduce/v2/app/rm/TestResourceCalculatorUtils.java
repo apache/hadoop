@@ -47,8 +47,8 @@ public class TestResourceCalculatorUtils {
         Integer.MAX_VALUE,
         expectedNumberOfContainersForCPU);
 
-    Resource zeroCpuResource = Resource.newInstance(nonZeroResource.getMemory(),
-        0);
+    Resource zeroCpuResource = Resource.newInstance(
+        nonZeroResource.getMemorySize(), 0);
 
     verifyDifferentResourceTypes(clusterAvailableResources, zeroCpuResource,
         expectedNumberOfContainersForMemory,

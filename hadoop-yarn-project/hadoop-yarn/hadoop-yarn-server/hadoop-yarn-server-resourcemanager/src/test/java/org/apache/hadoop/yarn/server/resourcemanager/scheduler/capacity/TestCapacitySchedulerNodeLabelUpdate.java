@@ -111,7 +111,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
     Assert.assertEquals(memory, queue.getQueueResourceUsage().getUsed(label)
-        .getMemory());
+        .getMemorySize());
   }
 
   private void checkUsedCapacity(MockRM rm, String queueName, int capacity,
@@ -128,7 +128,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
     Assert.assertEquals(memory, queue.getQueueResourceUsage().getAMUsed(label)
-        .getMemory());
+        .getMemorySize());
   }
 
   private void checkUserUsedResource(MockRM rm, String queueName,
@@ -137,7 +137,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     LeafQueue queue = (LeafQueue) scheduler.getQueue(queueName);
     LeafQueue.User user = queue.getUser(userName);
     Assert.assertEquals(memory,
-        user.getResourceUsage().getUsed(partition).getMemory());
+        user.getResourceUsage().getUsed(partition).getMemorySize());
   }
 
   @Test(timeout = 60000)
@@ -175,7 +175,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         rm.getResourceScheduler().getAppResourceUsageReport(
             am1.getApplicationAttemptId());
     Assert.assertEquals(1024, appResourceUsageReport.getUsedResources()
-        .getMemory());
+        .getMemorySize());
     Assert.assertEquals(1, appResourceUsageReport.getUsedResources()
         .getVirtualCores());
     // request a container.
@@ -186,7 +186,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         rm.getResourceScheduler().getAppResourceUsageReport(
             am1.getApplicationAttemptId());
     Assert.assertEquals(2048, appResourceUsageReport.getUsedResources()
-        .getMemory());
+        .getMemorySize());
     Assert.assertEquals(2, appResourceUsageReport.getUsedResources()
         .getVirtualCores());
     LeafQueue queue =
@@ -196,7 +196,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     for (UserInfo userInfo : users) {
       if (userInfo.getUsername().equals("user")) {
         ResourceInfo resourcesUsed = userInfo.getResourcesUsed();
-        Assert.assertEquals(2048, resourcesUsed.getMemory());
+        Assert.assertEquals(2048, resourcesUsed.getMemorySize());
         Assert.assertEquals(2, resourcesUsed.getvCores());
       }
     }
@@ -271,9 +271,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "x", 0);
     checkUserUsedResource(rm, "a", "user", "z", 1024);
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getUsed("x").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
     Assert.assertEquals(1024,
-        app.getAppAttemptResourceUsage().getUsed("z").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     
     // change h1's label to y
     mgr.replaceLabelsOnNode(ImmutableMap.of(nm1.getNodeId(), toSet("y")));
@@ -296,11 +296,11 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "y", 1024);
     checkUserUsedResource(rm, "a", "user", "z", 0);
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getUsed("x").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
     Assert.assertEquals(1024,
-        app.getAppAttemptResourceUsage().getUsed("y").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("y").getMemorySize());
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getUsed("z").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     
     // change h1's label to no label
     Set<String> emptyLabels = new HashSet<>();
@@ -326,13 +326,13 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "z", 0);
     checkUserUsedResource(rm, "a", "user", "", 2048);
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getUsed("x").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getUsed("y").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("y").getMemorySize());
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getUsed("z").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     Assert.assertEquals(2048,
-        app.getAppAttemptResourceUsage().getUsed("").getMemory());
+        app.getAppAttemptResourceUsage().getUsed("").getMemorySize());
 
     // Finish the two containers, we should see used resource becomes 0
     cs.completedContainer(cs.getRMContainer(containerId2),
@@ -460,17 +460,17 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "u2", "z", 2 * GB);
     checkUserUsedResource(rm, "a", "u2", "", 1 * GB);
     Assert.assertEquals(0,
-        application1.getAppAttemptResourceUsage().getUsed("x").getMemory());
+        application1.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
     Assert.assertEquals(1 * GB,
-        application1.getAppAttemptResourceUsage().getUsed("z").getMemory());
+        application1.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     Assert.assertEquals(2 * GB,
-        application1.getAppAttemptResourceUsage().getUsed("").getMemory());
+        application1.getAppAttemptResourceUsage().getUsed("").getMemorySize());
     Assert.assertEquals(0,
-        application2.getAppAttemptResourceUsage().getUsed("x").getMemory());
+        application2.getAppAttemptResourceUsage().getUsed("x").getMemorySize());
     Assert.assertEquals(2 * GB,
-        application2.getAppAttemptResourceUsage().getUsed("z").getMemory());
+        application2.getAppAttemptResourceUsage().getUsed("z").getMemorySize());
     Assert.assertEquals(1 * GB,
-        application2.getAppAttemptResourceUsage().getUsed("").getMemory());
+        application2.getAppAttemptResourceUsage().getUsed("").getMemorySize());
 
     rm.close();
   }
@@ -536,9 +536,9 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "x", 0);
     checkUserUsedResource(rm, "a", "user", "z", 2048);
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getAMUsed("x").getMemory());
+        app.getAppAttemptResourceUsage().getAMUsed("x").getMemorySize());
     Assert.assertEquals(1024,
-        app.getAppAttemptResourceUsage().getAMUsed("z").getMemory());
+        app.getAppAttemptResourceUsage().getAMUsed("z").getMemorySize());
 
     // change h1's label to no label
     Set<String> emptyLabels = new HashSet<>();
@@ -555,11 +555,11 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkUserUsedResource(rm, "a", "user", "z", 0);
     checkUserUsedResource(rm, "a", "user", "", 2048);
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getAMUsed("x").getMemory());
+        app.getAppAttemptResourceUsage().getAMUsed("x").getMemorySize());
     Assert.assertEquals(0,
-        app.getAppAttemptResourceUsage().getAMUsed("z").getMemory());
+        app.getAppAttemptResourceUsage().getAMUsed("z").getMemorySize());
     Assert.assertEquals(1024,
-        app.getAppAttemptResourceUsage().getAMUsed("").getMemory());
+        app.getAppAttemptResourceUsage().getAMUsed("").getMemorySize());
 
     rm.close();
   }

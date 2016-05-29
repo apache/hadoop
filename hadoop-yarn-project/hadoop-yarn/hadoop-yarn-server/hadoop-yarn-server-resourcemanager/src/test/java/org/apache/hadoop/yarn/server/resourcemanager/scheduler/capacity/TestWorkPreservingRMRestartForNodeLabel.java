@@ -112,14 +112,14 @@ public class TestWorkPreservingRMRestartForNodeLabel {
     FiCaSchedulerApp app =
         cs.getSchedulerApplications().get(appId).getCurrentAppAttempt();
     Assert.assertEquals(expectedMemUsage, app.getAppAttemptResourceUsage()
-        .getUsed(partition).getMemory());
+        .getUsed(partition).getMemorySize());
   }
   
   private void checkQueueResourceUsage(String partition, String queueName, MockRM rm, int expectedMemUsage) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
     Assert.assertEquals(expectedMemUsage, queue.getQueueResourceUsage()
-        .getUsed(partition).getMemory());
+        .getUsed(partition).getMemorySize());
   }
 
   @Test

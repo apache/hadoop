@@ -115,7 +115,7 @@ public class TestQueueCapacities {
   }
 
   void check(int mem, int cpu, Resource res) {
-    Assert.assertEquals(mem, res.getMemory());
+    Assert.assertEquals(mem, res.getMemorySize());
     Assert.assertEquals(cpu, res.getVirtualCores());
   }
 

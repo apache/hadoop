@@ -480,7 +480,7 @@ public class SystemMetricsPublisher extends CompositeService {
     TimelineEntity entity = createContainerEntity(event.getContainerId());
     Map<String, Object> entityInfo = new HashMap<String, Object>();
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO,
-        event.getAllocatedResource().getMemory());
+        event.getAllocatedResource().getMemorySize());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO,
         event.getAllocatedResource().getVirtualCores());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,

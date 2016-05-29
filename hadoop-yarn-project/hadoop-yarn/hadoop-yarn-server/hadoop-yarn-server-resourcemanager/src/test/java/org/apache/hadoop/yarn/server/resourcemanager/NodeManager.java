@@ -213,12 +213,12 @@ public class NodeManager implements ContainerManagementProtocol {
 
   synchronized public void checkResourceUsage() {
     LOG.info("Checking resource usage for " + containerManagerAddress);
-    Assert.assertEquals(available.getMemory(), 
+    Assert.assertEquals(available.getMemorySize(),
         resourceManager.getResourceScheduler().getNodeReport(
-            this.nodeId).getAvailableResource().getMemory());
-    Assert.assertEquals(used.getMemory(), 
+            this.nodeId).getAvailableResource().getMemorySize());
+    Assert.assertEquals(used.getMemorySize(),
         resourceManager.getResourceScheduler().getNodeReport(
-            this.nodeId).getUsedResource().getMemory());
+            this.nodeId).getUsedResource().getMemorySize());
   }
   
   @Override

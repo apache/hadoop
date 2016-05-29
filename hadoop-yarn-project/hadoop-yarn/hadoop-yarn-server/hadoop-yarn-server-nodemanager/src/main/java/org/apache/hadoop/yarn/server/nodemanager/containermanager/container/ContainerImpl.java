@@ -168,7 +168,7 @@ public class ContainerImpl implements Container {
     if (recoveredCapability != null
         && !this.resource.equals(recoveredCapability)) {
       // resource capability had been updated before NM was down
-      this.resource = Resource.newInstance(recoveredCapability.getMemory(),
+      this.resource = Resource.newInstance(recoveredCapability.getMemorySize(),
           recoveredCapability.getVirtualCores());
     }
   }
@@ -516,7 +516,7 @@ public class ContainerImpl implements Container {
     long launchDuration = clock.getTime() - containerLaunchStartTime;
     metrics.addContainerLaunchDuration(launchDuration);
 
-    long pmemBytes = getResource().getMemory() * 1024 * 1024L;
+    long pmemBytes = getResource().getMemorySize() * 1024 * 1024L;
     float pmemRatio = daemonConf.getFloat(
         YarnConfiguration.NM_VMEM_PMEM_RATIO,
         YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);

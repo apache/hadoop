@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
@@ -53,7 +55,7 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(int memory, int vCores) {
+  public static Resource newInstance(long memory, long vCores) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(vCores);
@@ -61,12 +63,23 @@ public abstract class Resource implements Comparable<Resource> {
   }
 
   /**
+   * This method is DEPRECATED:
+   * Use {@link Resource#getMemorySize()} instead
+   *
    * Get <em>memory</em> of the resource.
    * @return <em>memory</em> of the resource
    */
   @Public
-  @Stable
+  @Deprecated
   public abstract int getMemory();
+
+  /**
+   * Get <em>memory</em> of the resource.
+   * @return <em>memory</em> of the resource
+   */
+  @Private
+  @Unstable
+  public abstract long getMemorySize();
   
   /**
    * Set <em>memory</em> of the resource.
@@ -74,7 +87,7 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Stable
-  public abstract void setMemory(int memory);
+  public abstract void setMemory(long memory);
 
 
   /**
@@ -90,6 +103,10 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Evolving
   public abstract int getVirtualCores();
+
+  @Public
+  @Unstable
+  public abstract long getVirtualCoresSize();
   
   /**
    * Set <em>number of virtual cpu cores</em> of the resource.
@@ -103,13 +120,14 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public abstract void setVirtualCores(int vCores);
+  public abstract void setVirtualCores(long vCores);
 
   @Override
   public int hashCode() {
     final int prime = 263167;
-    int result = 3571;
-    result = 939769357 + getMemory(); // prime * result = 939769357 initially
+
+    int result = (int) (939769357
+        + getMemorySize()); // prime * result = 939769357 initially
     result = prime * result + getVirtualCores();
     return result;
   }
@@ -123,7 +141,7 @@ public abstract class Resource implements Comparable<Resource> {
     if (!(obj instanceof Resource))
       return false;
     Resource other = (Resource) obj;
-    if (getMemory() != other.getMemory() || 
+    if (getMemorySize() != other.getMemorySize() ||
         getVirtualCores() != other.getVirtualCores()) {
       return false;
     }
@@ -132,6 +150,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Override
   public String toString() {
-    return "<memory:" + getMemory() + ", vCores:" + getVirtualCores() + ">";
+    return "<memory:" + getMemorySize() + ", vCores:" + getVirtualCores() + ">";
   }
 }

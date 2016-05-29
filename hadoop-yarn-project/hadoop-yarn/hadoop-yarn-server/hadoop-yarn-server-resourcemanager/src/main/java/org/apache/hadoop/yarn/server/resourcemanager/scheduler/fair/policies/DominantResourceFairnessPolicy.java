@@ -101,13 +101,13 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   @Override
   public Resource getHeadroom(Resource queueFairShare, Resource queueUsage,
                               Resource maxAvailable) {
-    int queueAvailableMemory =
-        Math.max(queueFairShare.getMemory() - queueUsage.getMemory(), 0);
+    long queueAvailableMemory =
+        Math.max(queueFairShare.getMemorySize() - queueUsage.getMemorySize(), 0);
     int queueAvailableCPU =
         Math.max(queueFairShare.getVirtualCores() - queueUsage
             .getVirtualCores(), 0);
     Resource headroom = Resources.createResource(
-        Math.min(maxAvailable.getMemory(), queueAvailableMemory),
+        Math.min(maxAvailable.getMemorySize(), queueAvailableMemory),
         Math.min(maxAvailable.getVirtualCores(),
             queueAvailableCPU));
     return headroom;
@@ -180,8 +180,8 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
      */
     void calculateShares(Resource resource, Resource pool,
         ResourceWeights shares, ResourceType[] resourceOrder, ResourceWeights weights) {
-      shares.setWeight(MEMORY, (float)resource.getMemory() /
-          (pool.getMemory() * weights.getWeight(MEMORY)));
+      shares.setWeight(MEMORY, (float)resource.getMemorySize() /
+          (pool.getMemorySize() * weights.getWeight(MEMORY)));
       shares.setWeight(CPU, (float)resource.getVirtualCores() /
           (pool.getVirtualCores() * weights.getWeight(CPU)));
       // sort order vector by resource share
