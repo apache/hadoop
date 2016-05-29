@@ -102,6 +102,10 @@ public class Cluster {
       throws IOException {
 
     initProviderList();
+    final IOException initEx = new IOException(
+        "Cannot initialize Cluster. Please check your configuration for "
+            + MRConfig.FRAMEWORK_NAME
+            + " and the correspond server addresses.");
     for (ClientProtocolProvider provider : providerList) {
       LOG.debug("Trying ClientProtocolProvider : "
           + provider.getClass().getName());
@@ -124,16 +128,15 @@ public class Cluster {
               + " as the ClientProtocolProvider - returned null protocol");
         }
       } catch (Exception e) {
-        LOG.info("Failed to use " + provider.getClass().getName()
-            + " due to error: ", e);
+        final String errMsg = "Failed to use " + provider.getClass().getName()
+            + " due to error: ";
+        initEx.addSuppressed(new IOException(errMsg, e));
+        LOG.info(errMsg, e);
       }
     }
 
     if (null == clientProtocolProvider || null == client) {
-      throw new IOException(
-          "Cannot initialize Cluster. Please check your configuration for "
-              + MRConfig.FRAMEWORK_NAME
-              + " and the correspond server addresses.");
+      throw initEx;
     }
   }
 
