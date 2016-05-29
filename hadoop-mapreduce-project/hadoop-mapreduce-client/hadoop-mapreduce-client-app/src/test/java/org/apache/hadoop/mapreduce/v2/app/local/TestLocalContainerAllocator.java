@@ -201,7 +201,7 @@ public class TestLocalContainerAllocator {
     Container container = containerAssignedCaptor.getValue().getContainer();
     Resource containerResource = container.getResource();
     Assert.assertNotNull(containerResource);
-    Assert.assertEquals(containerResource.getMemory(), 0);
+    Assert.assertEquals(containerResource.getMemorySize(), 0);
     Assert.assertEquals(containerResource.getVirtualCores(), 0);
   }
 

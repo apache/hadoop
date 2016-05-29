@@ -472,7 +472,7 @@ public class FairScheduler extends
   }
 
   private boolean isResourceGreaterThanNone(Resource toPreempt) {
-    return (toPreempt.getMemory() > 0) || (toPreempt.getVirtualCores() > 0);
+    return (toPreempt.getMemorySize() > 0) || (toPreempt.getVirtualCores() > 0);
   }
 
   protected void warnOrKillContainer(RMContainer container) {
@@ -559,7 +559,7 @@ public class FairScheduler extends
     double weight = 1.0;
     if (sizeBasedWeight) {
       // Set weight based on current memory demand
-      weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
+      weight = Math.log1p(app.getDemand().getMemorySize()) / Math.log(2);
     }
     weight *= app.getPriority().getPriority();
     if (weightAdjuster != null) {
@@ -1214,7 +1214,7 @@ public class FairScheduler extends
     if (preemptionEnabled) {
       Resource clusterResource = getClusterResource();
       return (preemptionUtilizationThreshold < Math.max(
-          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
+          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemorySize(),
           (float) rootMetrics.getAllocatedVirtualCores() /
               clusterResource.getVirtualCores()));
     }

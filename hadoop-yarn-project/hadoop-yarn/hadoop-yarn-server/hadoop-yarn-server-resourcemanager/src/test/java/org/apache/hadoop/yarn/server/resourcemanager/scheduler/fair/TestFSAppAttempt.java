@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -30,7 +29,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
@@ -238,9 +236,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(DominantResourceFairnessPolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
-            clusterAvailable.getMemory(),
-            queueMaxResourcesAvailable.getMemory()),
+        min(queueStarvation.getMemorySize(),
+            clusterAvailable.getMemorySize(),
+            queueMaxResourcesAvailable.getMemorySize()),
         min(queueStarvation.getVirtualCores(),
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
@@ -250,9 +248,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FairSharePolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
-            clusterAvailable.getMemory(),
-            queueMaxResourcesAvailable.getMemory()),
+        min(queueStarvation.getMemorySize(),
+            clusterAvailable.getMemorySize(),
+            queueMaxResourcesAvailable.getMemorySize()),
         Math.min(
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
@@ -261,9 +259,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FifoPolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemory(),
-            clusterAvailable.getMemory(),
-            queueMaxResourcesAvailable.getMemory()),
+        min(queueStarvation.getMemorySize(),
+            clusterAvailable.getMemorySize(),
+            queueMaxResourcesAvailable.getMemorySize()),
         Math.min(
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
@@ -288,9 +286,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Resource clusterResource = scheduler.getClusterResource();
     Resource clusterUsage = scheduler.getRootQueueMetrics()
         .getAllocatedResources();
-    assertEquals(12 * 1024, clusterResource.getMemory());
+    assertEquals(12 * 1024, clusterResource.getMemorySize());
     assertEquals(12, clusterResource.getVirtualCores());
-    assertEquals(0, clusterUsage.getMemory());
+    assertEquals(0, clusterUsage.getMemorySize());
     assertEquals(0, clusterUsage.getVirtualCores());
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
     createMockRMApp(id11);
@@ -302,7 +300,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     FSAppAttempt app = scheduler.getSchedulerApp(id11);
     assertNotNull(app);
     Resource queueUsage = app.getQueue().getResourceUsage();
-    assertEquals(0, queueUsage.getMemory());
+    assertEquals(0, queueUsage.getMemorySize());
     assertEquals(0, queueUsage.getVirtualCores());
     SchedulerNode n1 = scheduler.getSchedulerNode(node1.getNodeID());
     SchedulerNode n2 = scheduler.getSchedulerNode(node2.getNodeID());
@@ -337,14 +335,14 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     assertEquals(clusterResource, spyApp.getHeadroom());
   }
 
-  private static int min(int value1, int value2, int value3) {
+  private static long min(long value1, long value2, long value3) {
     return Math.min(Math.min(value1, value2), value3);
   }
 
   protected void verifyHeadroom(FSAppAttempt schedulerApp,
-                                int expectedMemory, int expectedCPU) {
+                                long expectedMemory, long expectedCPU) {
     Resource headroom = schedulerApp.getHeadroom();
-    assertEquals(expectedMemory, headroom.getMemory());
+    assertEquals(expectedMemory, headroom.getMemorySize());
     assertEquals(expectedCPU, headroom.getVirtualCores());
   }
 }

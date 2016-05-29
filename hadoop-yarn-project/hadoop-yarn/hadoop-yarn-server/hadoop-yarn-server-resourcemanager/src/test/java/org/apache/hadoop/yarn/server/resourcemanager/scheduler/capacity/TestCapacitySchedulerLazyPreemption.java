@@ -19,27 +19,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.RMActiveServices;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -56,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class TestCapacitySchedulerLazyPreemption
     extends CapacitySchedulerPreemptionTestBase {
@@ -126,9 +116,9 @@ public class TestCapacitySchedulerLazyPreemption
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container
     am2.allocate(Arrays.asList(ResourceRequest
@@ -205,9 +195,9 @@ public class TestCapacitySchedulerLazyPreemption
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container with unknown host and unknown rack
     am2.allocate(Arrays.asList(ResourceRequest
@@ -296,9 +286,9 @@ public class TestCapacitySchedulerLazyPreemption
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container for h3 with hard locality,
     // h3 doesn't exist in the cluster
@@ -393,7 +383,7 @@ public class TestCapacitySchedulerLazyPreemption
 
     // NM1 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     am2.allocate("*", 1 * GB, 1, new ArrayList<ContainerId>());
 
     // Get edit policy and do one update
@@ -493,7 +483,7 @@ public class TestCapacitySchedulerLazyPreemption
 
     // NM1 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     am2.allocate("*", 3 * GB, 1, new ArrayList<ContainerId>());
 
     // Get edit policy and do one update
@@ -582,9 +572,9 @@ public class TestCapacitySchedulerLazyPreemption
 
     // NM1/NM2 has available resource = 0G
     Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container
     am2.allocate(Arrays.asList(ResourceRequest

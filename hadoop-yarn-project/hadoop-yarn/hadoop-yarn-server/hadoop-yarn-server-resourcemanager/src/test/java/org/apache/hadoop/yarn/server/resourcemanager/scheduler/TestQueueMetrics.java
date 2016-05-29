@@ -401,10 +401,10 @@ public class TestQueueMetrics {
     assertCounter("AppsKilled", killed, rb);
   }
 
-  public static void checkResources(MetricsSource source, int allocatedMB,
-      int allocatedCores, int allocCtnrs, long aggreAllocCtnrs,
-      long aggreReleasedCtnrs, int availableMB, int availableCores, int pendingMB,
-      int pendingCores, int pendingCtnrs, int reservedMB, int reservedCores,
+  public static void checkResources(MetricsSource source, long allocatedMB,
+      long allocatedCores, int allocCtnrs, long aggreAllocCtnrs,
+      long aggreReleasedCtnrs, long availableMB, long availableCores, long pendingMB,
+      long pendingCores, int pendingCtnrs, long reservedMB, long reservedCores,
       int reservedCtnrs) {
     MetricsRecordBuilder rb = getMetrics(source);
     assertGauge("AllocatedMB", allocatedMB, rb);

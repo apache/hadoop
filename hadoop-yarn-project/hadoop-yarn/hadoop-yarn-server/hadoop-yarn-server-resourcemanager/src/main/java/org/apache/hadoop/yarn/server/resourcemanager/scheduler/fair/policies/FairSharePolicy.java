@@ -82,13 +82,13 @@ public class FairSharePolicy extends SchedulingPolicy {
           s1.getResourceUsage(), minShare1);
       boolean s2Needy = Resources.lessThan(RESOURCE_CALCULATOR, null,
           s2.getResourceUsage(), minShare2);
-      minShareRatio1 = (double) s1.getResourceUsage().getMemory()
-          / Resources.max(RESOURCE_CALCULATOR, null, minShare1, ONE).getMemory();
-      minShareRatio2 = (double) s2.getResourceUsage().getMemory()
-          / Resources.max(RESOURCE_CALCULATOR, null, minShare2, ONE).getMemory();
-      useToWeightRatio1 = s1.getResourceUsage().getMemory() /
+      minShareRatio1 = (double) s1.getResourceUsage().getMemorySize()
+          / Resources.max(RESOURCE_CALCULATOR, null, minShare1, ONE).getMemorySize();
+      minShareRatio2 = (double) s2.getResourceUsage().getMemorySize()
+          / Resources.max(RESOURCE_CALCULATOR, null, minShare2, ONE).getMemorySize();
+      useToWeightRatio1 = s1.getResourceUsage().getMemorySize() /
           s1.getWeights().getWeight(ResourceType.MEMORY);
-      useToWeightRatio2 = s2.getResourceUsage().getMemory() /
+      useToWeightRatio2 = s2.getResourceUsage().getMemorySize() /
           s2.getWeights().getWeight(ResourceType.MEMORY);
       int res = 0;
       if (s1Needy && !s2Needy)
@@ -124,10 +124,10 @@ public class FairSharePolicy extends SchedulingPolicy {
   @Override
   public Resource getHeadroom(Resource queueFairShare,
                               Resource queueUsage, Resource maxAvailable) {
-    int queueAvailableMemory = Math.max(
-        queueFairShare.getMemory() - queueUsage.getMemory(), 0);
+    long queueAvailableMemory = Math.max(
+        queueFairShare.getMemorySize() - queueUsage.getMemorySize(), 0);
     Resource headroom = Resources.createResource(
-        Math.min(maxAvailable.getMemory(), queueAvailableMemory),
+        Math.min(maxAvailable.getMemorySize(), queueAvailableMemory),
         maxAvailable.getVirtualCores());
     return headroom;
   }
@@ -152,7 +152,7 @@ public class FairSharePolicy extends SchedulingPolicy {
 
   @Override
   public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
-    return usage.getMemory() > maxAMResource.getMemory();
+    return usage.getMemorySize() > maxAMResource.getMemorySize();
   }
 
   @Override

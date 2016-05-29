@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -211,7 +210,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue queueA = queueMgr.getLeafQueue("queueA", false);
-    assertEquals(4 * 1024, queueA.getResourceUsage().getMemory());
+    assertEquals(4 * 1024, queueA.getResourceUsage().getMemorySize());
 
     // Both queue B1 and queue B2 want 3 * 1024
     createSchedulingRequest(1 * 1024, "queueB.queueB1", "user1", 3);
@@ -223,8 +222,8 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     FSLeafQueue queueB1 = queueMgr.getLeafQueue("queueB.queueB1", false);
     FSLeafQueue queueB2 = queueMgr.getLeafQueue("queueB.queueB2", false);
-    assertEquals(2 * 1024, queueB1.getResourceUsage().getMemory());
-    assertEquals(2 * 1024, queueB2.getResourceUsage().getMemory());
+    assertEquals(2 * 1024, queueB1.getResourceUsage().getMemorySize());
+    assertEquals(2 * 1024, queueB2.getResourceUsage().getMemorySize());
 
     // For queue B1, the fairSharePreemptionThreshold is 0.4, and the fair share
     // threshold is 1.6 * 1024
@@ -237,8 +236,8 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     // Node checks in again
     scheduler.handle(nodeEvent2);
     scheduler.handle(nodeEvent2);
-    assertEquals(3 * 1024, queueB1.getResourceUsage().getMemory());
-    assertEquals(3 * 1024, queueB2.getResourceUsage().getMemory());
+    assertEquals(3 * 1024, queueB1.getResourceUsage().getMemorySize());
+    assertEquals(3 * 1024, queueB2.getResourceUsage().getMemorySize());
 
     // Both queue B1 and queue B2 usages go to 3 * 1024
     assertFalse(queueB1.isStarvedForFairShare());
@@ -283,7 +282,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue queueA = queueMgr.getLeafQueue("queueA", false);
-    assertEquals(7 * 1024, queueA.getResourceUsage().getMemory());
+    assertEquals(7 * 1024, queueA.getResourceUsage().getMemorySize());
     assertEquals(1, queueA.getResourceUsage().getVirtualCores());
 
     // Queue B has 3 reqs :
@@ -298,7 +297,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     }
 
     FSLeafQueue queueB = queueMgr.getLeafQueue("queueB", false);
-    assertEquals(3 * 1024, queueB.getResourceUsage().getMemory());
+    assertEquals(3 * 1024, queueB.getResourceUsage().getMemorySize());
     assertEquals(6, queueB.getResourceUsage().getVirtualCores());
 
     scheduler.update();

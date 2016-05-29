@@ -1058,7 +1058,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.drainEvents();
     RMNode rmNode = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
     Assert.assertEquals(3, rmNode.getHttpPort());
-    Assert.assertEquals(5120, rmNode.getTotalCapability().getMemory());
+    Assert.assertEquals(5120, rmNode.getTotalCapability().getMemorySize());
     Assert.assertEquals(5120 + 15360, metrics.getAvailableMB());
 
   }

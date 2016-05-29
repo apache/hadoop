@@ -521,13 +521,13 @@ public class TypeConverter {
         application.getApplicationResourceUsageReport();
     if (resourceUsageReport != null) {
       jobStatus.setNeededMem(
-          resourceUsageReport.getNeededResources().getMemory());
+          resourceUsageReport.getNeededResources().getMemorySize());
       jobStatus.setNumReservedSlots(
           resourceUsageReport.getNumReservedContainers());
       jobStatus.setNumUsedSlots(resourceUsageReport.getNumUsedContainers());
       jobStatus.setReservedMem(
-          resourceUsageReport.getReservedResources().getMemory());
-      jobStatus.setUsedMem(resourceUsageReport.getUsedResources().getMemory());
+          resourceUsageReport.getReservedResources().getMemorySize());
+      jobStatus.setUsedMem(resourceUsageReport.getUsedResources().getMemorySize());
     }
     return jobStatus;
   }

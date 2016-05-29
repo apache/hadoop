@@ -153,9 +153,9 @@ public class TestSimpleCapacityReplanner {
 
     // check resources at each moment in time no more exceed capacity
     for (int i = 0; i < 20; i++) {
-      int tot = 0;
+      long tot = 0;
       for (ReservationAllocation r : plan.getReservationsAtTime(i)) {
-        tot = r.getResourcesAtTime(i).getMemory();
+        tot = r.getResourcesAtTime(i).getMemorySize();
       }
       assertTrue(tot <= 70 * 1024);
     }

@@ -220,10 +220,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     Assert.assertEquals(10, scheduler.continuousSchedulingSleepMs);
     Assert.assertEquals(5000, scheduler.nodeLocalityDelayMs);
     Assert.assertEquals(5000, scheduler.rackLocalityDelayMs);
-    Assert.assertEquals(1024, scheduler.getMaximumResourceCapability().getMemory());
-    Assert.assertEquals(512, scheduler.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(1024, scheduler.getMaximumResourceCapability().getMemorySize());
+    Assert.assertEquals(512, scheduler.getMinimumResourceCapability().getMemorySize());
     Assert.assertEquals(128, 
-      scheduler.getIncrementResourceCapability().getMemory());
+      scheduler.getIncrementResourceCapability().getMemorySize());
   }
   
   @Test  
@@ -238,9 +238,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES, 2);
     scheduler.init(conf);
     scheduler.reinitialize(conf, null);
-    Assert.assertEquals(256, scheduler.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(256, scheduler.getMinimumResourceCapability().getMemorySize());
     Assert.assertEquals(1, scheduler.getMinimumResourceCapability().getVirtualCores());
-    Assert.assertEquals(512, scheduler.getIncrementResourceCapability().getMemory());
+    Assert.assertEquals(512, scheduler.getIncrementResourceCapability().getMemorySize());
     Assert.assertEquals(2, scheduler.getIncrementResourceCapability().getVirtualCores());
   }  
   
@@ -256,9 +256,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_VCORES, 2);
     scheduler.init(conf);
     scheduler.reinitialize(conf, null);
-    Assert.assertEquals(0, scheduler.getMinimumResourceCapability().getMemory());
+    Assert.assertEquals(0, scheduler.getMinimumResourceCapability().getMemorySize());
     Assert.assertEquals(0, scheduler.getMinimumResourceCapability().getVirtualCores());
-    Assert.assertEquals(512, scheduler.getIncrementResourceCapability().getMemory());
+    Assert.assertEquals(512, scheduler.getIncrementResourceCapability().getMemorySize());
     Assert.assertEquals(2, scheduler.getIncrementResourceCapability().getVirtualCores());
   }  
   
@@ -274,19 +274,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-    assertEquals(1024, scheduler.getClusterResource().getMemory());
+    assertEquals(1024, scheduler.getClusterResource().getMemorySize());
 
     // Add another node
     RMNode node2 =
         MockNodes.newNodeInfo(1, Resources.createResource(512), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
-    assertEquals(1536, scheduler.getClusterResource().getMemory());
+    assertEquals(1536, scheduler.getClusterResource().getMemorySize());
 
     // Remove the first node
     NodeRemovedSchedulerEvent nodeEvent3 = new NodeRemovedSchedulerEvent(node1);
     scheduler.handle(nodeEvent3);
-    assertEquals(512, scheduler.getClusterResource().getMemory());
+    assertEquals(512, scheduler.getClusterResource().getMemorySize());
   }
 
   @Test
@@ -317,9 +317,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     
     // Divided three ways - between the two queues and the default queue
     for (FSLeafQueue p : queues) {
-      assertEquals(3414, p.getFairShare().getMemory());
+      assertEquals(3414, p.getFairShare().getMemorySize());
       assertEquals(3414, p.getMetrics().getFairShareMB());
-      assertEquals(3414, p.getSteadyFairShare().getMemory());
+      assertEquals(3414, p.getSteadyFairShare().getMemorySize());
       assertEquals(3414, p.getMetrics().getSteadyFairShareMB());
     }
   }
@@ -365,11 +365,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
         "queueA", false);
     // queueA's weight is 0.25, so its fair share should be 2 * 1024.
-    assertEquals(2 * 1024, queue.getFairShare().getMemory());
+    assertEquals(2 * 1024, queue.getFairShare().getMemorySize());
     // queueB's weight is 0.75, so its fair share should be 6 * 1024.
     queue = scheduler.getQueueManager().getLeafQueue(
         "queueB", false);
-    assertEquals(6 * 1024, queue.getFairShare().getMemory());
+    assertEquals(6 * 1024, queue.getFairShare().getMemorySize());
   }
 
   @Test
@@ -409,11 +409,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
         "queueA", false);
     // queueA's weight is 0.0, so its fair share should be 0.
-    assertEquals(0, queue.getFairShare().getMemory());
+    assertEquals(0, queue.getFairShare().getMemorySize());
     // queueB's weight is 0.0, so its fair share should be 0.
     queue = scheduler.getQueueManager().getLeafQueue(
         "queueB", false);
-    assertEquals(0, queue.getFairShare().getMemory());
+    assertEquals(0, queue.getFairShare().getMemorySize());
   }
 
   @Test
@@ -457,12 +457,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         "queueA", false);
     // queueA's weight is 0.0 and minResources is 1,
     // so its fair share should be 1 (minShare).
-    assertEquals(1, queue.getFairShare().getMemory());
+    assertEquals(1, queue.getFairShare().getMemorySize());
     // queueB's weight is 0.0 and minResources is 1,
     // so its fair share should be 1 (minShare).
     queue = scheduler.getQueueManager().getLeafQueue(
         "queueB", false);
-    assertEquals(1, queue.getFairShare().getMemory());
+    assertEquals(1, queue.getFairShare().getMemorySize());
   }
 
   @Test
@@ -507,12 +507,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         "queueA", false);
     // queueA's weight is 0.5 and minResources is 1024,
     // so its fair share should be 4096.
-    assertEquals(4096, queue.getFairShare().getMemory());
+    assertEquals(4096, queue.getFairShare().getMemorySize());
     // queueB's weight is 0.5 and minResources is 1024,
     // so its fair share should be 4096.
     queue = scheduler.getQueueManager().getLeafQueue(
         "queueB", false);
-    assertEquals(4096, queue.getFairShare().getMemory());
+    assertEquals(4096, queue.getFairShare().getMemorySize());
   }
 
   @Test
@@ -606,17 +606,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue queue1 = queueManager.getLeafQueue("default", true);
     FSLeafQueue queue2 = queueManager.getLeafQueue("parent.queue2", true);
     FSLeafQueue queue3 = queueManager.getLeafQueue("parent.queue3", true);
-    assertEquals(capacity / 2, queue1.getFairShare().getMemory());
+    assertEquals(capacity / 2, queue1.getFairShare().getMemorySize());
     assertEquals(capacity / 2, queue1.getMetrics().getFairShareMB());
-    assertEquals(capacity / 2, queue1.getSteadyFairShare().getMemory());
+    assertEquals(capacity / 2, queue1.getSteadyFairShare().getMemorySize());
     assertEquals(capacity / 2, queue1.getMetrics().getSteadyFairShareMB());
-    assertEquals(capacity / 4, queue2.getFairShare().getMemory());
+    assertEquals(capacity / 4, queue2.getFairShare().getMemorySize());
     assertEquals(capacity / 4, queue2.getMetrics().getFairShareMB());
-    assertEquals(capacity / 4, queue2.getSteadyFairShare().getMemory());
+    assertEquals(capacity / 4, queue2.getSteadyFairShare().getMemorySize());
     assertEquals(capacity / 4, queue2.getMetrics().getSteadyFairShareMB());
-    assertEquals(capacity / 4, queue3.getFairShare().getMemory());
+    assertEquals(capacity / 4, queue3.getFairShare().getMemorySize());
     assertEquals(capacity / 4, queue3.getMetrics().getFairShareMB());
-    assertEquals(capacity / 4, queue3.getSteadyFairShare().getMemory());
+    assertEquals(capacity / 4, queue3.getSteadyFairShare().getMemorySize());
     assertEquals(capacity / 4, queue3.getMetrics().getSteadyFairShareMB());
   }
 
@@ -717,13 +717,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(
         FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
         scheduler.getQueueManager().getQueue("queue1").
-            getResourceUsage().getMemory());
+            getResourceUsage().getMemorySize());
 
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
     scheduler.handle(updateEvent2);
 
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").
-      getResourceUsage().getMemory());
+      getResourceUsage().getMemorySize());
     assertEquals(2, scheduler.getQueueManager().getQueue("queue1").
       getResourceUsage().getVirtualCores());
 
@@ -760,7 +760,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 1 is allocated app capacity
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue1").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
 
     // Now queue 2 requests likewise
     ApplicationAttemptId attId = createSchedulingRequest(1024, "queue2", "user1", 1);
@@ -770,8 +770,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 2 is waiting with a reservation
     assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
-        getResourceUsage().getMemory());
-    assertEquals(1024, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemory());
+        getResourceUsage().getMemorySize());
+    assertEquals(1024, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemorySize());
 
     // Now another node checks in with capacity
     RMNode node2 =
@@ -784,13 +784,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure this goes to queue 2
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue2").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
 
     // The old reservation should still be there...
-    assertEquals(1024, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemory());
+    assertEquals(1024, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemorySize());
     // ... but it should disappear when we update the first node.
     scheduler.handle(updateEvent);
-    assertEquals(0, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemory());
+    assertEquals(0, scheduler.getSchedulerApp(attId).getCurrentReservation().getMemorySize());
 
   }
 
@@ -834,7 +834,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Verify capacity allocation
     assertEquals(6144, scheduler.getQueueManager().getQueue("queue1").
-            getResourceUsage().getMemory());
+            getResourceUsage().getMemorySize());
 
     // Create new app with a resource request that can be satisfied by any
     // node but would be
@@ -866,7 +866,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(new NodeUpdateSchedulerEvent(node4));
     assertEquals(8192, scheduler.getQueueManager().getQueue("queue1").
-            getResourceUsage().getMemory());
+            getResourceUsage().getMemorySize());
 
     scheduler.handle(new NodeUpdateSchedulerEvent(node1));
     scheduler.handle(new NodeUpdateSchedulerEvent(node2));
@@ -927,7 +927,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Verify capacity allocation
     assertEquals(8192, scheduler.getQueueManager().getQueue("queue1").
-            getResourceUsage().getMemory());
+            getResourceUsage().getMemorySize());
 
     // Create new app with a resource request that can be satisfied by any
     // node but would be
@@ -972,7 +972,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(new NodeUpdateSchedulerEvent(node4));
     assertEquals(10240, scheduler.getQueueManager().getQueue("queue1").
-            getResourceUsage().getMemory());
+            getResourceUsage().getMemorySize());
 
     scheduler.handle(new NodeUpdateSchedulerEvent(node1));
     scheduler.handle(new NodeUpdateSchedulerEvent(node2));
@@ -1016,7 +1016,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Verify capacity allocation
     assertEquals(8192, scheduler.getQueueManager().getQueue("queue1").
-            getResourceUsage().getMemory());
+            getResourceUsage().getMemorySize());
 
     // Verify number of reservations have decremented
     assertEquals(0,
@@ -1060,7 +1060,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 1 is allocated app capacity
     assertEquals(2048, scheduler.getQueueManager().getQueue("queue1").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
 
     // Now queue 2 requests likewise
     createSchedulingRequest(1024, "queue2", "user2", 1);
@@ -1069,7 +1069,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 2 is allocated app capacity
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue2").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1", "user1", 1);
     scheduler.update();
@@ -1078,7 +1078,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Ensure the reservation does not get created as allocated memory of
     // queue1 exceeds max
     assertEquals(0, scheduler.getSchedulerApp(attId1).
-        getCurrentReservation().getMemory());
+        getCurrentReservation().getMemorySize());
   }
 
     @Test (timeout = 500000)
@@ -1117,7 +1117,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 1 is allocated app capacity
     assertEquals(2048, scheduler.getQueueManager().getQueue("queue1").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
 
     // Now queue 2 requests likewise
     createSchedulingRequest(1024, "queue2", "user2", 1);
@@ -1126,7 +1126,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 2 is allocated app capacity
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue2").
-      getResourceUsage().getMemory());
+      getResourceUsage().getMemorySize());
     
     ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1", "user1", 1);
     scheduler.update();
@@ -1134,7 +1134,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 1 is waiting with a reservation
     assertEquals(1024, scheduler.getSchedulerApp(attId1)
-        .getCurrentReservation().getMemory());
+        .getCurrentReservation().getMemorySize());
 
     // Exercise checks that reservation fits
     scheduler.handle(updateEvent);
@@ -1142,7 +1142,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Ensure the reservation still exists as allocated memory of queue1 doesn't
     // exceed max
     assertEquals(1024, scheduler.getSchedulerApp(attId1).
-        getCurrentReservation().getMemory());
+        getCurrentReservation().getMemorySize());
 
     // Now reduce max Resources of queue1 down to 2048
     out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -1166,12 +1166,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure allocated memory of queue1 doesn't exceed its maximum
     assertEquals(2048, scheduler.getQueueManager().getQueue("queue1").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
     //the reservation of queue1 should be reclaim
     assertEquals(0, scheduler.getSchedulerApp(attId1).
-        getCurrentReservation().getMemory());
+        getCurrentReservation().getMemorySize());
     assertEquals(1024, scheduler.getQueueManager().getQueue("queue2").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
   }
 
   @Test
@@ -1211,7 +1211,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 1 is allocated app capacity
     assertEquals(4096, scheduler.getQueueManager().getQueue("queue1").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
 
     // Now queue 2 requests below threshold
     ApplicationAttemptId attId = createSchedulingRequest(1024, "queue2", "user1", 1);
@@ -1220,7 +1220,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 2 has no reservation
     assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
     assertEquals(0,
         scheduler.getSchedulerApp(attId).getReservedContainers().size());
 
@@ -1231,7 +1231,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Make sure queue 2 is waiting with a reservation
     assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
-        getResourceUsage().getMemory());
+        getResourceUsage().getMemorySize());
     assertEquals(3, scheduler.getSchedulerApp(attId).getCurrentReservation()
         .getVirtualCores());
 
@@ -1444,10 +1444,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     for (FSLeafQueue p : queues) {
       if (p.getName().equals("root.queueA")) {
-        assertEquals(1024, p.getFairShare().getMemory());
+        assertEquals(1024, p.getFairShare().getMemorySize());
       }
       else if (p.getName().equals("root.queueB")) {
-        assertEquals(2048, p.getFairShare().getMemory());
+        assertEquals(2048, p.getFairShare().getMemorySize());
       }
     }
   }
@@ -1536,9 +1536,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
       if (leaf.getName().equals("root.parentq.user1")
           || leaf.getName().equals("root.parentq.user2")) {
         // assert that the fair share is 1/4th node1's capacity
-        assertEquals(capacity / 4, leaf.getFairShare().getMemory());
+        assertEquals(capacity / 4, leaf.getFairShare().getMemorySize());
         // assert that the steady fair share is 1/4th node1's capacity
-        assertEquals(capacity / 4, leaf.getSteadyFairShare().getMemory());
+        assertEquals(capacity / 4, leaf.getSteadyFairShare().getMemorySize());
         // assert weights are equal for both the user queues
         assertEquals(1.0, leaf.getWeights().getWeight(ResourceType.MEMORY), 0);
       }
@@ -1572,9 +1572,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // The steady fair share for all queues should be 0
     QueueManager queueManager = scheduler.getQueueManager();
     assertEquals(0, queueManager.getLeafQueue("child1", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
     assertEquals(0, queueManager.getLeafQueue("child2", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
 
     // Add one node
     RMNode node1 =
@@ -1582,13 +1582,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-    assertEquals(6144, scheduler.getClusterResource().getMemory());
+    assertEquals(6144, scheduler.getClusterResource().getMemorySize());
 
     // The steady fair shares for all queues should be updated
     assertEquals(2048, queueManager.getLeafQueue("child1", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
     assertEquals(2048, queueManager.getLeafQueue("child2", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
 
     // Reload the allocation configuration file
     out = new PrintWriter(new FileWriter(ALLOC_FILE));
@@ -1613,20 +1613,20 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // The steady fair shares for all queues should be updated
     assertEquals(1024, queueManager.getLeafQueue("child1", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
     assertEquals(2048, queueManager.getLeafQueue("child2", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
     assertEquals(2048, queueManager.getLeafQueue("child3", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
 
     // Remove the node, steady fair shares should back to 0
     NodeRemovedSchedulerEvent nodeEvent2 = new NodeRemovedSchedulerEvent(node1);
     scheduler.handle(nodeEvent2);
-    assertEquals(0, scheduler.getClusterResource().getMemory());
+    assertEquals(0, scheduler.getClusterResource().getMemorySize());
     assertEquals(0, queueManager.getLeafQueue("child1", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
     assertEquals(0, queueManager.getLeafQueue("child2", false)
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
   }
 
   @Test
@@ -1644,19 +1644,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             .newNodeInfo(1, Resources.createResource(6144), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
-    assertEquals(6144, scheduler.getClusterResource().getMemory());
+    assertEquals(6144, scheduler.getClusterResource().getMemorySize());
     assertEquals(6144, scheduler.getQueueManager().getRootQueue()
-        .getSteadyFairShare().getMemory());
+        .getSteadyFairShare().getMemorySize());
     assertEquals(6144, scheduler.getQueueManager()
-        .getLeafQueue("default", false).getSteadyFairShare().getMemory());
+        .getLeafQueue("default", false).getSteadyFairShare().getMemorySize());
 
     // Submit one application
     ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
     createApplicationWithAMResource(appAttemptId1, "default", "user1", null);
     assertEquals(3072, scheduler.getQueueManager()
-        .getLeafQueue("default", false).getSteadyFairShare().getMemory());
+        .getLeafQueue("default", false).getSteadyFairShare().getMemorySize());
     assertEquals(3072, scheduler.getQueueManager()
-        .getLeafQueue("user1", false).getSteadyFairShare().getMemory());
+        .getLeafQueue("user1", false).getSteadyFairShare().getMemorySize());
   }
 
   /**
@@ -1715,10 +1715,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
 
     assertEquals(2 * minReqSize, scheduler.getQueueManager().getQueue("root.queue1")
-        .getDemand().getMemory());
+        .getDemand().getMemorySize());
     assertEquals(2 * minReqSize + 2 * minReqSize, scheduler
         .getQueueManager().getQueue("root.queue2").getDemand()
-        .getMemory());
+        .getMemorySize());
   }
 
   @Test
@@ -1828,9 +1828,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     
     // One container should get reservation and the other should get nothing
     assertEquals(1024,
-        scheduler.getSchedulerApp(attId1).getCurrentReservation().getMemory());
+        scheduler.getSchedulerApp(attId1).getCurrentReservation().getMemorySize());
     assertEquals(0,
-        scheduler.getSchedulerApp(attId2).getCurrentReservation().getMemory());
+        scheduler.getSchedulerApp(attId2).getCurrentReservation().getMemorySize());
   }
 
   @Test (timeout = 5000)
@@ -3149,7 +3149,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1", true);
     assertEquals("Queue queue1's fair share should be 0", 0, queue1
-        .getFairShare().getMemory());
+        .getFairShare().getMemorySize());
 
     createSchedulingRequest(1 * 1024, "root.default", "user1");
     scheduler.update();
@@ -3167,11 +3167,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application1's AM requests 1024 MB memory",
-        1024, app1.getAMResource().getMemory());
+        1024, app1.getAMResource().getMemorySize());
     assertEquals("Application1's AM should be running",
         1, app1.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 1024 MB memory",
-        1024, queue1.getAmResourceUsage().getMemory());
+        1024, queue1.getAmResourceUsage().getMemorySize());
 
     // Exceeds no limits
     ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
@@ -3181,11 +3181,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application2's AM requests 1024 MB memory",
-        1024, app2.getAMResource().getMemory());
+        1024, app2.getAMResource().getMemorySize());
     assertEquals("Application2's AM should be running",
         1, app2.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Exceeds queue limit
     ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
@@ -3195,11 +3195,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application3's AM resource shouldn't be updated",
-        0, app3.getAMResource().getMemory());
+        0, app3.getAMResource().getMemorySize());
     assertEquals("Application3's AM should not be running",
         0, app3.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Still can run non-AM container
     createSchedulingRequestExistingApplication(1024, 1, attId1);
@@ -3208,7 +3208,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Application1 should have two running containers",
         2, app1.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Remove app1, app3's AM should become running
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
@@ -3221,9 +3221,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Application3's AM should be running",
         1, app3.getLiveContainers().size());
     assertEquals("Application3's AM requests 1024 MB memory",
-        1024, app3.getAMResource().getMemory());
+        1024, app3.getAMResource().getMemorySize());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Exceeds queue limit
     ApplicationAttemptId attId4 = createAppAttemptId(4, 1);
@@ -3233,11 +3233,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application4's AM resource shouldn't be updated",
-        0, app4.getAMResource().getMemory());
+        0, app4.getAMResource().getMemorySize());
     assertEquals("Application4's AM should not be running",
         0, app4.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Exceeds queue limit
     ApplicationAttemptId attId5 = createAppAttemptId(5, 1);
@@ -3247,11 +3247,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application5's AM resource shouldn't be updated",
-        0, app5.getAMResource().getMemory());
+        0, app5.getAMResource().getMemorySize());
     assertEquals("Application5's AM should not be running",
         0, app5.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Remove un-running app doesn't affect others
     AppAttemptRemovedSchedulerEvent appRemovedEvent4 =
@@ -3262,7 +3262,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Application5's AM should not be running",
         0, app5.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Remove app2 and app3, app5's AM should become running
     AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
@@ -3280,9 +3280,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Application5's AM should be running",
         1, app5.getLiveContainers().size());
     assertEquals("Application5's AM requests 2048 MB memory",
-        2048, app5.getAMResource().getMemory());
+        2048, app5.getAMResource().getMemorySize());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // request non-AM container for app5
     createSchedulingRequestExistingApplication(1024, 1, attId5);
@@ -3297,7 +3297,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Application5's AM should have 0 container",
         0, app5.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
     scheduler.update();
     scheduler.handle(updateEvent);
     // non-AM container should be allocated
@@ -3307,7 +3307,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         1, app5.getLiveContainers().size());
     // check non-AM container allocation won't affect queue AmResourceUsage
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Check amResource normalization
     ApplicationAttemptId attId6 = createAppAttemptId(6, 1);
@@ -3319,9 +3319,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Application6's AM should not be running",
         0, app6.getLiveContainers().size());
     assertEquals("Application6's AM resource shouldn't be updated",
-        0, app6.getAMResource().getMemory());
+        0, app6.getAMResource().getMemorySize());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     // Remove all apps
     AppAttemptRemovedSchedulerEvent appRemovedEvent5 =
@@ -3332,7 +3332,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(appRemovedEvent6);
     scheduler.update();
     assertEquals("Queue1's AM resource usage should be 0",
-        0, queue1.getAmResourceUsage().getMemory());
+        0, queue1.getAmResourceUsage().getMemorySize());
   }
 
   @Test
@@ -3375,23 +3375,23 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue queue1 =
         scheduler.getQueueManager().getLeafQueue("queue1", true);
     assertEquals("Queue queue1's fair share should be 0", 0, queue1
-        .getFairShare().getMemory());
+        .getFairShare().getMemorySize());
     FSLeafQueue queue2 =
         scheduler.getQueueManager().getLeafQueue("queue2", true);
     assertEquals("Queue queue2's fair share should be 0", 0, queue2
-        .getFairShare().getMemory());
+        .getFairShare().getMemorySize());
     FSLeafQueue queue3 =
         scheduler.getQueueManager().getLeafQueue("queue3", true);
     assertEquals("Queue queue3's fair share should be 0", 0, queue3
-        .getFairShare().getMemory());
+        .getFairShare().getMemorySize());
     FSLeafQueue queue4 =
         scheduler.getQueueManager().getLeafQueue("queue4", true);
     assertEquals("Queue queue4's fair share should be 0", 0, queue4
-        .getFairShare().getMemory());
+        .getFairShare().getMemorySize());
     FSLeafQueue queue5 =
         scheduler.getQueueManager().getLeafQueue("queue5", true);
     assertEquals("Queue queue5's fair share should be 0", 0, queue5
-        .getFairShare().getMemory());
+        .getFairShare().getMemorySize());
 
     List<String> queues = Arrays.asList("root.queue3", "root.queue4",
         "root.queue5");
@@ -3413,11 +3413,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application1's AM requests 1024 MB memory",
-        1024, app1.getAMResource().getMemory());
+        1024, app1.getAMResource().getMemorySize());
     assertEquals("Application1's AM should be running",
         1, app1.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 1024 MB memory",
-        1024, queue1.getAmResourceUsage().getMemory());
+        1024, queue1.getAmResourceUsage().getMemorySize());
 
     // Now the fair share is 1639 MB, and the maxAMShare is 0.4f,
     // so the AM is not accepted.
@@ -3428,11 +3428,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application2's AM resource shouldn't be updated",
-        0, app2.getAMResource().getMemory());
+        0, app2.getAMResource().getMemorySize());
     assertEquals("Application2's AM should not be running",
         0, app2.getLiveContainers().size());
     assertEquals("Queue2's AM resource usage should be 0 MB memory",
-        0, queue2.getAmResourceUsage().getMemory());
+        0, queue2.getAmResourceUsage().getMemorySize());
 
     // Remove the app2
     AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
@@ -3450,11 +3450,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application3's AM resource shouldn't be updated",
-            0, app3.getAMResource().getMemory());
+            0, app3.getAMResource().getMemorySize());
     assertEquals("Application3's AM should not be running",
             0, app3.getLiveContainers().size());
     assertEquals("Queue3's AM resource usage should be 0 MB memory",
-            0, queue3.getAmResourceUsage().getMemory());
+            0, queue3.getAmResourceUsage().getMemorySize());
 
     // AM4 can pass the fair share checking and it doesn't takes all
     // available VCore, but it need 5 VCores which are more than
@@ -3466,11 +3466,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.update();
     scheduler.handle(updateEvent);
     assertEquals("Application4's AM resource shouldn't be updated",
-            0, app4.getAMResource().getMemory());
+            0, app4.getAMResource().getMemorySize());
     assertEquals("Application4's AM should not be running",
             0, app4.getLiveContainers().size());
     assertEquals("Queue3's AM resource usage should be 0 MB memory",
-            0, queue3.getAmResourceUsage().getMemory());
+            0, queue3.getAmResourceUsage().getMemorySize());
   }
 
   /**
@@ -3552,11 +3552,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Allocate app1's AM container on node1.
     scheduler.handle(updateE1);
     assertEquals("Application1's AM requests 1024 MB memory",
-        1024, app1.getAMResource().getMemory());
+        1024, app1.getAMResource().getMemorySize());
     assertEquals("Application1's AM should be running",
         1, app1.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 1024 MB memory",
-        1024, queue1.getAmResourceUsage().getMemory());
+        1024, queue1.getAmResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
     createApplicationWithAMResource(attId2, "queue1", "user1", amResource2);
@@ -3566,11 +3566,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Allocate app2's AM container on node2.
     scheduler.handle(updateE2);
     assertEquals("Application2's AM requests 1024 MB memory",
-        1024, app2.getAMResource().getMemory());
+        1024, app2.getAMResource().getMemorySize());
     assertEquals("Application2's AM should be running",
         1, app2.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
     createApplicationWithAMResource(attId3, "queue1", "user1", amResource3);
@@ -3583,11 +3583,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Similarly app3 reserves a container on node2.
     scheduler.handle(updateE2);
     assertEquals("Application3's AM resource shouldn't be updated",
-        0, app3.getAMResource().getMemory());
+        0, app3.getAMResource().getMemorySize());
     assertEquals("Application3's AM should not be running",
         0, app3.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId4 = createAppAttemptId(4, 1);
     createApplicationWithAMResource(attId4, "queue1", "user1", amResource4);
@@ -3598,21 +3598,21 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // app3 already reserved its container on node1.
     scheduler.handle(updateE1);
     assertEquals("Application4's AM resource shouldn't be updated",
-        0, app4.getAMResource().getMemory());
+        0, app4.getAMResource().getMemorySize());
     assertEquals("Application4's AM should not be running",
         0, app4.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     scheduler.update();
     // Allocate app4's AM container on node3.
     scheduler.handle(updateE3);
     assertEquals("Application4's AM requests 5120 MB memory",
-        5120, app4.getAMResource().getMemory());
+        5120, app4.getAMResource().getMemorySize());
     assertEquals("Application4's AM should be running",
         1, app4.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 7168 MB memory",
-        7168, queue1.getAmResourceUsage().getMemory());
+        7168, queue1.getAmResourceUsage().getMemorySize());
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
         new AppAttemptRemovedSchedulerEvent(attId1,
@@ -3620,7 +3620,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Release app1's AM container on node1.
     scheduler.handle(appRemovedEvent1);
     assertEquals("Queue1's AM resource usage should be 6144 MB memory",
-        6144, queue1.getAmResourceUsage().getMemory());
+        6144, queue1.getAmResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId5 = createAppAttemptId(5, 1);
     createApplicationWithAMResource(attId5, "queue1", "user1", amResource5);
@@ -3632,11 +3632,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // exceeding queue MaxAMShare limit.
     scheduler.handle(updateE1);
     assertEquals("Application5's AM requests 1024 MB memory",
-        1024, app5.getAMResource().getMemory());
+        1024, app5.getAMResource().getMemorySize());
     assertEquals("Application5's AM should be running",
         1, app5.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 7168 MB memory",
-        7168, queue1.getAmResourceUsage().getMemory());
+        7168, queue1.getAmResourceUsage().getMemorySize());
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent3 =
         new AppAttemptRemovedSchedulerEvent(attId3,
@@ -3644,7 +3644,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Remove app3.
     scheduler.handle(appRemovedEvent3);
     assertEquals("Queue1's AM resource usage should be 7168 MB memory",
-        7168, queue1.getAmResourceUsage().getMemory());
+        7168, queue1.getAmResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId6 = createAppAttemptId(6, 1);
     createApplicationWithAMResource(attId6, "queue1", "user1", amResource6);
@@ -3655,11 +3655,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // it exceeds queue MaxAMShare limit.
     scheduler.handle(updateE1);
     assertEquals("Application6's AM resource shouldn't be updated",
-        0, app6.getAMResource().getMemory());
+        0, app6.getAMResource().getMemorySize());
     assertEquals("Application6's AM should not be running",
         0, app6.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 7168 MB memory",
-        7168, queue1.getAmResourceUsage().getMemory());
+        7168, queue1.getAmResourceUsage().getMemorySize());
 
     ApplicationAttemptId attId7 = createAppAttemptId(7, 1);
     createApplicationWithAMResource(attId7, "queue1", "user1", amResource7);
@@ -3670,11 +3670,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // app6 didn't reserve a container on node1.
     scheduler.handle(updateE1);
     assertEquals("Application7's AM requests 1024 MB memory",
-        1024, app7.getAMResource().getMemory());
+        1024, app7.getAMResource().getMemorySize());
     assertEquals("Application7's AM should be running",
         1, app7.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 8192 MB memory",
-        8192, queue1.getAmResourceUsage().getMemory());
+        8192, queue1.getAmResourceUsage().getMemorySize());
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent4 =
         new AppAttemptRemovedSchedulerEvent(attId4,
@@ -3682,7 +3682,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Release app4's AM container on node3.
     scheduler.handle(appRemovedEvent4);
     assertEquals("Queue1's AM resource usage should be 3072 MB memory",
-        3072, queue1.getAmResourceUsage().getMemory());
+        3072, queue1.getAmResourceUsage().getMemorySize());
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent5 =
         new AppAttemptRemovedSchedulerEvent(attId5,
@@ -3690,7 +3690,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Release app5's AM container on node1.
     scheduler.handle(appRemovedEvent5);
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-              2048, queue1.getAmResourceUsage().getMemory());
+              2048, queue1.getAmResourceUsage().getMemorySize());
 
     scheduler.update();
     // app6 reserves a container on node1 because node1's available resource
@@ -3709,21 +3709,21 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // app6 already reserved a container on node1.
     scheduler.handle(updateE1);
     assertEquals("Application8's AM resource shouldn't be updated",
-        0, app8.getAMResource().getMemory());
+        0, app8.getAMResource().getMemorySize());
     assertEquals("Application8's AM should not be running",
         0, app8.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
     scheduler.update();
     // app8 can't allocate a container on node2 because
     // app6 already reserved a container on node2.
     scheduler.handle(updateE2);
     assertEquals("Application8's AM resource shouldn't be updated",
-        0, app8.getAMResource().getMemory());
+        0, app8.getAMResource().getMemorySize());
     assertEquals("Application8's AM should not be running",
         0, app8.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
-        2048, queue1.getAmResourceUsage().getMemory());
+        2048, queue1.getAmResourceUsage().getMemorySize());
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
         new AppAttemptRemovedSchedulerEvent(attId2,
@@ -3731,17 +3731,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Release app2's AM container on node2.
     scheduler.handle(appRemovedEvent2);
     assertEquals("Queue1's AM resource usage should be 1024 MB memory",
-        1024, queue1.getAmResourceUsage().getMemory());
+        1024, queue1.getAmResourceUsage().getMemorySize());
 
     scheduler.update();
     // app6 turns the reservation into an allocation on node2.
     scheduler.handle(updateE2);
     assertEquals("Application6's AM requests 10240 MB memory",
-        10240, app6.getAMResource().getMemory());
+        10240, app6.getAMResource().getMemorySize());
     assertEquals("Application6's AM should be running",
         1, app6.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 11264 MB memory",
-        11264, queue1.getAmResourceUsage().getMemory());
+        11264, queue1.getAmResourceUsage().getMemorySize());
 
     scheduler.update();
     // app6 unreserve its container on node1 because
@@ -3749,11 +3749,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Now app8 can allocate its AM container on node1.
     scheduler.handle(updateE1);
     assertEquals("Application8's AM requests 1024 MB memory",
-        1024, app8.getAMResource().getMemory());
+        1024, app8.getAMResource().getMemorySize());
     assertEquals("Application8's AM should be running",
         1, app8.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 12288 MB memory",
-        12288, queue1.getAmResourceUsage().getMemory());
+        12288, queue1.getAmResourceUsage().getMemorySize());
   }
 
   @Test
@@ -4450,19 +4450,19 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals(usedResource.getMemory(), 0);
+    Assert.assertEquals(usedResource.getMemorySize(), 0);
     Assert.assertEquals(usedResource.getVirtualCores(), 0);
     // Check total resource of scheduler node is also changed to 0 GB 0 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals(totalResource.getMemory(), 0 * GB);
+    Assert.assertEquals(totalResource.getMemorySize(), 0 * GB);
     Assert.assertEquals(totalResource.getVirtualCores(), 0);
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals(availableResource.getMemory(), 0);
+    Assert.assertEquals(availableResource.getMemorySize(), 0);
     Assert.assertEquals(availableResource.getVirtualCores(), 0);
   }
 

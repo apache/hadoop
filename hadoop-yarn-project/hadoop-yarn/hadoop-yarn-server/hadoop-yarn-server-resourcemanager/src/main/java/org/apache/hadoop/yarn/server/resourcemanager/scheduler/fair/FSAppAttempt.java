@@ -193,7 +193,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       Resources.subtractFrom(availableResources,
           node.getUnallocatedResource());
     }
-    if (availableResources.getMemory() < 0) {
+    if (availableResources.getMemorySize() < 0) {
       availableResources.setMemory(0);
     }
     if (availableResources.getVirtualCores() < 0) {

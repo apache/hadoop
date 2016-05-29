@@ -161,7 +161,7 @@ public class TestDistributedSchedulingService {
     Assert.assertEquals(4,
         dsRegResp.getMaxAllocatableCapabilty().getVirtualCores());
     Assert.assertEquals(1024,
-        dsRegResp.getMinAllocatableCapabilty().getMemory());
+        dsRegResp.getMinAllocatableCapabilty().getMemorySize());
     Assert.assertEquals(2,
         dsRegResp.getIncrAllocatableCapabilty().getVirtualCores());
 

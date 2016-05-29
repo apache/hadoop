@@ -157,7 +157,7 @@ public class CheckpointAMPreemptionPolicy implements AMPreemptionPolicy {
         int pendingPreemptionRam = 0;
         int pendingPreemptionCores = 0;
         for (Resource r : pendingFlexiblePreemptions.values()) {
-          pendingPreemptionRam += r.getMemory();
+          pendingPreemptionRam += r.getMemorySize();
           pendingPreemptionCores += r.getVirtualCores();
         }
 
@@ -171,8 +171,8 @@ public class CheckpointAMPreemptionPolicy implements AMPreemptionPolicy {
 
           LOG.info("ResourceRequest:" + reqRsrc);
           int reqCont = reqRsrc.getNumContainers();
-          int reqMem = reqRsrc.getCapability().getMemory();
-          int totalMemoryToRelease = reqCont * reqMem;
+          long reqMem = reqRsrc.getCapability().getMemorySize();
+          long totalMemoryToRelease = reqCont * reqMem;
           int reqCores = reqRsrc.getCapability().getVirtualCores();
           int totalCoresToRelease = reqCont * reqCores;
 
@@ -204,7 +204,7 @@ public class CheckpointAMPreemptionPolicy implements AMPreemptionPolicy {
               break;
             }
             TaskAttemptId reduceId = ctxt.getTaskAttempt(cont.getId());
-            int cMem = cont.getResource().getMemory();
+            int cMem = (int) cont.getResource().getMemorySize();
             int cCores = cont.getResource().getVirtualCores();
 
             if (!toBePreempted.contains(reduceId)) {

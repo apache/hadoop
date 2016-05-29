@@ -28,7 +28,6 @@ import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -38,8 +37,6 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
-import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -53,10 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -397,15 +390,15 @@ public class TestContainerAllocation {
     
     // NM1 has available resource = 2G (8G - 2 * 1G - 4G)
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     // Usage of queue = 4G + 2 * 1G + 4G (reserved)
     Assert.assertEquals(10 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed().getMemory());
+        .getUsed().getMemorySize());
     Assert.assertEquals(4 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved().getMemory());
+        .getReserved().getMemorySize());
     Assert.assertEquals(4 * GB, leafQueue.getQueueResourceUsage().getReserved()
-        .getMemory());
+        .getMemorySize());
 
     // Cancel asks of app2 and re-kick RM
     am2.allocate("*", 4 * GB, 0, new ArrayList<ContainerId>());
@@ -414,14 +407,14 @@ public class TestContainerAllocation {
     // App2's reservation will be cancelled
     Assert.assertTrue(schedulerApp2.getReservedContainers().size() == 0);
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     Assert.assertEquals(6 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed().getMemory());
+        .getUsed().getMemorySize());
     Assert.assertEquals(0, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved().getMemory());
+        .getReserved().getMemorySize());
     Assert.assertEquals(0, leafQueue.getQueueResourceUsage().getReserved()
-        .getMemory());
+        .getMemorySize());
 
     rm1.close();
   }
@@ -480,15 +473,15 @@ public class TestContainerAllocation {
 
     // NM1 has available resource = 2G (8G - 2 * 1G - 4G)
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     // Usage of queue = 4G + 2 * 1G + 4G (reserved)
     Assert.assertEquals(10 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed().getMemory());
+        .getUsed().getMemorySize());
     Assert.assertEquals(4 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved().getMemory());
+        .getReserved().getMemorySize());
     Assert.assertEquals(4 * GB, leafQueue.getQueueResourceUsage().getReserved()
-        .getMemory());
+        .getMemorySize());
 
     // Mark one app1 container as killed/completed and re-kick RM
     for (RMContainer container : schedulerApp1.getLiveContainers()) {
@@ -509,15 +502,15 @@ public class TestContainerAllocation {
 
     // NM1 has available resource = 2G (8G - 2 * 1G - 4G)
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     // Usage of queue = 4G + 2 * 1G
     Assert.assertEquals(6 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed().getMemory());
+        .getUsed().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved().getMemory());
+        .getReserved().getMemorySize());
     Assert.assertEquals(0 * GB, leafQueue.getQueueResourceUsage().getReserved()
-        .getMemory());
+        .getMemorySize());
 
     rm1.close();
   }
@@ -576,15 +569,15 @@ public class TestContainerAllocation {
 
     // NM1 has available resource = 2G (8G - 2 * 1G - 4G)
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     // Usage of queue = 4G + 2 * 1G + 4G (reserved)
     Assert.assertEquals(10 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed().getMemory());
+        .getUsed().getMemorySize());
     Assert.assertEquals(4 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved().getMemory());
+        .getReserved().getMemorySize());
     Assert.assertEquals(4 * GB, leafQueue.getQueueResourceUsage().getReserved()
-        .getMemory());
+        .getMemorySize());
 
     // Remove the node
     cs.handle(new NodeRemovedSchedulerEvent(rmNode1));
@@ -596,11 +589,11 @@ public class TestContainerAllocation {
 
     // Usage and Reserved capacity of queue is 0
     Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed().getMemory());
+        .getUsed().getMemorySize());
     Assert.assertEquals(0 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved().getMemory());
+        .getReserved().getMemorySize());
     Assert.assertEquals(0 * GB, leafQueue.getQueueResourceUsage().getReserved()
-        .getMemory());
+        .getMemorySize());
 
     rm1.close();
   }

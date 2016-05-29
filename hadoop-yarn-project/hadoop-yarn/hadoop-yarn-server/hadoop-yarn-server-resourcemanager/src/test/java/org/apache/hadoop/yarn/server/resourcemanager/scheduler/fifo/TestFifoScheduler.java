@@ -335,9 +335,9 @@ public class TestFifoScheduler {
     
     // SchedulerNode's total resource and available resource are changed.
     assertEquals(1024, scheduler.getNodeTracker().getNode(node0.getNodeID())
-        .getTotalResource().getMemory());
+        .getTotalResource().getMemorySize());
     assertEquals(1024, scheduler.getNodeTracker().getNode(node0.getNodeID()).
-        getUnallocatedResource().getMemory(), 1024);
+        getUnallocatedResource().getMemorySize(), 1024);
     QueueInfo queueInfo = scheduler.getQueueInfo(null, false, false);
     Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
     
@@ -693,7 +693,7 @@ public class TestFifoScheduler {
     am1.registerAppAttempt();
     SchedulerNodeReport report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemory());
+    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
 
     RMApp app2 = rm.submitApp(2048);
     // kick the scheduling, 2GB given to AM, remaining 2 GB on nm2
@@ -703,7 +703,7 @@ public class TestFifoScheduler {
     am2.registerAppAttempt();
     SchedulerNodeReport report_nm2 =
         rm.getResourceScheduler().getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(2 * GB, report_nm2.getUsedResource().getMemory());
+    Assert.assertEquals(2 * GB, report_nm2.getUsedResource().getMemorySize());
 
     // add request for containers
     am1.addRequests(new String[] { "127.0.0.1", "127.0.0.2" }, GB, 1, 1);
@@ -729,24 +729,24 @@ public class TestFifoScheduler {
 
     List<Container> allocated1 = alloc1Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated1.size());
-    Assert.assertEquals(1 * GB, allocated1.get(0).getResource().getMemory());
+    Assert.assertEquals(1 * GB, allocated1.get(0).getResource().getMemorySize());
     Assert.assertEquals(nm1.getNodeId(), allocated1.get(0).getNodeId());
 
     List<Container> allocated2 = alloc2Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated2.size());
-    Assert.assertEquals(3 * GB, allocated2.get(0).getResource().getMemory());
+    Assert.assertEquals(3 * GB, allocated2.get(0).getResource().getMemorySize());
     Assert.assertEquals(nm1.getNodeId(), allocated2.get(0).getNodeId());
 
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     report_nm2 = rm.getResourceScheduler().getNodeReport(nm2.getNodeId());
-    Assert.assertEquals(0, report_nm1.getAvailableResource().getMemory());
-    Assert.assertEquals(2 * GB, report_nm2.getAvailableResource().getMemory());
+    Assert.assertEquals(0, report_nm1.getAvailableResource().getMemorySize());
+    Assert.assertEquals(2 * GB, report_nm2.getAvailableResource().getMemorySize());
 
-    Assert.assertEquals(6 * GB, report_nm1.getUsedResource().getMemory());
-    Assert.assertEquals(2 * GB, report_nm2.getUsedResource().getMemory());
+    Assert.assertEquals(6 * GB, report_nm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(2 * GB, report_nm2.getUsedResource().getMemorySize());
 
     Container c1 = allocated1.get(0);
-    Assert.assertEquals(GB, c1.getResource().getMemory());
+    Assert.assertEquals(GB, c1.getResource().getMemorySize());
     ContainerStatus containerStatus =
         BuilderUtils.newContainerStatus(c1.getId(), ContainerState.COMPLETE,
             "", 0, c1.getResource());
@@ -761,7 +761,7 @@ public class TestFifoScheduler {
     Assert.assertEquals(1, am1.schedule().getCompletedContainersStatuses()
         .size());
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(5 * GB, report_nm1.getUsedResource().getMemory());
+    Assert.assertEquals(5 * GB, report_nm1.getUsedResource().getMemorySize());
 
     rm.stop();
   }
@@ -818,7 +818,7 @@ public class TestFifoScheduler {
     int checkAlloc =
         conf.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    Assert.assertEquals(checkAlloc, report_nm1.getUsedResource().getMemory());
+    Assert.assertEquals(checkAlloc, report_nm1.getUsedResource().getMemorySize());
 
     rm.stop();
   }
@@ -1072,12 +1072,12 @@ public class TestFifoScheduler {
     Allocation allocation1 =
         fs.allocate(appAttemptId1, emptyAsk, emptyId, null, null, null, null);
     Assert.assertEquals("Allocation headroom", 1 * GB, allocation1
-        .getResourceLimit().getMemory());
+        .getResourceLimit().getMemorySize());
 
     Allocation allocation2 =
         fs.allocate(appAttemptId2, emptyAsk, emptyId, null, null, null, null);
     Assert.assertEquals("Allocation headroom", 1 * GB, allocation2
-        .getResourceLimit().getMemory());
+        .getResourceLimit().getMemorySize());
 
     rm.stop();
   }
@@ -1099,8 +1099,8 @@ public class TestFifoScheduler {
     SchedulerNodeReport report_nm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     // check node report, 2 GB used and 2 GB available
-    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemory());
-    Assert.assertEquals(2 * GB, report_nm1.getAvailableResource().getMemory());
+    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(2 * GB, report_nm1.getAvailableResource().getMemorySize());
 
     // add request for containers
     am1.addRequests(new String[] { "127.0.0.1", "127.0.0.2" }, 2 * GB, 1, 1);
@@ -1116,17 +1116,17 @@ public class TestFifoScheduler {
 
     List<Container> allocated1 = alloc1Response.getAllocatedContainers();
     Assert.assertEquals(1, allocated1.size());
-    Assert.assertEquals(2 * GB, allocated1.get(0).getResource().getMemory());
+    Assert.assertEquals(2 * GB, allocated1.get(0).getResource().getMemorySize());
     Assert.assertEquals(nm1.getNodeId(), allocated1.get(0).getNodeId());
 
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     // check node report, 4 GB used and 0 GB available
-    Assert.assertEquals(0, report_nm1.getAvailableResource().getMemory());
-    Assert.assertEquals(4 * GB, report_nm1.getUsedResource().getMemory());
+    Assert.assertEquals(0, report_nm1.getAvailableResource().getMemorySize());
+    Assert.assertEquals(4 * GB, report_nm1.getUsedResource().getMemorySize());
 
     // check container is assigned with 2 GB.
     Container c1 = allocated1.get(0);
-    Assert.assertEquals(2 * GB, c1.getResource().getMemory());
+    Assert.assertEquals(2 * GB, c1.getResource().getMemorySize());
 
     // update node resource to 2 GB, so resource is over-consumed.
     Map<NodeId, ResourceOption> nodeResourceMap =
@@ -1141,7 +1141,7 @@ public class TestFifoScheduler {
     while (waitCount++ != 20) {
       report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
       if (null != report_nm1 &&
-          report_nm1.getAvailableResource().getMemory() != 0) {
+          report_nm1.getAvailableResource().getMemorySize() != 0) {
         break;
       }
       LOG.info("Waiting for RMNodeResourceUpdateEvent to be handled... Tried "
@@ -1150,8 +1150,9 @@ public class TestFifoScheduler {
     }
     // Now, the used resource is still 4 GB, and available resource is minus
     // value.
-    Assert.assertEquals(4 * GB, report_nm1.getUsedResource().getMemory());
-    Assert.assertEquals(-2 * GB, report_nm1.getAvailableResource().getMemory());
+    report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
+    Assert.assertEquals(4 * GB, report_nm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(-2 * GB, report_nm1.getAvailableResource().getMemorySize());
 
     // Check container can complete successfully in case of resource
     // over-commitment.
@@ -1169,9 +1170,9 @@ public class TestFifoScheduler {
     Assert.assertEquals(1, am1.schedule().getCompletedContainersStatuses()
         .size());
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
-    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemory());
+    Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
     // As container return 2 GB back, the available resource becomes 0 again.
-    Assert.assertEquals(0 * GB, report_nm1.getAvailableResource().getMemory());
+    Assert.assertEquals(0 * GB, report_nm1.getAvailableResource().getMemorySize());
     rm.stop();
   }
 
@@ -1248,30 +1249,30 @@ public class TestFifoScheduler {
     Resource usedResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals(usedResource.getMemory(), 1 * GB);
+    Assert.assertEquals(usedResource.getMemorySize(), 1 * GB);
     Assert.assertEquals(usedResource.getVirtualCores(), 1);
     // Check total resource of scheduler node is also changed to 1 GB 1 core
     Resource totalResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals(totalResource.getMemory(), 1 * GB);
+    Assert.assertEquals(totalResource.getMemorySize(), 1 * GB);
     Assert.assertEquals(totalResource.getVirtualCores(), 1);
     // Check the available resource is 0/0
     Resource availableResource =
         resourceManager.getResourceScheduler()
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals(availableResource.getMemory(), 0);
+    Assert.assertEquals(availableResource.getMemorySize(), 0);
     Assert.assertEquals(availableResource.getVirtualCores(), 0);
   }
 
   private void checkApplicationResourceUsage(int expected, 
       Application application) {
-    Assert.assertEquals(expected, application.getUsedResources().getMemory());
+    Assert.assertEquals(expected, application.getUsedResources().getMemorySize());
   }
   
   private void checkNodeResourceUsage(int expected,
       org.apache.hadoop.yarn.server.resourcemanager.NodeManager node) {
-    Assert.assertEquals(expected, node.getUsed().getMemory());
+    Assert.assertEquals(expected, node.getUsed().getMemorySize());
     node.checkResourceUsage();
   }
 

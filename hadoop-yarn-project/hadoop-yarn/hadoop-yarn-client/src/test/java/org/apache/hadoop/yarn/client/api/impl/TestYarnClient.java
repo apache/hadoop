@@ -1209,7 +1209,7 @@ public class TestYarnClient {
     for (attempts = 10; attempts > 0; attempts--) {
       if (cluster.getResourceManager().getRMContext().getReservationSystem()
           .getPlan(ReservationSystemTestUtil.reservationQ).getTotalCapacity()
-          .getMemory() > 6000) {
+          .getMemorySize() > 6000) {
         break;
       }
       try {

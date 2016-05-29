@@ -1514,14 +1514,14 @@ public class RMWebServices extends WebServices {
       String msg = "Requested more cores than configured max";
       throw new BadRequestException(msg);
     }
-    if (newApp.getResource().getMemory() > rm.getConfig().getInt(
+    if (newApp.getResource().getMemorySize() > rm.getConfig().getInt(
       YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB)) {
       String msg = "Requested more memory than configured max";
       throw new BadRequestException(msg);
     }
     Resource r =
-        Resource.newInstance(newApp.getResource().getMemory(), newApp
+        Resource.newInstance(newApp.getResource().getMemorySize(), newApp
           .getResource().getvCores());
     return r;
   }
@@ -2012,7 +2012,7 @@ public class RMWebServices extends WebServices {
         .getReservationRequest()) {
       ResourceInfo rInfo = resReqInfo.getCapability();
       Resource capability =
-          Resource.newInstance(rInfo.getMemory(), rInfo.getvCores());
+          Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
       int numContainers = resReqInfo.getNumContainers();
       int minConcurrency = resReqInfo.getMinConcurrency();
       long duration = resReqInfo.getDuration();
@@ -2125,7 +2125,7 @@ public class RMWebServices extends WebServices {
         .getReservationRequest()) {
       ResourceInfo rInfo = resReqInfo.getCapability();
       Resource capability =
-          Resource.newInstance(rInfo.getMemory(), rInfo.getvCores());
+          Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
       int numContainers = resReqInfo.getNumContainers();
       int minConcurrency = resReqInfo.getMinConcurrency();
       long duration = resReqInfo.getDuration();

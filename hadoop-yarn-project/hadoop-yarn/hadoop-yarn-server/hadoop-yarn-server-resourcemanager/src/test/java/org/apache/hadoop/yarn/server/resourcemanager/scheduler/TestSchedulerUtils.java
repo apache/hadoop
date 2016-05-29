@@ -114,37 +114,37 @@ public class TestSchedulerUtils {
     ask.setCapability(Resources.createResource(-1024));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(minMemory, ask.getCapability().getMemory());
+    assertEquals(minMemory, ask.getCapability().getMemorySize());
 
     // case zero memory
     ask.setCapability(Resources.createResource(0));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(minMemory, ask.getCapability().getMemory());
+    assertEquals(minMemory, ask.getCapability().getMemorySize());
 
     // case memory is a multiple of minMemory
     ask.setCapability(Resources.createResource(2 * minMemory));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(2 * minMemory, ask.getCapability().getMemory());
+    assertEquals(2 * minMemory, ask.getCapability().getMemorySize());
 
     // case memory is not a multiple of minMemory
     ask.setCapability(Resources.createResource(minMemory + 10));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(2 * minMemory, ask.getCapability().getMemory());
+    assertEquals(2 * minMemory, ask.getCapability().getMemorySize());
 
     // case memory is equal to max allowed
     ask.setCapability(Resources.createResource(maxMemory));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(maxMemory, ask.getCapability().getMemory());
+    assertEquals(maxMemory, ask.getCapability().getMemorySize());
 
     // case memory is just less than max
     ask.setCapability(Resources.createResource(maxMemory - 10));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(maxMemory, ask.getCapability().getMemory());
+    assertEquals(maxMemory, ask.getCapability().getMemorySize());
 
     // max is not a multiple of min
     maxResource = Resources.createResource(maxMemory - 10, 0);
@@ -152,14 +152,14 @@ public class TestSchedulerUtils {
     // multiple of minMemory > maxMemory, then reduce to maxMemory
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(maxResource.getMemory(), ask.getCapability().getMemory());
+    assertEquals(maxResource.getMemorySize(), ask.getCapability().getMemorySize());
 
     // ask is more than max
     maxResource = Resources.createResource(maxMemory, 0);
     ask.setCapability(Resources.createResource(maxMemory + 100));
     SchedulerUtils.normalizeRequest(ask, resourceCalculator, null, minResource,
         maxResource);
-    assertEquals(maxResource.getMemory(), ask.getCapability().getMemory());
+    assertEquals(maxResource.getMemorySize(), ask.getCapability().getMemorySize());
   }
   
   @Test (timeout = 30000)
@@ -184,7 +184,7 @@ public class TestSchedulerUtils {
         ask, resourceCalculator, clusterResource, minResource, maxResource);
     assertEquals(minResource, ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
-    assertEquals(1024, ask.getCapability().getMemory());
+    assertEquals(1024, ask.getCapability().getMemorySize());
 
     // case non-zero memory & zero cores
     ask.setCapability(Resources.createResource(1536, 0));
@@ -192,7 +192,7 @@ public class TestSchedulerUtils {
         ask, resourceCalculator, clusterResource, minResource, maxResource);
     assertEquals(Resources.createResource(2048, 1), ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
-    assertEquals(2048, ask.getCapability().getMemory());
+    assertEquals(2048, ask.getCapability().getMemorySize());
   }
   
   @Test(timeout = 30000)

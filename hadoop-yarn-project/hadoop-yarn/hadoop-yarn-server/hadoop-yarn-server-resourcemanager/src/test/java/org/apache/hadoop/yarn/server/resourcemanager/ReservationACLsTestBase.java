@@ -488,7 +488,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
 
   private boolean checkCapacity(Collection<Plan> plans) {
     for (Plan plan : plans) {
-      if (plan.getTotalCapacity().getMemory() > 0) {
+      if (plan.getTotalCapacity().getMemorySize() > 0) {
         return true;
       }
     }

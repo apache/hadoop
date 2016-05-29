@@ -955,14 +955,17 @@ public class TestProportionalCapacityPreemptionPolicy {
     // which is likely triggered since we use small numbers for readability
     //run with Logger.getRootLogger().setLevel(Level.DEBUG);
     verify(mDisp, times(9)).handle(argThat(new IsPreemptionRequestFor(appC)));
-    assertEquals(10, policy.getQueuePartitions().get("queueE").get("").preemptableExtra.getMemory());
+    assertEquals(10, policy.getQueuePartitions().get("queueE").get("").preemptableExtra.getMemorySize());
     //2nd level child(E) preempts 10, but parent A has only 9 extra
     //check the parent can prempt only the extra from > 2 level child
-    TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get("queueA").get("");
-    assertEquals(0, tempQueueAPartition.untouchableExtra.getMemory());
-    int extraForQueueA = tempQueueAPartition.getUsed().getMemory()
-        - tempQueueAPartition.getGuaranteed().getMemory();
-    assertEquals(extraForQueueA,tempQueueAPartition.preemptableExtra.getMemory());
+    TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get(
+        "queueA").get("");
+    assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
+    long extraForQueueA =
+        tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition
+            .getGuaranteed().getMemorySize();
+    assertEquals(extraForQueueA,
+        tempQueueAPartition.preemptableExtra.getMemorySize());
   }
 
   @Test
@@ -985,14 +988,18 @@ public class TestProportionalCapacityPreemptionPolicy {
     policy.editSchedule();
 
     verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appC)));
-    assertEquals(10, policy.getQueuePartitions().get("queueE").get("").preemptableExtra.getMemory());
+    assertEquals(10, policy.getQueuePartitions().get("queueE")
+        .get("").preemptableExtra.getMemorySize());
     //2nd level child(E) preempts 10, but parent A has only 9 extra
     //check the parent can prempt only the extra from > 2 level child
-    TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get("queueA").get("");
-    assertEquals(0, tempQueueAPartition.untouchableExtra.getMemory());
-    int extraForQueueA = tempQueueAPartition.getUsed().getMemory()
-        - tempQueueAPartition.getGuaranteed().getMemory();
-    assertEquals(extraForQueueA,tempQueueAPartition.preemptableExtra.getMemory());
+    TempQueuePerPartition tempQueueAPartition = policy.getQueuePartitions().get(
+        "queueA").get("");
+    assertEquals(0, tempQueueAPartition.untouchableExtra.getMemorySize());
+    long extraForQueueA =
+        tempQueueAPartition.getUsed().getMemorySize() - tempQueueAPartition
+            .getGuaranteed().getMemorySize();
+    assertEquals(extraForQueueA,
+        tempQueueAPartition.preemptableExtra.getMemorySize());
   }
 
   static class IsPreemptionRequestFor
@@ -1122,12 +1129,12 @@ public class TestProportionalCapacityPreemptionPolicy {
     when(root.getAbsoluteCapacity()).thenReturn(
         Resources.divide(rc, tot, abs[0], tot));
     when(root.getAbsoluteMaximumCapacity()).thenReturn(
-        maxCap[0] / (float) tot.getMemory());
+        maxCap[0] / (float) tot.getMemorySize());
     when(root.getQueueResourceUsage()).thenReturn(resUsage);
     QueueCapacities rootQc = new QueueCapacities(true);
     rootQc.setAbsoluteUsedCapacity(Resources.divide(rc, tot, used[0], tot));
     rootQc.setAbsoluteCapacity(Resources.divide(rc, tot, abs[0], tot));
-    rootQc.setAbsoluteMaximumCapacity(maxCap[0] / (float) tot.getMemory());
+    rootQc.setAbsoluteMaximumCapacity(maxCap[0] / (float) tot.getMemorySize());
     when(root.getQueueCapacities()).thenReturn(rootQc);
     when(root.getQueuePath()).thenReturn(CapacitySchedulerConfiguration.ROOT);
     boolean preemptionDisabled = mockPreemptionStatus("root");
@@ -1153,13 +1160,13 @@ public class TestProportionalCapacityPreemptionPolicy {
       when(q.getAbsoluteCapacity()).thenReturn(
           Resources.divide(rc, tot, abs[i], tot));
       when(q.getAbsoluteMaximumCapacity()).thenReturn(
-          maxCap[i] / (float) tot.getMemory());
+          maxCap[i] / (float) tot.getMemorySize());
 
       // We need to make these fields to QueueCapacities
       QueueCapacities qc = new QueueCapacities(false);
       qc.setAbsoluteUsedCapacity(Resources.divide(rc, tot, used[i], tot));
       qc.setAbsoluteCapacity(Resources.divide(rc, tot, abs[i], tot));
-      qc.setAbsoluteMaximumCapacity(maxCap[i] / (float) tot.getMemory());
+      qc.setAbsoluteMaximumCapacity(maxCap[i] / (float) tot.getMemorySize());
       when(q.getQueueCapacities()).thenReturn(qc);
 
       String parentPathName = p.getQueuePath();
