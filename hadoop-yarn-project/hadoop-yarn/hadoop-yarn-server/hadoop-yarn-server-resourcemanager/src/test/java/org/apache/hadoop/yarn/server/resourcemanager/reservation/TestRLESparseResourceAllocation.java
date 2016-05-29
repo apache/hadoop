@@ -349,24 +349,24 @@ public class TestRLESparseResourceAllocation {
     // does not handle removal of "partial"
     // allocations correctly.
     Assert.assertEquals(102400, rleSparseVector.getCapacityAtTime(10)
-        .getMemory());
-    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(13).getMemory());
-    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(19).getMemory());
+        .getMemorySize());
+    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(13).getMemorySize());
+    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(19).getMemorySize());
     Assert.assertEquals(102400, rleSparseVector.getCapacityAtTime(21)
-        .getMemory());
+        .getMemorySize());
     Assert.assertEquals(2 * 102400, rleSparseVector.getCapacityAtTime(26)
-        .getMemory());
+        .getMemorySize());
 
     ReservationInterval riRemove2 = new ReservationInterval(9, 13);
     rleSparseVector.removeInterval(riRemove2, rr);
     LOG.info(rleSparseVector.toString());
 
-    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(11).getMemory());
+    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(11).getMemorySize());
     Assert.assertEquals(-102400, rleSparseVector.getCapacityAtTime(9)
-        .getMemory());
-    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(13).getMemory());
+        .getMemorySize());
+    Assert.assertEquals(0, rleSparseVector.getCapacityAtTime(13).getMemorySize());
     Assert.assertEquals(102400, rleSparseVector.getCapacityAtTime(20)
-        .getMemory());
+        .getMemorySize());
 
   }
 

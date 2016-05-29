@@ -56,8 +56,8 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
   private Resource staleClusterCapacity = null;
 
   // Max allocation
-  private int maxNodeMemory = -1;
-  private int maxNodeVCores = -1;
+  private long maxNodeMemory = -1;
+  private long maxNodeVCores = -1;
   private Resource configuredMaxAllocation;
   private boolean forceConfiguredMaxAllocation = true;
   private long configuredMaxAllocationWaitTime;
@@ -211,7 +211,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       }
 
       return Resources.createResource(
-          Math.min(configuredMaxAllocation.getMemory(), maxNodeMemory),
+          Math.min(configuredMaxAllocation.getMemorySize(), maxNodeMemory),
           Math.min(configuredMaxAllocation.getVirtualCores(), maxNodeVCores)
       );
     } finally {
@@ -224,7 +224,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
     writeLock.lock();
     try {
       if (add) { // added node
-        int nodeMemory = totalResource.getMemory();
+        long nodeMemory = totalResource.getMemorySize();
         if (nodeMemory > maxNodeMemory) {
           maxNodeMemory = nodeMemory;
         }
@@ -233,7 +233,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
           maxNodeVCores = nodeVCores;
         }
       } else {  // removed node
-        if (maxNodeMemory == totalResource.getMemory()) {
+        if (maxNodeMemory == totalResource.getMemorySize()) {
           maxNodeMemory = -1;
         }
         if (maxNodeVCores == totalResource.getVirtualCores()) {

@@ -54,8 +54,8 @@ class DefaultSchedulerPage extends RmView {
     @Override public void render(Block html) {
       info("\'" + sinfo.getQueueName() + "\' Queue Status").
         _("Queue State:" , sinfo.getState()).
-        _("Minimum Queue Memory Capacity:" , Integer.toString(sinfo.getMinQueueMemoryCapacity())).
-        _("Maximum Queue Memory Capacity:" , Integer.toString(sinfo.getMaxQueueMemoryCapacity())).
+        _("Minimum Queue Memory Capacity:" , Long.toString(sinfo.getMinQueueMemoryCapacity())).
+        _("Maximum Queue Memory Capacity:" , Long.toString(sinfo.getMaxQueueMemoryCapacity())).
         _("Number of Nodes:" , Integer.toString(sinfo.getNumNodes())).
         _("Used Node Capacity:" , Integer.toString(sinfo.getUsedNodeCapacity())).
         _("Available Node Capacity:" , Integer.toString(sinfo.getAvailNodeCapacity())).

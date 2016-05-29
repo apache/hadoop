@@ -646,7 +646,7 @@ public class ContainersMonitorImpl extends AbstractService implements
       ChangeMonitoringContainerResourceEvent changeEvent =
           (ChangeMonitoringContainerResourceEvent) monitoringEvent;
       Resource resource = changeEvent.getResource();
-      pmemLimitMBs = resource.getMemory();
+      pmemLimitMBs = (int) resource.getMemorySize();
       vmemLimitMBs = (int) (pmemLimitMBs * vmemRatio);
       cpuVcores = resource.getVirtualCores();
       usageMetrics.recordResourceLimit(
@@ -822,7 +822,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     }
     LOG.info("Changing resource-monitoring for " + containerId);
     updateContainerMetrics(monitoringEvent);
-    long pmemLimit = changeEvent.getResource().getMemory() * 1024L * 1024L;
+    long pmemLimit = changeEvent.getResource().getMemorySize() * 1024L * 1024L;
     long vmemLimit = (long) (pmemLimit * vmemRatio);
     int cpuVcores = changeEvent.getResource().getVirtualCores();
     processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);

@@ -95,9 +95,9 @@ public class JobStatus implements Writable, Cloneable {
   private String trackingUrl ="";
   private int numUsedSlots;
   private int numReservedSlots;
-  private int usedMem;
-  private int reservedMem;
-  private int neededMem;
+  private long usedMem;
+  private long reservedMem;
+  private long neededMem;
   private boolean isUber;
     
   /**
@@ -580,42 +580,42 @@ public class JobStatus implements Writable, Cloneable {
   /**
    * @return the used memory
    */
-  public int getUsedMem() {
+  public long getUsedMem() {
     return usedMem;
   }
 
   /**
    * @param m the used memory
    */
-  public void setUsedMem(int m) {
+  public void setUsedMem(long m) {
     this.usedMem = m;
   }
 
   /**
    * @return the reserved memory
    */
-  public int getReservedMem() {
+  public long getReservedMem() {
     return reservedMem;
  }
 
   /**
    * @param r the reserved memory
    */
-  public void setReservedMem(int r) {
+  public void setReservedMem(long r) {
     this.reservedMem = r;
   }
 
   /**
    * @return the needed memory
    */
-  public int getNeededMem() {
+  public long getNeededMem() {
   return neededMem;
  }
 
   /**
    * @param n the needed memory
    */
-  public void setNeededMem(int n) {
+  public void setNeededMem(long n) {
     this.neededMem = n;
   }
 

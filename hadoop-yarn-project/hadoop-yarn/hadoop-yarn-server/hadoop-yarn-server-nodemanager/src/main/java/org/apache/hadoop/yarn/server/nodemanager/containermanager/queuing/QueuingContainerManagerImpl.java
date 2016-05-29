@@ -600,7 +600,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
 
     private ProcessTreeInfo createProcessTreeInfo(ContainerId containerId,
         Resource resource, Configuration conf) {
-      long pmemBytes = resource.getMemory() * 1024 * 1024L;
+      long pmemBytes = resource.getMemorySize() * 1024 * 1024L;
       float pmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
           YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
       long vmemBytes = (long) (pmemRatio * pmemBytes);

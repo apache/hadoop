@@ -170,9 +170,9 @@ public class JobClientUnitTest {
     when(mockJobStatus.getPriority()).thenReturn(JobPriority.NORMAL);
     when(mockJobStatus.getNumUsedSlots()).thenReturn(1);
     when(mockJobStatus.getNumReservedSlots()).thenReturn(1);
-    when(mockJobStatus.getUsedMem()).thenReturn(1024);
-    when(mockJobStatus.getReservedMem()).thenReturn(512);
-    when(mockJobStatus.getNeededMem()).thenReturn(2048);
+    when(mockJobStatus.getUsedMem()).thenReturn(1024L);
+    when(mockJobStatus.getReservedMem()).thenReturn(512L);
+    when(mockJobStatus.getNeededMem()).thenReturn(2048L);
     when(mockJobStatus.getSchedulingInfo()).thenReturn("NA");
 
     Job mockJob = mock(Job.class);

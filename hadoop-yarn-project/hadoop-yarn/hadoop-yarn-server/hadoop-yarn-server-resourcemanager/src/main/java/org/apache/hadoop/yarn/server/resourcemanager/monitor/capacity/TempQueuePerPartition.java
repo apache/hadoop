@@ -258,17 +258,17 @@ public class TempQueuePerPartition {
 
   void appendLogString(StringBuilder sb) {
     sb.append(queueName).append(", ")
-        .append(current.getMemory()).append(", ")
+        .append(current.getMemorySize()).append(", ")
         .append(current.getVirtualCores()).append(", ")
-        .append(pending.getMemory()).append(", ")
+        .append(pending.getMemorySize()).append(", ")
         .append(pending.getVirtualCores()).append(", ")
-        .append(getGuaranteed().getMemory()).append(", ")
+        .append(getGuaranteed().getMemorySize()).append(", ")
         .append(getGuaranteed().getVirtualCores()).append(", ")
-        .append(idealAssigned.getMemory()).append(", ")
+        .append(idealAssigned.getMemorySize()).append(", ")
         .append(idealAssigned.getVirtualCores()).append(", ")
-        .append(toBePreempted.getMemory()).append(", ")
+        .append(toBePreempted.getMemorySize()).append(", ")
         .append(toBePreempted.getVirtualCores() ).append(", ")
-        .append(actuallyToBePreempted.getMemory()).append(", ")
+        .append(actuallyToBePreempted.getMemorySize()).append(", ")
         .append(actuallyToBePreempted.getVirtualCores());
   }
 

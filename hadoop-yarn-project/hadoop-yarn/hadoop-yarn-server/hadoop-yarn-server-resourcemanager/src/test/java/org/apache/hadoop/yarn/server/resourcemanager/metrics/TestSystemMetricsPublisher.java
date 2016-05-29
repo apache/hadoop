@@ -424,10 +424,12 @@ public class TestSystemMetricsPublisher {
         container.getAllocatedNode().getPort(),
         entity.getOtherInfo().get(
             ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO));
-    Assert.assertEquals(
-        container.getAllocatedResource().getMemory(),
-        entity.getOtherInfo().get(
-            ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO));
+    Assert.assertEquals(container.getAllocatedResource().getMemorySize(),
+        // KeyValueBasedTimelineStore could cast long to integer, need make sure
+        // variables for compare have same type.
+        ((Integer) entity.getOtherInfo().get(
+            ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO))
+            .longValue());
     Assert.assertEquals(
         container.getAllocatedResource().getVirtualCores(),
         entity.getOtherInfo().get(

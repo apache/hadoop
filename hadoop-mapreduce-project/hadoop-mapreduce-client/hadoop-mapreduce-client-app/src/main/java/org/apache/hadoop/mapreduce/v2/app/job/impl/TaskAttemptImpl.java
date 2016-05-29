@@ -1441,7 +1441,7 @@ public abstract class TaskAttemptImpl implements
     }
     long duration = (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
     Resource allocatedResource = taskAttempt.container.getResource();
-    int mbAllocated = allocatedResource.getMemory();
+    int mbAllocated = (int) allocatedResource.getMemorySize();
     int vcoresAllocated = allocatedResource.getVirtualCores();
     int minSlotMemSize = taskAttempt.conf.getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
