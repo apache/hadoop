@@ -40,12 +40,14 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -359,7 +361,9 @@ public class LogsCLI extends Configured implements Tool {
     return logFiles;
   }
 
-  private void printContainerLogsFromRunningApplication(Configuration conf,
+  @Private
+  @VisibleForTesting
+  public void printContainerLogsFromRunningApplication(Configuration conf,
       ContainerLogsRequest request, LogCLIHelpers logCliHelper)
       throws IOException {
     String containerIdStr = request.getContainerId().toString();
@@ -797,16 +801,29 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   private int fetchApplicationLogs(ContainerLogsRequest options,
-      LogCLIHelpers logCliHelper) throws IOException {
-    // TODO: YARN-5141. To get container logs for the Running applications.
+      LogCLIHelpers logCliHelper) throws IOException, YarnException {
+    // If the application has finished, we would fetch the logs
+    // from HDFS.
+    // If the application is still running, we would get the full
+    // list of the containers first, then fetch the logs for each
+    // container from NM.
     int resultCode = 0;
-    ContainerLogsRequest newOptions = getMatchedLogOptions(
-        options, logCliHelper);
-    if (newOptions == null) {
-      resultCode = -1;
+    if (options.isAppFinished()) {
+      ContainerLogsRequest newOptions = getMatchedLogOptions(
+          options, logCliHelper);
+      if (newOptions == null) {
+        resultCode = -1;
+      } else {
+        resultCode =
+            logCliHelper.dumpAllContainersLogs(newOptions);
+      }
     } else {
-      resultCode =
-          logCliHelper.dumpAllContainersLogs(newOptions);
+      List<ContainerLogsRequest> containerLogRequests =
+          getContainersLogRequestForRunningApplication(options);
+      for (ContainerLogsRequest container : containerLogRequests) {
+        printContainerLogsFromRunningApplication(getConf(), container,
+            logCliHelper);
+      }
     }
     if (resultCode == -1) {
       System.err.println("Can not find the logs for the application: "
@@ -878,5 +895,39 @@ public class LogsCLI extends Configured implements Tool {
       }
     }
     return false;
+  }
+
+  private List<ContainerLogsRequest>
+      getContainersLogRequestForRunningApplication(
+          ContainerLogsRequest options) throws YarnException, IOException {
+    List<ContainerLogsRequest> newOptionsList =
+        new ArrayList<ContainerLogsRequest>();
+    YarnClient yarnClient = createYarnClient();
+    try {
+      List<ApplicationAttemptReport> attempts =
+          yarnClient.getApplicationAttempts(options.getAppId());
+      for (ApplicationAttemptReport attempt : attempts) {
+        List<ContainerReport> containers = yarnClient.getContainers(
+            attempt.getApplicationAttemptId());
+        for (ContainerReport container : containers) {
+          ContainerLogsRequest newOptions = new ContainerLogsRequest(options);
+          newOptions.setContainerId(container.getContainerId().toString());
+          newOptions.setNodeId(container.getAssignedNode().toString());
+          newOptions.setNodeHttpAddress(container.getNodeHttpAddress()
+              .replaceFirst(WebAppUtils.getHttpSchemePrefix(getConf()), ""));
+          // if we do not specify the value for CONTAINER_LOG_FILES option,
+          // we will only output syslog
+          List<String> logFiles = newOptions.getLogTypes();
+          if (logFiles == null || logFiles.isEmpty()) {
+            logFiles = Arrays.asList("syslog");
+            newOptions.setLogTypes(logFiles);
+          }
+          newOptionsList.add(newOptions);
+        }
+      }
+      return newOptionsList;
+    } finally {
+      yarnClient.close();
+    }
   }
 }
