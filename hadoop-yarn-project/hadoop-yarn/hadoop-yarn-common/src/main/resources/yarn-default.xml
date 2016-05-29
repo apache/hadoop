@@ -1511,6 +1511,22 @@
   </property>
 
   <property>
+    <description>The set of networks allowed when launching containers using the
+      DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
+    <value>host,none,bridge</value>
+  </property>
+
+  <property>
+    <description>The network used when launching containers using the
+      DockerContainerRuntime when no network is specified in the request
+      . This network must be one of the (configurable) set of allowed container
+      networks.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
+    <value>host</value>
+  </property>
+
+  <property>
     <description>This flag determines whether memory limit will be set for the Windows Job
     Object of the containers launched by the default container executor.</description>
     <name>yarn.nodemanager.windows-container.memory-limit.enabled</name>
