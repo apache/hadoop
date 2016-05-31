@@ -489,7 +489,7 @@ class GenericEntityReader extends TimelineEntityReader {
             context.getFlowName(), context.getFlowRunId(), context.getAppId(),
             context.getEntityType(), context.getEntityId());
     Get get = new Get(rowKey);
-    get.setMaxVersions(Integer.MAX_VALUE);
+    get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       get.setFilter(filterList);
     }
@@ -506,7 +506,7 @@ class GenericEntityReader extends TimelineEntityReader {
     scan.setRowPrefixFilter(EntityRowKey.getRowKeyPrefix(
         context.getClusterId(), context.getUserId(), context.getFlowName(),
         context.getFlowRunId(), context.getAppId(), context.getEntityType()));
-    scan.setMaxVersions(Integer.MAX_VALUE);
+    scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       scan.setFilter(filterList);
     }

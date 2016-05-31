@@ -338,8 +338,9 @@ public abstract class TimelineEntityReader {
       metric.setId(metricResult.getKey());
       // Simply assume that if the value set contains more than 1 elements, the
       // metric is a TIME_SERIES metric, otherwise, it's a SINGLE_VALUE metric
-      metric.setType(metricResult.getValue().size() > 1 ?
-          TimelineMetric.Type.TIME_SERIES : TimelineMetric.Type.SINGLE_VALUE);
+      TimelineMetric.Type metricType = metricResult.getValue().size() > 1 ?
+          TimelineMetric.Type.TIME_SERIES : TimelineMetric.Type.SINGLE_VALUE;
+      metric.setType(metricType);
       metric.addValues(metricResult.getValue());
       entity.addMetric(metric);
     }
