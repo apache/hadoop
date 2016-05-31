@@ -169,7 +169,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         }
       }, nextIdx());
     } catch (WrapperException we) {
-      throw (GeneralSecurityException) we.getCause();
+      if (we.getCause() instanceof GeneralSecurityException) {
+        throw (GeneralSecurityException) we.getCause();
+      }
+      throw new IOException(we.getCause());
     }
   }
 
@@ -186,7 +189,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         }
       }, nextIdx());
     } catch (WrapperException we) {
-      throw (GeneralSecurityException)we.getCause();
+      if (we.getCause() instanceof GeneralSecurityException) {
+        throw (GeneralSecurityException) we.getCause();
+      }
+      throw new IOException(we.getCause());
     }
   }
 
@@ -273,7 +279,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         }
       }, nextIdx());
     } catch (WrapperException e) {
-      throw (NoSuchAlgorithmException)e.getCause();
+      if (e.getCause() instanceof GeneralSecurityException) {
+        throw (NoSuchAlgorithmException) e.getCause();
+      }
+      throw new IOException(e.getCause());
     }
   }
   @Override
@@ -309,7 +318,10 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         }
       }, nextIdx());
     } catch (WrapperException e) {
-      throw (NoSuchAlgorithmException)e.getCause();
+      if (e.getCause() instanceof GeneralSecurityException) {
+        throw (NoSuchAlgorithmException) e.getCause();
+      }
+      throw new IOException(e.getCause());
     }
   }
 
