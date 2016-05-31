@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
-import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
+import org.apache.hadoop.io.retry.AsyncCallHandler;
 import org.apache.hadoop.util.concurrent.AsyncGetFuture;
 import org.apache.hadoop.ipc.Client;
 
@@ -51,9 +51,8 @@ public class AsyncDistributedFileSystem {
     this.dfs = dfs;
   }
 
-  static <T> Future<T> getReturnValue() {
-    return new AsyncGetFuture<>(
-        ClientNamenodeProtocolTranslatorPB.getAsyncReturnValue());
+  private static <T> Future<T> getReturnValue() {
+    return new AsyncGetFuture<>(AsyncCallHandler.getAsyncReturn());
   }
 
   /**

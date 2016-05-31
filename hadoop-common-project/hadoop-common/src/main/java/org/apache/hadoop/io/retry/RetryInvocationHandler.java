@@ -42,11 +42,83 @@ import java.util.Map;
 public class RetryInvocationHandler<T> implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
 
-  private static class Counters {
+  static class Call {
+    private final Method method;
+    private final Object[] args;
+    private final boolean isRpc;
+    private final int callId;
+    final Counters counters;
+
+    private final RetryPolicy retryPolicy;
+    private final RetryInvocationHandler<?> retryInvocationHandler;
+
+    Call(Method method, Object[] args, boolean isRpc, int callId,
+         Counters counters, RetryInvocationHandler<?> retryInvocationHandler) {
+      this.method = method;
+      this.args = args;
+      this.isRpc = isRpc;
+      this.callId = callId;
+      this.counters = counters;
+
+      this.retryPolicy = retryInvocationHandler.getRetryPolicy(method);
+      this.retryInvocationHandler = retryInvocationHandler;
+    }
+
+    /** Invoke the call once without retrying. */
+    synchronized CallReturn invokeOnce() {
+      try {
+        // The number of times this invocation handler has ever been failed over
+        // before this method invocation attempt. Used to prevent concurrent
+        // failed method invocations from triggering multiple failover attempts.
+        final long failoverCount = retryInvocationHandler.getFailoverCount();
+        try {
+          return invoke();
+        } catch (Exception e) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this, e);
+          }
+          if (Thread.currentThread().isInterrupted()) {
+            // If interrupted, do not retry.
+            throw e;
+          }
+          retryInvocationHandler.handleException(
+              method, retryPolicy, failoverCount, counters, e);
+          return CallReturn.RETRY;
+        }
+      } catch(Throwable t) {
+        return new CallReturn(t);
+      }
+    }
+
+    CallReturn invoke() throws Throwable {
+      return new CallReturn(invokeMethod());
+    }
+
+    Object invokeMethod() throws Throwable {
+      if (isRpc) {
+        Client.setCallIdAndRetryCount(callId, counters.retries);
+      }
+      return retryInvocationHandler.invokeMethod(method, args);
+    }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + "#" + callId + ": "
+          + method.getDeclaringClass().getSimpleName() + "." + method.getName()
+          + "(" + (args == null || args.length == 0? "": Arrays.toString(args))
+          +  ")";
+    }
+  }
+
+  static class Counters {
     /** Counter for retries. */
     private int retries;
     /** Counter for method invocation has been failed over. */
     private int failovers;
+
+    boolean isZeros() {
+      return retries == 0 && failovers == 0;
+    }
   }
 
   private static class ProxyDescriptor<T> {
@@ -144,10 +216,12 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
 
   private final ProxyDescriptor<T> proxyDescriptor;
 
-  private volatile boolean hasMadeASuccessfulCall = false;
-  
+  private volatile boolean hasSuccessfulCall = false;
+
   private final RetryPolicy defaultPolicy;
   private final Map<String,RetryPolicy> methodNameToPolicyMap;
+
+  private final AsyncCallHandler asyncCallHandler = new AsyncCallHandler();
 
   protected RetryInvocationHandler(FailoverProxyProvider<T> proxyProvider,
       RetryPolicy retryPolicy) {
@@ -167,38 +241,35 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     return policy != null? policy: defaultPolicy;
   }
 
+  private long getFailoverCount() {
+    return proxyDescriptor.getFailoverCount();
+  }
+
+  private Call newCall(Method method, Object[] args, boolean isRpc, int callId,
+                       Counters counters) {
+    if (Client.isAsynchronousMode()) {
+      return asyncCallHandler.newAsyncCall(method, args, isRpc, callId,
+          counters, this);
+    } else {
+      return new Call(method, args, isRpc, callId, counters, this);
+    }
+  }
+
   @Override
   public Object invoke(Object proxy, Method method, Object[] args)
       throws Throwable {
     final boolean isRpc = isRpcInvocation(proxyDescriptor.getProxy());
     final int callId = isRpc? Client.nextCallId(): RpcConstants.INVALID_CALL_ID;
-    return invoke(method, args, isRpc, callId, new Counters());
-  }
+    final Counters counters = new Counters();
 
-  private Object invoke(final Method method, final Object[] args,
-      final boolean isRpc, final int callId, final Counters counters)
-      throws Throwable {
-    final RetryPolicy policy = getRetryPolicy(method);
-
+    final Call call = newCall(method, args, isRpc, callId, counters);
     while (true) {
-      // The number of times this invocation handler has ever been failed over,
-      // before this method invocation attempt. Used to prevent concurrent
-      // failed method invocations from triggering multiple failover attempts.
-      final long failoverCount = proxyDescriptor.getFailoverCount();
-
-      if (isRpc) {
-        Client.setCallIdAndRetryCount(callId, counters.retries);
-      }
-      try {
-        final Object ret = invokeMethod(method, args);
-        hasMadeASuccessfulCall = true;
-        return ret;
-      } catch (Exception ex) {
-        if (Thread.currentThread().isInterrupted()) {
-          // If interrupted, do not retry.
-          throw ex;
-        }
-        handleException(method, policy, failoverCount, counters, ex);
+      final CallReturn c = call.invokeOnce();
+      final CallReturn.State state = c.getState();
+      if (state == CallReturn.State.ASYNC_INVOKED) {
+        return null; // return null for async calls
+      } else if (c.getState() != CallReturn.State.RETRY) {
+        return c.getReturnValue();
       }
     }
   }
@@ -239,7 +310,8 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       final int failovers, final long delay, final Exception ex) {
     // log info if this has made some successful calls or
     // this is not the first failover
-    final boolean info = hasMadeASuccessfulCall || failovers != 0;
+    final boolean info = hasSuccessfulCall || failovers != 0
+        || asyncCallHandler.hasSuccessfulCall();
     if (!info && !LOG.isDebugEnabled()) {
       return;
     }
@@ -265,7 +337,9 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       if (!method.isAccessible()) {
         method.setAccessible(true);
       }
-      return method.invoke(proxyDescriptor.getProxy(), args);
+      final Object r = method.invoke(proxyDescriptor.getProxy(), args);
+      hasSuccessfulCall = true;
+      return r;
     } catch (InvocationTargetException e) {
       throw e.getCause();
     }
