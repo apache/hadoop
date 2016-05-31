@@ -612,7 +612,7 @@ public class TestHBaseTimelineStorage {
     aggMetric.setId("MEM_USAGE");
     Map<Long, Number> aggMetricValues = new HashMap<Long, Number>();
     ts = System.currentTimeMillis();
-    aggMetricValues.put(ts - 120000, 102400000);
+    aggMetricValues.put(ts - 120000, 102400000L);
     aggMetric.setType(Type.SINGLE_VALUE);
     aggMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
     aggMetric.setValues(aggMetricValues);
@@ -721,12 +721,14 @@ public class TestHBaseTimelineStorage {
       NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
       matchMetrics(metricValues, metricMap);
 
-      // read the timeline entity using the reader this time
+      // read the timeline entity using the reader this time. In metrics limit
+      // specify Integer MAX_VALUE. A TIME_SERIES will be returned(if more than
+      // one value exists for a metric).
       TimelineEntity e1 = reader.getEntity(
           new TimelineReaderContext(cluster, user, flow, runid, appId,
           entity.getType(), entity.getId()),
-          new TimelineDataToRetrieve(
-          null, null, EnumSet.of(TimelineReader.Field.ALL)));
+          new TimelineDataToRetrieve(null, null,
+          EnumSet.of(TimelineReader.Field.ALL), Integer.MAX_VALUE));
       assertNotNull(e1);
 
       // verify attributes
@@ -753,10 +755,67 @@ public class TestHBaseTimelineStorage {
         assertTrue(metric2.getId().equals("MAP_SLOT_MILLIS") ||
             metric2.getId().equals("MEM_USAGE"));
         if (metric2.getId().equals("MAP_SLOT_MILLIS")) {
+          assertEquals(6, metricValues2.size());
           matchMetrics(metricValues, metricValues2);
         }
         if (metric2.getId().equals("MEM_USAGE")) {
+          assertEquals(1, metricValues2.size());
           matchMetrics(aggMetricValues, metricValues2);
+        }
+      }
+
+      // In metrics limit specify a value of 3. No more than 3 values for a
+      // metric will be returned.
+      e1 = reader.getEntity(new TimelineReaderContext(cluster, user, flow,
+          runid, appId, entity.getType(), entity.getId()),
+          new TimelineDataToRetrieve(null, null,
+          EnumSet.of(TimelineReader.Field.ALL), 3));
+      assertNotNull(e1);
+      assertEquals(appId, e1.getId());
+      assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
+          e1.getType());
+      assertEquals(conf, e1.getConfigs());
+      metrics2 = e1.getMetrics();
+      assertEquals(2, metrics2.size());
+      for (TimelineMetric metric2 : metrics2) {
+        Map<Long, Number> metricValues2 = metric2.getValues();
+        assertTrue(metricValues2.size() <= 3);
+        assertTrue(metric2.getId().equals("MAP_SLOT_MILLIS") ||
+            metric2.getId().equals("MEM_USAGE"));
+      }
+
+      // Check if single value(latest value) instead of time series is returned
+      // if metricslimit is not set(null), irrespective of number of metric
+      // values.
+      e1 = reader.getEntity(
+          new TimelineReaderContext(cluster, user, flow, runid, appId,
+         entity.getType(), entity.getId()), new TimelineDataToRetrieve(
+         null, null, EnumSet.of(TimelineReader.Field.ALL), null));
+      assertNotNull(e1);
+      assertEquals(appId, e1.getId());
+      assertEquals(TimelineEntityType.YARN_APPLICATION.toString(),
+          e1.getType());
+      assertEquals(cTime, e1.getCreatedTime());
+      assertEquals(infoMap, e1.getInfo());
+      assertEquals(isRelatedTo, e1.getIsRelatedToEntities());
+      assertEquals(relatesTo, e1.getRelatesToEntities());
+      assertEquals(conf, e1.getConfigs());
+      assertEquals(2, e1.getMetrics().size());
+      for (TimelineMetric metric : e1.getMetrics()) {
+        assertEquals(1, metric.getValues().size());
+        assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+        assertTrue(metric.getId().equals("MAP_SLOT_MILLIS") ||
+            metric.getId().equals("MEM_USAGE"));
+        assertEquals(1, metric.getValues().size());
+        if (metric.getId().equals("MAP_SLOT_MILLIS")) {
+          assertTrue(metric.getValues().containsKey(ts - 20000));
+          assertEquals(metricValues.get(ts - 20000),
+              metric.getValues().get(ts - 20000));
+        }
+        if (metric.getId().equals("MEM_USAGE")) {
+          assertTrue(metric.getValues().containsKey(ts - 120000));
+          assertEquals(aggMetricValues.get(ts - 120000),
+              metric.getValues().get(ts - 120000));
         }
       }
     } finally {
@@ -839,8 +898,8 @@ public class TestHBaseTimelineStorage {
       String flow = "some_flow_name";
       String flowVersion = "AB7822C10F1111";
       long runid = 1002345678919L;
-      String appName =
-          ApplicationId.newInstance(System.currentTimeMillis(), 1).toString();
+      String appName = ApplicationId.newInstance(System.currentTimeMillis() +
+          9000000L, 1).toString();
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       hbi.stop();
 
@@ -931,12 +990,14 @@ public class TestHBaseTimelineStorage {
       TimelineEntity e1 = reader.getEntity(
           new TimelineReaderContext(cluster, user, flow, runid, appName,
           entity.getType(), entity.getId()),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL),
+          Integer.MAX_VALUE));
       Set<TimelineEntity> es1 = reader.getEntities(
           new TimelineReaderContext(cluster, user, flow, runid, appName,
           entity.getType(), null),
           new TimelineEntityFilters(),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL),
+          Integer.MAX_VALUE));
       assertNotNull(e1);
       assertEquals(1, es1.size());
 
@@ -961,6 +1022,25 @@ public class TestHBaseTimelineStorage {
       for (TimelineMetric metric2 : metrics2) {
         Map<Long, Number> metricValues2 = metric2.getValues();
         matchMetrics(metricValues, metricValues2);
+      }
+
+      e1 = reader.getEntity(new TimelineReaderContext(cluster, user, flow,
+          runid, appName, entity.getType(), entity.getId()),
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
+      assertNotNull(e1);
+      assertEquals(id, e1.getId());
+      assertEquals(type, e1.getType());
+      assertEquals(cTime, e1.getCreatedTime());
+      assertEquals(infoMap, e1.getInfo());
+      assertEquals(isRelatedTo, e1.getIsRelatedToEntities());
+      assertEquals(relatesTo, e1.getRelatesToEntities());
+      assertEquals(conf, e1.getConfigs());
+      for (TimelineMetric metric : e1.getMetrics()) {
+        assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+        assertEquals(1, metric.getValues().size());
+        assertTrue(metric.getValues().containsKey(ts - 20000));
+        assertEquals(metricValues.get(ts - 20000),
+            metric.getValues().get(ts - 20000));
       }
     } finally {
       if (hbi != null) {
@@ -1067,11 +1147,11 @@ public class TestHBaseTimelineStorage {
       TimelineEntity e1 = reader.getEntity(
           new TimelineReaderContext(cluster, user, flow, runid, appName,
           entity.getType(), entity.getId()),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
       TimelineEntity e2 = reader.getEntity(
           new TimelineReaderContext(cluster, user, null, null, appName,
           entity.getType(), entity.getId()),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
       assertNotNull(e1);
       assertNotNull(e2);
       assertEquals(e1, e2);
@@ -1125,8 +1205,8 @@ public class TestHBaseTimelineStorage {
       String flow = "other_flow_name";
       String flowVersion = "1111F01C2287BA";
       long runid = 1009876543218L;
-      String appName =
-          ApplicationId.newInstance(System.currentTimeMillis(), 1).toString();
+      String appName = ApplicationId.newInstance(System.currentTimeMillis() +
+          9000000L, 1).toString();
       byte[] startRow =
           EntityRowKey.getRowKeyPrefix(cluster, user, flow, runid, appName);
       hbi.write(cluster, user, flow, flowVersion, runid, appName, entities);
@@ -1173,12 +1253,12 @@ public class TestHBaseTimelineStorage {
       TimelineEntity e1 = reader.getEntity(
           new TimelineReaderContext(cluster, user, flow, runid, appName,
           entity.getType(), entity.getId()),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
       Set<TimelineEntity> es1 = reader.getEntities(
           new TimelineReaderContext(cluster, user, flow, runid, appName,
           entity.getType(), null),
           new TimelineEntityFilters(),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
       assertNotNull(e1);
       assertEquals(1, es1.size());
 
@@ -1235,7 +1315,7 @@ public class TestHBaseTimelineStorage {
       TimelineEntity e1 = reader.getEntity(
           new TimelineReaderContext(cluster, user, flow, runid, appName,
           entity.getType(), entity.getId()),
-          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+          new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
       assertNotNull(e1);
       // check the events
       NavigableSet<TimelineEvent> events = e1.getEvents();
@@ -1325,7 +1405,7 @@ public class TestHBaseTimelineStorage {
     TimelineEntity entity = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", "hello"),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertNotNull(entity);
     assertEquals(3, entity.getConfigs().size());
     assertEquals(1, entity.getIsRelatedToEntities().size());
@@ -1333,7 +1413,7 @@ public class TestHBaseTimelineStorage {
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world",
         null), new TimelineEntityFilters(),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(3, entities.size());
     int cfgCnt = 0;
     int metricCnt = 0;
@@ -1457,7 +1537,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         null, ef),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(1, entities.size());
     int eventCnt = 0;
     for (TimelineEntity timelineEntity : entities) {
@@ -1583,7 +1663,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, irt, null, null, null,
         null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     int isRelatedToCnt = 0;
     for (TimelineEntity timelineEntity : entities) {
@@ -1732,7 +1812,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, rt, null, null, null, null,
         null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     int relatesToCnt = 0;
     for (TimelineEntity timelineEntity : entities) {
@@ -1932,7 +2012,7 @@ public class TestHBaseTimelineStorage {
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", "hello"),
         new TimelineDataToRetrieve(
-        null, null, EnumSet.of(Field.INFO, Field.CONFIGS)));
+        null, null, EnumSet.of(Field.INFO, Field.CONFIGS), null));
     assertNotNull(e1);
     assertEquals(3, e1.getConfigs().size());
     assertEquals(0, e1.getIsRelatedToEntities().size());
@@ -1941,7 +2021,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(),
         new TimelineDataToRetrieve(
-        null, null, EnumSet.of(Field.IS_RELATED_TO, Field.METRICS)));
+        null, null, EnumSet.of(Field.IS_RELATED_TO, Field.METRICS), null));
     assertEquals(3, es1.size());
     int metricsCnt = 0;
     int isRelatedToCnt = 0;
@@ -1964,14 +2044,14 @@ public class TestHBaseTimelineStorage {
     TimelineEntity e1 = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", "hello"),
-        new TimelineDataToRetrieve(list, null, null));
+        new TimelineDataToRetrieve(list, null, null, null));
     assertNotNull(e1);
     assertEquals(1, e1.getConfigs().size());
     Set<TimelineEntity> es1 = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(),
-        new TimelineDataToRetrieve(list, null, null));
+        new TimelineDataToRetrieve(list, null, null, null));
     int cfgCnt = 0;
     for (TimelineEntity entity : es1) {
       cfgCnt += entity.getConfigs().size();
@@ -2002,7 +2082,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(2, entities.size());
     int cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2015,7 +2096,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2031,7 +2112,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList1, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(1, entities.size());
     cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2049,7 +2131,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList2, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList confFilterList3 = new TimelineFilterList(
@@ -2060,7 +2143,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList3, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList confFilterList4 = new TimelineFilterList(
@@ -2071,7 +2155,8 @@ public class TestHBaseTimelineStorage {
             1002345678919L, "application_1231111111_1111","world", null),
             new TimelineEntityFilters(null, null, null, null, null, null,
             confFilterList4, null, null),
-            new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+            new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+            null));
     assertEquals(0, entities.size());
 
     TimelineFilterList confFilterList5 = new TimelineFilterList(
@@ -2082,7 +2167,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList5, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(3, entities.size());
   }
 
@@ -2099,7 +2185,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList, null, null),
-        new TimelineDataToRetrieve(list, null, null));
+        new TimelineDataToRetrieve(list, null, null, null));
     assertEquals(1, entities.size());
     int cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2130,7 +2216,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList1, null, null),
-        new TimelineDataToRetrieve(confsToRetrieve, null, null));
+        new TimelineDataToRetrieve(confsToRetrieve, null, null, null));
     assertEquals(2, entities.size());
     cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2151,14 +2237,14 @@ public class TestHBaseTimelineStorage {
     TimelineEntity e1 = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", "hello"),
-        new TimelineDataToRetrieve(null, list, null));
+        new TimelineDataToRetrieve(null, list, null, null));
     assertNotNull(e1);
     assertEquals(1, e1.getMetrics().size());
     Set<TimelineEntity> es1 = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(),
-        new TimelineDataToRetrieve(null, list, null));
+        new TimelineDataToRetrieve(null, list, null, null));
     int metricCnt = 0;
     for (TimelineEntity entity : es1) {
       metricCnt += entity.getMetrics().size();
@@ -2187,7 +2273,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(2, entities.size());
     int metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2200,7 +2287,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2218,7 +2305,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList1, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(1, entities.size());
     metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2236,7 +2324,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList2, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList metricFilterList3 = new TimelineFilterList(
@@ -2247,7 +2336,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList3, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList metricFilterList4 = new TimelineFilterList(
@@ -2258,7 +2348,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList4, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList metricFilterList5 = new TimelineFilterList(
@@ -2269,7 +2360,8 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList5, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(3, entities.size());
   }
 
@@ -2286,7 +2378,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList, null),
-        new TimelineDataToRetrieve(null, list, null));
+        new TimelineDataToRetrieve(null, list, null, null));
     assertEquals(1, entities.size());
     int metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2316,17 +2408,38 @@ public class TestHBaseTimelineStorage {
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList1, null),
         new TimelineDataToRetrieve(
-        null, metricsToRetrieve, EnumSet.of(Field.METRICS)));
+        null, metricsToRetrieve, EnumSet.of(Field.METRICS), null));
     assertEquals(2, entities.size());
     metricCnt = 0;
     for (TimelineEntity entity : entities) {
       metricCnt += entity.getMetrics().size();
       for (TimelineMetric metric : entity.getMetrics()) {
+        assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+        assertEquals(1, metric.getValues().size());
         assertTrue("Metric Id returned should start with MAP1_",
             metric.getId().startsWith("MAP1_"));
       }
     }
     assertEquals(2, metricCnt);
+
+    entities = reader.getEntities(new TimelineReaderContext("cluster1", "user1",
+        "some_flow_name", 1002345678919L, "application_1231111111_1111","world",
+        null), new TimelineEntityFilters(null, null, null, null, null, null,
+        null, metricFilterList1, null), new TimelineDataToRetrieve(null,
+        metricsToRetrieve, EnumSet.of(Field.METRICS), Integer.MAX_VALUE));
+    assertEquals(2, entities.size());
+    metricCnt = 0;
+    int metricValCnt = 0;
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        metricValCnt += metric.getValues().size();
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
+    }
+    assertEquals(2, metricCnt);
+    assertEquals(7, metricValCnt);
   }
 
   @Test
@@ -2348,7 +2461,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(2, entities.size());
     int infoCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2364,7 +2477,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList1,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(1, entities.size());
     infoCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -2382,7 +2495,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList2,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(0, entities.size());
 
     TimelineFilterList infoFilterList3 = new TimelineFilterList(
@@ -2393,7 +2506,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList3,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(0, entities.size());
 
     TimelineFilterList infoFilterList4 = new TimelineFilterList(
@@ -2404,7 +2517,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList4,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(0, entities.size());
 
     TimelineFilterList infoFilterList5 = new TimelineFilterList(
@@ -2415,7 +2528,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1231111111_1111","world", null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList5,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(3, entities.size());
   }
 
@@ -2425,7 +2538,7 @@ public class TestHBaseTimelineStorage {
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1111111111_2222",
         TimelineEntityType.YARN_APPLICATION.toString(), null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertNotNull(entity);
     assertEquals(3, entity.getConfigs().size());
     assertEquals(1, entity.getIsRelatedToEntities().size());
@@ -2434,7 +2547,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
         null),
         new TimelineEntityFilters(),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(3, entities.size());
     int cfgCnt = 0;
     int metricCnt = 0;
@@ -2546,7 +2659,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, "application_1111111111_2222",
         TimelineEntityType.YARN_APPLICATION.toString(), null),
         new TimelineDataToRetrieve(
-        null, null, EnumSet.of(Field.INFO, Field.CONFIGS)));
+        null, null, EnumSet.of(Field.INFO, Field.CONFIGS), null));
     assertNotNull(e1);
     assertEquals(3, e1.getConfigs().size());
     assertEquals(0, e1.getIsRelatedToEntities().size());
@@ -2556,7 +2669,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(),
         new TimelineDataToRetrieve(
-        null, null, EnumSet.of(Field.IS_RELATED_TO, Field.METRICS)));
+        null, null, EnumSet.of(Field.IS_RELATED_TO, Field.METRICS), null));
     assertEquals(3, es1.size());
     int metricsCnt = 0;
     int isRelatedToCnt = 0;
@@ -2586,7 +2699,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, irt, null, null, null,
         null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     int isRelatedToCnt = 0;
     for (TimelineEntity timelineEntity : entities) {
@@ -2745,7 +2858,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, rt, null, null, null, null,
         null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     int relatesToCnt = 0;
     for (TimelineEntity timelineEntity : entities) {
@@ -2989,7 +3102,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(2, entities.size());
     int cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3003,7 +3117,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3020,7 +3134,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList1, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(1, entities.size());
     cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3039,7 +3154,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList2, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList confFilterList3 = new TimelineFilterList(
@@ -3051,7 +3167,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList3, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList confFilterList4 = new TimelineFilterList(
@@ -3063,7 +3180,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList4, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList confFilterList5 = new TimelineFilterList(
@@ -3075,7 +3193,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList5, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.CONFIGS),
+        null));
     assertEquals(3, entities.size());
   }
 
@@ -3092,7 +3211,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         null, ef),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(1, entities.size());
     int eventCnt = 0;
     for (TimelineEntity timelineEntity : entities) {
@@ -3218,7 +3337,7 @@ public class TestHBaseTimelineStorage {
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1111111111_2222",
         TimelineEntityType.YARN_APPLICATION.toString(), null),
-        new TimelineDataToRetrieve(list, null, null));
+        new TimelineDataToRetrieve(list, null, null, null));
     assertNotNull(e1);
     assertEquals(1, e1.getConfigs().size());
     Set<TimelineEntity> es1 = reader.getEntities(
@@ -3226,7 +3345,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
         null) ,
         new TimelineEntityFilters(),
-        new TimelineDataToRetrieve(list, null, null));
+        new TimelineDataToRetrieve(list, null, null, null));
     int cfgCnt = 0;
     for (TimelineEntity entity : es1) {
       cfgCnt += entity.getConfigs().size();
@@ -3252,7 +3371,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList, null, null),
-        new TimelineDataToRetrieve(list, null, null));
+        new TimelineDataToRetrieve(list, null, null, null));
     assertEquals(1, entities.size());
     int cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3285,7 +3404,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null,
         confFilterList1, null, null),
-        new TimelineDataToRetrieve(confsToRetrieve, null, null));
+        new TimelineDataToRetrieve(confsToRetrieve, null, null, null));
     assertEquals(2, entities.size());
     cfgCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3316,7 +3435,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(2, entities.size());
     int metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3330,7 +3450,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     assertEquals(2, entities.size());
     metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3349,7 +3469,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList1, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(1, entities.size());
     metricCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3368,7 +3489,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList2, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList metricFilterList3 = new TimelineFilterList(
@@ -3380,7 +3502,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList3, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList metricFilterList4 = new TimelineFilterList(
@@ -3392,7 +3515,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList4, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(0, entities.size());
 
     TimelineFilterList metricFilterList5 = new TimelineFilterList(
@@ -3404,7 +3528,8 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList5, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.METRICS),
+        null));
     assertEquals(3, entities.size());
   }
 
@@ -3417,7 +3542,7 @@ public class TestHBaseTimelineStorage {
         new TimelineReaderContext("cluster1", "user1", "some_flow_name",
         1002345678919L, "application_1111111111_2222",
         TimelineEntityType.YARN_APPLICATION.toString(), null),
-        new TimelineDataToRetrieve(null, list, null));
+        new TimelineDataToRetrieve(null, list, null, null));
     assertNotNull(e1);
     assertEquals(1, e1.getMetrics().size());
     Set<TimelineEntity> es1 = reader.getEntities(
@@ -3425,7 +3550,7 @@ public class TestHBaseTimelineStorage {
         1002345678919L, null, TimelineEntityType.YARN_APPLICATION.toString(),
         null),
         new TimelineEntityFilters(),
-        new TimelineDataToRetrieve(null, list, null));
+        new TimelineDataToRetrieve(null, list, null, null));
     int metricCnt = 0;
     for (TimelineEntity entity : es1) {
       metricCnt += entity.getMetrics().size();
@@ -3451,7 +3576,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList, null),
-        new TimelineDataToRetrieve(null, list, null));
+        new TimelineDataToRetrieve(null, list, null, null));
     int metricCnt = 0;
     assertEquals(1, entities.size());
     for (TimelineEntity entity : entities) {
@@ -3477,7 +3602,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList1, null),
-        new TimelineDataToRetrieve(null, metricsToRetrieve, null));
+        new TimelineDataToRetrieve(null, metricsToRetrieve, null, null));
     metricCnt = 0;
     assertEquals(2, entities.size());
     for (TimelineEntity entity : entities) {
@@ -3488,6 +3613,26 @@ public class TestHBaseTimelineStorage {
       }
     }
     assertEquals(2, metricCnt);
+
+    entities = reader.getEntities(new TimelineReaderContext("cluster1", "user1",
+        "some_flow_name", 1002345678919L, null,
+        TimelineEntityType.YARN_APPLICATION.toString(), null),
+        new TimelineEntityFilters(null, null, null, null, null, null, null,
+        metricFilterList1, null), new TimelineDataToRetrieve(null,
+        metricsToRetrieve, EnumSet.of(Field.METRICS), Integer.MAX_VALUE));
+    metricCnt = 0;
+    int metricValCnt = 0;
+    assertEquals(2, entities.size());
+    for (TimelineEntity entity : entities) {
+      metricCnt += entity.getMetrics().size();
+      for (TimelineMetric metric : entity.getMetrics()) {
+        metricValCnt += metric.getValues().size();
+        assertTrue("Metric Id returned should start with MAP1_",
+            metric.getId().startsWith("MAP1_"));
+      }
+    }
+    assertEquals(2, metricCnt);
+    assertEquals(7, metricValCnt);
   }
 
   @Test
@@ -3510,7 +3655,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(2, entities.size());
     int infoCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3527,7 +3672,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList1,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(1, entities.size());
     infoCnt = 0;
     for (TimelineEntity entity : entities) {
@@ -3546,7 +3691,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList2,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(0, entities.size());
 
     TimelineFilterList infoFilterList3 = new TimelineFilterList(
@@ -3558,7 +3703,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList3,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(0, entities.size());
 
     TimelineFilterList infoFilterList4 = new TimelineFilterList(
@@ -3570,7 +3715,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList4,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(0, entities.size());
 
     TimelineFilterList infoFilterList5 = new TimelineFilterList(
@@ -3582,7 +3727,7 @@ public class TestHBaseTimelineStorage {
         null),
         new TimelineEntityFilters(null, null, null, null, null, infoFilterList5,
         null, null, null),
-        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO)));
+        new TimelineDataToRetrieve(null, null, EnumSet.of(Field.INFO), null));
     assertEquals(3, entities.size());
   }
 

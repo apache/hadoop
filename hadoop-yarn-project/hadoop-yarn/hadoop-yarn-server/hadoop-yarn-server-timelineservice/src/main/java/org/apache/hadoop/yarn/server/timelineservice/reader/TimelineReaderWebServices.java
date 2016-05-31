@@ -217,7 +217,10 @@ public class TimelineReaderWebServices {
    *     flowrun id and app id which are extracted from UID and then used to
    *     query backend(Mandatory path param).
    * @param entityType Type of entities(Mandatory path param).
-   * @param limit Number of entities to return(Optional query param).
+   * @param limit If specified, defines the number of entities to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched entities should not be
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched entities should not be created
@@ -254,6 +257,13 @@ public class TimelineReaderWebServices {
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id and created time is returned
    *     (Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
@@ -283,7 +293,8 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -308,7 +319,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
           infofilters, conffilters, metricfilters, eventfilters),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -342,7 +353,10 @@ public class TimelineReaderWebServices {
    *     query param).
    * @param flowRunId Run id which should match for the entities(Optional query
    *     param).
-   * @param limit Number of entities to return(Optional query param).
+   * @param limit If specified, defines the number of entities to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched entities should not be
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched entities should not be created
@@ -379,6 +393,13 @@ public class TimelineReaderWebServices {
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
@@ -413,11 +434,12 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getEntities(req, res, null, appId, entityType, userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
   }
 
   /**
@@ -441,7 +463,10 @@ public class TimelineReaderWebServices {
    *     query param).
    * @param flowRunId Run id which should match for the entities(Optional query
    *     param).
-   * @param limit Number of entities to return(Optional query param).
+   * @param limit If specified, defines the number of entities to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched entities should not be
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched entities should not be created
@@ -478,6 +503,13 @@ public class TimelineReaderWebServices {
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances of the given entity type
@@ -513,7 +545,8 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -533,7 +566,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
           infofilters, conffilters, metricfilters, eventfilters),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -568,6 +601,13 @@ public class TimelineReaderWebServices {
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -588,7 +628,8 @@ public class TimelineReaderWebServices {
       @PathParam("uid") String uId,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -608,7 +649,7 @@ public class TimelineReaderWebServices {
       }
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -655,6 +696,13 @@ public class TimelineReaderWebServices {
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id, created time is returned
    *     (Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -680,9 +728,11 @@ public class TimelineReaderWebServices {
       @QueryParam("flowrunid") String flowRunId,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getEntity(req, res, null, appId, entityType, entityId, userId,
-        flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields);
+        flowName, flowRunId, confsToRetrieve, metricsToRetrieve, fields,
+        metricsLimit);
   }
 
   /**
@@ -717,6 +767,13 @@ public class TimelineReaderWebServices {
    *     {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type, id and created time is returned
    *     (Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -743,7 +800,8 @@ public class TimelineReaderWebServices {
       @QueryParam("flowrunid") String flowRunId,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -760,7 +818,7 @@ public class TimelineReaderWebServices {
           TimelineReaderWebServicesUtils.createTimelineReaderContext(
           clusterId, userId, flowName, flowRunId, appId, entityType, entityId),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -827,7 +885,7 @@ public class TimelineReaderWebServices {
       context.setEntityType(TimelineEntityType.YARN_FLOW_RUN.toString());
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, null));
+          null, metricsToRetrieve, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -936,7 +994,7 @@ public class TimelineReaderWebServices {
           clusterId, userId, flowName, flowRunId, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, null));
+          null, metricsToRetrieve, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -963,7 +1021,10 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, and flow name
    *     which are extracted from UID and then used to query backend(Mandatory
    *     path param).
-   * @param limit Number of flow runs to return(Optional query param).
+   * @param limit If specified, defines the number of flow runs to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched flow runs should not be
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched flow runs should not be created
@@ -972,10 +1033,11 @@ public class TimelineReaderWebServices {
    *     and send back in response. These metrics will be retrieved
    *     irrespective of whether metrics are specified in fields to retrieve or
    *     not.
-   * @param fields Specifies which fields to retrieve, see {@link Field}.
-   *     All fields will be retrieved if fields=ALL. Fields other than METRICS
-   *     have no meaning for this REST endpoint. If not specified, all fields
-   *     other than metrics are returned(Optional query param).
+   * @param fields Specifies which fields to retrieve, see {@link Field}. All
+   *     fields will be retrieved if fields=ALL. Amongst all the fields, only
+   *     METRICS makes sense for flow runs hence only ALL or METRICS are
+   *     supported as fields for fetching flow runs. Other fields will lead to
+   *     HTTP 400 (Bad Request) response. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
@@ -1021,7 +1083,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, null, null, null,
           null, null, null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, fields));
+          null, metricsToRetrieve, fields, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -1044,7 +1106,10 @@ public class TimelineReaderWebServices {
    *     Mandatory path param)
    * @param flowName Flow name to which the flow runs to be queried belongs to(
    *     Mandatory path param).
-   * @param limit Number of flow runs to return(Optional query param).
+   * @param limit If specified, defines the number of flow runs to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched flow runs should not be
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched flow runs should not be created
@@ -1053,10 +1118,11 @@ public class TimelineReaderWebServices {
    *     and send back in response. These metrics will be retrieved
    *     irrespective of whether metrics are specified in fields to retrieve or
    *     not.
-   * @param fields Specifies which fields to retrieve, see {@link Field}.
-   *     All fields will be retrieved if fields=ALL. Fields other than METRICS
-   *     have no meaning for this REST endpoint. If not specified, all fields
-   *     other than metrics are returned(Optional query param).
+   * @param fields Specifies which fields to retrieve, see {@link Field}. All
+   *     fields will be retrieved if fields=ALL. Amongst all the fields, only
+   *     METRICS makes sense for flow runs hence only ALL or METRICS are
+   *     supported as fields for fetching flow runs. Other fields will lead to
+   *     HTTP 400 (Bad Request) response. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
@@ -1095,7 +1161,10 @@ public class TimelineReaderWebServices {
    *     Mandatory path param)
    * @param flowName Flow name to which the flow runs to be queried belongs to(
    *     Mandatory path param).
-   * @param limit Number of flow runs to return(Optional query param).
+   * @param limit If specified, defines the number of flow runs to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched flow runs should not be
    *     created before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched flow runs should not be created
@@ -1104,10 +1173,11 @@ public class TimelineReaderWebServices {
    *     and send back in response. These metrics will be retrieved
    *     irrespective of whether metrics are specified in fields to retrieve or
    *     not.
-   * @param fields Specifies which fields to retrieve, see {@link Field}.
-   *     All fields will be retrieved if fields=ALL. Fields other than METRICS
-   *     have no meaning for this REST endpoint. If not specified, all fields
-   *     other than metrics are returned(Optional query param).
+   * @param fields Specifies which fields to retrieve, see {@link Field}. All
+   *     fields will be retrieved if fields=ALL. Amongst all the fields, only
+   *     METRICS makes sense for flow runs hence only ALL or METRICS are
+   *     supported as fields for fetching flow runs. Other fields will lead to
+   *     HTTP 400 (Bad Request) response. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     set of <cite>FlowRunEntity</cite> instances for the given flow are
@@ -1152,7 +1222,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, null, null, null,
           null, null, null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          null, metricsToRetrieve, fields));
+          null, metricsToRetrieve, fields, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "createdTime start/end or limit");
     }
@@ -1171,7 +1241,10 @@ public class TimelineReaderWebServices {
    *
    * @param req Servlet request.
    * @param res Servlet response.
-   * @param limit Number of flows to return(Optional query param).
+   * @param limit If specified, defines the number of flows to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param dateRange If specified is given as "[startdate]-[enddate]"(i.e.
    *     start and end date separated by "-") or single date. Dates are
    *     interpreted in yyyyMMdd format and are assumed to be in GMT(Optional
@@ -1214,7 +1287,10 @@ public class TimelineReaderWebServices {
    * @param res Servlet response.
    * @param clusterId Cluster id to which the flows to be queried belong to(
    *     Mandatory path param).
-   * @param limit Number of flows to return(Optional query param).
+   * @param limit If specified, defines the number of flows to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param dateRange If specified is given as "[startdate]-[enddate]"(i.e.
    *     start and end date separated by "-") or single date. Dates are
    *     interpreted in yyyyMMdd format and are assumed to be in GMT(Optional
@@ -1271,7 +1347,7 @@ public class TimelineReaderWebServices {
           clusterId, null, null, null, null,
           TimelineEntityType.YARN_FLOW_ACTIVITY.toString(), null),
           entityFilters, TimelineReaderWebServicesUtils.
-          createTimelineDataToRetrieve(null, null, null));
+          createTimelineDataToRetrieve(null, null, null, null));
     } catch (Exception e) {
       handleException(e, url, startTime, "limit");
     }
@@ -1305,6 +1381,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -1325,7 +1408,8 @@ public class TimelineReaderWebServices {
       @PathParam("uid") String uId,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -1346,7 +1430,7 @@ public class TimelineReaderWebServices {
       context.setEntityType(TimelineEntityType.YARN_APPLICATION.toString());
       entity = timelineReaderManager.getEntity(context,
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1388,6 +1472,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -1411,9 +1502,10 @@ public class TimelineReaderWebServices {
       @QueryParam("userid") String userId,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getApp(req, res, null, appId, flowName, flowRunId, userId,
-        confsToRetrieve, metricsToRetrieve, fields);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
   }
 
   /**
@@ -1444,6 +1536,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing a
    *     <cite>TimelineEntity</cite> instance is returned.<br>
@@ -1468,7 +1567,8 @@ public class TimelineReaderWebServices {
       @QueryParam("userid") String userId,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -1486,7 +1586,7 @@ public class TimelineReaderWebServices {
           clusterId, userId, flowName, flowRunId, appId,
           TimelineEntityType.YARN_APPLICATION.toString(), null),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime, "flowrunid");
     }
@@ -1512,7 +1612,10 @@ public class TimelineReaderWebServices {
    * @param uId a delimited string containing clusterid, userid, flow name and
    *     flowrun id which are extracted from UID and then used to query backend.
    *     (Mandatory path param).
-   * @param limit Number of apps to return(Optional query param).
+   * @param limit If specified, defines the number of apps to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched apps should not be created
    *     before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched apps should not be created
@@ -1549,6 +1652,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1577,7 +1687,8 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     String url = req.getRequestURI() +
         (req.getQueryString() == null ? "" :
             QUERY_STRING_SEP + req.getQueryString());
@@ -1601,7 +1712,7 @@ public class TimelineReaderWebServices {
           limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
           infofilters, conffilters, metricfilters, eventfilters),
           TimelineReaderWebServicesUtils.createTimelineDataToRetrieve(
-          confsToRetrieve, metricsToRetrieve, fields));
+          confsToRetrieve, metricsToRetrieve, fields, metricsLimit));
     } catch (Exception e) {
       handleException(e, url, startTime,
           "createdTime start/end or limit or flowrunid");
@@ -1628,7 +1739,10 @@ public class TimelineReaderWebServices {
    *     param).
    * @param flowRunId Run id which should match for the apps(Mandatory path
    *     param).
-   * @param limit Number of apps to return(Optional query param).
+   * @param limit If specified, defines the number of apps to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched apps should not be created
    *     before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched apps should not be created
@@ -1665,6 +1779,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1695,12 +1816,13 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
   }
 
   /**
@@ -1717,7 +1839,10 @@ public class TimelineReaderWebServices {
    *     param).
    * @param flowRunId Run id which should match for the apps(Mandatory path
    *     param).
-   * @param limit Number of apps to return(Optional query param).
+   * @param limit If specified, defines the number of apps to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched apps should not be created
    *     before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched apps should not be created
@@ -1754,6 +1879,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1786,12 +1918,13 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         flowRunId, limit, createdTimeStart, createdTimeEnd, relatesTo,
         isRelatedTo, infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
   }
 
   /**
@@ -1805,7 +1938,10 @@ public class TimelineReaderWebServices {
    * @param userId User id which should match for the apps(Mandatory path param)
    * @param flowName Flow name which should match for the apps(Mandatory path
    *     param).
-   * @param limit Number of apps to return(Optional query param).
+   * @param limit If specified, defines the number of apps to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched apps should not be created
    *     before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched apps should not be created
@@ -1842,6 +1978,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1871,19 +2014,19 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getEntities(req, res, null, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
   }
 
   /**
    * Return a list of apps for a given user, cluster id and flow name. If number
    * of matching apps are more than the limit, most recent apps till the limit
-   * is reached, will be returned. If number of matching apps are more than the
-   * limit, most recent apps till the limit is reached, will be returned.
+   * is reached, will be returned.
    *
    * @param req Servlet request.
    * @param res Servlet response.
@@ -1892,7 +2035,10 @@ public class TimelineReaderWebServices {
    * @param userId User id which should match for the apps(Mandatory path param)
    * @param flowName Flow name which should match for the apps(Mandatory path
    *     param).
-   * @param limit Number of apps to return(Optional query param).
+   * @param limit If specified, defines the number of apps to return. The
+   *     maximum possible value for limit can be {@link Long#MAX_VALUE}. If it
+   *     is not specified or has a value less than 0, then limit will be
+   *     considered as 100. (Optional query param).
    * @param createdTimeStart If specified, matched apps should not be created
    *     before this timestamp(Optional query param).
    * @param createdTimeEnd If specified, matched apps should not be created
@@ -1929,6 +2075,13 @@ public class TimelineReaderWebServices {
    *     see {@link Field}. All fields will be retrieved if fields=ALL. If not
    *     specified, 3 fields i.e. entity type(equivalent to YARN_APPLICATION),
    *     app id and app created time is returned(Optional query param).
+   * @param metricsLimit If specified, defines the number of metrics to return.
+   *     Considered only if fields contains METRICS/ALL or metricsToRetrieve is
+   *     specified. Ignored otherwise. The maximum possible value for
+   *     metricsLimit can be {@link Integer#MAX_VALUE}. If it is not specified
+   *     or has a value less than 1, and metrics have to be retrieved, then
+   *     metricsLimit will be considered as 1 i.e. latest single value of
+   *     metric(s) will be returned. (Optional query param).
    *
    * @return If successful, a HTTP 200(OK) response having a JSON representing
    *     a set of <cite>TimelineEntity</cite> instances representing apps is
@@ -1959,11 +2112,12 @@ public class TimelineReaderWebServices {
       @QueryParam("eventfilters") String eventfilters,
       @QueryParam("confstoretrieve") String confsToRetrieve,
       @QueryParam("metricstoretrieve") String metricsToRetrieve,
-      @QueryParam("fields") String fields) {
+      @QueryParam("fields") String fields,
+      @QueryParam("metricslimit") String metricsLimit) {
     return getEntities(req, res, clusterId, null,
         TimelineEntityType.YARN_APPLICATION.toString(), userId, flowName,
         null, limit, createdTimeStart, createdTimeEnd, relatesTo, isRelatedTo,
         infofilters, conffilters, metricfilters, eventfilters,
-        confsToRetrieve, metricsToRetrieve, fields);
+        confsToRetrieve, metricsToRetrieve, fields, metricsLimit);
   }
 }

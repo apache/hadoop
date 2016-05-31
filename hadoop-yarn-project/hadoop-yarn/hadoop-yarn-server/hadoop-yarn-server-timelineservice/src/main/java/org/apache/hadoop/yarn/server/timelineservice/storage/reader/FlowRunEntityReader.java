@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnF
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.common.base.Preconditions;
 
@@ -90,6 +92,15 @@ class FlowRunEntityReader extends TimelineEntityReader {
     if (isSingleEntityRead()) {
       Preconditions.checkNotNull(getContext().getFlowRunId(),
           "flowRunId shouldn't be null");
+    }
+    EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
+    if (!isSingleEntityRead() && fieldsToRetrieve != null) {
+      for (Field field : fieldsToRetrieve) {
+        if (field != Field.ALL && field != Field.METRICS) {
+          throw new BadRequestException("Invalid field " + field +
+              " specified while querying flow runs.");
+        }
+      }
     }
   }
 
@@ -209,6 +220,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
       newList.addFilter(filterList);
     }
     scan.setFilter(newList);
+    scan.setMaxVersions(Integer.MAX_VALUE);
     return getTable().getResultScanner(hbaseConf, conn, scan);
   }
 

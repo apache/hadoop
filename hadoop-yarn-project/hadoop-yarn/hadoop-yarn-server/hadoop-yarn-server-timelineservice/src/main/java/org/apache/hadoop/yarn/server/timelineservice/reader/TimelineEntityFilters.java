@@ -32,8 +32,9 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
  * filters restrict the number of entities to return.<br>
  * Filters contain the following :<br>
  * <ul>
- * <li><b>limit</b> - A limit on the number of entities to return. If null
- * or {@literal <=0}, defaults to {@link #DEFAULT_LIMIT}.</li>
+ * <li><b>limit</b> - A limit on the number of entities to return. If null or
+ * {@literal < 0}, defaults to {@link #DEFAULT_LIMIT}. The maximum possible
+ * value for limit can be {@link Long#MAX_VALUE}.</li>
  * <li><b>createdTimeBegin</b> - Matched entities should not be created
  * before this timestamp. If null or {@literal <=0}, defaults to 0.</li>
  * <li><b>createdTimeEnd</b> - Matched entities should not be created after
