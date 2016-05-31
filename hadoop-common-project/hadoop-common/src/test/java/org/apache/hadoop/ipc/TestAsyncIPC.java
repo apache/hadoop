@@ -30,6 +30,7 @@ import org.apache.hadoop.ipc.TestIPC.TestServer;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.concurrent.AsyncGetFuture;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +50,12 @@ public class TestAsyncIPC {
 
   private static Configuration conf;
   private static final Log LOG = LogFactory.getLog(TestAsyncIPC.class);
+
+  static <T extends Writable> AsyncGetFuture<T, IOException>
+      getAsyncRpcResponseFuture() {
+    return (AsyncGetFuture<T, IOException>) new AsyncGetFuture<>(
+        Client.getAsyncRpcResponse());
+  }
 
   @Before
   public void setupConf() {
@@ -84,7 +91,7 @@ public class TestAsyncIPC {
         try {
           final long param = TestIPC.RANDOM.nextLong();
           TestIPC.call(client, param, server, conf);
-          Future<LongWritable> returnFuture = Client.getAsyncRpcResponse();
+          Future<LongWritable> returnFuture = getAsyncRpcResponseFuture();
           returnFutures.put(i, returnFuture);
           expectedValues.put(i, param);
         } catch (Exception e) {
@@ -205,7 +212,7 @@ public class TestAsyncIPC {
 
     private void doCall(final int idx, final long param) throws IOException {
       TestIPC.call(client, param, server, conf);
-      Future<LongWritable> returnFuture = Client.getAsyncRpcResponse();
+      Future<LongWritable> returnFuture = getAsyncRpcResponseFuture();
       returnFutures.put(idx, returnFuture);
       expectedValues.put(idx, param);
     }
