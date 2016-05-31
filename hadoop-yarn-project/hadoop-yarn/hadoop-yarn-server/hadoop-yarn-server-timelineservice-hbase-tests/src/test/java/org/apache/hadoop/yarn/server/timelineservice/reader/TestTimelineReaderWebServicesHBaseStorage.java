@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.timelineservice.reader;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -112,13 +113,14 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     TimelineMetric m1 = new TimelineMetric();
     m1.setId("MAP_SLOT_MILLIS");
     Map<Long, Number> metricValues =
-        ImmutableMap.of(ts - 100000, (Number)2, ts - 80000, 40);
+        ImmutableMap.of(ts - 100000, (Number)2, ts - 90000, 7, ts - 80000, 40);
     m1.setType(Type.TIME_SERIES);
     m1.setValues(metricValues);
     metrics.add(m1);
     m1 = new TimelineMetric();
     m1.setId("MAP1_SLOT_MILLIS");
-    metricValues = ImmutableMap.of(ts - 100000, (Number)2, ts - 80000, 40);
+    metricValues =
+        ImmutableMap.of(ts - 100000, (Number)2, ts - 90000, 9, ts - 80000, 40);
     m1.setType(Type.TIME_SERIES);
     m1.setValues(metricValues);
     metrics.add(m1);
@@ -460,6 +462,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     assertNotNull(resp);
     assertTrue("Response from server should have been " + status,
         resp.getClientResponseStatus().equals(status));
+    System.out.println("Response is: " + resp.getEntity(String.class));
   }
 
   @Test
@@ -615,11 +618,17 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             (entity.getStartTime() == 1425016501034L) &&
             (entity.getMetrics().size() == 1)));
       }
+
+      // fields as CONFIGS will lead to a HTTP 400 as it makes no sense for
+      // flow runs.
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/clusters/cluster1/users/user1/flows/flow_name/runs?" +
+          "fields=CONFIGS");
+      verifyHttpResponse(client, uri, Status.BAD_REQUEST);
     } finally {
       client.destroy();
     }
   }
-
 
   @Test
   public void testGetFlowRunsMetricsToRetrieve() throws Exception {
@@ -1024,15 +1033,12 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entity);
       assertEquals("application_1111111111_1111", entity.getId());
       assertEquals(3, entity.getMetrics().size());
-      TimelineMetric m1 = newMetric(TimelineMetric.Type.TIME_SERIES,
-          "HDFS_BYTES_READ", ts - 100000, 31L);
-      m1.addValue(ts - 80000, 57L);
-      TimelineMetric m2 = newMetric(TimelineMetric.Type.TIME_SERIES,
-          "MAP_SLOT_MILLIS", ts - 100000, 2L);
-      m2.addValue(ts - 80000, 40L);
-      TimelineMetric m3 = newMetric(TimelineMetric.Type.TIME_SERIES,
-          "MAP1_SLOT_MILLIS", ts - 100000, 2L);
-      m3.addValue(ts - 80000, 40L);
+      TimelineMetric m1 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+          "HDFS_BYTES_READ", ts - 80000, 57L);
+      TimelineMetric m2 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+          "MAP_SLOT_MILLIS", ts - 80000, 40L);
+      TimelineMetric m3 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+          "MAP1_SLOT_MILLIS", ts - 80000, 40L);
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(verifyMetrics(metric, m1, m2, m3));
       }
@@ -1045,9 +1051,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertNotNull(entity);
       assertEquals("application_1111111111_2222", entity.getId());
       assertEquals(1, entity.getMetrics().size());
-      TimelineMetric m4 = newMetric(TimelineMetric.Type.TIME_SERIES,
-         "MAP_SLOT_MILLIS", ts - 100000, 5L);
-      m4.addValue(ts - 80000, 101L);
+      TimelineMetric m4 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+         "MAP_SLOT_MILLIS", ts - 80000, 101L);
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(verifyMetrics(metric, m4));
       }
@@ -1067,15 +1072,35 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
       assertNotNull(entity);
       assertEquals("application_1111111111_1111", entity.getId());
+      assertEquals(1, entity.getConfigs().size());
       assertEquals(3, entity.getMetrics().size());
-      TimelineMetric m1 = newMetric(TimelineMetric.Type.TIME_SERIES,
-          "HDFS_BYTES_READ", ts - 100000, 31L);
+      TimelineMetric m1 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+          "HDFS_BYTES_READ", ts - 80000, 57L);
+      TimelineMetric m2 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+          "MAP_SLOT_MILLIS", ts - 80000, 40L);
+      TimelineMetric m3 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+          "MAP1_SLOT_MILLIS", ts - 80000, 40L);
+      for (TimelineMetric metric : entity.getMetrics()) {
+        assertTrue(verifyMetrics(metric, m1, m2, m3));
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/clusters/cluster1/apps/application_1111111111_1111?" +
+          "fields=ALL&metricslimit=10");
+      resp = getResponse(client, uri);
+      entity = resp.getEntity(TimelineEntity.class);
+      assertNotNull(entity);
+      assertEquals("application_1111111111_1111", entity.getId());
+      assertEquals(1, entity.getConfigs().size());
+      assertEquals(3, entity.getMetrics().size());
+      m1 = newMetric(TimelineMetric.Type.TIME_SERIES, "HDFS_BYTES_READ",
+          ts - 100000, 31L);
       m1.addValue(ts - 80000, 57L);
-      TimelineMetric m2 = newMetric(TimelineMetric.Type.TIME_SERIES,
-          "MAP_SLOT_MILLIS", ts - 100000, 2L);
+      m2 = newMetric(TimelineMetric.Type.TIME_SERIES, "MAP_SLOT_MILLIS",
+          ts - 100000, 2L);
       m2.addValue(ts - 80000, 40L);
-      TimelineMetric m3 = newMetric(TimelineMetric.Type.TIME_SERIES,
-          "MAP1_SLOT_MILLIS", ts - 100000, 2L);
+      m3 = newMetric(TimelineMetric.Type.TIME_SERIES, "MAP1_SLOT_MILLIS",
+          ts - 100000, 2L);
       m3.addValue(ts - 80000, 40L);
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(verifyMetrics(metric, m1, m2, m3));
@@ -1229,11 +1254,6 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         }
       }
       assertEquals(2, metricCnt);
-
-      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
-          "entities/type1?metricstoretrieve=!(MAP1_,HDFS_");
-      verifyHttpResponse(client, uri, Status.BAD_REQUEST);
     } finally {
       client.destroy();
     }
@@ -1550,6 +1570,35 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         assertTrue(entity.getId().equals("entity2"));
         for (TimelineMetric metric : entity.getMetrics()) {
           assertTrue(metric.getId().startsWith("MAP1"));
+          assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+        }
+      }
+      assertEquals(2, metricCnt);
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
+          "entities/type1?metricfilters=(HDFS_BYTES_READ%20lt%2060%20AND%20" +
+          "MAP_SLOT_MILLIS%20gt%2040)%20OR%20(MAP1_SLOT_MILLIS%20ge" +
+          "%20140%20AND%20MAP11_SLOT_MILLIS%20le%20122)&metricstoretrieve=" +
+          "!(HDFS)&metricslimit=10");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
+      assertNotNull(entities);
+      assertEquals(1, entities.size());
+      metricCnt = 0;
+      for (TimelineEntity entity : entities) {
+        metricCnt += entity.getMetrics().size();
+        assertTrue(entity.getId().equals("entity2"));
+        for (TimelineMetric metric : entity.getMetrics()) {
+          assertTrue(metric.getId().startsWith("MAP1"));
+          if (metric.getId().equals("MAP1_SLOT_MILLIS")) {
+            assertEquals(2, metric.getValues().size());
+            assertEquals(TimelineMetric.Type.TIME_SERIES, metric.getType());
+          } else if (metric.getId().equals("MAP11_SLOT_MILLIS")) {
+            assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+          } else {
+            fail("Unexpected metric id");
+          }
         }
       }
       assertEquals(2, metricCnt);
@@ -1794,6 +1843,23 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertEquals(1, entity.getMetrics().size());
       for (TimelineMetric  metric : entity.getMetrics()) {
         assertTrue(metric.getId().startsWith("MAP11_"));
+        assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+        assertEquals(1, metric.getValues().size());
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
+          "entities/type1/entity2?metricstoretrieve=!(MAP1_,HDFS_)&" +
+          "metricslimit=5");
+      resp = getResponse(client, uri);
+      entity = resp.getEntity(TimelineEntity.class);
+      assertNotNull(entity);
+      assertEquals("entity2", entity.getId());
+      assertEquals("type1", entity.getType());
+      assertEquals(1, entity.getMetrics().size());
+      for (TimelineMetric  metric : entity.getMetrics()) {
+        assertTrue(metric.getId().startsWith("MAP11_"));
+        assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
       }
     } finally {
       client.destroy();
@@ -1818,6 +1884,29 @@ public class TestTimelineReaderWebServicesHBaseStorage {
             entity.getMetrics().size() == 3) ||
             (entity.getId().equals("application_1111111111_2222") &&
             entity.getMetrics().size() == 1));
+        for (TimelineMetric metric : entity.getMetrics()) {
+          assertEquals(TimelineMetric.Type.SINGLE_VALUE, metric.getType());
+          assertEquals(1, metric.getValues().size());
+        }
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+              "timeline/clusters/cluster1/users/user1/flows/flow_name/runs/" +
+              "1002345678919/apps?fields=ALL&metricslimit=2");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
+      assertNotNull(entities);
+      assertEquals(2, entities.size());
+      for (TimelineEntity entity : entities) {
+        assertTrue("Unexpected app in result",
+            (entity.getId().equals("application_1111111111_1111") &&
+            entity.getMetrics().size() == 3) ||
+            (entity.getId().equals("application_1111111111_2222") &&
+            entity.getMetrics().size() == 1));
+        for (TimelineMetric metric : entity.getMetrics()) {
+          assertTrue(metric.getValues().size() <= 2);
+          assertEquals(TimelineMetric.Type.TIME_SERIES, metric.getType());
+        }
       }
 
       // Query without specifying cluster ID.
@@ -1855,11 +1944,75 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       for (TimelineEntity entity : entities) {
         assertTrue("Unexpected app in result",
             (entity.getId().equals("application_1111111111_1111") &&
-            entity.getMetrics().size() == 3) ||
+            entity.getConfigs().size() == 1 &&
+            entity.getConfigs().equals(ImmutableMap.of("cfg2", "value1"))) ||
             (entity.getId().equals("application_1111111111_2222") &&
-            entity.getMetrics().size() == 1) ||
+            entity.getConfigs().size() == 1 &&
+            entity.getConfigs().equals(ImmutableMap.of("cfg1", "value1"))) ||
             (entity.getId().equals("application_1111111111_2224") &&
-            entity.getMetrics().size() == 1));
+            entity.getConfigs().size() == 0));
+        for (TimelineMetric metric : entity.getMetrics()) {
+          if (entity.getId().equals("application_1111111111_1111")) {
+            TimelineMetric m1 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+                "HDFS_BYTES_READ", ts - 80000, 57L);
+            TimelineMetric m2 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+                "MAP_SLOT_MILLIS", ts - 80000, 40L);
+            TimelineMetric m3 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+                "MAP1_SLOT_MILLIS", ts - 80000, 40L);
+            assertTrue(verifyMetrics(metric, m1, m2, m3));
+          } else if (entity.getId().equals("application_1111111111_2222")) {
+            TimelineMetric m1 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+                "MAP_SLOT_MILLIS", ts - 80000, 101L);
+            assertTrue(verifyMetrics(metric, m1));
+          } else if (entity.getId().equals("application_1111111111_2224")) {
+            TimelineMetric m1 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
+                "MAP_SLOT_MILLIS", ts - 80000, 101L);
+            assertTrue(verifyMetrics(metric, m1));
+          }
+        }
+      }
+
+      uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
+          "timeline/clusters/cluster1/users/user1/flows/flow_name/apps?" +
+          "fields=ALL&metricslimit=6");
+      resp = getResponse(client, uri);
+      entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
+      assertNotNull(entities);
+      assertEquals(3, entities.size());
+      for (TimelineEntity entity : entities) {
+        assertTrue("Unexpected app in result",
+            (entity.getId().equals("application_1111111111_1111") &&
+            entity.getConfigs().size() == 1 &&
+            entity.getConfigs().equals(ImmutableMap.of("cfg2", "value1"))) ||
+            (entity.getId().equals("application_1111111111_2222") &&
+            entity.getConfigs().size() == 1 &&
+            entity.getConfigs().equals(ImmutableMap.of("cfg1", "value1"))) ||
+            (entity.getId().equals("application_1111111111_2224") &&
+            entity.getConfigs().size() == 0));
+        for (TimelineMetric metric : entity.getMetrics()) {
+          if (entity.getId().equals("application_1111111111_1111")) {
+            TimelineMetric m1 = newMetric(TimelineMetric.Type.TIME_SERIES,
+                "HDFS_BYTES_READ", ts - 80000, 57L);
+            m1.addValue(ts - 100000, 31L);
+            TimelineMetric m2 = newMetric(TimelineMetric.Type.TIME_SERIES,
+                "MAP_SLOT_MILLIS", ts - 80000, 40L);
+            m2.addValue(ts - 100000, 2L);
+            TimelineMetric m3 = newMetric(TimelineMetric.Type.TIME_SERIES,
+                "MAP1_SLOT_MILLIS", ts - 80000, 40L);
+            m3.addValue(ts - 100000, 2L);
+            assertTrue(verifyMetrics(metric, m1, m2, m3));
+          } else if (entity.getId().equals("application_1111111111_2222")) {
+            TimelineMetric m1 = newMetric(TimelineMetric.Type.TIME_SERIES,
+                "MAP_SLOT_MILLIS", ts - 80000, 101L);
+            m1.addValue(ts - 100000, 5L);
+            assertTrue(verifyMetrics(metric, m1));
+          } else if (entity.getId().equals("application_1111111111_2224")) {
+            TimelineMetric m1 = newMetric(TimelineMetric.Type.TIME_SERIES,
+                "MAP_SLOT_MILLIS", ts - 80000, 101L);
+            m1.addValue(ts - 100000, 5L);
+            assertTrue(verifyMetrics(metric, m1));
+          }
+        }
       }
 
       // Query without specifying cluster ID.

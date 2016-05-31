@@ -312,7 +312,7 @@ class ApplicationEntityReader extends GenericEntityReader {
         ApplicationRowKey.getRowKey(context.getClusterId(), context.getUserId(),
             context.getFlowName(), context.getFlowRunId(), context.getAppId());
     Get get = new Get(rowKey);
-    get.setMaxVersions(Integer.MAX_VALUE);
+    get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
       get.setFilter(filterList);
     }
@@ -382,6 +382,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       newList.addFilter(filterList);
     }
     scan.setFilter(newList);
+    scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     return getTable().getResultScanner(hbaseConf, conn, scan);
   }
 

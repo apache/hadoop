@@ -53,6 +53,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Fiel
  * object to retrieve, see {@link Field}. If null, retrieves 3 fields,
  * namely entity id, entity type and entity created time. All fields will
  * be returned if {@link Field#ALL} is specified.</li>
+ * <li><b>metricsLimit</b> - If fieldsToRetrieve contains METRICS/ALL or
+ * metricsToRetrieve is specified, this limit defines an upper limit to the
+ * number of metrics to return. This parameter is ignored if METRICS are not to
+ * be fetched.</li>
  * </ul>
  */
 @Private
@@ -61,16 +65,28 @@ public class TimelineDataToRetrieve {
   private TimelineFilterList confsToRetrieve;
   private TimelineFilterList metricsToRetrieve;
   private EnumSet<Field> fieldsToRetrieve;
+  private Integer metricsLimit;
+
+  /**
+   * Default limit of number of metrics to return.
+   */
+  public static final Integer DEFAULT_METRICS_LIMIT = 1;
 
   public TimelineDataToRetrieve() {
-    this(null, null, null);
+    this(null, null, null, null);
   }
 
   public TimelineDataToRetrieve(TimelineFilterList confs,
-      TimelineFilterList metrics, EnumSet<Field> fields) {
+      TimelineFilterList metrics, EnumSet<Field> fields,
+      Integer limitForMetrics) {
     this.confsToRetrieve = confs;
     this.metricsToRetrieve = metrics;
     this.fieldsToRetrieve = fields;
+    if (limitForMetrics == null || limitForMetrics < 1) {
+      this.metricsLimit = DEFAULT_METRICS_LIMIT;
+    } else {
+      this.metricsLimit = limitForMetrics;
+    }
 
     if (this.fieldsToRetrieve == null) {
       this.fieldsToRetrieve = EnumSet.noneOf(Field.class);
@@ -114,6 +130,18 @@ public class TimelineDataToRetrieve {
         metricsToRetrieve != null &&
         !metricsToRetrieve.getFilterList().isEmpty()) {
       fieldsToRetrieve.add(Field.METRICS);
+    }
+  }
+
+  public Integer getMetricsLimit() {
+    return metricsLimit;
+  }
+
+  public void setMetricsLimit(Integer limit) {
+    if (limit == null || limit < 1) {
+      this.metricsLimit = DEFAULT_METRICS_LIMIT;
+    } else {
+      this.metricsLimit = limit;
     }
   }
 }

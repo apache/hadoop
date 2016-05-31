@@ -87,14 +87,16 @@ final class TimelineReaderWebServicesUtils {
    * @param confs confs to retrieve.
    * @param metrics metrics to retrieve.
    * @param fields fields to retrieve.
+   * @param metricsLimit upper limit on number of metrics to return.
    * @return a {@link TimelineDataToRetrieve} object.
    * @throws TimelineParseException if any problem occurs during parsing.
    */
   static TimelineDataToRetrieve createTimelineDataToRetrieve(String confs,
-      String metrics, String fields) throws TimelineParseException {
+      String metrics, String fields, String metricsLimit)
+      throws TimelineParseException {
     return new TimelineDataToRetrieve(parseDataToRetrieve(confs),
-        parseDataToRetrieve(metrics), parseFieldsStr(
-            fields, TimelineParseConstants.COMMA_DELIMITER));
+        parseDataToRetrieve(metrics), parseFieldsStr(fields,
+        TimelineParseConstants.COMMA_DELIMITER), parseIntStr(metricsLimit));
   }
 
   /**
@@ -188,6 +190,15 @@ final class TimelineReaderWebServicesUtils {
    */
   static Long parseLongStr(String str) {
     return str == null ? null : Long.parseLong(str.trim());
+  }
+
+  /**
+   * Interpret passed string as a integer.
+   * @param str Passed string.
+   * @return integer representation if string is not null, null otherwise.
+   */
+  static Integer parseIntStr(String str) {
+    return str == null ? null : Integer.parseInt(str.trim());
   }
 
   /**
