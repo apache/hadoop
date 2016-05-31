@@ -359,7 +359,6 @@ public class TestDistributedFileSystem {
   
   private static class MyDistributedFileSystem extends DistributedFileSystem {
     MyDistributedFileSystem() {
-      statistics = new FileSystem.Statistics("myhdfs"); // can't mock finals
       dfs = mock(DFSClient.class);
     }
     @Override
