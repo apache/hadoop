@@ -20,14 +20,15 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 
-import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
-import org.apache.commons.logging.impl.Log4JLogger;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
+
 import org.apache.hadoop.test.GenericTestUtils;
 
 /**
@@ -116,7 +117,73 @@ public abstract class FileContextCreateMkdirBaseTest {
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
     Assert.assertTrue(isDir(fc, f));
   }
- 
+
+  @Test
+  public void testMkdirsRecursiveWithExistingDir() throws IOException {
+    Path f = getTestRootPath(fc, "aDir/bDir/cDir");
+    fc.mkdir(f, FileContext.DEFAULT_PERM, true);
+    assertIsDirectory(fc.getFileStatus(f));
+    assertIsDirectory(fc.getFileStatus(f.getParent()));
+    assertIsDirectory(fc.getFileStatus(f.getParent().getParent()));
+  }
+
+  @Test
+  public void testMkdirRecursiveWithExistingFile() throws IOException {
+    Path f = getTestRootPath(fc, "NonExistant3/aDir");
+    fc.mkdir(f, FileContext.DEFAULT_PERM, true);
+    assertIsDirectory(fc.getFileStatus(f));
+    assertIsDirectory(fc.getFileStatus(f.getParent()));
+
+    // create a sample file
+    Path filePath = new Path(f.getParent(), "test.txt");
+    createFile(fc, filePath);
+    assertIsFile(filePath, fc.getFileStatus(filePath));
+
+    // try creating another folder which conflicts with filePath
+    Path dirPath = new Path(filePath, "bDir/cDir");
+    try {
+      fc.mkdir(dirPath, FileContext.DEFAULT_PERM, true);
+      Assert.fail("Mkdir for " + dirPath
+          + " should have failed as a file was present");
+    } catch(IOException e) {
+      // failed as expected
+    }
+  }
+
+  @Test
+  public void testWithRename() throws IOException, InterruptedException {
+    Path root = getTestRootPath(fc);
+    Path f = new Path(root, "d1/d2/d3");
+    fc.mkdir(f, FileContext.DEFAULT_PERM, true);
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d2")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d2/d3")));
+
+    // create a sample file f.txt
+    Path fPath = new Path(root, "d1/d2/f.txt");
+    createFile(fc, fPath);
+    assertIsFile(fPath, fc.getFileStatus(fPath));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d2")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d2/d3")));
+
+    // create a sample file f2.txt
+    Path f2Path = new Path(getTestRootPath(fc), "d1/d2/d3/f2.txt");
+    createFile(fc, f2Path);
+    assertIsFile(fPath, fc.getFileStatus(f2Path));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d2")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d2/d3")));
+
+    //rename d1/d2/d3 d1/d4
+    fc.rename(new Path(root, "d1/d2/d3"), new Path(root, "d1/d4"));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1")));
+    assertIsDirectory(fc.getFileStatus(new Path(root, "d1/d4")));
+    Path f2NewPath = new Path(root, "d1/d4/f2.txt");
+    assertIsFile(f2NewPath, fc.getFileStatus(f2NewPath));
+  }
+
+
   ///////////////////////
   //      Test Create
   ////////////////////////
