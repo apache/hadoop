@@ -106,6 +106,12 @@ public:
   Status Open(const std::string &path, FileHandle **handle) override;
 
 
+  virtual void GetBlockLocations(const std::string & path,
+    const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) override;
+  virtual Status GetBlockLocations(const std::string & path,
+    std::shared_ptr<FileBlockLocation> * locations) override;
+
+
   void SetFsEventCallback(fs_event_callback callback) override;
 
   /* add a new thread to handle asio requests, return number of threads in pool

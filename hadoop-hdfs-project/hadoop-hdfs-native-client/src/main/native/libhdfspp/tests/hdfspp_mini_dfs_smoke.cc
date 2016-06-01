@@ -15,24 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LIB_READER_FILEINFO_H_
-#define LIB_READER_FILEINFO_H_
 
-#include "ClientNamenodeProtocol.pb.h"
+#include "hdfspp_mini_dfs.h"
 
 namespace hdfs {
 
-/**
- * Information that is assumed to be unchanging about a file for the duration of
- * the operations.
- */
-struct FileInfo {
-  unsigned long long file_length_;
-  bool               under_construction_;
-  bool               last_block_complete_;
-  std::vector<::hadoop::hdfs::LocatedBlockProto> blocks_;
+class HdfsMiniDfsSmokeTest: public ::testing::Test {
+public:
+  MiniCluster cluster;
 };
+
+// Make sure we can set up a mini-cluster and connect to it
+TEST_F(HdfsMiniDfsSmokeTest, SmokeTest) {
+  FSHandle handle = cluster.connect();
+  EXPECT_NE(nullptr, handle.handle());
+
+  HdfsHandle connection = cluster.connect_c();
+  EXPECT_NE(nullptr, connection.handle());
+}
+
 
 }
 
-#endif
+
+int main(int argc, char *argv[]) {
+  // The following line must be executed to initialize Google Mock
+  // (and Google Test) before running the tests.
+  ::testing::InitGoogleMock(&argc, argv);
+  int exit_code = RUN_ALL_TESTS();
+  google::protobuf::ShutdownProtobufLibrary();
+
+  return exit_code;
+}
