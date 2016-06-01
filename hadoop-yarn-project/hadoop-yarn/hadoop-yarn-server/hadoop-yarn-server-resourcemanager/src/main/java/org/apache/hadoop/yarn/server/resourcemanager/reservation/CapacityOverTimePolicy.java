@@ -246,7 +246,7 @@ public class CapacityOverTimePolicy implements SharingPolicy {
     long vcores;
 
     public IntegralResource(Resource resource) {
-      this.memory = resource.getMemorySize();
+      this.memory = resource.getMemory();
       this.vcores = resource.getVirtualCores();
     }
 
@@ -256,12 +256,12 @@ public class CapacityOverTimePolicy implements SharingPolicy {
     }
 
     public void add(Resource r) {
-      memory += r.getMemorySize();
+      memory += r.getMemory();
       vcores += r.getVirtualCores();
     }
 
     public void subtract(Resource r) {
-      memory -= r.getMemorySize();
+      memory -= r.getMemory();
       vcores -= r.getVirtualCores();
     }
 

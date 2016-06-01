@@ -59,8 +59,8 @@ public class AppInfo {
   protected long elapsedTime;
   protected String applicationTags;
   protected int priority;
-  private long allocatedCpuVcores;
-  private long allocatedMemoryMB;
+  private int allocatedCpuVcores;
+  private int allocatedMemoryMB;
   protected boolean unmanagedApplication;
   private String appNodeLabelExpression;
   private String amNodeLabelExpression;
@@ -100,7 +100,7 @@ public class AppInfo {
         allocatedCpuVcores = app.getApplicationResourceUsageReport()
             .getUsedResources().getVirtualCores();
         allocatedMemoryMB = app.getApplicationResourceUsageReport()
-            .getUsedResources().getMemorySize();
+            .getUsedResources().getMemory();
       }
     }
     progress = app.getProgress() * 100; // in percent
@@ -152,11 +152,11 @@ public class AppInfo {
     return runningContainers;
   }
 
-  public long getAllocatedCpuVcores() {
+  public int getAllocatedCpuVcores() {
     return allocatedCpuVcores;
   }
 
-  public long getAllocatedMemoryMB() {
+  public int getAllocatedMemoryMB() {
     return allocatedMemoryMB;
   }
 

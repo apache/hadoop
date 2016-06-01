@@ -53,49 +53,39 @@ public class ResourcePBImpl extends Resource {
     }
     viaProto = false;
   }
-
+    
+  
   @Override
-  @SuppressWarnings("deprecation")
   public int getMemory() {
-    return (int) getMemorySize();
-  }
-
-  @Override
-  public long getMemorySize() {
     ResourceProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getMemory();
+    return (p.getMemory());
   }
 
   @Override
-  public void setMemory(long memory) {
+  public void setMemory(int memory) {
     maybeInitBuilder();
-    builder.setMemory(memory);
+    builder.setMemory((memory));
   }
 
   @Override
   public int getVirtualCores() {
-    return (int) getVirtualCoresSize();
-  }
-
-  @Override
-  public long getVirtualCoresSize() {
     ResourceProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getVirtualCores();
+    return (p.getVirtualCores());
   }
 
   @Override
-  public void setVirtualCores(long vCores) {
+  public void setVirtualCores(int vCores) {
     maybeInitBuilder();
-    builder.setVirtualCores(vCores);
+    builder.setVirtualCores((vCores));
   }
 
   @Override
   public int compareTo(Resource other) {
-    long diff = this.getMemorySize() - other.getMemorySize();
+    int diff = this.getMemory() - other.getMemory();
     if (diff == 0) {
       diff = this.getVirtualCores() - other.getVirtualCores();
     }
-    return diff == 0 ? 0 : (diff > 0 ? 1 : -1);
+    return diff;
   }
   
   

@@ -404,7 +404,7 @@ public abstract class ContainerExecutor implements Configurable {
             .getBoolean(
                 YarnConfiguration.NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED,
                 YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED)) {
-          memory = (int) resource.getMemorySize();
+          memory = resource.getMemory();
         }
 
         if (conf.getBoolean(

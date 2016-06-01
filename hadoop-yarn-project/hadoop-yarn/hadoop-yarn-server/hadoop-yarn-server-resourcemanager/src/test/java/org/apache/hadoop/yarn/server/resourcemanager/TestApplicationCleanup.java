@@ -531,7 +531,7 @@ public class TestApplicationCleanup {
     // 4. Verify Memory Usage by cluster, it should be 3072. AM memory +
     // requested memory. 1024 + 2048=3072
     ResourceScheduler rs = rm1.getRMContext().getScheduler();
-    long allocatedMB = rs.getRootQueueMetrics().getAllocatedMB();
+    int allocatedMB = rs.getRootQueueMetrics().getAllocatedMB();
     Assert.assertEquals(amMemory + containerMemory, allocatedMB);
 
     // 5. Re-register NM by sending completed container status

@@ -19,28 +19,24 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
+
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 
 public class TestFSAppAttempt extends FairSchedulerTestBase {
 
@@ -228,9 +224,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(DominantResourceFairnessPolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemorySize(),
-            clusterAvailable.getMemorySize(),
-            queueMaxResourcesAvailable.getMemorySize()),
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
         min(queueStarvation.getVirtualCores(),
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
@@ -240,9 +236,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FairSharePolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemorySize(),
-            clusterAvailable.getMemorySize(),
-            queueMaxResourcesAvailable.getMemorySize()),
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
@@ -251,23 +247,23 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
         .getInstance(FifoPolicy.class));
     verifyHeadroom(schedulerApp,
-        min(queueStarvation.getMemorySize(),
-            clusterAvailable.getMemorySize(),
-            queueMaxResourcesAvailable.getMemorySize()),
+        min(queueStarvation.getMemory(),
+            clusterAvailable.getMemory(),
+            queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
             queueMaxResourcesAvailable.getVirtualCores())
     );
   }
 
-  private static long min(long value1, long value2, long value3) {
+  private static int min(int value1, int value2, int value3) {
     return Math.min(Math.min(value1, value2), value3);
   }
 
   protected void verifyHeadroom(FSAppAttempt schedulerApp,
-                                long expectedMemory, long expectedCPU) {
+                                int expectedMemory, int expectedCPU) {
     Resource headroom = schedulerApp.getHeadroom();
-    assertEquals(expectedMemory, headroom.getMemorySize());
+    assertEquals(expectedMemory, headroom.getMemory());
     assertEquals(expectedCPU, headroom.getVirtualCores());
   }
 }

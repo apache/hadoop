@@ -81,8 +81,8 @@ public class FairSchedulerQueueInfo {
     
     usedResources = new ResourceInfo(queue.getResourceUsage());
     demandResources = new ResourceInfo(queue.getDemand());
-    fractionMemUsed = (float)usedResources.getMemorySize() /
-        clusterResources.getMemorySize();
+    fractionMemUsed = (float)usedResources.getMemory() /
+        clusterResources.getMemory();
 
     steadyFairResources = new ResourceInfo(queue.getSteadyFairShare());
     fairResources = new ResourceInfo(queue.getFairShare());
@@ -93,11 +93,11 @@ public class FairSchedulerQueueInfo {
             scheduler.getClusterResource()));
 
     fractionMemSteadyFairShare =
-        (float)steadyFairResources.getMemorySize() / clusterResources.getMemorySize();
-    fractionMemFairShare = (float) fairResources.getMemorySize()
-        / clusterResources.getMemorySize();
-    fractionMemMinShare = (float)minResources.getMemorySize() / clusterResources.getMemorySize();
-    fractionMemMaxShare = (float)maxResources.getMemorySize() / clusterResources.getMemorySize();
+        (float)steadyFairResources.getMemory() / clusterResources.getMemory();
+    fractionMemFairShare = (float) fairResources.getMemory()
+        / clusterResources.getMemory();
+    fractionMemMinShare = (float)minResources.getMemory() / clusterResources.getMemory();
+    fractionMemMaxShare = (float)maxResources.getMemory() / clusterResources.getMemory();
     
     maxApps = allocConf.getQueueMaxApps(queueName);
 

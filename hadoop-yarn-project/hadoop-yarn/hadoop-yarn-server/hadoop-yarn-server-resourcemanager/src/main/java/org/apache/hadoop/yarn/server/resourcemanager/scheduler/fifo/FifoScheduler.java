@@ -142,11 +142,11 @@ public class FifoScheduler extends
       QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
       queueInfo.setQueueName(DEFAULT_QUEUE.getQueueName());
       queueInfo.setCapacity(1.0f);
-      if (clusterResource.getMemorySize() == 0) {
+      if (clusterResource.getMemory() == 0) {
         queueInfo.setCurrentCapacity(0.0f);
       } else {
-        queueInfo.setCurrentCapacity((float) usedResource.getMemorySize()
-            / clusterResource.getMemorySize());
+        queueInfo.setCurrentCapacity((float) usedResource.getMemory()
+            / clusterResource.getMemory());
       }
       queueInfo.setMaximumCapacity(1.0f);
       queueInfo.setChildQueues(new ArrayList<QueueInfo>());
@@ -671,7 +671,7 @@ public class FifoScheduler extends
     return assignedContainers;
   }
 
-  private int assignContainer(FiCaSchedulerNode node, FiCaSchedulerApp application,
+  private int assignContainer(FiCaSchedulerNode node, FiCaSchedulerApp application, 
       Priority priority, int assignableContainers, 
       ResourceRequest request, NodeType type) {
     LOG.debug("assignContainers:" +
@@ -682,11 +682,14 @@ public class FifoScheduler extends
         " request=" + request + " type=" + type);
     Resource capability = request.getCapability();
 
-    int availableContainers =
-        (int) (node.getAvailableResource().getMemorySize() / capability
-            .getMemorySize());
-    // TODO: A buggy application with this zero would crash the scheduler.
-    int assignedContainers =
+    int availableContainers = 
+      node.getAvailableResource().getMemory() / capability.getMemory(); // TODO: A buggy
+                                                                        // application
+                                                                        // with this
+                                                                        // zero would
+                                                                        // crash the
+                                                                        // scheduler.
+    int assignedContainers = 
       Math.min(assignableContainers, availableContainers);
 
     if (assignedContainers > 0) {

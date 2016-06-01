@@ -81,7 +81,7 @@ public class ContainerInfo {
     this.user = container.getUser();
     Resource res = container.getResource();
     if (res != null) {
-      this.totalMemoryNeededMB = res.getMemorySize();
+      this.totalMemoryNeededMB = res.getMemory();
       this.totalVCoresNeeded = res.getVirtualCores();
     }
     this.containerLogsShortLink = ujoin("containerlogs", this.id,

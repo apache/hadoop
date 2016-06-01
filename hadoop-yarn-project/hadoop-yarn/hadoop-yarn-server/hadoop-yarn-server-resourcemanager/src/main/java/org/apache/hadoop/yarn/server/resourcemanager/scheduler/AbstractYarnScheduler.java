@@ -711,11 +711,11 @@ public abstract class AbstractYarnScheduler
     maxAllocWriteLock.lock();
     try {
       if (add) { // added node
-        int nodeMemory = (int)totalResource.getMemorySize();
+        int nodeMemory = totalResource.getMemory();
         if (nodeMemory > maxNodeMemory) {
           maxNodeMemory = nodeMemory;
           maximumAllocation.setMemory(Math.min(
-              configuredMaximumAllocation.getMemorySize(), maxNodeMemory));
+              configuredMaximumAllocation.getMemory(), maxNodeMemory));
         }
         int nodeVCores = totalResource.getVirtualCores();
         if (nodeVCores > maxNodeVCores) {
@@ -724,7 +724,7 @@ public abstract class AbstractYarnScheduler
               configuredMaximumAllocation.getVirtualCores(), maxNodeVCores));
         }
       } else {  // removed node
-        if (maxNodeMemory == totalResource.getMemorySize()) {
+        if (maxNodeMemory == totalResource.getMemory()) {
           maxNodeMemory = -1;
         }
         if (maxNodeVCores == totalResource.getVirtualCores()) {
@@ -735,7 +735,7 @@ public abstract class AbstractYarnScheduler
         if (maxNodeMemory == -1 || maxNodeVCores == -1) {
           for (Map.Entry<NodeId, N> nodeEntry : nodes.entrySet()) {
             int nodeMemory =
-                (int)nodeEntry.getValue().getTotalResource().getMemorySize();
+                nodeEntry.getValue().getTotalResource().getMemory();
             if (nodeMemory > maxNodeMemory) {
               maxNodeMemory = nodeMemory;
             }
@@ -746,10 +746,10 @@ public abstract class AbstractYarnScheduler
             }
           }
           if (maxNodeMemory == -1) {  // no nodes
-            maximumAllocation.setMemory(configuredMaximumAllocation.getMemorySize());
+            maximumAllocation.setMemory(configuredMaximumAllocation.getMemory());
           } else {
             maximumAllocation.setMemory(
-                Math.min(configuredMaximumAllocation.getMemorySize(), maxNodeMemory));
+                Math.min(configuredMaximumAllocation.getMemory(), maxNodeMemory));
           }
           if (maxNodeVCores == -1) {  // no nodes
             maximumAllocation.setVirtualCores(configuredMaximumAllocation.getVirtualCores());
@@ -768,7 +768,7 @@ public abstract class AbstractYarnScheduler
     maxAllocWriteLock.lock();
     try {
       configuredMaximumAllocation = Resources.clone(newMaxAlloc);
-      long maxMemory = newMaxAlloc.getMemorySize();
+      int maxMemory = newMaxAlloc.getMemory();
       if (maxNodeMemory != -1) {
         maxMemory = Math.min(maxMemory, maxNodeMemory);
       }

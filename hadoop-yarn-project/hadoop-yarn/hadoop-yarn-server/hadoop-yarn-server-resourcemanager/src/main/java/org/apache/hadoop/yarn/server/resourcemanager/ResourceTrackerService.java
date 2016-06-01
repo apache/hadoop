@@ -339,7 +339,7 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Check if this node has minimum allocations
-    if (capability.getMemorySize() < minAllocMb
+    if (capability.getMemory() < minAllocMb
         || capability.getVirtualCores() < minAllocVcores) {
       String message =
           "NodeManager from  " + host

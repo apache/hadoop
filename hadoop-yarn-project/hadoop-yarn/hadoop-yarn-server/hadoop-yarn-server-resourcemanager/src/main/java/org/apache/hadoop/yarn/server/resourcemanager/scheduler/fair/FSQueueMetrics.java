@@ -24,7 +24,6 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
-import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -32,69 +31,69 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 @Metrics(context="yarn")
 public class FSQueueMetrics extends QueueMetrics {
 
-  @Metric("Fair share of memory in MB") MutableGaugeLong fairShareMB;
-  @Metric("Fair share of CPU in vcores") MutableGaugeLong fairShareVCores;
-  @Metric("Steady fair share of memory in MB") MutableGaugeLong steadyFairShareMB;
-  @Metric("Steady fair share of CPU in vcores") MutableGaugeLong steadyFairShareVCores;
-  @Metric("Minimum share of memory in MB") MutableGaugeLong minShareMB;
-  @Metric("Minimum share of CPU in vcores") MutableGaugeLong minShareVCores;
-  @Metric("Maximum share of memory in MB") MutableGaugeLong maxShareMB;
-  @Metric("Maximum share of CPU in vcores") MutableGaugeLong maxShareVCores;
-
+  @Metric("Fair share of memory in MB") MutableGaugeInt fairShareMB;
+  @Metric("Fair share of CPU in vcores") MutableGaugeInt fairShareVCores;
+  @Metric("Steady fair share of memory in MB") MutableGaugeInt steadyFairShareMB;
+  @Metric("Steady fair share of CPU in vcores") MutableGaugeInt steadyFairShareVCores;
+  @Metric("Minimum share of memory in MB") MutableGaugeInt minShareMB;
+  @Metric("Minimum share of CPU in vcores") MutableGaugeInt minShareVCores;
+  @Metric("Maximum share of memory in MB") MutableGaugeInt maxShareMB;
+  @Metric("Maximum share of CPU in vcores") MutableGaugeInt maxShareVCores;
+  
   FSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     super(ms, queueName, parent, enableUserMetrics, conf);
   }
   
   public void setFairShare(Resource resource) {
-    fairShareMB.set(resource.getMemorySize());
+    fairShareMB.set(resource.getMemory());
     fairShareVCores.set(resource.getVirtualCores());
   }
   
-  public long getFairShareMB() {
+  public int getFairShareMB() {
     return fairShareMB.value();
   }
   
-  public long getFairShareVirtualCores() {
+  public int getFairShareVirtualCores() {
     return fairShareVCores.value();
   }
 
   public void setSteadyFairShare(Resource resource) {
-    steadyFairShareMB.set(resource.getMemorySize());
+    steadyFairShareMB.set(resource.getMemory());
     steadyFairShareVCores.set(resource.getVirtualCores());
   }
 
-  public long getSteadyFairShareMB() {
+  public int getSteadyFairShareMB() {
     return steadyFairShareMB.value();
   }
 
-  public long getSteadyFairShareVCores() {
+  public int getSteadyFairShareVCores() {
     return steadyFairShareVCores.value();
   }
 
   public void setMinShare(Resource resource) {
-    minShareMB.set(resource.getMemorySize());
+    minShareMB.set(resource.getMemory());
     minShareVCores.set(resource.getVirtualCores());
   }
   
-  public long getMinShareMB() {
+  public int getMinShareMB() {
     return minShareMB.value();
   }
   
-  public long getMinShareVirtualCores() {
+  public int getMinShareVirtualCores() {
     return minShareVCores.value();
   }
   
   public void setMaxShare(Resource resource) {
-    maxShareMB.set(resource.getMemorySize());
+    maxShareMB.set(resource.getMemory());
     maxShareVCores.set(resource.getVirtualCores());
   }
   
-  public long getMaxShareMB() {
+  public int getMaxShareMB() {
     return maxShareMB.value();
   }
   
-  public long getMaxShareVirtualCores() {
+  public int getMaxShareVirtualCores() {
     return maxShareVCores.value();
   }
   

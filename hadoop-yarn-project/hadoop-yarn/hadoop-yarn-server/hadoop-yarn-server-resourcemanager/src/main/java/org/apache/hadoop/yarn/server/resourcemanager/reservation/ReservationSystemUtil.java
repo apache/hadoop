@@ -106,7 +106,7 @@ public final class ReservationSystemUtil {
 
   public static ResourceProto convertToProtoFormat(Resource e) {
     return YarnProtos.ResourceProto.newBuilder()
-        .setMemory(e.getMemorySize())
+        .setMemory(e.getMemory())
         .setVirtualCores(e.getVirtualCores())
         .build();
   }

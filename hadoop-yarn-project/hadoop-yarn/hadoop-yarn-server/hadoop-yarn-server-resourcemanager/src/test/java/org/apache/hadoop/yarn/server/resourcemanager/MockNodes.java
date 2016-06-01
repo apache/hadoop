@@ -89,13 +89,13 @@ public class MockNodes {
 
   public static Resource newUsedResource(Resource total) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory((int)(Math.random() * total.getMemorySize()));
+    rs.setMemory((int)(Math.random() * total.getMemory()));
     return rs;
   }
 
   public static Resource newAvailResource(Resource total, Resource used) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory(total.getMemorySize() - used.getMemorySize());
+    rs.setMemory(total.getMemory() - used.getMemory());
     return rs;
   }
 

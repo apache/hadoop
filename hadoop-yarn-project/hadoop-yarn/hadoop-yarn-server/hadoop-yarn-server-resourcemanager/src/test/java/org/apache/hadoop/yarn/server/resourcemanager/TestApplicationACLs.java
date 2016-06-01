@@ -383,11 +383,11 @@ public class TestApplicationACLs {
     Assert.assertEquals("Enemy should not see app reserved containers",
         -1, usageReport.getNumReservedContainers());
     Assert.assertEquals("Enemy should not see app used resources",
-        -1, usageReport.getUsedResources().getMemorySize());
+        -1, usageReport.getUsedResources().getMemory());
     Assert.assertEquals("Enemy should not see app reserved resources",
-        -1, usageReport.getReservedResources().getMemorySize());
+        -1, usageReport.getReservedResources().getMemory());
     Assert.assertEquals("Enemy should not see app needed resources",
-        -1, usageReport.getNeededResources().getMemorySize());
+        -1, usageReport.getNeededResources().getMemory());
   }
 
   private void verifyAdministerQueueUserAccess() throws Exception {

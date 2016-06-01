@@ -305,7 +305,6 @@ public class TestTaskAttempt{
     Assert.assertEquals(rta.getLaunchTime(), 10);
     Counters counters = job.getAllCounters();
     Assert.assertEquals((int) Math.ceil((float) mapMemMb / minContainerSize),
-
         counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue());
     Assert.assertEquals((int) Math.ceil((float) reduceMemMb / minContainerSize),
         counters.findCounter(JobCounter.SLOTS_MILLIS_REDUCES).getValue());
@@ -567,7 +566,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
     setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
@@ -625,7 +624,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
     setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
@@ -689,7 +688,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
     setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
@@ -759,7 +758,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
     setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
@@ -816,7 +815,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
     setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl =
@@ -884,7 +883,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
     setupTaskAttemptFinishingMonitor(eventHandler, jobConf, appCtx);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
@@ -1044,7 +1043,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, new Token(),
@@ -1098,7 +1097,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, new Token(),
@@ -1155,7 +1154,7 @@ public class TestTaskAttempt{
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     Resource resource = mock(Resource.class);
     when(appCtx.getClusterInfo()).thenReturn(clusterInfo);
-    when(resource.getMemorySize()).thenReturn(1024L);
+    when(resource.getMemory()).thenReturn(1024);
 
     TaskAttemptImpl taImpl = new MapTaskAttemptImpl(taskId, 1, eventHandler,
         jobFile, 1, splits, jobConf, taListener, new Token(),

@@ -777,9 +777,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       assertEquals("numContainers doesn't match: " + numContainers,
           report.getNumContainers(), numContainers);
       assertEquals("usedMemoryMB doesn't match: " + usedMemoryMB, report
-          .getUsedResource().getMemorySize(), usedMemoryMB);
+          .getUsedResource().getMemory(), usedMemoryMB);
       assertEquals("availMemoryMB doesn't match: " + availMemoryMB, report
-          .getAvailableResource().getMemorySize(), availMemoryMB);
+          .getAvailableResource().getMemory(), availMemoryMB);
       assertEquals("usedVirtualCores doesn't match: " + usedVirtualCores, report
           .getUsedResource().getVirtualCores(), usedVirtualCores);
       assertEquals("availVirtualCores doesn't match: " + availVirtualCores, report

@@ -40,8 +40,8 @@ public class FifoSchedulerInfo extends SchedulerInfo {
   protected float capacity;
   protected float usedCapacity;
   protected QueueState qstate;
-  protected long minQueueMemoryCapacity;
-  protected long maxQueueMemoryCapacity;
+  protected int minQueueMemoryCapacity;
+  protected int maxQueueMemoryCapacity;
   protected int numNodes;
   protected int usedNodeCapacity;
   protected int availNodeCapacity;
@@ -67,8 +67,8 @@ public class FifoSchedulerInfo extends SchedulerInfo {
 
     this.usedCapacity = qInfo.getCurrentCapacity();
     this.capacity = qInfo.getCapacity();
-    this.minQueueMemoryCapacity = fs.getMinimumResourceCapability().getMemorySize();
-    this.maxQueueMemoryCapacity = fs.getMaximumResourceCapability().getMemorySize();
+    this.minQueueMemoryCapacity = fs.getMinimumResourceCapability().getMemory();
+    this.maxQueueMemoryCapacity = fs.getMaximumResourceCapability().getMemory();
     this.qstate = qInfo.getQueueState();
 
     this.numNodes = rmContext.getRMNodes().size();
@@ -79,9 +79,9 @@ public class FifoSchedulerInfo extends SchedulerInfo {
 
     for (RMNode ni : rmContext.getRMNodes().values()) {
       SchedulerNodeReport report = fs.getNodeReport(ni.getNodeID());
-      this.usedNodeCapacity += report.getUsedResource().getMemorySize();
-      this.availNodeCapacity += report.getAvailableResource().getMemorySize();
-      this.totalNodeCapacity += ni.getTotalCapability().getMemorySize();
+      this.usedNodeCapacity += report.getUsedResource().getMemory();
+      this.availNodeCapacity += report.getAvailableResource().getMemory();
+      this.totalNodeCapacity += ni.getTotalCapability().getMemory();
       this.numContainers += fs.getNodeReport(ni.getNodeID()).getNumContainers();
     }
   }
@@ -114,11 +114,11 @@ public class FifoSchedulerInfo extends SchedulerInfo {
     return this.qName;
   }
 
-  public long getMinQueueMemoryCapacity() {
+  public int getMinQueueMemoryCapacity() {
     return this.minQueueMemoryCapacity;
   }
 
-  public long getMaxQueueMemoryCapacity() {
+  public int getMaxQueueMemoryCapacity() {
     return this.maxQueueMemoryCapacity;
   }
 

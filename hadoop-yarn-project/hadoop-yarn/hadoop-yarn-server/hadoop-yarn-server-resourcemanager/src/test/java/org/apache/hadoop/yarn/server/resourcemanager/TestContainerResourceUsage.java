@@ -404,7 +404,7 @@ public class TestContainerResourceUsage {
     Resource resource = rmContainer.getContainer().getResource();
     long usedMillis =
         rmContainer.getFinishTime() - rmContainer.getCreationTime();
-    long memorySeconds = resource.getMemorySize()
+    long memorySeconds = resource.getMemory()
                           * usedMillis / DateUtils.MILLIS_PER_SECOND;
     long vcoreSeconds = resource.getVirtualCores()
                           * usedMillis / DateUtils.MILLIS_PER_SECOND;

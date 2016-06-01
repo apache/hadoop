@@ -130,18 +130,18 @@ public abstract class FSQueue implements Queue, Schedulable {
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queueInfo.setQueueName(getQueueName());
 
-    if (scheduler.getClusterResource().getMemorySize() == 0) {
+    if (scheduler.getClusterResource().getMemory() == 0) {
       queueInfo.setCapacity(0.0f);
     } else {
-      queueInfo.setCapacity((float) getFairShare().getMemorySize() /
-          scheduler.getClusterResource().getMemorySize());
+      queueInfo.setCapacity((float) getFairShare().getMemory() /
+          scheduler.getClusterResource().getMemory());
     }
 
-    if (getFairShare().getMemorySize() == 0) {
+    if (getFairShare().getMemory() == 0) {
       queueInfo.setCurrentCapacity(0.0f);
     } else {
-      queueInfo.setCurrentCapacity((float) getResourceUsage().getMemorySize() /
-          getFairShare().getMemorySize());
+      queueInfo.setCurrentCapacity((float) getResourceUsage().getMemory() /
+          getFairShare().getMemory());
     }
 
     ArrayList<QueueInfo> childQueueInfos = new ArrayList<QueueInfo>();

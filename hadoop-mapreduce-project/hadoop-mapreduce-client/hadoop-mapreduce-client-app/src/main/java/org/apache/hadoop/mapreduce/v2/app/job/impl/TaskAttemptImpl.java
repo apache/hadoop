@@ -1436,7 +1436,6 @@ public abstract class TaskAttemptImpl implements
       TaskAttemptImpl taskAttempt) {
     TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
     long duration = (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
-
     int mbRequired =
         taskAttempt.getMemoryRequired(taskAttempt.conf, taskType);
     int vcoresRequired = taskAttempt.getCpuRequired(taskAttempt.conf, taskType);

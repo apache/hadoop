@@ -36,8 +36,8 @@ import org.apache.hadoop.yarn.util.Times;
 public class ContainerInfo {
 
   protected String containerId;
-  protected long allocatedMB;
-  protected long allocatedVCores;
+  protected int allocatedMB;
+  protected int allocatedVCores;
   protected String assignedNodeId;
   protected int priority;
   protected long startedTime;
@@ -57,7 +57,7 @@ public class ContainerInfo {
   public ContainerInfo(ContainerReport container) {
     containerId = container.getContainerId().toString();
     if (container.getAllocatedResource() != null) {
-      allocatedMB = container.getAllocatedResource().getMemorySize();
+      allocatedMB = container.getAllocatedResource().getMemory();
       allocatedVCores = container.getAllocatedResource().getVirtualCores();
     }
     if (container.getAssignedNode() != null) {
@@ -79,11 +79,11 @@ public class ContainerInfo {
     return containerId;
   }
 
-  public long getAllocatedMB() {
+  public int getAllocatedMB() {
     return allocatedMB;
   }
 
-  public long getAllocatedVCores() {
+  public int getAllocatedVCores() {
     return allocatedVCores;
   }
 

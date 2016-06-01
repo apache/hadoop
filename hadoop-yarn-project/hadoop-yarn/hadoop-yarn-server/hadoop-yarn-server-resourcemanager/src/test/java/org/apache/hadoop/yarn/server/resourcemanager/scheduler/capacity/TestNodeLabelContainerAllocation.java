@@ -461,7 +461,7 @@ public class TestNodeLabelContainerAllocation {
 
     rm1.close();
   }
-
+  
   private void checkPendingResource(MockRM rm, int priority,
       ApplicationAttemptId attemptId, int memory) {
     CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
@@ -470,7 +470,7 @@ public class TestNodeLabelContainerAllocation {
         app.getAppSchedulingInfo().getResourceRequest(
             Priority.newInstance(priority), "*");
     Assert.assertEquals(memory,
-        rr.getCapability().getMemorySize() * rr.getNumContainers());
+        rr.getCapability().getMemory() * rr.getNumContainers());
   }
   
   private void checkLaunchedContainerNumOnNode(MockRM rm, NodeId nodeId,

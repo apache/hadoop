@@ -221,7 +221,7 @@ public class ApplicationMaster {
   @VisibleForTesting
   protected int numTotalContainers = 1;
   // Memory to request for the container on which the shell command will run
-  private long containerMemory = 10;
+  private int containerMemory = 10;
   // VirtualCores to request for the container on which the shell command will run
   private int containerVirtualCores = 1;
   // Priority of the request
@@ -593,7 +593,7 @@ public class ApplicationMaster {
             appMasterTrackingUrl);
     // Dump out information about cluster capability as seen by the
     // resource manager
-    long maxMem = response.getMaximumResourceCapability().getMemorySize();
+    int maxMem = response.getMaximumResourceCapability().getMemory();
     LOG.info("Max mem capability of resources in this cluster " + maxMem);
     
     int maxVCores = response.getMaximumResourceCapability().getVirtualCores();
@@ -823,7 +823,7 @@ public class ApplicationMaster {
             + ":" + allocatedContainer.getNodeId().getPort()
             + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
             + ", containerResourceMemory"
-            + allocatedContainer.getResource().getMemorySize()
+            + allocatedContainer.getResource().getMemory()
             + ", containerResourceVirtualCores"
             + allocatedContainer.getResource().getVirtualCores());
         // + ", containerToken"

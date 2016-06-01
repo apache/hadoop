@@ -28,13 +28,13 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public int compare(Resource unused, Resource lhs, Resource rhs) {
     // Only consider memory
-    return Long.compare(lhs.getMemorySize(), rhs.getMemorySize());
+    return lhs.getMemory() - rhs.getMemory();
   }
 
   @Override
-  public long computeAvailableContainers(Resource available, Resource required) {
+  public int computeAvailableContainers(Resource available, Resource required) {
     // Only consider memory
-    return available.getMemorySize() / required.getMemorySize();
+    return available.getMemory() / required.getMemory();
   }
 
   @Override
@@ -44,7 +44,7 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
   
   public boolean isInvalidDivisor(Resource r) {
-    if (r.getMemorySize() == 0.0f) {
+    if (r.getMemory() == 0.0f) {
       return true;
     }
     return false;
@@ -52,23 +52,23 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return (float)a.getMemorySize() / b.getMemorySize();
+    return (float)a.getMemory() / b.getMemory();
   }
 
   @Override
-  public Resource divideAndCeil(Resource numerator, long denominator) {
+  public Resource divideAndCeil(Resource numerator, int denominator) {
     return Resources.createResource(
-        divideAndCeil(numerator.getMemorySize(), denominator));
+        divideAndCeil(numerator.getMemory(), denominator));
   }
 
   @Override
   public Resource normalize(Resource r, Resource minimumResource,
       Resource maximumResource, Resource stepFactor) {
-    long normalizedMemory = Math.min(
+    int normalizedMemory = Math.min(
         roundUp(
-            Math.max(r.getMemorySize(), minimumResource.getMemorySize()),
-            stepFactor.getMemorySize()),
-            maximumResource.getMemorySize());
+            Math.max(r.getMemory(), minimumResource.getMemory()),
+            stepFactor.getMemory()),
+            maximumResource.getMemory());
     return Resources.createResource(normalizedMemory);
   }
 
@@ -81,22 +81,22 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundUp(r.getMemorySize(), stepFactor.getMemorySize())
+        roundUp(r.getMemory(), stepFactor.getMemory())
         );
   }
 
   @Override
   public Resource roundDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundDown(r.getMemorySize(), stepFactor.getMemorySize()));
+        roundDown(r.getMemory(), stepFactor.getMemory()));
   }
 
   @Override
   public Resource multiplyAndNormalizeUp(Resource r, double by,
       Resource stepFactor) {
     return Resources.createResource(
-        roundUp((long) (r.getMemorySize() * by + 0.5),
-            stepFactor.getMemorySize()));
+        roundUp((int)(r.getMemory() * by + 0.5), stepFactor.getMemory())
+        );
   }
 
   @Override
@@ -104,8 +104,8 @@ public class DefaultResourceCalculator extends ResourceCalculator {
       Resource stepFactor) {
     return Resources.createResource(
         roundDown(
-            (long)(r.getMemorySize() * by),
-            stepFactor.getMemorySize()
+            (int)(r.getMemory() * by), 
+            stepFactor.getMemory()
             )
         );
   }
@@ -113,6 +113,6 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public boolean fitsIn(Resource cluster,
       Resource smaller, Resource bigger) {
-    return smaller.getMemorySize() <= bigger.getMemorySize();
+    return smaller.getMemory() <= bigger.getMemory();
   }
 }

@@ -155,7 +155,7 @@ public class TopCLI extends YarnCLI {
       displayStringsMap.put(Columns.VCORES, String.valueOf(usedVirtualCores));
       usedMemory =
           appReport.getApplicationResourceUsageReport().getUsedResources()
-            .getMemorySize() / 1024;
+            .getMemory() / 1024;
       displayStringsMap.put(Columns.MEM, String.valueOf(usedMemory) + "G");
       reservedVirtualCores =
           appReport.getApplicationResourceUsageReport().getReservedResources()
@@ -164,7 +164,7 @@ public class TopCLI extends YarnCLI {
           String.valueOf(reservedVirtualCores));
       reservedMemory =
           appReport.getApplicationResourceUsageReport().getReservedResources()
-            .getMemorySize() / 1024;
+            .getMemory() / 1024;
       displayStringsMap.put(Columns.RMEM, String.valueOf(reservedMemory) + "G");
       attempts = appReport.getCurrentApplicationAttemptId().getAttemptId();
       nodes = 0;

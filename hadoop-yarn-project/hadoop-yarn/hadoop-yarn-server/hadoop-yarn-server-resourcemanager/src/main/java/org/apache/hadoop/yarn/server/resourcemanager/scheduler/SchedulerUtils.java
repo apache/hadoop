@@ -274,13 +274,13 @@ public class SchedulerUtils {
   private static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource, QueueInfo queueInfo, RMContext rmContext)
       throws InvalidResourceRequestException {
-    if (resReq.getCapability().getMemorySize() < 0 ||
-        resReq.getCapability().getMemorySize() > maximumResource.getMemorySize()) {
+    if (resReq.getCapability().getMemory() < 0 ||
+        resReq.getCapability().getMemory() > maximumResource.getMemory()) {
       throw new InvalidResourceRequestException("Invalid resource request"
           + ", requested memory < 0"
           + ", or requested memory > max configured"
-          + ", requestedMemory=" + resReq.getCapability().getMemorySize()
-          + ", maxMemory=" + maximumResource.getMemorySize());
+          + ", requestedMemory=" + resReq.getCapability().getMemory()
+          + ", maxMemory=" + maximumResource.getMemory());
     }
     if (resReq.getCapability().getVirtualCores() < 0 ||
         resReq.getCapability().getVirtualCores() >

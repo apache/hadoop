@@ -54,15 +54,15 @@ public class DominantResourceCalculator extends ResourceCalculator {
     }
     
     if (isInvalidDivisor(clusterResource)) {
-      if ((lhs.getMemorySize() < rhs.getMemorySize() && lhs.getVirtualCores() > rhs
+      if ((lhs.getMemory() < rhs.getMemory() && lhs.getVirtualCores() > rhs
           .getVirtualCores())
-          || (lhs.getMemorySize() > rhs.getMemorySize() && lhs.getVirtualCores() < rhs
+          || (lhs.getMemory() > rhs.getMemory() && lhs.getVirtualCores() < rhs
               .getVirtualCores())) {
         return 0;
-      } else if (lhs.getMemorySize() > rhs.getMemorySize()
+      } else if (lhs.getMemory() > rhs.getMemory()
           || lhs.getVirtualCores() > rhs.getVirtualCores()) {
         return 1;
-      } else if (lhs.getMemorySize() < rhs.getMemorySize()
+      } else if (lhs.getMemory() < rhs.getMemory()
           || lhs.getVirtualCores() < rhs.getVirtualCores()) {
         return -1;
       }
@@ -100,20 +100,20 @@ public class DominantResourceCalculator extends ResourceCalculator {
     // Just use 'dominant' resource
     return (dominant) ?
         Math.max(
-            (float)resource.getMemorySize() / clusterResource.getMemorySize(),
+            (float)resource.getMemory() / clusterResource.getMemory(), 
             (float)resource.getVirtualCores() / clusterResource.getVirtualCores()
             ) 
         :
           Math.min(
-              (float)resource.getMemorySize() / clusterResource.getMemorySize(),
+              (float)resource.getMemory() / clusterResource.getMemory(), 
               (float)resource.getVirtualCores() / clusterResource.getVirtualCores()
               ); 
   }
   
   @Override
-  public long computeAvailableContainers(Resource available, Resource required) {
+  public int computeAvailableContainers(Resource available, Resource required) {
     return Math.min(
-        available.getMemorySize() / required.getMemorySize(),
+        available.getMemory() / required.getMemory(), 
         available.getVirtualCores() / required.getVirtualCores());
   }
 
@@ -127,7 +127,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   
   @Override
   public boolean isInvalidDivisor(Resource r) {
-    if (r.getMemorySize() == 0.0f || r.getVirtualCores() == 0.0f) {
+    if (r.getMemory() == 0.0f || r.getVirtualCores() == 0.0f) {
       return true;
     }
     return false;
@@ -136,15 +136,15 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public float ratio(Resource a, Resource b) {
     return Math.max(
-        (float)a.getMemorySize()/b.getMemorySize(),
+        (float)a.getMemory()/b.getMemory(), 
         (float)a.getVirtualCores()/b.getVirtualCores()
         );
   }
 
   @Override
-  public Resource divideAndCeil(Resource numerator, long denominator) {
+  public Resource divideAndCeil(Resource numerator, int denominator) {
     return Resources.createResource(
-        divideAndCeil(numerator.getMemorySize(), denominator),
+        divideAndCeil(numerator.getMemory(), denominator),
         divideAndCeil(numerator.getVirtualCores(), denominator)
         );
   }
@@ -152,12 +152,12 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public Resource normalize(Resource r, Resource minimumResource,
                             Resource maximumResource, Resource stepFactor) {
-    long normalizedMemory = Math.min(
+    int normalizedMemory = Math.min(
       roundUp(
-        Math.max(r.getMemorySize(), minimumResource.getMemorySize()),
-        stepFactor.getMemorySize()),
-      maximumResource.getMemorySize());
-    long normalizedCores = Math.min(
+        Math.max(r.getMemory(), minimumResource.getMemory()),
+        stepFactor.getMemory()),
+      maximumResource.getMemory());
+    int normalizedCores = Math.min(
       roundUp(
         Math.max(r.getVirtualCores(), minimumResource.getVirtualCores()),
         stepFactor.getVirtualCores()),
@@ -169,7 +169,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundUp(r.getMemorySize(), stepFactor.getMemorySize()),
+        roundUp(r.getMemory(), stepFactor.getMemory()), 
         roundUp(r.getVirtualCores(), stepFactor.getVirtualCores())
         );
   }
@@ -177,7 +177,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public Resource roundDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
-        roundDown(r.getMemorySize(), stepFactor.getMemorySize()),
+        roundDown(r.getMemory(), stepFactor.getMemory()),
         roundDown(r.getVirtualCores(), stepFactor.getVirtualCores())
         );
   }
@@ -187,7 +187,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
       Resource stepFactor) {
     return Resources.createResource(
         roundUp(
-            (int)Math.ceil(r.getMemorySize() * by), stepFactor.getMemorySize()),
+            (int)Math.ceil(r.getMemory() * by), stepFactor.getMemory()),
         roundUp(
             (int)Math.ceil(r.getVirtualCores() * by), 
             stepFactor.getVirtualCores())
@@ -199,8 +199,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
       Resource stepFactor) {
     return Resources.createResource(
         roundDown(
-            (int)(r.getMemorySize() * by),
-            stepFactor.getMemorySize()
+            (int)(r.getMemory() * by), 
+            stepFactor.getMemory()
             ),
         roundDown(
             (int)(r.getVirtualCores() * by), 
@@ -212,7 +212,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   @Override
   public boolean fitsIn(Resource cluster,
       Resource smaller, Resource bigger) {
-    return smaller.getMemorySize() <= bigger.getMemorySize()
+    return smaller.getMemory() <= bigger.getMemory()
         && smaller.getVirtualCores() <= bigger.getVirtualCores();
   }
 }

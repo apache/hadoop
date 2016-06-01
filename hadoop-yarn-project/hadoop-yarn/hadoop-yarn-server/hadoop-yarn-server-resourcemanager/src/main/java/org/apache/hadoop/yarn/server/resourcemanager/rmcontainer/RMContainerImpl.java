@@ -708,7 +708,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
           }
         
         long usedMillis = container.finishTime - container.creationTime;
-        long memorySeconds = resource.getMemorySize()
+        long memorySeconds = resource.getMemory()
                               * usedMillis / DateUtils.MILLIS_PER_SECOND;
         long vcoreSeconds = resource.getVirtualCores()
                              * usedMillis / DateUtils.MILLIS_PER_SECOND;

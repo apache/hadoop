@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.junit.Before;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -59,6 +61,8 @@ import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -75,6 +79,8 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class TestRM extends ParameterizedSchedulerTestBase {
@@ -110,7 +116,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     
     GetNewApplicationResponse resp = rm.getNewAppId();
     assert (resp.getApplicationId().getId() != 0);    
-    assert (resp.getMaximumResourceCapability().getMemorySize() > 0);
+    assert (resp.getMaximumResourceCapability().getMemory() > 0);    
     rm.stop();
   }
   

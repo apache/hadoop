@@ -82,8 +82,8 @@ public class AppInfo {
   protected long elapsedTime;
   protected String amContainerLogs;
   protected String amHostHttpAddress;
-  protected long allocatedMB;
-  protected long allocatedVCores;
+  protected int allocatedMB;
+  protected int allocatedVCores;
   protected int runningContainers;
   protected long memorySeconds;
   protected long vcoreSeconds;
@@ -91,8 +91,8 @@ public class AppInfo {
   protected float clusterUsagePercentage;
 
   // preemption info fields
-  protected long preemptedResourceMB;
-  protected long preemptedResourceVCores;
+  protected int preemptedResourceMB;
+  protected int preemptedResourceVCores;
   protected int numNonAMContainerPreempted;
   protected int numAMContainerPreempted;
 
@@ -174,7 +174,7 @@ public class AppInfo {
               .getApplicationResourceUsageReport();
           if (resourceReport != null) {
             Resource usedResources = resourceReport.getUsedResources();
-            allocatedMB = usedResources.getMemorySize();
+            allocatedMB = usedResources.getMemory();
             allocatedVCores = usedResources.getVirtualCores();
             runningContainers = resourceReport.getNumUsedContainers();
             queueUsagePercentage = resourceReport.getQueueUsagePercentage();
@@ -190,7 +190,7 @@ public class AppInfo {
       numAMContainerPreempted =
           appMetrics.getNumAMContainersPreempted();
       preemptedResourceMB =
-          appMetrics.getResourcePreempted().getMemorySize();
+          appMetrics.getResourcePreempted().getMemory();
       numNonAMContainerPreempted =
           appMetrics.getNumNonAMContainersPreempted();
       preemptedResourceVCores =
@@ -302,19 +302,19 @@ public class AppInfo {
     return this.runningContainers;
   }
   
-  public long getAllocatedMB() {
+  public int getAllocatedMB() {
     return this.allocatedMB;
   }
   
-  public long getAllocatedVCores() {
+  public int getAllocatedVCores() {
     return this.allocatedVCores;
   }
   
-  public long getPreemptedMB() {
+  public int getPreemptedMB() {
     return preemptedResourceMB;
   }
 
-  public long getPreemptedVCores() {
+  public int getPreemptedVCores() {
     return preemptedResourceVCores;
   }
 
