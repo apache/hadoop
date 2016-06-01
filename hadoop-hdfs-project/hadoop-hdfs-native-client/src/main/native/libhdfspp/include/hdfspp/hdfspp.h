@@ -21,6 +21,7 @@
 #include "hdfspp/options.h"
 #include "hdfspp/status.h"
 #include "hdfspp/events.h"
+#include "hdfspp/block_location.h"
 
 #include <functional>
 #include <memory>
@@ -167,6 +168,16 @@ class FileSystem {
   Open(const std::string &path,
        const std::function<void(const Status &, FileHandle *)> &handler) = 0;
   virtual Status Open(const std::string &path, FileHandle **handle) = 0;
+
+  /**
+   * Returns the locations of all known blocks for the indicated file, or an error
+   * if the information clould not be found
+   */
+  virtual void GetBlockLocations(const std::string & path,
+    const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) = 0;
+  virtual Status GetBlockLocations(const std::string & path,
+    std::shared_ptr<FileBlockLocation> * locations) = 0;
+
 
   /**
    * Note that it is an error to destroy the filesystem from within a filesystem

@@ -90,3 +90,7 @@
 #define kObjectKindDirectory libhdfspp_kObjectKindDirectory
 #define hdfsReadStatistics libhdfspp_hdfsReadStatistics
 #define hdfsFileInfo libhdfspp_hdfsFileInfo
+#define hdfsGetLastError libhdfspp_hdfsGetLastError
+#define hdfsCancel libhdfspp_hdfsCancel
+#define hdfsGetBlockLocations libhdfspp_hdfsGetBlockLocations
+#define hdfsFreeBlockLocations libhdfspp_hdfsFreeBlockLocations

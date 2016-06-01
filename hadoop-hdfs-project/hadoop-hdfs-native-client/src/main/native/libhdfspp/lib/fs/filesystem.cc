@@ -97,12 +97,15 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
       auto locations = s.resp->locations();
 
       file_info->file_length_ = locations.filelength();
+      file_info->last_block_complete_ = locations.islastblockcomplete();
+      file_info->under_construction_ = locations.underconstruction();
 
       for (const auto &block : locations.blocks()) {
         file_info->blocks_.push_back(block);
       }
 
-      if (locations.has_lastblock() && locations.lastblock().b().numbytes()) {
+      if (!locations.islastblockcomplete() &&
+          locations.has_lastblock() && locations.lastblock().b().numbytes()) {
         file_info->blocks_.push_back(locations.lastblock());
         file_info->file_length_ += locations.lastblock().b().numbytes();
       }
@@ -335,6 +338,102 @@ Status FileSystemImpl::Open(const std::string &path,
   *handle = file_handle;
   return stat;
 }
+
+
+BlockLocation LocatedBlockToBlockLocation(const hadoop::hdfs::LocatedBlockProto & locatedBlock)
+{
+  BlockLocation result;
+
+  result.setCorrupt(locatedBlock.corrupt());
+  result.setOffset(locatedBlock.offset());
+
+  std::vector<DNInfo> dn_info;
+  dn_info.reserve(locatedBlock.locs_size());
+  for (const hadoop::hdfs::DatanodeInfoProto & datanode_info: locatedBlock.locs()) {
+    const hadoop::hdfs::DatanodeIDProto &id = datanode_info.id();
+    DNInfo newInfo;
+    if (id.has_ipaddr())
+        newInfo.setIPAddr(id.ipaddr());
+    if (id.has_hostname())
+        newInfo.setHostname(id.hostname());
+    if (id.has_xferport())
+        newInfo.setXferPort(id.xferport());
+    if (id.has_infoport())
+        newInfo.setInfoPort(id.infoport());
+    if (id.has_ipcport())
+        newInfo.setIPCPort(id.ipcport());
+    if (id.has_infosecureport())
+      newInfo.setInfoSecurePort(id.infosecureport());
+    dn_info.push_back(newInfo);
+  }
+  result.setDataNodes(dn_info);
+
+  if (locatedBlock.has_b()) {
+    const hadoop::hdfs::ExtendedBlockProto & b=locatedBlock.b();
+    result.setLength(b.numbytes());
+  }
+
+
+  return result;
+}
+
+void FileSystemImpl::GetBlockLocations(const std::string & path,
+  const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> handler)
+{
+  auto conversion = [handler](const Status & status, std::shared_ptr<const struct FileInfo> fileInfo) {
+    if (status.ok()) {
+      auto result = std::make_shared<FileBlockLocation>();
+
+      result->setFileLength(fileInfo->file_length_);
+      result->setLastBlockComplete(fileInfo->last_block_complete_);
+      result->setUnderConstruction(fileInfo->under_construction_);
+
+      std::vector<BlockLocation> blocks;
+      for (const hadoop::hdfs::LocatedBlockProto & locatedBlock: fileInfo->blocks_) {
+          auto newLocation = LocatedBlockToBlockLocation(locatedBlock);
+          blocks.push_back(newLocation);
+      }
+      result->setBlockLocations(blocks);
+
+      handler(status, result);
+    } else {
+      handler(status, std::shared_ptr<FileBlockLocation>());
+    }
+  };
+
+  nn_.GetBlockLocations(path, conversion);
+}
+
+Status FileSystemImpl::GetBlockLocations(const std::string & path,
+  std::shared_ptr<FileBlockLocation> * fileBlockLocations)
+{
+  if (!fileBlockLocations)
+    return Status::InvalidArgument("Null pointer passed to GetBlockLocations");
+
+  auto callstate = std::make_shared<std::promise<std::tuple<Status, std::shared_ptr<FileBlockLocation>>>>();
+  std::future<std::tuple<Status, std::shared_ptr<FileBlockLocation>>> future(callstate->get_future());
+
+  /* wrap async call with promise/future to make it blocking */
+  auto callback = [callstate](const Status &s, std::shared_ptr<FileBlockLocation> blockInfo) {
+    callstate->set_value(std::make_tuple(s,blockInfo));
+  };
+
+  GetBlockLocations(path, callback);
+
+  /* wait for async to finish */
+  auto returnstate = future.get();
+  auto stat = std::get<0>(returnstate);
+
+  if (!stat.ok()) {
+    return stat;
+  }
+
+  *fileBlockLocations = std::get<1>(returnstate);
+
+  return stat;
+}
+
+
 
 void FileSystemImpl::WorkerDeleter::operator()(std::thread *t) {
   // It is far too easy to destroy the filesystem (and thus the threadpool)

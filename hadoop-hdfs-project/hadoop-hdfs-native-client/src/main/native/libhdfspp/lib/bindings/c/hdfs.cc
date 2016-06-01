@@ -167,12 +167,20 @@ static int ReportCaughtNonException()
   return Error(Status::Exception("Uncaught value not derived from std::exception", ""));
 }
 
-/* return false on failure */
-bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
+bool CheckSystem(hdfsFS fs) {
   if (!fs) {
     ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
     return false;
   }
+
+  return true;
+}
+
+/* return false on failure */
+bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
+  if (!CheckSystem(fs))
+    return false;
+
   if (!file) {
     ReportError(EBADF, "Cannot perform FS operations with null File handle.");
     return false;
@@ -407,6 +415,92 @@ int hdfsCancel(hdfsFS fs, hdfsFile file) {
   } catch (...) {
     return ReportCaughtNonException();
   }
+}
+
+
+int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations ** locations_out)
+{
+  try
+  {
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (locations_out == nullptr) {
+      ReportError(EINVAL, "Null pointer passed to hdfsGetBlockLocations");
+      return -2;
+    }
+
+    std::shared_ptr<FileBlockLocation> ppLocations;
+    Status stat = fs->get_impl()->GetBlockLocations(path, &ppLocations);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+
+    hdfsBlockLocations *locations = new struct hdfsBlockLocations();
+    (*locations_out) = locations;
+
+    bzero(locations, sizeof(*locations));
+    locations->fileLength = ppLocations->getFileLength();
+    locations->isLastBlockComplete = ppLocations->isLastBlockComplete();
+    locations->isUnderConstruction = ppLocations->isUnderConstruction();
+
+    const std::vector<BlockLocation> & ppBlockLocations = ppLocations->getBlockLocations();
+    locations->num_blocks = ppBlockLocations.size();
+    locations->blocks = new struct hdfsBlockInfo[locations->num_blocks];
+    for (size_t i=0; i < ppBlockLocations.size(); i++) {
+      auto ppBlockLocation = ppBlockLocations[i];
+      auto block = &locations->blocks[i];
+
+      block->num_bytes = ppBlockLocation.getLength();
+      block->start_offset = ppBlockLocation.getOffset();
+
+      const std::vector<DNInfo> & ppDNInfos = ppBlockLocation.getDataNodes();
+      block->num_locations = ppDNInfos.size();
+      block->locations = new hdfsDNInfo[block->num_locations];
+      for (size_t j=0; j < block->num_locations; j++) {
+        auto ppDNInfo = ppDNInfos[j];
+        auto dn_info = &block->locations[j];
+
+        dn_info->xfer_port = ppDNInfo.getXferPort();
+        dn_info->info_port = ppDNInfo.getInfoPort();
+        dn_info->IPC_port  = ppDNInfo.getIPCPort();
+        dn_info->info_secure_port = ppDNInfo.getInfoSecurePort();
+
+        char * buf;
+        buf = new char[ppDNInfo.getHostname().size() + 1];
+        strncpy(buf, ppDNInfo.getHostname().c_str(), ppDNInfo.getHostname().size());
+        dn_info->hostname = buf;
+
+        buf = new char[ppDNInfo.getIPAddr().size() + 1];
+        strncpy(buf, ppDNInfo.getIPAddr().c_str(), ppDNInfo.getIPAddr().size());
+        dn_info->ip_address = buf;
+      }
+    }
+
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
+  if (blockLocations == nullptr)
+    return 0;
+
+  for (size_t i=0; i < blockLocations->num_blocks; i++) {
+    auto block = &blockLocations->blocks[i];
+    for (size_t j=0; j < block->num_locations; j++) {
+      auto location = &block->locations[j];
+      delete[] location->hostname;
+      delete[] location->ip_address;
+    }
+  }
+  delete[] blockLocations->blocks;
+  delete blockLocations;
+
+  return 0;
 }
 
 

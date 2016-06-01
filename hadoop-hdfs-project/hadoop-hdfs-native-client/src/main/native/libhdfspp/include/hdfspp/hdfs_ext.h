@@ -116,6 +116,63 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
 
 
 /**
+ * Returns the block information and data nodes associated with a particular file.
+ *
+ * The hdfsBlockLocations structure will have zero or more hdfsBlockInfo elements,
+ * which will have zero or more ip_addr elements indicating which datanodes have
+ * each block.
+ *
+ * @param fs         A connected hdfs instance
+ * @param path       Path of the file to query
+ * @param locations  The address of an output pointer to contain the block information.
+ *                   On success, this pointer must be later freed with hdfsFreeBlockLocations.
+ *
+ * @return         0 on success; nonzero error code otherwise.
+ *                 If the file does not exist, an error will be returned.
+ */
+struct hdfsDNInfo {
+  const char *    ip_address;
+  const char *    hostname;
+  int             xfer_port;
+  int             info_port;
+  int             IPC_port;
+  int             info_secure_port;
+};
+
+struct hdfsBlockInfo {
+    uint64_t            start_offset;
+    uint64_t            num_bytes;
+
+    size_t              num_locations;
+    struct hdfsDNInfo * locations;
+};
+
+struct hdfsBlockLocations
+{
+    uint64_t               fileLength;
+    int                    isLastBlockComplete;
+    int                    isUnderConstruction;
+
+    size_t                 num_blocks;
+    struct hdfsBlockInfo * blocks;
+};
+
+LIBHDFS_EXTERNAL
+int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations ** locations);
+
+/**
+ * Frees up an hdfsBlockLocations pointer allocated by hdfsGetBlockLocations.
+ *
+ * @param locations    The previously-populated pointer allocated by hdfsGetBlockLocations
+ * @return             0 on success, nonzero on error
+ */
+LIBHDFS_EXTERNAL
+int hdfsFreeBlockLocations(struct hdfsBlockLocations * locations);
+
+
+
+
+/**
  *  Client can supply a C style function pointer to be invoked any time something
  *  is logged.  Unlike the C++ logger this will not filter by level or component,
  *  it is up to the consumer to throw away messages they don't want.

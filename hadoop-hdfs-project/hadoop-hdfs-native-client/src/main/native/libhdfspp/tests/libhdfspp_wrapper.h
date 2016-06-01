@@ -22,6 +22,7 @@
 /* Rename libhdfspp structs and functions */
 #include "libhdfspp_wrapper_defines.h"
 #include "hdfs/hdfs.h"
+#include "hdfspp/hdfs_ext.h"
 #include "libhdfs_wrapper_undefs.h"
 
 /* "Original" symbols can be included elsewhere. */

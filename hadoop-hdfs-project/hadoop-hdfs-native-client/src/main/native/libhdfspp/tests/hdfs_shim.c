@@ -311,7 +311,7 @@ int hdfsFileIsEncrypted(hdfsFileInfo *hdfsFileInfo) {
       ((libhdfs_hdfsFileInfo *) hdfsFileInfo);
 }
 
-char*** hdfsGetHosts(hdfsFS fs, const char* path, 
+char*** hdfsGetHosts(hdfsFS fs, const char* path,
         tOffset start, tOffset length) {
   return libhdfs_hdfsGetHosts(fs->libhdfsRep, path, start, length);
 }
@@ -382,4 +382,26 @@ const void *hadoopRzBufferGet(const struct hadoopRzBuffer *buffer) {
 
 void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer) {
   return libhdfs_hadoopRzBufferFree(file->libhdfsRep, buffer);
+}
+
+
+/*************
+ * hdfs_ext functions
+ */
+
+void hdfsGetLastError(char *buf, int len) {
+  return libhdfspp_hdfsGetLastError(buf, len);
+}
+
+int hdfsCancel(hdfsFS fs, hdfsFile file) {
+  return libhdfspp_hdfsCancel(fs->libhdfsppRep, file->libhdfsppRep);
+}
+
+
+int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations ** locations) {
+  return libhdfspp_hdfsGetBlockLocations(fs->libhdfsppRep, path, locations);
+}
+
+int hdfsFreeBlockLocations(struct hdfsBlockLocations * locations) {
+  return libhdfspp_hdfsFreeBlockLocations(locations);
 }
