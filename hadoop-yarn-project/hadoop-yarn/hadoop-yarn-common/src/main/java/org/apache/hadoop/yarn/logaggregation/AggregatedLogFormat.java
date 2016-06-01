@@ -733,7 +733,7 @@ public class AggregatedLogFormat {
         ps = new PrintStream(os);
         while (true) {
           try {
-            readContainerLogs(valueStream, ps, logUploadedTime);
+            readContainerLogs(valueStream, ps, logUploadedTime, Long.MAX_VALUE);
           } catch (EOFException e) {
             // EndOfFile
             return;
@@ -757,7 +757,8 @@ public class AggregatedLogFormat {
     }
 
     private static void readContainerLogs(DataInputStream valueStream,
-        PrintStream out, long logUploadedTime) throws IOException {
+        PrintStream out, long logUploadedTime, long bytes)
+        throws IOException {
       byte[] buf = new byte[65535];
 
       String fileType = valueStream.readUTF();
@@ -773,16 +774,35 @@ public class AggregatedLogFormat {
       out.println(fileLengthStr);
       out.println("Log Contents:");
 
+      long toSkip = 0;
+      long totalBytesToRead = fileLength;
+      if (bytes < 0) {
+        long absBytes = Math.abs(bytes);
+        if (absBytes < fileLength) {
+          toSkip = fileLength - absBytes;
+          totalBytesToRead = absBytes;
+        }
+        long skippedBytes = valueStream.skip(toSkip);
+        if (skippedBytes != toSkip) {
+          throw new IOException("The bytes were skipped are "
+              + "different from the caller requested");
+        }
+      } else {
+        if (bytes < fileLength) {
+          totalBytesToRead = bytes;
+        }
+      }
+
       long curRead = 0;
-      long pendingRead = fileLength - curRead;
+      long pendingRead = totalBytesToRead - curRead;
       int toRead =
                 pendingRead > buf.length ? buf.length : (int) pendingRead;
       int len = valueStream.read(buf, 0, toRead);
-      while (len != -1 && curRead < fileLength) {
+      while (len != -1 && curRead < totalBytesToRead) {
         out.write(buf, 0, len);
         curRead += len;
 
-        pendingRead = fileLength - curRead;
+        pendingRead = totalBytesToRead - curRead;
         toRead =
                   pendingRead > buf.length ? buf.length : (int) pendingRead;
         len = valueStream.read(buf, 0, toRead);
@@ -803,7 +823,23 @@ public class AggregatedLogFormat {
     public static void readAContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime)
           throws IOException {
-      readContainerLogs(valueStream, out, logUploadedTime);
+      readContainerLogs(valueStream, out, logUploadedTime, Long.MAX_VALUE);
+    }
+
+    /**
+     * Keep calling this till you get a {@link EOFException} for getting logs of
+     * all types for a single container for the specific bytes.
+     *
+     * @param valueStream
+     * @param out
+     * @param logUploadedTime
+     * @param bytes
+     * @throws IOException
+     */
+    public static void readAContainerLogsForALogType(
+        DataInputStream valueStream, PrintStream out, long logUploadedTime,
+        long bytes) throws IOException {
+      readContainerLogs(valueStream, out, logUploadedTime, bytes);
     }
 
     /**
@@ -832,6 +868,22 @@ public class AggregatedLogFormat {
     public static int readContainerLogsForALogType(
         DataInputStream valueStream, PrintStream out, long logUploadedTime,
         List<String> logType) throws IOException {
+      return readContainerLogsForALogType(valueStream, out, logUploadedTime,
+          logType, Long.MAX_VALUE);
+    }
+
+    /**
+     * Keep calling this till you get a {@link EOFException} for getting logs of
+     * the specific types for a single container.
+     * @param valueStream
+     * @param out
+     * @param logUploadedTime
+     * @param logType
+     * @throws IOException
+     */
+    public static int readContainerLogsForALogType(
+        DataInputStream valueStream, PrintStream out, long logUploadedTime,
+        List<String> logType, long bytes) throws IOException {
       byte[] buf = new byte[65535];
 
       String fileType = valueStream.readUTF();
@@ -848,15 +900,34 @@ public class AggregatedLogFormat {
         out.println(fileLengthStr);
         out.println("Log Contents:");
 
+        long toSkip = 0;
+        long totalBytesToRead = fileLength;
+        if (bytes < 0) {
+          long absBytes = Math.abs(bytes);
+          if (absBytes < fileLength) {
+            toSkip = fileLength - absBytes;
+            totalBytesToRead = absBytes;
+          }
+          long skippedBytes = valueStream.skip(toSkip);
+          if (skippedBytes != toSkip) {
+            throw new IOException("The bytes were skipped are "
+                + "different from the caller requested");
+          }
+        } else {
+          if (bytes < fileLength) {
+            totalBytesToRead = bytes;
+          }
+        }
+
         long curRead = 0;
-        long pendingRead = fileLength - curRead;
+        long pendingRead = totalBytesToRead - curRead;
         int toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
         int len = valueStream.read(buf, 0, toRead);
-        while (len != -1 && curRead < fileLength) {
+        while (len != -1 && curRead < totalBytesToRead) {
           out.write(buf, 0, len);
           curRead += len;
 
-          pendingRead = fileLength - curRead;
+          pendingRead = totalBytesToRead - curRead;
           toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
           len = valueStream.read(buf, 0, toRead);
         }

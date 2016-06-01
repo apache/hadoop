@@ -601,6 +601,72 @@ public class TestAHSWebServices extends JerseyTestBase {
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1ForApp100));
+    int fullTextSize = responseText.getBytes().length;
+    int tailTextSize = "\nEnd of LogType:syslog\n".getBytes().length;
+
+    String logMessage = "Hello." + containerId1ForApp100;
+    int fileContentSize = logMessage.getBytes().length;
+    // specify how many bytes we should get from logs
+    // if we specify a position number, it would get the first n bytes from
+    // container log
+    r = resource();
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1ForApp100.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .queryParam("size", "5")
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertEquals(responseText.getBytes().length,
+        (fullTextSize - fileContentSize) + 5);
+    assertTrue(fullTextSize >= responseText.getBytes().length);
+    assertEquals(new String(responseText.getBytes(),
+        (fullTextSize - fileContentSize - tailTextSize), 5),
+        new String(logMessage.getBytes(), 0, 5));
+
+    // specify how many bytes we should get from logs
+    // if we specify a negative number, it would get the last n bytes from
+    // container log
+    r = resource();
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1ForApp100.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .queryParam("size", "-5")
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertEquals(responseText.getBytes().length,
+        (fullTextSize - fileContentSize) + 5);
+    assertTrue(fullTextSize >= responseText.getBytes().length);
+    assertEquals(new String(responseText.getBytes(),
+        (fullTextSize - fileContentSize - tailTextSize), 5),
+        new String(logMessage.getBytes(), fileContentSize - 5, 5));
+
+    // specify the bytes which is larger than the actual file size,
+    // we would get the full logs
+    r = resource();
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1ForApp100.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .queryParam("size", "10000")
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertEquals(responseText.getBytes().length, fullTextSize);
+
+    r = resource();
+    response = r.path("ws").path("v1")
+        .path("applicationhistory").path("containerlogs")
+        .path(containerId1ForApp100.toString()).path(fileName)
+        .queryParam("user.name", user)
+        .queryParam("size", "-10000")
+        .accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertEquals(responseText.getBytes().length, fullTextSize);
   }
 
   private static void createContainerLogInLocalDir(Path appLogsDir,

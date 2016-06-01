@@ -88,6 +88,7 @@ public class LogsCLI extends Configured implements Tool {
   private static final String SHOW_META_INFO = "show_meta_info";
   private static final String LIST_NODES_OPTION = "list_nodes";
   private static final String OUT_OPTION = "out";
+  private static final String SIZE_OPTION = "size";
   public static final String HELP_CMD = "help";
 
   @Override
@@ -113,6 +114,7 @@ public class LogsCLI extends Configured implements Tool {
     String[] logFiles = null;
     List<String> amContainersList = new ArrayList<String>();
     String localDir = null;
+    long bytes = Long.MAX_VALUE;
     try {
       CommandLine commandLine = parser.parse(opts, args, true);
       appIdStr = commandLine.getOptionValue(APPLICATION_ID_OPTION);
@@ -133,6 +135,9 @@ public class LogsCLI extends Configured implements Tool {
       }
       if (commandLine.hasOption(CONTAINER_LOG_FILES)) {
         logFiles = commandLine.getOptionValues(CONTAINER_LOG_FILES);
+      }
+      if (commandLine.hasOption(SIZE_OPTION)) {
+        bytes = Long.parseLong(commandLine.getOptionValue(SIZE_OPTION));
       }
     } catch (ParseException e) {
       System.err.println("options parsing failed: " + e.getMessage());
@@ -195,7 +200,7 @@ public class LogsCLI extends Configured implements Tool {
 
     ContainerLogsRequest request = new ContainerLogsRequest(appId,
         isApplicationFinished(appState), appOwner, nodeAddress, null,
-        containerIdStr, localDir, logs);
+        containerIdStr, localDir, logs, bytes);
 
     if (showMetaInfo) {
       return showMetaInfo(request, logCliHelper);
@@ -402,6 +407,7 @@ public class LogsCLI extends Configured implements Tool {
           ClientResponse response =
               webResource.path("ws").path("v1").path("node")
                 .path("containerlogs").path(containerIdStr).path(logFile)
+                .queryParam("size", Long.toString(request.getBytes()))
                 .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
           out.println(response.getEntity(String.class));
           out.println("End of LogType:" + logFile);
@@ -442,7 +448,9 @@ public class LogsCLI extends Configured implements Tool {
         newOptions);
   }
 
-  private ContainerReport getContainerReport(String containerIdStr)
+  @Private
+  @VisibleForTesting
+  public ContainerReport getContainerReport(String containerIdStr)
       throws YarnException, IOException {
     YarnClient yarnClient = createYarnClient();
     try {
@@ -636,12 +644,16 @@ public class LogsCLI extends Configured implements Tool {
     opts.addOption(OUT_OPTION, true, "Local directory for storing individual "
         + "container logs. The container logs will be stored based on the "
         + "node the container ran on.");
+    opts.addOption(SIZE_OPTION, true, "Prints the log file's first 'n' bytes "
+        + "or the last 'n' bytes. Use negative values as bytes to read from "
+        + "the end and positive values as bytes to read from the beginning.");
     opts.getOption(APPLICATION_ID_OPTION).setArgName("Application ID");
     opts.getOption(CONTAINER_ID_OPTION).setArgName("Container ID");
     opts.getOption(NODE_ADDRESS_OPTION).setArgName("Node Address");
     opts.getOption(APP_OWNER_OPTION).setArgName("Application Owner");
     opts.getOption(AM_CONTAINER_OPTION).setArgName("AM Containers");
     opts.getOption(OUT_OPTION).setArgName("Local Directory");
+    opts.getOption(SIZE_OPTION).setArgName("size");
     return opts;
   }
 
@@ -656,6 +668,7 @@ public class LogsCLI extends Configured implements Tool {
     printOpts.addOption(commandOpts.getOption(SHOW_META_INFO));
     printOpts.addOption(commandOpts.getOption(LIST_NODES_OPTION));
     printOpts.addOption(commandOpts.getOption(OUT_OPTION));
+    printOpts.addOption(commandOpts.getOption(SIZE_OPTION));
     return printOpts;
   }
 

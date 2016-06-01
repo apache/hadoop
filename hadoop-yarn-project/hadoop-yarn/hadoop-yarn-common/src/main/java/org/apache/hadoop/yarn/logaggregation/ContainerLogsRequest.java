@@ -30,6 +30,7 @@ public class ContainerLogsRequest {
   private boolean appFinished;
   private String outputLocalDir;
   private List<String> logTypes;
+  private long bytes;
 
   public ContainerLogsRequest() {}
 
@@ -42,12 +43,13 @@ public class ContainerLogsRequest {
     this.setContainerId(request.getContainerId());
     this.setOutputLocalDir(request.getOutputLocalDir());
     this.setLogTypes(request.getLogTypes());
+    this.setBytes(request.getBytes());
   }
 
   public ContainerLogsRequest(ApplicationId applicationId,
       boolean isAppFinished, String owner,
       String address, String httpAddress, String container, String localDir,
-      List<String> logs) {
+      List<String> logs, long bytes) {
     this.setAppId(applicationId);
     this.setAppFinished(isAppFinished);
     this.setAppOwner(owner);
@@ -56,6 +58,7 @@ public class ContainerLogsRequest {
     this.setContainerId(container);
     this.setOutputLocalDir(localDir);
     this.setLogTypes(logs);
+    this.setBytes(bytes);
   }
 
   public ApplicationId getAppId() {
@@ -120,5 +123,13 @@ public class ContainerLogsRequest {
 
   public void setLogTypes(List<String> logTypes) {
     this.logTypes = logTypes;
+  }
+
+  public long getBytes() {
+    return bytes;
+  }
+
+  public void setBytes(long bytes) {
+    this.bytes = bytes;
   }
 }

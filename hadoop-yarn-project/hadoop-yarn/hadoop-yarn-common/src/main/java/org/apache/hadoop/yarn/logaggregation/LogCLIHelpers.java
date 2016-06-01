@@ -65,6 +65,7 @@ public class LogCLIHelpers implements Configurable {
     options.setAppOwner(jobOwner);
     List<String> logs = new ArrayList<String>();
     options.setLogTypes(logs);
+    options.setBytes(Long.MAX_VALUE);
     return dumpAContainersLogsForALogType(options, false);
   }
 
@@ -160,12 +161,13 @@ public class LogCLIHelpers implements Configurable {
                 thisNodeFile.getPath());
           if (logType == null || logType.isEmpty()) {
             if (dumpAContainerLogs(containerId, reader, out,
-                thisNodeFile.getModificationTime()) > -1) {
+                thisNodeFile.getModificationTime(), options.getBytes()) > -1) {
               foundContainerLogs = true;
             }
           } else {
             if (dumpAContainerLogsForALogType(containerId, reader, out,
-                thisNodeFile.getModificationTime(), logType) > -1) {
+                thisNodeFile.getModificationTime(), logType,
+                options.getBytes()) > -1) {
               foundContainerLogs = true;
             }
           }
@@ -222,12 +224,13 @@ public class LogCLIHelpers implements Configurable {
           out.println(StringUtils.repeat("=", containerId.length()));
           if (logType == null || logType.isEmpty()) {
             if (dumpAContainerLogs(containerId, reader, out,
-                thisNodeFile.getModificationTime()) > -1) {
+                thisNodeFile.getModificationTime(), options.getBytes()) > -1) {
               foundContainerLogs = true;
             }
           } else {
             if (dumpAContainerLogsForALogType(containerId, reader, out,
-                thisNodeFile.getModificationTime(), logType) > -1) {
+                thisNodeFile.getModificationTime(), logType,
+                options.getBytes()) > -1) {
               foundContainerLogs = true;
             }
           }
@@ -249,7 +252,7 @@ public class LogCLIHelpers implements Configurable {
   @Private
   public int dumpAContainerLogs(String containerIdStr,
       AggregatedLogFormat.LogReader reader, PrintStream out,
-      long logUploadedTime) throws IOException {
+      long logUploadedTime, long bytes) throws IOException {
     DataInputStream valueStream = getContainerLogsStream(
         containerIdStr, reader);
 
@@ -261,7 +264,7 @@ public class LogCLIHelpers implements Configurable {
     while (true) {
       try {
         LogReader.readAContainerLogsForALogType(valueStream, out,
-            logUploadedTime);
+            logUploadedTime, bytes);
         foundContainerLogs = true;
       } catch (EOFException eof) {
         break;
@@ -290,7 +293,8 @@ public class LogCLIHelpers implements Configurable {
   @Private
   public int dumpAContainerLogsForALogType(String containerIdStr,
       AggregatedLogFormat.LogReader reader, PrintStream out,
-      long logUploadedTime, List<String> logType) throws IOException {
+      long logUploadedTime, List<String> logType, long bytes)
+      throws IOException {
     DataInputStream valueStream = getContainerLogsStream(
         containerIdStr, reader);
     if (valueStream == null) {
@@ -301,7 +305,7 @@ public class LogCLIHelpers implements Configurable {
     while (true) {
       try {
         int result = LogReader.readContainerLogsForALogType(
-            valueStream, out, logUploadedTime, logType);
+            valueStream, out, logUploadedTime, logType, bytes);
         if (result == 0) {
           foundContainerLogs = true;
         }
@@ -361,12 +365,13 @@ public class LogCLIHelpers implements Configurable {
                 try {
                   if (logTypes == null || logTypes.isEmpty()) {
                     LogReader.readAContainerLogsForALogType(valueStream, out,
-                        thisNodeFile.getModificationTime());
+                        thisNodeFile.getModificationTime(),
+                        options.getBytes());
                     foundAnyLogs = true;
                   } else {
                     int result = LogReader.readContainerLogsForALogType(
                         valueStream, out, thisNodeFile.getModificationTime(),
-                        logTypes);
+                        logTypes, options.getBytes());
                     if (result == 0) {
                       foundAnyLogs = true;
                     }
