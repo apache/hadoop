@@ -127,8 +127,15 @@ public final class Constants {
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 14400;
 
   // s3 server-side encryption
-  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = 
-    "fs.s3a.server-side-encryption-algorithm";
+  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
+      "fs.s3a.server-side-encryption-algorithm";
+
+  /**
+   * The standard encryption algorithm AWS supports.
+   * Different implementations may support others (or none).
+   */
+  public static final String SERVER_SIDE_ENCRYPTION_AES256 =
+      "AES256";
 
   //override signature algorithm used for signing requests
   public static final String SIGNING_ALGORITHM = "fs.s3a.signing-algorithm";

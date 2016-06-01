@@ -37,7 +37,6 @@ public class TestS3AFileSystemContract extends FileSystemContractBaseTest {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestS3AFileSystemContract.class);
-  public static final String TEST_FS_S3A_NAME = "test.fs.s3a.name";
 
   @Override
   public void setUp() throws Exception {

@@ -768,3 +768,25 @@ By default, the `parallel-tests` profile runs 4 test suites concurrently.  This
 can be tuned by passing the `testsThreadCount` argument.
 
     mvn -Pparallel-tests -DtestsThreadCount=8 clean test
+
+### Testing against non AWS S3 endpoints.
+
+The S3A filesystem is designed to work with storage endpoints which implement
+the S3 protocols to the extent that the amazon S3 SDK is capable of talking
+to it. We encourage testing against other filesystems and submissions of patches
+which address issues. In particular, we encourage testing of Hadoop release
+candidates, as these third-party endpoints get even less testing than the
+S3 endpoint itself.
+
+
+**Disabling the encryption tests**
+
+If the endpoint doesn't support server-side-encryption, these will fail
+
+      <property>
+        <name>test.fs.s3a.encryption.enabled</name>
+        <value>false</value>
+      </property>
+
+Encryption is only used for those specific test suites with `Encryption` in
+their classname.

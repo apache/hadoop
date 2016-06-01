@@ -765,6 +765,28 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Low-level call to get at the object metadata.
+   * @param path path to the object
+   * @return metadata
+   * @throws IOException IO and object access problems.
+   */
+  @VisibleForTesting
+  public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+    return getObjectMetadata(pathToKey(path));
+  }
+
+  /**
+   * Request object metadata; increments counters in the process.
+   * @param key key
+   * @return the metadata
+   */
+  private ObjectMetadata getObjectMetadata(String key) {
+    ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
+    statistics.incrementReadOps(1);
+    return meta;
+  }
+
+  /**
    * A helper method to delete a list of keys on a s3-backend.
    *
    * @param keysToDelete collection of keys to delete on the s3-backend
@@ -1597,7 +1619,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Get the threshold for multipart files
+   * Get the threshold for multipart files.
    * @return the value as set during initialization
    */
   public long getMultiPartThreshold() {
