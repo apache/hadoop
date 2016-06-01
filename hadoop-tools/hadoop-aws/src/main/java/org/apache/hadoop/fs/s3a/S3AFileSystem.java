@@ -1150,6 +1150,9 @@ public class S3AFileSystem extends FileSystem {
       do {
         try {
           FileStatus fileStatus = getFileStatus(fPart);
+          if (fileStatus.isDirectory()) {
+            break;
+          }
           if (fileStatus.isFile()) {
             throw new FileAlreadyExistsException(String.format(
                 "Can't make directory for path '%s' since it is a file.",
