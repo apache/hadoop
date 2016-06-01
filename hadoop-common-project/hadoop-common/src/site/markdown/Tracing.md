@@ -84,6 +84,15 @@ You can specify the configuration associated with span receiver by `-Ckey=value`
       ID  CLASS
       2   org.apache.htrace.core.LocalFileSpanReceiver
 
+If the cluster is Kerberized, the service principal name must be specified using `-principal` option.
+For example, to show list of span receivers of a namenode:
+
+    $ hadoop trace -list -host NN1:8020 -principal namenode/NN1@EXAMPLE.COM
+
+Or, for a datanode:
+
+    $ hadoop trace -list -host DN2:9867 -principal datanode/DN1@EXAMPLE.COM
+
 ### Starting tracing spans by HTrace API
 
 In order to trace, you will need to wrap the traced logic with **tracing span** as shown below.
