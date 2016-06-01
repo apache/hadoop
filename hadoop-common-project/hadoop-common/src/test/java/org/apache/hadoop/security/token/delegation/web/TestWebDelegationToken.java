@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
+import static org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator.DelegationTokenOperation;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
@@ -30,6 +32,7 @@ import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHa
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -41,6 +44,8 @@ import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -60,8 +65,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.URL;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
@@ -76,6 +79,9 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 public class TestWebDelegationToken {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestWebDelegationToken.class);
   private static final String OK_USER = "ok-user";
   private static final String FAIL_USER = "fail-user";
   private static final String FOO_USER = "foo";
@@ -111,7 +117,7 @@ public class TestWebDelegationToken {
       AuthenticationToken token = null;
       if (request.getParameter("authenticated") != null) {
         token = new AuthenticationToken(request.getParameter("authenticated"),
-            "U", "test");
+            "U", "unsupported type");
       } else {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setHeader(KerberosAuthenticator.WWW_AUTHENTICATE, "dummy");
@@ -134,6 +140,32 @@ public class TestWebDelegationToken {
     }
   }
 
+  /**
+   * A dummy DelegationTokenAuthenticationHandler to verify that the request
+   * header contains delegation token.
+   */
+  public static class HeaderVerifyingDelegationTokenAuthenticationHandler
+      extends DummyDelegationTokenAuthenticationHandler {
+
+    @Override
+    public boolean managementOperation(AuthenticationToken token,
+        HttpServletRequest request, HttpServletResponse response)
+        throws IOException, AuthenticationException {
+      String op = ServletUtils.getParameter(request,
+          KerberosDelegationTokenAuthenticator.OP_PARAM);
+      if (op != null) {
+        DelegationTokenOperation dtOp = DelegationTokenOperation.valueOf(op);
+        if (dtOp == DelegationTokenOperation.RENEWDELEGATIONTOKEN
+            || dtOp == DelegationTokenOperation.CANCELDELEGATIONTOKEN) {
+          Assert.assertNotNull("Request header should have delegation token",
+              request.getHeader(
+                  DelegationTokenAuthenticator.DELEGATION_TOKEN_HEADER));
+        }
+      }
+      return super.managementOperation(token, request, response);
+    }
+  }
+
   public static class AFilter extends DelegationTokenAuthenticationFilter {
 
     @Override
@@ -142,6 +174,24 @@ public class TestWebDelegationToken {
       Properties conf = new Properties();
       conf.setProperty(AUTH_TYPE,
           DummyDelegationTokenAuthenticationHandler.class.getName());
+      return conf;
+    }
+  }
+
+  /**
+   * A dummy DelegationTokenAuthenticationFilter that uses a
+   * {@link HeaderVerifyingDelegationTokenAuthenticationHandler} to verify that
+   * the request header contains delegation token.
+   */
+  public static class HeaderVerifyingFilter
+      extends DelegationTokenAuthenticationFilter {
+
+    @Override
+    protected Properties getConfiguration(String configPrefix,
+        FilterConfig filterConfig) {
+      Properties conf = new Properties();
+      conf.setProperty(AUTH_TYPE,
+          HeaderVerifyingDelegationTokenAuthenticationHandler.class.getName());
       return conf;
     }
   }
@@ -203,6 +253,7 @@ public class TestWebDelegationToken {
   @After
   public void cleanUp() throws Exception {
     jetty.stop();
+    jetty = null;
 
     // resetting hadoop security to simple
     org.apache.hadoop.conf.Configuration conf =
@@ -424,6 +475,63 @@ public class TestWebDelegationToken {
 
     } finally {
       jetty.stop();
+    }
+  }
+
+  @Test(timeout=120000)
+  public void testDelegationTokenAuthenticatorUsingDT() throws Exception {
+    Context context = new Context();
+    context.setContextPath("/foo");
+    jetty.setHandler(context);
+    context.addFilter(new FilterHolder(HeaderVerifyingFilter.class), "/*", 0);
+    context.addServlet(new ServletHolder(PingServlet.class), "/bar");
+
+    jetty.start();
+    final URL nonAuthURL = new URL(getJettyURL() + "/foo/bar");
+    URL authURL = new URL(getJettyURL() + "/foo/bar?authenticated=foo");
+    URL authURL2 = new URL(getJettyURL() + "/foo/bar?authenticated=bar");
+
+    DelegationTokenAuthenticatedURL.Token token =
+        new DelegationTokenAuthenticatedURL.Token();
+    final DelegationTokenAuthenticatedURL aUrl =
+        new DelegationTokenAuthenticatedURL();
+    aUrl.getDelegationToken(authURL, token, FOO_USER);
+    Assert.assertNotNull(token.getDelegationToken());
+    Assert.assertEquals(new Text("token-kind"),
+        token.getDelegationToken().getKind());
+
+    // Create a token that only has dt so that we can test ops when
+    // authenticating with a delegation token.
+    DelegationTokenAuthenticatedURL.Token dtOnlyToken =
+        new DelegationTokenAuthenticatedURL.Token();
+    dtOnlyToken.setDelegationToken(token.getDelegationToken());
+
+    /**
+     * We're using delegation token, so everything comes from that.
+     * {@link DelegationTokenAuthenticationHandler#authenticate}.
+     *
+     * This means that the special logic we injected at
+     * {@link DummyAuthenticationHandler#authenticate}
+     * (check "authenticated" and return 401) wouldn't work any more.
+     */
+
+    aUrl.getDelegationToken(authURL, dtOnlyToken, FOO_USER);
+    aUrl.renewDelegationToken(authURL, dtOnlyToken);
+    aUrl.renewDelegationToken(nonAuthURL, dtOnlyToken);
+    aUrl.renewDelegationToken(authURL2, dtOnlyToken);
+
+    // Verify that after cancelling, we can't renew.
+    // After cancelling, the dt on token will be set to null. Back it up here.
+    DelegationTokenAuthenticatedURL.Token cancelledToken =
+        new DelegationTokenAuthenticatedURL.Token();
+    cancelledToken.setDelegationToken(dtOnlyToken.getDelegationToken());
+    aUrl.cancelDelegationToken(authURL, dtOnlyToken);
+    try {
+      aUrl.renewDelegationToken(authURL, cancelledToken);
+      Assert.fail();
+    } catch (Exception ex) {
+      LOG.info("Intentional exception caught:", ex);
+      GenericTestUtils.assertExceptionContains("can't be found in cache", ex);
     }
   }
 
