@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -45,11 +46,7 @@ import static org.junit.Assume.assumeTrue;
  * Base class for scale tests; here is where the common scale configuration
  * keys are defined.
  */
-public class S3AScaleTestBase extends Assert {
-
-  public static final String SCALE_TEST = "scale.test.";
-
-  public static final String S3A_SCALE_TEST = "fs.s3a.scale.test.";
+public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   @Rule
   public TestName methodName = new TestName();
@@ -58,37 +55,6 @@ public class S3AScaleTestBase extends Assert {
   public static void nameThread() {
     Thread.currentThread().setName("JUnit");
   }
-
-  /**
-   * The number of operations to perform: {@value}.
-   */
-  public static final String KEY_OPERATION_COUNT =
-      SCALE_TEST + "operation.count";
-
-  /**
-   * The readahead buffer: {@value}.
-   */
-  public static final String KEY_READ_BUFFER_SIZE =
-      S3A_SCALE_TEST + "read.buffer.size";
-
-  public static final int DEFAULT_READ_BUFFER_SIZE = 16384;
-
-  /**
-   * Key for a multi MB test file: {@value}.
-   */
-  public static final String KEY_CSVTEST_FILE =
-      S3A_SCALE_TEST + "csvfile";
-
-  /**
-   * Default path for the multi MB test file: {@value}.
-   */
-  public static final String DEFAULT_CSVTEST_FILE
-      = "s3a://landsat-pds/scene_list.gz";
-
-  /**
-   * The default number of operations to perform: {@value}.
-   */
-  public static final long DEFAULT_OPERATION_COUNT = 2005;
 
   protected S3AFileSystem fs;
 

@@ -27,11 +27,30 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Callable;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+
+/**
+ * Utilities for the S3A tests.
+ */
 public class S3ATestUtils {
 
-  public static S3AFileSystem createTestFileSystem(Configuration conf) throws
-      IOException {
-    String fsname = conf.getTrimmed(TestS3AFileSystemContract.TEST_FS_S3A_NAME, "");
+  /**
+   * Create the test filesystem.
+   *
+   * If the test.fs.s3a.name property is not set, this will
+   * trigger a JUnit failure.
+   *
+   * Multipart purging is enabled.
+   * @param conf configuration
+   * @return the FS
+   * @throws IOException IO Problems
+   * @throws AssumptionViolatedException if the FS is not named
+   */
+  public static S3AFileSystem createTestFileSystem(Configuration conf)
+      throws IOException {
+    String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
 
 
     boolean liveTest = !StringUtils.isEmpty(fsname);
@@ -44,19 +63,31 @@ public class S3ATestUtils {
       // This doesn't work with our JUnit 3 style test cases, so instead we'll
       // make this whole class not run by default
       throw new AssumptionViolatedException(
-          "No test filesystem in " + TestS3AFileSystemContract.TEST_FS_S3A_NAME);
+          "No test filesystem in " + TEST_FS_S3A_NAME);
     }
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
-    conf.setBoolean(Constants.PURGE_EXISTING_MULTIPART, true);
-    conf.setInt(Constants.PURGE_EXISTING_MULTIPART_AGE, 0);
+    conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
+    conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 0);
     fs1.initialize(testURI, conf);
     return fs1;
   }
 
-  public static FileContext createTestFileContext(Configuration conf) throws
-      IOException {
-    String fsname = conf.getTrimmed(TestS3AFileSystemContract.TEST_FS_S3A_NAME, "");
+  /**
+   * Create a file context for tests.
+   *
+   * If the test.fs.s3a.name property is not set, this will
+   * trigger a JUnit failure.
+   *
+   * Multipart purging is enabled.
+   * @param conf configuration
+   * @return the FS
+   * @throws IOException IO Problems
+   * @throws AssumptionViolatedException if the FS is not named
+   */
+  public static FileContext createTestFileContext(Configuration conf)
+      throws IOException {
+    String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
 
     boolean liveTest = !StringUtils.isEmpty(fsname);
     URI testURI = null;
@@ -67,8 +98,8 @@ public class S3ATestUtils {
     if (!liveTest) {
       // This doesn't work with our JUnit 3 style test cases, so instead we'll
       // make this whole class not run by default
-      throw new AssumptionViolatedException(
-          "No test filesystem in " + TestS3AFileSystemContract.TEST_FS_S3A_NAME);
+      throw new AssumptionViolatedException("No test filesystem in "
+          + TEST_FS_S3A_NAME);
     }
     FileContext fc = FileContext.getFileContext(testURI,conf);
     return fc;
@@ -137,6 +168,26 @@ public class S3ATestUtils {
       throw ex;
     }
     return ex;
+  }
+
+  /**
+   * Turn off FS Caching: use if a filesystem with different options from
+   * the default is required.
+   * @param conf configuration to patch
+   */
+  public static void disableFilesystemCaching(Configuration conf) {
+    conf.setBoolean("fs.s3a.impl.disable.cache", true);
+  }
+
+  /**
+   * Skip a test if encryption tests are disabled.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfEncryptionTestsDisabled(
+      Configuration configuration) {
+    if (!configuration.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
+      skip("Skipping encryption tests");
+    }
   }
 
 }
