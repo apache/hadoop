@@ -203,6 +203,11 @@ public class TestLogsCLI {
     pw.println("                                 for all the containers on the specific");
     pw.println("                                 NodeManager. Currently, this option can");
     pw.println("                                 only be used for finished applications.");
+    pw.println(" -size <size>                    Prints the log file's first 'n' bytes or");
+    pw.println("                                 the last 'n' bytes. Use negative values");
+    pw.println("                                 as bytes to read from the end and");
+    pw.println("                                 positive values as bytes to read from the");
+    pw.println("                                 beginning.");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -227,7 +232,7 @@ public class TestLogsCLI {
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     ContainerId containerId2 = ContainerId.newContainerId(appAttemptId, 2);
     ContainerId containerId3 = ContainerId.newContainerId(appAttemptId, 3);
-    NodeId nodeId = NodeId.newInstance("localhost", 1234);
+    final NodeId nodeId = NodeId.newInstance("localhost", 1234);
 
     // create local logs
     String rootLogDir = "target/LocalLogs";
@@ -281,7 +286,16 @@ public class TestLogsCLI {
     YarnClient mockYarnClient =
         createMockYarnClient(
             YarnApplicationState.FINISHED, ugi.getShortUserName());
-    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+    LogsCLI cli = new LogsCLIForTest(mockYarnClient) {
+      @Override
+      public ContainerReport getContainerReport(String containerIdStr)
+          throws YarnException, IOException {
+        ContainerReport mockReport = mock(ContainerReport.class);
+        doReturn(nodeId).when(mockReport).getAssignedNode();
+        doReturn("http://localhost:2345").when(mockReport).getNodeHttpAddress();
+        return mockReport;
+      }
+    };
     cli.setConf(configuration);
 
     int exitCode = cli.run(new String[] { "-applicationId", appId.toString() });
@@ -307,6 +321,7 @@ public class TestLogsCLI {
         "Hello container_0_0001_01_000003 in syslog!"));
     assertTrue(sysOutStream.toString().contains(
         "Hello container_0_0001_01_000003 in stdout!"));
+    int fullSize = sysOutStream.toByteArray().length;
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
@@ -329,6 +344,14 @@ public class TestLogsCLI {
         "Can not find any log file matching the pattern: [123]"));
     sysErrStream.reset();
 
+    // specify the bytes which is larger than the actual file size,
+    // we would get the full logs
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-logFiles", ".*", "-size", "10000" });
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toByteArray().length == fullSize);
+    sysOutStream.reset();
+
     // uploaded two logs for container1. The first log is empty.
     // The second one is not empty.
     // We can still successfully read logs for container1.
@@ -343,6 +366,49 @@ public class TestLogsCLI {
     assertTrue(!sysOutStream.toString().contains(
       "Logs for container " + containerId1.toString()
           + " are not present in this log-file."));
+    sysOutStream.reset();
+
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId3.toString(), "-logFiles", "stdout" });
+    assertTrue(exitCode == 0);
+    int fullContextSize = sysOutStream.toByteArray().length;
+    String fullContext = sysOutStream.toString();
+    sysOutStream.reset();
+
+    String logMessage = "Hello container_0_0001_01_000003 in stdout!";
+    int fileContentSize = logMessage.getBytes().length;
+    int tailContentSize = "End of LogType:syslog\n\n".getBytes().length;
+
+    // specify how many bytes we should get from logs
+    // specify a position number, it would get the first n bytes from
+    // container log
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId3.toString(), "-logFiles", "stdout",
+        "-size", "5"});
+    assertTrue(exitCode == 0);
+    Assert.assertEquals(new String(logMessage.getBytes(), 0, 5),
+        new String(sysOutStream.toByteArray(),
+        (fullContextSize - fileContentSize - tailContentSize), 5));
+    sysOutStream.reset();
+
+    // specify a negative number, it would get the last n bytes from
+    // container log
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId3.toString(), "-logFiles", "stdout",
+        "-size", "-5"});
+    assertTrue(exitCode == 0);
+    Assert.assertEquals(new String(logMessage.getBytes(),
+        logMessage.getBytes().length - 5, 5),
+        new String(sysOutStream.toByteArray(),
+        (fullContextSize - fileContentSize - tailContentSize), 5));
+    sysOutStream.reset();
+
+    long negative = (fullContextSize + 1000) * (-1);
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId3.toString(), "-logFiles", "stdout",
+        "-size", Long.toString(negative)});
+    assertTrue(exitCode == 0);
+    Assert.assertEquals(fullContext, sysOutStream.toString());
     sysOutStream.reset();
 
     // Uploaded the empty log for container0.

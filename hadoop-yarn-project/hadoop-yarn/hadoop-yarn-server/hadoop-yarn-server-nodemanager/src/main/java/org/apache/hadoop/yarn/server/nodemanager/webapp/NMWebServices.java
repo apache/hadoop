@@ -60,7 +60,6 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -217,7 +216,8 @@ public class NMWebServices {
   @Unstable
   public Response getLogs(@PathParam("containerid") String containerIdStr,
       @PathParam("filename") String filename,
-      @QueryParam("download") String download) {
+      @QueryParam("download") String download,
+      @QueryParam("size") String size) {
     ContainerId containerId;
     try {
       containerId = ConverterUtils.toContainerId(containerIdStr);
@@ -235,19 +235,51 @@ public class NMWebServices {
       return Response.serverError().entity(ex.getMessage()).build();
     }
     boolean downloadFile = parseBooleanParam(download);
+    final long bytes = parseLongParam(size);
+
     try {
       final FileInputStream fis = ContainerLogsUtils.openLogFileForRead(
           containerIdStr, logFile, nmContext);
-      
+      final long fileLength = logFile.length();
+
       StreamingOutput stream = new StreamingOutput() {
         @Override
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
           int bufferSize = 65536;
           byte[] buf = new byte[bufferSize];
-          int len;
-          while ((len = fis.read(buf, 0, bufferSize)) > 0) {
+          long toSkip = 0;
+          long totalBytesToRead = fileLength;
+          if (bytes < 0) {
+            long absBytes = Math.abs(bytes);
+            if (absBytes < fileLength) {
+              toSkip = fileLength - absBytes;
+              totalBytesToRead = absBytes;
+            }
+            long skippedBytes = fis.skip(toSkip);
+            if (skippedBytes != toSkip) {
+              throw new IOException("The bytes were skipped are different "
+                  + "from the caller requested");
+            }
+          } else {
+            if (bytes < fileLength) {
+              totalBytesToRead = bytes;
+            }
+          }
+
+          long curRead = 0;
+          long pendingRead = totalBytesToRead - curRead;
+          int toRead = pendingRead > buf.length ? buf.length
+              : (int) pendingRead;
+          int len = fis.read(buf, 0, toRead);
+          while (len != -1 && curRead < totalBytesToRead) {
             os.write(buf, 0, len);
+            curRead += len;
+
+            pendingRead = totalBytesToRead - curRead;
+            toRead = pendingRead > buf.length ? buf.length
+                : (int) pendingRead;
+            len = fis.read(buf, 0, toRead);
           }
           os.flush();
         }
@@ -267,5 +299,12 @@ public class NMWebServices {
       return ("true").equalsIgnoreCase(param);
     }
     return false;
+  }
+
+  private long parseLongParam(String bytes) {
+    if (bytes == null || bytes.isEmpty()) {
+      return Long.MAX_VALUE;
+    }
+    return Long.parseLong(bytes);
   }
 }
