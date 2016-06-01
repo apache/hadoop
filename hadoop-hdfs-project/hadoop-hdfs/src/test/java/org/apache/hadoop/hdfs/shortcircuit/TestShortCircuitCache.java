@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
@@ -624,15 +625,22 @@ public class TestShortCircuitCache {
   }
 
   static private void checkNumberOfSegmentsAndSlots(final int expectedSegments,
-        final int expectedSlots, ShortCircuitRegistry registry) {
-    registry.visit(new ShortCircuitRegistry.Visitor() {
+        final int expectedSlots, final ShortCircuitRegistry registry)
+  throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
-      public void accept(HashMap<ShmId, RegisteredShm> segments,
-                         HashMultimap<ExtendedBlockId, Slot> slots) {
-        Assert.assertEquals(expectedSegments, segments.size());
-        Assert.assertEquals(expectedSlots, slots.size());
+      public Boolean get() {
+        return registry.visit(new ShortCircuitRegistry.Visitor() {
+          @Override
+          public boolean accept(HashMap<ShmId, RegisteredShm> segments,
+              HashMultimap<ExtendedBlockId, Slot> slots) {
+            return (expectedSegments == segments.size()) &&
+                (expectedSlots == slots.size());
+          }
+        });
       }
-    });
+    }, 100, 10000);
+
   }
 
   public static class TestCleanupFailureInjector
@@ -774,16 +782,8 @@ public class TestShortCircuitCache {
     DFSTestUtil.createFile(fs, TEST_PATH2, 4096, (short)1, 0xFADE2);
     DFSTestUtil.readFileBuffer(fs, TEST_PATH1);
     DFSTestUtil.readFileBuffer(fs, TEST_PATH2);
-    ShortCircuitRegistry registry =
-        cluster.getDataNodes().get(0).getShortCircuitRegistry();
-    registry.visit(new ShortCircuitRegistry.Visitor() {
-      @Override
-      public void accept(HashMap<ShmId, RegisteredShm> segments,
-                         HashMultimap<ExtendedBlockId, Slot> slots) {
-        Assert.assertEquals(1, segments.size());
-        Assert.assertEquals(2, slots.size());
-      }
-    });
+    checkNumberOfSegmentsAndSlots(1, 2,
+        cluster.getDataNodes().get(0).getShortCircuitRegistry());
     cluster.shutdown();
     sockDir.close();
   }
