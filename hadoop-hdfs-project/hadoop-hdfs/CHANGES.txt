@@ -178,6 +178,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10372. Fix for failing TestFsDatasetImpl#testCleanShutdownOfVolume.
     (Rushabh Shah via kihwal)
 
+    HDFS-9476. TestDFSUpgradeFromImage#testUpgradeFromRel1BBWImage
+    occasionally fail. (Masatake Iwasaki via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
