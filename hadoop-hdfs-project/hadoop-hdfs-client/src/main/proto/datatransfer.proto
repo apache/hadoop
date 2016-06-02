@@ -154,6 +154,7 @@ message OpBlockGroupChecksumProto {
   // each internal block has a block token
   repeated hadoop.common.TokenProto blockTokens = 3;
   required ErasureCodingPolicyProto ecPolicy = 4;
+  repeated uint32 blockIndices = 5;
 }
 
 /**

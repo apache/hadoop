@@ -32,14 +32,16 @@ public class StripedBlockInfo {
   private final ExtendedBlock block;
   private final DatanodeInfo[] datanodes;
   private final Token<BlockTokenIdentifier>[] blockTokens;
+  private final byte[] blockIndices;
   private final ErasureCodingPolicy ecPolicy;
 
   public StripedBlockInfo(ExtendedBlock block, DatanodeInfo[] datanodes,
-                          Token<BlockTokenIdentifier>[] blockTokens,
-                          ErasureCodingPolicy ecPolicy) {
+      Token<BlockTokenIdentifier>[] blockTokens, byte[] blockIndices,
+      ErasureCodingPolicy ecPolicy) {
     this.block = block;
     this.datanodes = datanodes;
     this.blockTokens = blockTokens;
+    this.blockIndices = blockIndices;
     this.ecPolicy = ecPolicy;
   }
 
@@ -53,6 +55,10 @@ public class StripedBlockInfo {
 
   public Token<BlockTokenIdentifier>[] getBlockTokens() {
     return blockTokens;
+  }
+
+  public byte[] getBlockIndices() {
+    return blockIndices;
   }
 
   public ErasureCodingPolicy getErasureCodingPolicy() {

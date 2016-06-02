@@ -460,7 +460,8 @@ final class FileChecksumHelper {
       setRemaining(getRemaining() - block.getNumBytes());
 
       StripedBlockInfo stripedBlockInfo = new StripedBlockInfo(block,
-          blockGroup.getLocations(), blockGroup.getBlockTokens(), ecPolicy);
+          blockGroup.getLocations(), blockGroup.getBlockTokens(),
+          blockGroup.getBlockIndices(), ecPolicy);
       DatanodeInfo[] datanodes = blockGroup.getLocations();
 
       //try each datanode in the block group.

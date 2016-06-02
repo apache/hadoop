@@ -163,17 +163,40 @@ public class TestFileChecksum {
     Assert.assertFalse(stripedFileChecksum1.equals(replicatedFileChecksum));
   }
 
-  /*
-  // TODO: allow datanode failure, HDFS-9833
   @Test
-  public void testStripedAndReplicatedWithFailure() throws Exception {
-    FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1,
-        10, true);
-    FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
-        10, true);
+  public void testStripedFileChecksumWithMissedDataBlocks1() throws Exception {
+    FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1, fileSize,
+        false);
+    FileChecksum stripedFileChecksumRecon = getFileChecksum(stripedFile1,
+        fileSize, true);
 
-    Assert.assertFalse(stripedFileChecksum1.equals(replicatedFileChecksum));
-  }*/
+    LOG.info("stripedFileChecksum1:" + stripedFileChecksum1);
+    LOG.info("stripedFileChecksumRecon:" + stripedFileChecksumRecon);
+
+    Assert.assertTrue("Checksum mismatches!",
+        stripedFileChecksum1.equals(stripedFileChecksumRecon));
+  }
+
+  @Test
+  public void testStripedFileChecksumWithMissedDataBlocks2() throws Exception {
+    FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1, -1,
+        false);
+    FileChecksum stripedFileChecksum2 = getFileChecksum(stripedFile2, -1,
+        false);
+    FileChecksum stripedFileChecksum2Recon = getFileChecksum(stripedFile2, -1,
+        true);
+
+    LOG.info("stripedFileChecksum1:" + stripedFileChecksum1);
+    LOG.info("stripedFileChecksum2:" + stripedFileChecksum1);
+    LOG.info("stripedFileChecksum2Recon:" + stripedFileChecksum2Recon);
+
+    Assert.assertTrue("Checksum mismatches!",
+        stripedFileChecksum1.equals(stripedFileChecksum2));
+    Assert.assertTrue("Checksum mismatches!",
+        stripedFileChecksum1.equals(stripedFileChecksum2Recon));
+    Assert.assertTrue("Checksum mismatches!",
+        stripedFileChecksum2.equals(stripedFileChecksum2Recon));
+  }
 
   private FileChecksum getFileChecksum(String filePath, int range,
                                        boolean killDn) throws Exception {

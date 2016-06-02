@@ -23,11 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 import org.apache.hadoop.util.DataChecksum;
@@ -85,8 +82,7 @@ class StripedReader {
   private final CompletionService<Void> readService;
 
   StripedReader(StripedReconstructor reconstructor, DataNode datanode,
-                Configuration conf,
-                BlockECReconstructionInfo reconstructionInfo) {
+      Configuration conf, StripedReconstructionInfo stripedReconInfo) {
     stripedReadTimeoutInMills = conf.getInt(
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY,
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
@@ -98,13 +94,11 @@ class StripedReader {
     this.datanode = datanode;
     this.conf = conf;
 
-    ErasureCodingPolicy ecPolicy = reconstructionInfo.getErasureCodingPolicy();
-    dataBlkNum = ecPolicy.getNumDataUnits();
-    parityBlkNum = ecPolicy.getNumParityUnits();
+    dataBlkNum = stripedReconInfo.getEcPolicy().getNumDataUnits();
+    parityBlkNum = stripedReconInfo.getEcPolicy().getNumParityUnits();
 
-    ExtendedBlock blockGroup = reconstructionInfo.getExtendedBlock();
-    int cellsNum = (int)((blockGroup.getNumBytes() - 1) / ecPolicy.getCellSize()
-        + 1);
+    int cellsNum = (int) ((stripedReconInfo.getBlockGroup().getNumBytes() - 1)
+        / stripedReconInfo.getEcPolicy().getCellSize() + 1);
     minRequiredSources = Math.min(cellsNum, dataBlkNum);
 
     if (minRequiredSources < dataBlkNum) {
@@ -113,8 +107,10 @@ class StripedReader {
       zeroStripeIndices = new short[zeroStripNum];
     }
 
-    liveIndices = reconstructionInfo.getLiveBlockIndices();
-    sources = reconstructionInfo.getSourceDnInfos();
+    this.liveIndices = stripedReconInfo.getLiveIndices();
+    assert liveIndices != null;
+    this.sources = stripedReconInfo.getSources();
+    assert sources != null;
 
     readers = new ArrayList<>(sources.length);
     readService = reconstructor.createReadService();
