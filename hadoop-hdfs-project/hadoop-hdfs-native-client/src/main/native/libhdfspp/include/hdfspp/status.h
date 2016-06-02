@@ -38,7 +38,8 @@ class Status {
   static Status Exception(const char *expception_class_name, const char *error_message);
   static Status Error(const char *error_message);
   static Status AuthenticationFailed();
-    static Status Canceled();
+  static Status Canceled();
+  static Status PathNotFound(const char *msg);
 
   // success
   bool ok() const { return code_ == 0; }
@@ -56,6 +57,7 @@ class Status {
     kUnimplemented = static_cast<unsigned>(std::errc::function_not_supported),
     kOperationCanceled = static_cast<unsigned>(std::errc::operation_canceled),
     kPermissionDenied = static_cast<unsigned>(std::errc::permission_denied),
+    kPathNotFound = static_cast<unsigned>(std::errc::no_such_file_or_directory),
     kException = 256,
     kAuthenticationFailed = 257,
   };

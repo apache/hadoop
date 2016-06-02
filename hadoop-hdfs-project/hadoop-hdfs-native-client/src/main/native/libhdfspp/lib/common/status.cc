@@ -26,6 +26,8 @@ namespace hdfs {
 
 const char * kStatusAccessControlException = "org.apache.hadoop.security.AccessControlException";
 const char * kStatusSaslException = "javax.security.sasl.SaslException";
+const char * kPathNotFoundException = "org.apache.hadoop.fs.InvalidPathException";
+const char * kPathNotFoundException2 = "java.io.FileNotFoundException";
 
 Status::Status(int code, const char *msg1) : code_(code) {
   if(msg1) {
@@ -53,6 +55,10 @@ Status Status::InvalidArgument(const char *msg) {
   return Status(kInvalidArgument, msg);
 }
 
+Status Status::PathNotFound(const char *msg){
+  return Status(kPathNotFound, msg);
+}
+
 Status Status::ResourceUnavailable(const char *msg) {
   return Status(kResourceUnavailable, msg);
 }
@@ -66,6 +72,10 @@ Status Status::Exception(const char *exception_class_name, const char *error_mes
     return Status(kPermissionDenied, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kStatusSaslException) == 0))
     return AuthenticationFailed();
+  else if (exception_class_name && (strcmp(exception_class_name, kPathNotFoundException) == 0))
+    return Status(kPathNotFound, error_message);
+  else if (exception_class_name && (strcmp(exception_class_name, kPathNotFoundException2) == 0))
+    return Status(kPathNotFound, error_message);
   else
     return Status(kException, exception_class_name, error_message);
 }

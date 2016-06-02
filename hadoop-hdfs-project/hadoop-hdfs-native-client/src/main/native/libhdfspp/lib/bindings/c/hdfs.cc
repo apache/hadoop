@@ -26,6 +26,9 @@
 #include <hdfs/hdfs.h>
 #include <hdfspp/hdfs_ext.h>
 
+#include <libgen.h>
+#include "limits.h"
+
 #include <string>
 #include <cstring>
 #include <iostream>
@@ -145,6 +148,10 @@ static int Error(const Status &stat) {
     case Status::Code::kPermissionDenied:
       errnum = EACCES;
       default_message = "Permission denied";
+      break;
+    case Status::Code::kPathNotFound:
+      errnum = ENOENT;
+      default_message = "No such file or directory";
       break;
     default:
       errnum = ENOSYS;
@@ -314,6 +321,127 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   } catch (...) {
     return ReportCaughtNonException();
   }
+}
+
+void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
+                            const hdfs::StatInfo & stat_info) {
+  /* file or directory */
+  if (stat_info.file_type == StatInfo::IS_DIR) {
+    file_info->mKind = kObjectKindDirectory;
+  } else if (stat_info.file_type == StatInfo::IS_FILE) {
+    file_info->mKind = kObjectKindFile;
+  } else {
+    file_info->mKind = kObjectKindFile;
+    LOG_WARN(kFileSystem, << "Symlink is not supported! Reporting as a file: ");
+  }
+
+  /* the name of the file */
+  char copyOfPath[PATH_MAX];
+  strncpy(copyOfPath, stat_info.path.c_str(), PATH_MAX);
+  copyOfPath[PATH_MAX - 1] = '\0'; // in case strncpy ran out of space
+
+  char * mName = basename(copyOfPath);
+  size_t mName_size = strlen(mName);
+  file_info->mName = new char[mName_size+1];
+  strncpy(file_info->mName, basename(copyOfPath), mName_size + 1);
+
+  /* the last modification time for the file in seconds */
+  file_info->mLastMod = (tTime) stat_info.modification_time;
+
+  /* the size of the file in bytes */
+  file_info->mSize = (tOffset) stat_info.length;
+
+  /* the count of replicas */
+  file_info->mReplication = (short) stat_info.block_replication;
+
+  /* the block size for the file */
+  file_info->mBlockSize = (tOffset) stat_info.blocksize;
+
+  /* the owner of the file */
+  file_info->mOwner = new char[stat_info.owner.size() + 1];
+  strncpy(file_info->mOwner, stat_info.owner.c_str(), stat_info.owner.size() + 1);
+
+  /* the group associated with the file */
+  file_info->mGroup = new char[stat_info.group.size() + 1];
+  strncpy(file_info->mGroup, stat_info.group.c_str(), stat_info.group.size() + 1);
+
+  /* the permissions associated with the file */
+  file_info->mPermissions = (short) stat_info.permissions;
+
+  /* the last access time for the file in seconds */
+  file_info->mLastAccess = stat_info.access_time;
+}
+
+hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
+  try {
+    if (!CheckSystem(fs)) {
+       return nullptr;
+    }
+
+    hdfs::StatInfo stat_info;
+    Status stat = fs->get_impl()->GetFileInfo(path, stat_info);
+    if (!stat.ok()) {
+      Error(stat);
+      return nullptr;
+    }
+    hdfsFileInfo *file_info = new hdfsFileInfo[1];
+    StatInfoToHdfsFileInfo(file_info, stat_info);
+    return file_info;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    return nullptr;
+  }
+}
+
+hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
+  try {
+      if (!CheckSystem(fs)) {
+        *numEntries = 0;
+        return nullptr;
+      }
+
+      std::shared_ptr<std::vector<StatInfo>>  stat_infos;
+      Status stat = fs->get_impl()->GetListing(path, stat_infos);
+      if (!stat.ok()) {
+        Error(stat);
+        *numEntries = 0;
+        return nullptr;
+      }
+      //Existing API expects nullptr if size is 0
+      if(!stat_infos || stat_infos->size()==0){
+        *numEntries = 0;
+        return nullptr;
+      }
+      *numEntries = stat_infos->size();
+      hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos->size()];
+      for(std::vector<StatInfo>::size_type i = 0; i < stat_infos->size(); i++) {
+        StatInfoToHdfsFileInfo(&file_infos[i], stat_infos->at(i));
+      }
+
+      return file_infos;
+    } catch (const std::exception & e) {
+      ReportException(e);
+      *numEntries = 0;
+      return nullptr;
+    } catch (...) {
+      ReportCaughtNonException();
+      *numEntries = 0;
+      return nullptr;
+    }
+}
+
+void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
+{
+    int i;
+    for (i = 0; i < numEntries; ++i) {
+        delete[] hdfsFileInfo[i].mName;
+        delete[] hdfsFileInfo[i].mOwner;
+        delete[] hdfsFileInfo[i].mGroup;
+    }
+    delete[] hdfsFileInfo;
 }
 
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,

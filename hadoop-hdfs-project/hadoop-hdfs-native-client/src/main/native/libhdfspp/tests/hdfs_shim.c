@@ -78,8 +78,7 @@ void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats) {
 }
 
 hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
-  REPORT_FUNCTION_NOT_IMPLEMENTED
-  return NULL;
+  return (hdfsFS) libhdfspp_hdfsConnectAsUser(nn, port, user);
 }
 
 hdfsFS hdfsConnect(const char* nn, tPort port) {
@@ -294,16 +293,16 @@ int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
 
 hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path,
                                 int *numEntries) {
-  return (hdfsFileInfo *)libhdfs_hdfsListDirectory(fs->libhdfsRep, path, numEntries);
+  return (hdfsFileInfo *)libhdfspp_hdfsListDirectory(fs->libhdfsppRep, path, numEntries);
 }
 
 hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
-  return (hdfsFileInfo *)libhdfs_hdfsGetPathInfo(fs->libhdfsRep, path);
+  return (hdfsFileInfo *)libhdfspp_hdfsGetPathInfo(fs->libhdfsppRep, path);
 }
 
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries) {
-  return libhdfs_hdfsFreeFileInfo
-      ((libhdfs_hdfsFileInfo *) hdfsFileInfo, numEntries);
+  return libhdfspp_hdfsFreeFileInfo
+      ((libhdfspp_hdfsFileInfo *) hdfsFileInfo, numEntries);
 }
 
 int hdfsFileIsEncrypted(hdfsFileInfo *hdfsFileInfo) {

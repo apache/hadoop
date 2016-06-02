@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #define TO_STR_HELPER(X) #X
 #define TO_STR(X) TO_STR_HELPER(X)
@@ -56,7 +57,7 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
     tPort port;
     hdfsFS hdfs;
     struct hdfsBuilder *bld;
-    
+
     port = (tPort)nmdGetNameNodePort(cl);
     if (port < 0) {
         fprintf(stderr, "hdfsSingleNameNodeConnect: nmdGetNameNodePort "
@@ -109,7 +110,7 @@ static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
         return ret;
     } else if (blockSize != TLH_DEFAULT_BLOCK_SIZE) {
         fprintf(stderr, "hdfsGetDefaultBlockSizeAtPath(%s) got "
-                "%"PRId64", but we expected %d\n", 
+                "%"PRId64", but we expected %d\n",
                 path, blockSize, TLH_DEFAULT_BLOCK_SIZE);
         return EIO;
     }
@@ -157,6 +158,12 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     EXPECT_ZERO(doTestGetDefaultBlockSize(fs, paths->prefix));
 
+    /* There is no such directory.
+     * Check that errno is set to ENOENT
+     */
+    char invalid_path[] = "/some_invalid/path";
+    EXPECT_NULL_WITH_ERRNO(hdfsListDirectory(fs, invalid_path, &numEntries), ENOENT);
+
     /* There should be no entry in the directory. */
     errno = EACCES; // see if errno is set to 0 on success
     EXPECT_NULL_WITH_ERRNO(hdfsListDirectory(fs, paths->prefix, &numEntries), 0);
@@ -198,11 +205,30 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
     /* There should be 1 entry in the directory. */
-    EXPECT_NONNULL(hdfsListDirectory(fs, paths->prefix, &numEntries));
+    hdfsFileInfo * dirList = hdfsListDirectory(fs, paths->prefix, &numEntries);
+    EXPECT_NONNULL(dirList);
     if (numEntries != 1) {
         fprintf(stderr, "hdfsListDirectory set numEntries to "
                 "%d on directory containing 1 file.", numEntries);
     }
+    hdfsFreeFileInfo(dirList, numEntries);
+
+    /* Create many files for ListDirectory to page through */
+    int nFile;
+    for (nFile = 0; nFile < 10000; nFile++) {
+      char filename[PATH_MAX];
+      snprintf(filename, PATH_MAX, "%s/many_files_%d", paths->prefix, nFile);
+      file = hdfsOpenFile(fs, filename, O_WRONLY, 0, 0, 0);
+      EXPECT_NONNULL(file);
+      EXPECT_ZERO(hdfsCloseFile(fs, file));
+    }
+    dirList = hdfsListDirectory(fs, paths->prefix, &numEntries);
+    EXPECT_NONNULL(dirList);
+    if (numEntries != 10002) {
+        fprintf(stderr, "hdfsListDirectory set numEntries to "
+                "%d on directory containing 10002 files.", numEntries);
+    }
+    hdfsFreeFileInfo(dirList, numEntries);
 
     /* Let's re-open the file for reading */
     file = hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0);
@@ -274,7 +300,25 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
 
     snprintf(tmp, sizeof(tmp), "%s/nonexistent-file-name", paths->prefix);
     EXPECT_NEGATIVE_ONE_WITH_ERRNO(hdfsChown(fs, tmp, "ha3", NULL), ENOENT);
-    return 0;
+
+    //Test case: File does not exist
+    EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs, invalid_path), ENOENT);
+
+//  Test case: No permission to access parent directory
+//  Trying to set permissions of the parent directory to 0
+//  by a super user, and then connecting as SomeGuy. Should
+//  receive permission denied, but receives fileInfo.
+//  EXPECT_ZERO(hdfsChmod(fs, paths->prefix, 0));
+//  EXPECT_ZERO(hdfsChmod(fs, paths->file2, 0));
+//  EXPECT_ZERO(hdfsDisconnect(fs));
+//  EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, "SomeGuy"));
+//  EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs, paths->file2), EACCES);
+//  EXPECT_ZERO(hdfsDisconnect(fs));
+//  EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+//  if (!fs) {
+//      return 1;
+//  }
+  return 0;
 }
 
 static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
@@ -329,7 +373,7 @@ static int checkFailures(struct tlhThreadInfo *ti, int tlhNumThreads)
     for (i = 0; i < tlhNumThreads; i++) {
         if (ti[i].success != 0) {
             fprintf(stderr, "%s%d", sep, i);
-            sep = ", "; 
+            sep = ", ";
         }
     }
     fprintf(stderr, "].  FAILURE.\n");
