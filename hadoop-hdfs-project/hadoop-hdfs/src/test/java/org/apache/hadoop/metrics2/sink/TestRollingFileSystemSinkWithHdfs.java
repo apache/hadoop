@@ -187,8 +187,8 @@ public class TestRollingFileSystemSinkWithHdfs
     try {
       ms.stop();
 
-      fail("No exception was generated while stopping sink "
-          + "even though HDFS was unavailable");
+      assertTrue("No exception was generated while stopping sink "
+          + "even though HDFS was unavailable", MockSink.errored);
     } catch (MetricsException ex) {
       // Expected
     } finally {
