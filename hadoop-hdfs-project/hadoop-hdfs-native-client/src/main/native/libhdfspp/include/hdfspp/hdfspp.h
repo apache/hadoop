@@ -22,6 +22,8 @@
 #include "hdfspp/status.h"
 #include "hdfspp/events.h"
 #include "hdfspp/block_location.h"
+#include "hdfspp/statinfo.h"
+
 
 #include <functional>
 #include <memory>
@@ -170,6 +172,33 @@ class FileSystem {
   virtual Status Open(const std::string &path, FileHandle **handle) = 0;
 
   /**
+   * Returns metadata about the file if the file/directory exists.
+   **/
+  virtual void
+  GetFileInfo(const std::string &path,
+                  const std::function<void(const Status &, const StatInfo &)> &handler) = 0;
+  virtual Status GetFileInfo(const std::string &path, StatInfo & stat_info) = 0;
+
+  /**
+   * Retrieves the files contained in a directory and returns the metadata
+   * for each of them.
+   *
+   * The asynchronous method will return batches of files; the consumer must
+   * return true if they want more files to be delivered.  The final bool
+   * parameter in the callback will be set to true if this is the final
+   * batch of files.
+   *
+   * The synchronous method will return all files in the directory.
+   *
+   * Path must be an absolute path in the hdfs filesytem (e.g. /tmp/foo/bar)
+   **/
+  virtual void
+  GetListing(const std::string &path,
+                  const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> &handler) = 0;
+  virtual Status GetListing(const std::string &path,
+                            std::shared_ptr<std::vector<StatInfo>> & stat_infos) = 0;
+
+  /**
    * Returns the locations of all known blocks for the indicated file, or an error
    * if the information clould not be found
    */
@@ -177,7 +206,6 @@ class FileSystem {
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) = 0;
   virtual Status GetBlockLocations(const std::string & path,
     std::shared_ptr<FileBlockLocation> * locations) = 0;
-
 
   /**
    * Note that it is an error to destroy the filesystem from within a filesystem

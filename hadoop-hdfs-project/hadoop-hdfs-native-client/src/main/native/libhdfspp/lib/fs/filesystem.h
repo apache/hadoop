@@ -28,6 +28,7 @@
 #include "rpc/rpc_engine.h"
 #include "reader/block_reader.h"
 #include "reader/fileinfo.h"
+#include "hdfspp/statinfo.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
@@ -64,8 +65,20 @@ public:
   void GetBlockLocations(const std::string & path,
     std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
 
+  void GetFileInfo(const std::string & path,
+      std::function<void(const Status &, const StatInfo &)> handler);
+
+  // start_after="" for initial call
+  void GetListing(const std::string & path,
+        std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> handler,
+        const std::string & start_after = "");
+
   void SetFsEventCallback(fs_event_callback callback);
+
 private:
+  static void HdfsFileStatusProtoToStatInfo(hdfs::StatInfo & si, const ::hadoop::hdfs::HdfsFileStatusProto & fs);
+  static void DirectoryListingProtoToStatInfo(std::shared_ptr<std::vector<StatInfo>> stat_infos, const ::hadoop::hdfs::DirectoryListingProto & dl);
+
   ::asio::io_service * io_service_;
   RpcEngine engine_;
   ClientNamenodeProtocol namenode_;
@@ -105,6 +118,17 @@ public:
                         &handler) override;
   Status Open(const std::string &path, FileHandle **handle) override;
 
+  void GetFileInfo(
+      const std::string &path,
+      const std::function<void(const Status &, const StatInfo &)> &handler) override;
+
+  Status GetFileInfo(const std::string &path, StatInfo & stat_info) override;
+
+  void GetListing(
+        const std::string &path,
+        const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> &handler) override;
+
+  Status GetListing(const std::string &path, std::shared_ptr<std::vector<StatInfo>> &stat_infos) override;
 
   virtual void GetBlockLocations(const std::string & path,
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) override;
@@ -150,6 +174,11 @@ private:
    * exposes implementation details that may change at any time.
    **/
   std::shared_ptr<LibhdfsEvents> event_handlers_;
+
+  void GetListingShim(const Status &stat, std::shared_ptr<std::vector<StatInfo>> &stat_infos, bool has_more,
+                      std::string path,
+                      const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> &handler);
+
 };
 }
 
