@@ -80,14 +80,14 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       Resource capability, int numContainers, boolean relaxLocality,
       String labelExpression) {
     return newInstance(priority, hostName, capability, numContainers,
-        relaxLocality, labelExpression, ExecutionType.GUARANTEED);
+        relaxLocality, labelExpression, ExecutionTypeRequest.newInstance());
   }
 
   @Public
-  @Stable
+  @Evolving
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality, String
-      labelExpression, ExecutionType execType) {
+      labelExpression, ExecutionTypeRequest executionTypeRequest) {
     ResourceRequest request = Records.newRecord(ResourceRequest.class);
     request.setPriority(priority);
     request.setResourceName(hostName);
@@ -95,7 +95,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     request.setNumContainers(numContainers);
     request.setRelaxLocality(relaxLocality);
     request.setNodeLabelExpression(labelExpression);
-    request.setExecutionType(execType);
+    request.setExecutionTypeRequest(executionTypeRequest);
     return request;
   }
 
@@ -233,14 +233,16 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public abstract boolean getRelaxLocality();
 
   /**
-   * Set the <code>ExecutionType</code> of the requested container.
+   * Set the <code>ExecutionTypeRequest</code> of the requested container.
    *
-   * @param execType
-   *          ExecutionType of the requested container
+   * @param execSpec
+   *          ExecutionTypeRequest of the requested container
    */
   @Public
-  @Stable
-  public abstract void setExecutionType(ExecutionType execType);
+  @Evolving
+  public void setExecutionTypeRequest(ExecutionTypeRequest execSpec) {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * Get whether locality relaxation is enabled with this
@@ -250,8 +252,10 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
    * <code>ResourceRequest</code>.
    */
   @Public
-  @Stable
-  public abstract ExecutionType getExecutionType();
+  @Evolving
+  public ExecutionTypeRequest getExecutionTypeRequest() {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * <p>For a request at a network hierarchy level, set whether locality can be relaxed
@@ -353,12 +357,12 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         return false;
     } else if (!priority.equals(other.getPriority()))
       return false;
-    ExecutionType executionType = getExecutionType();
-    if (executionType == null) {
-      if (other.getExecutionType() != null) {
+    ExecutionTypeRequest execTypeRequest = getExecutionTypeRequest();
+    if (execTypeRequest == null) {
+      if (other.getExecutionTypeRequest() != null) {
         return false;
       }
-    } else if (executionType != other.getExecutionType()) {
+    } else if (!execTypeRequest.equals(other.getExecutionTypeRequest())) {
       return false;
     }
     if (getNodeLabelExpression() == null) {

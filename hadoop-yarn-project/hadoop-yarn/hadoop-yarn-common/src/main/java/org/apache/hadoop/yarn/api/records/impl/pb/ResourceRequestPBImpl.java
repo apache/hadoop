@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -39,6 +39,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   
   private Priority priority = null;
   private Resource capability = null;
+  private ExecutionTypeRequest executionTypeRequest = null;
   
   
   public ResourceRequestPBImpl() {
@@ -63,6 +64,10 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     }
     if (this.capability != null) {
       builder.setCapability(convertToProtoFormat(this.capability));
+    }
+    if (this.executionTypeRequest != null) {
+      builder.setExecutionTypeRequest(
+          ProtoUtils.convertToProtoFormat(this.executionTypeRequest));
     }
   }
 
@@ -102,6 +107,29 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
       builder.clearPriority();
     this.priority = priority;
   }
+
+
+  public ExecutionTypeRequest getExecutionTypeRequest() {
+    ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.executionTypeRequest != null) {
+      return this.executionTypeRequest;
+    }
+    if (!p.hasExecutionTypeRequest()) {
+      return null;
+    }
+    this.executionTypeRequest =
+        ProtoUtils.convertFromProtoFormat(p.getExecutionTypeRequest());
+    return this.executionTypeRequest;
+  }
+
+  public void setExecutionTypeRequest(ExecutionTypeRequest execSpec) {
+    maybeInitBuilder();
+    if (execSpec == null) {
+      builder.clearExecutionTypeRequest();
+    }
+    this.executionTypeRequest = execSpec;
+  }
+
   @Override
   public String getResourceName() {
     ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
@@ -186,7 +214,7 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
         + ", # Containers: " + getNumContainers()
         + ", Location: " + getResourceName()
         + ", Relax Locality: " + getRelaxLocality()
-        + ", Node Label Expression: " + getNodeLabelExpression() + "}";
+        + ", Execution Spec: " + getExecutionTypeRequest() + "}";
   }
 
   @Override
@@ -207,24 +235,4 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     }
     builder.setNodeLabelExpression(nodeLabelExpression);
   }
-
-  @Override
-  public ExecutionType getExecutionType() {
-    ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasExecutionType()) {
-      return null;
-    }
-    return ProtoUtils.convertFromProtoFormat(p.getExecutionType());
-  }
-
-  @Override
-  public void setExecutionType(ExecutionType execType) {
-    maybeInitBuilder();
-    if (execType == null) {
-      builder.clearExecutionType();
-      return;
-    }
-    builder.setExecutionType(ProtoUtils.convertToProtoFormat(execType));
-  }
-
 }

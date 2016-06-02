@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -462,7 +463,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       remoteRequest.setCapability(capability);
       remoteRequest.setNumContainers(0);
       remoteRequest.setNodeLabelExpression(nodeLabelExpression);
-      remoteRequest.setExecutionType(executionType);
+      remoteRequest.setExecutionTypeRequest(
+          ExecutionTypeRequest.newInstance(executionType, true));
       reqMap.put(capability, remoteRequest);
     }
     remoteRequest.setNumContainers(remoteRequest.getNumContainers() + 1);

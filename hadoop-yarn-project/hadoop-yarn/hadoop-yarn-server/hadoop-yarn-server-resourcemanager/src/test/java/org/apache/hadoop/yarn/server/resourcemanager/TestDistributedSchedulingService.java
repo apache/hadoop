@@ -39,8 +39,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -104,6 +107,13 @@ public class TestDistributedSchedulingService {
         ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(
                 ApplicationId.newInstance(12345, 1), 2), 3));
+    AllocateRequest allReq =
+        (AllocateRequestPBImpl)factory.newRecordInstance(AllocateRequest.class);
+    allReq.setAskList(Arrays.asList(
+        ResourceRequest.newInstance(Priority.UNDEFINED, "a",
+            Resource.newInstance(1, 2), 1, true, "exp",
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true))));
     DistributedSchedulingService service = createService(factory, rmContext, c);
     Server server = service.getServer(rpc, conf, addr, null);
     server.start();
@@ -168,8 +178,7 @@ public class TestDistributedSchedulingService {
     DistSchedAllocateResponse dsAllocResp =
         new DistSchedAllocateResponsePBImpl(
             dsProxy.allocateForDistributedScheduling(null,
-                ((AllocateRequestPBImpl)factory
-                    .newRecordInstance(AllocateRequest.class)).getProto()));
+                ((AllocateRequestPBImpl)allReq).getProto()));
     Assert.assertEquals(
         "h1", dsAllocResp.getNodesForScheduling().get(0).getHost());
 
@@ -235,6 +244,10 @@ public class TestDistributedSchedulingService {
       @Override
       public DistSchedAllocateResponse allocateForDistributedScheduling(
           AllocateRequest request) throws YarnException, IOException {
+        List<ResourceRequest> askList = request.getAskList();
+        Assert.assertEquals(1, askList.size());
+        Assert.assertTrue(askList.get(0)
+            .getExecutionTypeRequest().getEnforceExecutionType());
         DistSchedAllocateResponse resp =
             factory.newRecordInstance(DistSchedAllocateResponse.class);
         resp.setNodesForScheduling(
