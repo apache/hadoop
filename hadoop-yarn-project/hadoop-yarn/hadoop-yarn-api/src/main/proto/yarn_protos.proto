@@ -305,7 +305,12 @@ message ResourceRequestProto {
   optional int32 num_containers = 4;
   optional bool relax_locality = 5 [default = true];
   optional string node_label_expression = 6;
-  optional ExecutionTypeProto executionType = 7 [default = GUARANTEED];
+  optional ExecutionTypeRequestProto execution_type_request = 7;
+}
+
+message ExecutionTypeRequestProto {
+  optional ExecutionTypeProto execution_type = 1 [default = GUARANTEED];
+  optional bool enforce_execution_type = 2 [default = false];
 }
 
 enum AMCommandProto {
