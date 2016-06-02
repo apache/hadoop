@@ -15868,7 +15868,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*1. N is not a positive integer, or( )*</expected-output>
+          <expected-output>^( |\t)*1. quota is not a positive integer, or( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
