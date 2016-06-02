@@ -153,7 +153,8 @@ The following instructions are to run a MapReduce job locally. If you want to ex
 
 5.  Copy the input files into the distributed filesystem:
 
-          $ bin/hdfs dfs -put etc/hadoop input
+          $ bin/hdfs dfs -mkdir input
+          $ bin/hdfs dfs -put etc/hadoop/*.xml input
 
 6.  Run some of the examples provided:
 
