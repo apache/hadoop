@@ -307,7 +307,7 @@ public class ValueQueue <E> {
         ekvs.add(val);
       }
     } catch (Exception e) {
-      throw new IOException("Exeption while contacting value generator ", e);
+      throw new IOException("Exception while contacting value generator ", e);
     }
     return ekvs;
   }
