@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -117,14 +119,15 @@ public class TestPendingReconstruction {
     //
     // verify that nothing has timed out so far
     //
-    assertTrue(pendingReconstructions.getTimedOutBlocks() == null);
+    assertNull(pendingReconstructions.getTimedOutBlocks());
+    assertEquals(0L, pendingReconstructions.getNumTimedOuts());
 
     //
     // Wait for one second and then insert some more items.
     //
     try {
       Thread.sleep(1000);
-    } catch (Exception e) {
+    } catch (Exception ignored) {
     }
 
     for (int i = 10; i < 15; i++) {
@@ -133,7 +136,8 @@ public class TestPendingReconstruction {
           DatanodeStorageInfo.toDatanodeDescriptors(
               DFSTestUtil.createDatanodeStorageInfos(i)));
     }
-    assertTrue(pendingReconstructions.size() == 15);
+    assertEquals(15, pendingReconstructions.size());
+    assertEquals(0L, pendingReconstructions.getNumTimedOuts());
 
     //
     // Wait for everything to timeout.
@@ -153,10 +157,14 @@ public class TestPendingReconstruction {
     // Verify that everything has timed out.
     //
     assertEquals("Size of pendingReconstructions ", 0, pendingReconstructions.size());
+    assertEquals(15L, pendingReconstructions.getNumTimedOuts());
     Block[] timedOut = pendingReconstructions.getTimedOutBlocks();
-    assertTrue(timedOut != null && timedOut.length == 15);
-    for (int i = 0; i < timedOut.length; i++) {
-      assertTrue(timedOut[i].getBlockId() < 15);
+    assertNotNull(timedOut);
+    assertEquals(15, timedOut.length);
+    // Verify the number is not reset
+    assertEquals(15L, pendingReconstructions.getNumTimedOuts());
+    for (Block block : timedOut) {
+      assertTrue(block.getBlockId() < 15);
     }
     pendingReconstructions.stop();
   }
