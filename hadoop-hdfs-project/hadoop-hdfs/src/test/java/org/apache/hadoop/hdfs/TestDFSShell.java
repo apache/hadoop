@@ -49,6 +49,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.BZip2Codec;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -530,7 +531,8 @@ public class TestDFSShell {
       cluster = new MiniDFSCluster.Builder(conf)
           .format(true)
           .numDataNodes(2)
-          .nameNodePort(8020)
+          .nameNodePort(ServerSocketUtil.waitForPort(
+              HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT, 10))
           .waitSafeMode(true)
           .build();
       FileSystem srcFs = cluster.getFileSystem();
