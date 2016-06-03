@@ -34,7 +34,7 @@ public class KeyProviderDelegationTokenExtension extends
       new DefaultDelegationTokenExtension();
 
   /**
-   * DelegationTokenExtension is a type of Extension that exposes methods to 
+   * DelegationTokenExtension is a type of Extension that exposes methods
    * needed to work with Delegation Tokens.
    */  
   public interface DelegationTokenExtension extends 
@@ -49,8 +49,23 @@ public class KeyProviderDelegationTokenExtension extends
      * @return list of new delegation tokens
      * @throws IOException thrown if IOException if an IO error occurs.
      */
-    public Token<?>[] addDelegationTokens(final String renewer, 
+    Token<?>[] addDelegationTokens(final String renewer,
         Credentials credentials) throws IOException;
+
+    /**
+     * Renews the given token.
+     * @param token The token to be renewed.
+     * @return The token's lifetime after renewal, or 0 if it can't be renewed.
+     * @throws IOException
+     */
+    long renewDelegationToken(final Token<?> token) throws IOException;
+
+    /**
+     * Cancels the given token.
+     * @param token The token to be cancelled.
+     * @throws IOException
+     */
+    Void cancelDelegationToken(final Token<?> token) throws IOException;
   }
   
   /**
@@ -65,7 +80,16 @@ public class KeyProviderDelegationTokenExtension extends
         Credentials credentials) {
       return null;
     }
-    
+
+    @Override
+    public long renewDelegationToken(final Token<?> token) throws IOException {
+      return 0;
+    }
+
+    @Override
+    public Void cancelDelegationToken(final Token<?> token) throws IOException {
+      return null;
+    }
   }
 
   private KeyProviderDelegationTokenExtension(KeyProvider keyProvider,
