@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -29,6 +30,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -185,5 +187,51 @@ public final class S3AUtils {
       }
     }
     return builder.toString();
+  }
+
+  /**
+   * Create a files status instance from a listing.
+   * @param keyPath path to entry
+   * @param summary summary from AWS
+   * @param blockSize block size to declare.
+   * @return a status entry
+   */
+  public static S3AFileStatus createFileStatus(Path keyPath,
+      S3ObjectSummary summary,
+      long blockSize) {
+    if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
+      return new S3AFileStatus(true, true, keyPath);
+    } else {
+      return new S3AFileStatus(summary.getSize(),
+          dateToLong(summary.getLastModified()), keyPath,
+          blockSize);
+    }
+  }
+
+  /**
+   * Predicate: does the object represent a directory?.
+   * @param name object name
+   * @param size object size
+   * @return true if it meets the criteria for being an object
+   */
+  public static boolean objectRepresentsDirectory(final String name,
+      final long size) {
+    return !name.isEmpty()
+        && name.charAt(name.length() - 1) == '/'
+        && size == 0L;
+  }
+
+  /**
+   * Date to long conversion.
+   * Handles null Dates that can be returned by AWS by returning 0
+   * @param date date from AWS query
+   * @return timestamp of the object
+   */
+  public static long dateToLong(final Date date) {
+    if (date == null) {
+      return 0L;
+    }
+
+    return date.getTime();
   }
 }

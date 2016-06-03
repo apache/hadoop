@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
@@ -26,49 +27,30 @@ import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableMetric;
 
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.apache.hadoop.fs.s3a.Statistic.*;
+
 /**
  * Instrumentation of S3a.
- * Derived from the {@code AzureFileSystemInstrumentation}
+ * Derived from the {@code AzureFileSystemInstrumentation}.
+ *
+ * Counters and metrics are generally addressed in code by their name or
+ * {@link Statistic} key. There <i>may</i> be some Statistics which do
+ * not have an entry here. To avoid attempts to access such counters failing,
+ * the operations to increment/query metric values are designed to handle
+ * lookup failures.
  */
 @Metrics(about = "Metrics for S3a", context = "S3AFileSystem")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInstrumentation {
   public static final String CONTEXT = "S3AFileSystem";
-
-  public static final String STREAM_OPENED = "streamOpened";
-  public static final String STREAM_CLOSE_OPERATIONS = "streamCloseOperations";
-  public static final String STREAM_CLOSED = "streamClosed";
-  public static final String STREAM_ABORTED = "streamAborted";
-  public static final String STREAM_READ_EXCEPTIONS = "streamReadExceptions";
-  public static final String STREAM_SEEK_OPERATIONS = "streamSeekOperations";
-  public static final String STREAM_FORWARD_SEEK_OPERATIONS
-      = "streamForwardSeekOperations";
-  public static final String STREAM_BACKWARD_SEEK_OPERATIONS
-      = "streamBackwardSeekOperations";
-  public static final String STREAM_SEEK_BYTES_SKIPPED =
-      "streamBytesSkippedOnSeek";
-  public static final String STREAM_SEEK_BYTES_BACKWARDS =
-      "streamBytesBackwardsOnSeek";
-  public static final String STREAM_SEEK_BYTES_READ = "streamBytesRead";
-  public static final String STREAM_READ_OPERATIONS = "streamReadOperations";
-  public static final String STREAM_READ_FULLY_OPERATIONS
-      = "streamReadFullyOperations";
-  public static final String STREAM_READ_OPERATIONS_INCOMPLETE
-      = "streamReadOperationsIncomplete";
-  public static final String FILES_CREATED = "files_created";
-  public static final String FILES_COPIED = "files_copied";
-  public static final String FILES_COPIED_BYTES = "files_copied_bytes";
-  public static final String FILES_DELETED = "files_deleted";
-  public static final String DIRECTORIES_CREATED = "directories_created";
-  public static final String DIRECTORIES_DELETED = "directories_deleted";
-  public static final String IGNORED_ERRORS = "ignored_errors";
   private final MetricsRegistry registry =
       new MetricsRegistry("S3AFileSystem").setContext(CONTEXT);
   private final MutableCounterLong streamOpenOperations;
@@ -95,6 +77,27 @@ public class S3AInstrumentation {
   private final MutableCounterLong numberOfDirectoriesDeleted;
   private final Map<String, MutableCounterLong> streamMetrics = new HashMap<>();
 
+  private static final Statistic[] COUNTERS_TO_CREATE = {
+      INVOCATION_COPY_FROM_LOCAL_FILE,
+      INVOCATION_EXISTS,
+      INVOCATION_GET_FILE_STATUS,
+      INVOCATION_GLOB_STATUS,
+      INVOCATION_IS_DIRECTORY,
+      INVOCATION_IS_FILE,
+      INVOCATION_LIST_FILES,
+      INVOCATION_LIST_LOCATED_STATUS,
+      INVOCATION_LIST_STATUS,
+      INVOCATION_MKDIRS,
+      INVOCATION_RENAME,
+      OBJECT_COPY_REQUESTS,
+      OBJECT_DELETE_REQUESTS,
+      OBJECT_LIST_REQUESTS,
+      OBJECT_METADATA_REQUESTS,
+      OBJECT_MULTIPART_UPLOAD_ABORTED,
+      OBJECT_PUT_BYTES,
+      OBJECT_PUT_REQUESTS
+  };
+
   public S3AInstrumentation(URI name) {
     UUID fileSystemInstanceId = UUID.randomUUID();
     registry.tag("FileSystemId",
@@ -103,50 +106,35 @@ public class S3AInstrumentation {
     registry.tag("fsURI",
         "URI of this filesystem",
         name.toString());
-    streamOpenOperations = streamCounter(STREAM_OPENED,
-        "Total count of times an input stream to object store was opened");
-    streamCloseOperations = streamCounter(STREAM_CLOSE_OPERATIONS,
-        "Total count of times an attempt to close a data stream was made");
-    streamClosed = streamCounter(STREAM_CLOSED,
-        "Count of times the TCP stream was closed");
-    streamAborted = streamCounter(STREAM_ABORTED,
-        "Count of times the TCP stream was aborted");
-    streamSeekOperations = streamCounter(STREAM_SEEK_OPERATIONS,
-        "Number of seek operations invoked on input streams");
-    streamReadExceptions = streamCounter(STREAM_READ_EXCEPTIONS,
-        "Number of read exceptions caught and attempted to recovered from");
-    streamForwardSeekOperations = streamCounter(STREAM_FORWARD_SEEK_OPERATIONS,
-        "Number of executed seek operations which went forward in a stream");
-    streamBackwardSeekOperations = streamCounter(
-        STREAM_BACKWARD_SEEK_OPERATIONS,
-        "Number of executed seek operations which went backwards in a stream");
-    streamBytesSkippedOnSeek = streamCounter(STREAM_SEEK_BYTES_SKIPPED,
-        "Count of bytes skipped during forward seek operations");
-    streamBytesBackwardsOnSeek = streamCounter(STREAM_SEEK_BYTES_BACKWARDS,
-        "Count of bytes moved backwards during seek operations");
-    streamBytesRead = streamCounter(STREAM_SEEK_BYTES_READ,
-        "Count of bytes read during seek() in stream operations");
-    streamReadOperations = streamCounter(STREAM_READ_OPERATIONS,
-        "Count of read() operations in streams");
-    streamReadFullyOperations = streamCounter(STREAM_READ_FULLY_OPERATIONS,
-        "Count of readFully() operations in streams");
-    streamReadsIncomplete = streamCounter(STREAM_READ_OPERATIONS_INCOMPLETE,
-        "Count of incomplete read() operations in streams");
-
-    numberOfFilesCreated = counter(FILES_CREATED,
-            "Total number of files created through the object store.");
-    numberOfFilesCopied = counter(FILES_COPIED,
-            "Total number of files copied within the object store.");
-    bytesOfFilesCopied = counter(FILES_COPIED_BYTES,
-            "Total number of bytes copied within the object store.");
-    numberOfFilesDeleted = counter(FILES_DELETED,
-            "Total number of files deleted through from the object store.");
-    numberOfDirectoriesCreated = counter(DIRECTORIES_CREATED,
-        "Total number of directories created through the object store.");
-    numberOfDirectoriesDeleted = counter(DIRECTORIES_DELETED,
-        "Total number of directories deleted through the object store.");
-    ignoredErrors = counter(IGNORED_ERRORS,
-        "Total number of errors caught and ingored.");
+    streamOpenOperations = streamCounter(STREAM_OPENED);
+    streamCloseOperations = streamCounter(STREAM_CLOSE_OPERATIONS);
+    streamClosed = streamCounter(STREAM_CLOSED);
+    streamAborted = streamCounter(STREAM_ABORTED);
+    streamSeekOperations = streamCounter(STREAM_SEEK_OPERATIONS);
+    streamReadExceptions = streamCounter(STREAM_READ_EXCEPTIONS);
+    streamForwardSeekOperations =
+        streamCounter(STREAM_FORWARD_SEEK_OPERATIONS);
+    streamBackwardSeekOperations =
+        streamCounter(STREAM_BACKWARD_SEEK_OPERATIONS);
+    streamBytesSkippedOnSeek = streamCounter(STREAM_SEEK_BYTES_SKIPPED);
+    streamBytesBackwardsOnSeek =
+        streamCounter(STREAM_SEEK_BYTES_BACKWARDS);
+    streamBytesRead = streamCounter(STREAM_SEEK_BYTES_READ);
+    streamReadOperations = streamCounter(STREAM_READ_OPERATIONS);
+    streamReadFullyOperations =
+        streamCounter(STREAM_READ_FULLY_OPERATIONS);
+    streamReadsIncomplete =
+        streamCounter(STREAM_READ_OPERATIONS_INCOMPLETE);
+    numberOfFilesCreated = counter(FILES_CREATED);
+    numberOfFilesCopied = counter(FILES_COPIED);
+    bytesOfFilesCopied = counter(FILES_COPIED_BYTES);
+    numberOfFilesDeleted = counter(FILES_DELETED);
+    numberOfDirectoriesCreated = counter(DIRECTORIES_CREATED);
+    numberOfDirectoriesDeleted = counter(DIRECTORIES_DELETED);
+    ignoredErrors = counter(IGNORED_ERRORS);
+    for (Statistic statistic : COUNTERS_TO_CREATE) {
+      counter(statistic);
+    }
   }
 
   /**
@@ -171,6 +159,25 @@ public class S3AInstrumentation {
         Interns.info(name, desc), 0L);
     streamMetrics.put(name, counter);
     return counter;
+  }
+
+  /**
+   * Create a counter in the registry.
+   * @param op statistic to count
+   * @return a new counter
+   */
+  protected final MutableCounterLong counter(Statistic op) {
+    return counter(op.getSymbol(), op.getDescription());
+  }
+
+  /**
+   * Create a counter in the stream map: these are unregistered in the public
+   * metrics.
+   * @param op statistic to count
+   * @return a new counter
+   */
+  protected final MutableCounterLong streamCounter(Statistic op) {
+    return streamCounter(op.getSymbol(), op.getDescription());
   }
 
   /**
@@ -213,6 +220,58 @@ public class S3AInstrumentation {
           Long.toString(entry.getValue().value()));
     }
     return metricBuilder.toString();
+  }
+
+  /**
+   * Get the value of a counter.
+   * @param statistic the operation
+   * @return its value, or 0 if not found.
+   */
+  public long getCounterValue(Statistic statistic) {
+    return getCounterValue(statistic.getSymbol());
+  }
+
+  /**
+   * Get the value of a counter.
+   * If the counter is null, return 0.
+   * @param name the name of the counter
+   * @return its value.
+   */
+  public long getCounterValue(String name) {
+    MutableCounterLong counter = lookupCounter(name);
+    return counter == null ? 0 : counter.value();
+  }
+
+  /**
+   * Lookup a counter by name. Return null if it is not known.
+   * @param name counter name
+   * @return the counter
+   */
+  private MutableCounterLong lookupCounter(String name) {
+    MutableMetric metric = lookupMetric(name);
+    if (metric == null) {
+      return null;
+    }
+    Preconditions.checkNotNull(metric, "not found: " + name);
+    if (!(metric instanceof MutableCounterLong)) {
+      throw new IllegalStateException("Metric " + name
+          + " is not a MutableCounterLong: " + metric);
+    }
+    return (MutableCounterLong) metric;
+  }
+
+  /**
+   * Look up a metric from both the registered set and the lighter weight
+   * stream entries.
+   * @param name metric name
+   * @return the metric or null
+   */
+  public MutableMetric lookupMetric(String name) {
+    MutableMetric metric = getRegistry().get(name);
+    if (metric == null) {
+      metric = streamMetrics.get(name);
+    }
+    return metric;
   }
 
   /**
@@ -260,6 +319,19 @@ public class S3AInstrumentation {
    */
   public void errorIgnored() {
     ignoredErrors.incr();
+  }
+
+  /**
+   * Increment a specific counter.
+   * No-op if not defined.
+   * @param op operation
+   * @param count increment value
+   */
+  public void incrementCounter(Statistic op, long count) {
+    MutableCounterLong counter = lookupCounter(op.getSymbol());
+    if (counter != null) {
+      counter.incr(count);
+    }
   }
 
   /**
