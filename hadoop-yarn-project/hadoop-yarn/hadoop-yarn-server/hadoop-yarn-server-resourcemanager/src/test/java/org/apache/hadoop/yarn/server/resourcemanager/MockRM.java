@@ -874,6 +874,20 @@ public class MockRM extends ResourceManager {
     return am;
   }
 
+  public static MockAM launchUAM(RMApp app, MockRM rm, MockNM nm)
+      throws Exception {
+    // UAMs go directly to LAUNCHED state
+    rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
+    System.out.println("Launch AM " + attempt.getAppAttemptId());
+    nm.nodeHeartbeat(true);
+    MockAM am = new MockAM(rm.getRMContext(), rm.masterService,
+        attempt.getAppAttemptId());
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
+    return am;
+  }
+
   public static RMAppAttempt waitForAttemptScheduled(RMApp app, MockRM rm)
       throws Exception {
     rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
