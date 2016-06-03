@@ -158,6 +158,30 @@ public class TestDtUtilShell {
   }
 
   @Test
+  public void testEdit() throws Exception {
+    String oldService = SERVICE2.toString();
+    String newAlias = "newName:12345";
+    args = new String[] {"edit",
+        "-service", oldService, "-alias", newAlias, tokenFilename2};
+    rc = dt.run(args);
+    assertEquals("test simple edit exit code", 0, rc);
+    args = new String[] {"print", "-alias", oldService, tokenFilename2};
+    rc = dt.run(args);
+    assertEquals("test simple edit print old exit code", 0, rc);
+    assertTrue("test simple edit output kind old:\n" + outContent.toString(),
+               outContent.toString().contains(KIND.toString()));
+    assertTrue("test simple edit output service old:\n" + outContent.toString(),
+               outContent.toString().contains(oldService));
+    args = new String[] {"print", "-alias", newAlias, tokenFilename2};
+    rc = dt.run(args);
+    assertEquals("test simple edit print new exit code", 0, rc);
+    assertTrue("test simple edit output kind new:\n" + outContent.toString(),
+               outContent.toString().contains(KIND.toString()));
+    assertTrue("test simple edit output service new:\n" + outContent.toString(),
+               outContent.toString().contains(newAlias));
+  }
+
+  @Test
   public void testAppend() throws Exception {
     args = new String[] {"append", tokenFilename, tokenFilename2};
     rc = dt.run(args);
