@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
@@ -81,7 +81,7 @@ public class TimelineReaderServer extends CompositeService {
   private TimelineReader createTimelineReaderStore(Configuration conf) {
     TimelineReader readerStore = ReflectionUtils.newInstance(conf.getClass(
         YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
-        FileSystemTimelineReaderImpl.class, TimelineReader.class), conf);
+        HBaseTimelineReaderImpl.class, TimelineReader.class), conf);
     LOG.info("Using store " + readerStore.getClass().getName());
     readerStore.init(conf);
     return readerStore;

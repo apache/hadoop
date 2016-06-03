@@ -36,7 +36,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -61,7 +61,7 @@ public class TimelineCollectorManager extends AbstractService {
   public void serviceInit(Configuration conf) throws Exception {
     writer = ReflectionUtils.newInstance(conf.getClass(
         YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
-        FileSystemTimelineWriterImpl.class,
+        HBaseTimelineWriterImpl.class,
         TimelineWriter.class), conf);
     writer.init(conf);
     // create a single dedicated thread for flushing the writer on a periodic

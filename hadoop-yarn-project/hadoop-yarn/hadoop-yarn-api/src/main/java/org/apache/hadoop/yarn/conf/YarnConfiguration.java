@@ -1989,11 +1989,13 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String APP_FINAL_VALUE_RETENTION_THRESHOLD =
       TIMELINE_SERVICE_PREFIX
-      + "coprocessor.app-final-value-retention-milliseconds";
+      + "hbase.coprocessor.app-final-value-retention-milliseconds";
 
   /**
-   * The setting that controls how long the final value of a metric
-   * of a completed app is retained before merging into the flow sum.
+   * The setting that controls how long the final value of a metric of a
+   * completed app is retained before merging into the flow sum. Up to this time
+   * after an application is completed out-of-order values that arrive can be
+   * recognized and discarded at the cost of increased storage.
    */
   public static final long DEFAULT_APP_FINAL_VALUE_RETENTION_THRESHOLD = 3 * 24
       * 60 * 60 * 1000L;
