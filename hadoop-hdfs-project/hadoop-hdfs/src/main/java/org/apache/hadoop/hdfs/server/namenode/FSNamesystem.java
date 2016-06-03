@@ -4466,7 +4466,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getExcessBlocks() {
     return blockManager.getExcessBlocksCount();
   }
-  
+
+  @Metric
+  public long getNumTimedOutPendingReplications() {
+    return blockManager.getNumTimedOutPendingReplications();
+  }
+
   // HA-only metric
   @Metric
   public long getPostponedMisreplicatedBlocks() {
