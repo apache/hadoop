@@ -43,7 +43,6 @@ import javax.net.SocketFactory;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,6 +69,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -506,6 +506,17 @@ public class DFSUtilClient {
     return new ReconfigurationProtocolTranslatorPB(addr, ticket, conf, factory);
   }
 
+  private static String keyProviderUriKeyName =
+      HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI;
+
+  /**
+   * Set the key provider uri configuration key name for creating key providers.
+   * @param keyName The configuration key name.
+   */
+  public static void setKeyProviderUriKeyName(final String keyName) {
+    keyProviderUriKeyName = keyName;
+  }
+
   /**
    * Creates a new KeyProvider from the given Configuration.
    *
@@ -516,29 +527,7 @@ public class DFSUtilClient {
    */
   public static KeyProvider createKeyProvider(
       final Configuration conf) throws IOException {
-    final String providerUriStr =
-        conf.getTrimmed(HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
-    // No provider set in conf
-    if (providerUriStr.isEmpty()) {
-      return null;
-    }
-    final URI providerUri;
-    try {
-      providerUri = new URI(providerUriStr);
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-    KeyProvider keyProvider = KeyProviderFactory.get(providerUri, conf);
-    if (keyProvider == null) {
-      throw new IOException("Could not instantiate KeyProvider from " +
-          HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI + " setting of '"
-          + providerUriStr + "'");
-    }
-    if (keyProvider.isTransient()) {
-      throw new IOException("KeyProvider " + keyProvider.toString()
-          + " was found but it is a transient provider.");
-    }
-    return keyProvider;
+    return KMSUtil.createKeyProvider(conf, keyProviderUriKeyName);
   }
 
   public static Peer peerFromSocket(Socket socket)
