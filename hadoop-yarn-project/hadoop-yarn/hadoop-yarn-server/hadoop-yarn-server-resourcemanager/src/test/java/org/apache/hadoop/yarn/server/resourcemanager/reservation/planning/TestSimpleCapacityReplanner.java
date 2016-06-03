@@ -53,7 +53,7 @@ public class TestSimpleCapacityReplanner {
   @Test
   public void testReplanningPlanCapacityLoss() throws PlanningException {
 
-    Resource clusterCapacity = Resource.newInstance(100 * 1024, 10);
+    Resource clusterCapacity = Resource.newInstance(100 * 1024, 100);
     Resource minAlloc = Resource.newInstance(1024, 1);
     Resource maxAlloc = Resource.newInstance(1024 * 8, 8);
 
