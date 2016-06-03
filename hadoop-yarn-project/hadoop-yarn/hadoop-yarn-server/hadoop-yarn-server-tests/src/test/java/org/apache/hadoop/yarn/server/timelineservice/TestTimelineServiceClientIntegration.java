@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.timelineservice.collector.NodeTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -66,6 +68,8 @@ public class TestTimelineServiceClientIntegration {
       // enable timeline service v.2
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+      conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
+          FileSystemTimelineWriterImpl.class, TimelineWriter.class);
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
               collectorManager, conf);
@@ -159,7 +163,9 @@ public class TestTimelineServiceClientIntegration {
           mock(CollectorNodemanagerProtocol.class);
       try {
         GetTimelineCollectorContextResponse response =
-            GetTimelineCollectorContextResponse.newInstance(null, null, null, 0L);
+            GetTimelineCollectorContextResponse.newInstance(
+                UserGroupInformation.getCurrentUser().getShortUserName(),
+                "test_flow_name", "test_flow_version", 1L);
         when(protocol.getTimelineCollectorContext(any(
             GetTimelineCollectorContextRequest.class))).thenReturn(response);
       } catch (YarnException | IOException e) {

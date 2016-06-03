@@ -36,8 +36,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TestFileSystemTimelineReaderImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
+import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -74,9 +76,11 @@ public class TestTimelineReaderWebServices {
       Configuration config = new YarnConfiguration();
       config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
       config.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
-      config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, 
+      config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
           "localhost:0");
       config.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
+      config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
+          FileSystemTimelineReaderImpl.class, TimelineReader.class);
       server = new TimelineReaderServer();
       server.init(config);
       server.start();
@@ -101,13 +105,12 @@ public class TestTimelineReaderWebServices {
   }
 
   private static void verifyHttpResponse(Client client, URI uri,
-      Status status) {
+      Status expectedStatus) {
     ClientResponse resp =
         client.resource(uri).accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
-    assertTrue("Response from server should have been " + status,
-        resp.getClientResponseStatus().equals(status));
+    assertEquals(resp.getClientResponseStatus(), expectedStatus);
   }
 
   private static Client createClient() {
