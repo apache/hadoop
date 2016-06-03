@@ -108,6 +108,11 @@ public enum DefaultMetricsSystem {
   }
 
   @InterfaceAudience.Private
+  public static void removeSourceName(String name) {
+    INSTANCE.removeSource(name);
+  }
+
+  @InterfaceAudience.Private
   public static String sourceName(String name, boolean dupOK) {
     return INSTANCE.newSourceName(name, dupOK);
   }
@@ -125,6 +130,10 @@ public enum DefaultMetricsSystem {
 
   synchronized void removeObjectName(String name) {
     mBeanNames.map.remove(name);
+  }
+
+  synchronized void removeSource(String name) {
+    sourceNames.map.remove(name);
   }
 
   synchronized String newSourceName(String name, boolean dupOK) {
