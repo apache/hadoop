@@ -160,6 +160,12 @@ public class ContainerMetrics implements MetricsSource {
         DefaultMetricsSystem.instance(), containerId, flushPeriodMs, delayMs);
   }
 
+  public synchronized static ContainerMetrics getContainerMetrics(
+      ContainerId containerId) {
+    // could be null
+    return usageMetrics.get(containerId);
+  }
+
   synchronized static ContainerMetrics forContainer(
       MetricsSystem ms, ContainerId containerId, long flushPeriodMs,
       long delayMs) {
@@ -205,12 +211,14 @@ public class ContainerMetrics implements MetricsSource {
   }
 
   public synchronized void finished() {
-    this.finished = true;
-    if (timer != null) {
-      timer.cancel();
-      timer = null;
+    if (!finished) {
+      this.finished = true;
+      if (timer != null) {
+        timer.cancel();
+        timer = null;
+      }
+      scheduleTimerTaskForUnregistration();
     }
-    scheduleTimerTaskForUnregistration();
   }
 
   public void recordMemoryUsage(int memoryMBs) {
