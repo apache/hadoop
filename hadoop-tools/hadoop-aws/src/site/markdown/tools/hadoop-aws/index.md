@@ -735,8 +735,18 @@ The exact number of operations to perform is configurable in the option
 Larger values generate more load, and are recommended when testing locally,
 or in batch runs.
 
-Smaller values should result in faster test runs, especially when the object
+Smaller values results in faster test runs, especially when the object
 store is a long way away.
+
+Operations which work on directories have a separate option: this controls
+the width and depth of tests creating recursive directories. Larger
+values create exponentially more directories, with consequent performance
+impact.
+
+      <property>
+        <name>scale.test.directory.count</name>
+        <value>2</value>
+      </property>
 
 DistCp tests targeting S3A support a configurable file size.  The default is
 10 MB, but the configuration value is expressed in KB so that it can be tuned

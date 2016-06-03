@@ -35,10 +35,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 
@@ -54,6 +52,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
  * Upload files/parts asap directly from a memory buffer (instead of buffering
@@ -77,8 +76,6 @@ public class S3AFastOutputStream extends OutputStream {
   private final int multiPartThreshold;
   private final S3AFileSystem fs;
   private final CannedAccessControlList cannedACL;
-  private final FileSystem.Statistics statistics;
-  private final String serverSideEncryptionAlgorithm;
   private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
   private MultiPartUpload multiPartUpload;
@@ -98,28 +95,28 @@ public class S3AFastOutputStream extends OutputStream {
    * @param bucket S3 bucket name
    * @param key S3 key name
    * @param progress report progress in order to prevent timeouts
-   * @param statistics track FileSystem.Statistics on the performed operations
    * @param cannedACL used CannedAccessControlList
-   * @param serverSideEncryptionAlgorithm algorithm for server side encryption
    * @param partSize size of a single part in a multi-part upload (except
    * last part)
    * @param multiPartThreshold files at least this size use multi-part upload
    * @param threadPoolExecutor thread factory
    * @throws IOException on any problem
    */
-  public S3AFastOutputStream(AmazonS3Client client, S3AFileSystem fs,
-      String bucket, String key, Progressable progress,
-      FileSystem.Statistics statistics, CannedAccessControlList cannedACL,
-      String serverSideEncryptionAlgorithm, long partSize,
-      long multiPartThreshold, ExecutorService threadPoolExecutor)
+  public S3AFastOutputStream(AmazonS3Client client,
+      S3AFileSystem fs,
+      String bucket,
+      String key,
+      Progressable progress,
+      CannedAccessControlList cannedACL,
+      long partSize,
+      long multiPartThreshold,
+      ExecutorService threadPoolExecutor)
       throws IOException {
     this.bucket = bucket;
     this.key = key;
     this.client = client;
     this.fs = fs;
     this.cannedACL = cannedACL;
-    this.statistics = statistics;
-    this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
     //Ensure limit as ByteArrayOutputStream size cannot exceed Integer.MAX_VALUE
     if (partSize > Integer.MAX_VALUE) {
       this.partSize = Integer.MAX_VALUE;
@@ -246,16 +243,17 @@ public class S3AFastOutputStream extends OutputStream {
       if (multiPartUpload == null) {
         putObject();
       } else {
-        if (buffer.size() > 0) {
+        int size = buffer.size();
+        if (size > 0) {
+          fs.incrementPutStartStatistics(size);
           //send last part
           multiPartUpload.uploadPartAsync(new ByteArrayInputStream(buffer
-              .toByteArray()), buffer.size());
+              .toByteArray()), size);
         }
         final List<PartETag> partETags = multiPartUpload
             .waitForAllPartUploads();
         multiPartUpload.complete(partETags);
       }
-      statistics.incrementWriteOps(1);
       // This will delete unnecessary fake parent directories
       fs.finishedWrite(key);
       LOG.debug("Upload complete for bucket '{}' key '{}'", bucket, key);
@@ -265,18 +263,19 @@ public class S3AFastOutputStream extends OutputStream {
     }
   }
 
+  /**
+   * Create the default metadata for a multipart upload operation.
+   * @return the metadata to use/extend.
+   */
   private ObjectMetadata createDefaultMetadata() {
-    ObjectMetadata om = new ObjectMetadata();
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
-    return om;
+    return fs.newObjectMetadata();
   }
 
   private MultiPartUpload initiateMultiPartUpload() throws IOException {
-    final ObjectMetadata om = createDefaultMetadata();
     final InitiateMultipartUploadRequest initiateMPURequest =
-        new InitiateMultipartUploadRequest(bucket, key, om);
+        new InitiateMultipartUploadRequest(bucket,
+            key,
+            createDefaultMetadata());
     initiateMPURequest.setCannedACL(cannedACL);
     try {
       return new MultiPartUpload(
@@ -290,15 +289,18 @@ public class S3AFastOutputStream extends OutputStream {
     LOG.debug("Executing regular upload for bucket '{}' key '{}'",
         bucket, key);
     final ObjectMetadata om = createDefaultMetadata();
-    om.setContentLength(buffer.size());
-    final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
-        new ByteArrayInputStream(buffer.toByteArray()), om);
-    putObjectRequest.setCannedAcl(cannedACL);
+    final int size = buffer.size();
+    om.setContentLength(size);
+    final PutObjectRequest putObjectRequest =
+        fs.newPutObjectRequest(key,
+            om,
+            new ByteArrayInputStream(buffer.toByteArray()));
     putObjectRequest.setGeneralProgressListener(progressListener);
     ListenableFuture<PutObjectResult> putObjectResult =
         executorService.submit(new Callable<PutObjectResult>() {
           @Override
           public PutObjectResult call() throws Exception {
+            fs.incrementPutStartStatistics(size);
             return client.putObject(putObjectRequest);
           }
         });
@@ -306,7 +308,7 @@ public class S3AFastOutputStream extends OutputStream {
     try {
       putObjectResult.get();
     } catch (InterruptedException ie) {
-      LOG.warn("Interrupted object upload:" + ie, ie);
+      LOG.warn("Interrupted object upload: {}", ie, ie);
       Thread.currentThread().interrupt();
     } catch (ExecutionException ee) {
       throw extractException("regular upload", key, ee);
@@ -339,7 +341,7 @@ public class S3AFastOutputStream extends OutputStream {
             public PartETag call() throws Exception {
               LOG.debug("Uploading part {} for id '{}'", currentPartNumber,
                   uploadId);
-              return client.uploadPart(request).getPartETag();
+              return fs.uploadPart(request).getPartETag();
             }
           });
       partETagsFutures.add(partETagFuture);
@@ -349,7 +351,7 @@ public class S3AFastOutputStream extends OutputStream {
       try {
         return Futures.allAsList(partETagsFutures).get();
       } catch (InterruptedException ie) {
-        LOG.warn("Interrupted partUpload:" + ie, ie);
+        LOG.warn("Interrupted partUpload: {}", ie, ie);
         Thread.currentThread().interrupt();
         return null;
       } catch (ExecutionException ee) {
@@ -382,11 +384,12 @@ public class S3AFastOutputStream extends OutputStream {
     public void abort() {
       LOG.warn("Aborting multi-part upload with id '{}'", uploadId);
       try {
+        fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
         client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
             key, uploadId));
       } catch (Exception e2) {
         LOG.warn("Unable to abort multipart upload, you may need to purge  " +
-            "uploaded parts: " + e2, e2);
+            "uploaded parts: {}", e2, e2);
       }
     }
   }

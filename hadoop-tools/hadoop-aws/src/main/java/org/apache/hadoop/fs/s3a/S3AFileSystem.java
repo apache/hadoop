@@ -42,7 +42,6 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -50,6 +49,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
@@ -68,8 +69,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Progressable;
@@ -77,6 +83,7 @@ import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,6 +122,7 @@ public class S3AFileSystem extends FileSystem {
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
+  private S3AStorageStatistics storageStatistics;
   private long readAhead;
 
   // The maximum number of entries that can be deleted in any call to s3
@@ -182,6 +190,15 @@ public class S3AFileSystem extends FileSystem {
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
       readAhead = longOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
+      storageStatistics = (S3AStorageStatistics)
+          GlobalStorageStatistics.INSTANCE
+              .put(S3AStorageStatistics.NAME,
+                  new GlobalStorageStatistics.StorageStatisticsProvider() {
+                    @Override
+                    public StorageStatistics provide() {
+                      return new S3AStorageStatistics();
+                    }
+                  });
 
       int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
       if (maxThreads < 2) {
@@ -281,6 +298,14 @@ public class S3AFileSystem extends FileSystem {
       LOG.error(msg);
       throw new IllegalArgumentException(msg);
     }
+  }
+
+  /**
+   * Get S3A Instrumentation. For test purposes.
+   * @return this instance's instrumentation.
+   */
+  public S3AInstrumentation getInstrumentation() {
+    return instrumentation;
   }
 
   /**
@@ -559,23 +584,26 @@ public class S3AFileSystem extends FileSystem {
     }
     instrumentation.fileCreated();
     if (getConf().getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD)) {
-      return new FSDataOutputStream(new S3AFastOutputStream(s3, this, bucket,
-          key, progress, statistics, cannedACL,
-          serverSideEncryptionAlgorithm, partSize, multiPartThreshold,
-          threadPoolExecutor), statistics);
+      return new FSDataOutputStream(
+          new S3AFastOutputStream(s3,
+              this,
+              bucket,
+              key,
+              progress,
+              cannedACL,
+              partSize,
+              multiPartThreshold,
+              threadPoolExecutor),
+          statistics);
     }
     // We pass null to FSDataOutputStream so it won't count writes that
     // are being buffered to a file
     return new FSDataOutputStream(
         new S3AOutputStream(getConf(),
-            transfers,
             this,
-            bucket,
             key,
-            progress,
-            cannedACL,
-            statistics,
-            serverSideEncryptionAlgorithm),
+            progress
+        ),
         null);
   }
 
@@ -631,6 +659,7 @@ public class S3AFileSystem extends FileSystem {
   private boolean innerRename(Path src, Path dst) throws IOException,
       AmazonClientException {
     LOG.debug("Rename path {} to {}", src, dst);
+    incrementStatistic(INVOCATION_RENAME);
 
     String srcKey = pathToKey(src);
     String dstKey = pathToKey(dst);
@@ -731,8 +760,7 @@ public class S3AFileSystem extends FileSystem {
       request.setPrefix(srcKey);
       request.setMaxKeys(maxKeys);
 
-      ObjectListing objects = s3.listObjects(request);
-      statistics.incrementReadOps(1);
+      ObjectListing objects = listObjects(request);
 
       while (true) {
         for (S3ObjectSummary summary : objects.getObjectSummaries()) {
@@ -746,8 +774,7 @@ public class S3AFileSystem extends FileSystem {
         }
 
         if (objects.isTruncated()) {
-          objects = s3.listNextBatchOfObjects(objects);
-          statistics.incrementReadOps(1);
+          objects = continueListObjects(objects);
         } else {
           if (!keysToDelete.isEmpty()) {
             removeKeys(keysToDelete, false);
@@ -776,14 +803,220 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Increment a statistic by 1.
+   * @param statistic The operation to increment
+   */
+  protected void incrementStatistic(Statistic statistic) {
+    incrementStatistic(statistic, 1);
+  }
+
+  /**
+   * Increment a statistic by a specific value.
+   * @param statistic The operation to increment
+   * @param count the count to increment
+   */
+  protected void incrementStatistic(Statistic statistic, long count) {
+    instrumentation.incrementCounter(statistic, count);
+    storageStatistics.incrementCounter(statistic, count);
+  }
+
+  /**
    * Request object metadata; increments counters in the process.
    * @param key key
    * @return the metadata
    */
-  private ObjectMetadata getObjectMetadata(String key) {
+  protected ObjectMetadata getObjectMetadata(String key) {
+    incrementStatistic(OBJECT_METADATA_REQUESTS);
     ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
-    statistics.incrementReadOps(1);
+    incrementReadOperations();
     return meta;
+  }
+
+  /**
+   * Initiate a {@code listObjects} operation, incrementing metrics
+   * in the process.
+   * @param request request to initiate
+   * @return the results
+   */
+  protected ObjectListing listObjects(ListObjectsRequest request) {
+    incrementStatistic(OBJECT_LIST_REQUESTS);
+    incrementReadOperations();
+    return s3.listObjects(request);
+  }
+
+  /**
+   * List the next set of objects.
+   * @param objects paged result
+   * @return the next result object
+   */
+  protected ObjectListing continueListObjects(ObjectListing objects) {
+    incrementStatistic(OBJECT_LIST_REQUESTS);
+    incrementReadOperations();
+    return s3.listNextBatchOfObjects(objects);
+  }
+
+  /**
+   * Increment read operations.
+   */
+  public void incrementReadOperations() {
+    statistics.incrementReadOps(1);
+  }
+
+  /**
+   * Increment the write operation counter.
+   * This is somewhat inaccurate, as it appears to be invoked more
+   * often than needed in progress callbacks.
+   */
+  public void incrementWriteOperations() {
+    statistics.incrementWriteOps(1);
+  }
+
+  /**
+   * Delete an object.
+   * Increments the {@code OBJECT_DELETE_REQUESTS} and write
+   * operation statistics.
+   * @param key key to blob to delete.
+   */
+  private void deleteObject(String key) {
+    incrementWriteOperations();
+    incrementStatistic(OBJECT_DELETE_REQUESTS);
+    s3.deleteObject(bucket, key);
+  }
+
+  /**
+   * Perform a bulk object delete operation.
+   * Increments the {@code OBJECT_DELETE_REQUESTS} and write
+   * operation statistics.
+   * @param deleteRequest keys to delete on the s3-backend
+   */
+  private void deleteObjects(DeleteObjectsRequest deleteRequest) {
+    incrementWriteOperations();
+    incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
+    s3.deleteObjects(deleteRequest);
+  }
+
+  /**
+   * Create a putObject request.
+   * Adds the ACL and metadata
+   * @param key key of object
+   * @param metadata metadata header
+   * @param srcfile source file
+   * @return the request
+   */
+  public PutObjectRequest newPutObjectRequest(String key,
+      ObjectMetadata metadata, File srcfile) {
+    PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
+        srcfile);
+    putObjectRequest.setCannedAcl(cannedACL);
+    putObjectRequest.setMetadata(metadata);
+    return putObjectRequest;
+  }
+
+  /**
+   * Create a {@link PutObjectRequest} request.
+   * The metadata is assumed to have been configured with the size of the
+   * operation.
+   * @param key key of object
+   * @param metadata metadata header
+   * @param inputStream source data.
+   * @return the request
+   */
+  PutObjectRequest newPutObjectRequest(String key,
+      ObjectMetadata metadata, InputStream inputStream) {
+    PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
+        inputStream, metadata);
+    putObjectRequest.setCannedAcl(cannedACL);
+    return putObjectRequest;
+  }
+
+  /**
+   * Create a new object metadata instance.
+   * Any standard metadata headers are added here, for example:
+   * encryption.
+   * @return a new metadata instance
+   */
+  public ObjectMetadata newObjectMetadata() {
+    final ObjectMetadata om = new ObjectMetadata();
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
+      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+    }
+    return om;
+  }
+
+  /**
+   * Create a new object metadata instance.
+   * Any standard metadata headers are added here, for example:
+   * encryption.
+   *
+   * @param length length of data to set in header.
+   * @return a new metadata instance
+   */
+  public ObjectMetadata newObjectMetadata(long length) {
+    final ObjectMetadata om = newObjectMetadata();
+    om.setContentLength(length);
+    return om;
+  }
+
+  /**
+   * PUT an object, incrementing the put requests and put bytes
+   * counters.
+   * It does not update the other counters,
+   * as existing code does that as progress callbacks come in.
+   * Byte length is calculated from the file length, or, if there is no
+   * file, from the content length of the header.
+   * @param putObjectRequest the request
+   * @return the upload initiated
+   */
+  public Upload putObject(PutObjectRequest putObjectRequest) {
+    long len;
+    if (putObjectRequest.getFile() != null) {
+      len = putObjectRequest.getFile().length();
+    } else {
+      len = putObjectRequest.getMetadata().getContentLength();
+    }
+    incrementPutStartStatistics(len);
+    return transfers.upload(putObjectRequest);
+  }
+
+  /**
+   * Upload part of a multi-partition file.
+   * Increments the write and put counters
+   * @param request request
+   * @return the result of the operation.
+   */
+  public UploadPartResult uploadPart(UploadPartRequest request) {
+    incrementPutStartStatistics(request.getPartSize());
+    return s3.uploadPart(request);
+  }
+
+  /**
+   * At the start of a put/multipart upload operation, update the
+   * relevant counters.
+   *
+   * @param bytes bytes in the request.
+   */
+  public void incrementPutStartStatistics(long bytes) {
+    LOG.debug("PUT start {} bytes", bytes);
+    incrementWriteOperations();
+    incrementStatistic(OBJECT_PUT_REQUESTS);
+    if (bytes > 0) {
+      incrementStatistic(OBJECT_PUT_BYTES, bytes);
+    }
+  }
+
+  /**
+   * Callback for use in progress callbacks from put/multipart upload events.
+   * Increments those statistics which are expected to be updated during
+   * the ongoing upload operation.
+   * @param key key to file that is being written (for logging)
+   * @param bytes bytes successfully uploaded.
+   */
+  public void incrementPutProgressStatistics(String key, long bytes) {
+    LOG.debug("PUT {}: {} bytes", key, bytes);
+    incrementWriteOperations();
+    if (bytes > 0) {
+      statistics.incrementBytesWritten(bytes);
+    }
   }
 
   /**
@@ -796,21 +1029,13 @@ public class S3AFileSystem extends FileSystem {
   private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
           boolean clearKeys) throws AmazonClientException {
     if (enableMultiObjectsDelete) {
-      DeleteObjectsRequest deleteRequest
-          = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-      s3.deleteObjects(deleteRequest);
+      deleteObjects(new DeleteObjectsRequest(bucket).withKeys(keysToDelete));
       instrumentation.fileDeleted(keysToDelete.size());
-      statistics.incrementWriteOps(1);
     } else {
-      int writeops = 0;
-
       for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
-        s3.deleteObject(
-            new DeleteObjectRequest(bucket, keyVersion.getKey()));
-        writeops++;
+        deleteObject(keyVersion.getKey());
       }
       instrumentation.fileDeleted(keysToDelete.size());
-      statistics.incrementWriteOps(writeops);
     }
     if (clearKeys) {
       keysToDelete.clear();
@@ -880,9 +1105,8 @@ public class S3AFileSystem extends FileSystem {
 
       if (status.isEmptyDirectory()) {
         LOG.debug("Deleting fake empty directory {}", key);
-        s3.deleteObject(bucket, key);
+        deleteObject(key);
         instrumentation.directoryDeleted();
-        statistics.incrementWriteOps(1);
       } else {
         LOG.debug("Getting objects for directory prefix {} to delete", key);
 
@@ -893,9 +1117,9 @@ public class S3AFileSystem extends FileSystem {
         //request.setDelimiter("/");
         request.setMaxKeys(maxKeys);
 
-        List<DeleteObjectsRequest.KeyVersion> keys = new ArrayList<>();
-        ObjectListing objects = s3.listObjects(request);
-        statistics.incrementReadOps(1);
+        ObjectListing objects = listObjects(request);
+        List<DeleteObjectsRequest.KeyVersion> keys =
+            new ArrayList<>(objects.getObjectSummaries().size());
         while (true) {
           for (S3ObjectSummary summary : objects.getObjectSummaries()) {
             keys.add(new DeleteObjectsRequest.KeyVersion(summary.getKey()));
@@ -907,8 +1131,7 @@ public class S3AFileSystem extends FileSystem {
           }
 
           if (objects.isTruncated()) {
-            objects = s3.listNextBatchOfObjects(objects);
-            statistics.incrementReadOps(1);
+            objects = continueListObjects(objects);
           } else {
             if (!keys.isEmpty()) {
               removeKeys(keys, false);
@@ -919,13 +1142,11 @@ public class S3AFileSystem extends FileSystem {
       }
     } else {
       LOG.debug("delete: Path is a file");
-      s3.deleteObject(bucket, key);
       instrumentation.fileDeleted(1);
-      statistics.incrementWriteOps(1);
+      deleteObject(key);
     }
 
     createFakeDirectoryIfNecessary(f.getParent());
-
     return true;
   }
 
@@ -934,7 +1155,7 @@ public class S3AFileSystem extends FileSystem {
     String key = pathToKey(f);
     if (!key.isEmpty() && !exists(f)) {
       LOG.debug("Creating new fake directory at {}", f);
-      createFakeDirectory(bucket, key);
+      createFakeDirectory(key);
     }
   }
 
@@ -970,6 +1191,7 @@ public class S3AFileSystem extends FileSystem {
       IOException, AmazonClientException {
     String key = pathToKey(f);
     LOG.debug("List status for path: {}", f);
+    incrementStatistic(INVOCATION_LIST_STATUS);
 
     final List<FileStatus> result = new ArrayList<FileStatus>();
     final FileStatus fileStatus =  getFileStatus(f);
@@ -987,8 +1209,7 @@ public class S3AFileSystem extends FileSystem {
 
       LOG.debug("listStatus: doing listObjects for directory {}", key);
 
-      ObjectListing objects = s3.listObjects(request);
-      statistics.incrementReadOps(1);
+      ObjectListing objects = listObjects(request);
 
       Path fQualified = f.makeQualified(uri, workingDir);
 
@@ -999,33 +1220,25 @@ public class S3AFileSystem extends FileSystem {
           if (keyPath.equals(fQualified) ||
               summary.getKey().endsWith(S3N_FOLDER_SUFFIX)) {
             LOG.debug("Ignoring: {}", keyPath);
-            continue;
-          }
-
-          if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-            result.add(new S3AFileStatus(true, true, keyPath));
-            LOG.debug("Adding: fd: {}", keyPath);
           } else {
-            result.add(new S3AFileStatus(summary.getSize(),
-                dateToLong(summary.getLastModified()), keyPath,
-                getDefaultBlockSize(fQualified)));
-            LOG.debug("Adding: fi: {}", keyPath);
+            S3AFileStatus status = createFileStatus(keyPath, summary,
+                getDefaultBlockSize(keyPath));
+            result.add(status);
+            LOG.debug("Adding: {}", status);
           }
         }
 
         for (String prefix : objects.getCommonPrefixes()) {
           Path keyPath = keyToPath(prefix).makeQualified(uri, workingDir);
-          if (keyPath.equals(f)) {
-            continue;
+          if (!keyPath.equals(f)) {
+            result.add(new S3AFileStatus(true, false, keyPath));
+            LOG.debug("Adding: rd: {}", keyPath);
           }
-          result.add(new S3AFileStatus(true, false, keyPath));
-          LOG.debug("Adding: rd: {}", keyPath);
         }
 
         if (objects.isTruncated()) {
           LOG.debug("listStatus: list truncated - getting next batch");
-          objects = s3.listNextBatchOfObjects(objects);
-          statistics.incrementReadOps(1);
+          objects = continueListObjects(objects);
         } else {
           break;
         }
@@ -1037,8 +1250,6 @@ public class S3AFileSystem extends FileSystem {
 
     return result.toArray(new FileStatus[result.size()]);
   }
-
-
 
   /**
    * Set the current working directory for the given file system. All relative
@@ -1061,7 +1272,7 @@ public class S3AFileSystem extends FileSystem {
   /**
    *
    * Make the given path and all non-existent parents into
-   * directories. Has the semantics of Unix @{code 'mkdir -p'}.
+   * directories. Has the semantics of Unix {@code 'mkdir -p'}.
    * Existence of the directory hierarchy is not an error.
    * @param path path to create
    * @param permission to apply to f
@@ -1096,7 +1307,7 @@ public class S3AFileSystem extends FileSystem {
   private boolean innerMkdirs(Path f, FsPermission permission)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
     LOG.debug("Making directory: {}", f);
-
+    incrementStatistic(INVOCATION_MKDIRS);
     try {
       FileStatus fileStatus = getFileStatus(f);
 
@@ -1125,7 +1336,7 @@ public class S3AFileSystem extends FileSystem {
       } while (fPart != null);
 
       String key = pathToKey(f);
-      createFakeDirectory(bucket, key);
+      createFakeDirectory(key);
       return true;
     }
   }
@@ -1139,12 +1350,12 @@ public class S3AFileSystem extends FileSystem {
    */
   public S3AFileStatus getFileStatus(Path f) throws IOException {
     String key = pathToKey(f);
+    incrementStatistic(INVOCATION_GET_FILE_STATUS);
     LOG.debug("Getting path status for {}  ({})", f , key);
 
     if (!key.isEmpty()) {
       try {
-        ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
-        statistics.incrementReadOps(1);
+        ObjectMetadata meta = getObjectMetadata(key);
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
           LOG.debug("Found exact file: fake directory");
@@ -1169,8 +1380,7 @@ public class S3AFileSystem extends FileSystem {
       if (!key.endsWith("/")) {
         String newKey = key + "/";
         try {
-          ObjectMetadata meta = s3.getObjectMetadata(bucket, newKey);
-          statistics.incrementReadOps(1);
+          ObjectMetadata meta = getObjectMetadata(newKey);
 
           if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
             LOG.debug("Found file (with /): fake directory");
@@ -1203,8 +1413,7 @@ public class S3AFileSystem extends FileSystem {
       request.setDelimiter("/");
       request.setMaxKeys(1);
 
-      ObjectListing objects = s3.listObjects(request);
-      statistics.incrementReadOps(1);
+      ObjectListing objects = listObjects(request);
 
       if (!objects.getCommonPrefixes().isEmpty()
           || !objects.getObjectSummaries().isEmpty()) {
@@ -1287,7 +1496,8 @@ public class S3AFileSystem extends FileSystem {
   private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
       Path src, Path dst)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
-    String key = pathToKey(dst);
+    incrementStatistic(INVOCATION_COPY_FROM_LOCAL_FILE);
+    final String key = pathToKey(dst);
 
     if (!overwrite && exists(dst)) {
       throw new FileAlreadyExistsException(dst + " already exists");
@@ -1298,35 +1508,19 @@ public class S3AFileSystem extends FileSystem {
     LocalFileSystem local = getLocal(getConf());
     File srcfile = local.pathToFile(src);
 
-    final ObjectMetadata om = new ObjectMetadata();
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
-    PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, srcfile);
-    putObjectRequest.setCannedAcl(cannedACL);
-    putObjectRequest.setMetadata(om);
-
-    ProgressListener progressListener = new ProgressListener() {
-      public void progressChanged(ProgressEvent progressEvent) {
-        switch (progressEvent.getEventType()) {
-          case TRANSFER_PART_COMPLETED_EVENT:
-            statistics.incrementWriteOps(1);
-            break;
-          default:
-            break;
-        }
-      }
-    };
-
-    statistics.incrementWriteOps(1);
-    Upload up = transfers.upload(putObjectRequest);
-    up.addProgressListener(progressListener);
+    final ObjectMetadata om = newObjectMetadata();
+    PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
+    Upload up = putObject(putObjectRequest);
+    ProgressableProgressListener listener = new ProgressableProgressListener(
+        this, key, up, null);
+    up.addProgressListener(listener);
     try {
       up.waitForUploadResult();
     } catch (InterruptedException e) {
       throw new InterruptedIOException("Interrupted copying " + src
           + " to "  + dst + ", cancelling");
     }
+    listener.uploadCompleted();
 
     // This will delete unnecessary fake parent directories
     finishedWrite(key);
@@ -1375,7 +1569,7 @@ public class S3AFileSystem extends FileSystem {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
     try {
-      ObjectMetadata srcom = s3.getObjectMetadata(bucket, srcKey);
+      ObjectMetadata srcom = getObjectMetadata(srcKey);
       ObjectMetadata dstom = cloneObjectMetadata(srcom);
       if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
         dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
@@ -1389,7 +1583,7 @@ public class S3AFileSystem extends FileSystem {
         public void progressChanged(ProgressEvent progressEvent) {
           switch (progressEvent.getEventType()) {
             case TRANSFER_PART_COMPLETED_EVENT:
-              statistics.incrementWriteOps(1);
+              incrementWriteOperations();
               break;
             default:
               break;
@@ -1401,7 +1595,7 @@ public class S3AFileSystem extends FileSystem {
       copy.addProgressListener(progressListener);
       try {
         copy.waitForCopyResult();
-        statistics.incrementWriteOps(1);
+        incrementWriteOperations();
         instrumentation.filesCopied(1, size);
       } catch (InterruptedException e) {
         throw new InterruptedIOException("Interrupted copying " + srcKey
@@ -1413,26 +1607,12 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-  private boolean objectRepresentsDirectory(final String name, final long size) {
-    return !name.isEmpty()
-        && name.charAt(name.length() - 1) == '/'
-        && size == 0L;
-  }
-
-  // Handles null Dates that can be returned by AWS
-  private static long dateToLong(final Date date) {
-    if (date == null) {
-      return 0L;
-    }
-
-    return date.getTime();
-  }
-
   /**
    * Perform post-write actions.
    * @param key key written to
    */
   public void finishedWrite(String key) {
+    LOG.debug("Finished write to {}", key);
     deleteUnnecessaryFakeDirectories(keyToPath(key).getParent());
   }
 
@@ -1454,8 +1634,7 @@ public class S3AFileSystem extends FileSystem {
 
         if (status.isDirectory() && status.isEmptyDirectory()) {
           LOG.debug("Deleting fake directory {}/", key);
-          s3.deleteObject(bucket, key + "/");
-          statistics.incrementWriteOps(1);
+          deleteObject(key + "/");
         }
       } catch (IOException | AmazonClientException e) {
         LOG.debug("While deleting key {} ", key, e);
@@ -1471,18 +1650,20 @@ public class S3AFileSystem extends FileSystem {
   }
 
 
-  private void createFakeDirectory(final String bucketName, final String objectName)
-      throws AmazonClientException, AmazonServiceException {
+  private void createFakeDirectory(final String objectName)
+      throws AmazonClientException, AmazonServiceException,
+      InterruptedIOException {
     if (!objectName.endsWith("/")) {
-      createEmptyObject(bucketName, objectName + "/");
+      createEmptyObject(objectName + "/");
     } else {
-      createEmptyObject(bucketName, objectName);
+      createEmptyObject(objectName);
     }
   }
 
   // Used to create an empty file that represents an empty directory
-  private void createEmptyObject(final String bucketName, final String objectName)
-      throws AmazonClientException, AmazonServiceException {
+  private void createEmptyObject(final String objectName)
+      throws AmazonClientException, AmazonServiceException,
+      InterruptedIOException {
     final InputStream im = new InputStream() {
       @Override
       public int read() throws IOException {
@@ -1490,16 +1671,16 @@ public class S3AFileSystem extends FileSystem {
       }
     };
 
-    final ObjectMetadata om = new ObjectMetadata();
-    om.setContentLength(0L);
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+    PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
+        newObjectMetadata(0L),
+        im);
+    Upload upload = putObject(putObjectRequest);
+    try {
+      upload.waitForUploadResult();
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted creating " + objectName);
     }
-    PutObjectRequest putObjectRequest =
-        new PutObjectRequest(bucketName, objectName, im, om);
-    putObjectRequest.setCannedAcl(cannedACL);
-    s3.putObject(putObjectRequest);
-    statistics.incrementWriteOps(1);
+    incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
 
@@ -1514,10 +1695,7 @@ public class S3AFileSystem extends FileSystem {
     // This approach may be too brittle, especially if
     // in future there are new attributes added to ObjectMetadata
     // that we do not explicitly call to set here
-    ObjectMetadata ret = new ObjectMetadata();
-
-    // Non null attributes
-    ret.setContentLength(source.getContentLength());
+    ObjectMetadata ret = newObjectMetadata(source.getContentLength());
 
     // Possibly null attributes
     // Allowing nulls to pass breaks it during later use
@@ -1624,6 +1802,75 @@ public class S3AFileSystem extends FileSystem {
    */
   public long getMultiPartThreshold() {
     return multiPartThreshold;
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public FileStatus[] globStatus(Path pathPattern) throws IOException {
+    incrementStatistic(INVOCATION_GLOB_STATUS);
+    return super.globStatus(pathPattern);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    incrementStatistic(INVOCATION_GLOB_STATUS);
+    return super.globStatus(pathPattern, filter);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
+      throws FileNotFoundException, IOException {
+    incrementStatistic(INVOCATION_LIST_LOCATED_STATUS);
+    return super.listLocatedStatus(f);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listFiles(Path f,
+      boolean recursive) throws FileNotFoundException, IOException {
+    incrementStatistic(INVOCATION_LIST_FILES);
+    return super.listFiles(f, recursive);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean exists(Path f) throws IOException {
+    incrementStatistic(INVOCATION_EXISTS);
+    return super.exists(f);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean isDirectory(Path f) throws IOException {
+    incrementStatistic(INVOCATION_IS_DIRECTORY);
+    return super.isDirectory(f);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean isFile(Path f) throws IOException {
+    incrementStatistic(INVOCATION_IS_FILE);
+    return super.isFile(f);
   }
 
   /**

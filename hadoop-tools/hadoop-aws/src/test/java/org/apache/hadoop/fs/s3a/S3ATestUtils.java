@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.URI;
@@ -190,4 +192,155 @@ public class S3ATestUtils {
     }
   }
 
+  /**
+   * Reset all metrics in a list.
+   * @param metrics metrics to reset
+   */
+  public static void reset(S3ATestUtils.MetricDiff... metrics) {
+    for (S3ATestUtils.MetricDiff metric : metrics) {
+      metric.reset();
+    }
+  }
+
+  /**
+   * Print all metrics in a list.
+   * @param log log to print the metrics to.
+   * @param metrics metrics to process
+   */
+  public static void print(Logger log, S3ATestUtils.MetricDiff... metrics) {
+    for (S3ATestUtils.MetricDiff metric : metrics) {
+      log.info(metric.toString());
+    }
+  }
+
+  /**
+   * Print all metrics in a list, then reset them.
+   * @param log log to print the metrics to.
+   * @param metrics metrics to process
+   */
+  public static void printThenReset(Logger log,
+      S3ATestUtils.MetricDiff... metrics) {
+    print(log, metrics);
+    reset(metrics);
+  }
+
+  /**
+   * Helper class to do diffs of metrics.
+   */
+  public static final class MetricDiff {
+    private final S3AFileSystem fs;
+    private final Statistic statistic;
+    private long startingValue;
+
+    /**
+     * Constructor.
+     * Invokes {@link #reset()} so it is immediately capable of measuring the
+     * difference in metric values.
+     *
+     * @param fs the filesystem to monitor
+     * @param statistic the statistic to monitor.
+     */
+    public MetricDiff(S3AFileSystem fs, Statistic statistic) {
+      this.fs = fs;
+      this.statistic = statistic;
+      reset();
+    }
+
+    /**
+     * Reset the starting value to the current value.
+     * Diffs will be against this new value.
+     */
+    public void reset() {
+      startingValue = currentValue();
+    }
+
+    /**
+     * Get the current value of the metric.
+     * @return the latest value.
+     */
+    public long currentValue() {
+      return fs.getInstrumentation().getCounterValue(statistic);
+    }
+
+    /**
+     * Get the difference between the the current value and
+     * {@link #startingValue}.
+     * @return the difference.
+     */
+    public long diff() {
+      return currentValue() - startingValue;
+    }
+
+    @Override
+    public String toString() {
+      long c = currentValue();
+      final StringBuilder sb = new StringBuilder(statistic.getSymbol());
+      sb.append(" starting=").append(startingValue);
+      sb.append(" current=").append(c);
+      sb.append(" diff=").append(c - startingValue);
+      return sb.toString();
+    }
+
+    /**
+     * Assert that the value of {@link #diff()} matches that expected.
+     * @param expected expected value.
+     */
+    public void assertDiffEquals(long expected) {
+      Assert.assertEquals("Count of " + this,
+          expected, diff());
+    }
+
+    /**
+     * Assert that the value of {@link #diff()} matches that of another
+     * instance.
+     * @param that the other metric diff instance.
+     */
+    public void assertDiffEquals(MetricDiff that) {
+      Assert.assertEquals(this.toString() + " != " + that,
+          this.diff(), that.diff());
+    }
+
+    /**
+     * Comparator for assertions.
+     * @param that other metric diff
+     * @return true if the value is {@code ==} the other's
+     */
+    public boolean diffEquals(MetricDiff that) {
+      return this.currentValue() == that.currentValue();
+    }
+
+    /**
+     * Comparator for assertions.
+     * @param that other metric diff
+     * @return true if the value is {@code <} the other's
+     */
+    public boolean diffLessThan(MetricDiff that) {
+      return this.currentValue() < that.currentValue();
+    }
+
+    /**
+     * Comparator for assertions.
+     * @param that other metric diff
+     * @return true if the value is {@code <=} the other's
+     */
+    public boolean diffLessThanOrEquals(MetricDiff that) {
+      return this.currentValue() <= that.currentValue();
+    }
+
+    /**
+     * Get the statistic
+     * @return the statistic
+     */
+    public Statistic getStatistic() {
+      return statistic;
+    }
+
+    /**
+     * Get the starting value; that set in the last {@link #reset()}.
+     * @return the starting value for diffs.
+     */
+    public long getStartingValue() {
+      return startingValue;
+    }
+  }
 }

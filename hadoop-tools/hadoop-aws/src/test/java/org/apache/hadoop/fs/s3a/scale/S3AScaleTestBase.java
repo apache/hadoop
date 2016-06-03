@@ -34,13 +34,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
-import java.util.Locale;
-
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Base class for scale tests; here is where the common scale configuration
@@ -51,10 +49,56 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   @Rule
   public TestName methodName = new TestName();
 
+  @Rule
+  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
+
   @BeforeClass
   public static void nameThread() {
     Thread.currentThread().setName("JUnit");
   }
+
+  /**
+   * The number of operations to perform: {@value}.
+   */
+  public static final String KEY_OPERATION_COUNT =
+      SCALE_TEST + "operation.count";
+
+  /**
+   * The number of directory operations to perform: {@value}.
+   */
+  public static final String KEY_DIRECTORY_COUNT =
+      SCALE_TEST + "directory.count";
+
+  /**
+   * The readahead buffer: {@value}.
+   */
+  public static final String KEY_READ_BUFFER_SIZE =
+      S3A_SCALE_TEST + "read.buffer.size";
+
+  public static final int DEFAULT_READ_BUFFER_SIZE = 16384;
+
+  /**
+   * Key for a multi MB test file: {@value}.
+   */
+  public static final String KEY_CSVTEST_FILE =
+      S3A_SCALE_TEST + "csvfile";
+
+  /**
+   * Default path for the multi MB test file: {@value}.
+   */
+  public static final String DEFAULT_CSVTEST_FILE
+      = "s3a://landsat-pds/scene_list.gz";
+
+  /**
+   * The default number of operations to perform: {@value}.
+   */
+  public static final long DEFAULT_OPERATION_COUNT = 2005;
+
+  /**
+   * Default number of directories to create when performing
+   * directory performance/scale tests.
+   */
+  public static final int DEFAULT_DIRECTORY_COUNT = 2;
 
   protected S3AFileSystem fs;
 
@@ -132,108 +176,4 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     }
   }
 
-  /**
-   * Make times more readable, by adding a "," every three digits.
-   * @param nanos nanos or other large number
-   * @return a string for logging
-   */
-  protected static String toHuman(long nanos) {
-    return String.format(Locale.ENGLISH, "%,d", nanos);
-  }
-
-  /**
-   * Log the bandwidth of a timer as inferred from the number of
-   * bytes processed.
-   * @param timer timer
-   * @param bytes bytes processed in the time period
-   */
-  protected void bandwidth(NanoTimer timer, long bytes) {
-    LOG.info("Bandwidth = {}  MB/S",
-        timer.bandwidthDescription(bytes));
-  }
-
-  /**
-   * Work out the bandwidth in MB/s
-   * @param bytes bytes
-   * @param durationNS duration in nanos
-   * @return the number of megabytes/second of the recorded operation
-   */
-  public static double bandwidthMBs(long bytes, long durationNS) {
-    return (bytes * 1000.0 ) / durationNS;
-  }
-
-  /**
-   * A simple class for timing operations in nanoseconds, and for
-   * printing some useful results in the process.
-   */
-  protected static class NanoTimer {
-    final long startTime;
-    long endTime;
-
-    public NanoTimer() {
-      startTime = now();
-    }
-
-    /**
-     * End the operation
-     * @return the duration of the operation
-     */
-    public long end() {
-      endTime = now();
-      return duration();
-    }
-
-    /**
-     * End the operation; log the duration
-     * @param format message
-     * @param args any arguments
-     * @return the duration of the operation
-     */
-    public long end(String format, Object... args) {
-      long d = end();
-      LOG.info("Duration of {}: {} nS",
-          String.format(format, args), toHuman(d));
-      return d;
-    }
-
-    long now() {
-      return System.nanoTime();
-    }
-
-    long duration() {
-      return endTime - startTime;
-    }
-
-    double bandwidth(long bytes) {
-      return S3AScaleTestBase.bandwidthMBs(bytes, duration());
-    }
-
-    /**
-     * Bandwidth as bytes per second
-     * @param bytes bytes in
-     * @return the number of bytes per second this operation timed.
-     */
-    double bandwidthBytes(long bytes) {
-      return (bytes * 1.0 ) / duration();
-    }
-
-    /**
-     * How many nanoseconds per byte
-     * @param bytes bytes processed in this time period
-     * @return the nanoseconds it took each byte to be processed
-     */
-    long nanosPerByte(long bytes) {
-      return duration() / bytes;
-    }
-
-    /**
-     * Get a description of the bandwidth, even down to fractions of
-     * a MB
-     * @param bytes bytes processed
-     * @return bandwidth
-     */
-    String bandwidthDescription(long bytes) {
-      return String.format("%,.6f", bandwidth(bytes));
-    }
-  }
 }

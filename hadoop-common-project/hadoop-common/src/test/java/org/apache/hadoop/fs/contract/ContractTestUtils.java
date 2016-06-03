@@ -22,7 +22,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
@@ -34,8 +36,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -890,6 +898,418 @@ public class ContractTestUtils extends Assert {
     } finally {
       // Delete test file
       fs.delete(objectPath, false);
+    }
+  }
+
+  /**
+   * Make times more readable, by adding a "," every three digits.
+   * @param nanos nanos or other large number
+   * @return a string for logging
+   */
+  public static String toHuman(long nanos) {
+    return String.format(Locale.ENGLISH, "%,d", nanos);
+  }
+
+  /**
+   * Log the bandwidth of a timer as inferred from the number of
+   * bytes processed.
+   * @param timer timer
+   * @param bytes bytes processed in the time period
+   */
+  public static void bandwidth(NanoTimer timer, long bytes) {
+    LOG.info("Bandwidth = {}  MB/S",
+        timer.bandwidthDescription(bytes));
+  }
+
+  /**
+   * Work out the bandwidth in MB/s.
+   * @param bytes bytes
+   * @param durationNS duration in nanos
+   * @return the number of megabytes/second of the recorded operation
+   */
+  public static double bandwidthMBs(long bytes, long durationNS) {
+    return (bytes * 1000.0) / durationNS;
+  }
+
+  /**
+   * Recursively create a directory tree.
+   * Return the details about the created tree. The files and directories
+   * are those created under the path, not the base directory created. That
+   * is retrievable via {@link TreeScanResults#getBasePath()}.
+   * @param fs filesystem
+   * @param current parent dir
+   * @param depth depth of directory tree
+   * @param width width: subdirs per entry
+   * @param files number of files per entry
+   * @param filesize size of files to create in bytes.
+   * @return the details about the created tree.
+   * @throws IOException IO Problems
+   */
+  public static TreeScanResults createSubdirs(FileSystem fs,
+      Path current,
+      int depth,
+      int width,
+      int files,
+      int filesize) throws IOException {
+    return createSubdirs(fs, current, depth, width, files,
+        filesize, "dir-", "file-", "0");
+  }
+
+  /**
+   * Recursively create a directory tree.
+   * @param fs filesystem
+   * @param current the current dir in the walk
+   * @param depth depth of directory tree
+   * @param width width: subdirs per entry
+   * @param files number of files per entry
+   * @param filesize size of files to create in bytes.
+   * @param dirPrefix prefix for directory entries
+   * @param filePrefix prefix for file entries
+   * @param marker string which is slowly built up to uniquely name things
+   * @return the details about the created tree.
+   * @throws IOException IO Problems
+   */
+  public static TreeScanResults createSubdirs(FileSystem fs,
+      Path current,
+      int depth,
+      int width,
+      int files,
+      int filesize,
+      String dirPrefix,
+      String filePrefix,
+      String marker) throws IOException {
+    fs.mkdirs(current);
+    TreeScanResults results = new TreeScanResults(current);
+    if (depth > 0) {
+      byte[] data = dataset(filesize, 'a', 'z');
+      for (int i = 0; i < files; i++) {
+        String name = String.format("%s-%s-%04d.txt", filePrefix, marker, i);
+        Path path = new Path(current, name);
+        createFile(fs, path, true, data);
+        results.add(fs, path);
+      }
+      for (int w = 0; w < width; w++) {
+        String marker2 = String.format("%s-%04d", marker, w);
+        Path child = new Path(current, dirPrefix + marker2);
+        results.add(createSubdirs(fs, child, depth - 1, width, files,
+            filesize, dirPrefix, filePrefix, marker2));
+        results.add(fs, child);
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Predicate to determine if two lists are equivalent, that is, they
+   * contain the same entries.
+   * @param left first collection of paths
+   * @param right second collection of paths
+   * @return true if all entries are in each collection of path.
+   */
+  public static boolean collectionsEquivalent(Collection<Path> left,
+      Collection<Path> right) {
+    Set<Path> leftSet = new HashSet<>(left);
+    Set<Path> rightSet = new HashSet<>(right);
+    return leftSet.containsAll(right) && rightSet.containsAll(left);
+  }
+
+  /**
+   * Predicate to determine if two lists are equivalent, that is, they
+   * contain the same entries.
+   * @param left first collection of paths
+   * @param right second collection of paths
+   * @return true if all entries are in each collection of path.
+   */
+  public static boolean collectionsEquivalentNoDuplicates(Collection<Path> left,
+      Collection<Path> right) {
+    return collectionsEquivalent(left, right) &&
+        !containsDuplicates(left) && !containsDuplicates(right);
+  }
+
+
+  /**
+   * Predicate to test for a collection of paths containing duplicate entries.
+   * @param paths collection of paths
+   * @return true if there are duplicates.
+   */
+  public static boolean containsDuplicates(Collection<Path> paths) {
+    return new HashSet<>(paths).size() != paths.size();
+  }
+
+  /**
+   * Recursively list all entries, with a depth first traversal of the
+   * directory tree.
+   * @param path path
+   * @return the number of entries listed
+   * @throws IOException IO problems
+   */
+  public static TreeScanResults treeWalk(FileSystem fs, Path path)
+      throws IOException {
+    TreeScanResults dirsAndFiles = new TreeScanResults();
+
+    FileStatus[] statuses = fs.listStatus(path);
+    for (FileStatus status : statuses) {
+      LOG.info("{}{}", status.getPath(), status.isDirectory() ? "*" : "");
+    }
+    for (FileStatus status : statuses) {
+      dirsAndFiles.add(status);
+      if (status.isDirectory()) {
+        dirsAndFiles.add(treeWalk(fs, status.getPath()));
+      }
+    }
+    return dirsAndFiles;
+  }
+
+  /**
+   * Results of recursive directory creation/scan operations.
+   */
+  public static final class TreeScanResults {
+
+    private Path basePath;
+    private final List<Path> files = new ArrayList<>();
+    private final List<Path> directories = new ArrayList<>();
+    private final List<Path> other = new ArrayList<>();
+
+
+    public TreeScanResults() {
+    }
+
+    public TreeScanResults(Path basePath) {
+      this.basePath = basePath;
+    }
+
+    /**
+     * Build from a located file status iterator.
+     * @param results results of the listFiles/listStatus call.
+     * @throws IOException IO problems during the iteration.
+     */
+    public TreeScanResults(RemoteIterator<LocatedFileStatus> results)
+        throws IOException {
+      while (results.hasNext()) {
+        add(results.next());
+      }
+    }
+
+    /**
+     * Construct results from an array of statistics.
+     * @param stats statistics array. Must not be null.
+     */
+    public TreeScanResults(FileStatus[] stats) {
+      assertNotNull("Null file status array", stats);
+      for (FileStatus stat : stats) {
+        add(stat);
+      }
+    }
+
+    /**
+     * Add all paths in the other set of results to this instance.
+     * @param that the other instance
+     * @return this instance
+     */
+    public TreeScanResults add(TreeScanResults that) {
+      files.addAll(that.files);
+      directories.addAll(that.directories);
+      other.addAll(that.other);
+      return this;
+    }
+
+    /**
+     * Increment the counters based on the file status.
+     * @param status path status to count.
+     */
+    public void add(FileStatus status) {
+      if (status.isFile()) {
+        files.add(status.getPath());
+      } else if (status.isDirectory()) {
+        directories.add(status.getPath());
+      } else {
+        other.add(status.getPath());
+      }
+    }
+
+    public void add(FileSystem fs, Path path) throws IOException {
+      add(fs.getFileStatus(path));
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%d director%s and %d file%s",
+          getDirCount(),
+          getDirCount() == 1 ? "y" : "ies",
+          getFileCount(),
+          getFileCount() == 1 ? "" : "s");
+    }
+
+    /**
+     * Assert that the state of a listing has the specific number of files,
+     * directories and other entries. The error text will include
+     * the {@code text} param, the field in question, and the entire object's
+     * string value.
+     * @param text text prefix for assertions.
+     * @param f file count
+     * @param d expected directory count
+     * @param o expected other entries.
+     */
+    public void assertSizeEquals(String text, long f, long d, long o) {
+      String self = toString();
+      Assert.assertEquals(text + ": file count in " + self,
+          f, getFileCount());
+      Assert.assertEquals(text + ": directory count in " + self,
+          d, getDirCount());
+      Assert.assertEquals(text + ": 'other' count in " + self,
+          o, getOtherCount());
+    }
+
+    /**
+     * Assert that the trees are equivalent: that every list matches (and
+     * that neither has any duplicates).
+     * @param that the other entry
+     */
+    public void assertEquivalent(TreeScanResults that) {
+      String details = "this= " + this + "; that=" + that;
+      assertFieldsEquivalent("files", that, files, that.files);
+      assertFieldsEquivalent("directories", that,
+          directories, that.directories);
+      assertFieldsEquivalent("other", that, other, that.other);
+    }
+
+    /**
+     * Assert that a field in two instances are equivalent.
+     * @param fieldname field name for error messages
+     * @param that the other instance to scan
+     * @param ours our field's contents
+     * @param theirs the other instance's field constants
+     */
+    public void assertFieldsEquivalent(String fieldname,
+        TreeScanResults that,
+        List<Path> ours, List<Path> theirs) {
+      assertFalse("Duplicate  " + files + " in " + this,
+          containsDuplicates(ours));
+      assertFalse("Duplicate  " + files + " in other " + that,
+          containsDuplicates(theirs));
+      assertTrue(fieldname + " mismatch: between {" + this + "}" +
+              " and {" + that + "}",
+          collectionsEquivalent(files, that.files));
+    }
+
+    public List<Path> getFiles() {
+      return files;
+    }
+
+    public List<Path> getDirectories() {
+      return directories;
+    }
+
+    public List<Path> getOther() {
+      return other;
+    }
+
+    public Path getBasePath() {
+      return basePath;
+    }
+
+    public long getFileCount() {
+      return files.size();
+    }
+
+    public long getDirCount() {
+      return directories.size();
+    }
+
+    public long getOtherCount() {
+      return other.size();
+    }
+
+    /**
+     * Total count of entries.
+     * @return the total number of entries
+     */
+    public long totalCount() {
+      return getFileCount() + getDirCount() + getOtherCount();
+    }
+
+  }
+
+  /**
+   * A simple class for timing operations in nanoseconds, and for
+   * printing some useful results in the process.
+   */
+  public static final class NanoTimer {
+    private final long startTime;
+    private long endTime;
+
+    public NanoTimer() {
+      startTime = now();
+    }
+
+    /**
+     * End the operation.
+     * @return the duration of the operation
+     */
+    public long end() {
+      endTime = now();
+      return duration();
+    }
+
+    /**
+     * End the operation; log the duration.
+     * @param format message
+     * @param args any arguments
+     * @return the duration of the operation
+     */
+    public long end(String format, Object... args) {
+      long d = end();
+      LOG.info("Duration of {}: {} nS",
+          String.format(format, args), toHuman(d));
+      return d;
+    }
+
+    public long now() {
+      return System.nanoTime();
+    }
+
+    public long duration() {
+      return endTime - startTime;
+    }
+
+    public double bandwidth(long bytes) {
+      return bandwidthMBs(bytes, duration());
+    }
+
+    /**
+     * Bandwidth as bytes per second.
+     * @param bytes bytes in
+     * @return the number of bytes per second this operation timed.
+     */
+    public double bandwidthBytes(long bytes) {
+      return (bytes * 1.0) / duration();
+    }
+
+    /**
+     * How many nanoseconds per IOP, byte, etc.
+     * @param operations operations processed in this time period
+     * @return the nanoseconds it took each byte to be processed
+     */
+    public long nanosPerOperation(long operations) {
+      return duration() / operations;
+    }
+
+    /**
+     * Get a description of the bandwidth, even down to fractions of
+     * a MB.
+     * @param bytes bytes processed
+     * @return bandwidth
+     */
+    public String bandwidthDescription(long bytes) {
+      return String.format("%,.6f", bandwidth(bytes));
+    }
+
+    public long getStartTime() {
+      return startTime;
+    }
+
+    public long getEndTime() {
+      return endTime;
     }
   }
 }
