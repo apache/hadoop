@@ -38,7 +38,9 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 /**
  * This implements a local file based backend for storing application timeline
- * information.
+ * information. This implementation may not provide a complete implementation of
+ * all the necessary features. This implementation is provided solely for basic
+ * testing purposes, and should not be used in a non-test situation.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

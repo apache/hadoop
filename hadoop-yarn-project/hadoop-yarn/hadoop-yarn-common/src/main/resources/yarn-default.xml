@@ -2150,7 +2150,6 @@
     <value>604800</value>
   </property>
 
-  <!-- Timeline Service v2 Configuration -->
   <property>
     <name>yarn.timeline-service.entity-group-fs-store.leveldb-cache-read-cache-size</name>
     <description>
@@ -2188,6 +2187,23 @@
     <value>300</value>
   </property>
 
+  <!-- Timeline Service v2 Configuration -->
+  <property>
+    <name>yarn.timeline-service.writer.class</name>
+    <description>
+      Storage implementation ATS v2 will use for the TimelineWriter service.
+    </description>
+    <value>org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl</value>
+  </property>
+
+  <property>
+    <name>yarn.timeline-service.reader.class</name>
+    <description>
+      Storage implementation ATS v2 will use for the TimelineReader service.
+    </description>
+    <value>org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl</value>
+  </property>
+
   <property>
     <name>yarn.timeline-service.client.internal-timers-ttl-secs</name>
     <description>
@@ -2221,10 +2237,15 @@
   </property>
 
   <property>
-    <description> The setting that controls how long the final value
+    <description>
+    The setting that controls how long the final value
     of a metric of a completed app is retained before merging into
-    the flow sum.</description>
-    <name>yarn.timeline-service.coprocessor.app-final-value-retention-milliseconds</name>
+    the flow sum. Up to this time after an application is completed
+    out-of-order values that arrive can be recognized and discarded at the
+    cost of increased storage.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds
+    </name>
     <value>259200000</value>
   </property>
 

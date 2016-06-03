@@ -56,7 +56,10 @@ import org.codehaus.jackson.map.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- *  File System based implementation for TimelineReader.
+ *  File System based implementation for TimelineReader. This implementation may
+ *  not provide a complete implementation of all the necessary features. This
+ *  implementation is provided solely for basic testing purposes, and should not
+ *  be used in a non-test situation.
  */
 public class FileSystemTimelineReaderImpl extends AbstractService
     implements TimelineReader {
