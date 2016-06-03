@@ -33,6 +33,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-12472. Make GenericTestUtils.assertExceptionContains robust.
     (Steve Loughran via jing9)
 
+    HADOOP-13105. Support timeouts in LDAP queries in LdapGroupsMapping.
+    (Mingliang Liu via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -170,6 +170,13 @@ public class LdapGroupsMapping
     LDAP_CONFIG_PREFIX + ".directory.search.timeout";
   public static final int DIRECTORY_SEARCH_TIMEOUT_DEFAULT = 10000; // 10s
 
+  public static final String CONNECTION_TIMEOUT =
+      LDAP_CONFIG_PREFIX + ".connection.timeout.ms";
+  public static final int CONNECTION_TIMEOUT_DEFAULT = 60 * 1000; // 60 seconds
+  public static final String READ_TIMEOUT =
+      LDAP_CONFIG_PREFIX + ".read.timeout.ms";
+  public static final int READ_TIMEOUT_DEFAULT = 60 * 1000; // 60 seconds
+
   private static final Log LOG = LogFactory.getLog(LdapGroupsMapping.class);
 
   private static final SearchControls SEARCH_CONTROLS = new SearchControls();
@@ -305,6 +312,11 @@ public class LdapGroupsMapping
 
       env.put(Context.SECURITY_PRINCIPAL, bindUser);
       env.put(Context.SECURITY_CREDENTIALS, bindPassword);
+
+      env.put("com.sun.jndi.ldap.connect.timeout", conf.get(CONNECTION_TIMEOUT,
+          String.valueOf(CONNECTION_TIMEOUT_DEFAULT)));
+      env.put("com.sun.jndi.ldap.read.timeout", conf.get(READ_TIMEOUT,
+          String.valueOf(READ_TIMEOUT_DEFAULT)));
 
       ctx = new InitialDirContext(env);
     }
