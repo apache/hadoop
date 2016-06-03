@@ -596,8 +596,8 @@ public class TestRMAppAttemptTransitions {
     } else {
       assertEquals(getProxyUrl(applicationAttempt),
           applicationAttempt.getTrackingUrl());
-      verifyAttemptFinalStateSaved();
     }
+    verifyAttemptFinalStateSaved();
     assertEquals(finishedContainerCount, applicationAttempt
         .getJustFinishedContainers().size());
     Assert.assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
@@ -735,6 +735,7 @@ public class TestRMAppAttemptTransitions {
     applicationAttempt.handle(new RMAppAttemptUnregistrationEvent(
         applicationAttempt.getAppAttemptId(), url, finalStatus,
         diagnostics));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
     testAppAttemptFinishedState(null, finalStatus, url, diagnostics, 1,
         true);
     assertFalse(transferStateFromPreviousAttempt);

@@ -1434,4 +1434,96 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // check that attempt state is recovered correctly.
     assertEquals(RMAppAttemptState.FINISHED, recoveredApp1.getCurrentAppAttempt().getState());
   }
+
+  @Test(timeout = 600000)
+  public void testUAMRecoveryOnRMWorkPreservingRestart() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the UAM
+    RMApp app0 = rm1.submitApp(200, true);
+    MockAM am0 = MockRM.launchUAM(app0, rm1, nm1);
+    am0.registerAppAttempt();
+
+    // Allocate containers to UAM
+    int numContainers = 2;
+    am0.allocate("127.0.0.1", 1000, numContainers,
+        new ArrayList<ContainerId>());
+    nm1.nodeHeartbeat(true);
+    List<Container> conts = am0.allocate(new ArrayList<ResourceRequest>(),
+        new ArrayList<ContainerId>()).getAllocatedContainers();
+    Assert.assertTrue(conts.isEmpty());
+    while (conts.size() == 0) {
+      nm1.nodeHeartbeat(true);
+      conts.addAll(am0.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers());
+      Thread.sleep(500);
+    }
+    Assert.assertFalse(conts.isEmpty());
+
+    // start new RM
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    rm2.waitForState(app0.getApplicationId(), RMAppState.ACCEPTED);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
+
+    // recover app
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    RMApp recoveredApp =
+        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    NMContainerStatus container1 = TestRMRestart
+        .createNMContainerStatus(am0.getApplicationAttemptId(), 1,
+            ContainerState.RUNNING);
+    NMContainerStatus container2 = TestRMRestart
+        .createNMContainerStatus(am0.getApplicationAttemptId(), 2,
+            ContainerState.RUNNING);
+    nm1.registerNode(Arrays.asList(container1, container2), null);
+
+    // Wait for RM to settle down on recovering containers;
+    waitForNumContainersToRecover(2, rm2, am0.getApplicationAttemptId());
+
+    // retry registerApplicationMaster() after RM restart.
+    am0.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
+    am0.registerAppAttempt(true);
+
+    // Check if UAM is correctly recovered on restart
+    rm2.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.RUNNING);
+
+    // Check if containers allocated to UAM are recovered
+    Map<ApplicationId, SchedulerApplication> schedulerApps =
+        ((AbstractYarnScheduler) rm2.getResourceScheduler())
+            .getSchedulerApplications();
+    SchedulerApplication schedulerApp =
+        schedulerApps.get(recoveredApp.getApplicationId());
+    SchedulerApplicationAttempt schedulerAttempt =
+        schedulerApp.getCurrentAppAttempt();
+    Assert.assertEquals(numContainers,
+        schedulerAttempt.getLiveContainers().size());
+
+    // Check if UAM is able to heart beat
+    Assert.assertNotNull(am0.doHeartbeat());
+
+    // Complete the UAM
+    am0.unregisterAppAttempt(false);
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
+    rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
+    Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
+        recoveredApp.getFinalApplicationStatus());
+
+    // Restart RM once more to check UAM is not re-run
+    MockRM rm3 = new MockRM(conf, memStore);
+    rm3.start();
+    recoveredApp = rm3.getRMContext().getRMApps().get(app0.getApplicationId());
+    Assert.assertEquals(RMAppState.FINISHED, recoveredApp.getState());
+
+  }
 }
