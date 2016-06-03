@@ -134,6 +134,27 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     }, nextIdx());
   }
 
+  @Override
+  public long renewDelegationToken(final Token<?> token) throws IOException {
+    return doOp(new ProviderCallable<Long>() {
+      @Override
+      public Long call(KMSClientProvider provider) throws IOException {
+        return provider.renewDelegationToken(token);
+      }
+    }, nextIdx());
+  }
+
+  @Override
+  public Void cancelDelegationToken(final Token<?> token) throws IOException {
+    return doOp(new ProviderCallable<Void>() {
+      @Override
+      public Void call(KMSClientProvider provider) throws IOException {
+        provider.cancelDelegationToken(token);
+        return null;
+      }
+    }, nextIdx());
+  }
+
   // This request is sent to all providers in the load-balancing group
   @Override
   public void warmUpEncryptedKeys(String... keyNames) throws IOException {

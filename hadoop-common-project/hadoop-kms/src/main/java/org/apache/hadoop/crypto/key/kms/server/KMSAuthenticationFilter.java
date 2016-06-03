@@ -72,7 +72,7 @@ public class KMSAuthenticationFilter
           KerberosDelegationTokenAuthenticationHandler.class.getName());
     }
     props.setProperty(DelegationTokenAuthenticationHandler.TOKEN_KIND,
-        KMSClientProvider.TOKEN_KIND);
+        KMSClientProvider.TOKEN_KIND_STR);
     return props;
   }
 
