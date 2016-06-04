@@ -33,7 +33,7 @@
   $(window).bind('hashchange', function () {
     $('#alert-panel').hide();
 
-    var dir = window.location.hash.slice(1);
+    var dir = decodeURIComponent(window.location.hash.slice(1));
     if(dir == "") {
       dir = "/";
     }
