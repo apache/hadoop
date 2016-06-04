@@ -55,8 +55,8 @@ class TestFlowDataGenerator {
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = insertTs;
 
-    for (int k=1; k< 100 ; k++) {
-    metricValues.put(ts - k*200000, 20L);
+    for (int k = 1; k < 100; k++) {
+      metricValues.put(ts - k * 200000L, 20L);
     }
     metricValues.put(ts - 80000, 40L);
     m1.setType(Type.TIME_SERIES);
@@ -68,7 +68,7 @@ class TestFlowDataGenerator {
     metricValues = new HashMap<Long, Number>();
     ts = System.currentTimeMillis();
     for (int k=1; k< 100 ; k++) {
-      metricValues.put(ts - k*100000, 31L);
+      metricValues.put(ts - k*100000L, 31L);
     }
 
     metricValues.put(ts - 80000, 57L);

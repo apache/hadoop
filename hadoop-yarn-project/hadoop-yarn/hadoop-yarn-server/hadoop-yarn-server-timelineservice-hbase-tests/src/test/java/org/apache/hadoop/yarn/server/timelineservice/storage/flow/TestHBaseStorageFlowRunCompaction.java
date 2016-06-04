@@ -69,8 +69,8 @@ public class TestHBaseStorageFlowRunCompaction {
 
   private static HBaseTestingUtility util;
 
-  private final String metric1 = "MAP_SLOT_MILLIS";
-  private final String metric2 = "HDFS_BYTES_READ";
+  private static final String metric1 = "MAP_SLOT_MILLIS";
+  private static final String metric2 = "HDFS_BYTES_READ";
 
   private final byte[] aRowKey = Bytes.toBytes("a");
   private final byte[] aFamily = Bytes.toBytes("family");
@@ -166,9 +166,11 @@ public class TestHBaseStorageFlowRunCompaction {
       entityApp1 = TestFlowDataGenerator.getEntityMetricsApp1Complete(
           insertTs + 1, c1);
       te1.addEntity(entityApp1);
-      hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
-      hbi.flush();
-      hbi.close();
+      if (hbi != null) {
+        hbi.write(cluster, user, flow, flowVersion, runid, appName, te1);
+        hbi.flush();
+        hbi.close();
+      }
     }
 
     // check in flow run table
