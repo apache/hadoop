@@ -148,7 +148,9 @@ public class TestHBaseStorageFlowActivity {
       // flush everything to hbase
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     Connection conn = ConnectionFactory.createConnection(c1);
@@ -199,7 +201,9 @@ public class TestHBaseStorageFlowActivity {
         assertEquals(1, flowRuns.size());
       }
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -230,7 +234,9 @@ public class TestHBaseStorageFlowActivity {
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
     // check flow activity
     checkFlowActivityTable(cluster, user, flow, flowVersion, runid, c1,
@@ -260,7 +266,9 @@ public class TestHBaseStorageFlowActivity {
         }
       }
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -351,7 +359,9 @@ public class TestHBaseStorageFlowActivity {
 
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
     // check flow activity
     checkFlowActivityTableSeveralRuns(cluster, user, flow, c1, flowVersion1,
@@ -396,7 +406,9 @@ public class TestHBaseStorageFlowActivity {
         }
       }
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 

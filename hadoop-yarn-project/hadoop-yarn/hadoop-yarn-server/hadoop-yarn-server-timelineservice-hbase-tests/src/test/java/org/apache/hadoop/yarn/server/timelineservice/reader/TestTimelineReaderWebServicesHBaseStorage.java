@@ -345,7 +345,9 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           "application_1111111111_1111", te5);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
   }
 
@@ -390,7 +392,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
-      String msg = new String();
+      String msg = "";
       if (resp != null) {
         msg = resp.getClientResponseStatus().toString();
       }
