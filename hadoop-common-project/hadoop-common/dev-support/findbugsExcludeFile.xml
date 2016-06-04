@@ -345,13 +345,7 @@
        <Bug pattern="SF_SWITCH_FALLTHROUGH" />
      </Match>
 
-     <!-- WA_NOT_IN_LOOP is invalid in util.concurrent.AsyncGet$Util.wait. -->
-     <Match>
-       <Class name="org.apache.hadoop.util.concurrent.AsyncGet$Util" />
-       <Method name="wait" />
-       <Bug pattern="WA_NOT_IN_LOOP" />
-     </Match>
-
+     <!-- Synchronization performed on util.concurrent instance. -->
      <Match>
        <Class name="org.apache.hadoop.service.AbstractService" />
        <Method name="stop" />
