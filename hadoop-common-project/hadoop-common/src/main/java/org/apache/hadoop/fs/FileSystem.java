@@ -1252,6 +1252,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Renames Path src to Path dst
    * <ul>
+   * <li
    * <li>Fails if src is a file and dst is a directory.
    * <li>Fails if src is a directory and dst is a file.
    * <li>Fails if the parent of dst does not exist or is a file.
