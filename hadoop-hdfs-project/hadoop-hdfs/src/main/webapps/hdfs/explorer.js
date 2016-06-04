@@ -366,5 +366,56 @@
     });
   })
 
+  $('#modal-upload-file-button').click(function() {
+    $(this).prop('disabled', true);
+    $(this).button('complete');
+    var files = []
+    var numCompleted = 0
+
+    for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
+      (function() {
+        var file = $('#modal-upload-file-input').prop('files')[i];
+        var url = '/webhdfs/v1' + current_directory;
+        url = encode_path(append_path(url, file.name));
+        url += '?op=CREATE&noredirect=true';
+        files.push( { file: file } )
+        files[i].request = $.ajax({
+          type: 'PUT',
+          url: url,
+          processData: false,
+          crossDomain: true
+        });
+      })()
+     }
+    for(var f in files) {
+      (function() {
+        var file = files[f];
+        file.request.done(function(data) {
+          var url = data['Location'];
+          $.ajax({
+            type: 'PUT',
+            url: url,
+            data: file.file,
+            processData: false,
+            crossDomain: true
+          }).complete(function(data) {
+            numCompleted++;
+            if(numCompleted == files.length) {
+              $('#modal-upload-file').modal('hide');
+              $('#modal-upload-file-button').button('reset');
+              browse_directory(current_directory);
+            }
+          }).error(function(jqXHR, textStatus, errorThrown) {
+            numCompleted++;
+            show_err_msg("Couldn't upload the file " + file.file.name + ". "+ errorThrown);
+          });
+        }).error(function(jqXHR, textStatus, errorThrown) {
+          numCompleted++;
+          show_err_msg("Couldn't find datanode to write file. " + errorThrown);
+        });
+      })();
+    }
+  });
+
   init();
 })();
