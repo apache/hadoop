@@ -24,8 +24,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import com.google.common.collect.Lists;
-
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -199,7 +198,6 @@ import org.apache.hadoop.security.token.Token;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.util.concurrent.AsyncGet;
 
 /**
  * This class forwards NN's ClientProtocol calls as RPC calls to the NN server
@@ -211,8 +209,8 @@ import org.apache.hadoop.util.concurrent.AsyncGet;
 public class ClientNamenodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
   final private ClientNamenodeProtocolPB rpcProxy;
-  private static final ThreadLocal<AsyncGet<?, Exception>>
-      ASYNC_RETURN_VALUE = new ThreadLocal<>();
+  private static final ThreadLocal<Callable<?>>
+      RETURN_VALUE_CALLBACK = new ThreadLocal<>();
 
   static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST =
       GetServerDefaultsRequestProto.newBuilder().build();
@@ -248,8 +246,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @SuppressWarnings("unchecked")
   @Unstable
-  public static <T> AsyncGet<T, Exception> getAsyncReturnValue() {
-    return (AsyncGet<T, Exception>) ASYNC_RETURN_VALUE.get();
+  public static <T> Callable<T> getReturnValueCallback() {
+    return (Callable<T>) RETURN_VALUE_CALLBACK.get();
   }
 
   @Override
@@ -371,7 +369,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       if (Client.isAsynchronousMode()) {
         rpcProxy.setPermission(null, req);
-        setAsyncReturnValue();
+        setReturnValueCallback();
       } else {
         rpcProxy.setPermission(null, req);
       }
@@ -380,18 +378,17 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
   }
 
-  private void setAsyncReturnValue() {
-    final AsyncGet<Message, Exception> asyncReturnMessage
-        = ProtobufRpcEngine.getAsyncReturnMessage();
-    final AsyncGet<Void, Exception> asyncGet
-        = new AsyncGet<Void, Exception>() {
+  private void setReturnValueCallback() {
+    final Callable<Message> returnMessageCallback = ProtobufRpcEngine
+        .getReturnMessageCallback();
+    Callable<Void> callBack = new Callable<Void>() {
       @Override
-      public Void get(long timeout, TimeUnit unit) throws Exception {
-        asyncReturnMessage.get(timeout, unit);
+      public Void call() throws Exception {
+        returnMessageCallback.call();
         return null;
       }
     };
-    ASYNC_RETURN_VALUE.set(asyncGet);
+    RETURN_VALUE_CALLBACK.set(callBack);
   }
 
   @Override
@@ -406,7 +403,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       if (Client.isAsynchronousMode()) {
         rpcProxy.setOwner(null, req.build());
-        setAsyncReturnValue();
+        setReturnValueCallback();
       } else {
         rpcProxy.setOwner(null, req.build());
       }
@@ -539,7 +536,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       if (Client.isAsynchronousMode()) {
         rpcProxy.rename2(null, req);
-        setAsyncReturnValue();
+        setReturnValueCallback();
       } else {
         rpcProxy.rename2(null, req);
       }
