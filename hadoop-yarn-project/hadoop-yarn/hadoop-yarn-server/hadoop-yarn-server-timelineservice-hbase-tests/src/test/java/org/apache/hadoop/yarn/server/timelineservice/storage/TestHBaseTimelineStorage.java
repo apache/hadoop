@@ -678,32 +678,34 @@ public class TestHBaseTimelineStorage {
       assertEquals(infoMap, infoColumns);
 
       // Remember isRelatedTo is of type Map<String, Set<String>>
-      for (String isRelatedToKey : isRelatedTo.keySet()) {
+      for (Map.Entry<String, Set<String>> isRelatedToEntry : isRelatedTo
+          .entrySet()) {
         Object isRelatedToValue =
             ApplicationColumnPrefix.IS_RELATED_TO.readResult(result,
-                isRelatedToKey);
+                isRelatedToEntry.getKey());
         String compoundValue = isRelatedToValue.toString();
         // id7?id9?id6
         Set<String> isRelatedToValues =
             new HashSet<String>(Separator.VALUES.splitEncoded(compoundValue));
-        assertEquals(isRelatedTo.get(isRelatedToKey).size(),
+        assertEquals(isRelatedTo.get(isRelatedToEntry.getKey()).size(),
             isRelatedToValues.size());
-        for (String v : isRelatedTo.get(isRelatedToKey)) {
+        for (String v : isRelatedToEntry.getValue()) {
           assertTrue(isRelatedToValues.contains(v));
         }
       }
 
       // RelatesTo
-      for (String relatesToKey : relatesTo.keySet()) {
+      for (Map.Entry<String, Set<String>> relatesToEntry : relatesTo
+          .entrySet()) {
         String compoundValue =
             ApplicationColumnPrefix.RELATES_TO.readResult(result,
-                relatesToKey).toString();
+                relatesToEntry.getKey()).toString();
         // id3?id4?id5
         Set<String> relatesToValues =
             new HashSet<String>(Separator.VALUES.splitEncoded(compoundValue));
-        assertEquals(relatesTo.get(relatesToKey).size(),
+        assertEquals(relatesTo.get(relatesToEntry.getKey()).size(),
             relatesToValues.size());
-        for (String v : relatesTo.get(relatesToKey)) {
+        for (String v : relatesToEntry.getValue()) {
           assertTrue(relatesToValues.contains(v));
         }
       }
@@ -938,41 +940,43 @@ public class TestHBaseTimelineStorage {
           assertEquals(infoMap, infoColumns);
 
           // Remember isRelatedTo is of type Map<String, Set<String>>
-          for (String isRelatedToKey : isRelatedTo.keySet()) {
+          for (Map.Entry<String, Set<String>> isRelatedToEntry : isRelatedTo
+              .entrySet()) {
             Object isRelatedToValue =
                 EntityColumnPrefix.IS_RELATED_TO.readResult(result,
-                    isRelatedToKey);
+                    isRelatedToEntry.getKey());
             String compoundValue = isRelatedToValue.toString();
             // id7?id9?id6
             Set<String> isRelatedToValues =
                 new HashSet<String>(
                     Separator.VALUES.splitEncoded(compoundValue));
-            assertEquals(isRelatedTo.get(isRelatedToKey).size(),
+            assertEquals(isRelatedTo.get(isRelatedToEntry.getKey()).size(),
                 isRelatedToValues.size());
-            for (String v : isRelatedTo.get(isRelatedToKey)) {
+            for (String v : isRelatedToEntry.getValue()) {
               assertTrue(isRelatedToValues.contains(v));
             }
           }
 
           // RelatesTo
-          for (String relatesToKey : relatesTo.keySet()) {
-            String compoundValue =
-                EntityColumnPrefix.RELATES_TO.readResult(result, relatesToKey)
-                    .toString();
+          for (Map.Entry<String, Set<String>> relatesToEntry : relatesTo
+              .entrySet()) {
+            String compoundValue = EntityColumnPrefix.RELATES_TO
+                .readResult(result, relatesToEntry.getKey()).toString();
             // id3?id4?id5
             Set<String> relatesToValues =
                 new HashSet<String>(
                     Separator.VALUES.splitEncoded(compoundValue));
-            assertEquals(relatesTo.get(relatesToKey).size(),
+            assertEquals(relatesTo.get(relatesToEntry.getKey()).size(),
                 relatesToValues.size());
-            for (String v : relatesTo.get(relatesToKey)) {
+            for (String v : relatesToEntry.getValue()) {
               assertTrue(relatesToValues.contains(v));
             }
           }
 
           // Configuration
           Map<String, Object> configColumns =
-              EntityColumnPrefix.CONFIG.readResults(result, StringKeyConverter.getInstance());
+              EntityColumnPrefix.CONFIG.readResults(result,
+                  StringKeyConverter.getInstance());
           assertEquals(conf, configColumns);
 
           NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
@@ -1273,8 +1277,10 @@ public class TestHBaseTimelineStorage {
         assertTrue(info == null || info.isEmpty());
       }
     } finally {
-      hbi.stop();
-      hbi.close();
+      if (hbi != null) {
+        hbi.stop();
+        hbi.close();
+      }
     }
   }
 

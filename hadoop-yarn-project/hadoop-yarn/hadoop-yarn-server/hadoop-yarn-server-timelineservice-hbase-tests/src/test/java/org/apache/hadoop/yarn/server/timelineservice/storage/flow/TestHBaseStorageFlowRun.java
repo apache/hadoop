@@ -75,8 +75,8 @@ public class TestHBaseStorageFlowRun {
 
   private static HBaseTestingUtility util;
 
-  private final String metric1 = "MAP_SLOT_MILLIS";
-  private final String metric2 = "HDFS_BYTES_READ";
+  private static final String METRIC1 = "MAP_SLOT_MILLIS";
+  private static final String METRIC2 = "HDFS_BYTES_READ";
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -213,7 +213,9 @@ public class TestHBaseStorageFlowRun {
       // flush everything to hbase
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     Connection conn = ConnectionFactory.createConnection(c1);
@@ -257,7 +259,9 @@ public class TestHBaseStorageFlowRun {
       assertEquals(minStartTs, flowRun.getStartTime());
       assertEquals(endTs, flowRun.getMaxEndTime());
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -299,7 +303,9 @@ public class TestHBaseStorageFlowRun {
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     // check flow run
@@ -327,10 +333,10 @@ public class TestHBaseStorageFlowRun {
           value = n;
         }
         switch (id) {
-        case metric1:
+        case METRIC1:
           assertEquals(141L, value);
           break;
-        case metric2:
+        case METRIC2:
           assertEquals(57L, value);
           break;
         default:
@@ -338,7 +344,9 @@ public class TestHBaseStorageFlowRun {
         }
       }
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -365,14 +373,14 @@ public class TestHBaseStorageFlowRun {
       rowCount++;
       // check metric1
       byte[] q = ColumnHelper.getColumnQualifier(
-          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), metric1);
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC1);
       assertTrue(values.containsKey(q));
       assertEquals(141L, Bytes.toLong(values.get(q)));
 
       // check metric2
       assertEquals(3, values.size());
       q = ColumnHelper.getColumnQualifier(
-          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), metric2);
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC2);
       assertTrue(values.containsKey(q));
       assertEquals(57L, Bytes.toLong(values.get(q)));
     }
@@ -407,7 +415,9 @@ public class TestHBaseStorageFlowRun {
       hbi.write(cluster, user, flow, flowVersion, 1002345678918L, appName, te);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     // use the timeline reader to verify data
@@ -418,7 +428,7 @@ public class TestHBaseStorageFlowRun {
       hbr.start();
       TimelineFilterList metricsToRetrieve = new TimelineFilterList(
           Operator.OR, new TimelinePrefixFilter(TimelineCompareOp.EQUAL,
-              metric1.substring(0, metric1.indexOf("_") + 1)));
+              METRIC1.substring(0, METRIC1.indexOf("_") + 1)));
       TimelineEntity entity = hbr.getEntity(
           new TimelineReaderContext(cluster, user, flow, 1002345678919L, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
@@ -435,7 +445,7 @@ public class TestHBaseStorageFlowRun {
           value = n;
         }
         switch (id) {
-        case metric1:
+        case METRIC1:
           assertEquals(40L, value);
           break;
         default:
@@ -455,7 +465,9 @@ public class TestHBaseStorageFlowRun {
       }
       assertEquals(2, metricCnt);
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -488,7 +500,9 @@ public class TestHBaseStorageFlowRun {
       hbi.write(cluster, user, flow, flowVersion, runid, appName, te);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     // check flow run
@@ -528,10 +542,10 @@ public class TestHBaseStorageFlowRun {
             value = n;
           }
           switch (id) {
-          case metric1:
+          case METRIC1:
             assertEquals(141L, value);
             break;
-          case metric2:
+          case METRIC2:
             assertEquals(57L, value);
             break;
           default:
@@ -540,7 +554,9 @@ public class TestHBaseStorageFlowRun {
         }
       }
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -595,8 +611,10 @@ public class TestHBaseStorageFlowRun {
         }
       }
     } finally {
-      hbi.flush();
-      hbi.close();
+      if (hbi != null) {
+        hbi.flush();
+        hbi.close();
+      }
       checkMinMaxFlush(c1, minTS, startTs, count, cluster, user, flow, runid,
           true);
     }
@@ -665,7 +683,9 @@ public class TestHBaseStorageFlowRun {
           "application_11111111111111_2222", te);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     // use the timeline reader to verify data
@@ -711,7 +731,9 @@ public class TestHBaseStorageFlowRun {
         }
       }
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
@@ -742,7 +764,9 @@ public class TestHBaseStorageFlowRun {
           "application_11111111111111_2222", te);
       hbi.flush();
     } finally {
-      hbi.close();
+      if (hbi != null) {
+        hbi.close();
+      }
     }
 
     // use the timeline reader to verify data
@@ -754,12 +778,12 @@ public class TestHBaseStorageFlowRun {
 
       TimelineFilterList list1 = new TimelineFilterList();
       list1.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.GREATER_OR_EQUAL, metric1, 101));
+          TimelineCompareOp.GREATER_OR_EQUAL, METRIC1, 101));
       TimelineFilterList list2 = new TimelineFilterList();
       list2.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.LESS_THAN, metric1, 43));
+          TimelineCompareOp.LESS_THAN, METRIC1, 43));
       list2.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.EQUAL, metric2, 57));
+          TimelineCompareOp.EQUAL, METRIC2, 57));
       TimelineFilterList metricFilterList =
           new TimelineFilterList(Operator.OR, list1, list2);
       Set<TimelineEntity> entities = hbr.getEntities(
@@ -777,8 +801,8 @@ public class TestHBaseStorageFlowRun {
 
       TimelineFilterList metricFilterList1 = new TimelineFilterList(
           new TimelineCompareFilter(
-          TimelineCompareOp.LESS_OR_EQUAL, metric1, 127),
-          new TimelineCompareFilter(TimelineCompareOp.NOT_EQUAL, metric2, 30));
+          TimelineCompareOp.LESS_OR_EQUAL, METRIC1, 127),
+          new TimelineCompareFilter(TimelineCompareOp.NOT_EQUAL, METRIC2, 30));
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
@@ -793,8 +817,8 @@ public class TestHBaseStorageFlowRun {
       assertEquals(2, metricCnt);
 
       TimelineFilterList metricFilterList2 = new TimelineFilterList(
-          new TimelineCompareFilter(TimelineCompareOp.LESS_THAN, metric1, 32),
-          new TimelineCompareFilter(TimelineCompareOp.NOT_EQUAL, metric2, 57));
+          new TimelineCompareFilter(TimelineCompareOp.LESS_THAN, METRIC1, 32),
+          new TimelineCompareFilter(TimelineCompareOp.NOT_EQUAL, METRIC2, 57));
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
@@ -815,17 +839,17 @@ public class TestHBaseStorageFlowRun {
 
       TimelineFilterList list3 = new TimelineFilterList();
       list3.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.GREATER_OR_EQUAL, metric1, 101));
+          TimelineCompareOp.GREATER_OR_EQUAL, METRIC1, 101));
       TimelineFilterList list4 = new TimelineFilterList();
       list4.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.LESS_THAN, metric1, 43));
+          TimelineCompareOp.LESS_THAN, METRIC1, 43));
       list4.addFilter(new TimelineCompareFilter(
-          TimelineCompareOp.EQUAL, metric2, 57));
+          TimelineCompareOp.EQUAL, METRIC2, 57));
       TimelineFilterList metricFilterList4 =
           new TimelineFilterList(Operator.OR, list3, list4);
       TimelineFilterList metricsToRetrieve = new TimelineFilterList(Operator.OR,
           new TimelinePrefixFilter(TimelineCompareOp.EQUAL,
-          metric2.substring(0, metric2.indexOf("_") + 1)));
+          METRIC2.substring(0, METRIC2.indexOf("_") + 1)));
       entities = hbr.getEntities(
           new TimelineReaderContext(cluster, user, flow, null, null,
           TimelineEntityType.YARN_FLOW_RUN.toString(), null),
@@ -840,7 +864,9 @@ public class TestHBaseStorageFlowRun {
       }
       assertEquals(1, metricCnt);
     } finally {
-      hbr.close();
+      if (hbr != null) {
+        hbr.close();
+      }
     }
   }
 
