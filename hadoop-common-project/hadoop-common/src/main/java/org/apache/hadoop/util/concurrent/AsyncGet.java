@@ -47,19 +47,14 @@ public interface AsyncGet<R, E extends Throwable> {
   R get(long timeout, TimeUnit unit)
       throws E, TimeoutException, InterruptedException;
 
-  /** @return true if the underlying computation is done; false, otherwise. */
-  boolean isDone();
-
   /** Utility */
   class Util {
-    /** Use {@link #get(long, TimeUnit)} timeout parameters to wait. */
-    public static void wait(Object obj, long timeout, TimeUnit unit)
-        throws InterruptedException {
-      if (timeout < 0) {
-        obj.wait();
-      } else if (timeout > 0) {
-        obj.wait(unit.toMillis(timeout));
-      }
+    /**
+     * @return {@link Object#wait(long)} timeout converted
+     *         from {@link #get(long, TimeUnit)} timeout.
+     */
+    public static long asyncGetTimeout2WaitTimeout(long timeout, TimeUnit unit){
+      return timeout < 0? 0: timeout == 0? 1:unit.toMillis(timeout);
     }
   }
 }
