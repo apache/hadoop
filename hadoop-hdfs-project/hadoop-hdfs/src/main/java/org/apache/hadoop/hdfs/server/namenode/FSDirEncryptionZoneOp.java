@@ -254,7 +254,7 @@ final class FSDirEncryptionZoneOp {
   static FileEncryptionInfo getFileEncryptionInfo(final FSDirectory fsd,
       final INode inode, final int snapshotId, final INodesInPath iip)
       throws IOException {
-    if (!inode.isFile()) {
+    if (!inode.isFile() || !fsd.ezManager.hasCreatedEncryptionZone()) {
       return null;
     }
     fsd.readLock();
