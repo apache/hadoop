@@ -60,11 +60,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SignalContainerResponsePBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -147,6 +149,7 @@ import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerManagerImpl extends CompositeService implements
@@ -1380,16 +1383,7 @@ public class ContainerManagerImpl extends CompositeService implements
           (CMgrSignalContainersEvent) event;
       for (SignalContainerRequest request : containersSignalEvent
           .getContainersToSignal()) {
-        ContainerId containerId = request.getContainerId();
-        Container container = this.context.getContainers().get(containerId);
-        if (container != null) {
-          LOG.info(containerId + " signal request by ResourceManager.");
-          this.dispatcher.getEventHandler().handle(
-              new SignalContainersLauncherEvent(container,
-                  request.getCommand()));
-        } else {
-          LOG.info("Container " + containerId + " no longer exists");
-        }
+        internalSignalToContainer(request, "ResourceManager");
       }
       break;
     default:
@@ -1439,5 +1433,29 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public void updateQueuingLimit(ContainerQueuingLimit queuingLimit) {
     LOG.trace("Implementation does not support queuing of Containers !!");
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public SignalContainerResponse signalToContainer(
+      SignalContainerRequest request) throws YarnException, IOException {
+    internalSignalToContainer(request, "Application Master");
+    return new SignalContainerResponsePBImpl();
+  }
+
+  @SuppressWarnings("unchecked")
+  private void internalSignalToContainer(SignalContainerRequest request,
+      String sentBy) {
+    ContainerId containerId = request.getContainerId();
+    Container container = this.context.getContainers().get(containerId);
+    if (container != null) {
+      LOG.info(containerId + " signal request " + request.getCommand()
+            + " by " + sentBy);
+      this.dispatcher.getEventHandler().handle(
+          new SignalContainersLauncherEvent(container,
+              request.getCommand()));
+    } else {
+      LOG.info("Container " + containerId + " no longer exists");
+    }
   }
 }

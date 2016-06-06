@@ -481,7 +481,7 @@ public class TestClientRedirect {
     }
 
     @Override
-    public SignalContainerResponse signalContainer(
+    public SignalContainerResponse signalToContainer(
         SignalContainerRequest request) throws IOException {
       return null;
     }

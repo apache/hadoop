@@ -1005,11 +1005,11 @@ public class MockRM extends ResourceManager {
     return activeServices;
   }
 
-  public void signalContainer(ContainerId containerId, SignalContainerCommand command)
-      throws Exception {
+  public void signalToContainer(ContainerId containerId,
+      SignalContainerCommand command) throws Exception {
     ApplicationClientProtocol client = getClientRMService();
     SignalContainerRequest req =
         SignalContainerRequest.newInstance(containerId, command);
-    client.signalContainer(req);
+    client.signalToContainer(req);
   }
 }

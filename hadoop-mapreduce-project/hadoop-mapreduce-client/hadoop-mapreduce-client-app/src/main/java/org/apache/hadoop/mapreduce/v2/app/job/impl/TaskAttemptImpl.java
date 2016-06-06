@@ -2175,7 +2175,8 @@ public abstract class TaskAttemptImpl implements
         taskAttempt.container.getId(), StringInterner
         .weakIntern(taskAttempt.container.getNodeId().toString()),
         taskAttempt.container.getContainerToken(),
-        ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP));
+        ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP,
+        event.getType() == TaskAttemptEventType.TA_TIMED_OUT));
   }
 
   /**

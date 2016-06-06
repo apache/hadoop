@@ -588,13 +588,13 @@ public class ApplicationClientProtocolPBClientImpl implements ApplicationClientP
   }
 
   @Override
-  public SignalContainerResponse signalContainer(
+  public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
     YarnServiceProtos.SignalContainerRequestProto requestProto =
         ((SignalContainerRequestPBImpl) request).getProto();
     try {
       return new SignalContainerResponsePBImpl(
-          proxy.signalContainer(null, requestProto));
+          proxy.signalToContainer(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;

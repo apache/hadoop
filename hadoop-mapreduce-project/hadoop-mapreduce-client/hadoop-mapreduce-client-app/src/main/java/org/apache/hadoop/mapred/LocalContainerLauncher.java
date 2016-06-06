@@ -20,6 +20,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -254,6 +258,30 @@ public class LocalContainerLauncher extends AbstractService implements
           futures.put(event.getTaskAttemptID(), future);
 
         } else if (event.getType() == EventType.CONTAINER_REMOTE_CLEANUP) {
+
+          if (event.getDumpContainerThreads()) {
+            try {
+              // Construct full thread dump header
+              System.out.println(new java.util.Date());
+              RuntimeMXBean rtBean = ManagementFactory.getRuntimeMXBean();
+              System.out.println("Full thread dump " + rtBean.getVmName()
+                  + " (" + rtBean.getVmVersion()
+                  + " " + rtBean.getSystemProperties().get("java.vm.info")
+                  + "):\n");
+              // Dump threads' states and stacks
+              ThreadMXBean tmxBean = ManagementFactory.getThreadMXBean();
+              ThreadInfo[] tInfos = tmxBean.dumpAllThreads(
+                  tmxBean.isObjectMonitorUsageSupported(),
+                  tmxBean.isSynchronizerUsageSupported());
+              for (ThreadInfo ti : tInfos) {
+                System.out.println(ti.toString());
+              }
+            } catch (Throwable t) {
+              // Failure to dump stack shouldn't cause method failure.
+              System.out.println("Could not create full thread dump: "
+                  + t.getMessage());
+            }
+          }
 
           // cancel (and interrupt) the current running task associated with the
           // event

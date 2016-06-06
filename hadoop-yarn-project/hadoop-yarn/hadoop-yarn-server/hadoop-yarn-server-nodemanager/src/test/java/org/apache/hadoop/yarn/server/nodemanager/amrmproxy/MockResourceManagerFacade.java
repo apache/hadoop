@@ -486,7 +486,7 @@ public class MockResourceManagerFacade implements
   }
 
   @Override
-  public SignalContainerResponse signalContainer(
+  public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws IOException {
 return null;
 }

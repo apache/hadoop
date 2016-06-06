@@ -858,12 +858,12 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
-  public void signalContainer(ContainerId containerId,
+  public void signalToContainer(ContainerId containerId,
       SignalContainerCommand command)
           throws YarnException, IOException {
     LOG.info("Signalling container " + containerId + " with command " + command);
     SignalContainerRequest request =
         SignalContainerRequest.newInstance(containerId, command);
-    rmClient.signalContainer(request);
+    rmClient.signalToContainer(request);
   }
 }
