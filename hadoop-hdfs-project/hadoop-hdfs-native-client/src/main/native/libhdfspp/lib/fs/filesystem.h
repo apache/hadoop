@@ -19,70 +19,17 @@
 #define LIBHDFSPP_LIB_FS_FILESYSTEM_H_
 
 #include "filehandle.h"
-#include "common/libhdfs_events_impl.h"
-#include "common/hdfs_public_api.h"
-#include "common/async_stream.h"
-#include "common/new_delete.h"
 #include "hdfspp/hdfspp.h"
 #include "fs/bad_datanode_tracker.h"
-#include "rpc/rpc_engine.h"
 #include "reader/block_reader.h"
 #include "reader/fileinfo.h"
-#include "hdfspp/statinfo.h"
-#include "ClientNamenodeProtocol.pb.h"
-#include "ClientNamenodeProtocol.hrpc.inl"
 
 #include "asio.hpp"
 
 #include <thread>
+#include "namenode_operations.h"
 
 namespace hdfs {
-
-/**
- * NameNodeConnection: abstracts the details of communicating with a NameNode
- * and the implementation of the communications protocol.
- *
- * Will eventually handle retry and failover.
- *
- * Threading model: thread-safe; all operations can be called concurrently
- * Lifetime: owned by a FileSystemImpl
- */
-class NameNodeOperations {
-public:
-  MEMCHECKED_CLASS(NameNodeOperations);
-  NameNodeOperations(::asio::io_service *io_service, const Options &options,
-            const std::string &client_name, const std::string &user_name,
-            const char *protocol_name, int protocol_version) :
-  io_service_(io_service),
-  engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
-  namenode_(& engine_) {}
-
-  void Connect(const std::string &cluster_name,
-               const std::string &server,
-               const std::string &service,
-               std::function<void(const Status &)> &&handler);
-
-  void GetBlockLocations(const std::string & path,
-    std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
-
-  void GetFileInfo(const std::string & path,
-      std::function<void(const Status &, const StatInfo &)> handler);
-
-  // start_after="" for initial call
-  void GetListing(const std::string & path,
-        std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> handler,
-        const std::string & start_after = "");
-
-  void SetFsEventCallback(fs_event_callback callback);
-
-private:
-  static void HdfsFileStatusProtoToStatInfo(hdfs::StatInfo & si, const ::hadoop::hdfs::HdfsFileStatusProto & fs);
-  static void DirectoryListingProtoToStatInfo(std::shared_ptr<std::vector<StatInfo>> stat_infos, const ::hadoop::hdfs::DirectoryListingProto & dl);
-
-  ::asio::io_service * io_service_;
-  RpcEngine engine_;
-  ClientNamenodeProtocol namenode_;
-};
 
 /*
  * FileSystem: The consumer's main point of interaction with the cluster as
