@@ -1635,7 +1635,7 @@ public class ClientRMService extends AbstractService implements
    */
   @SuppressWarnings("unchecked")
   @Override
-  public SignalContainerResponse signalContainer(
+  public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
     ContainerId containerId = request.getContainerId();
 

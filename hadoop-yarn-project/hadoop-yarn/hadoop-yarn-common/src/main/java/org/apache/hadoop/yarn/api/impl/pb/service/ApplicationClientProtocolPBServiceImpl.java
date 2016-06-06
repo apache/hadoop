@@ -596,11 +596,12 @@ public class ApplicationClientProtocolPBServiceImpl implements ApplicationClient
   }
 
   @Override
-  public SignalContainerResponseProto signalContainer(RpcController controller,
+  public SignalContainerResponseProto signalToContainer(
+      RpcController controller,
       YarnServiceProtos.SignalContainerRequestProto proto) throws ServiceException {
     SignalContainerRequestPBImpl request = new SignalContainerRequestPBImpl(proto);
     try {
-      SignalContainerResponse response = real.signalContainer(request);
+      SignalContainerResponse response = real.signalToContainer(request);
       return ((SignalContainerResponsePBImpl)response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);

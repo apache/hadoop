@@ -1689,11 +1689,11 @@ public class TestYarnClient {
         applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     SignalContainerCommand command = SignalContainerCommand.OUTPUT_THREAD_DUMP;
-    client.signalContainer(containerId, command);
+    client.signalToContainer(containerId, command);
     final ArgumentCaptor<SignalContainerRequest> signalReqCaptor =
         ArgumentCaptor.forClass(SignalContainerRequest.class);
     verify(((MockYarnClient) client).getRMClient())
-        .signalContainer(signalReqCaptor.capture());
+        .signalToContainer(signalReqCaptor.capture());
     SignalContainerRequest request = signalReqCaptor.getValue();
     Assert.assertEquals(containerId, request.getContainerId());
     Assert.assertEquals(command, request.getCommand());

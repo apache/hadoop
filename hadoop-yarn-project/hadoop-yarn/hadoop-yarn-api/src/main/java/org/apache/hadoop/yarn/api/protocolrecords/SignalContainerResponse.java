@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
  *
  * <p>Currently it's empty.</p>
  *
- * @see ApplicationClientProtocol#signalContainer(SignalContainerRequest)
+ * @see ApplicationClientProtocol#signalToContainer(SignalContainerRequest)
  */
 @Public
 @Evolving

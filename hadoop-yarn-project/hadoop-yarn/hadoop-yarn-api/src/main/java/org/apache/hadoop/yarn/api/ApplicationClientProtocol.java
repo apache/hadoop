@@ -563,7 +563,7 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    */
   @Public
   @Unstable
-  public SignalContainerResponse signalContainer(
+  SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException,
       IOException;
 }

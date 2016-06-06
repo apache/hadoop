@@ -30,17 +30,29 @@ public class ContainerLauncherEvent
   private ContainerId containerID;
   private String containerMgrAddress;
   private Token containerToken;
+  private boolean dumpContainerThreads;
 
   public ContainerLauncherEvent(TaskAttemptId taskAttemptID, 
       ContainerId containerID,
       String containerMgrAddress,
       Token containerToken,
       ContainerLauncher.EventType type) {
+    this(taskAttemptID, containerID, containerMgrAddress, containerToken, type,
+        false);
+  }
+
+  public ContainerLauncherEvent(TaskAttemptId taskAttemptID,
+      ContainerId containerID,
+      String containerMgrAddress,
+      Token containerToken,
+      ContainerLauncher.EventType type,
+      boolean dumpContainerThreads) {
     super(type);
     this.taskAttemptID = taskAttemptID;
     this.containerID = containerID;
     this.containerMgrAddress = containerMgrAddress;
     this.containerToken = containerToken;
+    this.dumpContainerThreads = dumpContainerThreads;
   }
 
   public TaskAttemptId getTaskAttemptID() {
@@ -57,6 +69,10 @@ public class ContainerLauncherEvent
 
   public Token getContainerToken() {
     return containerToken;
+  }
+
+  public boolean getDumpContainerThreads() {
+    return dumpContainerThreads;
   }
 
   @Override
@@ -77,6 +93,8 @@ public class ContainerLauncherEvent
         + ((containerToken == null) ? 0 : containerToken.hashCode());
     result = prime * result
         + ((taskAttemptID == null) ? 0 : taskAttemptID.hashCode());
+    result = prime * result
+        + (dumpContainerThreads ? 1 : 0);
     return result;
   }
 
@@ -109,7 +127,8 @@ public class ContainerLauncherEvent
         return false;
     } else if (!taskAttemptID.equals(other.taskAttemptID))
       return false;
-    return true;
+
+    return dumpContainerThreads == other.dumpContainerThreads;
   }
 
 }
