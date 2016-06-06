@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -34,6 +35,7 @@ import java.util.concurrent.Future;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC.RpcKind;
@@ -54,12 +56,13 @@ public class TestAsyncIPC {
   @Before
   public void setupConf() {
     conf = new Configuration();
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 10000);
     Client.setPingInterval(conf, TestIPC.PING_INTERVAL);
     // set asynchronous mode for main thread
     Client.setAsynchronousMode(true);
   }
 
-  protected static class SerialCaller extends Thread {
+  static class AsyncCaller extends Thread {
     private Client client;
     private InetSocketAddress server;
     private int count;
@@ -68,11 +71,11 @@ public class TestAsyncIPC {
         new HashMap<Integer, Future<LongWritable>>();
     Map<Integer, Long> expectedValues = new HashMap<Integer, Long>();
 
-    public SerialCaller(Client client, InetSocketAddress server, int count) {
+    public AsyncCaller(Client client, InetSocketAddress server, int count) {
       this.client = client;
       this.server = server;
       this.count = count;
-      // set asynchronous mode, since SerialCaller extends Thread
+      // set asynchronous mode, since AsyncCaller extends Thread
       Client.setAsynchronousMode(true);
     }
 
@@ -107,14 +110,111 @@ public class TestAsyncIPC {
     }
   }
 
-  @Test
-  public void testSerial() throws IOException, InterruptedException,
-      ExecutionException {
-    internalTestSerial(3, false, 2, 5, 100);
-    internalTestSerial(3, true, 2, 5, 10);
+  static class AsyncLimitlCaller extends Thread {
+    private Client client;
+    private InetSocketAddress server;
+    private int count;
+    private boolean failed;
+    Map<Integer, Future<LongWritable>> returnFutures = new HashMap<Integer, Future<LongWritable>>();
+    Map<Integer, Long> expectedValues = new HashMap<Integer, Long>();
+    int start = 0, end = 0;
+
+    int getStart() {
+      return start;
+    }
+
+    int getEnd() {
+      return end;
+    }
+
+    int getCount() {
+      return count;
+    }
+
+    public AsyncLimitlCaller(Client client, InetSocketAddress server, int count) {
+      this(0, client, server, count);
+    }
+
+    final int callerId;
+
+    public AsyncLimitlCaller(int callerId, Client client, InetSocketAddress server,
+        int count) {
+      this.client = client;
+      this.server = server;
+      this.count = count;
+      // set asynchronous mode, since AsyncLimitlCaller extends Thread
+      Client.setAsynchronousMode(true);
+      this.callerId = callerId;
+    }
+
+    @Override
+    public void run() {
+      // in case Thread#Start is called, which will spawn new thread
+      Client.setAsynchronousMode(true);
+      for (int i = 0; i < count; i++) {
+        try {
+          final long param = TestIPC.RANDOM.nextLong();
+          runCall(i, param);
+        } catch (Exception e) {
+          LOG.fatal(String.format("Caller-%d Call-%d caught: %s", callerId, i,
+              StringUtils.stringifyException(e)));
+          failed = true;
+        }
+      }
+    }
+
+    private void runCall(final int idx, final long param)
+        throws InterruptedException, ExecutionException, IOException {
+      for (;;) {
+        try {
+          doCall(idx, param);
+          return;
+        } catch (AsyncCallLimitExceededException e) {
+          /**
+           * reached limit of async calls, fetch results of finished async calls
+           * to let follow-on calls go
+           */
+          start = end;
+          end = idx;
+          waitForReturnValues(start, end);
+        }
+      }
+    }
+
+    private void doCall(final int idx, final long param) throws IOException {
+      TestIPC.call(client, param, server, conf);
+      Future<LongWritable> returnFuture = Client.getReturnRpcResponse();
+      returnFutures.put(idx, returnFuture);
+      expectedValues.put(idx, param);
+    }
+
+    private void waitForReturnValues(final int start, final int end)
+        throws InterruptedException, ExecutionException {
+      for (int i = start; i < end; i++) {
+        LongWritable value = returnFutures.get(i).get();
+        if (expectedValues.get(i) != value.get()) {
+          LOG.fatal(String.format("Caller-%d Call-%d failed!", callerId, i));
+          failed = true;
+          break;
+        }
+      }
+    }
   }
 
-  public void internalTestSerial(int handlerCount, boolean handlerSleep,
+  @Test(timeout = 60000)
+  public void testAsyncCall() throws IOException, InterruptedException,
+      ExecutionException {
+    internalTestAsyncCall(3, false, 2, 5, 100);
+    internalTestAsyncCall(3, true, 2, 5, 10);
+  }
+
+  @Test(timeout = 60000)
+  public void testAsyncCallLimit() throws IOException,
+      InterruptedException, ExecutionException {
+    internalTestAsyncCallLimit(100, false, 5, 10, 500);
+  }
+
+  public void internalTestAsyncCall(int handlerCount, boolean handlerSleep,
       int clientCount, int callerCount, int callCount) throws IOException,
       InterruptedException, ExecutionException {
     Server server = new TestIPC.TestServer(handlerCount, handlerSleep, conf);
@@ -126,14 +226,83 @@ public class TestAsyncIPC {
       clients[i] = new Client(LongWritable.class, conf);
     }
 
-    SerialCaller[] callers = new SerialCaller[callerCount];
+    AsyncCaller[] callers = new AsyncCaller[callerCount];
     for (int i = 0; i < callerCount; i++) {
-      callers[i] = new SerialCaller(clients[i % clientCount], addr, callCount);
+      callers[i] = new AsyncCaller(clients[i % clientCount], addr, callCount);
       callers[i].start();
     }
     for (int i = 0; i < callerCount; i++) {
       callers[i].join();
       callers[i].waitForReturnValues();
+      String msg = String.format("Expected not failed for caller-%d: %s.", i,
+          callers[i]);
+      assertFalse(msg, callers[i].failed);
+    }
+    for (int i = 0; i < clientCount; i++) {
+      clients[i].stop();
+    }
+    server.stop();
+  }
+
+  @Test(timeout = 60000)
+  public void testCallGetReturnRpcResponseMultipleTimes() throws IOException,
+      InterruptedException, ExecutionException {
+    int handlerCount = 10, callCount = 100;
+    Server server = new TestIPC.TestServer(handlerCount, false, conf);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+    final Client client = new Client(LongWritable.class, conf);
+
+    int asyncCallCount = client.getAsyncCallCount();
+
+    try {
+      AsyncCaller caller = new AsyncCaller(client, addr, callCount);
+      caller.run();
+
+      caller.waitForReturnValues();
+      String msg = String.format(
+          "First time, expected not failed for caller: %s.", caller);
+      assertFalse(msg, caller.failed);
+
+      caller.waitForReturnValues();
+      assertTrue(asyncCallCount == client.getAsyncCallCount());
+      msg = String.format("Second time, expected not failed for caller: %s.",
+          caller);
+      assertFalse(msg, caller.failed);
+
+      assertTrue(asyncCallCount == client.getAsyncCallCount());
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
+  public void internalTestAsyncCallLimit(int handlerCount, boolean handlerSleep,
+      int clientCount, int callerCount, int callCount) throws IOException,
+      InterruptedException, ExecutionException {
+    Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 100);
+    Client.setPingInterval(conf, TestIPC.PING_INTERVAL);
+
+    Server server = new TestIPC.TestServer(handlerCount, handlerSleep, conf);
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    server.start();
+
+    Client[] clients = new Client[clientCount];
+    for (int i = 0; i < clientCount; i++) {
+      clients[i] = new Client(LongWritable.class, conf);
+    }
+
+    AsyncLimitlCaller[] callers = new AsyncLimitlCaller[callerCount];
+    for (int i = 0; i < callerCount; i++) {
+      callers[i] = new AsyncLimitlCaller(i, clients[i % clientCount], addr,
+          callCount);
+      callers[i].start();
+    }
+    for (int i = 0; i < callerCount; i++) {
+      callers[i].join();
+      callers[i].waitForReturnValues(callers[i].getStart(),
+          callers[i].getCount());
       String msg = String.format("Expected not failed for caller-%d: %s.", i,
           callers[i]);
       assertFalse(msg, callers[i].failed);
@@ -196,7 +365,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final SerialCaller caller = new SerialCaller(client, addr, 4);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 4);
       caller.run();
       caller.waitForReturnValues();
       String msg = String.format("Expected not failed for caller: %s.", caller);
@@ -235,7 +404,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
       caller.run();
       caller.waitForReturnValues();
       String msg = String.format("Expected not failed for caller: %s.", caller);
@@ -272,7 +441,7 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      final SerialCaller caller = new SerialCaller(client, addr, 10);
+      final AsyncCaller caller = new AsyncCaller(client, addr, 10);
       caller.run();
       caller.waitForReturnValues();
       String msg = String.format("Expected not failed for caller: %s.", caller);
@@ -313,9 +482,9 @@ public class TestAsyncIPC {
     try {
       InetSocketAddress addr = NetUtils.getConnectAddress(server);
       server.start();
-      SerialCaller[] callers = new SerialCaller[callerCount];
+      AsyncCaller[] callers = new AsyncCaller[callerCount];
       for (int i = 0; i < callerCount; ++i) {
-        callers[i] = new SerialCaller(client, addr, perCallerCallCount);
+        callers[i] = new AsyncCaller(client, addr, perCallerCallCount);
         callers[i].start();
       }
       for (int i = 0; i < callerCount; ++i) {
