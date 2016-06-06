@@ -229,7 +229,6 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   std::shared_ptr<LibhdfsEvents> event_handlers_;
   std::string cluster_name_;
 
-
   // Lock for mutable parts of this class that need to be thread safe
   std::mutex connection_state_lock_;
 
