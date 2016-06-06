@@ -775,6 +775,6 @@ public abstract class YarnClient extends AbstractService {
    * @throws YarnException
    * @throws IOException
    */
-  public abstract void signalContainer(ContainerId containerId,
+  public abstract void signalToContainer(ContainerId containerId,
       SignalContainerCommand command) throws YarnException, IOException;
 }

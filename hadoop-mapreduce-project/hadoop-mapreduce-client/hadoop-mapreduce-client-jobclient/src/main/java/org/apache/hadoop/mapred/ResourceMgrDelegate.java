@@ -496,8 +496,9 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public void signalContainer(ContainerId containerId, SignalContainerCommand command)
+  public void signalToContainer(ContainerId containerId,
+      SignalContainerCommand command)
       throws YarnException, IOException {
-    client.signalContainer(containerId, command);
+    client.signalToContainer(containerId, command);
   }
 }

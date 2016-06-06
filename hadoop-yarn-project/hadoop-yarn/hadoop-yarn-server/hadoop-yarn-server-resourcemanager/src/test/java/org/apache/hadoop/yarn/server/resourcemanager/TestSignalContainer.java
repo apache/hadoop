@@ -83,7 +83,7 @@ public class TestSignalContainer {
     Assert.assertEquals(request, contReceived);
 
     for(Container container : conts) {
-      rm.signalContainer(container.getId(),
+      rm.signalToContainer(container.getId(),
           SignalContainerCommand.OUTPUT_THREAD_DUMP);
     }
 

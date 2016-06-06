@@ -21,6 +21,11 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.yarn.proto.ContainerManagementProtocol.ContainerManagementProtocolService;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerResponseProto;
+
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 @Private
 @Unstable
@@ -29,4 +34,6 @@ import org.apache.hadoop.yarn.proto.ContainerManagementProtocol.ContainerManagem
     protocolVersion = 1)
 public interface ContainerManagementProtocolPB extends ContainerManagementProtocolService.BlockingInterface {
 
+  SignalContainerResponseProto signalToContainer(RpcController arg0,
+      SignalContainerRequestProto proto) throws ServiceException;
 }

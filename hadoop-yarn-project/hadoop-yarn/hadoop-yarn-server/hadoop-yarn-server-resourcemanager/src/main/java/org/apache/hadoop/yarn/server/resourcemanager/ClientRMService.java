@@ -1625,7 +1625,7 @@ public class ClientRMService extends AbstractService implements
    * to RMNodeImpl so that the next NM heartbeat will pick up the signal request
    */
   @Override
-  public SignalContainerResponse signalContainer(
+  public SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
     ContainerId containerId = request.getContainerId();
 

@@ -284,7 +284,7 @@ public class ApplicationCLI extends YarnCLI {
       if (signalArgs.length == 2) {
         command = SignalContainerCommand.valueOf(signalArgs[1]);
       }
-      signalContainer(containerId, command);
+      signalToContainer(containerId, command);
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(title, opts);
@@ -299,11 +299,11 @@ public class ApplicationCLI extends YarnCLI {
    * @param command the signal command
    * @throws YarnException
    */
-  private void signalContainer(String containerIdStr,
+  private void signalToContainer(String containerIdStr,
       SignalContainerCommand command) throws YarnException, IOException {
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     sysout.println("Signalling container " + containerIdStr);
-    client.signalContainer(containerId, command);
+    client.signalToContainer(containerId, command);
   }
 
   /**
