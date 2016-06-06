@@ -196,22 +196,35 @@ public class TestDFSPermission {
     return fs.getFileStatus(path).getPermission().toShort();
   }
 
-  /* create a file/directory with the default umask and permission */
   private void create(OpType op, Path name) throws IOException {
-    create(op, name, DEFAULT_UMASK, new FsPermission(DEFAULT_PERMISSION));
+    create(fs, conf, op, name);
+  }
+
+  /* create a file/directory with the default umask and permission */
+  static void create(final FileSystem fs, final Configuration fsConf,
+      OpType op, Path name) throws IOException {
+    create(fs, fsConf, op, name, DEFAULT_UMASK, new FsPermission(
+        DEFAULT_PERMISSION));
+  }
+
+  private void create(OpType op, Path name, short umask,
+      FsPermission permission)
+      throws IOException {
+    create(fs, conf, op, name, umask, permission);
   }
 
   /* create a file/directory with the given umask and permission */
-  private void create(OpType op, Path name, short umask, 
-      FsPermission permission) throws IOException {
+  static void create(final FileSystem fs, final Configuration fsConf,
+      OpType op, Path name, short umask, FsPermission permission)
+      throws IOException {
     // set umask in configuration, converting to padded octal
-    conf.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
+    fsConf.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
 
     // create the file/directory
     switch (op) {
     case CREATE:
       FSDataOutputStream out = fs.create(name, permission, true, 
-          conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+          fsConf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
           fs.getDefaultReplication(name), fs.getDefaultBlockSize(name), null);
       out.close();
       break;
@@ -359,7 +372,7 @@ public class TestDFSPermission {
   final static private String DIR_NAME = "dir";
   final static private String FILE_DIR_NAME = "filedir";
 
-  private enum OpType {CREATE, MKDIRS, OPEN, SET_REPLICATION,
+  enum OpType {CREATE, MKDIRS, OPEN, SET_REPLICATION,
     GET_FILEINFO, IS_DIR, EXISTS, GET_CONTENT_LENGTH, LIST, RENAME, DELETE
   };
 
@@ -615,7 +628,7 @@ public class TestDFSPermission {
   /* A random permission generator that guarantees that each permission
    * value is generated only once.
    */
-  static private class PermissionGenerator {
+  static class PermissionGenerator {
     private final Random r;
     private final short[] permissions = new short[MAX_PERMISSION + 1];
     private int numLeft = MAX_PERMISSION + 1;
