@@ -298,6 +298,9 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
       Error(stat);
       return nullptr;
     }
+    if (f && fileEventCallback) {
+      f->SetFileEventCallback(fileEventCallback.value());
+    }
     return new hdfsFile_internal(f);
   } catch (const std::exception & e) {
     ReportException(e);

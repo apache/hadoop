@@ -231,7 +231,7 @@ void FileHandleImpl::AsyncPreadSome(
   // Wrap the DN in a block reader to handle the state and logic of the
   //    block request protocol
   std::shared_ptr<BlockReader> reader;
-  reader = CreateBlockReader(BlockReaderOptions(), dn);
+  reader = CreateBlockReader(BlockReaderOptions(), dn, event_handlers_);
 
   // Lambdas cannot capture copies of member variables so we'll make explicit
   //    copies for it
@@ -240,7 +240,7 @@ void FileHandleImpl::AsyncPreadSome(
   auto cluster_name = cluster_name_;
 
   auto read_handler = [reader, event_handlers, cluster_name, path, dn_id, handler](const Status & status, size_t transferred) {
-    auto event_resp = event_handlers->call(FILE_DN_READ_EVENT, cluster_name.c_str(), path.c_str(), transferred);
+  event_response event_resp = event_handlers->call(FILE_DN_READ_EVENT, cluster_name.c_str(), path.c_str(), transferred);
 #ifndef NDEBUG
     if (event_resp.response() == event_response::kTest_Error) {
       handler(event_resp.status(), dn_id, transferred);
@@ -254,7 +254,7 @@ void FileHandleImpl::AsyncPreadSome(
   auto connect_handler = [handler,event_handlers,cluster_name,path,read_handler,block,offset_within_block,size_within_block, buffers, reader, dn_id, client_name]
           (Status status, std::shared_ptr<DataNodeConnection> dn) {
     (void)dn;
-    auto event_resp = event_handlers->call(FILE_DN_CONNECT_EVENT, cluster_name.c_str(), path.c_str(), 0);
+    event_response event_resp = event_handlers->call(FILE_DN_CONNECT_EVENT, cluster_name.c_str(), path.c_str(), 0);
 #ifndef NDEBUG
     if (event_resp.response() == event_response::kTest_Error) {
       status = event_resp.status();
@@ -276,9 +276,10 @@ void FileHandleImpl::AsyncPreadSome(
 }
 
 std::shared_ptr<BlockReader> FileHandleImpl::CreateBlockReader(const BlockReaderOptions &options,
-                                               std::shared_ptr<DataNodeConnection> dn)
+                                                               std::shared_ptr<DataNodeConnection> dn,
+                                                               std::shared_ptr<LibhdfsEvents> event_handlers)
 {
-  std::shared_ptr<BlockReader> reader = std::make_shared<BlockReaderImpl>(options, dn, cancel_state_);
+  std::shared_ptr<BlockReader> reader = std::make_shared<BlockReaderImpl>(options, dn, cancel_state_, event_handlers);
 
   LOG_TRACE(kFileHandle, << "FileHandleImpl::CreateBlockReader(" << FMT_THIS_ADDR
                          << ", ..., dnconn=" << dn.get()

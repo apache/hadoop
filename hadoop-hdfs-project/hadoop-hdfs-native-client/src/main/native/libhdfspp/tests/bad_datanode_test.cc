@@ -93,9 +93,10 @@ public:
   std::shared_ptr<MockReader> mock_reader_ = std::make_shared<MockReader>();
 protected:
   std::shared_ptr<BlockReader> CreateBlockReader(const BlockReaderOptions &options,
-                                                 std::shared_ptr<DataNodeConnection> dn) override
+                                                 std::shared_ptr<DataNodeConnection> dn,
+                                                 std::shared_ptr<hdfs::LibhdfsEvents> event_handlers) override
   {
-    (void) options; (void) dn;
+      (void) options; (void) dn; (void) event_handlers;
     assert(mock_reader_);
     return mock_reader_;
   }
