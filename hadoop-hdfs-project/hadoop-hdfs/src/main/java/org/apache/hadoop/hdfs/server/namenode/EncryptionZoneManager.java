@@ -97,7 +97,7 @@ public class EncryptionZoneManager {
     }
   }
 
-  private final TreeMap<Long, EncryptionZoneInt> encryptionZones;
+  private TreeMap<Long, EncryptionZoneInt> encryptionZones = null;
   private final FSDirectory dir;
   private final int maxListEncryptionZonesResponses;
 
@@ -108,7 +108,6 @@ public class EncryptionZoneManager {
    */
   public EncryptionZoneManager(FSDirectory dir, Configuration conf) {
     this.dir = dir;
-    encryptionZones = new TreeMap<Long, EncryptionZoneInt>();
     maxListEncryptionZonesResponses = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
         DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES_DEFAULT
@@ -145,6 +144,9 @@ public class EncryptionZoneManager {
       CipherSuite suite, CryptoProtocolVersion version, String keyName) {
     final EncryptionZoneInt ez = new EncryptionZoneInt(
         inodeId, suite, version, keyName);
+    if (encryptionZones == null) {
+      encryptionZones = new TreeMap<>();
+    }
     encryptionZones.put(inodeId, ez);
   }
 
@@ -155,7 +157,9 @@ public class EncryptionZoneManager {
    */
   void removeEncryptionZone(Long inodeId) {
     assert dir.hasWriteLock();
-    encryptionZones.remove(inodeId);
+    if (hasCreatedEncryptionZone()) {
+      encryptionZones.remove(inodeId);
+    }
   }
 
   /**
@@ -203,6 +207,9 @@ public class EncryptionZoneManager {
   private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
+    if (!hasCreatedEncryptionZone()) {
+      return null;
+    }
     List<INode> inodes = iip.getReadOnlyINodes();
     for (int i = inodes.size() - 1; i >= 0; i--) {
       final INode inode = inodes.get(i);
@@ -340,6 +347,10 @@ public class EncryptionZoneManager {
   BatchedListEntries<EncryptionZone> listEncryptionZones(long prevId)
       throws IOException {
     assert dir.hasReadLock();
+    if (!hasCreatedEncryptionZone()) {
+      final List<EncryptionZone> emptyZones = Lists.newArrayList();
+      return new BatchedListEntries<>(emptyZones, false);
+    }
     NavigableMap<Long, EncryptionZoneInt> tailMap = encryptionZones.tailMap
         (prevId, false);
     final int numResponses = Math.min(maxListEncryptionZonesResponses,
@@ -373,5 +384,15 @@ public class EncryptionZoneManager {
     }
     final boolean hasMore = (numResponses < tailMap.size());
     return new BatchedListEntries<EncryptionZone>(zones, hasMore);
+  }
+
+  /**
+   * @return Whether there has been any attempt to create an encryption zone in
+   * the cluster at all. If not, it is safe to quickly return null when
+   * checking the encryption information of any file or directory in the
+   * cluster.
+   */
+  public boolean hasCreatedEncryptionZone() {
+    return encryptionZones != null;
   }
 }
