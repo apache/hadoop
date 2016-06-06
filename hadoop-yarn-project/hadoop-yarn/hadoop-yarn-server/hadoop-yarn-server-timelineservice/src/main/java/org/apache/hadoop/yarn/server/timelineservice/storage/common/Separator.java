@@ -20,12 +20,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Used to separate row qualifiers, column qualifiers and compount fields.
+ * Used to separate row qualifiers, column qualifiers and compound fields.
  */
 public enum Separator {
 
@@ -53,25 +54,39 @@ public enum Separator {
    */
   TAB("\t", "%3$");
 
+  // a reserved character that starts each of the encoded values and is encoded
+  // first in order to escape naturally occurring instances of encoded values
+  // although it can be expressed as an enum instance, we define them as private
+  // variables to hide it from callers
+  private static final String PERCENT = "%";
+  private static final String PERCENT_ENCODED = "%9$";
+
+  private static final Pattern PERCENT_PATTERN =
+      Pattern.compile(PERCENT, Pattern.LITERAL);
+  private static final String PERCENT_REPLACEMENT =
+      Matcher.quoteReplacement(PERCENT);
+
+  private static final Pattern PERCENT_ENCODED_PATTERN =
+      Pattern.compile(PERCENT_ENCODED, Pattern.LITERAL);
+  private static final String PERCENT_ENCODED_REPLACEMENT =
+      Matcher.quoteReplacement(PERCENT_ENCODED);
+
   /**
    * The string value of this separator.
    */
   private final String value;
 
   /**
-   * The URLEncoded version of this separator.
-   */
-  private final String encodedValue;
-
-  /**
    * The bye representation of value.
    */
   private final byte[] bytes;
 
-  /**
-   * The value quoted so that it can be used as a safe regex.
-   */
-  private final String quotedValue;
+  // pre-compiled patterns and quoted replacements for optimization
+  private final Pattern valuePattern;
+  private final String valueReplacement;
+
+  private final Pattern encodedValuePattern;
+  private final String encodedValueReplacement;
 
   /**
    * Indicator for variable size of an individual segment in a split. The
@@ -97,7 +112,6 @@ public enum Separator {
    */
   private Separator(String value, String encodedValue) {
     this.value = value;
-    this.encodedValue = encodedValue;
 
     // validation
     if (value == null || value.length() == 0 || encodedValue == null
@@ -107,7 +121,11 @@ public enum Separator {
     }
 
     this.bytes = Bytes.toBytes(value);
-    this.quotedValue = Pattern.quote(value);
+    this.valuePattern = Pattern.compile(value, Pattern.LITERAL);
+    this.valueReplacement = Matcher.quoteReplacement(value);
+
+    this.encodedValuePattern = Pattern.compile(encodedValue, Pattern.LITERAL);
+    this.encodedValueReplacement = Matcher.quoteReplacement(encodedValue);
   }
 
   /**
@@ -119,6 +137,13 @@ public enum Separator {
 
   /**
    * Used to make token safe to be used with this separator without collisions.
+   * It <em>must</em> be paired with {@link #decode(String)} for it to be
+   * decoded correctly.
+   * <p>
+   * If you need to encode a given string for multiple separators,
+   * {@link #encode(String, Separator...)} should be used over successive
+   * invocations of this method. It will result in a more compact version of the
+   * encoded value.
    *
    * @param token Token to be encoded.
    * @return the token with any occurrences of this separator URLEncoded.
@@ -128,11 +153,29 @@ public enum Separator {
       // Nothing to replace
       return token;
     }
-    return token.replace(value, encodedValue);
+    // first encode the percent to escape naturally occurring encoded values
+    String escaped = encodePercent(token);
+    return encodeSingle(escaped, this);
+  }
+
+  private static String replace(String token, Pattern pattern,
+      String replacement) {
+    return pattern.matcher(token).replaceAll(replacement);
+  }
+
+  private static String encodeSingle(String token, Separator separator) {
+    return replace(token, separator.valuePattern,
+        separator.encodedValueReplacement);
+  }
+
+  private static String encodePercent(String token) {
+    return replace(token, PERCENT_PATTERN, PERCENT_ENCODED_REPLACEMENT);
   }
 
   /**
-   * Decode the token encoded using {@link #encode}.
+   * Decode the token encoded using {@link #encode(String)}. It <em>must</em> be
+   * used for the result encoded with {@link #encode(String)} to be able to
+   * recover the original.
    *
    * @param token Token to be decoded.
    * @return the token with any occurrences of the encoded separator replaced by
@@ -143,13 +186,30 @@ public enum Separator {
       // Nothing to replace
       return token;
     }
-    return token.replace(encodedValue, value);
+    String escaped = decodeSingle(token, this);
+    // decode percent to de-escape
+    return decodePercent(escaped);
+  }
+
+  private static String decodeSingle(String token, Separator separator) {
+    return replace(token, separator.encodedValuePattern,
+        separator.valueReplacement);
+  }
+
+  private static String decodePercent(String token) {
+    return replace(token, PERCENT_ENCODED_PATTERN, PERCENT_REPLACEMENT);
   }
 
   /**
-   * Encode the given separators in the token with their encoding equivalent.
-   * This means that when encoding is already present in the token itself, this
-   * is not a reversible process. See also {@link #decode(String, Separator...)}
+   * Encode the given separators in the token with their encoding equivalents.
+   * It <em>must</em> be paired with {@link #decode(byte[], Separator...)} or
+   * {@link #decode(String, Separator...)} with the same separators for it to be
+   * decoded correctly.
+   * <p>
+   * If you need to encode a given string for multiple separators, this form of
+   * encoding should be used over successive invocations of
+   * {@link #encode(String)}. It will result in a more compact version of the
+   * encoded value.
    *
    * @param token containing possible separators that need to be encoded.
    * @param separators to be encoded in the token with their URLEncoding
@@ -158,22 +218,25 @@ public enum Separator {
    *         separators encoded.
    */
   public static byte[] encode(String token, Separator... separators) {
-    if (token == null) {
+    if (token == null || token.length() == 0) {
       return EMPTY_BYTES;
     }
     String result = token;
+    // first encode the percent to escape naturally occurring encoded values
+    result = encodePercent(token);
     for (Separator separator : separators) {
       if (separator != null) {
-        result = separator.encode(result);
+        result = encodeSingle(result, separator);
       }
     }
     return Bytes.toBytes(result);
   }
 
   /**
-   * Decode the given separators in the token with their decoding equivalent.
-   * This means that when encoding is already present in the token itself, this
-   * is not a reversible process.
+   * Decode the given separators in the token with their decoding equivalents.
+   * It <em>must</em> be used for the result encoded with
+   * {@link #encode(String, Separator...)} with the same separators to be able
+   * to recover the original.
    *
    * @param token containing possible separators that need to be encoded.
    * @param separators to be encoded in the token with their URLEncoding
@@ -189,9 +252,10 @@ public enum Separator {
   }
 
   /**
-   * Decode the given separators in the token with their decoding equivalent.
-   * This means that when encoding is already present in the token itself, this
-   * is not a reversible process.
+   * Decode the given separators in the token with their decoding equivalents.
+   * It <em>must</em> be used for the result encoded with
+   * {@link #encode(String, Separator...)} with the same separators to be able
+   * to recover the original.
    *
    * @param token containing possible separators that need to be encoded.
    * @param separators to be encoded in the token with their URLEncoding
@@ -206,10 +270,11 @@ public enum Separator {
     String result = token;
     for (Separator separator : separators) {
       if (separator != null) {
-        result = separator.decode(result);
+        result = decodeSingle(result, separator);
       }
     }
-    return result;
+    // decode percent to de-escape
+    return decodePercent(result);
   }
 
   /**
@@ -309,7 +374,7 @@ public enum Separator {
   public Collection<String> splitEncoded(String compoundValue) {
     List<String> result = new ArrayList<String>();
     if (compoundValue != null) {
-      for (String val : compoundValue.split(quotedValue)) {
+      for (String val : valuePattern.split(compoundValue)) {
         result.add(decode(val));
       }
     }

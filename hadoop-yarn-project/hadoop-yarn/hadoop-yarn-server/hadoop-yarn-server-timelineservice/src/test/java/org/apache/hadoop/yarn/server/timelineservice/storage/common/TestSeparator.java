@@ -34,7 +34,7 @@ public class TestSeparator {
 
   private static String villain = "Dr. Heinz Doofenshmirtz";
   private static String special =
-      ".   *   |   ?   +   \t   (   )   [   ]   {   }   ^   $  \\ \"";
+      ".   *   |   ?   +   \t   (   )   [   ]   {   }   ^   $  \\ \"  %";
 
   /**
    *
@@ -81,6 +81,12 @@ public class TestSeparator {
         Separator.VALUES, Separator.SPACE);
 
   }
+  @Test
+  public void testEncodedValues() {
+    testEncodeDecode("Double-escape %2$ and %9$ or %%2$ or %%3$, nor  %%%2$" +
+        "= no problem!",
+        Separator.QUALIFIERS, Separator.VALUES, Separator.SPACE, Separator.TAB);
+   }
 
   @Test
   public void testSplits() {
