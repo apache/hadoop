@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
@@ -464,6 +465,7 @@ public class S3AFileSystem extends FileSystem {
           new BasicAWSCredentialsProvider(
               creds.getAccessKey(), creds.getAccessSecret()),
           new InstanceProfileCredentialsProvider(),
+          new EnvironmentVariableCredentialsProvider(),
           new AnonymousAWSCredentialsProvider()
       );
 
