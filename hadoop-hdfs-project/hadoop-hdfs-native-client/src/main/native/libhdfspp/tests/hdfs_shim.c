@@ -24,9 +24,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Cheat for now and use the same hdfsBuilder as libhdfs */
+/* (libhdfspp doesn't have an hdfsBuilder yet). */
 struct hdfsBuilder {
-  struct libhdfs_hdfsBuilder * libhdfsBuilder;
-  struct libhdfspp_hdfsBuilder * libhdfsppBuilder;
+    int forceNewInstance;
+    const char *nn;
+    tPort port;
+    const char *kerbTicketCachePath;
+    const char *userName;
+    struct hdfsBuilderConfOpt *opts;
 };
 
 /* Shim structs and functions that delegate to libhdfspp and libhdfs. */
@@ -92,13 +98,13 @@ hdfsFS hdfsConnectNewInstance(const char* nn, tPort port) {
 
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
   hdfsFS ret = calloc(1, sizeof(struct hdfs_internal));
-  ret->libhdfsppRep = libhdfspp_hdfsBuilderConnect(bld->libhdfsppBuilder);
+  ret->libhdfsppRep = libhdfspp_hdfsConnect(bld->nn, bld->port);
   if (!ret->libhdfsppRep) {
     free(ret);
     ret = NULL;
   } else {
     /* Destroys bld object. */
-    ret->libhdfsRep = libhdfs_hdfsBuilderConnect(bld->libhdfsBuilder);
+    ret->libhdfsRep = libhdfs_hdfsBuilderConnect(bld);
     if (!ret->libhdfsRep) {
       libhdfspp_hdfsDisconnect(ret->libhdfsppRep);
       free(ret);
@@ -109,61 +115,49 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld) {
 }
 
 struct hdfsBuilder *hdfsNewBuilder(void) {
-  struct hdfsBuilder * ret = calloc(1, sizeof(struct hdfsBuilder));
-  ret->libhdfsppBuilder = libhdfspp_hdfsNewBuilder();
-  ret->libhdfsBuilder = libhdfs_hdfsNewBuilder();
-  return ret;
+  return libhdfs_hdfsNewBuilder();
 }
 
 void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld) {
-  libhdfs_hdfsBuilderSetForceNewInstance(bld->libhdfsBuilder);
-//  libhdfspp_hdfsBuilderSetForceNewInstance(bld->libhdfsppBuilder);
+  libhdfs_hdfsBuilderSetForceNewInstance(bld);
 }
 
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn) {
-  libhdfs_hdfsBuilderSetNameNode(bld->libhdfsBuilder, nn);
-  libhdfspp_hdfsBuilderSetNameNode(bld->libhdfsppBuilder, nn);
+  libhdfs_hdfsBuilderSetNameNode(bld, nn);
 }
 
 void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port) {
-  libhdfs_hdfsBuilderSetNameNodePort(bld->libhdfsBuilder, port);
-  libhdfspp_hdfsBuilderSetNameNodePort(bld->libhdfsppBuilder, port);
+  libhdfs_hdfsBuilderSetNameNodePort(bld, port);
 }
 
 void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName) {
-  libhdfs_hdfsBuilderSetUserName(bld->libhdfsBuilder, userName);
-  libhdfspp_hdfsBuilderSetUserName(bld->libhdfsppBuilder, userName);
+  libhdfs_hdfsBuilderSetUserName(bld, userName);
 }
 
 void hdfsBuilderSetKerbTicketCachePath(struct hdfsBuilder *bld,
                                const char *kerbTicketCachePath) {
-  libhdfs_hdfsBuilderSetKerbTicketCachePath(bld->libhdfsBuilder, kerbTicketCachePath);
-//  libhdfspp_hdfsBuilderSetKerbTicketCachePath(bld->libhdfsppBuilder, kerbTicketCachePath);
+  libhdfs_hdfsBuilderSetKerbTicketCachePath(bld, kerbTicketCachePath);
 }
 
 void hdfsFreeBuilder(struct hdfsBuilder *bld) {
-  libhdfs_hdfsFreeBuilder(bld->libhdfsBuilder);
-  libhdfspp_hdfsFreeBuilder(bld->libhdfsppBuilder);
-  free(bld);
+  libhdfs_hdfsFreeBuilder(bld);
 }
 
 int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
                           const char *val) {
-  fprintf(stderr, "hdfs_shim::hdfsBuilderConfSetStr) key=%s val=%s\n", key, val);
-  libhdfs_hdfsBuilderConfSetStr(bld->libhdfsBuilder, key, val);
-  return libhdfspp_hdfsBuilderConfSetStr(bld->libhdfsppBuilder, key, val);
+  return libhdfs_hdfsBuilderConfSetStr(bld, key, val);
 }
 
 int hdfsConfGetStr(const char *key, char **val) {
-  return libhdfspp_hdfsConfGetStr(key, val);
+  return libhdfs_hdfsConfGetStr(key, val);
 }
 
 int hdfsConfGetInt(const char *key, int32_t *val) {
-  return libhdfspp_hdfsConfGetInt(key, val);
+  return libhdfs_hdfsConfGetInt(key, val);
 }
 
 void hdfsConfStrFree(char *val) {
-  libhdfspp_hdfsConfStrFree(val);
+  libhdfs_hdfsConfStrFree(val);
 }
 
 int hdfsDisconnect(hdfsFS fs) {
