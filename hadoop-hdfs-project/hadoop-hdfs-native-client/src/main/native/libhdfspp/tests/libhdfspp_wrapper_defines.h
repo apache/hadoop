@@ -81,7 +81,6 @@
 #define hadoopRzBufferLength libhdfspp_hadoopRzBufferLength
 #define hadoopRzBufferGet libhdfspp_hadoopRzBufferGet
 #define hadoopRzBufferFree libhdfspp_hadoopRzBufferFree
-#define hdfsBuilder libhdfspp_hdfsBuilder
 #define hdfs_internal libhdfspp_hdfs_internal
 #define hdfsFS libhdfspp_hdfsFS
 #define hdfsFile_internal libhdfspp_hdfsFile_internal

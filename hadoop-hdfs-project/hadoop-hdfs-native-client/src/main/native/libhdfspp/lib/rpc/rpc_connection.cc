@@ -274,18 +274,9 @@ void RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
   }
 
   Status status;
-  if(event_handlers_) {
-    event_response event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
-#ifndef NDEBUG
-    if (event_resp.response() == event_response::kTest_Error) {
-      status = event_resp.status();
-    }
-#endif
-  }
-
-  if (status.ok() && h.has_exceptionclassname()) {
+  if (h.has_exceptionclassname()) {
     status =
-      Status::Exception(h.exceptionclassname().c_str(), h.errormsg().c_str());
+        Status::Exception(h.exceptionclassname().c_str(), h.errormsg().c_str());
   }
 
   io_service().post([req, response, status]() {

@@ -386,7 +386,7 @@ TEST(RpcEngineTest, TestEventCallbacks)
   });
   io_service.run();
   ASSERT_TRUE(complete);
-  ASSERT_EQ(8, callbacks.size());
+  ASSERT_EQ(7, callbacks.size());
   ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[0]); // error
   ASSERT_EQ(FS_NN_CONNECT_EVENT, callbacks[1]); // reconnect
   ASSERT_EQ(FS_NN_READ_EVENT, callbacks[2]); // makes an error

@@ -24,6 +24,7 @@
 
 #include <future>
 
+
 namespace hdfs {
 
 #define FMT_CONT_AND_PARENT_ADDR "this=" << (void*)this << ", parent=" << (void*)parent_
@@ -104,17 +105,7 @@ void BlockReaderImpl::AsyncRequestBlock(
   m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;
     if (stat.ok()) {
       const auto &resp = s.response;
-
-    if(this->event_handlers_) {
-      event_response event_resp = this->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
-#ifndef NDEBUG
-      if (stat.ok() && event_resp.response() == event_response::kTest_Error) {
-        stat = Status::Error("Test error");
-      }
-#endif
-    }
-
-      if (stat.ok() && resp.status() == ::hadoop::hdfs::Status::SUCCESS) {
+      if (resp.status() == ::hadoop::hdfs::Status::SUCCESS) {
         if (resp.has_readopchecksuminfo()) {
           const auto &checksum_info = resp.readopchecksuminfo();
           chunk_padding_bytes_ = offset - checksum_info.chunkoffset();
@@ -171,14 +162,6 @@ struct BlockReaderImpl::ReadPacketHeader
         assert(v && "Failed to parse the header");
         parent_->state_ = kReadChecksum;
       }
-      if(parent_->event_handlers_) {
-        event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
-#ifndef NDEBUG
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
-          status = Status::Error("Test error");
-        }
-#endif
-      }
       next(status);
     };
 
@@ -231,21 +214,13 @@ struct BlockReaderImpl::ReadChecksum : continuation::Continuation {
       return;
     }
 
-    auto handler = [parent, next, this](const asio::error_code &ec, size_t) {
+    auto handler = [parent, next](const asio::error_code &ec, size_t) {
       Status status;
       if (ec) {
         status = Status(ec.value(), ec.message().c_str());
       } else {
         parent->state_ =
             parent->chunk_padding_bytes_ ? kReadPadding : kReadData;
-      }
-      if(parent->event_handlers_) {
-        event_response event_resp = parent->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
-#ifndef NDEBUG
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
-          status = Status::Error("Test error");
-        }
-#endif
       }
       next(status);
     };
@@ -273,6 +248,7 @@ struct BlockReaderImpl::ReadData : continuation::Continuation {
   virtual void Run(const Next &next) override {
     LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadData::Run("
                             << FMT_CONT_AND_PARENT_ADDR << ") called");
+
     auto handler =
         [next, this](const asio::error_code &ec, size_t transferred) {
           Status status;
@@ -284,14 +260,6 @@ struct BlockReaderImpl::ReadData : continuation::Continuation {
           parent_->packet_data_read_bytes_ += transferred;
           if (parent_->packet_data_read_bytes_ >= parent_->header_.datalen()) {
             parent_->state_ = kReadPacketHeader;
-          }
-          if(parent_->event_handlers_) {
-            event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
-#ifndef NDEBUG
-            if (status.ok() && event_resp.response() == event_response::kTest_Error) {
-                status = Status::Error("Test error");
-            }
-#endif
           }
           next(status);
         };
@@ -324,21 +292,12 @@ struct BlockReaderImpl::ReadPadding : continuation::Continuation {
       return;
     }
 
-    auto h = [next, this](const Status &stat) {
-      Status status = stat;
+    auto h = [next, this](const Status &status) {
       if (status.ok()) {
         assert(reinterpret_cast<const int &>(*bytes_transferred_) ==
                parent_->chunk_padding_bytes_);
         parent_->chunk_padding_bytes_ = 0;
         parent_->state_ = kReadData;
-      }
-      if(parent_->event_handlers_) {
-        event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
-#ifndef NDEBUG
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
-          status = Status::Error("Test error");
-        }
-#endif
       }
       next(status);
     };
@@ -375,19 +334,10 @@ struct BlockReaderImpl::AckRead : continuation::Continuation {
     m->Push(
         continuation::WriteDelimitedPBMessage(parent_->dn_, &m->state()));
 
-    m->Run([this, next](const Status &stat,
+    m->Run([this, next](const Status &status,
                         const hadoop::hdfs::ClientReadStatusProto &) {
-      Status status = stat;
       if (status.ok()) {
         parent_->state_ = BlockReaderImpl::kFinished;
-      }
-      if(parent_->event_handlers_) {
-        event_response event_resp = parent_->event_handlers_->call(FILE_DN_READ_EVENT, "", "", 0);
-#ifndef NDEBUG
-        if (status.ok() && event_resp.response() == event_response::kTest_Error) {
-          status = Status::Error("Test error");
-        }
-#endif
       }
       next(status);
     });
