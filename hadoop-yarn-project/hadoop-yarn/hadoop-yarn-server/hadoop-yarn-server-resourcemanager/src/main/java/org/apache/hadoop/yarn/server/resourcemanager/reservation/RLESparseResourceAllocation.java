@@ -510,7 +510,11 @@ public class RLESparseResourceAllocation {
           long previous = a.floorKey(start);
           a = a.tailMap(previous, true);
         }
-        a = a.headMap(end, true);
+
+        if (end < a.lastKey()) {
+          a = a.headMap(end, true);
+        }
+
       }
       RLESparseResourceAllocation ret =
           new RLESparseResourceAllocation(a, resourceCalculator);
