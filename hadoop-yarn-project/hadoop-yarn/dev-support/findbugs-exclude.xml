@@ -517,6 +517,11 @@
   </Match>
 
   <Match>
+    <Class name="org.apache.hadoop.yarn.api.records.ResourceRequest" />
+    <Method name="equals" />
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
+  </Match>
+  <Match>
     <Package name="org.apache.hadoop.yarn.api.records.impl.pb" />
     <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
   </Match>
