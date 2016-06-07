@@ -283,6 +283,28 @@ public class TestRLESparseResourceAllocation {
   }
 
   @Test
+  public void testRangeOverlapping() {
+    ResourceCalculator resCalc = new DefaultResourceCalculator();
+
+    RLESparseResourceAllocation r =
+        new RLESparseResourceAllocation(resCalc);
+    int[] alloc = {10, 10, 10, 10, 10, 10};
+    int start = 100;
+    Set<Entry<ReservationInterval, Resource>> inputs =
+        generateAllocation(start, alloc, false).entrySet();
+    for (Entry<ReservationInterval, Resource> ip : inputs) {
+      r.addInterval(ip.getKey(), ip.getValue());
+    }
+    long s = r.getEarliestStartTime();
+    long d = r.getLatestNonNullTime();
+
+    // tries to trigger "out-of-range" bug
+    r =  r.getRangeOverlapping(s, d);
+    r = r.getRangeOverlapping(s-1, d-1);
+    r = r.getRangeOverlapping(s+1, d+1);
+  }
+
+  @Test
   public void testBlocks() {
     ResourceCalculator resCalc = new DefaultResourceCalculator();
 
