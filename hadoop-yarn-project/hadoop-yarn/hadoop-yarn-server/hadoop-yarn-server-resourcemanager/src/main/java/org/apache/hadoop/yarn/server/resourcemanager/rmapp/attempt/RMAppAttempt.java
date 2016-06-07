@@ -190,7 +190,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * Get the {@link BlacklistManager} that manages blacklists for AM failures
    * @return the {@link BlacklistManager} that tracks AM failures.
    */
-  BlacklistManager getAMBlacklist();
+  BlacklistManager getAMBlacklistManager();
 
   /**
    * the start time of the application.

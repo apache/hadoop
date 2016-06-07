@@ -375,13 +375,7 @@ public class FifoScheduler extends
             " #ask=" + ask.size());
       }
 
-      if (application.isWaitingForAMContainer()) {
-        // Allocate is for AM and update AM blacklist for this
-        application.updateAMBlacklist(
-            blacklistAdditions, blacklistRemovals);
-      } else {
-        application.updateBlacklist(blacklistAdditions, blacklistRemovals);
-      }
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
 
       Resource headroom = application.getHeadroom();
       application.setApplicationHeadroomForMetrics(headroom);
@@ -516,10 +510,10 @@ public class FifoScheduler extends
       application.showRequests();
       synchronized (application) {
         // Check if this resource is on the blacklist
-        if (SchedulerAppUtils.isBlacklisted(application, node, LOG)) {
+        if (SchedulerAppUtils.isPlaceBlacklisted(application, node, LOG)) {
           continue;
         }
-        
+
         for (Priority priority : application.getPriorities()) {
           int maxContainers = 
             getMaxAllocatableContainers(application, priority, node, 

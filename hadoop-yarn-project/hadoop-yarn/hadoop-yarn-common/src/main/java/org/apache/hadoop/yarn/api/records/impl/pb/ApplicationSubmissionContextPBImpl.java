@@ -24,7 +24,6 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.AMBlackListingRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -34,7 +33,6 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.proto.YarnProtos.AMBlackListingRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProtoOrBuilder;
@@ -65,7 +63,6 @@ extends ApplicationSubmissionContext {
   private ResourceRequest amResourceRequest = null;
   private LogAggregationContext logAggregationContext = null;
   private ReservationId reservationId = null;
-  private AMBlackListingRequest amBlackListRequest = null;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -133,10 +130,6 @@ extends ApplicationSubmissionContext {
     }
     if (this.reservationId != null) {
       builder.setReservationId(convertToProtoFormat(this.reservationId));
-    }
-    if (this.amBlackListRequest != null) {
-      builder.setAmBlacklistingRequest(
-          convertToProtoFormat(this.amBlackListRequest));
     }
   }
 
@@ -420,29 +413,6 @@ extends ApplicationSubmissionContext {
     return p.getKeepContainersAcrossApplicationAttempts();
   }
 
-  @Override
-  public AMBlackListingRequest getAMBlackListRequest() {
-    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
-    if (amBlackListRequest != null) {
-      return amBlackListRequest;
-    }
-    if (!p.hasAmBlacklistingRequest()) {
-      return null;
-    }
-    amBlackListRequest = convertFromProtoFormat(p.getAmBlacklistingRequest());
-    return amBlackListRequest;
-  }
-
-  @Override
-  public void setAMBlackListRequest(AMBlackListingRequest amBlackListRequest) {
-    maybeInitBuilder();
-    if (amBlackListRequest == null) {
-      builder.clearAmBlacklistingRequest();
-      return;
-    }
-    this.amBlackListRequest = amBlackListRequest;
-  }
-
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
     return new PriorityPBImpl(p);
   }
@@ -483,16 +453,6 @@ extends ApplicationSubmissionContext {
 
   private ResourceProto convertToProtoFormat(Resource t) {
     return ((ResourcePBImpl)t).getProto();
-  }
-
-  private AMBlackListingRequestPBImpl convertFromProtoFormat(
-      AMBlackListingRequestProto a) {
-    return new AMBlackListingRequestPBImpl(a);
-  }
-
-  private AMBlackListingRequestProto convertToProtoFormat(
-      AMBlackListingRequest a) {
-    return ((AMBlackListingRequestPBImpl) a).getProto();
   }
 
   @Override

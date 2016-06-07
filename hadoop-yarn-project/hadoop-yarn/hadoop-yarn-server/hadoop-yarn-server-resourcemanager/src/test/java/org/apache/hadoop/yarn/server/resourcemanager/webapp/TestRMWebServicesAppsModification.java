@@ -22,7 +22,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,15 +50,12 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
-import org.apache.hadoop.yarn.api.records.AMBlackListingRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -72,7 +76,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CredentialsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LogAggregationContextInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -101,6 +111,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.client.filter.LoggingFilter;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
@@ -827,17 +838,6 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
         System.currentTimeMillis(), 1).toString();
     appInfo.setReservationId(reservationId);
 
-    // Set AMBlackListingRequestInfo
-    boolean isAMBlackListingEnabled = true;
-    float disableFailureThreshold = 0.01f;
-    AMBlackListingRequestInfo amBlackListingRequestInfo
-        = new AMBlackListingRequestInfo();
-    amBlackListingRequestInfo.setAMBlackListingEnabled(
-        isAMBlackListingEnabled);
-    amBlackListingRequestInfo.setBlackListingDisableFailureThreshold(
-        disableFailureThreshold);
-    appInfo.setAMBlackListingRequestInfo(amBlackListingRequestInfo);
-
     ClientResponse response =
         this.constructWebResource(urlPath).accept(acceptMedia)
           .entity(appInfo, contentMedia).post(ClientResponse.class);
@@ -911,13 +911,6 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
 
     // Check ReservationId
     assertEquals(reservationId, app.getReservationId().toString());
-
-    // Check AMBlackListingRequestInfo
-    AMBlackListingRequest amBlackListingRequest = asc.getAMBlackListRequest();
-    assertEquals(isAMBlackListingEnabled,
-        amBlackListingRequest.isAMBlackListingEnabled());
-    assertTrue(disableFailureThreshold == amBlackListingRequest
-        .getBlackListingDisableFailureThreshold());
 
     response =
         this.constructWebResource("apps", appId).accept(acceptMedia)

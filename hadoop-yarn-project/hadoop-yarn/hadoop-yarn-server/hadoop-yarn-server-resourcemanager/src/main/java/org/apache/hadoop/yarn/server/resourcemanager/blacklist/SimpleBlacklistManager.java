@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.blacklist;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 
 /**
  * Maintains a list of failed nodes and returns that as long as number of
@@ -58,8 +59,8 @@ public class SimpleBlacklistManager implements BlacklistManager {
   }
 
   @Override
-  public BlacklistUpdates getBlacklistUpdates() {
-    BlacklistUpdates ret;
+  public ResourceBlacklistRequest getBlacklistUpdates() {
+    ResourceBlacklistRequest ret;
     List<String> blacklist = new ArrayList<>(blacklistNodes);
     final int currentBlacklistSize = blacklist.size();
     final double failureThreshold = this.blacklistDisableFailureThreshold *
@@ -70,13 +71,15 @@ public class SimpleBlacklistManager implements BlacklistManager {
             "failure threshold ratio " + blacklistDisableFailureThreshold +
             " out of total usable nodes " + numberOfNodeManagerHosts);
       }
-      ret = new BlacklistUpdates(blacklist, EMPTY_LIST);
+      ret = ResourceBlacklistRequest.newInstance(blacklist, EMPTY_LIST);
     } else {
       LOG.warn("Ignoring Blacklists, blacklist size " + currentBlacklistSize
           + " is more than failure threshold ratio "
           + blacklistDisableFailureThreshold + " out of total usable nodes "
           + numberOfNodeManagerHosts);
-      ret = new BlacklistUpdates(EMPTY_LIST, blacklist);
+      // TODO: After the threshold hits, we will keep sending a long list
+      // every time a new AM is to be scheduled.
+      ret = ResourceBlacklistRequest.newInstance(EMPTY_LIST, blacklist);
     }
     return ret;
   }
