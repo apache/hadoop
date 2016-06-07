@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -233,6 +234,9 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
 
     YarnConfiguration conf = createNMConfigForDistributeNodeLabels();
     conf.setLong(YarnConfiguration.NM_NODE_LABELS_RESYNC_INTERVAL, 2000);
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "0.0.0.0:"
+        + ServerSocketUtil.getPort(8040, 10));
+
     nm.init(conf);
     resourceTracker.resetNMHeartbeatReceiveFlag();
     nm.start();
@@ -329,6 +333,9 @@ public class TestNodeStatusUpdaterForLabels extends NodeLabelTestBase {
     };
     dummyLabelsProviderRef.setNodeLabels(toNodeLabelSet("P"));
     YarnConfiguration conf = createNMConfigForDistributeNodeLabels();
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "0.0.0.0:"
+        + ServerSocketUtil.getPort(8040, 10));
+
     nm.init(conf);
     resourceTracker.resetNMHeartbeatReceiveFlag();
     nm.start();
