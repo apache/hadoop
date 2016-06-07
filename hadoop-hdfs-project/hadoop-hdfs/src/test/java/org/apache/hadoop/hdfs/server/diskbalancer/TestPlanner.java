@@ -456,4 +456,51 @@ public class TestPlanner {
     assertEquals(newPlan.getVolumeSetPlans().size(),
         copy.getVolumeSetPlans().size());
   }
+
+  @Test
+  public void testGreedyPlannerLargeDisksWithData() throws Exception {
+    NullConnector nullConnector = new NullConnector();
+    DiskBalancerCluster cluster = new DiskBalancerCluster(nullConnector);
+
+    DiskBalancerDataNode node =
+        new DiskBalancerDataNode(UUID.randomUUID().toString());
+
+    // All disks have same capacity of data
+    DiskBalancerVolume volume1 = createVolume("volume1", 1968, 88);
+    DiskBalancerVolume volume2 = createVolume("volume2", 1968, 88);
+    DiskBalancerVolume volume3 = createVolume("volume3", 1968, 111);
+    DiskBalancerVolume volume4 = createVolume("volume4", 1968, 111);
+    DiskBalancerVolume volume5 = createVolume("volume5", 1968, 30);
+    DiskBalancerVolume volume6 = createVolume("volume6", 1563, 30);
+    DiskBalancerVolume volume7 = createVolume("volume7", 1563, 30);
+    DiskBalancerVolume volume8 = createVolume("volume8", 1563, 30);
+    DiskBalancerVolume volume9 = createVolume("volume9", 1563, 210);
+
+
+
+
+    node.addVolume(volume1);
+    node.addVolume(volume2);
+    node.addVolume(volume3);
+
+    node.addVolume(volume4);
+    node.addVolume(volume5);
+    node.addVolume(volume6);
+
+    node.addVolume(volume7);
+    node.addVolume(volume8);
+    node.addVolume(volume9);
+
+
+    nullConnector.addNode(node);
+    cluster.readClusterInfo();
+    Assert.assertEquals(1, cluster.getNodes().size());
+
+    GreedyPlanner planner = new GreedyPlanner(1.0f, node);
+    NodePlan plan = new NodePlan(node.getDataNodeName(),
+        node.getDataNodePort());
+    planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
+
+    assertTrue(plan.getVolumeSetPlans().size() > 2);
+  }
 }

@@ -23,6 +23,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
 import org.apache.hadoop.hdfs.tools.DiskBalancer;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
@@ -32,7 +36,9 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class that implements Plan Command.
@@ -111,7 +117,10 @@ public class PlanCommand extends Command {
           cmd.getOptionValue(DiskBalancer.PLAN));
     }
     this.thresholdPercentage = getThresholdPercentage(cmd);
+
+    LOG.debug("threshold Percentage is {}", this.thresholdPercentage);
     setNodesToProcess(node);
+    populatePathNames(node);
 
     List<NodePlan> plans = getCluster().computePlan(this.thresholdPercentage);
     setPlanParams(plans);
@@ -134,6 +143,32 @@ public class PlanCommand extends Command {
 
     if (cmd.hasOption(DiskBalancer.VERBOSE)) {
       printToScreen(plans);
+    }
+  }
+
+
+  /**
+   * Reads the Physical path of the disks we are balancing. This is needed to
+   * make the disk balancer human friendly and not used in balancing.
+   *
+   * @param node - Disk Balancer Node.
+   */
+  private void populatePathNames(DiskBalancerDataNode node) throws IOException {
+    String dnAddress = node.getDataNodeIP() + ":" + node.getDataNodePort();
+    ClientDatanodeProtocol dnClient = getDataNodeProxy(dnAddress);
+    String volumeNameJson = dnClient.getDiskBalancerSetting(
+        DiskBalancerConstants.DISKBALANCER_VOLUME_NAME);
+    ObjectMapper mapper = new ObjectMapper();
+
+    @SuppressWarnings("unchecked")
+    Map<String, String> volumeMap =
+        mapper.readValue(volumeNameJson, HashMap.class);
+    for (DiskBalancerVolumeSet set : node.getVolumeSets().values()) {
+      for (DiskBalancerVolume vol : set.getVolumes()) {
+        if (volumeMap.containsKey(vol.getUuid())) {
+          vol.setPath(volumeMap.get(vol.getUuid()));
+        }
+      }
     }
   }
 
@@ -198,9 +233,11 @@ public class PlanCommand extends Command {
     for (NodePlan plan : plans) {
       for (Step step : plan.getVolumeSetPlans()) {
         if (this.bandwidth > 0) {
+          LOG.debug("Setting bandwidth to {}", this.bandwidth);
           step.setBandwidth(this.bandwidth);
         }
         if (this.maxError > 0) {
+          LOG.debug("Setting max error to {}", this.maxError);
           step.setMaxDiskErrors(this.maxError);
         }
       }

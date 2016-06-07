@@ -155,7 +155,6 @@ class DBNameNodeConnector implements ClusterConnector {
           .READ_ONLY_SHARED) || report.isFailed());
       volume.setStorageType(storage.getStorageType().name());
       volume.setIsTransient(storage.getStorageType().isTransient());
-      //volume.setPath(storage.getVolumePath());
       node.addVolume(volume);
     }
 
