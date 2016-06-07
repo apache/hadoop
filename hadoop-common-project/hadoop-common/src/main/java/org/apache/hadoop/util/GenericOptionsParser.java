@@ -26,6 +26,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -115,6 +116,7 @@ public class GenericOptionsParser {
   private static final Log LOG = LogFactory.getLog(GenericOptionsParser.class);
   private Configuration conf;
   private CommandLine commandLine;
+  private final boolean parseSuccessful;
 
   /**
    * Create an options parser with the given options to parse the args.
@@ -167,7 +169,7 @@ public class GenericOptionsParser {
    */
   public GenericOptionsParser(Configuration conf,
       Options options, String[] args) throws IOException {
-    parseGeneralOptions(options, conf, args);
+    parseSuccessful = parseGeneralOptions(options, conf, args);
     this.conf = conf;
   }
 
@@ -205,10 +207,18 @@ public class GenericOptionsParser {
   }
 
   /**
+   * Query for the parse operation succeeded
+   * @return true if there was no error parsing the CLI
+   */
+  public boolean isParseSuccessful() {
+    return parseSuccessful;
+  }
+
+  /**
    * Specify properties of each generic option
    */
   @SuppressWarnings("static-access")
-  private static Options buildGeneralOptions(Options opts) {
+  protected Options buildGeneralOptions(Options opts) {
     Option fs = OptionBuilder.withArgName("local|namenode:port")
     .hasArg()
     .withDescription("specify a namenode")
@@ -271,7 +281,7 @@ public class GenericOptionsParser {
 
     if (line.hasOption("jt")) {
       String optionValue = line.getOptionValue("jt");
-      if (optionValue.equalsIgnoreCase("local")) {
+      if (optionValue.toLowerCase(Locale.ENGLISH).equals("local")) {
         conf.set("mapreduce.framework.name", optionValue);
       }
 
@@ -366,14 +376,14 @@ public class GenericOptionsParser {
   }
 
   /**
-   * takes input as a comma separated list of files
+   * Takes input as a comma separated list of files
    * and verifies if they exist. It defaults for file:///
    * if the files specified do not have a scheme.
    * it returns the paths uri converted defaulting to file:///.
    * So an input of  /home/user/file1,/home/user/file2 would return
    * file:///home/user/file1,file:///home/user/file2
    * @param files
-   * @return
+   * @return the comma separated list of file URLs
    */
   private String validateFiles(String files, Configuration conf) 
       throws IOException  {
@@ -475,22 +485,26 @@ public class GenericOptionsParser {
    * Parse the user-specified options, get the generic options, and modify
    * configuration accordingly
    * @param opts Options to use for parsing args.
-   * @param conf Configuration to be modified
+   * @param c Configuration to be modified
    * @param args User-specified arguments
+   * @return true if the parse was successful
    */
-  private void parseGeneralOptions(Options opts, Configuration conf, 
+  private boolean parseGeneralOptions(Options opts, Configuration c,
       String[] args) throws IOException {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
+    boolean parsed = false;
     try {
       commandLine = parser.parse(opts, preProcessForWindows(args), true);
-      processGeneralOptions(conf, commandLine);
+      processGeneralOptions(c, commandLine);
+      parsed = true;
     } catch(ParseException e) {
       LOG.warn("options parsing failed: "+e.getMessage());
 
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("general options are: ", opts);
     }
+    return parsed;
   }
 
   /**
