@@ -196,7 +196,7 @@ public class TestComputeFairShares {
   private void verifyMemoryShares(int... shares) {
     Assert.assertEquals(scheds.size(), shares.length);
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getMemory());
+      Assert.assertEquals(shares[i], scheds.get(i).getFairShare().getMemorySize());
     }
   }
   

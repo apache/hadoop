@@ -160,7 +160,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         }
         Resource capToAssign = res.getResourcesAtTime(now);
         float targetCapacity = 0f;
-        if (planResources.getMemory() > 0
+        if (planResources.getMemorySize() > 0
             && planResources.getVirtualCores() > 0) {
           if (shouldResize) {
             capToAssign =

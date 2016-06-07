@@ -115,7 +115,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       AppInfo appInfo = new AppInfo(rm, app, true, WebAppUtils.getHttpSchemePrefix(conf));
       String percent = StringUtils.format("%.1f", appInfo.getProgress());
       ApplicationAttemptId attemptId = app.getCurrentAppAttempt().getAppAttemptId();
-      int fairShare = fsinfo.getAppFairShare(attemptId);
+      long fairShare = fsinfo.getAppFairShare(attemptId);
       if (fairShare == FairSchedulerInfo.INVALID_FAIR_SHARE) {
         // FairScheduler#applications don't have the entry. Skip it.
         continue;

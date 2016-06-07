@@ -23,7 +23,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -32,37 +32,37 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 public class CSQueueMetrics extends QueueMetrics {
 
   @Metric("AM memory limit in MB")
-  MutableGaugeInt AMResourceLimitMB;
+  MutableGaugeLong AMResourceLimitMB;
   @Metric("AM CPU limit in virtual cores")
-  MutableGaugeInt AMResourceLimitVCores;
+  MutableGaugeLong AMResourceLimitVCores;
   @Metric("Used AM memory limit in MB")
-  MutableGaugeInt usedAMResourceMB;
+  MutableGaugeLong usedAMResourceMB;
   @Metric("Used AM CPU limit in virtual cores")
-  MutableGaugeInt usedAMResourceVCores;
+  MutableGaugeLong usedAMResourceVCores;
 
   CSQueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
     super(ms, queueName, parent, enableUserMetrics, conf);
   }
 
-  public int getAMResourceLimitMB() {
+  public long getAMResourceLimitMB() {
     return AMResourceLimitMB.value();
   }
 
-  public int getAMResourceLimitVCores() {
+  public long getAMResourceLimitVCores() {
     return AMResourceLimitVCores.value();
   }
 
-  public int getUsedAMResourceMB() {
+  public long getUsedAMResourceMB() {
     return usedAMResourceMB.value();
   }
 
-  public int getUsedAMResourceVCores() {
+  public long getUsedAMResourceVCores() {
     return usedAMResourceVCores.value();
   }
 
   public void setAMResouceLimit(Resource res) {
-    AMResourceLimitMB.set(res.getMemory());
+    AMResourceLimitMB.set(res.getMemorySize());
     AMResourceLimitVCores.set(res.getVirtualCores());
   }
 
@@ -74,7 +74,7 @@ public class CSQueueMetrics extends QueueMetrics {
   }
 
   public void incAMUsed(String user, Resource res) {
-    usedAMResourceMB.incr(res.getMemory());
+    usedAMResourceMB.incr(res.getMemorySize());
     usedAMResourceVCores.incr(res.getVirtualCores());
     CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
     if (userMetrics != null) {
@@ -83,7 +83,7 @@ public class CSQueueMetrics extends QueueMetrics {
   }
 
   public void decAMUsed(String user, Resource res) {
-    usedAMResourceMB.decr(res.getMemory());
+    usedAMResourceMB.decr(res.getMemorySize());
     usedAMResourceVCores.decr(res.getVirtualCores());
     CSQueueMetrics userMetrics = (CSQueueMetrics) getUserMetrics(user);
     if (userMetrics != null) {

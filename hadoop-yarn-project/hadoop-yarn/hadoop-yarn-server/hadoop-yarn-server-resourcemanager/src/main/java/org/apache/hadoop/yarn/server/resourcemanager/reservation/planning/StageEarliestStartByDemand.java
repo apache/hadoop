@@ -88,7 +88,7 @@ public class StageEarliestStartByDemand implements StageEarliestStart {
 
   // Weight = total memory consumption of stage
   protected double calcWeight(ReservationRequest stage) {
-    return (stage.getDuration() * stage.getCapability().getMemory())
+    return (stage.getDuration() * stage.getCapability().getMemorySize())
         * (stage.getNumContainers());
   }
 

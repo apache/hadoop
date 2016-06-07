@@ -873,7 +873,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions {
 
   private void checkPendingResource(CSQueue queue, String partition, int pending) {
     ResourceUsage ru = queue.getQueueResourceUsage();
-    Assert.assertEquals(pending, ru.getPending(partition).getMemory());
+    Assert.assertEquals(pending, ru.getPending(partition).getMemorySize());
   }
 
   private void buildEnv(String labelsConfig, String nodesConfig,

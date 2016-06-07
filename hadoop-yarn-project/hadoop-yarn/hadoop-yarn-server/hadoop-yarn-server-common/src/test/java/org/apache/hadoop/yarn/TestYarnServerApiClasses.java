@@ -180,7 +180,7 @@ public class TestYarnServerApiClasses {
     assertEquals(1, copy.getContainersToDecrease().get(0)
         .getId().getContainerId());
     assertEquals(1024, copy.getContainersToDecrease().get(1)
-        .getResource().getMemory());
+        .getResource().getMemorySize());
   }
 
   /**
@@ -201,7 +201,7 @@ public class TestYarnServerApiClasses {
 
     assertEquals(8080, copy.getHttpPort());
     assertEquals(9090, copy.getNodeId().getPort());
-    assertEquals(10000, copy.getResource().getMemory());
+    assertEquals(10000, copy.getResource().getMemorySize());
     assertEquals(2, copy.getResource().getVirtualCores());
 
   }
@@ -273,7 +273,7 @@ public class TestYarnServerApiClasses {
     assertEquals(1, copy.getIncreasedContainers().get(0)
         .getId().getContainerId());
     assertEquals(4096, copy.getIncreasedContainers().get(1)
-        .getResource().getMemory());
+        .getResource().getMemorySize());
   }
 
   @Test

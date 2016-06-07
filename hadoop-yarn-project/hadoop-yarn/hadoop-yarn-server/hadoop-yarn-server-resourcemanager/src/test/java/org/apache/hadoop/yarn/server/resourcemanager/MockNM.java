@@ -50,8 +50,10 @@ public class MockNM {
 
   private int responseId;
   private NodeId nodeId;
-  private final int memory;
-  private final int vCores;
+
+  private long memory;
+  private int vCores;
+
   private ResourceTrackerService resourceTracker;
   private int httpPort = 2;
   private MasterKey currentContainerTokenMasterKey;
@@ -142,7 +144,7 @@ public class MockNM {
     this.currentContainerTokenMasterKey =
         registrationResponse.getContainerTokenMasterKey();
     this.currentNMTokenMasterKey = registrationResponse.getNMTokenMasterKey();
-    return registrationResponse;    
+    return registrationResponse;
   }
   
   public NodeHeartbeatResponse nodeHeartbeat(boolean isHealthy) throws Exception {
@@ -211,11 +213,11 @@ public class MockNM {
             .getKeyId()) {
       this.currentNMTokenMasterKey = masterKeyFromRM;
     }
-    
+
     return heartbeatResponse;
   }
 
-  public int getMemory() {
+  public long getMemory() {
     return memory;
   }
 

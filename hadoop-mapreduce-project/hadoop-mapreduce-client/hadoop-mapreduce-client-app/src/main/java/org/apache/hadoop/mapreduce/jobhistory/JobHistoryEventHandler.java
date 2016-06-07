@@ -689,9 +689,9 @@ public class JobHistoryEventHandler extends AbstractService
       NormalizedResourceEvent normalizedResourceEvent = 
             (NormalizedResourceEvent) event;
       if (normalizedResourceEvent.getTaskType() == TaskType.MAP) {
-        summary.setResourcesPerMap(normalizedResourceEvent.getMemory());
+        summary.setResourcesPerMap((int) normalizedResourceEvent.getMemory());
       } else if (normalizedResourceEvent.getTaskType() == TaskType.REDUCE) {
-        summary.setResourcesPerReduce(normalizedResourceEvent.getMemory());
+        summary.setResourcesPerReduce((int) normalizedResourceEvent.getMemory());
       }
       break;  
     case JOB_INITED:

@@ -193,7 +193,7 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
             .synchronizePlan(ReservationSystemTestUtil.reservationQ, false);
         if (rm.getRMContext().getReservationSystem()
             .getPlan(ReservationSystemTestUtil.reservationQ).getTotalCapacity()
-            .getMemory() > 0) {
+            .getMemorySize() > 0) {
           break;
         }
         LOG.info("Waiting for node capacity to be added to plan");

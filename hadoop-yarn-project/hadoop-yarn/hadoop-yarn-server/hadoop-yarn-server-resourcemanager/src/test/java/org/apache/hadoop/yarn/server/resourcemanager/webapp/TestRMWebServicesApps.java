@@ -1410,7 +1410,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("clusterUsagePerc doesn't match", 50.0f, clusterUsagePerc, 0.01f);
     assertEquals("numContainers doesn't match", 1, numContainers);
     assertEquals("preemptedResourceMB doesn't match", app
-        .getRMAppMetrics().getResourcePreempted().getMemory(),
+        .getRMAppMetrics().getResourcePreempted().getMemorySize(),
         preemptedResourceMB);
     assertEquals("preemptedResourceVCores doesn't match", app
         .getRMAppMetrics().getResourcePreempted().getVirtualCores(),

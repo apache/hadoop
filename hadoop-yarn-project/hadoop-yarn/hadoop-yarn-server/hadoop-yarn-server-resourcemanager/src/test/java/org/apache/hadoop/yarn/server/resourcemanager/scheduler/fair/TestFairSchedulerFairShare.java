@@ -109,10 +109,10 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
 
     for (FSLeafQueue leaf : leafQueues) {
       if (leaf.getName().startsWith("root.parentA")) {
-        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity,
+        assertEquals(0, (double) leaf.getFairShare().getMemorySize() / nodeCapacity,
             0);
       } else if (leaf.getName().startsWith("root.parentB")) {
-        assertEquals(0, (double) leaf.getFairShare().getMemory() / nodeCapacity,
+        assertEquals(0, (double) leaf.getFairShare().getMemorySize() / nodeCapacity,
             0);
       }
     }
@@ -137,12 +137,12 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         100,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA1", false).getFairShare()
-            .getMemory() / nodeCapacity * 100, 0.1);
+            .getMemorySize() / nodeCapacity * 100, 0.1);
     assertEquals(
         0,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA2", false).getFairShare()
-            .getMemory() / nodeCapacity, 0.1);
+            .getMemorySize() / nodeCapacity, 0.1);
 
     verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
         nodeCapacity);
@@ -167,7 +167,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
           33,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getMemorySize()
               / nodeCapacity * 100, .9);
     }
 
@@ -200,7 +200,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
           40,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getMemorySize()
               / nodeCapacity * 100, .9);
     }
 
@@ -210,7 +210,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         10,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentB.childB1", false).getFairShare()
-            .getMemory()
+            .getMemorySize()
             / nodeCapacity * 100, .9);
 
     verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
@@ -237,7 +237,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
           50,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getMemorySize()
               / nodeCapacity * 100, .9);
     }
     // Let app under childA1 complete. This should cause the fair share
@@ -254,13 +254,13 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         0,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA1", false).getFairShare()
-            .getMemory()
+            .getMemorySize()
             / nodeCapacity * 100, 0);
     assertEquals(
         100,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentA.childA2", false).getFairShare()
-            .getMemory()
+            .getMemorySize()
             / nodeCapacity * 100, 0.1);
 
     verifySteadyFairShareMemory(scheduler.getQueueManager().getLeafQueues(),
@@ -293,7 +293,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
           40,
           (double) scheduler.getQueueManager()
               .getLeafQueue("root.parentA.childA" + i, false).getFairShare()
-              .getMemory()
+              .getMemorySize()
               / nodeMem * 100, .9);
       assertEquals(
           40,
@@ -308,7 +308,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
         10,
         (double) scheduler.getQueueManager()
             .getLeafQueue("root.parentB.childB1", false).getFairShare()
-            .getMemory()
+            .getMemorySize()
             / nodeMem * 100, .9);
     assertEquals(
         10,
@@ -322,13 +322,13 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     for (FSLeafQueue leaf : leafQueues) {
       if (leaf.getName().startsWith("root.parentA")) {
         assertEquals(0.2,
-            (double) leaf.getSteadyFairShare().getMemory() / nodeMem, 0.001);
+            (double) leaf.getSteadyFairShare().getMemorySize() / nodeMem, 0.001);
         assertEquals(0.2,
             (double) leaf.getSteadyFairShare().getVirtualCores() / nodeVCores,
             0.001);
       } else if (leaf.getName().startsWith("root.parentB")) {
         assertEquals(0.05,
-            (double) leaf.getSteadyFairShare().getMemory() / nodeMem, 0.001);
+            (double) leaf.getSteadyFairShare().getMemorySize() / nodeMem, 0.001);
         assertEquals(0.1,
             (double) leaf.getSteadyFairShare().getVirtualCores() / nodeVCores,
             0.001);
@@ -348,11 +348,11 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     for (FSLeafQueue leaf : leafQueues) {
       if (leaf.getName().startsWith("root.parentA")) {
         assertEquals(0.2,
-            (double) leaf.getSteadyFairShare().getMemory() / nodeCapacity,
+            (double) leaf.getSteadyFairShare().getMemorySize() / nodeCapacity,
             0.001);
       } else if (leaf.getName().startsWith("root.parentB")) {
         assertEquals(0.05,
-            (double) leaf.getSteadyFairShare().getMemory() / nodeCapacity,
+            (double) leaf.getSteadyFairShare().getMemorySize() / nodeCapacity,
             0.001);
       }
     }

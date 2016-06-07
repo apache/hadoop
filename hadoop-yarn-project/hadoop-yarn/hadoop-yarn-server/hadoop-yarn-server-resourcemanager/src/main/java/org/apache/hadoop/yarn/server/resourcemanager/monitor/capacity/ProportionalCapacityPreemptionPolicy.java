@@ -1083,17 +1083,17 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
     void appendLogString(StringBuilder sb) {
       sb.append(queueName).append(", ")
-        .append(current.getMemory()).append(", ")
+        .append(current.getMemorySize()).append(", ")
         .append(current.getVirtualCores()).append(", ")
-        .append(pending.getMemory()).append(", ")
+        .append(pending.getMemorySize()).append(", ")
         .append(pending.getVirtualCores()).append(", ")
-        .append(guaranteed.getMemory()).append(", ")
+        .append(guaranteed.getMemorySize()).append(", ")
         .append(guaranteed.getVirtualCores()).append(", ")
-        .append(idealAssigned.getMemory()).append(", ")
+        .append(idealAssigned.getMemorySize()).append(", ")
         .append(idealAssigned.getVirtualCores()).append(", ")
-        .append(toBePreempted.getMemory()).append(", ")
+        .append(toBePreempted.getMemorySize()).append(", ")
         .append(toBePreempted.getVirtualCores() ).append(", ")
-        .append(actuallyPreempted.getMemory()).append(", ")
+        .append(actuallyPreempted.getMemorySize()).append(", ")
         .append(actuallyPreempted.getVirtualCores());
     }
 

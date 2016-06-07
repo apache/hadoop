@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProtoOrBuilder;
 
@@ -53,39 +53,49 @@ public class ResourcePBImpl extends Resource {
     }
     viaProto = false;
   }
-    
-  
+
   @Override
+  @SuppressWarnings("deprecation")
   public int getMemory() {
-    ResourceProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getMemory());
+    return (int) getMemorySize();
   }
 
   @Override
-  public void setMemory(int memory) {
+  public long getMemorySize() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getMemory();
+  }
+
+  @Override
+  public void setMemory(long memory) {
     maybeInitBuilder();
-    builder.setMemory((memory));
+    builder.setMemory(memory);
   }
 
   @Override
   public int getVirtualCores() {
-    ResourceProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getVirtualCores());
+    return (int) getVirtualCoresSize();
   }
 
   @Override
-  public void setVirtualCores(int vCores) {
+  public long getVirtualCoresSize() {
+    ResourceProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getVirtualCores();
+  }
+
+  @Override
+  public void setVirtualCores(long vCores) {
     maybeInitBuilder();
-    builder.setVirtualCores((vCores));
+    builder.setVirtualCores(vCores);
   }
 
   @Override
   public int compareTo(Resource other) {
-    int diff = this.getMemory() - other.getMemory();
+    long diff = this.getMemorySize() - other.getMemorySize();
     if (diff == 0) {
       diff = this.getVirtualCores() - other.getVirtualCores();
     }
-    return diff;
+    return diff == 0 ? 0 : (diff > 0 ? 1 : -1);
   }
   
   
