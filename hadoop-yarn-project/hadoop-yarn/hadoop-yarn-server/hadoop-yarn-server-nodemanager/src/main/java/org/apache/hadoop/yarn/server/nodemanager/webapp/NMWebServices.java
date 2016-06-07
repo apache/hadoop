@@ -37,7 +37,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -236,7 +236,6 @@ public class NMWebServices {
     }
     boolean downloadFile = parseBooleanParam(download);
     final long bytes = parseLongParam(size);
-
     try {
       final FileInputStream fis = ContainerLogsUtils.openLogFileForRead(
           containerIdStr, logFile, nmContext);
@@ -246,42 +245,46 @@ public class NMWebServices {
         @Override
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
-          int bufferSize = 65536;
-          byte[] buf = new byte[bufferSize];
-          long toSkip = 0;
-          long totalBytesToRead = fileLength;
-          if (bytes < 0) {
-            long absBytes = Math.abs(bytes);
-            if (absBytes < fileLength) {
-              toSkip = fileLength - absBytes;
-              totalBytesToRead = absBytes;
+          try {
+            int bufferSize = 65536;
+            byte[] buf = new byte[bufferSize];
+            long toSkip = 0;
+            long totalBytesToRead = fileLength;
+            if (bytes < 0) {
+              long absBytes = Math.abs(bytes);
+              if (absBytes < fileLength) {
+                toSkip = fileLength - absBytes;
+                totalBytesToRead = absBytes;
+              }
+              long skippedBytes = fis.skip(toSkip);
+              if (skippedBytes != toSkip) {
+                throw new IOException("The bytes were skipped are different "
+                    + "from the caller requested");
+              }
+            } else {
+              if (bytes < fileLength) {
+                totalBytesToRead = bytes;
+              }
             }
-            long skippedBytes = fis.skip(toSkip);
-            if (skippedBytes != toSkip) {
-              throw new IOException("The bytes were skipped are different "
-                  + "from the caller requested");
-            }
-          } else {
-            if (bytes < fileLength) {
-              totalBytesToRead = bytes;
-            }
-          }
 
-          long curRead = 0;
-          long pendingRead = totalBytesToRead - curRead;
-          int toRead = pendingRead > buf.length ? buf.length
-              : (int) pendingRead;
-          int len = fis.read(buf, 0, toRead);
-          while (len != -1 && curRead < totalBytesToRead) {
-            os.write(buf, 0, len);
-            curRead += len;
-
-            pendingRead = totalBytesToRead - curRead;
-            toRead = pendingRead > buf.length ? buf.length
+            long curRead = 0;
+            long pendingRead = totalBytesToRead - curRead;
+            int toRead = pendingRead > buf.length ? buf.length
                 : (int) pendingRead;
-            len = fis.read(buf, 0, toRead);
+            int len = fis.read(buf, 0, toRead);
+            while (len != -1 && curRead < totalBytesToRead) {
+              os.write(buf, 0, len);
+              curRead += len;
+
+              pendingRead = totalBytesToRead - curRead;
+              toRead = pendingRead > buf.length ? buf.length
+                  : (int) pendingRead;
+              len = fis.read(buf, 0, toRead);
+            }
+            os.flush();
+          } finally {
+            IOUtils.closeQuietly(fis);
           }
-          os.flush();
         }
       };
       ResponseBuilder resp = Response.ok(stream);
