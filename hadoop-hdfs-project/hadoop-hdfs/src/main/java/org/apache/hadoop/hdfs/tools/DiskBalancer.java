@@ -216,6 +216,10 @@ public class DiskBalancer extends Configured implements Tool {
     Option help =
         new Option(HELP, true, "Help about a command or this message");
     opt.addOption(help);
+
+    Option verbose = new Option(VERBOSE, "Print out the summary of the plan");
+    opt.addOption(verbose);
+
   }
 
   /**

@@ -163,10 +163,10 @@ public abstract class Command extends Configured {
       if (getClusterURI().getScheme().startsWith("file")) {
         diskBalancerLogs = new Path(
             System.getProperty("user.dir") + DEFAULT_LOG_DIR.toString() +
-                format.format(now));
+                Path.SEPARATOR + format.format(now));
       } else {
         diskBalancerLogs = new Path(DEFAULT_LOG_DIR.toString() +
-            format.format(now));
+            Path.SEPARATOR + format.format(now));
       }
     } else {
       diskBalancerLogs = new Path(path);
