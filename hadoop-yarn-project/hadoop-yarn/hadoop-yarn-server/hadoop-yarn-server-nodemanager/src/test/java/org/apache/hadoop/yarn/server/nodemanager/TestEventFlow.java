@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
@@ -91,6 +92,8 @@ public class TestEventFlow {
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, 
         remoteLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "0.0.0.0:"
+        + ServerSocketUtil.getPort(8040, 10));
 
     ContainerExecutor exec = new DefaultContainerExecutor();
     exec.setConf(conf);

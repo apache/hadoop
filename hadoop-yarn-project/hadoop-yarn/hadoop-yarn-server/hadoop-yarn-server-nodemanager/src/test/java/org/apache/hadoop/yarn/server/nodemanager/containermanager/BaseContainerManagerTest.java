@@ -172,6 +172,9 @@ public abstract class BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "0.0.0.0:"
+        + ServerSocketUtil.getPort(8040, 10));
+
 
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     // Default delSrvc
