@@ -61,7 +61,7 @@ public class ExecuteCommand extends Command {
     verifyCommandOptions(DiskBalancer.EXECUTE, cmd);
 
     String planFile = cmd.getOptionValue(DiskBalancer.EXECUTE);
-    Preconditions.checkArgument(planFile == null || planFile.isEmpty(),
+    Preconditions.checkArgument(planFile != null && !planFile.isEmpty(),
         "Invalid plan file specified.");
 
     String planData = null;
