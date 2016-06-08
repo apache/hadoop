@@ -175,8 +175,9 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
       }
 
       nodeStatusUpdater.sendOutofBandHeartBeat();
+    } else {
+      super.stopContainerInternal(containerID);
     }
-    super.stopContainerInternal(containerID);
   }
 
   /**
@@ -456,6 +457,18 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
             ContainerExitStatus.INVALID, this.context.getQueuingContext()
                 .getQueuedContainers().get(containerID).getResource(),
             executionType);
+      } else {
+        // Check if part of the stopped/killed queued containers.
+        for (ContainerTokenIdentifier cTokenId : this.context
+            .getQueuingContext().getKilledQueuedContainers().keySet()) {
+          if (cTokenId.getContainerID().equals(containerID)) {
+            return BuilderUtils.newContainerStatus(containerID,
+                org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
+                this.context.getQueuingContext().getKilledQueuedContainers()
+                    .get(cTokenId), ContainerExitStatus.ABORTED, cTokenId
+                        .getResource(), cTokenId.getExecutionType());
+          }
+        }
       }
     }
     return super.getContainerStatusInternal(containerID, nmTokenIdentifier);
