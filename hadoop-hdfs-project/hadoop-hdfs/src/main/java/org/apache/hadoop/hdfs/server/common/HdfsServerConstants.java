@@ -355,7 +355,6 @@ public interface HdfsServerConstants {
   }
   
   String NAMENODE_LEASE_HOLDER = "HDFS_NameNode";
-  long NAMENODE_LEASE_RECHECK_INTERVAL = 2000;
 
   String CRYPTO_XATTR_ENCRYPTION_ZONE =
       "raw.hdfs.crypto.encryption.zone";
