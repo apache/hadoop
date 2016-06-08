@@ -80,11 +80,9 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     store = createStore(SCALE);
     TimelineEntities entities = new TimelineEntities();
     entities.addEntity(createApplicationTimelineEntity(
-        ApplicationId.newInstance(0, SCALE + 1), true, true, false, false,
-        YarnApplicationState.FINISHED));
+        ApplicationId.newInstance(0, SCALE + 1), true, true, false, false));
     entities.addEntity(createApplicationTimelineEntity(
-        ApplicationId.newInstance(0, SCALE + 2), true, false, true, false,
-        YarnApplicationState.FINISHED));
+        ApplicationId.newInstance(0, SCALE + 2), true, false, true, false));
     store.put(entities);
   }
 
@@ -142,10 +140,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       if (i == 2) {
         entities.addEntity(createApplicationTimelineEntity(
-            appId, true, false, false, true, YarnApplicationState.FINISHED));
+            appId, true, false, false, true));
       } else {
         entities.addEntity(createApplicationTimelineEntity(
-            appId, false, false, false, false, YarnApplicationState.FINISHED));
+            appId, false, false, false, false));
       }
       store.put(entities);
       for (int j = 1; j <= scale; ++j) {
@@ -162,16 +160,6 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         }
       }
     }
-    TimelineEntities entities = new TimelineEntities();
-    ApplicationId appId = ApplicationId.newInstance(1234, 1);
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
-    entities.addEntity(createApplicationTimelineEntity(
-        appId, true, false, false, false, YarnApplicationState.RUNNING));
-    entities.addEntity(createAppAttemptTimelineEntity(appAttemptId));
-    entities.addEntity(createContainerEntity(containerId));
-    store.put(entities);
   }
 
   @Test
@@ -367,7 +355,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         historyManager.getApplications(Long.MAX_VALUE, 0L, Long.MAX_VALUE)
           .values();
     Assert.assertNotNull(apps);
-    Assert.assertEquals(SCALE + 2, apps.size());
+    Assert.assertEquals(SCALE + 1, apps.size());
     ApplicationId ignoredAppId = ApplicationId.newInstance(0, SCALE + 2);
     for (ApplicationReport app : apps) {
       Assert.assertNotEquals(ignoredAppId, app.getApplicationId());
@@ -479,8 +467,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
 
   private static TimelineEntity createApplicationTimelineEntity(
       ApplicationId appId, boolean emptyACLs, boolean noAttemptId,
-      boolean wrongAppId, boolean enableUpdateEvent,
-      YarnApplicationState state) {
+      boolean wrongAppId, boolean enableUpdateEvent) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     if (wrongAppId) {
@@ -530,7 +517,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     eventInfo.put(ApplicationMetricsConstants.FINAL_STATUS_EVENT_INFO,
         FinalApplicationStatus.UNDEFINED.toString());
     eventInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
-        state.toString());
+        YarnApplicationState.FINISHED.toString());
     if (!noAttemptId) {
       eventInfo.put(ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO,
           ApplicationAttemptId.newInstance(appId, 1));
@@ -635,8 +622,6 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO, 100);
     entityInfo
         .put(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO, -1);
-    entityInfo.put(ContainerMetricsConstants
-        .ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO, "http://test:1234");
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ContainerMetricsConstants.CREATED_EVENT_TYPE);

@@ -33,7 +33,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
@@ -216,8 +215,7 @@ public class NMWebServices {
   @Public
   @Unstable
   public Response getLogs(@PathParam("containerid") String containerIdStr,
-      @PathParam("filename") String filename,
-      @QueryParam("download") String download) {
+      @PathParam("filename") String filename) {
     ContainerId containerId;
     try {
       containerId = ConverterUtils.toContainerId(containerIdStr);
@@ -234,7 +232,7 @@ public class NMWebServices {
     } catch (YarnException ex) {
       return Response.serverError().entity(ex.getMessage()).build();
     }
-    boolean downloadFile = parseBooleanParam(download);
+    
     try {
       final FileInputStream fis = ContainerLogsUtils.openLogFileForRead(
           containerIdStr, logFile, nmContext);
@@ -252,22 +250,10 @@ public class NMWebServices {
           os.flush();
         }
       };
-      ResponseBuilder resp = Response.ok(stream);
-      if (downloadFile) {
-        resp.header("Content-Type", "application/octet-stream");
-        resp.header("Content-Disposition", "attachment; filename="
-            + logFile.getName());
-      }
-      return resp.build();
+      
+      return Response.ok(stream).build();
     } catch (IOException ex) {
       return Response.serverError().entity(ex.getMessage()).build();
     }
-  }
-
-  private boolean parseBooleanParam(String param) {
-    if (param != null) {
-      return ("true").equalsIgnoreCase(param);
-    }
-    return false;
   }
 }
