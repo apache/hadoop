@@ -379,7 +379,9 @@ public class LogsCLI extends Configured implements Tool {
       Configuration conf, String appId) throws ClientHandlerException,
       UniformInterfaceException, JSONException {
     Client webServiceClient = Client.create();
-    String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(conf);
+    String webAppAddress = WebAppUtils.getHttpSchemePrefix(conf) +
+        WebAppUtils.getWebAppBindURL(conf, YarnConfiguration.RM_BIND_HOST,
+        WebAppUtils.getRMWebAppURLWithoutScheme(conf));
     WebResource webResource = webServiceClient.resource(webAppAddress);
 
     ClientResponse response =
