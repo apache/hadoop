@@ -160,6 +160,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
           containerTokenId.getExecutionType());
 
       if (foundInQueue) {
+        LOG.info("Removing queued container with ID " + containerID);
         this.context.getQueuingContext().getKilledQueuedContainers().put(
             containerTokenId,
             "Queued container request removed by ApplicationMaster.");
@@ -500,6 +501,16 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
   @VisibleForTesting
   public int getNumAllocatedOpportunisticContainers() {
     return allocatedOpportunisticContainers.size();
+  }
+
+  @VisibleForTesting
+  public int getNumQueuedGuaranteedContainers() {
+    return queuedGuaranteedContainers.size();
+  }
+
+  @VisibleForTesting
+  public int getNumQueuedOpportunisticContainers() {
+    return queuedOpportunisticContainers.size();
   }
 
   class QueuingApplicationEventDispatcher implements
