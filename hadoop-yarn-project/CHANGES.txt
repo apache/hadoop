@@ -145,6 +145,9 @@ Release 2.7.3 - UNRELEASED
     YARN-4459. container-executor should only kill process groups (Jun Gong
     via jlowe)
 
+    YARN-5206. RegistrySecurity includes id:pass in exception text if
+    considered invalid (Steve Loughran via jlowe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
