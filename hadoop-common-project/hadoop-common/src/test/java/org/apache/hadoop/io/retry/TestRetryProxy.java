@@ -22,12 +22,14 @@ import static org.apache.hadoop.io.retry.RetryPolicies.RETRY_FOREVER;
 import static org.apache.hadoop.io.retry.RetryPolicies.TRY_ONCE_THEN_FAIL;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryByException;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryByRemoteException;
+import static org.apache.hadoop.io.retry.RetryPolicies.retryOtherThanRemoteException;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithProportionalSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumTimeWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.exponentialBackoffRetry;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -202,8 +204,29 @@ public class TestRetryProxy {
     } catch (RemoteException e) {
       // expected
     }
-  }  
-  
+  }
+
+  @Test
+  public void testRetryOtherThanRemoteException() throws Throwable {
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
+        Collections.<Class<? extends Exception>, RetryPolicy>singletonMap(
+            IOException.class, RETRY_FOREVER);
+
+    UnreliableInterface unreliable = (UnreliableInterface)
+        RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+            retryOtherThanRemoteException(TRY_ONCE_THEN_FAIL,
+                exceptionToPolicyMap));
+    // should retry with local IOException.
+    unreliable.failsOnceWithIOException();
+    try {
+      // won't get retry on remote exception
+      unreliable.failsOnceWithRemoteException();
+      fail("Should fail");
+    } catch (RemoteException e) {
+      // expected
+    }
+  }
+
   @Test
   public void testRetryInterruptible() throws Throwable {
     final UnreliableInterface unreliable = (UnreliableInterface)

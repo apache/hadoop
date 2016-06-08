@@ -148,6 +148,9 @@ Release 2.7.3 - UNRELEASED
     YARN-5206. RegistrySecurity includes id:pass in exception text if
     considered invalid (Steve Loughran via jlowe)
 
+    YARN-4288. Fixed RMProxy to retry on IOException from local host.
+    (Junping Du via jianhe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
