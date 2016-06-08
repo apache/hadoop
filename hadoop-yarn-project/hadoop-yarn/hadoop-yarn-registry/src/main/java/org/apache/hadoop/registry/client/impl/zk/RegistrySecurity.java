@@ -440,7 +440,7 @@ public class RegistrySecurity extends AbstractService {
    */
   public String digest(String idPasswordPair) throws IOException {
     if (StringUtils.isEmpty(idPasswordPair) || !isValid(idPasswordPair)) {
-      throw new IOException("Invalid id:password: " + idPasswordPair);
+      throw new IOException("Invalid id:password");
     }
     try {
       return DigestAuthenticationProvider.generateDigest(idPasswordPair);
