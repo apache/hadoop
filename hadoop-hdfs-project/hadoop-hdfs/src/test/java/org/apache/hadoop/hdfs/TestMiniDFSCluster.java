@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -81,36 +80,6 @@ public class TestMiniDFSCluster {
       if (cluster != null) {
         cluster.shutdown();
       }
-    }
-  }
-
-  /**
-   * Bring up two clusters and assert that they are in different directories.
-   * @throws Throwable on a failure
-   */
-  @Test(timeout=100000)
-  public void testDualClusters() throws Throwable {
-    File testDataCluster2 = new File(testDataPath, CLUSTER_2);
-    File testDataCluster3 = new File(testDataPath, CLUSTER_3);
-    Configuration conf = new HdfsConfiguration();
-    String c2Path = testDataCluster2.getAbsolutePath();
-    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c2Path);
-    MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf).build();
-    MiniDFSCluster cluster3 = null;
-    try {
-      String dataDir2 = cluster2.getDataDirectory();
-      assertEquals(new File(c2Path + "/data"), new File(dataDir2));
-      //change the data dir
-      conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
-               testDataCluster3.getAbsolutePath());
-      MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
-      cluster3 = builder.build();
-      String dataDir3 = cluster3.getDataDirectory();
-      assertTrue("Clusters are bound to the same directory: " + dataDir2,
-                        !dataDir2.equals(dataDir3));
-    } finally {
-      MiniDFSCluster.shutdownCluster(cluster3);
-      MiniDFSCluster.shutdownCluster(cluster2);
     }
   }
 
