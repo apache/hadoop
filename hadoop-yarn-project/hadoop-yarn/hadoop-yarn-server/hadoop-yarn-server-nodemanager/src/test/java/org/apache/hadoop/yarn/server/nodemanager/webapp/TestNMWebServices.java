@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
@@ -389,17 +390,29 @@ public class TestNMWebServices extends JerseyTestBase {
         .queryParam("size", "-10000")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
+    assertEquals("text/plain", response.getType().toString());
     assertEquals(fullTextSize, responseText.getBytes().length);
     assertEquals(logMessage, responseText);
 
     // ask and download it
     response = r.path("ws").path("v1").path("node").path("containerlogs")
-        .path(containerIdStr).path(filename).queryParam("download", "true")
+        .path(containerIdStr).path(filename)
+        .queryParam("format", "octet-stream")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertEquals(logMessage, responseText);
     assertEquals(200, response.getStatus());
     assertEquals("application/octet-stream", response.getType().toString());
+
+    // specify a invalid format value
+    response = r.path("ws").path("v1").path("node").path("containerlogs")
+        .path(containerIdStr).path(filename)
+        .queryParam("format", "123")
+        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertEquals("The valid values for the parameter : format are "
+        + WebAppUtils.listSupportedLogContentType(), responseText);
+    assertEquals(400, response.getStatus());
 
     // ask for file that doesn't exist
     response = r.path("ws").path("v1").path("node")

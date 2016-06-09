@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -212,7 +213,7 @@ public class AHSWebServices extends WebServices {
       @Context HttpServletResponse res,
       @PathParam("containerid") String containerIdStr,
       @PathParam("filename") String filename,
-      @QueryParam("download") String download,
+      @QueryParam("format") String format,
       @QueryParam("size") String size) {
     init(res);
     ContainerId containerId;
@@ -222,9 +223,6 @@ public class AHSWebServices extends WebServices {
       return createBadResponse(Status.NOT_FOUND,
           "Invalid ContainerId: " + containerIdStr);
     }
-
-    boolean downloadFile = parseBooleanParam(download);
-
 
     final long length = parseLongParam(size);
 
@@ -236,7 +234,7 @@ public class AHSWebServices extends WebServices {
     } catch (Exception ex) {
       // directly find logs from HDFS.
       return sendStreamOutputResponse(appId, null, null, containerIdStr,
-          filename, downloadFile, length);
+          filename, format, length);
     }
     String appOwner = appInfo.getUser();
 
@@ -250,7 +248,7 @@ public class AHSWebServices extends WebServices {
       if (isFinishedState(appInfo.getAppState())) {
         // directly find logs from HDFS.
         return sendStreamOutputResponse(appId, appOwner, null, containerIdStr,
-            filename, downloadFile, length);
+            filename, format, length);
       }
       return createBadResponse(Status.INTERNAL_SERVER_ERROR,
           "Can not get ContainerInfo for the container: " + containerId);
@@ -270,7 +268,7 @@ public class AHSWebServices extends WebServices {
       return response.build();
     } else if (isFinishedState(appInfo.getAppState())) {
       return sendStreamOutputResponse(appId, appOwner, nodeId,
-          containerIdStr, filename, downloadFile, length);
+          containerIdStr, filename, format, length);
     } else {
       return createBadResponse(Status.NOT_FOUND,
           "The application is not at Running or Finished State.");
@@ -293,13 +291,19 @@ public class AHSWebServices extends WebServices {
     return response;
   }
 
-  private boolean parseBooleanParam(String param) {
-    return ("true").equalsIgnoreCase(param);
-  }
-
   private Response sendStreamOutputResponse(ApplicationId appId,
       String appOwner, String nodeId, String containerIdStr,
-      String fileName, boolean downloadFile, long bytes) {
+      String fileName, String format, long bytes) {
+    String contentType = WebAppUtils.getDefaultLogContentType();
+    if (format != null && !format.isEmpty()) {
+      contentType = WebAppUtils.getSupportedLogContentType(format);
+      if (contentType == null) {
+        String errorMessage = "The valid values for the parameter : format "
+            + "are " + WebAppUtils.listSupportedLogContentType();
+        return Response.status(Status.BAD_REQUEST).entity(errorMessage)
+            .build();
+      }
+    }
     StreamingOutput stream = null;
     try {
       stream = getStreamingOutput(appId, appOwner, nodeId,
@@ -313,9 +317,11 @@ public class AHSWebServices extends WebServices {
           "Can not get log for container: " + containerIdStr);
     }
     ResponseBuilder response = Response.ok(stream);
-    if (downloadFile) {
-      response.header("Content-Type", "application/octet-stream");
-    }
+    response.header("Content-Type", contentType);
+    // Sending the X-Content-Type-Options response header with the value
+    // nosniff will prevent Internet Explorer from MIME-sniffing a response
+    // away from the declared content-type.
+    response.header("X-Content-Type-Options", "nosniff");
     return response.build();
   }
 
