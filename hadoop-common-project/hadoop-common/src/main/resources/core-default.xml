@@ -761,6 +761,11 @@
 </property>
 
 <property>
+  <name>fs.s3a.session.token</name>
+  <description>The session token used with temporary credentials. Used only with provider org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider.</description>
+</property>
+
+<property>
   <name>fs.s3a.connection.maximum</name>
   <value>15</value>
   <description>Controls the maximum number of simultaneous connections to S3.</description>

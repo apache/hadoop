@@ -41,6 +41,9 @@ public final class Constants {
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
+  // session token for when using TemporaryAWSCredentialsProvider
+  public static final String SESSION_TOKEN = "fs.s3a.session.token";
+
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
