@@ -187,9 +187,11 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    * Get the CPU usage by all the processes in the process-tree based on
    * average between samples as a ratio of overall CPU cycles similar to top.
    * Thus, if 2 out of 4 cores are used this should return 200.0.
+   * Note: UNAVAILABLE will be returned in case when CPU usage is not
+   * available. It is NOT advised to return any other error code.
    *
    * @return percentage CPU usage since the process-tree was created,
-   * {@link #UNAVAILABLE} if it cannot be calculated.
+   * {@link #UNAVAILABLE} if CPU usage cannot be calculated or not available.
    */
   public float getCpuUsagePercent() {
     return UNAVAILABLE;
