@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.blacklist;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 
 /**
  * Tracks blacklists based on failures reported on nodes.
@@ -33,14 +34,14 @@ public interface BlacklistManager {
   void addNode(String node);
 
   /**
-   * Get {@link BlacklistUpdates} that indicate which nodes should be
+   * Get {@link ResourceBlacklistRequest} that indicate which nodes should be
    * added or to removed from the blacklist.
-   * @return {@link BlacklistUpdates}
+   * @return {@link ResourceBlacklistRequest}
    */
-  BlacklistUpdates getBlacklistUpdates();
+  ResourceBlacklistRequest getBlacklistUpdates();
 
   /**
-   * Refresh the number of nodemanager hosts available for scheduling.
+   * Refresh the number of NodeManagers available for scheduling.
    * @param nodeHostCount is the number of node hosts.
    */
   void refreshNodeHostCount(int nodeHostCount);

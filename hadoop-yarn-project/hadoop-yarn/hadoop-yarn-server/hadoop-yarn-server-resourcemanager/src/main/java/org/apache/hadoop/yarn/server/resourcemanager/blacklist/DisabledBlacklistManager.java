@@ -20,21 +20,23 @@ package org.apache.hadoop.yarn.server.resourcemanager.blacklist;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
+
 /**
  * A {@link BlacklistManager} that returns no blacklists.
  */
-public class DisabledBlacklistManager implements BlacklistManager{
+public class DisabledBlacklistManager implements BlacklistManager {
 
   private static final ArrayList<String> EMPTY_LIST = new ArrayList<String>();
-  private BlacklistUpdates noBlacklist =
-      new BlacklistUpdates(EMPTY_LIST, EMPTY_LIST);
+  private ResourceBlacklistRequest noBlacklist =
+      ResourceBlacklistRequest.newInstance(EMPTY_LIST, EMPTY_LIST);
 
   @Override
   public void addNode(String node) {
   }
 
   @Override
-  public BlacklistUpdates getBlacklistUpdates() {
+  public ResourceBlacklistRequest getBlacklistUpdates() {
     return noBlacklist;
   }
 

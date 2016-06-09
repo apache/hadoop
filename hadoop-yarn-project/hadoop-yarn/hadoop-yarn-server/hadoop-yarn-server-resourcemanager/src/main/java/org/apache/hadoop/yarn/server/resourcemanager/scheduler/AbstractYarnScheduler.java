@@ -178,7 +178,7 @@ public abstract class AbstractYarnScheduler
     NodeFilter nodeFilter = new NodeFilter() {
       @Override
       public boolean accept(SchedulerNode node) {
-        return SchedulerAppUtils.isBlacklisted(app, node, LOG);
+        return SchedulerAppUtils.isPlaceBlacklisted(app, node, LOG);
       }
     };
     return nodeTracker.getNodes(nodeFilter);
