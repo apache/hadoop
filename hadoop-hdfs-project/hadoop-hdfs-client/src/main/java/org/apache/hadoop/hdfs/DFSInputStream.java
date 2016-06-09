@@ -309,6 +309,7 @@ public class DFSInputStream extends FSInputStream
     try {
       Thread.sleep(waitTime);
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new InterruptedIOException(
           "Interrupted while getting the last block length.");
     }
@@ -420,6 +421,7 @@ public class DFSInputStream extends FSInputStream
         try {
           Thread.sleep(500); // delay between retries.
         } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           throw new InterruptedIOException(
               "Interrupted while getting the length.");
         }
@@ -1083,6 +1085,7 @@ public class DFSInputStream extends FSInputStream
               " IOException, will wait for " + waitTime + " msec.");
           Thread.sleep((long)waitTime);
         } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           throw new InterruptedIOException(
               "Interrupted while choosing DataNode for read.");
         }
