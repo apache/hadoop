@@ -36,7 +36,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -241,13 +241,17 @@ public class NMWebServices {
         @Override
         public void write(OutputStream os) throws IOException,
             WebApplicationException {
-          int bufferSize = 65536;
-          byte[] buf = new byte[bufferSize];
-          int len;
-          while ((len = fis.read(buf, 0, bufferSize)) > 0) {
-            os.write(buf, 0, len);
+          try {
+            int bufferSize = 65536;
+            byte[] buf = new byte[bufferSize];
+            int len;
+            while ((len = fis.read(buf, 0, bufferSize)) > 0) {
+              os.write(buf, 0, len);
+            }
+            os.flush();
+          } finally {
+            IOUtils.closeQuietly(fis);
           }
-          os.flush();
         }
       };
       
