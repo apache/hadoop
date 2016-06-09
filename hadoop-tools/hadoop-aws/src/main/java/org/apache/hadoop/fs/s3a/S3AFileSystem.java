@@ -465,20 +465,28 @@ public class S3AFileSystem extends FileSystem {
           new BasicAWSCredentialsProvider(
               creds.getAccessKey(), creds.getAccessSecret()),
           new InstanceProfileCredentialsProvider(),
-          new EnvironmentVariableCredentialsProvider(),
-          new AnonymousAWSCredentialsProvider()
-      );
+          new EnvironmentVariableCredentialsProvider());
 
     } else {
       try {
         LOG.debug("Credential provider class is {}", className);
-        credentials = (AWSCredentialsProvider) Class.forName(className)
-            .getDeclaredConstructor(URI.class, Configuration.class)
-            .newInstance(this.uri, conf);
+        Class<?> credClass = Class.forName(className);
+        try {
+          credentials =
+              (AWSCredentialsProvider)credClass.getDeclaredConstructor(
+                  URI.class, Configuration.class).newInstance(this.uri, conf);
+        } catch (NoSuchMethodException | SecurityException e) {
+          credentials =
+              (AWSCredentialsProvider)credClass.getDeclaredConstructor()
+                  .newInstance();
+        }
       } catch (ClassNotFoundException e) {
         throw new IOException(className + " not found.", e);
       } catch (NoSuchMethodException | SecurityException e) {
-        throw new IOException(className + " constructor exception.", e);
+        throw new IOException(String.format("%s constructor exception.  A "
+            + "class specified in %s must provide an accessible constructor "
+            + "accepting URI and Configuration, or an accessible default "
+            + "constructor.", className, AWS_CREDENTIALS_PROVIDER), e);
       } catch (ReflectiveOperationException | IllegalArgumentException e) {
         throw new IOException(className + " instantiation exception.", e);
       }
