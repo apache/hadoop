@@ -455,6 +455,15 @@ public class ContainersMonitorImpl extends AbstractService implements
             // cpuUsagePercentPerCore should be 300% and
             // cpuUsageTotalCoresPercentage should be 50%
             float cpuUsagePercentPerCore = pTree.getCpuUsagePercent();
+            if (cpuUsagePercentPerCore < 0) {
+              // CPU usage is not available likely because the container just
+              // started. Let us skip this turn and consider this container
+              // in the next iteration.
+              LOG.info("Skipping monitoring container " + containerId
+                  + " since CPU usage is not yet available.");
+              continue;
+            }
+
             float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore /
                 resourceCalculatorPlugin.getNumProcessors();
 

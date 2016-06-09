@@ -20,11 +20,20 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
-public class MockResourceCalculatorProcessTree extends ResourceCalculatorProcessTree {
+/**
+ * Mock class to obtain resource usage (CPU).
+ */
+public class MockCPUResourceCalculatorProcessTree
+    extends ResourceCalculatorProcessTree {
 
-  private long rssMemorySize = 0;
+  private long cpuPercentage = ResourceCalculatorProcessTree.UNAVAILABLE;
 
-  public MockResourceCalculatorProcessTree(String root) {
+  /**
+   * Constructor for MockCPUResourceCalculatorProcessTree with specified root
+   * process.
+   * @param root
+   */
+  public MockCPUResourceCalculatorProcessTree(String root) {
     super(root);
   }
 
@@ -47,16 +56,15 @@ public class MockResourceCalculatorProcessTree extends ResourceCalculatorProcess
     return true;
   }
 
-  public void setRssMemorySize(long rssMemorySize) {
-    this.rssMemorySize = rssMemorySize;
-  }
-
-  public long getRssMemorySize() {
-    return this.rssMemorySize;
-  }
-
   @Override
   public float getCpuUsagePercent() {
-    return 0;
+    long cpu = this.cpuPercentage;
+    // First getter call will be returned with -1, and other calls will
+    // return non-zero value as defined below.
+    if (cpu == ResourceCalculatorProcessTree.UNAVAILABLE) {
+      // Set a default value other than 0 for test.
+      this.cpuPercentage = 50;
+    }
+    return cpu;
   }
 }
