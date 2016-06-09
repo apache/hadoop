@@ -979,16 +979,13 @@ public class ApplicationMaster {
       }
       Container container = containers.get(containerId);
       if (container != null) {
-        applicationMaster.nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
+        applicationMaster.nmClientAsync.getContainerStatusAsync(
+            containerId, container.getNodeId());
       }
       if(applicationMaster.timelineClient != null) {
-        applicationMaster.publishContainerStartEvent(
-            applicationMaster.timelineClient, container,
-            applicationMaster.domainId, applicationMaster.appSubmitterUgi);
-
         if (applicationMaster.timelineServiceV2) {
-            applicationMaster.publishContainerStartEventOnTimelineServiceV2(
-                container);
+          applicationMaster.publishContainerStartEventOnTimelineServiceV2(
+              container);
         } else {
           applicationMaster.publishContainerStartEvent(
             applicationMaster.timelineClient, container,
@@ -1355,12 +1352,13 @@ public class ApplicationMaster {
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
     entity.setId(container.getId().toString());
     entity.setType(DSEntity.DS_CONTAINER.toString());
-    //entity.setDomainId(domainId);
+    long ts = System.currentTimeMillis();
+    entity.setCreatedTime(ts);
     entity.addInfo("user", appSubmitterUgi.getShortUserName());
 
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent event =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent();
-    event.setTimestamp(System.currentTimeMillis());
+    event.setTimestamp(ts);
     event.setId(DSEvent.DS_CONTAINER_START.toString());
     event.addInfo("Node", container.getNodeId().toString());
     event.addInfo("Resources", container.getResource().toString());
@@ -1418,12 +1416,15 @@ public class ApplicationMaster {
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
     entity.setId(appAttemptID.toString());
     entity.setType(DSEntity.DS_APP_ATTEMPT.toString());
-    //entity.setDomainId(domainId);
+    long ts = System.currentTimeMillis();
+    if (appEvent == DSEvent.DS_APP_ATTEMPT_START) {
+      entity.setCreatedTime(ts);
+    }
     entity.addInfo("user", appSubmitterUgi.getShortUserName());
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent event =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent();
     event.setId(appEvent.toString());
-    event.setTimestamp(System.currentTimeMillis());
+    event.setTimestamp(ts);
     entity.addEvent(event);
 
     try {
