@@ -31,16 +31,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
-import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
-
+import org.apache.hadoop.hdfs.tools.DiskBalancer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.htrace.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,10 +56,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.List;
 
 /**
  * Common interface for command handling.
@@ -393,17 +390,5 @@ public abstract class Command extends Configured {
    */
   protected DiskBalancerCluster getCluster() {
     return cluster;
-  }
-
-  /**
-   * Returns a plan from the Json Data.
-   *
-   * @param planData - Json String
-   * @return NodePlan
-   * @throws IOException
-   */
-  protected NodePlan readPlan(String planData) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(planData, NodePlan.class);
   }
 }

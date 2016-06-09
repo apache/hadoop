@@ -70,7 +70,7 @@ public class CancelCommand extends Command {
       // points us to the plan file, we can compute the hash as well as read
       // the address of the datanode from the plan file.
       String planFile = cmd.getOptionValue(DiskBalancer.CANCEL);
-      Preconditions.checkArgument(planFile == null || planFile.isEmpty(),
+      Preconditions.checkArgument(planFile != null && !planFile.isEmpty(),
           "Invalid plan file specified.");
       String planData = null;
       try (FSDataInputStream plan = open(planFile)) {
@@ -88,7 +88,7 @@ public class CancelCommand extends Command {
    */
   private void cancelPlan(String planData) throws IOException {
     Preconditions.checkNotNull(planData);
-    NodePlan plan = readPlan(planData);
+    NodePlan plan = NodePlan.parseJson(planData);
     String dataNodeAddress = plan.getNodeName() + ":" + plan.getPort();
     Preconditions.checkNotNull(dataNodeAddress);
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);

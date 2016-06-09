@@ -79,7 +79,7 @@ public class ExecuteCommand extends Command {
    */
   private void submitPlan(String planData) throws IOException {
     Preconditions.checkNotNull(planData);
-    NodePlan plan = readPlan(planData);
+    NodePlan plan = NodePlan.parseJson(planData);
     String dataNodeAddress = plan.getNodeName() + ":" + plan.getPort();
     Preconditions.checkNotNull(dataNodeAddress);
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);
