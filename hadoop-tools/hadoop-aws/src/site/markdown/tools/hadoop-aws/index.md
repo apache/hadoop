@@ -198,6 +198,46 @@ If you do any of these: change your credentials immediately!
       </description>
     </property>
 
+    <property>
+      <name>fs.s3a.session.token</name>
+      <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider as the providers.</description>
+    </property>
+
+#### Authentication methods
+
+The standard way to authenticate is with an access key and secret key using the
+properties above. You can also avoid configuring credentials if the EC2
+instances in your cluster are configured with IAM instance profiles that grant
+the appropriate S3 access.
+
+A temporary set of credentials can also be obtained from Amazon STS; these
+consist of an access key, a secret key, and a session token. To use these
+temporary credentials you must include the `aws-java-sdk-sts` JAR in your
+classpath (consult the POM for the current version) and set the
+`TemporaryAWSCredentialsProvider` class as the provider. The session key
+must be set in the property `fs.s3a.session.token` —and the access and secret
+key properties to those of this temporary session.
+
+    <property>
+      <name>fs.s3a.aws.credentials.provider</name>
+      <value>org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider</value>
+    </property>
+
+    <property>
+      <name>fs.s3a.access.key</name>
+      <value>SESSION-ACCESS-KEY</value>
+    </property>
+
+    <property>
+      <name>fs.s3a.secret.key</name>
+      <value>SESSION-SECRET-KEY</value>
+    </property>
+
+    <property>
+      <name>fs.s3a.session.token</name>
+      <value>SECRET-SESSION-TOKEN</value>
+    </property>
+
 #### Protecting the AWS Credentials in S3A
 
 To protect the access/secret keys from prying eyes, it is recommended that you
@@ -608,6 +648,13 @@ Example:
         <description>AWS secret key. Omit for IAM role-based authentication.</description>
         <value>DONOTEVERSHARETHISSECRETKEY!</value>
       </property>
+
+      <property>
+        <name>test.sts.endpoint</name>
+        <description>Specific endpoint to use for STS requests.</description>
+        <value>sts.amazonaws.com</value>
+      </property>
+
     </configuration>
 
 ### File `contract-test-options.xml`
@@ -717,8 +764,30 @@ that the file `contract-test-options.xml` does not contain any
 secret credentials itself. As the auth keys XML file is kept out of the
 source code tree, it is not going to get accidentally committed.
 
-### Running Performance Tests against non-AWS storage infrastructures
+### Running Tests against non-AWS storage infrastructures
 
+### S3A session tests
+
+The test `TestS3ATemporaryCredentials` requests a set of temporary
+credentials from the STS service, then uses them to authenticate with S3.
+
+If an S3 implementation does not support STS, then the functional test
+cases must be disabled:
+
+        <property>
+          <name>test.fs.s3a.sts.enabled</name>
+          <value>false</value>
+        </property>
+
+These tests reqest a temporary set of credentials from the STS service endpoint.
+An alternate endpoint may be defined in `test.fs.s3a.sts.endpoint`.
+
+        <property>
+          <name>test.fs.s3a.sts.endpoint</name>
+          <value>https://sts.example.org/</value>
+        </property>
+
+The default is ""; meaning "use the amazon default value".
 
 #### CSV Data source
 
