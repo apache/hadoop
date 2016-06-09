@@ -46,6 +46,7 @@
     <module>hadoop-azure</module>
     <module>hadoop-aws</module>
     <module>hadoop-kafka</module>
+    <module>hadoop-azure-datalake</module>
   </modules>
 
   <build>
