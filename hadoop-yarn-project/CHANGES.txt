@@ -151,6 +151,21 @@ Release 2.7.3 - UNRELEASED
     YARN-4288. Fixed RMProxy to retry on IOException from local host.
     (Junping Du via jianhe)
 
+    YARN-5069. TestFifoScheduler.testResourceOverCommit race condition.
+    (Eric Badger via epayne)
+
+    YARN-5009. NMLeveldbStateStoreService database can grow substantially
+    leading to longer recovery times. (Jason Lowe via jianhe)
+
+    YARN-5008. LeveldbRMStateStore database can grow substantially leading to
+    long recovery times. (Jason Lowe via jianhe)
+
+    YARN-4751. In 2.7, Labeled queue usage not shown properly in capacity
+    scheduler UI. (Eric Payne via naganarasimha_gr)
+
+    YARN-3362. Add node label usage in RM CapacityScheduler web UI.
+    (Eric Payne via naganarasimha_gr)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
