@@ -20,6 +20,7 @@
 
 #include "rpc/rpc_engine.h"
 #include "hdfspp/statinfo.h"
+#include "hdfspp/fsinfo.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
@@ -35,6 +36,7 @@ namespace hdfs {
 * Threading model: thread-safe; all operations can be called concurrently
 * Lifetime: owned by a FileSystemImpl
 */
+
 class NameNodeOperations {
 public:
   MEMCHECKED_CLASS(NameNodeOperations);
@@ -56,16 +58,31 @@ public:
   void GetFileInfo(const std::string & path,
       std::function<void(const Status &, const StatInfo &)> handler);
 
+  void GetFsStats(std::function<void(const Status &, const FsInfo &)> handler);
+
   // start_after="" for initial call
   void GetListing(const std::string & path,
         std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> handler,
         const std::string & start_after = "");
+
+  void CreateSnapshot(const std::string & path, const std::string & name,
+      std::function<void(const Status &)> handler);
+
+  void DeleteSnapshot(const std::string & path, const std::string & name,
+      std::function<void(const Status &)> handler);
+
+  void AllowSnapshot(const std::string & path,
+      std::function<void(const Status &)> handler);
+
+  void DisallowSnapshot(const std::string & path,
+      std::function<void(const Status &)> handler);
 
   void SetFsEventCallback(fs_event_callback callback);
 
 private:
   static void HdfsFileStatusProtoToStatInfo(hdfs::StatInfo & si, const ::hadoop::hdfs::HdfsFileStatusProto & fs);
   static void DirectoryListingProtoToStatInfo(std::shared_ptr<std::vector<StatInfo>> stat_infos, const ::hadoop::hdfs::DirectoryListingProto & dl);
+  static void GetFsStatsResponseProtoToFsInfo(hdfs::FsInfo & fs_info, const std::shared_ptr<::hadoop::hdfs::GetFsStatsResponseProto> & fs);
 
   ::asio::io_service * io_service_;
   RpcEngine engine_;

@@ -197,7 +197,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     }
     if (ret != expected) {
         fprintf(stderr, "hdfsWrite was supposed to write %d bytes, but "
-                "it wrote %d\n", ret, expected);
+                "it wrote %d\n", expected, ret);
         return EIO;
     }
     EXPECT_ZERO(hdfsFlush(fs, file));

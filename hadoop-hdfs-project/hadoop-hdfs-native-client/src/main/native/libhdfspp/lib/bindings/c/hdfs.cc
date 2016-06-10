@@ -153,6 +153,10 @@ static int Error(const Status &stat) {
       errnum = ENOENT;
       default_message = "No such file or directory";
       break;
+    case Status::Code::kNotADirectory:
+      errnum = ENOTDIR;
+      default_message = "Not a directory";
+      break;
     default:
       errnum = ENOSYS;
       default_message = "Error: unrecognised code";
@@ -323,6 +327,52 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   }
 }
 
+tOffset hdfsGetCapacity(hdfsFS fs) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+       return -1;
+    }
+
+    hdfs::FsInfo fs_info;
+    Status stat = fs->get_impl()->GetFsStats(fs_info);
+    if (!stat.ok()) {
+      Error(stat);
+      return -1;
+    }
+    return fs_info.capacity;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return -1;
+  } catch (...) {
+    ReportCaughtNonException();
+    return -1;
+  }
+}
+
+tOffset hdfsGetUsed(hdfsFS fs) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+       return -1;
+    }
+
+    hdfs::FsInfo fs_info;
+    Status stat = fs->get_impl()->GetFsStats(fs_info);
+    if (!stat.ok()) {
+      Error(stat);
+      return -1;
+    }
+    return fs_info.used;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return -1;
+  } catch (...) {
+    ReportCaughtNonException();
+    return -1;
+  }
+}
+
 void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
                             const hdfs::StatInfo & stat_info) {
   /* file or directory */
@@ -365,10 +415,10 @@ void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
   file_info->mGroup = new char[stat_info.group.size() + 1];
   strncpy(file_info->mGroup, stat_info.group.c_str(), stat_info.group.size() + 1);
 
-  /* the permissions associated with the file */
+  /* the permissions associated with the file encoded as an octal number (0777)*/
   file_info->mPermissions = (short) stat_info.permissions;
 
-  /* the last access time for the file in seconds */
+  /* the last access time for the file in seconds since the epoch*/
   file_info->mLastAccess = stat_info.access_time;
 }
 
@@ -442,6 +492,101 @@ void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
         delete[] hdfsFileInfo[i].mGroup;
     }
     delete[] hdfsFileInfo;
+}
+
+int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (!path) {
+      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+    }
+    Status stat;
+    if(!name){
+      stat = fs->get_impl()->CreateSnapshot(path, "");
+    } else {
+      stat = fs->get_impl()->CreateSnapshot(path, name);
+    }
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (!path) {
+      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+    }
+    if (!name) {
+      return Error(Status::InvalidArgument("Argument 'name' cannot be NULL"));
+    }
+    Status stat;
+    stat = fs->get_impl()->DeleteSnapshot(path, name);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (!path) {
+      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+    }
+    Status stat;
+    stat = fs->get_impl()->AllowSnapshot(path);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (!path) {
+      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+    }
+    Status stat;
+    stat = fs->get_impl()->DisallowSnapshot(path);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,

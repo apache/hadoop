@@ -131,6 +131,28 @@ void NameNodeOperations::GetFileInfo(const std::string & path,
   });
 }
 
+void NameNodeOperations::GetFsStats(
+    std::function<void(const Status &, const FsInfo &)> handler) {
+  using ::hadoop::hdfs::GetFsStatusRequestProto;
+  using ::hadoop::hdfs::GetFsStatsResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::GetFsStats(" << FMT_THIS_ADDR << ") called");
+
+  GetFsStatusRequestProto req;
+  auto resp = std::make_shared<GetFsStatsResponseProto>();
+
+  namenode_.GetFsStats(&req, resp, [resp, handler](const Status &stat) {
+    if (stat.ok()) {
+      struct FsInfo fs_info;
+      GetFsStatsResponseProtoToFsInfo(fs_info, resp);
+      handler(stat, fs_info);
+    } else {
+      handler(stat, FsInfo());
+    }
+  });
+}
+
 void NameNodeOperations::GetListing(
     const std::string & path,
     std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> handler,
@@ -176,6 +198,108 @@ void NameNodeOperations::GetListing(
       });
 }
 
+void NameNodeOperations::CreateSnapshot(const std::string & path,
+    const std::string & name, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::CreateSnapshotRequestProto;
+  using ::hadoop::hdfs::CreateSnapshotResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::CreateSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    return;
+  }
+
+  CreateSnapshotRequestProto req;
+  req.set_snapshotroot(path);
+  if (!name.empty()) {
+    req.set_snapshotname(name);
+  }
+
+  auto resp = std::make_shared<CreateSnapshotResponseProto>();
+
+  namenode_.CreateSnapshot(&req, resp,
+      [resp, handler, path](const Status &stat) {
+        handler(stat);
+      });
+}
+
+void NameNodeOperations::DeleteSnapshot(const std::string & path,
+    const std::string & name, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::DeleteSnapshotRequestProto;
+  using ::hadoop::hdfs::DeleteSnapshotResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::DeleteSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    return;
+  }
+  if (name.empty()) {
+    handler(Status::InvalidArgument("Argument 'name' cannot be empty"));
+    return;
+  }
+
+  DeleteSnapshotRequestProto req;
+  req.set_snapshotroot(path);
+  req.set_snapshotname(name);
+
+  auto resp = std::make_shared<DeleteSnapshotResponseProto>();
+
+  namenode_.DeleteSnapshot(&req, resp,
+      [resp, handler, path](const Status &stat) {
+        handler(stat);
+      });
+}
+
+void NameNodeOperations::AllowSnapshot(const std::string & path, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::AllowSnapshotRequestProto;
+  using ::hadoop::hdfs::AllowSnapshotResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::AllowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    return;
+  }
+
+  AllowSnapshotRequestProto req;
+  req.set_snapshotroot(path);
+
+  auto resp = std::make_shared<AllowSnapshotResponseProto>();
+
+  namenode_.AllowSnapshot(&req, resp,
+      [resp, handler, path](const Status &stat) {
+        handler(stat);
+      });
+}
+
+void NameNodeOperations::DisallowSnapshot(const std::string & path, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::DisallowSnapshotRequestProto;
+  using ::hadoop::hdfs::DisallowSnapshotResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::DisallowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    return;
+  }
+
+  DisallowSnapshotRequestProto req;
+  req.set_snapshotroot(path);
+
+  auto resp = std::make_shared<DisallowSnapshotResponseProto>();
+
+  namenode_.DisallowSnapshot(&req, resp,
+      [resp, handler, path](const Status &stat) {
+        handler(stat);
+      });
+}
+
 void NameNodeOperations::SetFsEventCallback(fs_event_callback callback) {
   engine_.SetFsEventCallback(callback);
 }
@@ -195,6 +319,21 @@ void NameNodeOperations::HdfsFileStatusProtoToStatInfo(
   stat_info.blocksize = fs.blocksize();
   stat_info.fileid = fs.fileid();
   stat_info.children_num = fs.childrennum();
+}
+
+void NameNodeOperations::GetFsStatsResponseProtoToFsInfo(
+    hdfs::FsInfo & fs_info,
+    const std::shared_ptr<::hadoop::hdfs::GetFsStatsResponseProto> & fs) {
+  fs_info.capacity = fs->capacity();
+  fs_info.used = fs->used();
+  fs_info.remaining = fs->remaining();
+  fs_info.under_replicated = fs->under_replicated();
+  fs_info.corrupt_blocks = fs->corrupt_blocks();
+  fs_info.missing_blocks = fs->missing_blocks();
+  fs_info.missing_repl_one_blocks = fs->missing_repl_one_blocks();
+  if(fs->has_blocks_in_future()){
+    fs_info.blocks_in_future = fs->blocks_in_future();
+  }
 }
 
 }

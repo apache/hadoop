@@ -23,7 +23,7 @@
 #include "hdfspp/events.h"
 #include "hdfspp/block_location.h"
 #include "hdfspp/statinfo.h"
-
+#include "hdfspp/fsinfo.h"
 
 #include <functional>
 #include <memory>
@@ -180,6 +180,16 @@ class FileSystem {
   virtual Status GetFileInfo(const std::string &path, StatInfo & stat_info) = 0;
 
   /**
+   * Retrieves the file system information as a whole, such as the total raw size of all files in the filesystem
+   * and the raw capacity of the filesystem
+   *
+   *  @param FsInfo      struct to be populated by GetFsStats
+   **/
+  virtual void GetFsStats(
+      const std::function<void(const Status &, const FsInfo &)> &handler) = 0;
+  virtual Status GetFsStats(FsInfo & fs_info) = 0;
+
+  /**
    * Retrieves the files contained in a directory and returns the metadata
    * for each of them.
    *
@@ -206,6 +216,50 @@ class FileSystem {
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) = 0;
   virtual Status GetBlockLocations(const std::string & path,
     std::shared_ptr<FileBlockLocation> * locations) = 0;
+
+  /*****************************************************************************
+   *                    FILE SYSTEM SNAPSHOT FUNCTIONS
+   ****************************************************************************/
+
+  /**
+   * Creates a snapshot of a snapshottable directory specified by path
+   *
+   *  @param path    Path to the directory to be snapshotted (must be non-empty)
+   *  @param name    Name to be given to the created snapshot (may be empty)
+   **/
+  virtual void CreateSnapshot(const std::string &path, const std::string &name,
+      const std::function<void(const Status &)> &handler) = 0;
+  virtual Status CreateSnapshot(const std::string &path,
+      const std::string &name) = 0;
+
+  /**
+   * Deletes the directory snapshot specified by path and name
+   *
+   *  @param path    Path to the snapshotted directory (must be non-empty)
+   *  @param name    Name of the snapshot to be deleted (must be non-empty)
+   **/
+  virtual void DeleteSnapshot(const std::string &path, const std::string &name,
+      const std::function<void(const Status &)> &handler) = 0;
+  virtual Status DeleteSnapshot(const std::string &path,
+      const std::string &name) = 0;
+
+  /**
+   * Allows snapshots to be made on the specified directory
+   *
+   *  @param path    Path to the directory to be made snapshottable (must be non-empty)
+   **/
+  virtual void AllowSnapshot(const std::string &path,
+      const std::function<void(const Status &)> &handler) = 0;
+  virtual Status AllowSnapshot(const std::string &path) = 0;
+
+  /**
+   * Disallows snapshots to be made on the specified directory
+   *
+   *  @param path    Path to the directory to be made non-snapshottable (must be non-empty)
+   **/
+  virtual void DisallowSnapshot(const std::string &path,
+      const std::function<void(const Status &)> &handler) = 0;
+  virtual Status DisallowSnapshot(const std::string &path) = 0;
 
   /**
    * Note that it is an error to destroy the filesystem from within a filesystem
