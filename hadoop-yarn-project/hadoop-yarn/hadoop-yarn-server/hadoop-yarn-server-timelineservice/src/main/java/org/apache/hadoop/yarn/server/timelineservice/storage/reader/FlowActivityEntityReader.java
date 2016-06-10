@@ -35,9 +35,11 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrie
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTable;
 
 import com.google.common.base.Preconditions;
@@ -49,6 +51,12 @@ import com.google.common.base.Preconditions;
 class FlowActivityEntityReader extends TimelineEntityReader {
   private static final FlowActivityTable FLOW_ACTIVITY_TABLE =
       new FlowActivityTable();
+
+  /**
+   * Used to convert Long key components to and from storage format.
+   */
+  private final KeyConverter<Long> longKeyConverter = new LongKeyConverter();
+
 
   public FlowActivityEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
@@ -105,15 +113,14 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     if (getFilters().getCreatedTimeBegin() == 0L &&
         getFilters().getCreatedTimeEnd() == Long.MAX_VALUE) {
        // All records have to be chosen.
-      scan.setRowPrefixFilter(FlowActivityRowKey.getRowKeyPrefix(clusterId));
+      scan.setRowPrefixFilter(new FlowActivityRowKeyPrefix(clusterId)
+          .getRowKeyPrefix());
     } else {
-      scan.setStartRow(
-          FlowActivityRowKey.getRowKeyPrefix(clusterId,
-              getFilters().getCreatedTimeEnd()));
-      scan.setStopRow(
-          FlowActivityRowKey.getRowKeyPrefix(clusterId,
-              (getFilters().getCreatedTimeBegin() <= 0 ? 0 :
-              (getFilters().getCreatedTimeBegin() - 1))));
+      scan.setStartRow(new FlowActivityRowKeyPrefix(clusterId, getFilters()
+          .getCreatedTimeEnd()).getRowKeyPrefix());
+      scan.setStopRow(new FlowActivityRowKeyPrefix(clusterId, (getFilters()
+          .getCreatedTimeBegin() <= 0 ? 0
+          : (getFilters().getCreatedTimeBegin() - 1))).getRowKeyPrefix());
     }
     // use the page filter to limit the result to the page size
     // the scanner may still return more than the limit; therefore we need to
@@ -137,8 +144,7 @@ class FlowActivityEntityReader extends TimelineEntityReader {
     // get the list of run ids along with the version that are associated with
     // this flow on this day
     Map<Long, Object> runIdsMap =
-        FlowActivityColumnPrefix.RUN_ID.readResults(result,
-            LongKeyConverter.getInstance());
+        FlowActivityColumnPrefix.RUN_ID.readResults(result, longKeyConverter);
     for (Map.Entry<Long, Object> e : runIdsMap.entrySet()) {
       Long runId = e.getKey();
       String version = (String)e.getValue();

@@ -23,13 +23,13 @@ import java.io.IOException;
  * Encodes and decodes column names / row keys which are long.
  */
 public final class LongKeyConverter implements KeyConverter<Long> {
-  private static final LongKeyConverter INSTANCE = new LongKeyConverter();
 
-  public static LongKeyConverter getInstance() {
-    return INSTANCE;
-  }
+  /**
+   * To delegate the actual work to.
+   */
+  private final LongConverter longConverter = new LongConverter();
 
-  private LongKeyConverter() {
+  public LongKeyConverter() {
   }
 
   /*
@@ -44,7 +44,7 @@ public final class LongKeyConverter implements KeyConverter<Long> {
     try {
       // IOException will not be thrown here as we are explicitly passing
       // Long.
-      return LongConverter.getInstance().encodeValue(key);
+      return longConverter.encodeValue(key);
     } catch (IOException e) {
       return null;
     }
@@ -60,7 +60,7 @@ public final class LongKeyConverter implements KeyConverter<Long> {
   @Override
   public Long decode(byte[] bytes) {
     try {
-      return (Long) LongConverter.getInstance().decodeValue(bytes);
+      return (Long) longConverter.decodeValue(bytes);
     } catch (IOException e) {
       return null;
     }

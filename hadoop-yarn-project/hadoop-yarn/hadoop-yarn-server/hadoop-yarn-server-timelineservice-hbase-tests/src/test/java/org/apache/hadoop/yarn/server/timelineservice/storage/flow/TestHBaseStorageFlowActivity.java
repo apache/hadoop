@@ -158,7 +158,7 @@ public class TestHBaseStorageFlowActivity {
     Table table1 = conn.getTable(TableName
         .valueOf(FlowActivityTable.DEFAULT_TABLE_NAME));
     byte[] startRow =
-        FlowActivityRowKey.getRowKey(cluster, minStartTs, user, flow);
+        new FlowActivityRowKey(cluster, minStartTs, user, flow).getRowKey();
     Get g = new Get(startRow);
     Result r1 = table1.get(g);
     assertNotNull(r1);
@@ -278,11 +278,12 @@ public class TestHBaseStorageFlowActivity {
     Scan s = new Scan();
     s.addFamily(FlowActivityColumnFamily.INFO.getBytes());
     byte[] startRow =
-        FlowActivityRowKey.getRowKey(cluster, appCreatedTime, user, flow);
+        new FlowActivityRowKey(cluster, appCreatedTime, user, flow).getRowKey();
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
     byte[] stopRow =
-        FlowActivityRowKey.getRowKey(clusterStop, appCreatedTime, user, flow);
+        new FlowActivityRowKey(clusterStop, appCreatedTime, user, flow)
+            .getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName
@@ -420,11 +421,11 @@ public class TestHBaseStorageFlowActivity {
     Scan s = new Scan();
     s.addFamily(FlowActivityColumnFamily.INFO.getBytes());
     byte[] startRow =
-        FlowActivityRowKey.getRowKey(cluster, appCreatedTime, user, flow);
+        new FlowActivityRowKey(cluster, appCreatedTime, user, flow).getRowKey();
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
     byte[] stopRow =
-        FlowActivityRowKey.getRowKey(clusterStop, appCreatedTime, user, flow);
+        new FlowActivityRowKey(clusterStop, appCreatedTime, user, flow).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName

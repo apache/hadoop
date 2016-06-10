@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -26,14 +27,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Encodes a value by interpreting it as a Long and converting it to bytes and
  * decodes a set of bytes as a Long.
  */
-public final class LongConverter implements NumericValueConverter {
-  private static final LongConverter INSTANCE = new LongConverter();
+public final class LongConverter implements NumericValueConverter,
+    Serializable {
 
-  private LongConverter() {
-  }
+  /**
+   * Added because we implement Comparator<Number>.
+   */
+  private static final long serialVersionUID = 1L;
 
-  public static LongConverter getInstance() {
-    return INSTANCE;
+  public LongConverter() {
   }
 
   @Override
@@ -75,5 +77,18 @@ public final class LongConverter implements NumericValueConverter {
       sum = sum + ((num == null) ? 0L : num.longValue());
     }
     return sum;
+  }
+
+  /**
+   * Converts a timestamp into it's inverse timestamp to be used in (row) keys
+   * where we want to have the most recent timestamp in the top of the table
+   * (scans start at the most recent timestamp first).
+   *
+   * @param key value to be inverted so that the latest version will be first in
+   *          a scan.
+   * @return inverted long
+   */
+  public static long invertLong(long key) {
+    return Long.MAX_VALUE - key;
   }
 }

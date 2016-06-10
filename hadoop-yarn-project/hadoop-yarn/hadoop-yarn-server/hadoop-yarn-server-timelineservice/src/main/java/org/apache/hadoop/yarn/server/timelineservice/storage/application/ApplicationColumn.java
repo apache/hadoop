@@ -45,7 +45,7 @@ public enum ApplicationColumn implements Column<ApplicationTable> {
    * When the application was created.
    */
   CREATED_TIME(ApplicationColumnFamily.INFO, "created_time",
-      LongConverter.getInstance()),
+      new LongConverter()),
 
   /**
    * The version of the flow that this app belongs to.
