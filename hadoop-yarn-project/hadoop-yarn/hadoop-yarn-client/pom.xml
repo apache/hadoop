@@ -27,6 +27,8 @@
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.basedir}</yarn.basedir>
+    <should.run.jdiff>true</should.run.jdiff>
+    <dev-support.relative.dir>../dev-support</dev-support.relative.dir>
   </properties>
 
   <dependencies>
