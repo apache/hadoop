@@ -24,13 +24,8 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
  * added later, if required in the associated ColumnPrefix implementations.
  */
 public final class StringKeyConverter implements KeyConverter<String> {
-  private static final StringKeyConverter INSTANCE = new StringKeyConverter();
 
-  public static StringKeyConverter getInstance() {
-    return INSTANCE;
-  }
-
-  private StringKeyConverter() {
+  public StringKeyConverter() {
   }
 
   /*

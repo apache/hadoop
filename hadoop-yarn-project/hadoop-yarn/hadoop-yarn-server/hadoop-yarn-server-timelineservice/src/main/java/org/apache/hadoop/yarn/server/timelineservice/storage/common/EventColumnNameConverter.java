@@ -30,14 +30,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public final class EventColumnNameConverter
     implements KeyConverter<EventColumnName> {
-  private static final EventColumnNameConverter INSTANCE =
-      new EventColumnNameConverter();
 
-  public static EventColumnNameConverter getInstance() {
-    return INSTANCE;
-  }
-
-  private EventColumnNameConverter() {
+  public EventColumnNameConverter() {
   }
 
   // eventId=timestamp=infokey are of types String, Long String
@@ -69,7 +63,7 @@ public final class EventColumnNameConverter
       return Separator.VALUES.join(first, Separator.EMPTY_BYTES);
     }
     byte[] second = Bytes.toBytes(
-        TimelineStorageUtils.invertLong(key.getTimestamp()));
+        LongConverter.invertLong(key.getTimestamp()));
     if (key.getInfoKey() == null) {
       return Separator.VALUES.join(first, second, Separator.EMPTY_BYTES);
     }
@@ -96,7 +90,7 @@ public final class EventColumnNameConverter
     }
     String id = Separator.decode(Bytes.toString(components[0]),
         Separator.VALUES, Separator.TAB, Separator.SPACE);
-    Long ts = TimelineStorageUtils.invertLong(Bytes.toLong(components[1]));
+    Long ts = LongConverter.invertLong(Bytes.toLong(components[1]));
     String infoKey = components[2].length == 0 ? null :
         Separator.decode(Bytes.toString(components[2]),
             Separator.VALUES, Separator.TAB, Separator.SPACE);

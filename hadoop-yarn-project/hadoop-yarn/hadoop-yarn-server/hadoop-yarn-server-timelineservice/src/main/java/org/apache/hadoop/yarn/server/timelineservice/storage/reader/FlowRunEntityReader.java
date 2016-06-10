@@ -28,12 +28,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
@@ -43,11 +43,12 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
@@ -81,8 +82,8 @@ class FlowRunEntityReader extends TimelineEntityReader {
   @Override
   protected void validateParams() {
     Preconditions.checkNotNull(getContext(), "context shouldn't be null");
-    Preconditions.checkNotNull(
-        getDataToRetrieve(), "data to retrieve shouldn't be null");
+    Preconditions.checkNotNull(getDataToRetrieve(),
+        "data to retrieve shouldn't be null");
     Preconditions.checkNotNull(getContext().getClusterId(),
         "clusterId shouldn't be null");
     Preconditions.checkNotNull(getContext().getUserId(),
@@ -97,8 +98,8 @@ class FlowRunEntityReader extends TimelineEntityReader {
     if (!isSingleEntityRead() && fieldsToRetrieve != null) {
       for (Field field : fieldsToRetrieve) {
         if (field != Field.ALL && field != Field.METRICS) {
-          throw new BadRequestException("Invalid field " + field +
-              " specified while querying flow runs.");
+          throw new BadRequestException("Invalid field " + field
+              + " specified while querying flow runs.");
         }
       }
     }
@@ -119,23 +120,22 @@ class FlowRunEntityReader extends TimelineEntityReader {
     Long createdTimeBegin = getFilters().getCreatedTimeBegin();
     Long createdTimeEnd = getFilters().getCreatedTimeEnd();
     if (createdTimeBegin != 0 || createdTimeEnd != Long.MAX_VALUE) {
-      listBasedOnFilters.addFilter(
-          TimelineFilterUtils.createSingleColValueFiltersByRange(
-          FlowRunColumn.MIN_START_TIME, createdTimeBegin, createdTimeEnd));
+      listBasedOnFilters.addFilter(TimelineFilterUtils
+          .createSingleColValueFiltersByRange(FlowRunColumn.MIN_START_TIME,
+              createdTimeBegin, createdTimeEnd));
     }
     // Filter based on metric filters.
     TimelineFilterList metricFilters = getFilters().getMetricFilters();
     if (metricFilters != null && !metricFilters.getFilterList().isEmpty()) {
-      listBasedOnFilters.addFilter(
-          TimelineFilterUtils.createHBaseFilterList(
-              FlowRunColumnPrefix.METRIC, metricFilters));
+      listBasedOnFilters.addFilter(TimelineFilterUtils.createHBaseFilterList(
+          FlowRunColumnPrefix.METRIC, metricFilters));
     }
     return listBasedOnFilters;
   }
 
   /**
-   * Add {@link QualifierFilter} filters to filter list for each column of
-   * flow run table.
+   * Add {@link QualifierFilter} filters to filter list for each column of flow
+   * run table.
    *
    * @return filter list to which qualifier filters have been added.
    */
@@ -153,20 +153,19 @@ class FlowRunEntityReader extends TimelineEntityReader {
     FilterList list = new FilterList(Operator.MUST_PASS_ONE);
     // By default fetch everything in INFO column family.
     FamilyFilter infoColumnFamily =
-        new FamilyFilter(CompareOp.EQUAL,
-           new BinaryComparator(FlowRunColumnFamily.INFO.getBytes()));
+        new FamilyFilter(CompareOp.EQUAL, new BinaryComparator(
+            FlowRunColumnFamily.INFO.getBytes()));
     TimelineDataToRetrieve dataToRetrieve = getDataToRetrieve();
     // If multiple entities have to be retrieved, check if metrics have to be
     // retrieved and if not, add a filter so that metrics can be excluded.
     // Metrics are always returned if we are reading a single entity.
-    if (!isSingleEntityRead() && !TimelineStorageUtils.hasField(
-        dataToRetrieve.getFieldsToRetrieve(), Field.METRICS)) {
+    if (!isSingleEntityRead()
+        && !hasField(dataToRetrieve.getFieldsToRetrieve(), Field.METRICS)) {
       FilterList infoColFamilyList = new FilterList(Operator.MUST_PASS_ONE);
       infoColFamilyList.addFilter(infoColumnFamily);
-      infoColFamilyList.addFilter(
-          new QualifierFilter(CompareOp.NOT_EQUAL,
-          new BinaryPrefixComparator(
-              FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(""))));
+      infoColFamilyList.addFilter(new QualifierFilter(CompareOp.NOT_EQUAL,
+          new BinaryPrefixComparator(FlowRunColumnPrefix.METRIC
+              .getColumnPrefixBytes(""))));
       list.addFilter(infoColFamilyList);
     } else {
       // Check if metricsToRetrieve are specified and if they are, create a
@@ -176,14 +175,13 @@ class FlowRunEntityReader extends TimelineEntityReader {
       // (in augmentParams()).
       TimelineFilterList metricsToRetrieve =
           dataToRetrieve.getMetricsToRetrieve();
-      if (metricsToRetrieve != null &&
-          !metricsToRetrieve.getFilterList().isEmpty()) {
+      if (metricsToRetrieve != null
+          && !metricsToRetrieve.getFilterList().isEmpty()) {
         FilterList infoColFamilyList = new FilterList();
         infoColFamilyList.addFilter(infoColumnFamily);
         FilterList columnsList = updateFixedColumns();
-        columnsList.addFilter(
-            TimelineFilterUtils.createHBaseFilterList(
-                FlowRunColumnPrefix.METRIC, metricsToRetrieve));
+        columnsList.addFilter(TimelineFilterUtils.createHBaseFilterList(
+            FlowRunColumnPrefix.METRIC, metricsToRetrieve));
         infoColFamilyList.addFilter(columnsList);
         list.addFilter(infoColFamilyList);
       }
@@ -195,9 +193,10 @@ class FlowRunEntityReader extends TimelineEntityReader {
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
     TimelineReaderContext context = getContext();
-    byte[] rowKey =
-        FlowRunRowKey.getRowKey(context.getClusterId(), context.getUserId(),
+    FlowRunRowKey flowRunRowKey =
+        new FlowRunRowKey(context.getClusterId(), context.getUserId(),
             context.getFlowName(), context.getFlowRunId());
+    byte[] rowKey = flowRunRowKey.getRowKey();
     Get get = new Get(rowKey);
     get.setMaxVersions(Integer.MAX_VALUE);
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -207,13 +206,14 @@ class FlowRunEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected ResultScanner getResults(Configuration hbaseConf,
-      Connection conn, FilterList filterList) throws IOException {
+  protected ResultScanner getResults(Configuration hbaseConf, Connection conn,
+      FilterList filterList) throws IOException {
     Scan scan = new Scan();
     TimelineReaderContext context = getContext();
-    scan.setRowPrefixFilter(
-        FlowRunRowKey.getRowKeyPrefix(context.getClusterId(),
-            context.getUserId(), context.getFlowName()));
+    RowKeyPrefix<FlowRunRowKey> flowRunRowKeyPrefix =
+        new FlowRunRowKeyPrefix(context.getClusterId(), context.getUserId(),
+            context.getFlowName());
+    scan.setRowPrefixFilter(flowRunRowKeyPrefix.getRowKeyPrefix());
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(getFilters().getLimit()));
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -238,27 +238,27 @@ class FlowRunEntityReader extends TimelineEntityReader {
     }
 
     // read the start time
-    Long startTime = (Long)FlowRunColumn.MIN_START_TIME.readResult(result);
+    Long startTime = (Long) FlowRunColumn.MIN_START_TIME.readResult(result);
     if (startTime != null) {
       flowRun.setStartTime(startTime.longValue());
     }
 
     // read the end time if available
-    Long endTime = (Long)FlowRunColumn.MAX_END_TIME.readResult(result);
+    Long endTime = (Long) FlowRunColumn.MAX_END_TIME.readResult(result);
     if (endTime != null) {
       flowRun.setMaxEndTime(endTime.longValue());
     }
 
     // read the flow version
-    String version = (String)FlowRunColumn.FLOW_VERSION.readResult(result);
+    String version = (String) FlowRunColumn.FLOW_VERSION.readResult(result);
     if (version != null) {
       flowRun.setVersion(version);
     }
 
     // read metrics if its a single entity query or if METRICS are part of
     // fieldsToRetrieve.
-    if (isSingleEntityRead() || TimelineStorageUtils.hasField(
-        getDataToRetrieve().getFieldsToRetrieve(), Field.METRICS)) {
+    if (isSingleEntityRead()
+        || hasField(getDataToRetrieve().getFieldsToRetrieve(), Field.METRICS)) {
       readMetrics(flowRun, result, FlowRunColumnPrefix.METRIC);
     }
 

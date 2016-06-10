@@ -49,8 +49,7 @@ public enum EntityColumn implements Column<EntityTable> {
   /**
    * When the entity was created.
    */
-  CREATED_TIME(EntityColumnFamily.INFO, "created_time",
-      LongConverter.getInstance()),
+  CREATED_TIME(EntityColumnFamily.INFO, "created_time", new LongConverter()),
 
   /**
    * The version of the flow that this entity belongs to.

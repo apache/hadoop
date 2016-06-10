@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.entity;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.AppIdKeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+
 /**
  * Represents a rowkey for the entity table.
  */
@@ -28,6 +34,8 @@ public class EntityRowKey {
   private final String appId;
   private final String entityType;
   private final String entityId;
+  private final KeyConverter<EntityRowKey> entityRowKeyConverter =
+      new EntityRowKeyConverter();
 
   public EntityRowKey(String clusterId, String userId, String flowName,
       Long flowRunId, String appId, String entityType, String entityId) {
@@ -69,61 +77,14 @@ public class EntityRowKey {
   }
 
   /**
-   * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowName!flowRunId!AppId}.
-   *
-   * @param clusterId Context cluster id.
-   * @param userId User name.
-   * @param flowName Flow name.
-   * @param flowRunId Run Id for the flow.
-   * @param appId Application Id.
-   * @return byte array with the row key prefix.
-   */
-  public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowName, Long flowRunId, String appId) {
-    return EntityRowKeyConverter.getInstance().encode(new EntityRowKey(
-        clusterId, userId, flowName, flowRunId, appId, null, null));
-  }
-
-  /**
-   * Constructs a row key prefix for the entity table as follows:
-   * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!}.
-   * Typically used while querying multiple entities of a particular entity
-   * type.
-   *
-   * @param clusterId Context cluster id.
-   * @param userId User name.
-   * @param flowName Flow name.
-   * @param flowRunId Run Id for the flow.
-   * @param appId Application Id.
-   * @param entityType Entity type.
-   * @return byte array with the row key prefix.
-   */
-  public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowName, Long flowRunId, String appId, String entityType) {
-    return EntityRowKeyConverter.getInstance().encode(new EntityRowKey(
-        clusterId, userId, flowName, flowRunId, appId, entityType, null));
-  }
-
-  /**
    * Constructs a row key for the entity table as follows:
    * {@code userName!clusterId!flowName!flowRunId!AppId!entityType!entityId}.
    * Typically used while querying a specific entity.
    *
-   * @param clusterId Context cluster id.
-   * @param userId User name.
-   * @param flowName Flow name.
-   * @param flowRunId Run Id for the flow.
-   * @param appId Application Id.
-   * @param entityType Entity type.
-   * @param entityId Entity Id.
    * @return byte array with the row key.
    */
-  public static byte[] getRowKey(String clusterId, String userId,
-      String flowName, Long flowRunId, String appId, String entityType,
-      String entityId) {
-    return EntityRowKeyConverter.getInstance().encode(new EntityRowKey(
-        clusterId, userId, flowName, flowRunId, appId, entityType, entityId));
+  public byte[] getRowKey() {
+    return entityRowKeyConverter.encode(this);
   }
 
   /**
@@ -133,6 +94,132 @@ public class EntityRowKey {
    * @return An <cite>EntityRowKey</cite> object.
    */
   public static EntityRowKey parseRowKey(byte[] rowKey) {
-    return EntityRowKeyConverter.getInstance().decode(rowKey);
+    return new EntityRowKeyConverter().decode(rowKey);
+  }
+
+  /**
+   * Encodes and decodes row key for entity table. The row key is of the form :
+   * userName!clusterId!flowName!flowRunId!appId!entityType!entityId. flowRunId
+   * is a long, appId is encoded/decoded using {@link AppIdKeyConverter} and
+   * rest are strings.
+   * <p>
+   */
+  final private static class EntityRowKeyConverter implements
+      KeyConverter<EntityRowKey> {
+
+    private final AppIdKeyConverter appIDKeyConverter = new AppIdKeyConverter();
+
+    private EntityRowKeyConverter() {
+    }
+
+    /**
+     * Entity row key is of the form
+     * userName!clusterId!flowName!flowRunId!appId!entityType!entityId w. each
+     * segment separated by !. The sizes below indicate sizes of each one of
+     * these segments in sequence. clusterId, userName, flowName, entityType and
+     * entityId are strings. flowrunId is a long hence 8 bytes in size. app id
+     * is represented as 12 bytes with cluster timestamp part of appid being 8
+     * bytes (long) and seq id being 4 bytes(int). Strings are variable in size
+     * (i.e. end whenever separator is encountered). This is used while decoding
+     * and helps in determining where to split.
+     */
+    private static final int[] SEGMENT_SIZES = {Separator.VARIABLE_SIZE,
+        Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
+        AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE,
+        Separator.VARIABLE_SIZE };
+
+    /*
+     * (non-Javadoc)
+     *
+     * Encodes EntityRowKey object into a byte array with each component/field
+     * in EntityRowKey separated by Separator#QUALIFIERS. This leads to an
+     * entity table row key of the form
+     * userName!clusterId!flowName!flowRunId!appId!entityType!entityId If
+     * entityType in passed EntityRowKey object is null (and the fields
+     * preceding it i.e. clusterId, userId and flowName, flowRunId and appId
+     * are not null), this returns a row key prefix of the form
+     * userName!clusterId!flowName!flowRunId!appId! and if entityId in
+     * EntityRowKey is null (other 6 components are not null), this returns a
+     * row key prefix of the form
+     * userName!clusterId!flowName!flowRunId!appId!entityType! flowRunId is
+     * inverted while encoding as it helps maintain a descending order for row
+     * keys in entity table.
+     *
+     * @see org.apache.hadoop.yarn.server.timelineservice.storage.common
+     * .KeyConverter#encode(java.lang.Object)
+     */
+    @Override
+    public byte[] encode(EntityRowKey rowKey) {
+      byte[] user =
+          Separator.encode(rowKey.getUserId(), Separator.SPACE, Separator.TAB,
+              Separator.QUALIFIERS);
+      byte[] cluster =
+          Separator.encode(rowKey.getClusterId(), Separator.SPACE,
+              Separator.TAB, Separator.QUALIFIERS);
+      byte[] flow =
+          Separator.encode(rowKey.getFlowName(), Separator.SPACE,
+              Separator.TAB, Separator.QUALIFIERS);
+      byte[] first = Separator.QUALIFIERS.join(user, cluster, flow);
+      // Note that flowRunId is a long, so we can't encode them all at the same
+      // time.
+      byte[] second =
+          Bytes.toBytes(LongConverter.invertLong(rowKey.getFlowRunId()));
+      byte[] third = appIDKeyConverter.encode(rowKey.getAppId());
+      if (rowKey.getEntityType() == null) {
+        return Separator.QUALIFIERS.join(first, second, third,
+            Separator.EMPTY_BYTES);
+      }
+      byte[] entityType =
+          Separator.encode(rowKey.getEntityType(), Separator.SPACE,
+              Separator.TAB, Separator.QUALIFIERS);
+      byte[] entityId =
+          rowKey.getEntityId() == null ? Separator.EMPTY_BYTES : Separator
+              .encode(rowKey.getEntityId(), Separator.SPACE, Separator.TAB,
+                  Separator.QUALIFIERS);
+      byte[] fourth = Separator.QUALIFIERS.join(entityType, entityId);
+      return Separator.QUALIFIERS.join(first, second, third, fourth);
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * Decodes an application row key of the form
+     * userName!clusterId!flowName!flowRunId!appId!entityType!entityId
+     * represented in byte format and converts it into an EntityRowKey object.
+     * flowRunId is inverted while decoding as it was inverted while encoding.
+     *
+     * @see
+     * org.apache.hadoop.yarn.server.timelineservice.storage.common
+     * .KeyConverter#decode(byte[])
+     */
+    @Override
+    public EntityRowKey decode(byte[] rowKey) {
+      byte[][] rowKeyComponents =
+          Separator.QUALIFIERS.split(rowKey, SEGMENT_SIZES);
+      if (rowKeyComponents.length != 7) {
+        throw new IllegalArgumentException("the row key is not valid for "
+            + "an entity");
+      }
+      String userId =
+          Separator.decode(Bytes.toString(rowKeyComponents[0]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      String clusterId =
+          Separator.decode(Bytes.toString(rowKeyComponents[1]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      String flowName =
+          Separator.decode(Bytes.toString(rowKeyComponents[2]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      Long flowRunId =
+          LongConverter.invertLong(Bytes.toLong(rowKeyComponents[3]));
+      String appId = appIDKeyConverter.decode(rowKeyComponents[4]);
+      String entityType =
+          Separator.decode(Bytes.toString(rowKeyComponents[5]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      String entityId =
+          Separator.decode(Bytes.toString(rowKeyComponents[6]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      return new EntityRowKey(clusterId, userId, flowName, flowRunId, appId,
+          entityType, entityId);
+    }
   }
 }

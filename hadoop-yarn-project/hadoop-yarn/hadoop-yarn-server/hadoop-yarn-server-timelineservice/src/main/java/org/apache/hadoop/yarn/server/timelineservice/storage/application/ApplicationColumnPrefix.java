@@ -67,8 +67,7 @@ public enum ApplicationColumnPrefix implements ColumnPrefix<ApplicationTable> {
   /**
    * Metrics are stored with the metric name as the column name.
    */
-  METRIC(ApplicationColumnFamily.METRICS, null,
-      LongConverter.getInstance());
+  METRIC(ApplicationColumnFamily.METRICS, null, new LongConverter());
 
   private final ColumnHelper<ApplicationTable> column;
   private final ColumnFamily<ApplicationTable> columnFamily;

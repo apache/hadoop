@@ -19,24 +19,24 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotEquals;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -46,21 +46,21 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
-import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimestampGenerator;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 
 /**
  * Tests the FlowRun and FlowActivity Tables
@@ -194,10 +194,11 @@ public class TestHBaseStorageFlowRunCompaction {
       long runid, Configuration c1, int valueCount) throws IOException {
     Scan s = new Scan();
     s.addFamily(FlowRunColumnFamily.INFO.getBytes());
-    byte[] startRow = FlowRunRowKey.getRowKey(cluster, user, flow, runid);
+    byte[] startRow = new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
-    byte[] stopRow = FlowRunRowKey.getRowKey(clusterStop, user, flow, runid);
+    byte[] stopRow =
+        new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName
@@ -302,8 +303,9 @@ public class TestHBaseStorageFlowRunCompaction {
         cell4Ts, Bytes.toBytes(cellValue4), tagByteArray);
     currentColumnCells.add(c4);
 
-    List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+    List<Cell> cells =
+        fs.processSummationMajorCompaction(currentColumnCells,
+            new LongConverter(), currentTimestamp);
     assertNotNull(cells);
 
     // we should be getting back 4 cells
@@ -387,8 +389,9 @@ public class TestHBaseStorageFlowRunCompaction {
       cellTsNotFinal++;
     }
 
-    List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+    List<Cell> cells =
+        fs.processSummationMajorCompaction(currentColumnCells,
+            new LongConverter(), currentTimestamp);
     assertNotNull(cells);
 
     // we should be getting back count + 1 cells
@@ -489,8 +492,9 @@ public class TestHBaseStorageFlowRunCompaction {
       cellTsNotFinal++;
     }
 
-    List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+    List<Cell> cells =
+        fs.processSummationMajorCompaction(currentColumnCells,
+            new LongConverter(), currentTimestamp);
     assertNotNull(cells);
 
     // we should be getting back
@@ -554,7 +558,7 @@ public class TestHBaseStorageFlowRunCompaction {
         130L, Bytes.toBytes(cellValue2), tagByteArray);
     currentColumnCells.add(c2);
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+        new LongConverter(), currentTimestamp);
     assertNotNull(cells);
 
     // we should be getting back two cells
@@ -602,7 +606,7 @@ public class TestHBaseStorageFlowRunCompaction {
     currentColumnCells.add(c1);
 
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+        new LongConverter(), currentTimestamp);
     assertNotNull(cells);
     // we should not get the same cell back
     // but we get back the flow cell
@@ -639,7 +643,7 @@ public class TestHBaseStorageFlowRunCompaction {
         currentTimestamp, Bytes.toBytes(1110L), tagByteArray);
     currentColumnCells.add(c1);
     List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+        new LongConverter(), currentTimestamp);
     assertNotNull(cells);
     // we expect the same cell back
     assertEquals(1, cells.size());
@@ -653,15 +657,19 @@ public class TestHBaseStorageFlowRunCompaction {
     FlowScanner fs = getFlowScannerForTestingCompaction();
     long currentTimestamp = System.currentTimeMillis();
 
+    LongConverter longConverter = new LongConverter();
+
     SortedSet<Cell> currentColumnCells = null;
-    List<Cell> cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+    List<Cell> cells =
+        fs.processSummationMajorCompaction(currentColumnCells, longConverter,
+            currentTimestamp);
     assertNotNull(cells);
     assertEquals(0, cells.size());
 
     currentColumnCells = new TreeSet<Cell>(KeyValue.COMPARATOR);
-    cells = fs.processSummationMajorCompaction(currentColumnCells,
-        LongConverter.getInstance(), currentTimestamp);
+    cells =
+        fs.processSummationMajorCompaction(currentColumnCells, longConverter,
+            currentTimestamp);
     assertNotNull(cells);
     assertEquals(0, cells.size());
   }

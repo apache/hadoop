@@ -59,8 +59,8 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilte
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
@@ -224,7 +224,7 @@ public class TestHBaseStorageFlowRun {
         .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
     // scan the table and see that we get back the right min and max
     // timestamps
-    byte[] startRow = FlowRunRowKey.getRowKey(cluster, user, flow, runid);
+    byte[] startRow = new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
     Get g = new Get(startRow);
     g.addColumn(FlowRunColumnFamily.INFO.getBytes(),
         FlowRunColumn.MIN_START_TIME.getColumnQualifierBytes());
@@ -354,10 +354,11 @@ public class TestHBaseStorageFlowRun {
       long runid, Configuration c1) throws IOException {
     Scan s = new Scan();
     s.addFamily(FlowRunColumnFamily.INFO.getBytes());
-    byte[] startRow = FlowRunRowKey.getRowKey(cluster, user, flow, runid);
+    byte[] startRow = new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
-    byte[] stopRow = FlowRunRowKey.getRowKey(clusterStop, user, flow, runid);
+    byte[] stopRow =
+        new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName
@@ -629,7 +630,7 @@ public class TestHBaseStorageFlowRun {
         .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
     // scan the table and see that we get back the right min and max
     // timestamps
-    byte[] startRow = FlowRunRowKey.getRowKey(cluster, user, flow, runid);
+    byte[] startRow = new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
     Get g = new Get(startRow);
     g.addColumn(FlowRunColumnFamily.INFO.getBytes(),
         FlowRunColumn.MIN_START_TIME.getColumnQualifierBytes());
