@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
+
 /**
  * Represents a rowkey for the flow run table.
  */
@@ -25,6 +30,8 @@ public class FlowRunRowKey {
   private final String userId;
   private final String flowName;
   private final Long flowRunId;
+  private final FlowRunRowKeyConverter flowRunRowKeyConverter =
+      new FlowRunRowKeyConverter();
 
   public FlowRunRowKey(String clusterId, String userId, String flowName,
       Long flowRunId) {
@@ -51,35 +58,15 @@ public class FlowRunRowKey {
   }
 
   /**
-   * Constructs a row key prefix for the flow run table as follows: {
-   * clusterId!userI!flowName!}.
-   *
-   * @param clusterId Cluster Id.
-   * @param userId User Id.
-   * @param flowName Flow Name.
-   * @return byte array with the row key prefix
-   */
-  public static byte[] getRowKeyPrefix(String clusterId, String userId,
-      String flowName) {
-    return FlowRunRowKeyConverter.getInstance().encode(new FlowRunRowKey(
-        clusterId, userId, flowName, null));
-  }
-
-  /**
    * Constructs a row key for the entity table as follows: {
    * clusterId!userId!flowName!Inverted Flow Run Id}.
    *
-   * @param clusterId Cluster Id.
-   * @param userId User Id.
-   * @param flowName Flow Name.
-   * @param flowRunId Run Id for the flow name.
    * @return byte array with the row key
    */
-  public static byte[] getRowKey(String clusterId, String userId,
-      String flowName, Long flowRunId) {
-    return FlowRunRowKeyConverter.getInstance().encode(new FlowRunRowKey(
-        clusterId, userId, flowName, flowRunId));
+  public byte[] getRowKey() {
+    return flowRunRowKeyConverter.encode(this);
   }
+
 
   /**
    * Given the raw row key as bytes, returns the row key as an object.
@@ -88,7 +75,7 @@ public class FlowRunRowKey {
    * @return A <cite>FlowRunRowKey</cite> object.
    */
   public static FlowRunRowKey parseRowKey(byte[] rowKey) {
-    return FlowRunRowKeyConverter.getInstance().decode(rowKey);
+    return new FlowRunRowKeyConverter().decode(rowKey);
   }
 
   /**
@@ -105,5 +92,99 @@ public class FlowRunRowKey {
     flowKeyStr.append(flowRunId);
     flowKeyStr.append("}");
     return flowKeyStr.toString();
+  }
+
+  /**
+   * Encodes and decodes row key for flow run table.
+   * The row key is of the form : clusterId!userId!flowName!flowrunId.
+   * flowrunId is a long and rest are strings.
+   * <p>
+   */
+  final private static class FlowRunRowKeyConverter implements
+      KeyConverter<FlowRunRowKey> {
+
+    private FlowRunRowKeyConverter() {
+    }
+
+    /**
+     * The flow run row key is of the form clusterId!userId!flowName!flowrunId
+     * with each segment separated by !. The sizes below indicate sizes of each
+     * one of these segments in sequence. clusterId, userId and flowName are
+     * strings. flowrunId is a long hence 8 bytes in size. Strings are variable
+     * in size (i.e. end whenever separator is encountered). This is used while
+     * decoding and helps in determining where to split.
+     */
+    private static final int[] SEGMENT_SIZES = {Separator.VARIABLE_SIZE,
+        Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG };
+
+    /*
+     * (non-Javadoc)
+     *
+     * Encodes FlowRunRowKey object into a byte array with each component/field
+     * in FlowRunRowKey separated by Separator#QUALIFIERS. This leads to an flow
+     * run row key of the form clusterId!userId!flowName!flowrunId If flowRunId
+     * in passed FlowRunRowKey object is null (and the fields preceding it i.e.
+     * clusterId, userId and flowName are not null), this returns a row key
+     * prefix of the form clusterId!userName!flowName! flowRunId is inverted
+     * while encoding as it helps maintain a descending order for flow keys in
+     * flow run table.
+     *
+     * @see
+     * org.apache.hadoop.yarn.server.timelineservice.storage.common
+     * .KeyConverter#encode(java.lang.Object)
+     */
+    @Override
+    public byte[] encode(FlowRunRowKey rowKey) {
+      byte[] first =
+          Separator.QUALIFIERS.join(Separator.encode(rowKey.getClusterId(),
+              Separator.SPACE, Separator.TAB, Separator.QUALIFIERS), Separator
+              .encode(rowKey.getUserId(), Separator.SPACE, Separator.TAB,
+                  Separator.QUALIFIERS), Separator.encode(rowKey.getFlowName(),
+              Separator.SPACE, Separator.TAB, Separator.QUALIFIERS));
+      if (rowKey.getFlowRunId() == null) {
+        return Separator.QUALIFIERS.join(first, Separator.EMPTY_BYTES);
+      } else {
+        // Note that flowRunId is a long, so we can't encode them all at the
+        // same
+        // time.
+        byte[] second =
+            Bytes.toBytes(LongConverter.invertLong(rowKey.getFlowRunId()));
+        return Separator.QUALIFIERS.join(first, second);
+      }
+    }
+
+    /*
+     * (non-Javadoc)
+     *
+     * Decodes an flow run row key of the form
+     * clusterId!userId!flowName!flowrunId represented in byte format and
+     * converts it into an FlowRunRowKey object. flowRunId is inverted while
+     * decoding as it was inverted while encoding.
+     *
+     * @see
+     * org.apache.hadoop.yarn.server.timelineservice.storage.common
+     * .KeyConverter#decode(byte[])
+     */
+    @Override
+    public FlowRunRowKey decode(byte[] rowKey) {
+      byte[][] rowKeyComponents =
+          Separator.QUALIFIERS.split(rowKey, SEGMENT_SIZES);
+      if (rowKeyComponents.length != 4) {
+        throw new IllegalArgumentException("the row key is not valid for "
+            + "a flow run");
+      }
+      String clusterId =
+          Separator.decode(Bytes.toString(rowKeyComponents[0]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      String userId =
+          Separator.decode(Bytes.toString(rowKeyComponents[1]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      String flowName =
+          Separator.decode(Bytes.toString(rowKeyComponents[2]),
+              Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+      Long flowRunId =
+          LongConverter.invertLong(Bytes.toLong(rowKeyComponents[3]));
+      return new FlowRunRowKey(clusterId, userId, flowName, flowRunId);
+    }
   }
 }

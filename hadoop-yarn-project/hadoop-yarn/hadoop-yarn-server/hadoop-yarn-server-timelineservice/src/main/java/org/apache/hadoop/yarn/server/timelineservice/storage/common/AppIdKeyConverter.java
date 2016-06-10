@@ -28,13 +28,8 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
  * (long - 8 bytes) followed by sequence id section of app id (int - 4 bytes).
  */
 public final class AppIdKeyConverter implements KeyConverter<String> {
-  private static final AppIdKeyConverter INSTANCE = new AppIdKeyConverter();
 
-  public static AppIdKeyConverter getInstance() {
-    return INSTANCE;
-  }
-
-  private AppIdKeyConverter() {
+  public AppIdKeyConverter() {
   }
 
   /*
@@ -58,7 +53,7 @@ public final class AppIdKeyConverter implements KeyConverter<String> {
     ApplicationId appId = ConverterUtils.toApplicationId(appIdStr);
     byte[] appIdBytes = new byte[getKeySize()];
     byte[] clusterTs = Bytes.toBytes(
-        TimelineStorageUtils.invertLong(appId.getClusterTimestamp()));
+        LongConverter.invertLong(appId.getClusterTimestamp()));
     System.arraycopy(clusterTs, 0, appIdBytes, 0, Bytes.SIZEOF_LONG);
     byte[] seqId = Bytes.toBytes(TimelineStorageUtils.invertInt(appId.getId()));
     System.arraycopy(seqId, 0, appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT);
@@ -83,7 +78,7 @@ public final class AppIdKeyConverter implements KeyConverter<String> {
     if (appIdBytes.length != getKeySize()) {
       throw new IllegalArgumentException("Invalid app id in byte format");
     }
-    long clusterTs = TimelineStorageUtils.invertLong(
+    long clusterTs = LongConverter.invertLong(
         Bytes.toLong(appIdBytes, 0, Bytes.SIZEOF_LONG));
     int seqId = TimelineStorageUtils.invertInt(
         Bytes.toInt(appIdBytes, Bytes.SIZEOF_LONG, Bytes.SIZEOF_INT));

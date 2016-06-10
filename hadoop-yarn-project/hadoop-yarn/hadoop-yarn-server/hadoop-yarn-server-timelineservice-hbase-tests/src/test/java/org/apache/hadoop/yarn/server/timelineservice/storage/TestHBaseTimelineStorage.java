@@ -70,12 +70,14 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnName;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.EventColumnNameConverter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.KeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTable;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -649,8 +651,9 @@ public class TestHBaseTimelineStorage {
 
       infoMap.putAll(infoMap1);
       // retrieve the row
-      byte[] rowKey =
-          ApplicationRowKey.getRowKey(cluster, user, flow, runid, appId);
+      ApplicationRowKey applicationRowKey =
+          new ApplicationRowKey(cluster, user, flow, runid, appId);
+      byte[] rowKey = applicationRowKey.getRowKey();
       Get get = new Get(rowKey);
       get.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
@@ -674,7 +677,7 @@ public class TestHBaseTimelineStorage {
 
       Map<String, Object> infoColumns =
           ApplicationColumnPrefix.INFO.readResults(result,
-              StringKeyConverter.getInstance());
+              new StringKeyConverter());
       assertEquals(infoMap, infoColumns);
 
       // Remember isRelatedTo is of type Map<String, Set<String>>
@@ -710,15 +713,16 @@ public class TestHBaseTimelineStorage {
         }
       }
 
+      KeyConverter<String> stringKeyConverter = new StringKeyConverter();
       // Configuration
       Map<String, Object> configColumns =
-          ApplicationColumnPrefix.CONFIG.readResults(result,
-              StringKeyConverter.getInstance());
+          ApplicationColumnPrefix.CONFIG
+              .readResults(result, stringKeyConverter);
       assertEquals(conf, configColumns);
 
       NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-          ApplicationColumnPrefix.METRIC.readResultsWithTimestamps(
-              result, StringKeyConverter.getInstance());
+          ApplicationColumnPrefix.METRIC.readResultsWithTimestamps(result,
+              stringKeyConverter);
 
       NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
       matchMetrics(metricValues, metricMap);
@@ -908,7 +912,8 @@ public class TestHBaseTimelineStorage {
       // scan the table and see that entity exists
       Scan s = new Scan();
       byte[] startRow =
-          EntityRowKey.getRowKeyPrefix(cluster, user, flow, runid, appName);
+          new EntityRowKeyPrefix(cluster, user, flow, runid, appName)
+              .getRowKeyPrefix();
       s.setStartRow(startRow);
       s.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
@@ -916,6 +921,7 @@ public class TestHBaseTimelineStorage {
 
       int rowCount = 0;
       int colCount = 0;
+      KeyConverter<String> stringKeyConverter = new StringKeyConverter();
       for (Result result : scanner) {
         if (result != null && !result.isEmpty()) {
           rowCount++;
@@ -936,7 +942,7 @@ public class TestHBaseTimelineStorage {
 
           Map<String, Object> infoColumns =
               EntityColumnPrefix.INFO.readResults(result,
-                  StringKeyConverter.getInstance());
+                  new StringKeyConverter());
           assertEquals(infoMap, infoColumns);
 
           // Remember isRelatedTo is of type Map<String, Set<String>>
@@ -975,13 +981,12 @@ public class TestHBaseTimelineStorage {
 
           // Configuration
           Map<String, Object> configColumns =
-              EntityColumnPrefix.CONFIG.readResults(result,
-                  StringKeyConverter.getInstance());
+              EntityColumnPrefix.CONFIG.readResults(result, stringKeyConverter);
           assertEquals(conf, configColumns);
 
           NavigableMap<String, NavigableMap<Long, Number>> metricsResult =
-              EntityColumnPrefix.METRIC.readResultsWithTimestamps(
-                  result, StringKeyConverter.getInstance());
+              EntityColumnPrefix.METRIC.readResultsWithTimestamps(result,
+                  stringKeyConverter);
 
           NavigableMap<Long, Number> metricMap = metricsResult.get(m1.getId());
           matchMetrics(metricValues, metricMap);
@@ -1116,8 +1121,9 @@ public class TestHBaseTimelineStorage {
       hbi.stop();
 
       // retrieve the row
-      byte[] rowKey =
-          ApplicationRowKey.getRowKey(cluster, user, flow, runid, appName);
+      ApplicationRowKey applicationRowKey =
+          new ApplicationRowKey(cluster, user, flow, runid, appName);
+      byte[] rowKey = applicationRowKey.getRowKey();
       Get get = new Get(rowKey);
       get.setMaxVersions(Integer.MAX_VALUE);
       Connection conn = ConnectionFactory.createConnection(c1);
@@ -1132,7 +1138,7 @@ public class TestHBaseTimelineStorage {
 
       Map<EventColumnName, Object> eventsResult =
           ApplicationColumnPrefix.EVENT.readResults(result,
-              EventColumnNameConverter.getInstance());
+              new EventColumnNameConverter());
       // there should be only one event
       assertEquals(1, eventsResult.size());
       for (Map.Entry<EventColumnName, Object> e : eventsResult.entrySet()) {
@@ -1212,7 +1218,8 @@ public class TestHBaseTimelineStorage {
       String appName = ApplicationId.newInstance(System.currentTimeMillis() +
           9000000L, 1).toString();
       byte[] startRow =
-          EntityRowKey.getRowKeyPrefix(cluster, user, flow, runid, appName);
+          new EntityRowKeyPrefix(cluster, user, flow, runid, appName)
+              .getRowKeyPrefix();
       hbi.write(cluster, user, flow, flowVersion, runid, appName, entities);
       hbi.stop();
       // scan the table and see that entity exists
@@ -1234,7 +1241,7 @@ public class TestHBaseTimelineStorage {
 
           Map<EventColumnName, Object> eventsResult =
               EntityColumnPrefix.EVENT.readResults(result,
-                  EventColumnNameConverter.getInstance());
+                  new EventColumnNameConverter());
           // there should be only one event
           assertEquals(1, eventsResult.size());
           for (Map.Entry<EventColumnName, Object> e : eventsResult.entrySet()) {

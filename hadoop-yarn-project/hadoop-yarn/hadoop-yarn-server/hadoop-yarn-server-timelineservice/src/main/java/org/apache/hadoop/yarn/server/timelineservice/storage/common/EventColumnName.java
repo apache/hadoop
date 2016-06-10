@@ -26,6 +26,8 @@ public class EventColumnName {
   private final String id;
   private final Long timestamp;
   private final String infoKey;
+  private final KeyConverter<EventColumnName> eventColumnNameConverter =
+      new EventColumnNameConverter();
 
   public EventColumnName(String id, Long timestamp, String infoKey) {
     this.id = id;
@@ -43,6 +45,19 @@ public class EventColumnName {
 
   public String getInfoKey() {
     return infoKey;
+  }
+
+  /**
+   * @return a byte array with each components/fields separated by
+   *         Separator#VALUES. This leads to an event column name of the form
+   *         eventId=timestamp=infokey. If both timestamp and infokey are null,
+   *         then a qualifier of the form eventId=timestamp= is returned. If
+   *         only infokey is null, then a qualifier of the form eventId= is
+   *         returned. These prefix forms are useful for queries that intend to
+   *         retrieve more than one specific column name.
+   */
+  public byte[] getColumnQualifier() {
+    return eventColumnNameConverter.encode(this);
   }
 
 }

@@ -46,8 +46,11 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.application.Applica
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnFamily;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 
 import com.google.common.base.Preconditions;
@@ -150,13 +153,13 @@ class ApplicationEntityReader extends GenericEntityReader {
     EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
     // If INFO field has to be retrieved, add a filter for fetching columns
     // with INFO column prefix.
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.INFO)) {
+    if (hasField(fieldsToRetrieve, Field.INFO)) {
       infoFamilyColsFilter.addFilter(
           TimelineFilterUtils.createHBaseQualifierFilter(
               CompareOp.EQUAL, ApplicationColumnPrefix.INFO));
     }
     TimelineFilterList relatesTo = getFilters().getRelatesTo();
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.RELATES_TO)) {
+    if (hasField(fieldsToRetrieve, Field.RELATES_TO)) {
       // If RELATES_TO field has to be retrieved, add a filter for fetching
       // columns with RELATES_TO column prefix.
       infoFamilyColsFilter.addFilter(
@@ -169,12 +172,11 @@ class ApplicationEntityReader extends GenericEntityReader {
       // matched after fetching rows from HBase.
       Set<String> relatesToCols =
           TimelineFilterUtils.fetchColumnsFromFilterList(relatesTo);
-      infoFamilyColsFilter.addFilter(
-          TimelineFilterUtils.createFiltersFromColumnQualifiers(
-              ApplicationColumnPrefix.RELATES_TO, relatesToCols));
+      infoFamilyColsFilter.addFilter(createFiltersFromColumnQualifiers(
+          ApplicationColumnPrefix.RELATES_TO, relatesToCols));
     }
     TimelineFilterList isRelatedTo = getFilters().getIsRelatedTo();
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.IS_RELATED_TO)) {
+    if (hasField(fieldsToRetrieve, Field.IS_RELATED_TO)) {
       // If IS_RELATED_TO field has to be retrieved, add a filter for fetching
       // columns with IS_RELATED_TO column prefix.
       infoFamilyColsFilter.addFilter(
@@ -187,12 +189,11 @@ class ApplicationEntityReader extends GenericEntityReader {
       // matched after fetching rows from HBase.
       Set<String> isRelatedToCols =
           TimelineFilterUtils.fetchColumnsFromFilterList(isRelatedTo);
-      infoFamilyColsFilter.addFilter(
-          TimelineFilterUtils.createFiltersFromColumnQualifiers(
-              ApplicationColumnPrefix.IS_RELATED_TO, isRelatedToCols));
+      infoFamilyColsFilter.addFilter(createFiltersFromColumnQualifiers(
+          ApplicationColumnPrefix.IS_RELATED_TO, isRelatedToCols));
     }
     TimelineFilterList eventFilters = getFilters().getEventFilters();
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.EVENTS)) {
+    if (hasField(fieldsToRetrieve, Field.EVENTS)) {
       // If EVENTS field has to be retrieved, add a filter for fetching columns
       // with EVENT column prefix.
       infoFamilyColsFilter.addFilter(
@@ -205,9 +206,8 @@ class ApplicationEntityReader extends GenericEntityReader {
       // fetching rows from HBase.
       Set<String> eventCols =
           TimelineFilterUtils.fetchColumnsFromFilterList(eventFilters);
-      infoFamilyColsFilter.addFilter(
-          TimelineFilterUtils.createFiltersFromColumnQualifiers(
-              ApplicationColumnPrefix.EVENT, eventCols));
+      infoFamilyColsFilter.addFilter(createFiltersFromColumnQualifiers(
+          ApplicationColumnPrefix.EVENT, eventCols));
     }
     return infoFamilyColsFilter;
   }
@@ -222,25 +222,25 @@ class ApplicationEntityReader extends GenericEntityReader {
   private void excludeFieldsFromInfoColFamily(FilterList infoColFamilyList) {
     EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
     // Events not required.
-    if (!TimelineStorageUtils.hasField(fieldsToRetrieve, Field.EVENTS)) {
+    if (!hasField(fieldsToRetrieve, Field.EVENTS)) {
       infoColFamilyList.addFilter(
           TimelineFilterUtils.createHBaseQualifierFilter(
               CompareOp.NOT_EQUAL, ApplicationColumnPrefix.EVENT));
     }
     // info not required.
-    if (!TimelineStorageUtils.hasField(fieldsToRetrieve, Field.INFO)) {
+    if (!hasField(fieldsToRetrieve, Field.INFO)) {
       infoColFamilyList.addFilter(
           TimelineFilterUtils.createHBaseQualifierFilter(
               CompareOp.NOT_EQUAL, ApplicationColumnPrefix.INFO));
     }
     // is related to not required.
-    if (!TimelineStorageUtils.hasField(fieldsToRetrieve, Field.IS_RELATED_TO)) {
+    if (!hasField(fieldsToRetrieve, Field.IS_RELATED_TO)) {
       infoColFamilyList.addFilter(
           TimelineFilterUtils.createHBaseQualifierFilter(
               CompareOp.NOT_EQUAL, ApplicationColumnPrefix.IS_RELATED_TO));
     }
     // relates to not required.
-    if (!TimelineStorageUtils.hasField(fieldsToRetrieve, Field.RELATES_TO)) {
+    if (!hasField(fieldsToRetrieve, Field.RELATES_TO)) {
       infoColFamilyList.addFilter(
           TimelineFilterUtils.createHBaseQualifierFilter(
               CompareOp.NOT_EQUAL, ApplicationColumnPrefix.RELATES_TO));
@@ -308,9 +308,10 @@ class ApplicationEntityReader extends GenericEntityReader {
   protected Result getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList) throws IOException {
     TimelineReaderContext context = getContext();
-    byte[] rowKey =
-        ApplicationRowKey.getRowKey(context.getClusterId(), context.getUserId(),
+    ApplicationRowKey applicationRowKey =
+        new ApplicationRowKey(context.getClusterId(), context.getUserId(),
             context.getFlowName(), context.getFlowRunId(), context.getAppId());
+    byte[] rowKey = applicationRowKey.getRowKey();
     Get get = new Get(rowKey);
     get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -345,10 +346,13 @@ class ApplicationEntityReader extends GenericEntityReader {
     TimelineReaderContext context = getContext();
     if (isSingleEntityRead()) {
       // Get flow context information from AppToFlow table.
-      if (context.getFlowName() == null || context.getFlowRunId() == null ||
-          context.getUserId() == null) {
-        FlowContext flowContext = lookupFlowContext(
-            context.getClusterId(), context.getAppId(), hbaseConf, conn);
+      if (context.getFlowName() == null || context.getFlowRunId() == null
+          || context.getUserId() == null) {
+        AppToFlowRowKey appToFlowRowKey =
+            new AppToFlowRowKey(context.getClusterId(), context.getAppId());
+        FlowContext flowContext =
+            lookupFlowContext(appToFlowRowKey,
+                hbaseConf, conn);
         context.setFlowName(flowContext.getFlowName());
         context.setFlowRunId(flowContext.getFlowRunId());
         context.setUserId(flowContext.getUserId());
@@ -367,15 +371,13 @@ class ApplicationEntityReader extends GenericEntityReader {
       Connection conn, FilterList filterList) throws IOException {
     Scan scan = new Scan();
     TimelineReaderContext context = getContext();
-    if (context.getFlowRunId() != null) {
-      scan.setRowPrefixFilter(ApplicationRowKey.
-          getRowKeyPrefix(context.getClusterId(), context.getUserId(),
-              context.getFlowName(), context.getFlowRunId()));
-    } else {
-      scan.setRowPrefixFilter(ApplicationRowKey.
-          getRowKeyPrefix(context.getClusterId(), context.getUserId(),
-              context.getFlowName()));
-    }
+    // Whether or not flowRunID is null doesn't matter, the
+    // ApplicationRowKeyPrefix will do the right thing.
+    RowKeyPrefix<ApplicationRowKey> applicationRowKeyPrefix =
+        new ApplicationRowKeyPrefix(context.getClusterId(),
+            context.getUserId(), context.getFlowName(),
+            context.getFlowRunId());
+    scan.setRowPrefixFilter(applicationRowKeyPrefix.getRowKeyPrefix());
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(getFilters().getLimit()));
     if (filterList != null && !filterList.getFilters().isEmpty()) {
@@ -409,15 +411,14 @@ class ApplicationEntityReader extends GenericEntityReader {
     boolean checkIsRelatedTo =
         !isSingleEntityRead() && filters.getIsRelatedTo() != null &&
         filters.getIsRelatedTo().getFilterList().size() > 0;
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.IS_RELATED_TO) ||
-        checkIsRelatedTo) {
-      TimelineStorageUtils.readRelationship(
-          entity, result, ApplicationColumnPrefix.IS_RELATED_TO, true);
+    if (hasField(fieldsToRetrieve, Field.IS_RELATED_TO) || checkIsRelatedTo) {
+      readRelationship(entity, result, ApplicationColumnPrefix.IS_RELATED_TO,
+          true);
       if (checkIsRelatedTo && !TimelineStorageUtils.matchIsRelatedTo(entity,
           filters.getIsRelatedTo())) {
         return null;
       }
-      if (!TimelineStorageUtils.hasField(fieldsToRetrieve,
+      if (!hasField(fieldsToRetrieve,
           Field.IS_RELATED_TO)) {
         entity.getIsRelatedToEntities().clear();
       }
@@ -430,29 +431,27 @@ class ApplicationEntityReader extends GenericEntityReader {
     boolean checkRelatesTo =
         !isSingleEntityRead() && filters.getRelatesTo() != null &&
         filters.getRelatesTo().getFilterList().size() > 0;
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.RELATES_TO) ||
+    if (hasField(fieldsToRetrieve, Field.RELATES_TO) ||
         checkRelatesTo) {
-      TimelineStorageUtils.readRelationship(
-          entity, result, ApplicationColumnPrefix.RELATES_TO, false);
+      readRelationship(entity, result, ApplicationColumnPrefix.RELATES_TO,
+          false);
       if (checkRelatesTo && !TimelineStorageUtils.matchRelatesTo(entity,
           filters.getRelatesTo())) {
         return null;
       }
-      if (!TimelineStorageUtils.hasField(fieldsToRetrieve, Field.RELATES_TO)) {
+      if (!hasField(fieldsToRetrieve, Field.RELATES_TO)) {
         entity.getRelatesToEntities().clear();
       }
     }
 
     // fetch info if fieldsToRetrieve contains INFO or ALL.
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.INFO)) {
-      TimelineStorageUtils.readKeyValuePairs(
-          entity, result, ApplicationColumnPrefix.INFO, false);
+    if (hasField(fieldsToRetrieve, Field.INFO)) {
+      readKeyValuePairs(entity, result, ApplicationColumnPrefix.INFO, false);
     }
 
     // fetch configs if fieldsToRetrieve contains CONFIGS or ALL.
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.CONFIGS)) {
-      TimelineStorageUtils.readKeyValuePairs(
-          entity, result, ApplicationColumnPrefix.CONFIG, true);
+    if (hasField(fieldsToRetrieve, Field.CONFIGS)) {
+      readKeyValuePairs(entity, result, ApplicationColumnPrefix.CONFIG, true);
     }
 
     // fetch events and match event filters if they exist. If event filters do
@@ -462,21 +461,19 @@ class ApplicationEntityReader extends GenericEntityReader {
     boolean checkEvents =
         !isSingleEntityRead() && filters.getEventFilters() != null &&
         filters.getEventFilters().getFilterList().size() > 0;
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.EVENTS) ||
-        checkEvents) {
-      TimelineStorageUtils.readEvents(
-          entity, result, ApplicationColumnPrefix.EVENT);
+    if (hasField(fieldsToRetrieve, Field.EVENTS) || checkEvents) {
+      readEvents(entity, result, ApplicationColumnPrefix.EVENT);
       if (checkEvents && !TimelineStorageUtils.matchEventFilters(entity,
           filters.getEventFilters())) {
         return null;
       }
-      if (!TimelineStorageUtils.hasField(fieldsToRetrieve, Field.EVENTS)) {
+      if (!hasField(fieldsToRetrieve, Field.EVENTS)) {
         entity.getEvents().clear();
       }
     }
 
     // fetch metrics if fieldsToRetrieve contains METRICS or ALL.
-    if (TimelineStorageUtils.hasField(fieldsToRetrieve, Field.METRICS)) {
+    if (hasField(fieldsToRetrieve, Field.METRICS)) {
       readMetrics(entity, result, ApplicationColumnPrefix.METRIC);
     }
     return entity;
