@@ -22,10 +22,12 @@ package org.apache.hadoop.hdfs.server.diskbalancer.command;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.tools.DiskBalancer;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * Gets the current status of disk balancer command.
@@ -55,10 +57,22 @@ public class QueryCommand extends Command {
     verifyCommandOptions(DiskBalancer.QUERY, cmd);
     String nodeName = cmd.getOptionValue(DiskBalancer.QUERY);
     Preconditions.checkNotNull(nodeName);
-    ClientDatanodeProtocol dataNode = getDataNodeProxy(nodeName);
+    nodeName = nodeName.trim();
+    String nodeAddress = nodeName;
+
+    // if the string is not name:port format use the default port.
+    if(!nodeName.matches("^.*:\\d$")) {
+      int defaultIPC = NetUtils.createSocketAddr(
+          getConf().getTrimmed(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY,
+              DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_DEFAULT)).getPort();
+      nodeAddress = nodeName + ":" + defaultIPC;
+      LOG.debug("Using default data node port :  {}", nodeAddress);
+    }
+
+    ClientDatanodeProtocol dataNode = getDataNodeProxy(nodeAddress);
     try {
       DiskBalancerWorkStatus workStatus = dataNode.queryDiskBalancerPlan();
-      System.out.printf("Plan ID: %s Result: %s%n", workStatus.getPlanID(),
+      System.out.printf("Plan ID: %s %nResult: %s%n", workStatus.getPlanID(),
           workStatus.getResult().toString());
 
       if(cmd.hasOption(DiskBalancer.VERBOSE)) {
