@@ -57,9 +57,9 @@ Use the `AuthenticatedURL` class to obtain an authenticated HTTP connection:
     URL url = new URL("http://localhost:8080/hadoop-auth/kerberos/who");
     AuthenticatedURL.Token token = new AuthenticatedURL.Token();
     ...
-    HttpURLConnection conn = new AuthenticatedURL(url, token).openConnection();
+    HttpURLConnection conn = new AuthenticatedURL().openConnection(url, token);
     ...
-    conn = new AuthenticatedURL(url, token).openConnection();
+    conn = new AuthenticatedURL().openConnection(url, token);
     ...
 
 Building and Running the Examples
