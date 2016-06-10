@@ -43,14 +43,14 @@ import java.util.Map;
  * URL url = new URL("http://foo:8080/bar");
  * AuthenticatedURL.Token token = new AuthenticatedURL.Token();
  * AuthenticatedURL aUrl = new AuthenticatedURL();
- * HttpURLConnection conn = new AuthenticatedURL(url, token).openConnection();
+ * HttpURLConnection conn = new AuthenticatedURL().openConnection(url, token);
  * ....
  * // use the 'conn' instance
  * ....
  *
  * // establishing a follow up connection using a token from the previous connection
  *
- * HttpURLConnection conn = new AuthenticatedURL(url, token).openConnection();
+ * HttpURLConnection conn = new AuthenticatedURL().openConnection(url, token);
  * ....
  * // use the 'conn' instance
  * ....
