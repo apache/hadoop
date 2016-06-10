@@ -286,3 +286,10 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     font-weight: normal;
     cursor: pointer;
 }
+
+.cut-paste {
+  width: 75px;
+  min-width: 75px;
+  float: right;
+  left: 75px;
+}
