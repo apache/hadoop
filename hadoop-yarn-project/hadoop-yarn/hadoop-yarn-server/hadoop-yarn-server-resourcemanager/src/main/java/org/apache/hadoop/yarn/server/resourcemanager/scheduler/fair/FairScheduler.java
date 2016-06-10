@@ -197,6 +197,8 @@ public class FairScheduler extends
   private FairSchedulerEventLog eventLog; // Machine-readable event log
   protected boolean assignMultiple; // Allocate multiple containers per
                                     // heartbeat
+  @VisibleForTesting
+  boolean maxAssignDynamic;
   protected int maxAssign; // Max containers to assign per heartbeat
 
   @VisibleForTesting
@@ -470,7 +472,7 @@ public class FairScheduler extends
   }
 
   private boolean isResourceGreaterThanNone(Resource toPreempt) {
-    return (toPreempt.getMemory() > 0) || (toPreempt.getVirtualCores() > 0);
+    return (toPreempt.getMemorySize() > 0) || (toPreempt.getVirtualCores() > 0);
   }
 
   protected void warnOrKillContainer(RMContainer container) {
@@ -557,7 +559,7 @@ public class FairScheduler extends
     double weight = 1.0;
     if (sizeBasedWeight) {
       // Set weight based on current memory demand
-      weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
+      weight = Math.log1p(app.getDemand().getMemorySize()) / Math.log(2);
     }
     weight *= app.getPriority().getPriority();
     if (weightAdjuster != null) {
@@ -991,13 +993,7 @@ public class FairScheduler extends
         preemptionContainerIds.add(container.getContainerId());
       }
 
-      if (application.isWaitingForAMContainer()) {
-        // Allocate is for AM and update AM blacklist for this
-        application.updateAMBlacklist(
-            blacklistAdditions, blacklistRemovals);
-      } else {
-        application.updateBlacklist(blacklistAdditions, blacklistRemovals);
-      }
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
 
       List<Container> newlyAllocatedContainers =
           application.pullNewlyAllocatedContainers();
@@ -1116,6 +1112,22 @@ public class FairScheduler extends
     }
   }
 
+  private boolean shouldContinueAssigning(int containers,
+      Resource maxResourcesToAssign, Resource assignedResource) {
+    if (!assignMultiple) {
+      return false; // assignMultiple is not enabled. Allocate one at a time.
+    }
+
+    if (maxAssignDynamic) {
+      // Using fitsIn to check if the resources assigned so far are less than
+      // or equal to max resources to assign (half of remaining resources).
+      // The "equal to" part can lead to allocating one extra container.
+      return Resources.fitsIn(assignedResource, maxResourcesToAssign);
+    } else {
+      return maxAssign <= 0 || containers < maxAssign;
+    }
+  }
+
   @VisibleForTesting
   synchronized void attemptScheduling(FSSchedulerNode node) {
     if (rmContext.isWorkPreservingRecoveryEnabled()
@@ -1144,16 +1156,22 @@ public class FairScheduler extends
     if (!validReservation) {
       // No reservation, schedule at queue which is farthest below fair share
       int assignedContainers = 0;
+      Resource assignedResource = Resources.clone(Resources.none());
+      Resource maxResourcesToAssign =
+          Resources.multiply(node.getUnallocatedResource(), 0.5f);
       while (node.getReservedContainer() == null) {
         boolean assignedContainer = false;
-        if (!queueMgr.getRootQueue().assignContainer(node).equals(
-            Resources.none())) {
+        Resource assignment = queueMgr.getRootQueue().assignContainer(node);
+        if (!assignment.equals(Resources.none())) {
           assignedContainers++;
           assignedContainer = true;
+          Resources.addTo(assignedResource, assignment);
         }
         if (!assignedContainer) { break; }
-        if (!assignMultiple) { break; }
-        if ((assignedContainers >= maxAssign) && (maxAssign > 0)) { break; }
+        if (!shouldContinueAssigning(assignedContainers,
+            maxResourcesToAssign, assignedResource)) {
+          break;
+        }
       }
     }
     updateRootQueueMetrics();
@@ -1190,7 +1208,7 @@ public class FairScheduler extends
     if (preemptionEnabled) {
       Resource clusterResource = getClusterResource();
       return (preemptionUtilizationThreshold < Math.max(
-          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemory(),
+          (float) rootMetrics.getAllocatedMB() / clusterResource.getMemorySize(),
           (float) rootMetrics.getAllocatedVirtualCores() /
               clusterResource.getVirtualCores()));
     }
@@ -1380,6 +1398,7 @@ public class FairScheduler extends
       preemptionUtilizationThreshold =
           this.conf.getPreemptionUtilizationThreshold();
       assignMultiple = this.conf.getAssignMultiple();
+      maxAssignDynamic = this.conf.isMaxAssignDynamic();
       maxAssign = this.conf.getMaxAssign();
       sizeBasedWeight = this.conf.getSizeBasedWeight();
       preemptionInterval = this.conf.getPreemptionInterval();

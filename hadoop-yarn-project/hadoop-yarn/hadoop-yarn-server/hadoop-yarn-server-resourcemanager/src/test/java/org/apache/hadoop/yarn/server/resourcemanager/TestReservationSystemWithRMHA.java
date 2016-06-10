@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
@@ -65,8 +67,11 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
     // create a reservation
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -74,7 +79,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
 
@@ -98,8 +102,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
+
     // create a reservation
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -107,7 +115,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
@@ -144,8 +151,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
+
     // create a reservation
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -153,7 +164,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
 
     // Delete the reservation
@@ -183,7 +193,7 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
             .synchronizePlan(ReservationSystemTestUtil.reservationQ, false);
         if (rm.getRMContext().getReservationSystem()
             .getPlan(ReservationSystemTestUtil.reservationQ).getTotalCapacity()
-            .getMemory() > 0) {
+            .getMemorySize() > 0) {
           break;
         }
         LOG.info("Waiting for node capacity to be added to plan");
@@ -199,13 +209,14 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     }
   }
 
-  private ReservationSubmissionRequest createReservationSubmissionRequest() {
+  private ReservationSubmissionRequest createReservationSubmissionRequest(
+      ReservationId reservationId) {
     Clock clock = new UTCClock();
     long arrival = clock.getTime();
     long duration = 60000;
     long deadline = (long) (arrival + duration + 1500);
-    return ReservationSystemTestUtil.createSimpleReservationRequest(4, arrival,
-        deadline, duration);
+    return ReservationSystemTestUtil.createSimpleReservationRequest(
+      reservationId, 4, arrival, deadline, duration);
   }
 
   private void validateReservation(Plan plan, ReservationId resId,
@@ -224,8 +235,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
+
     // create a reservation
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -233,7 +248,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
@@ -273,10 +287,14 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     explicitFailover();
 
     addNodeCapacityToPlan(rm2, 102400, 100);
+    ClientRMService clientService = rm2.getClientRMService();
+
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
 
     // create a reservation
-    ClientRMService clientService = rm2.getClientRMService();
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -284,7 +302,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
@@ -304,8 +321,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
+
     // create a reservation
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -313,7 +334,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
@@ -353,8 +373,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
+    ReservationId reservationID = getNewReservation(clientService)
+        .getReservationId();
+
     // create a reservation
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        reservationID);
     ReservationSubmissionResponse response = null;
     try {
       response = clientService.submitReservation(request);
@@ -362,7 +386,6 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId reservationID = response.getReservationId();
     Assert.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
@@ -419,8 +442,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
 
     ClientRMService clientService = rm1.getClientRMService();
 
-    // create 3 reservations
-    ReservationSubmissionRequest request = createReservationSubmissionRequest();
+    ReservationId resID1 = getNewReservation(clientService)
+        .getReservationId();
+
+    // create a reservation
+    ReservationSubmissionRequest request = createReservationSubmissionRequest(
+        resID1);
     ReservationDefinition reservationDefinition =
         request.getReservationDefinition();
     ReservationSubmissionResponse response = null;
@@ -430,25 +457,30 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId resID1 = response.getReservationId();
     Assert.assertNotNull(resID1);
     LOG.info("Submit reservation response: " + resID1);
+
+    ReservationId resID2 = getNewReservation(clientService)
+        .getReservationId();
+    request.setReservationId(resID2);
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId resID2 = response.getReservationId();
     Assert.assertNotNull(resID2);
     LOG.info("Submit reservation response: " + resID2);
+
+    ReservationId resID3 = getNewReservation(clientService)
+        .getReservationId();
+    request.setReservationId(resID3);
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    ReservationId resID3 = response.getReservationId();
     Assert.assertNotNull(resID3);
     LOG.info("Submit reservation response: " + resID3);
 
@@ -513,6 +545,20 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
+  }
+
+  private GetNewReservationResponse getNewReservation(ClientRMService
+                                                        clientRMService) {
+    GetNewReservationRequest newReservationRequest = GetNewReservationRequest
+        .newInstance();
+    GetNewReservationResponse getNewReservationResponse = null;
+    try {
+      getNewReservationResponse = clientRMService.getNewReservation(
+        newReservationRequest);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    return getNewReservationResponse;
   }
 
 }

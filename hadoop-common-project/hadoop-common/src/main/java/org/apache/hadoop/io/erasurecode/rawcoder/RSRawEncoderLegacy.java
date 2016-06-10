@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
 
 import java.nio.ByteBuffer;
@@ -29,20 +30,20 @@ import java.util.Arrays;
  * when possible.
  */
 @InterfaceAudience.Private
-public class RSRawEncoderLegacy extends AbstractRawErasureEncoder {
+public class RSRawEncoderLegacy extends RawErasureEncoder {
   private int[] generatingPolynomial;
 
-  public RSRawEncoderLegacy(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
+  public RSRawEncoderLegacy(ErasureCoderOptions coderOptions) {
+    super(coderOptions);
 
     assert (getNumDataUnits() + getNumParityUnits() < RSUtil.GF.getFieldSize());
 
-    int[] primitivePower = RSUtil.getPrimitivePower(numDataUnits,
-        numParityUnits);
+    int[] primitivePower = RSUtil.getPrimitivePower(getNumDataUnits(),
+        getNumParityUnits());
     // compute generating polynomial
     int[] gen = {1};
     int[] poly = new int[2];
-    for (int i = 0; i < numParityUnits; i++) {
+    for (int i = 0; i < getNumParityUnits(); i++) {
       poly[0] = primitivePower[i];
       poly[1] = 1;
       gen = RSUtil.GF.multiply(gen, poly);
@@ -52,15 +53,21 @@ public class RSRawEncoderLegacy extends AbstractRawErasureEncoder {
   }
 
   @Override
-  protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
+  protected void doEncode(ByteBufferEncodingState encodingState) {
+    CoderUtil.resetOutputBuffers(encodingState.outputs,
+        encodingState.encodeLength);
     // parity units + data units
-    ByteBuffer[] all = new ByteBuffer[outputs.length + inputs.length];
+    ByteBuffer[] all = new ByteBuffer[encodingState.outputs.length +
+        encodingState.inputs.length];
 
-    if (isAllowingChangeInputs()) {
-      System.arraycopy(outputs, 0, all, 0, outputs.length);
-      System.arraycopy(inputs, 0, all, outputs.length, inputs.length);
+    if (allowChangeInputs()) {
+      System.arraycopy(encodingState.outputs, 0, all, 0,
+          encodingState.outputs.length);
+      System.arraycopy(encodingState.inputs, 0, all,
+          encodingState.outputs.length, encodingState.inputs.length);
     } else {
-      System.arraycopy(outputs, 0, all, 0, outputs.length);
+      System.arraycopy(encodingState.outputs, 0, all, 0,
+          encodingState.outputs.length);
 
       /**
        * Note when this coder would be really (rarely) used in a production
@@ -68,11 +75,11 @@ public class RSRawEncoderLegacy extends AbstractRawErasureEncoder {
        * buffers avoiding reallocating.
        */
       ByteBuffer tmp;
-      for (int i = 0; i < inputs.length; i++) {
-        tmp = ByteBuffer.allocate(inputs[i].remaining());
-        tmp.put(inputs[i]);
+      for (int i = 0; i < encodingState.inputs.length; i++) {
+        tmp = ByteBuffer.allocate(encodingState.inputs[i].remaining());
+        tmp.put(encodingState.inputs[i]);
         tmp.flip();
-        all[outputs.length + i] = tmp;
+        all[encodingState.outputs.length + i] = tmp;
       }
     }
 
@@ -81,27 +88,38 @@ public class RSRawEncoderLegacy extends AbstractRawErasureEncoder {
   }
 
   @Override
-  protected void doEncode(byte[][] inputs, int[] inputOffsets,
-                          int dataLen, byte[][] outputs,
-                          int[] outputOffsets) {
+  protected void doEncode(ByteArrayEncodingState encodingState) {
+    int dataLen = encodingState.encodeLength;
+    CoderUtil.resetOutputBuffers(encodingState.outputs,
+        encodingState.outputOffsets, dataLen);
     // parity units + data units
-    byte[][] all = new byte[outputs.length + inputs.length][];
-    int[] allOffsets = new int[outputOffsets.length + inputOffsets.length];
+    byte[][] all = new byte[encodingState.outputs.length +
+        encodingState.inputs.length][];
+    int[] allOffsets = new int[encodingState.outputOffsets.length +
+        encodingState.inputOffsets.length];
 
-    if (isAllowingChangeInputs()) {
-      System.arraycopy(outputs, 0, all, 0, outputs.length);
-      System.arraycopy(inputs, 0, all, outputs.length, inputs.length);
+    if (allowChangeInputs()) {
+      System.arraycopy(encodingState.outputs, 0, all, 0,
+          encodingState.outputs.length);
+      System.arraycopy(encodingState.inputs, 0, all,
+          encodingState.outputs.length, encodingState.inputs.length);
 
-      System.arraycopy(outputOffsets, 0, allOffsets, 0, outputOffsets.length);
-      System.arraycopy(inputOffsets, 0, allOffsets,
-          outputOffsets.length, inputOffsets.length);
+      System.arraycopy(encodingState.outputOffsets, 0, allOffsets, 0,
+          encodingState.outputOffsets.length);
+      System.arraycopy(encodingState.inputOffsets, 0, allOffsets,
+          encodingState.outputOffsets.length,
+          encodingState.inputOffsets.length);
     } else {
-      System.arraycopy(outputs, 0, all, 0, outputs.length);
-      System.arraycopy(outputOffsets, 0, allOffsets, 0, outputOffsets.length);
+      System.arraycopy(encodingState.outputs, 0, all, 0,
+          encodingState.outputs.length);
+      System.arraycopy(encodingState.outputOffsets, 0, allOffsets, 0,
+          encodingState.outputOffsets.length);
 
-      for (int i = 0; i < inputs.length; i++) {
-        all[outputs.length + i] = Arrays.copyOfRange(inputs[i],
-            inputOffsets[i], inputOffsets[i] + dataLen);
+      for (int i = 0; i < encodingState.inputs.length; i++) {
+        all[encodingState.outputs.length + i] =
+            Arrays.copyOfRange(encodingState.inputs[i],
+            encodingState.inputOffsets[i],
+                encodingState.inputOffsets[i] + dataLen);
       }
     }
 

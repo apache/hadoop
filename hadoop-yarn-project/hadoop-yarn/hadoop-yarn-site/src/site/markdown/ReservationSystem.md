@@ -39,7 +39,9 @@ Flow of a Reservation
 
 With reference to the figure above, a typical reservation proceeds as follows:
 
- * **Step 1**  The user (or an automated tool on its behalf) submit a reservation request specified by the Reservation Definition Language (RDL). This describes the user need for resources over-time (e.g., a skyline of resources) and temporal constraints (e.g., deadline). This can be done both programmatically through the usual Client-to-RM protocols or via the REST api of the RM.
+ * **Step 0**  The user (or an automated tool on its behalf) submits a reservation creation request, and receives a response containing the ReservationId.
+
+ * **Step 1**  The user (or an automated tool on its behalf) submits a reservation request specified by the Reservation Definition Language (RDL) and ReservationId retrieved from the previous step. This describes the user need for resources over-time (e.g., a skyline of resources) and temporal constraints (e.g., deadline). This can be done both programmatically through the usual Client-to-RM protocols or via the REST api of the RM. If a reservation is submitted with the same ReservationId, and the RDL is the same, a new reservation will not be created and the request will be successful. If the RDL is different, the reservation will be rejected, and the request will be unsuccessful.
 
  * **Step 2**  The ReservationSystem leverages a ReservationAgent (GREE in the figure) to find a plausible allocation for the reservation in the Plan, a data structure tracking all reservation currently accepted and the available resources in the system.
 

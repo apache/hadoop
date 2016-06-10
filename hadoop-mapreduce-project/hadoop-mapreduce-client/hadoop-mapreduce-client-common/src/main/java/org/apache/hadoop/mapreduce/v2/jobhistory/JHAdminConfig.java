@@ -239,6 +239,14 @@ public class JHAdminConfig {
       MR_HISTORY_CSRF_PREFIX + "methods-to-ignore";
 
   /**
+   * XFS settings.
+   */
+  public static final String MR_HISTORY_XFS_PREFIX = MR_HISTORY_PREFIX +
+      "webapp.xfs-filter.";
+  public static final String MR_HISTORY_XFS_OPTIONS = MR_HISTORY_XFS_PREFIX +
+      "xframe-options";
+
+  /**
    * Settings for .jhist file format.
    */
   public static final String MR_HS_JHIST_FORMAT =

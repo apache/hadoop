@@ -194,7 +194,7 @@ public class Application {
     Resource currentSpec = requestSpec.put(priority, capability);
     if (currentSpec != null) {
       throw new IllegalStateException("Resource spec already exists for " +
-      		"priority " + priority.getPriority() + " - " + currentSpec.getMemory());
+      		"priority " + priority.getPriority() + " - " + currentSpec.getMemorySize());
     }
   }
   

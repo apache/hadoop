@@ -119,6 +119,23 @@
       </div>
     </div>
 
+    <div class="modal" id="modal-upload-file" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog">
+         <div class="modal-content">
+           <div class="modal-header"><button type="button" class="close"
+             data-dismiss="modal" aria-hidden="true">&times;</button>
+             <h4 class="modal-title" id="file-upload-title">Upload File</h4>
+           </div>
+           <div class="modal-body" id="file-upload-body">
+             <input id="modal-upload-file-input" type="file" class="file" multiple>
+           </div>
+           <div class="modal-footer">
+             <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+             <button type="button" class="btn btn-success" id="modal-upload-file-button" data-complete-text="Uploading...">Upload</button>
+           </div>
+         </div>
+      </div>
+    </div>
   <div class="modal" id="delete-modal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -142,7 +159,7 @@
   </div>
 
       <div class="row">
-      <div class="col-xs-11">
+      <div class="col-xs-10 col-md-10">
         <form onsubmit="return false;">
           <div class="input-group">
             <input type="text" class="form-control" id="directory"/>
@@ -152,11 +169,15 @@
           </div>
         </form>
       </div>
-      <div class="col-xs-1">
+      <div class="col-xs-2 col-md-2">
         <button type="button" class="btn btn-default" data-toggle="modal"
           aria-label="New Directory" data-target="#btn-create-directory"
           title="Create Directory">
             <span class="glyphicon glyphicon-folder-open"></span>
+        </button>
+        <button type="button" class="btn btn-default" data-toggle="modal"
+          data-target="#modal-upload-file" title="Upload Files">
+            <span class="glyphicon glyphicon-cloud-upload"></span>
         </button>
       </div>
     </div>

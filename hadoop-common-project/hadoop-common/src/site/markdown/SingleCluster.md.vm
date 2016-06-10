@@ -153,7 +153,8 @@ The following instructions are to run a MapReduce job locally. If you want to ex
 
 5.  Copy the input files into the distributed filesystem:
 
-          $ bin/hdfs dfs -put etc/hadoop input
+          $ bin/hdfs dfs -mkdir input
+          $ bin/hdfs dfs -put etc/hadoop/*.xml input
 
 6.  Run some of the examples provided:
 
@@ -180,12 +181,22 @@ You can run a MapReduce job on YARN in a pseudo-distributed mode by setting a fe
 
 The following instructions assume that 1. ~ 4. steps of [the above instructions](#Execution) are already executed.
 
-1.  Configure parameters as follows:`etc/hadoop/mapred-site.xml`:
+1.  Configure parameters as follows:
+
+    `etc/hadoop/mapred-site.xml`:
 
         <configuration>
             <property>
                 <name>mapreduce.framework.name</name>
                 <value>yarn</value>
+            </property>
+            <property>
+                <name>mapreduce.admin.user.env</name>
+                <value>HADOOP_MAPRED_HOME=$HADOOP_COMMON_HOME</value>
+            </property>
+            <property>
+                <name>yarn.app.mapreduce.am.env</name>
+                <value>HADOOP_MAPRED_HOME=$HADOOP_COMMON_HOME</value>
             </property>
         </configuration>
 

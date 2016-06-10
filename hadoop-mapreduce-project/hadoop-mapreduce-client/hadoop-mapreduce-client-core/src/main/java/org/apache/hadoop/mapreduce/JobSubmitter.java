@@ -200,6 +200,13 @@ class JobSubmitter {
       conf.setInt(MRJobConfig.NUM_MAPS, maps);
       LOG.info("number of splits:" + maps);
 
+      int maxMaps = conf.getInt(MRJobConfig.JOB_MAX_MAP,
+          MRJobConfig.DEFAULT_JOB_MAX_MAP);
+      if (maxMaps >= 0 && maxMaps < maps) {
+        throw new IllegalArgumentException("The number of map tasks " + maps +
+            " exceeded limit " + maxMaps);
+      }
+
       // write "queue admins of the queue to which job is being submitted"
       // to job file.
       String queue = conf.get(MRJobConfig.QUEUE_NAME,

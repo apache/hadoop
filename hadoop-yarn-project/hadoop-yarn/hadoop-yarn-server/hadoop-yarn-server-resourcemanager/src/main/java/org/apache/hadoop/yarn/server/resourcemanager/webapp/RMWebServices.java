@@ -78,17 +78,22 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
-import org.apache.hadoop.yarn.api.records.AMBlackListingRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -128,7 +133,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AMBlackListingRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -149,6 +153,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LogAggregationContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
@@ -162,14 +167,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDelet
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
@@ -1497,10 +1497,6 @@ public class RMWebServices extends WebServices {
           reservationIdStr);
       appContext.setReservationID(reservationId);
     }
-    if (newApp.getAMBlackListingRequestInfo() != null) {
-      appContext.setAMBlackListRequest(createAMBlackListingRequest(
-          newApp.getAMBlackListingRequestInfo()));
-    }
     return appContext;
   }
 
@@ -1512,14 +1508,14 @@ public class RMWebServices extends WebServices {
       String msg = "Requested more cores than configured max";
       throw new BadRequestException(msg);
     }
-    if (newApp.getResource().getMemory() > rm.getConfig().getInt(
+    if (newApp.getResource().getMemorySize() > rm.getConfig().getInt(
       YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB)) {
       String msg = "Requested more memory than configured max";
       throw new BadRequestException(msg);
     }
     Resource r =
-        Resource.newInstance(newApp.getResource().getMemory(), newApp
+        Resource.newInstance(newApp.getResource().getMemorySize(), newApp
           .getResource().getvCores());
     return r;
   }
@@ -1647,13 +1643,6 @@ public class RMWebServices extends WebServices {
         logAggregationContextInfo.getRolledLogsExcludePattern(),
         logAggregationContextInfo.getLogAggregationPolicyClassName(),
         logAggregationContextInfo.getLogAggregationPolicyParameters());
-  }
-
-  private AMBlackListingRequest createAMBlackListingRequest(
-      AMBlackListingRequestInfo amBlackListingRequestInfo) {
-    return AMBlackListingRequest.newInstance(
-        amBlackListingRequestInfo.getAMBlackListingEnabled(),
-        amBlackListingRequestInfo.getBlackListingDisableFailureThreshold());
   }
 
   @POST
@@ -1870,6 +1859,61 @@ public class RMWebServices extends WebServices {
   }
 
   /**
+   * Generates a new ReservationId which is then sent to the client.
+   *
+   * @param hsr the servlet request
+   * @return Response containing the app id and the maximum resource
+   *         capabilities
+   * @throws AuthorizationException if the user is not authorized
+   *         to invoke this method.
+   * @throws IOException if creation fails.
+   * @throws InterruptedException if interrupted.
+   */
+  @POST
+  @Path("/reservation/new-reservation")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response createNewReservation(@Context HttpServletRequest hsr)
+    throws AuthorizationException, IOException, InterruptedException {
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      throw new AuthorizationException("Unable to obtain user name, "
+        + "user not authenticated");
+    }
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
+
+    NewReservation reservationId = createNewReservation();
+    return Response.status(Status.OK).entity(reservationId).build();
+
+  }
+
+  /**
+   * Function that actually creates the {@link ReservationId} by calling the
+   * ClientRMService.
+   *
+   * @return returns structure containing the {@link ReservationId}
+   * @throws IOException if creation fails.
+   */
+  private NewReservation createNewReservation() throws IOException {
+    GetNewReservationRequest req =
+        recordFactory.newRecordInstance(GetNewReservationRequest.class);
+    GetNewReservationResponse resp;
+    try {
+      resp = rm.getClientRMService().getNewReservation(req);
+    } catch (YarnException e) {
+      String msg = "Unable to create new reservation from RM web service";
+      LOG.error(msg, e);
+      throw new YarnRuntimeException(msg, e);
+    }
+    NewReservation reservationId =
+        new NewReservation(resp.getReservationId().toString());
+    return reservationId;
+  }
+
+  /**
    * Function to submit a Reservation to the RM.
    *
    * @param resContext provides information to construct the
@@ -1903,19 +1947,15 @@ public class RMWebServices extends WebServices {
     final ReservationSubmissionRequest reservation =
         createReservationSubmissionRequest(resContext);
 
-    ReservationSubmissionResponseInfo resRespInfo;
     try {
-      resRespInfo =
-          callerUGI.doAs(
-           new PrivilegedExceptionAction<ReservationSubmissionResponseInfo>() {
-                @Override
-                public ReservationSubmissionResponseInfo run()
-                    throws IOException, YarnException {
-                  ReservationSubmissionResponse tempRes =
-                      rm.getClientRMService().submitReservation(reservation);
-                  return new ReservationSubmissionResponseInfo(tempRes);
-                }
-              });
+      callerUGI
+          .doAs(new PrivilegedExceptionAction<ReservationSubmissionResponse>() {
+              @Override
+              public ReservationSubmissionResponse run() throws IOException,
+                  YarnException {
+                return rm.getClientRMService().submitReservation(reservation);
+              }
+          });
     } catch (UndeclaredThrowableException ue) {
       if (ue.getCause() instanceof YarnException) {
         throw new BadRequestException(ue.getCause().getMessage());
@@ -1924,11 +1964,11 @@ public class RMWebServices extends WebServices {
       throw ue;
     }
 
-    return Response.status(Status.OK).entity(resRespInfo).build();
+    return Response.status(Status.ACCEPTED).build();
   }
 
   private ReservationSubmissionRequest createReservationSubmissionRequest(
-      ReservationSubmissionRequestInfo resContext) {
+      ReservationSubmissionRequestInfo resContext) throws IOException {
 
     // defending against a couple of common submission format problems
     if (resContext == null) {
@@ -1959,7 +1999,7 @@ public class RMWebServices extends WebServices {
         .getReservationRequest()) {
       ResourceInfo rInfo = resReqInfo.getCapability();
       Resource capability =
-          Resource.newInstance(rInfo.getMemory(), rInfo.getvCores());
+          Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
       int numContainers = resReqInfo.getNumContainers();
       int minConcurrency = resReqInfo.getMinConcurrency();
       long duration = resReqInfo.getDuration();
@@ -1972,8 +2012,12 @@ public class RMWebServices extends WebServices {
     ReservationDefinition rDef =
         ReservationDefinition.newInstance(resInfo.getArrival(),
             resInfo.getDeadline(), reqs, resInfo.getReservationName());
+
+    ReservationId reservationId = ReservationId.parseReservationId(resContext
+        .getReservationId());
     ReservationSubmissionRequest request =
-        ReservationSubmissionRequest.newInstance(rDef, resContext.getQueue());
+        ReservationSubmissionRequest.newInstance(rDef, resContext.getQueue(),
+          reservationId);
 
     return request;
   }
@@ -2068,7 +2112,7 @@ public class RMWebServices extends WebServices {
         .getReservationRequest()) {
       ResourceInfo rInfo = resReqInfo.getCapability();
       Resource capability =
-          Resource.newInstance(rInfo.getMemory(), rInfo.getvCores());
+          Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
       int numContainers = resReqInfo.getNumContainers();
       int minConcurrency = resReqInfo.getMinConcurrency();
       long duration = resReqInfo.getDuration();
@@ -2095,9 +2139,13 @@ public class RMWebServices extends WebServices {
    *          the ReservationDeleteRequest
    * @param hsr the servlet request
    * @return Response containing the status code
-   * @throws AuthorizationException
-   * @throws IOException
-   * @throws InterruptedException
+   * @throws AuthorizationException when the user group information cannot be
+   *           retrieved.
+   * @throws IOException when a {@link ReservationDeleteRequest} cannot be
+   *           created from the {@link ReservationDeleteRequestInfo}. This
+   *           exception is also thrown on
+   *           {@code ClientRMService.deleteReservation} invokation failure.
+   * @throws InterruptedException if doAs action throws an InterruptedException.
    */
   @POST
   @Path("/reservation/delete")

@@ -48,11 +48,10 @@ macro(hadoop_add_compiler_flags FLAGS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
 endmacro()
 
-# Add flags to all the CMake linker variables
+# Add flags to all the CMake linker variables.
 macro(hadoop_add_linker_flags FLAGS)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${FLAGS}")
-    set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} ${FLAGS}")
 endmacro()
 
 # Compile a library with both shared and static variants.
@@ -188,7 +187,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 #
 elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
     # Solaris flags. 64-bit compilation is mandatory, and is checked earlier.
-    hadoop_add_compiler_flags("-m64 -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS -D_XOPEN_SOURCE=500")
+    hadoop_add_compiler_flags("-m64 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS")
+    set(CMAKE_C_FLAGS "-std=gnu99 ${CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-std=gnu++98 ${CMAKE_CXX_FLAGS}")
     hadoop_add_linker_flags("-m64")
 
     # CMAKE_SYSTEM_PROCESSOR is set to the output of 'uname -p', which on Solaris is
@@ -199,7 +200,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
         set(CMAKE_SYSTEM_PROCESSOR "amd64")
         set(CMAKE_LIBRARY_ARCHITECTURE "amd64")
     elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "sparc")
-        set(CMAKE_SYSTEM_PROCESSOR STREQUAL "sparcv9")
+        set(CMAKE_SYSTEM_PROCESSOR "sparcv9")
         set(CMAKE_LIBRARY_ARCHITECTURE "sparcv9")
     else()
         message(FATAL_ERROR "Unrecognised CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")

@@ -387,11 +387,11 @@ public class TestApplicationACLs {
     Assert.assertEquals("Enemy should not see app reserved containers",
         -1, usageReport.getNumReservedContainers());
     Assert.assertEquals("Enemy should not see app used resources",
-        -1, usageReport.getUsedResources().getMemory());
+        -1, usageReport.getUsedResources().getMemorySize());
     Assert.assertEquals("Enemy should not see app reserved resources",
-        -1, usageReport.getReservedResources().getMemory());
+        -1, usageReport.getReservedResources().getMemorySize());
     Assert.assertEquals("Enemy should not see app needed resources",
-        -1, usageReport.getNeededResources().getMemory());
+        -1, usageReport.getNeededResources().getMemorySize());
   }
 
   private void verifyInvalidQueueWithAcl() throws Exception {

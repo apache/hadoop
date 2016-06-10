@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 
@@ -89,6 +90,21 @@ public class TestDataNodeErasureCodingMetrics {
   public void testEcTasks() throws Exception {
     DataNode workerDn = doTest("/testEcTasks");
     MetricsRecordBuilder rb = getMetrics(workerDn.getMetrics().name());
+
+    // EcReconstructionTasks metric value will be updated in the finally block
+    // of striped reconstruction thread. Here, giving a grace period to finish
+    // EC reconstruction metric updates in DN.
+    LOG.info("Waiting to finish EC reconstruction metric updates in DN");
+    int retries = 0;
+    while (retries < 20) {
+      long taskMetricValue = getLongCounter("EcReconstructionTasks", rb);
+      if (taskMetricValue > 0) {
+        break;
+      }
+      Thread.sleep(500);
+      retries++;
+      rb = getMetrics(workerDn.getMetrics().name());
+    }
     assertCounter("EcReconstructionTasks", (long) 1, rb);
     assertCounter("EcFailedReconstructionTasks", (long) 0, rb);
   }

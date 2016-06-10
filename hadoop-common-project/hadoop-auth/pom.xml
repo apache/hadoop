@@ -119,29 +119,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.directory.server</groupId>
-      <artifactId>apacheds-kerberos-codec</artifactId>
-      <scope>compile</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.directory.api</groupId>
-            <artifactId>api-asn1-ber</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.directory.api</groupId>
-            <artifactId>api-i18n</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.directory.api</groupId>
-            <artifactId>api-ldap-model</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>net.sf.ehcache</groupId>
-            <artifactId>ehcache-core</artifactId>
-          </exclusion>
-        </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
@@ -153,6 +130,10 @@
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kerby</groupId>
+      <artifactId>kerb-simplekdc</artifactId>
     </dependency>
   </dependencies>
 

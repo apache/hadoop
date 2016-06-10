@@ -94,7 +94,7 @@ public class TestBalancerWithHANameNodes {
       totalCapacity += newNodeCapacity;
       TestBalancer.waitForHeartBeat(totalUsedSpace, totalCapacity, client,
           cluster);
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
       assertEquals(1, namenodes.size());
       assertTrue(namenodes.contains(HATestUtil.getLogicalUri(cluster)));
       final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);

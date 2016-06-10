@@ -54,8 +54,8 @@ message ContainerIdProto {
 }
 
 message ResourceProto {
-  optional int32 memory = 1;
-  optional int32 virtual_cores = 2;
+  optional int64 memory = 1;
+  optional int64 virtual_cores = 2;
 }
 
 message ResourceUtilizationProto {
@@ -92,6 +92,7 @@ message ContainerProto {
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
   optional hadoop.common.TokenProto container_token = 6;
+  optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
 }
 
 message ContainerReportProto {
@@ -290,10 +291,6 @@ enum ExecutionTypeProto {
   OPPORTUNISTIC = 2;
 }
 
-message AMBlackListingRequestProto {
-  optional bool blacklisting_enabled = 1 [default = false];
-  optional float blacklisting_failure_threshold = 2;
-}
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -304,7 +301,12 @@ message ResourceRequestProto {
   optional int32 num_containers = 4;
   optional bool relax_locality = 5 [default = true];
   optional string node_label_expression = 6;
-  optional ExecutionTypeProto executionType = 7 [default = GUARANTEED];
+  optional ExecutionTypeRequestProto execution_type_request = 7;
+}
+
+message ExecutionTypeRequestProto {
+  optional ExecutionTypeProto execution_type = 1 [default = GUARANTEED];
+  optional bool enforce_execution_type = 2 [default = false];
 }
 
 enum AMCommandProto {
@@ -360,7 +362,6 @@ message ApplicationSubmissionContextProto {
   optional ReservationIdProto reservation_id = 15;
   optional string node_label_expression = 16;
   optional ResourceRequestProto am_container_resource_request = 17;
-  optional AMBlackListingRequestProto am_blacklisting_request = 18;
 }
 
 message LogAggregationContextProto {

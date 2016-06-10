@@ -653,12 +653,12 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
 
   public void checkPendingResource(CSQueue queue, String partition, int pending) {
     ResourceUsage ru = queue.getQueueResourceUsage();
-    Assert.assertEquals(pending, ru.getPending(partition).getMemory());
+    Assert.assertEquals(pending, ru.getPending(partition).getMemorySize());
   }
 
   public void checkReservedResource(CSQueue queue, String partition, int reserved) {
     ResourceUsage ru = queue.getQueueResourceUsage();
-    Assert.assertEquals(reserved, ru.getReserved(partition).getMemory());
+    Assert.assertEquals(reserved, ru.getReserved(partition).getMemorySize());
   }
 
   static class IsPreemptionRequestForQueueAndNode

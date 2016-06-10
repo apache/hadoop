@@ -394,12 +394,12 @@ public class ShortCircuitRegistry {
   }
 
   public static interface Visitor {
-    void accept(HashMap<ShmId, RegisteredShm> segments,
+    boolean accept(HashMap<ShmId, RegisteredShm> segments,
                 HashMultimap<ExtendedBlockId, Slot> slots);
   }
 
   @VisibleForTesting
-  public synchronized void visit(Visitor visitor) {
-    visitor.accept(segments, slots);
+  public synchronized boolean visit(Visitor visitor) {
+    return visitor.accept(segments, slots);
   }
 }

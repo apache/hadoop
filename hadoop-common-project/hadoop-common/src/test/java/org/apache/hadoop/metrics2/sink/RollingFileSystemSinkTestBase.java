@@ -180,10 +180,12 @@ public class RollingFileSystemSinkTestBase {
         .add(prefix + ".sink.mysink0.source", "testsrc")
         .add(prefix + ".sink.mysink0.context", "test1")
         .add(prefix + ".sink.mysink0.ignore-error", ignoreErrors)
-        .add(prefix + ".sink.mysink0.allow-append", allowAppend);
+        .add(prefix + ".sink.mysink0.allow-append", allowAppend)
+        .add(prefix + ".sink.mysink0.roll-offset-interval-millis", 0)
+        .add(prefix + ".sink.mysink0.roll-interval", "1h");
 
     if (useSecureParams) {
-        builder.add(prefix + ".sink.mysink0.keytab-key", SINK_KEYTAB_FILE_KEY)
+      builder.add(prefix + ".sink.mysink0.keytab-key", SINK_KEYTAB_FILE_KEY)
         .add(prefix + ".sink.mysink0.principal-key", SINK_PRINCIPAL_KEY);
     }
 
@@ -210,7 +212,7 @@ public class RollingFileSystemSinkTestBase {
    */
   protected String doWriteTest(MetricsSystem ms, String path, int count)
       throws IOException, URISyntaxException {
-    final String then = DATE_FORMAT.format(new Date());
+    final String then = DATE_FORMAT.format(new Date()) + "00";
 
     MyMetrics1 mm1 = new MyMetrics1().registerWith(ms);
     new MyMetrics2().registerWith(ms);
@@ -219,8 +221,12 @@ public class RollingFileSystemSinkTestBase {
     mm1.testMetric2.incr(2);
 
     ms.publishMetricsNow(); // publish the metrics
-    ms.stop();
-    ms.shutdown();
+
+    try {
+      ms.stop();
+    } finally {
+      ms.shutdown();
+    }
 
     return readLogFile(path, then, count);
   }
@@ -239,7 +245,7 @@ public class RollingFileSystemSinkTestBase {
    */
   protected String readLogFile(String path, String then, int count)
       throws IOException, URISyntaxException {
-    final String now = DATE_FORMAT.format(new Date());
+    final String now = DATE_FORMAT.format(new Date()) + "00";
     final String logFile = getLogFilename();
     FileSystem fs = FileSystem.get(new URI(path), new Configuration());
     StringBuilder metrics = new StringBuilder();
@@ -426,7 +432,7 @@ public class RollingFileSystemSinkTestBase {
     Calendar now = getNowNotTopOfHour();
 
     FileSystem fs = FileSystem.get(new URI(path), new Configuration());
-    Path dir = new Path(path, DATE_FORMAT.format(now.getTime()));
+    Path dir = new Path(path, DATE_FORMAT.format(now.getTime()) + "00");
 
     fs.mkdirs(dir);
 
@@ -494,8 +500,8 @@ public class RollingFileSystemSinkTestBase {
     }
 
     assertTrue("The sink created additional unexpected log files. " + count
-        + "files were created", expected >= count);
-    assertTrue("The sink created too few log files. " + count + "files were "
+        + " files were created", expected >= count);
+    assertTrue("The sink created too few log files. " + count + " files were "
         + "created", expected <= count);
   }
 

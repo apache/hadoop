@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
-
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -73,6 +72,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_RUN_OVERRIDE_DISABLE =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_OVERRIDE_DISABLE";
   @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_NETWORK =
+      "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK";
   public static final String ENV_DOCKER_CONTAINER_RUN_PRIVILEGED_CONTAINER =
       "YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER";
   @InterfaceAudience.Private
@@ -82,6 +83,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private Configuration conf;
   private DockerClient dockerClient;
   private PrivilegedOperationExecutor privilegedOperationExecutor;
+  private Set<String> allowedNetworks = new HashSet<>();
+  private String defaultNetwork;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
 
@@ -122,6 +125,26 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throws ContainerExecutionException {
     this.conf = conf;
     dockerClient = new DockerClient(conf);
+    allowedNetworks.clear();
+    allowedNetworks.addAll(Arrays.asList(
+        conf.getStrings(YarnConfiguration.NM_DOCKER_ALLOWED_CONTAINER_NETWORKS,
+            YarnConfiguration.DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_NETWORKS)));
+    defaultNetwork = conf.get(
+        YarnConfiguration.NM_DOCKER_DEFAULT_CONTAINER_NETWORK,
+        YarnConfiguration.DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK);
+
+    if(!allowedNetworks.contains(defaultNetwork)) {
+      String message = "Default network: " + defaultNetwork
+          + " is not in the set of allowed networks: " + allowedNetworks;
+
+      if (LOG.isWarnEnabled()) {
+        LOG.warn(message + ". Please check "
+            + "configuration");
+      }
+
+      throw new ContainerExecutionException(message);
+    }
+
     privilegedContainersAcl = new AccessControlList(conf.get(
         YarnConfiguration.NM_DOCKER_PRIVILEGED_CONTAINERS_ACL,
         YarnConfiguration.DEFAULT_NM_DOCKER_PRIVILEGED_CONTAINERS_ACL));
@@ -131,6 +154,18 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   public void prepareContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
 
+  }
+
+  private void validateContainerNetworkType(String network)
+      throws ContainerExecutionException {
+    if (allowedNetworks.contains(network)) {
+      return;
+    }
+
+    String msg = "Disallowed network:  '" + network
+        + "' specified. Allowed networks: are " + allowedNetworks
+        .toString();
+    throw new ContainerExecutionException(msg);
   }
 
   public void addCGroupParentIfRequired(String resourcesOptions,
@@ -260,6 +295,13 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     Map<String, String> environment = container.getLaunchContext()
         .getEnvironment();
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
+    String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
+
+    if(network == null || network.isEmpty()) {
+      network = defaultNetwork;
+    }
+
+    validateContainerNetworkType(network);
 
     if (imageName == null) {
       throw new ContainerExecutionException(ENV_DOCKER_CONTAINER_IMAGE
@@ -293,7 +335,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         runAsUser, imageName)
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
-        .setNetworkType("host")
+        .setNetworkType(network)
         .setCapabilities(capabilities)
         .addMountLocation("/etc/passwd", "/etc/password:ro");
     List<String> allDirs = new ArrayList<>(containerLocalDirs);

@@ -29,6 +29,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -36,6 +37,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A command-line tool for viewing and modifying tracing settings.
@@ -44,6 +47,7 @@ import org.apache.hadoop.util.Tool;
 public class TraceAdmin extends Configured implements Tool {
   private TraceAdminProtocolPB proxy;
   private TraceAdminProtocolTranslatorPB remote;
+  private static final Logger LOG = LoggerFactory.getLogger(TraceAdmin.class);
 
   private void usage() {
     PrintStream err = System.err;
@@ -61,7 +65,9 @@ public class TraceAdmin extends Configured implements Tool {
             "  -list: List the current span receivers.\n" +
             "  -remove [id]\n" +
             "    Remove the span receiver with the specified id.  Use -list to\n" +
-            "    find the id of each receiver.\n"
+            "    find the id of each receiver.\n" +
+            "  -principal: If the daemon is Kerberized, specify the service\n" +
+            "    principal name."
     );
   }
 
@@ -165,6 +171,14 @@ public class TraceAdmin extends Configured implements Tool {
     if (args.size() < 0) {
       System.err.println("You must specify an operation.");
       return 1;
+    }
+    String servicePrincipal = StringUtils.popOptionWithArgument("-principal",
+        args);
+    if (servicePrincipal != null) {
+      LOG.debug("Set service principal: {}", servicePrincipal);
+      getConf().set(
+          CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
+          servicePrincipal);
     }
     RPC.setProtocolEngine(getConf(), TraceAdminProtocolPB.class,
         ProtobufRpcEngine.class);

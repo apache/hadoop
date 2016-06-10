@@ -22,7 +22,10 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.rawcoder.*;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
  * Hitchhiker is a new erasure coding algorithm developed as a research project
@@ -68,17 +71,20 @@ public class HHXORErasureDecoder extends AbstractErasureDecoder {
 
   private RawErasureDecoder checkCreateRSRawDecoder() {
     if (rsRawDecoder == null) {
-      rsRawDecoder = CodecUtil.createRSRawDecoder(getConf(),
-              getNumDataUnits(), getNumParityUnits());
+      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
+          getNumDataUnits(), getNumParityUnits());
+      rsRawDecoder = CodecUtil.createRawDecoder(getConf(),
+              ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
     }
     return rsRawDecoder;
   }
 
   private RawErasureEncoder checkCreateXorRawEncoder() {
     if (xorRawEncoder == null) {
-      xorRawEncoder = CodecUtil.createXORRawEncoder(getConf(),
-              getNumDataUnits(), getNumParityUnits());
-      xorRawEncoder.setCoderOption(CoderOption.ALLOW_CHANGE_INPUTS, false);
+      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
+          getNumDataUnits(), getNumParityUnits());
+      xorRawEncoder = CodecUtil.createRawEncoder(getConf(),
+          ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
     }
     return xorRawEncoder;
   }

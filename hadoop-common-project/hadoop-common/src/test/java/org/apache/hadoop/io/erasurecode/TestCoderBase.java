@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 public abstract class TestCoderBase {
   protected static Random RAND = new Random();
 
-  private boolean allowDump = true;
+  protected boolean allowDump = true;
 
   private Configuration conf;
   protected int numDataUnits;
@@ -90,13 +90,8 @@ public abstract class TestCoderBase {
     }
   }
 
-  /**
-   * Set true during setup if want to dump test settings and coding data,
-   * useful in debugging.
-   * @param allowDump
-   */
-  protected void setAllowDump(boolean allowDump) {
-    this.allowDump = allowDump;
+  protected boolean isAllowDump() {
+    return allowDump;
   }
 
   /**
@@ -502,7 +497,8 @@ public abstract class TestCoderBase {
       sb.append(" erasedParityIndexes=").
               append(Arrays.toString(erasedParityIndexes));
       sb.append(" usingDirectBuffer=").append(usingDirectBuffer);
-      sb.append(" isAllowingChangeInputs=").append(allowChangeInputs);
+      sb.append(" allowChangeInputs=").append(allowChangeInputs);
+      sb.append(" allowVerboseDump=").append(allowDump);
       sb.append("\n");
 
       System.out.println(sb.toString());

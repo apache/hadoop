@@ -41,7 +41,7 @@ public class SchedulerSecurityInfo extends SecurityInfo {
 
   @Override
   public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    if (!protocol.equals(ApplicationMasterProtocolPB.class)) {
+    if (!ApplicationMasterProtocolPB.class.isAssignableFrom(protocol)) {
       return null;
     }
     return new TokenInfo() {

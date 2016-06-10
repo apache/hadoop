@@ -18,141 +18,244 @@
 
 package org.apache.hadoop.metrics2.sink;
 
-import org.apache.hadoop.metrics2.MetricsSystem;
+import java.util.Calendar;
+import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 
 import org.junit.Test;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
- * Test the {@link RollingFileSystemSink} class in the context of the local file
- * system.
+ * Test that the init() method picks up all the configuration settings
+ * correctly.
  */
-public class TestRollingFileSystemSink extends RollingFileSystemSinkTestBase {
-  /**
-   * Test writing logs to the local file system.
-   * @throws Exception when things break
-   */
+public class TestRollingFileSystemSink {
   @Test
-  public void testWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
-    MetricsSystem ms = initMetricsSystem(path, false, false);
+  public void testInit() {
+    ConfigBuilder builder = new ConfigBuilder();
+    SubsetConfiguration conf =
+        builder.add("sink.roll-interval", "10m")
+            .add("sink.roll-offset-interval-millis", "1")
+            .add("sink.basepath", "path")
+            .add("sink.ignore-error", "true")
+            .add("sink.allow-append", "true")
+            .add("sink.source", "src")
+            .subset("sink");
 
-    assertMetricsContents(doWriteTest(ms, path, 1));
+    RollingFileSystemSink sink = new RollingFileSystemSink();
+
+    sink.init(conf);
+
+    assertEquals("The roll interval was not set correctly",
+        sink.rollIntervalMillis, 600000);
+    assertEquals("The roll offset interval was not set correctly",
+        sink.rollOffsetIntervalMillis, 1);
+    assertEquals("The base path was not set correctly",
+        sink.basePath, new Path("path"));
+    assertEquals("ignore-error was not set correctly",
+        sink.ignoreError, true);
+    assertEquals("allow-append was not set correctly",
+        sink.allowAppend, true);
+    assertEquals("The source was not set correctly",
+        sink.source, "src");
   }
 
   /**
-   * Test writing logs to the local file system with the sink set to ignore
-   * errors.
-   * @throws Exception when things break
+   * Test whether the initial roll interval is set correctly.
    */
   @Test
-  public void testSilentWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
-    MetricsSystem ms = initMetricsSystem(path, true, false);
+  public void testSetInitialFlushTime() {
+    RollingFileSystemSink rfsSink = new RollingFileSystemSink(1000, 0);
+    Calendar calendar = Calendar.getInstance();
 
-    assertMetricsContents(doWriteTest(ms, path, 1));
+    calendar.set(Calendar.MILLISECOND, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.HOUR, 0);
+    calendar.set(Calendar.DAY_OF_YEAR, 1);
+    calendar.set(Calendar.YEAR, 2016);
+
+    assertNull("Last flush time should have been null prior to calling init()",
+        rfsSink.nextFlush);
+
+    rfsSink.setInitialFlushTime(calendar.getTime());
+
+    long diff =
+        rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertEquals("The initial flush time was calculated incorrectly", 0L, diff);
+
+    calendar.set(Calendar.MILLISECOND, 10);
+    rfsSink.setInitialFlushTime(calendar.getTime());
+    diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertEquals("The initial flush time was calculated incorrectly",
+        -10L, diff);
+
+    calendar.set(Calendar.SECOND, 1);
+    calendar.set(Calendar.MILLISECOND, 10);
+    rfsSink.setInitialFlushTime(calendar.getTime());
+    diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertEquals("The initial flush time was calculated incorrectly",
+        -10L, diff);
+
+    // Try again with a random offset
+    rfsSink = new RollingFileSystemSink(1000, 100);
+
+    assertNull("Last flush time should have been null prior to calling init()",
+        rfsSink.nextFlush);
+
+    calendar.set(Calendar.MILLISECOND, 0);
+    calendar.set(Calendar.SECOND, 0);
+    rfsSink.setInitialFlushTime(calendar.getTime());
+
+    diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertTrue("The initial flush time was calculated incorrectly: " + diff,
+        (diff >= -1000L) && (diff < -900L));
+
+    calendar.set(Calendar.MILLISECOND, 10);
+    rfsSink.setInitialFlushTime(calendar.getTime());
+    diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertTrue("The initial flush time was calculated incorrectly: " + diff,
+        ((diff >= -10L) && (diff <= 0L) ||
+            ((diff > -1000L) && (diff < -910L))));
+
+    calendar.set(Calendar.SECOND, 1);
+    calendar.set(Calendar.MILLISECOND, 10);
+    rfsSink.setInitialFlushTime(calendar.getTime());
+    diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertTrue("The initial flush time was calculated incorrectly: " + diff,
+        ((diff >= -10L) && (diff <= 0L) ||
+            ((diff > -1000L) && (diff < -910L))));
+
+    // Now try pathological settings
+    rfsSink = new RollingFileSystemSink(1000, 1000000);
+
+    assertNull("Last flush time should have been null prior to calling init()",
+        rfsSink.nextFlush);
+
+    calendar.set(Calendar.MILLISECOND, 1);
+    calendar.set(Calendar.SECOND, 0);
+    rfsSink.setInitialFlushTime(calendar.getTime());
+
+    diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
+
+    assertTrue("The initial flush time was calculated incorrectly: " + diff,
+        (diff > -1000L) && (diff <= 0L));
   }
 
   /**
-   * Test writing logs to HDFS when the log file already exists.
-   *
-   * @throws Exception when things break
+   * Test that the roll time updates correctly.
    */
   @Test
-  public void testExistingWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
+  public void testUpdateRollTime() {
+    RollingFileSystemSink rfsSink = new RollingFileSystemSink(1000, 0);
+    Calendar calendar = Calendar.getInstance();
 
-    assertMetricsContents(doAppendTest(path, false, false, 2));
+    calendar.set(Calendar.MILLISECOND, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.HOUR, 0);
+    calendar.set(Calendar.DAY_OF_YEAR, 1);
+    calendar.set(Calendar.YEAR, 2016);
+
+    rfsSink.nextFlush = Calendar.getInstance();
+    rfsSink.nextFlush.setTime(calendar.getTime());
+    rfsSink.updateFlushTime(calendar.getTime());
+
+    assertEquals("The next roll time should have been 1 second in the future",
+        calendar.getTimeInMillis() + 1000,
+        rfsSink.nextFlush.getTimeInMillis());
+
+    rfsSink.nextFlush.setTime(calendar.getTime());
+    calendar.add(Calendar.MILLISECOND, 10);
+    rfsSink.updateFlushTime(calendar.getTime());
+
+    assertEquals("The next roll time should have been 990 ms in the future",
+        calendar.getTimeInMillis() + 990,
+        rfsSink.nextFlush.getTimeInMillis());
+
+    rfsSink.nextFlush.setTime(calendar.getTime());
+    calendar.add(Calendar.SECOND, 2);
+    calendar.add(Calendar.MILLISECOND, 10);
+    rfsSink.updateFlushTime(calendar.getTime());
+
+    assertEquals("The next roll time should have been 990 ms in the future",
+        calendar.getTimeInMillis() + 990,
+        rfsSink.nextFlush.getTimeInMillis());
   }
 
   /**
-   * Test writing logs to HDFS when the log file and the .1 log file already
-   * exist.
-   *
-   * @throws Exception when things break
+   * Test whether the roll interval is correctly calculated from the
+   * configuration settings.
    */
   @Test
-  public void testExistingWrite2() throws Exception {
-    String path = methodDir.getAbsolutePath();
-    MetricsSystem ms = initMetricsSystem(path, false, false);
+  public void testGetRollInterval() {
+    doTestGetRollInterval(1, new String[] {"m", "min", "minute", "minutes"},
+        60 * 1000L);
+    doTestGetRollInterval(1, new String[] {"h", "hr", "hour", "hours"},
+        60 * 60 * 1000L);
+    doTestGetRollInterval(1, new String[] {"d", "day", "days"},
+        24 * 60 * 60 * 1000L);
 
-    preCreateLogFile(path, 2);
+    ConfigBuilder builder = new ConfigBuilder();
+    SubsetConfiguration conf =
+        builder.add("sink.roll-interval", "1").subset("sink");
+    // We can reuse the same sink evry time because we're setting the same
+    // property every time.
+    RollingFileSystemSink sink = new RollingFileSystemSink();
 
-    assertMetricsContents(doWriteTest(ms, path, 3));
-  }
+    sink.init(conf);
 
-  /**
-   * Test writing logs to HDFS with ignore errors enabled when
-   * the log file already exists.
-   *
-   * @throws Exception when things break
-   */
-  @Test
-  public void testSilentExistingWrite() throws Exception {
-    String path = methodDir.getAbsolutePath();
+    assertEquals(3600000L, sink.getRollInterval());
 
-    assertMetricsContents(doAppendTest(path, false, false, 2));
-  }
+    for (char c : "abcefgijklnopqrtuvwxyz".toCharArray()) {
+      builder = new ConfigBuilder();
+      conf = builder.add("sink.roll-interval", "90 " + c).subset("sink");
 
-  /**
-   * Test that writing fails when the directory isn't writable.
-   */
-  @Test
-  public void testFailedWrite() {
-    String path = methodDir.getAbsolutePath();
-    MetricsSystem ms = initMetricsSystem(path, false, false);
-
-    new MyMetrics1().registerWith(ms);
-
-    methodDir.setWritable(false);
-    MockSink.errored = false;
-
-    try {
-      // publish the metrics
-      ms.publishMetricsNow();
-
-      assertTrue("No exception was generated while writing metrics "
-          + "even though the target directory was not writable",
-          MockSink.errored);
-
-      ms.stop();
-      ms.shutdown();
-    } finally {
-      // Make sure the dir is writable again so we can delete it at the end
-      methodDir.setWritable(true);
+      try {
+        sink.init(conf);
+        sink.getRollInterval();
+        fail("Allowed flush interval with bad units: " + c);
+      } catch (MetricsException ex) {
+        // Expected
+      }
     }
   }
 
   /**
-   * Test that writing fails silently when the directory is not writable.
+   * Test the basic unit conversions with the given unit name modifier applied.
+   *
+   * @param mod a unit name modifier
    */
-  @Test
-  public void testSilentFailedWrite() {
-    String path = methodDir.getAbsolutePath();
-    MetricsSystem ms = initMetricsSystem(path, true, false);
+  private void doTestGetRollInterval(int num, String[] units, long expected) {
+    RollingFileSystemSink sink = new RollingFileSystemSink();
+    ConfigBuilder builder = new ConfigBuilder();
 
-    new MyMetrics1().registerWith(ms);
+    for (String unit : units) {
+      sink.init(builder.add("sink.roll-interval", num + unit).subset("sink"));
+      assertEquals(expected, sink.getRollInterval());
 
-    methodDir.setWritable(false);
-    MockSink.errored = false;
+      sink.init(builder.add("sink.roll-interval",
+          num + unit.toUpperCase()).subset("sink"));
+      assertEquals(expected, sink.getRollInterval());
 
-    try {
-      // publish the metrics
-      ms.publishMetricsNow();
+      sink.init(builder.add("sink.roll-interval",
+          num + " " + unit).subset("sink"));
+      assertEquals(expected, sink.getRollInterval());
 
-      assertFalse("An exception was generated while writing metrics "
-          + "when the target directory was not writable, even though the "
-          + "sink is set to ignore errors",
-          MockSink.errored);
-
-      ms.stop();
-      ms.shutdown();
-    } finally {
-      // Make sure the dir is writable again so we can delete it at the end
-      methodDir.setWritable(true);
+      sink.init(builder.add("sink.roll-interval",
+          num + " " + unit.toUpperCase()).subset("sink"));
+      assertEquals(expected, sink.getRollInterval());
     }
   }
 }

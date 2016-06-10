@@ -1029,7 +1029,6 @@ public class TestRPC extends TestRpcBase {
     final TestRpcService proxy;
     boolean succeeded = false;
     final int numClients = 1;
-    final int queueSizePerHandler = 3;
 
     GenericTestUtils.setLogLevel(DecayRpcScheduler.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(RPC.LOG, Level.DEBUG);
@@ -1052,7 +1051,10 @@ public class TestRPC extends TestRpcBase {
 
     MetricsRecordBuilder rb1 =
         getMetrics("DecayRpcSchedulerMetrics2." + ns);
-    final long beginCallVolume = MetricsAsserts.getLongCounter("CallVolume", rb1);
+    final long beginDecayedCallVolume = MetricsAsserts.getLongCounter(
+        "DecayedCallVolume", rb1);
+    final long beginRawCallVolume = MetricsAsserts.getLongCounter(
+        "CallVolume", rb1);
     final int beginUniqueCaller = MetricsAsserts.getIntCounter("UniqueCallers",
         rb1);
 
@@ -1090,27 +1092,32 @@ public class TestRPC extends TestRpcBase {
           public Boolean get() {
             MetricsRecordBuilder rb2 =
               getMetrics("DecayRpcSchedulerMetrics2." + ns);
-            long callVolume1 = MetricsAsserts.getLongCounter("CallVolume", rb2);
-            int uniqueCaller1 = MetricsAsserts.getIntCounter("UniqueCallers",
-              rb2);
+            long decayedCallVolume1 = MetricsAsserts.getLongCounter(
+                "DecayedCallVolume", rb2);
+            long rawCallVolume1 = MetricsAsserts.getLongCounter(
+                "CallVolume", rb2);
+            int uniqueCaller1 = MetricsAsserts.getIntCounter(
+                "UniqueCallers", rb2);
             long callVolumePriority0 = MetricsAsserts.getLongGauge(
-                "Priority.0.CallVolume", rb2);
+                "Priority.0.CompletedCallVolume", rb2);
             long callVolumePriority1 = MetricsAsserts.getLongGauge(
-                "Priority.1.CallVolume", rb2);
+                "Priority.1.CompletedCallVolume", rb2);
             double avgRespTimePriority0 = MetricsAsserts.getDoubleGauge(
                 "Priority.0.AvgResponseTime", rb2);
             double avgRespTimePriority1 = MetricsAsserts.getDoubleGauge(
                 "Priority.1.AvgResponseTime", rb2);
 
-            LOG.info("CallVolume1: " + callVolume1);
+            LOG.info("DecayedCallVolume: " + decayedCallVolume1);
+            LOG.info("CallVolume: " + rawCallVolume1);
             LOG.info("UniqueCaller: " + uniqueCaller1);
-            LOG.info("Priority.0.CallVolume: " + callVolumePriority0);
-            LOG.info("Priority.1.CallVolume: " + callVolumePriority1);
+            LOG.info("Priority.0.CompletedCallVolume: " + callVolumePriority0);
+            LOG.info("Priority.1.CompletedCallVolume: " + callVolumePriority1);
             LOG.info("Priority.0.AvgResponseTime: " + avgRespTimePriority0);
             LOG.info("Priority.1.AvgResponseTime: " + avgRespTimePriority1);
 
-            return callVolume1 > beginCallVolume
-                && uniqueCaller1 > beginUniqueCaller;
+            return decayedCallVolume1 > beginDecayedCallVolume &&
+                rawCallVolume1 > beginRawCallVolume &&
+                uniqueCaller1 > beginUniqueCaller;
           }
         }, 30, 60000);
       }

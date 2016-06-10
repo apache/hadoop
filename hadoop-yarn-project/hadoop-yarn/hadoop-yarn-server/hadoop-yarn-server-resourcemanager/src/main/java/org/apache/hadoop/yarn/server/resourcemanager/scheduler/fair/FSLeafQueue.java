@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -331,7 +332,7 @@ public class FSLeafQueue extends FSQueue {
       readLock.unlock();
     }
     for (FSAppAttempt sched : pendingForResourceApps) {
-      if (SchedulerAppUtils.isBlacklisted(sched, node, LOG)) {
+      if (SchedulerAppUtils.isPlaceBlacklisted(sched, node, LOG)) {
         continue;
       }
       assigned = sched.assignContainer(node);
@@ -481,8 +482,8 @@ public class FSLeafQueue extends FSQueue {
 
   /**
    * Check whether this queue can run this application master under the
-   * maxAMShare limit
-   *
+   * maxAMShare limit. For FIFO and FAIR policies, check if the VCore usage
+   * takes up the entire cluster or maxResources for the queue.
    * @param amResource
    * @return true if this queue can run
    */
@@ -494,8 +495,22 @@ public class FSLeafQueue extends FSQueue {
     }
     Resource maxAMResource = Resources.multiply(getFairShare(), maxAMShare);
     Resource ifRunAMResource = Resources.add(amResourceUsage, amResource);
-    return !policy
-        .checkIfAMResourceUsageOverLimit(ifRunAMResource, maxAMResource);
+
+    boolean overMaxAMShareLimit = policy
+            .checkIfAMResourceUsageOverLimit(ifRunAMResource, maxAMResource);
+
+    // For fair policy and fifo policy which doesn't check VCore usages,
+    // additionally check if the AM takes all available VCores or
+    // over maxResource to avoid deadlock.
+    if (!overMaxAMShareLimit && !policy.equals(
+        SchedulingPolicy.getInstance(DominantResourceFairnessPolicy.class))) {
+      overMaxAMShareLimit =
+         isVCoresOverMaxResource(ifRunAMResource.getVirtualCores()) ||
+         ifRunAMResource.getVirtualCores() >=
+         scheduler.getRootQueueMetrics().getAvailableVirtualCores();
+    }
+
+    return !overMaxAMShareLimit;
   }
 
   public void addAMResourceUsage(Resource amResource) {

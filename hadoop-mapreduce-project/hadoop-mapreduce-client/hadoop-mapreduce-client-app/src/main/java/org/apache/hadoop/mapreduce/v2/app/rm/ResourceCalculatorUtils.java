@@ -20,43 +20,42 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
-import org.apache.hadoop.yarn.util.Records;
 
 import java.util.EnumSet;
 
 public class ResourceCalculatorUtils {
-  public static int divideAndCeil(int a, int b) {
+  public static int divideAndCeil(long a, long b) {
     if (b == 0) {
       return 0;
     }
-    return (a + (b - 1)) / b;
+    return (int) ((a + (b - 1)) / b);
   }
 
   public static int computeAvailableContainers(Resource available,
       Resource required, EnumSet<SchedulerResourceTypes> resourceTypes) {
     if (resourceTypes.contains(SchedulerResourceTypes.CPU)) {
       return Math.min(
-        calculateRatioOrMaxValue(available.getMemory(), required.getMemory()),
+        calculateRatioOrMaxValue(available.getMemorySize(), required.getMemorySize()),
         calculateRatioOrMaxValue(available.getVirtualCores(), required
             .getVirtualCores()));
     }
     return calculateRatioOrMaxValue(
-      available.getMemory(), required.getMemory());
+      available.getMemorySize(), required.getMemorySize());
   }
 
   public static int divideAndCeilContainers(Resource required, Resource factor,
       EnumSet<SchedulerResourceTypes> resourceTypes) {
     if (resourceTypes.contains(SchedulerResourceTypes.CPU)) {
-      return Math.max(divideAndCeil(required.getMemory(), factor.getMemory()),
+      return Math.max(divideAndCeil(required.getMemorySize(), factor.getMemorySize()),
         divideAndCeil(required.getVirtualCores(), factor.getVirtualCores()));
     }
-    return divideAndCeil(required.getMemory(), factor.getMemory());
+    return divideAndCeil(required.getMemorySize(), factor.getMemorySize());
   }
 
-  private static int calculateRatioOrMaxValue(int numerator, int denominator) {
+  private static int calculateRatioOrMaxValue(long numerator, long denominator) {
     if (denominator == 0) {
       return Integer.MAX_VALUE;
     }
-    return numerator / denominator;
+    return (int) (numerator / denominator);
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import java.io.File;
+import java.io.InterruptedIOException;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -90,11 +91,11 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
       } else {
         LOG.warn("Unable to locate pid file for container " + containerIdStr);
       }
-    } catch (IOException e) {
-        LOG.error("Unable to recover container " + containerIdStr, e);
-    } catch (InterruptedException e) {
+    } catch (InterruptedException | InterruptedIOException e) {
       LOG.warn("Interrupted while waiting for exit code from " + containerId);
       notInterrupted = false;
+    } catch (IOException e) {
+      LOG.error("Unable to recover container " + containerIdStr, e);
     } finally {
       if (notInterrupted) {
         this.completed.set(true);

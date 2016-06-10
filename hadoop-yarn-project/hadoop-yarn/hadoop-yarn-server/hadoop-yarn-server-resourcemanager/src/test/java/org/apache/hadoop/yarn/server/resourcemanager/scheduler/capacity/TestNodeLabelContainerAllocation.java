@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -522,22 +521,22 @@ public class TestNodeLabelContainerAllocation {
     Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
     Assert.assertTrue(schedulerApp1.getReservedContainers().size() > 0);
     Assert.assertEquals(9 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed("x").getMemory());
+        .getUsed("x").getMemorySize());
     Assert.assertEquals(4 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved("x").getMemory());
+        .getReserved("x").getMemorySize());
     Assert.assertEquals(4 * GB,
-        leafQueue.getQueueResourceUsage().getReserved("x").getMemory());
+        leafQueue.getQueueResourceUsage().getReserved("x").getMemorySize());
 
     // Cancel asks of app2 and re-kick RM
     am1.allocate("*", 4 * GB, 0, new ArrayList<ContainerId>());
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
     Assert.assertEquals(5 * GB, cs.getRootQueue().getQueueResourceUsage()
-        .getUsed("x").getMemory());
+        .getUsed("x").getMemorySize());
     Assert.assertEquals(0, cs.getRootQueue().getQueueResourceUsage()
-        .getReserved("x").getMemory());
+        .getReserved("x").getMemorySize());
     Assert.assertEquals(0, leafQueue.getQueueResourceUsage().getReserved("x")
-        .getMemory());
+        .getMemorySize());
     rm1.close();
   }
 
@@ -549,7 +548,7 @@ public class TestNodeLabelContainerAllocation {
         app.getAppSchedulingInfo().getResourceRequest(
             Priority.newInstance(priority), "*");
     Assert.assertEquals(memory,
-        rr.getCapability().getMemory() * rr.getNumContainers());
+        rr.getCapability().getMemorySize() * rr.getNumContainers());
   }
   
   private void checkLaunchedContainerNumOnNode(MockRM rm, NodeId nodeId,

@@ -535,27 +535,4 @@ public abstract class ApplicationSubmissionContext {
   @Public
   @Unstable
   public abstract void setReservationID(ReservationId reservationID);
-
-  /**
-   * Get AM Blacklisting request object to know whether application needs any
-   * specific blacklisting for AM Nodes.
-   *
-   * @return AMBlackListingRequest object which has blacklisting information.
-   */
-  @Public
-  @Unstable
-  public abstract AMBlackListingRequest getAMBlackListRequest();
-
-  /**
-   * Get AM Blacklisting request object to know whether application needs any
-   * specific blacklisting for AM Nodes.
-   *
-   * @param blackListRequest
-   *          object which has blacklisting information such as
-   *          "enable/disable AM blacklisting" and "disable failure threshold".
-   */
-  @Public
-  @Unstable
-  public abstract void setAMBlackListRequest(
-      AMBlackListingRequest blackListRequest);
 }

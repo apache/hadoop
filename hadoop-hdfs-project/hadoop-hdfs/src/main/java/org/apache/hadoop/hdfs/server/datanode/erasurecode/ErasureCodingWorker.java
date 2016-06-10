@@ -116,19 +116,24 @@ public final class ErasureCodingWorker {
    */
   public void processErasureCodingTasks(
       Collection<BlockECReconstructionInfo> ecTasks) {
-    for (BlockECReconstructionInfo reconstructionInfo : ecTasks) {
+    for (BlockECReconstructionInfo reconInfo : ecTasks) {
       try {
-        final StripedReconstructor task =
-            new StripedReconstructor(this, reconstructionInfo);
+        StripedReconstructionInfo stripedReconInfo =
+            new StripedReconstructionInfo(
+            reconInfo.getExtendedBlock(), reconInfo.getErasureCodingPolicy(),
+            reconInfo.getLiveBlockIndices(), reconInfo.getSourceDnInfos(),
+            reconInfo.getTargetDnInfos(), reconInfo.getTargetStorageTypes());
+        final StripedBlockReconstructor task =
+            new StripedBlockReconstructor(this, stripedReconInfo);
         if (task.hasValidTargets()) {
           stripedReconstructionPool.submit(task);
         } else {
           LOG.warn("No missing internal block. Skip reconstruction for task:{}",
-              reconstructionInfo);
+              reconInfo);
         }
       } catch (Throwable e) {
         LOG.warn("Failed to reconstruct striped block {}",
-            reconstructionInfo.getExtendedBlock().getLocalBlock(), e);
+            reconInfo.getExtendedBlock().getLocalBlock(), e);
       }
     }
   }

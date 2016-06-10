@@ -174,7 +174,7 @@ public class TestBalancerWithNodeGroup {
     waitForHeartBeat(totalUsedSpace, totalCapacity);
 
     // start rebalancing
-    Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+    Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
     assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 
@@ -188,7 +188,7 @@ public class TestBalancerWithNodeGroup {
     waitForHeartBeat(totalUsedSpace, totalCapacity);
 
     // start rebalancing
-    Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+    Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
     Assert.assertTrue(r == ExitStatus.SUCCESS.getExitCode() ||
         (r == ExitStatus.NO_MOVE_PROGRESS.getExitCode()));

@@ -129,6 +129,14 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final boolean DEFAULT_SIZE_BASED_WEIGHT = false;
 
   /** Maximum number of containers to assign on each check-in. */
+  public static final String DYNAMIC_MAX_ASSIGN =
+      CONF_PREFIX + "dynamic.max.assign";
+  private static final boolean DEFAULT_DYNAMIC_MAX_ASSIGN = true;
+
+  /**
+   * Specify exact number of containers to assign on each heartbeat, if dynamic
+   * max assign is turned off.
+   */
   protected static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
   protected static final int DEFAULT_MAX_ASSIGN = -1;
 
@@ -220,6 +228,10 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getAssignMultiple() {
     return getBoolean(ASSIGN_MULTIPLE, DEFAULT_ASSIGN_MULTIPLE);
+  }
+
+  public boolean isMaxAssignDynamic() {
+    return getBoolean(DYNAMIC_MAX_ASSIGN, DEFAULT_DYNAMIC_MAX_ASSIGN);
   }
 
   public int getMaxAssign() {

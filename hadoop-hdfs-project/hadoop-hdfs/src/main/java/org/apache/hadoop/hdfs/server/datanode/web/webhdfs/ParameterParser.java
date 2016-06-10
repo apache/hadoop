@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
+import org.apache.hadoop.hdfs.web.resources.NoRedirectParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
 import org.apache.hadoop.hdfs.web.resources.PermissionParam;
@@ -108,6 +109,10 @@ class ParameterParser {
 
   boolean overwrite() {
     return new OverwriteParam(param(OverwriteParam.NAME)).getValue();
+  }
+
+  boolean noredirect() {
+    return new NoRedirectParam(param(NoRedirectParam.NAME)).getValue();
   }
 
   Token<DelegationTokenIdentifier> delegationToken() throws IOException {

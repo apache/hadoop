@@ -711,7 +711,7 @@ public class TestRMHA {
   }
   
   private void verifyClusterMetrics(int activeNodes, int appsSubmitted,
-      int appsPending, int containersPending, int availableMB,
+      int appsPending, int containersPending, long availableMB,
       int activeApplications) throws Exception {
     int timeoutSecs = 0;
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
@@ -742,7 +742,7 @@ public class TestRMHA {
     assertTrue(message, isAllMetricAssertionDone);
   }
 
-  private void assertMetric(String metricName, int expected, int actual) {
+  private void assertMetric(String metricName, long expected, long actual) {
     assertEquals("Incorrect value for metric " + metricName, expected, actual);
   }
 

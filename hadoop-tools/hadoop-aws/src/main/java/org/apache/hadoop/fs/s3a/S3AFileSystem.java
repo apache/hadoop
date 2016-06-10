@@ -31,17 +31,18 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSCredentialsProviderChain;
-
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -49,17 +50,18 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.event.ProgressEvent;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -68,14 +70,21 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +123,7 @@ public class S3AFileSystem extends FileSystem {
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
+  private S3AStorageStatistics storageStatistics;
   private long readAhead;
 
   // The maximum number of entries that can be deleted in any call to s3
@@ -127,92 +137,124 @@ public class S3AFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     setConf(conf);
-    instrumentation = new S3AInstrumentation(name);
+    try {
+      instrumentation = new S3AInstrumentation(name);
 
-    uri = URI.create(name.getScheme() + "://" + name.getAuthority());
-    workingDir = new Path("/user", System.getProperty("user.name"))
-        .makeQualified(this.uri, this.getWorkingDirectory());
+      uri = URI.create(name.getScheme() + "://" + name.getAuthority());
+      workingDir = new Path("/user", System.getProperty("user.name"))
+          .makeQualified(this.uri, this.getWorkingDirectory());
 
-    AWSAccessKeys creds = getAWSAccessKeys(name, conf);
+      bucket = name.getHost();
 
-    AWSCredentialsProviderChain credentials = new AWSCredentialsProviderChain(
-        new BasicAWSCredentialsProvider(
-            creds.getAccessKey(), creds.getAccessSecret()),
-        new InstanceProfileCredentialsProvider(),
-        new AnonymousAWSCredentialsProvider()
-    );
+      AWSCredentialsProvider credentials =
+          getAWSCredentialsProvider(name, conf);
 
-    bucket = name.getHost();
+      ClientConfiguration awsConf = new ClientConfiguration();
+      awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
+          DEFAULT_MAXIMUM_CONNECTIONS, 1));
+      boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
+          DEFAULT_SECURE_CONNECTIONS);
+      awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
+      awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
+          DEFAULT_MAX_ERROR_RETRIES, 0));
+      awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
+          DEFAULT_ESTABLISH_TIMEOUT, 0));
+      awsConf.setSocketTimeout(intOption(conf, SOCKET_TIMEOUT,
+          DEFAULT_SOCKET_TIMEOUT, 0));
+      String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
+      if (!signerOverride.isEmpty()) {
+        LOG.debug("Signer override = {}", signerOverride);
+        awsConf.setSignerOverride(signerOverride);
+      }
 
-    ClientConfiguration awsConf = new ClientConfiguration();
-    awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
-        DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
-    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
-    awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
-        DEFAULT_MAX_ERROR_RETRIES, 0));
-    awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, 0));
-    awsConf.setSocketTimeout(intOption(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, 0));
-    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
-    if (!signerOverride.isEmpty()) {
-      LOG.debug("Signer override = {}", signerOverride);
-      awsConf.setSignerOverride(signerOverride);
+      initProxySupport(conf, awsConf, secureConnections);
+
+      initUserAgent(conf, awsConf);
+
+      initAmazonS3Client(conf, credentials, awsConf);
+
+      maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
+      partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+      if (partSize < 5 * 1024 * 1024) {
+        LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
+        partSize = 5 * 1024 * 1024;
+      }
+
+      multiPartThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
+          DEFAULT_MIN_MULTIPART_THRESHOLD);
+      if (multiPartThreshold < 5 * 1024 * 1024) {
+        LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
+        multiPartThreshold = 5 * 1024 * 1024;
+      }
+      //check but do not store the block size
+      longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
+      enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
+
+      readAhead = longOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
+      storageStatistics = (S3AStorageStatistics)
+          GlobalStorageStatistics.INSTANCE
+              .put(S3AStorageStatistics.NAME,
+                  new GlobalStorageStatistics.StorageStatisticsProvider() {
+                    @Override
+                    public StorageStatistics provide() {
+                      return new S3AStorageStatistics();
+                    }
+                  });
+
+      int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
+      if (maxThreads < 2) {
+        LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
+        maxThreads = 2;
+      }
+      int totalTasks = conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS);
+      if (totalTasks < 1) {
+        LOG.warn(MAX_TOTAL_TASKS + "must be at least 1: forcing to 1.");
+        totalTasks = 1;
+      }
+      long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
+      threadPoolExecutor = new BlockingThreadPoolExecutorService(maxThreads,
+          maxThreads + totalTasks, keepAliveTime, TimeUnit.SECONDS,
+          "s3a-transfer-shared");
+
+      initTransferManager();
+
+      initCannedAcls(conf);
+
+      verifyBucketExists();
+
+      initMultipartUploads(conf);
+
+      serverSideEncryptionAlgorithm =
+          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    } catch (AmazonClientException e) {
+      throw translateException("initializing ", new Path(name), e);
     }
 
-    initProxySupport(conf, awsConf, secureConnections);
+  }
 
-    initUserAgent(conf, awsConf);
-
-    initAmazonS3Client(conf, credentials, awsConf);
-
-    maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
-    partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    if (partSize < 5 * 1024 * 1024) {
-      LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
-      partSize = 5 * 1024 * 1024;
+  /**
+   * Verify that the bucket exists. This does not check permissions,
+   * not even read access.
+   * @throws FileNotFoundException the bucket is absent
+   * @throws IOException any other problem talking to S3
+   */
+  protected void verifyBucketExists()
+      throws FileNotFoundException, IOException {
+    try {
+      if (!s3.doesBucketExist(bucket)) {
+        throw new FileNotFoundException("Bucket " + bucket + " does not exist");
+      }
+    } catch (AmazonS3Exception e) {
+      // this is a sign of a serious startup problem so do dump everything
+      LOG.warn(stringify(e), e);
+      throw translateException("doesBucketExist", bucket, e);
+    } catch (AmazonServiceException e) {
+      // this is a sign of a serious startup problem so do dump everything
+      LOG.warn(stringify(e), e);
+      throw translateException("doesBucketExist", bucket, e);
+    } catch (AmazonClientException e) {
+      throw translateException("doesBucketExist", bucket, e);
     }
-
-    multiPartThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
-        DEFAULT_MIN_MULTIPART_THRESHOLD);
-    if (multiPartThreshold < 5 * 1024 * 1024) {
-      LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
-      multiPartThreshold = 5 * 1024 * 1024;
-    }
-    //check but do not store the block size
-    longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
-    enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
-    readAhead = longOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
-
-    int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
-    if (maxThreads < 2) {
-      LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
-      maxThreads = 2;
-    }
-    int totalTasks = conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS);
-    if (totalTasks < 1) {
-      LOG.warn(MAX_TOTAL_TASKS + "must be at least 1: forcing to 1.");
-      totalTasks = 1;
-    }
-    long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
-    threadPoolExecutor = new BlockingThreadPoolExecutorService(maxThreads,
-        maxThreads + totalTasks, keepAliveTime, TimeUnit.SECONDS,
-        "s3a-transfer-shared");
-
-    initTransferManager();
-
-    initCannedAcls(conf);
-
-    if (!s3.doesBucketExist(bucket)) {
-      throw new FileNotFoundException("Bucket " + bucket + " does not exist");
-    }
-
-    initMultipartUploads(conf);
-
-    serverSideEncryptionAlgorithm = conf.get(SERVER_SIDE_ENCRYPTION_ALGORITHM);
-
   }
 
   void initProxySupport(Configuration conf, ClientConfiguration awsConf,
@@ -260,6 +302,14 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Get S3A Instrumentation. For test purposes.
+   * @return this instance's instrumentation.
+   */
+  public S3AInstrumentation getInstrumentation() {
+    return instrumentation;
+  }
+
+  /**
    * Initializes the User-Agent header to send in HTTP requests to the S3
    * back-end.  We always include the Hadoop version number.  The user also may
    * set an optional custom prefix to put in front of the Hadoop version number.
@@ -280,7 +330,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   private void initAmazonS3Client(Configuration conf,
-      AWSCredentialsProviderChain credentials, ClientConfiguration awsConf)
+      AWSCredentialsProvider credentials, ClientConfiguration awsConf)
       throws IllegalArgumentException {
     s3 = new AmazonS3Client(credentials, awsConf);
     String endPoint = conf.getTrimmed(ENDPOINT, "");
@@ -324,7 +374,7 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-  private void initMultipartUploads(Configuration conf) {
+  private void initMultipartUploads(Configuration conf) throws IOException {
     boolean purgeExistingMultipart = conf.getBoolean(PURGE_EXISTING_MULTIPART,
         DEFAULT_PURGE_EXISTING_MULTIPART);
     long purgeExistingMultipartAge = longOption(conf,
@@ -339,10 +389,10 @@ public class S3AFileSystem extends FileSystem {
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() == 403) {
           instrumentation.errorIgnored();
-          LOG.debug("Failed to abort multipart uploads against {}," +
+          LOG.debug("Failed to purging multipart uploads against {}," +
               " FS may be read only", bucket, e);
         } else {
-          throw e;
+          throw translateException("purging multipart uploads", bucket, e);
         }
       }
     }
@@ -393,6 +443,57 @@ public class S3AFileSystem extends FileSystem {
       }
     }
     return new AWSAccessKeys(accessKey, secretKey);
+  }
+
+  /**
+   * Create the standard credential provider, or load in one explicitly
+   * identified in the configuration.
+   * @param binding the S3 binding/bucket.
+   * @param conf configuration
+   * @return a credential provider
+   * @throws IOException on any problem. Class construction issues may be
+   * nested inside the IOE.
+   */
+  private AWSCredentialsProvider getAWSCredentialsProvider(URI binding,
+      Configuration conf) throws IOException {
+    AWSCredentialsProvider credentials;
+
+    String className = conf.getTrimmed(AWS_CREDENTIALS_PROVIDER);
+    if (StringUtils.isEmpty(className)) {
+      AWSAccessKeys creds = getAWSAccessKeys(binding, conf);
+      credentials = new AWSCredentialsProviderChain(
+          new BasicAWSCredentialsProvider(
+              creds.getAccessKey(), creds.getAccessSecret()),
+          new InstanceProfileCredentialsProvider(),
+          new EnvironmentVariableCredentialsProvider());
+
+    } else {
+      try {
+        LOG.debug("Credential provider class is {}", className);
+        Class<?> credClass = Class.forName(className);
+        try {
+          credentials =
+              (AWSCredentialsProvider)credClass.getDeclaredConstructor(
+                  URI.class, Configuration.class).newInstance(this.uri, conf);
+        } catch (NoSuchMethodException | SecurityException e) {
+          credentials =
+              (AWSCredentialsProvider)credClass.getDeclaredConstructor()
+                  .newInstance();
+        }
+      } catch (ClassNotFoundException e) {
+        throw new IOException(className + " not found.", e);
+      } catch (NoSuchMethodException | SecurityException e) {
+        throw new IOException(String.format("%s constructor exception.  A "
+            + "class specified in %s must provide an accessible constructor "
+            + "accepting URI and Configuration, or an accessible default "
+            + "constructor.", className, AWS_CREDENTIALS_PROVIDER), e);
+      } catch (ReflectiveOperationException | IllegalArgumentException e) {
+        throw new IOException(className + " instantiation exception.", e);
+      }
+      LOG.debug("Using {} for {}.", credentials, this.uri);
+    }
+
+    return credentials;
   }
 
   /**
@@ -493,23 +594,26 @@ public class S3AFileSystem extends FileSystem {
     }
     instrumentation.fileCreated();
     if (getConf().getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD)) {
-      return new FSDataOutputStream(new S3AFastOutputStream(s3, this, bucket,
-          key, progress, statistics, cannedACL,
-          serverSideEncryptionAlgorithm, partSize, multiPartThreshold,
-          threadPoolExecutor), statistics);
+      return new FSDataOutputStream(
+          new S3AFastOutputStream(s3,
+              this,
+              bucket,
+              key,
+              progress,
+              cannedACL,
+              partSize,
+              multiPartThreshold,
+              threadPoolExecutor),
+          statistics);
     }
     // We pass null to FSDataOutputStream so it won't count writes that
     // are being buffered to a file
     return new FSDataOutputStream(
         new S3AOutputStream(getConf(),
-            transfers,
             this,
-            bucket,
             key,
-            progress,
-            cannedACL,
-            statistics,
-            serverSideEncryptionAlgorithm),
+            progress
+        ),
         null);
   }
 
@@ -542,11 +646,30 @@ public class S3AFileSystem extends FileSystem {
    *
    * @param src path to be renamed
    * @param dst new path after rename
-   * @throws IOException on failure
+   * @throws IOException on IO failure
    * @return true if rename is successful
    */
   public boolean rename(Path src, Path dst) throws IOException {
+    try {
+      return innerRename(src, dst);
+    } catch (AmazonClientException e) {
+      throw translateException("rename(" + src +", " + dst + ")", src, e);
+    }
+  }
+
+  /**
+   * The inner rename operation. See {@link #rename(Path, Path)} for
+   * the description of the operation.
+   * @param src path to be renamed
+   * @param dst new path after rename
+   * @return true if rename is successful
+   * @throws IOException on IO failure.
+   * @throws AmazonClientException on failures inside the AWS SDK
+   */
+  private boolean innerRename(Path src, Path dst) throws IOException,
+      AmazonClientException {
     LOG.debug("Rename path {} to {}", src, dst);
+    incrementStatistic(INVOCATION_RENAME);
 
     String srcKey = pathToKey(src);
     String dstKey = pathToKey(dst);
@@ -647,8 +770,7 @@ public class S3AFileSystem extends FileSystem {
       request.setPrefix(srcKey);
       request.setMaxKeys(maxKeys);
 
-      ObjectListing objects = s3.listObjects(request);
-      statistics.incrementReadOps(1);
+      ObjectListing objects = listObjects(request);
 
       while (true) {
         for (S3ObjectSummary summary : objects.getObjectSummaries()) {
@@ -662,8 +784,7 @@ public class S3AFileSystem extends FileSystem {
         }
 
         if (objects.isTruncated()) {
-          objects = s3.listNextBatchOfObjects(objects);
-          statistics.incrementReadOps(1);
+          objects = continueListObjects(objects);
         } else {
           if (!keysToDelete.isEmpty()) {
             removeKeys(keysToDelete, false);
@@ -681,6 +802,234 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Low-level call to get at the object metadata.
+   * @param path path to the object
+   * @return metadata
+   * @throws IOException IO and object access problems.
+   */
+  @VisibleForTesting
+  public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+    return getObjectMetadata(pathToKey(path));
+  }
+
+  /**
+   * Increment a statistic by 1.
+   * @param statistic The operation to increment
+   */
+  protected void incrementStatistic(Statistic statistic) {
+    incrementStatistic(statistic, 1);
+  }
+
+  /**
+   * Increment a statistic by a specific value.
+   * @param statistic The operation to increment
+   * @param count the count to increment
+   */
+  protected void incrementStatistic(Statistic statistic, long count) {
+    instrumentation.incrementCounter(statistic, count);
+    storageStatistics.incrementCounter(statistic, count);
+  }
+
+  /**
+   * Request object metadata; increments counters in the process.
+   * @param key key
+   * @return the metadata
+   */
+  protected ObjectMetadata getObjectMetadata(String key) {
+    incrementStatistic(OBJECT_METADATA_REQUESTS);
+    ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
+    incrementReadOperations();
+    return meta;
+  }
+
+  /**
+   * Initiate a {@code listObjects} operation, incrementing metrics
+   * in the process.
+   * @param request request to initiate
+   * @return the results
+   */
+  protected ObjectListing listObjects(ListObjectsRequest request) {
+    incrementStatistic(OBJECT_LIST_REQUESTS);
+    incrementReadOperations();
+    return s3.listObjects(request);
+  }
+
+  /**
+   * List the next set of objects.
+   * @param objects paged result
+   * @return the next result object
+   */
+  protected ObjectListing continueListObjects(ObjectListing objects) {
+    incrementStatistic(OBJECT_LIST_REQUESTS);
+    incrementReadOperations();
+    return s3.listNextBatchOfObjects(objects);
+  }
+
+  /**
+   * Increment read operations.
+   */
+  public void incrementReadOperations() {
+    statistics.incrementReadOps(1);
+  }
+
+  /**
+   * Increment the write operation counter.
+   * This is somewhat inaccurate, as it appears to be invoked more
+   * often than needed in progress callbacks.
+   */
+  public void incrementWriteOperations() {
+    statistics.incrementWriteOps(1);
+  }
+
+  /**
+   * Delete an object.
+   * Increments the {@code OBJECT_DELETE_REQUESTS} and write
+   * operation statistics.
+   * @param key key to blob to delete.
+   */
+  private void deleteObject(String key) {
+    incrementWriteOperations();
+    incrementStatistic(OBJECT_DELETE_REQUESTS);
+    s3.deleteObject(bucket, key);
+  }
+
+  /**
+   * Perform a bulk object delete operation.
+   * Increments the {@code OBJECT_DELETE_REQUESTS} and write
+   * operation statistics.
+   * @param deleteRequest keys to delete on the s3-backend
+   */
+  private void deleteObjects(DeleteObjectsRequest deleteRequest) {
+    incrementWriteOperations();
+    incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
+    s3.deleteObjects(deleteRequest);
+  }
+
+  /**
+   * Create a putObject request.
+   * Adds the ACL and metadata
+   * @param key key of object
+   * @param metadata metadata header
+   * @param srcfile source file
+   * @return the request
+   */
+  public PutObjectRequest newPutObjectRequest(String key,
+      ObjectMetadata metadata, File srcfile) {
+    PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
+        srcfile);
+    putObjectRequest.setCannedAcl(cannedACL);
+    putObjectRequest.setMetadata(metadata);
+    return putObjectRequest;
+  }
+
+  /**
+   * Create a {@link PutObjectRequest} request.
+   * The metadata is assumed to have been configured with the size of the
+   * operation.
+   * @param key key of object
+   * @param metadata metadata header
+   * @param inputStream source data.
+   * @return the request
+   */
+  PutObjectRequest newPutObjectRequest(String key,
+      ObjectMetadata metadata, InputStream inputStream) {
+    PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
+        inputStream, metadata);
+    putObjectRequest.setCannedAcl(cannedACL);
+    return putObjectRequest;
+  }
+
+  /**
+   * Create a new object metadata instance.
+   * Any standard metadata headers are added here, for example:
+   * encryption.
+   * @return a new metadata instance
+   */
+  public ObjectMetadata newObjectMetadata() {
+    final ObjectMetadata om = new ObjectMetadata();
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
+      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+    }
+    return om;
+  }
+
+  /**
+   * Create a new object metadata instance.
+   * Any standard metadata headers are added here, for example:
+   * encryption.
+   *
+   * @param length length of data to set in header.
+   * @return a new metadata instance
+   */
+  public ObjectMetadata newObjectMetadata(long length) {
+    final ObjectMetadata om = newObjectMetadata();
+    om.setContentLength(length);
+    return om;
+  }
+
+  /**
+   * PUT an object, incrementing the put requests and put bytes
+   * counters.
+   * It does not update the other counters,
+   * as existing code does that as progress callbacks come in.
+   * Byte length is calculated from the file length, or, if there is no
+   * file, from the content length of the header.
+   * @param putObjectRequest the request
+   * @return the upload initiated
+   */
+  public Upload putObject(PutObjectRequest putObjectRequest) {
+    long len;
+    if (putObjectRequest.getFile() != null) {
+      len = putObjectRequest.getFile().length();
+    } else {
+      len = putObjectRequest.getMetadata().getContentLength();
+    }
+    incrementPutStartStatistics(len);
+    return transfers.upload(putObjectRequest);
+  }
+
+  /**
+   * Upload part of a multi-partition file.
+   * Increments the write and put counters
+   * @param request request
+   * @return the result of the operation.
+   */
+  public UploadPartResult uploadPart(UploadPartRequest request) {
+    incrementPutStartStatistics(request.getPartSize());
+    return s3.uploadPart(request);
+  }
+
+  /**
+   * At the start of a put/multipart upload operation, update the
+   * relevant counters.
+   *
+   * @param bytes bytes in the request.
+   */
+  public void incrementPutStartStatistics(long bytes) {
+    LOG.debug("PUT start {} bytes", bytes);
+    incrementWriteOperations();
+    incrementStatistic(OBJECT_PUT_REQUESTS);
+    if (bytes > 0) {
+      incrementStatistic(OBJECT_PUT_BYTES, bytes);
+    }
+  }
+
+  /**
+   * Callback for use in progress callbacks from put/multipart upload events.
+   * Increments those statistics which are expected to be updated during
+   * the ongoing upload operation.
+   * @param key key to file that is being written (for logging)
+   * @param bytes bytes successfully uploaded.
+   */
+  public void incrementPutProgressStatistics(String key, long bytes) {
+    LOG.debug("PUT {}: {} bytes", key, bytes);
+    incrementWriteOperations();
+    if (bytes > 0) {
+      statistics.incrementBytesWritten(bytes);
+    }
+  }
+
+  /**
    * A helper method to delete a list of keys on a s3-backend.
    *
    * @param keysToDelete collection of keys to delete on the s3-backend
@@ -688,30 +1037,24 @@ public class S3AFileSystem extends FileSystem {
    *            when set to true
    */
   private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-          boolean clearKeys) {
+          boolean clearKeys) throws AmazonClientException {
     if (enableMultiObjectsDelete) {
-      DeleteObjectsRequest deleteRequest
-          = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-      s3.deleteObjects(deleteRequest);
+      deleteObjects(new DeleteObjectsRequest(bucket).withKeys(keysToDelete));
       instrumentation.fileDeleted(keysToDelete.size());
-      statistics.incrementWriteOps(1);
     } else {
-      int writeops = 0;
-
       for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
-        s3.deleteObject(
-            new DeleteObjectRequest(bucket, keyVersion.getKey()));
-        writeops++;
+        deleteObject(keyVersion.getKey());
       }
       instrumentation.fileDeleted(keysToDelete.size());
-      statistics.incrementWriteOps(writeops);
     }
     if (clearKeys) {
       keysToDelete.clear();
     }
   }
 
-  /** Delete a file.
+  /**
+   * Delete a Path. This operation is at least {@code O(files)}, with
+   * added overheads to enumerate the path. It is also not atomic.
    *
    * @param f the path to delete.
    * @param recursive if path is a directory and set to
@@ -721,6 +1064,26 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException due to inability to delete a directory or file.
    */
   public boolean delete(Path f, boolean recursive) throws IOException {
+    try {
+      return innerDelete(f, recursive);
+    } catch (AmazonClientException e) {
+      throw translateException("delete", f, e);
+    }
+  }
+
+  /**
+   * Delete a path. See {@link #delete(Path, boolean)}.
+   *
+   * @param f the path to delete.
+   * @param recursive if path is a directory and set to
+   * true, the directory is deleted else throws an exception. In
+   * case of a file the recursive can be set to either true or false.
+   * @return  true if delete is successful else false.
+   * @throws IOException due to inability to delete a directory or file.
+   * @throws AmazonClientException on failures inside the AWS SDK
+   */
+  private boolean innerDelete(Path f, boolean recursive) throws IOException,
+      AmazonClientException {
     LOG.debug("Delete path {} - recursive {}", f , recursive);
     S3AFileStatus status;
     try {
@@ -752,9 +1115,8 @@ public class S3AFileSystem extends FileSystem {
 
       if (status.isEmptyDirectory()) {
         LOG.debug("Deleting fake empty directory {}", key);
-        s3.deleteObject(bucket, key);
+        deleteObject(key);
         instrumentation.directoryDeleted();
-        statistics.incrementWriteOps(1);
       } else {
         LOG.debug("Getting objects for directory prefix {} to delete", key);
 
@@ -765,9 +1127,9 @@ public class S3AFileSystem extends FileSystem {
         //request.setDelimiter("/");
         request.setMaxKeys(maxKeys);
 
-        List<DeleteObjectsRequest.KeyVersion> keys = new ArrayList<>();
-        ObjectListing objects = s3.listObjects(request);
-        statistics.incrementReadOps(1);
+        ObjectListing objects = listObjects(request);
+        List<DeleteObjectsRequest.KeyVersion> keys =
+            new ArrayList<>(objects.getObjectSummaries().size());
         while (true) {
           for (S3ObjectSummary summary : objects.getObjectSummaries()) {
             keys.add(new DeleteObjectsRequest.KeyVersion(summary.getKey()));
@@ -779,8 +1141,7 @@ public class S3AFileSystem extends FileSystem {
           }
 
           if (objects.isTruncated()) {
-            objects = s3.listNextBatchOfObjects(objects);
-            statistics.incrementReadOps(1);
+            objects = continueListObjects(objects);
           } else {
             if (!keys.isEmpty()) {
               removeKeys(keys, false);
@@ -791,21 +1152,20 @@ public class S3AFileSystem extends FileSystem {
       }
     } else {
       LOG.debug("delete: Path is a file");
-      s3.deleteObject(bucket, key);
       instrumentation.fileDeleted(1);
-      statistics.incrementWriteOps(1);
+      deleteObject(key);
     }
 
     createFakeDirectoryIfNecessary(f.getParent());
-
     return true;
   }
 
-  private void createFakeDirectoryIfNecessary(Path f) throws IOException {
+  private void createFakeDirectoryIfNecessary(Path f)
+      throws IOException, AmazonClientException {
     String key = pathToKey(f);
     if (!key.isEmpty() && !exists(f)) {
       LOG.debug("Creating new fake directory at {}", f);
-      createFakeDirectory(bucket, key);
+      createFakeDirectory(key);
     }
   }
 
@@ -820,8 +1180,28 @@ public class S3AFileSystem extends FileSystem {
    */
   public FileStatus[] listStatus(Path f) throws FileNotFoundException,
       IOException {
+    try {
+      return innerListStatus(f);
+    } catch (AmazonClientException e) {
+      throw translateException("listStatus", f, e);
+    }
+  }
+
+  /**
+   * List the statuses of the files/directories in the given path if the path is
+   * a directory.
+   *
+   * @param f given path
+   * @return the statuses of the files/directories in the given patch
+   * @throws FileNotFoundException when the path does not exist;
+   * @throws IOException due to an IO problem.
+   * @throws AmazonClientException on failures inside the AWS SDK
+   */
+  public FileStatus[] innerListStatus(Path f) throws FileNotFoundException,
+      IOException, AmazonClientException {
     String key = pathToKey(f);
     LOG.debug("List status for path: {}", f);
+    incrementStatistic(INVOCATION_LIST_STATUS);
 
     final List<FileStatus> result = new ArrayList<FileStatus>();
     final FileStatus fileStatus =  getFileStatus(f);
@@ -839,8 +1219,7 @@ public class S3AFileSystem extends FileSystem {
 
       LOG.debug("listStatus: doing listObjects for directory {}", key);
 
-      ObjectListing objects = s3.listObjects(request);
-      statistics.incrementReadOps(1);
+      ObjectListing objects = listObjects(request);
 
       Path fQualified = f.makeQualified(uri, workingDir);
 
@@ -851,33 +1230,25 @@ public class S3AFileSystem extends FileSystem {
           if (keyPath.equals(fQualified) ||
               summary.getKey().endsWith(S3N_FOLDER_SUFFIX)) {
             LOG.debug("Ignoring: {}", keyPath);
-            continue;
-          }
-
-          if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-            result.add(new S3AFileStatus(true, true, keyPath));
-            LOG.debug("Adding: fd: {}", keyPath);
           } else {
-            result.add(new S3AFileStatus(summary.getSize(),
-                dateToLong(summary.getLastModified()), keyPath,
-                getDefaultBlockSize(fQualified)));
-            LOG.debug("Adding: fi: {}", keyPath);
+            S3AFileStatus status = createFileStatus(keyPath, summary,
+                getDefaultBlockSize(keyPath));
+            result.add(status);
+            LOG.debug("Adding: {}", status);
           }
         }
 
         for (String prefix : objects.getCommonPrefixes()) {
           Path keyPath = keyToPath(prefix).makeQualified(uri, workingDir);
-          if (keyPath.equals(f)) {
-            continue;
+          if (!keyPath.equals(f)) {
+            result.add(new S3AFileStatus(true, false, keyPath));
+            LOG.debug("Adding: rd: {}", keyPath);
           }
-          result.add(new S3AFileStatus(true, false, keyPath));
-          LOG.debug("Adding: rd: {}", keyPath);
         }
 
         if (objects.isTruncated()) {
           LOG.debug("listStatus: list truncated - getting next batch");
-          objects = s3.listNextBatchOfObjects(objects);
-          statistics.incrementReadOps(1);
+          objects = continueListObjects(objects);
         } else {
           break;
         }
@@ -889,8 +1260,6 @@ public class S3AFileSystem extends FileSystem {
 
     return result.toArray(new FileStatus[result.size()]);
   }
-
-
 
   /**
    * Set the current working directory for the given file system. All relative
@@ -911,17 +1280,44 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Make the given file and all non-existent parents into
-   * directories. Has the semantics of Unix 'mkdir -p'.
+   *
+   * Make the given path and all non-existent parents into
+   * directories. Has the semantics of Unix {@code 'mkdir -p'}.
    * Existence of the directory hierarchy is not an error.
-   * @param f path to create
+   * @param path path to create
    * @param permission to apply to f
+   * @return true if a directory was created
+   * @throws FileAlreadyExistsException there is a file at the path specified
+   * @throws IOException other IO problems
    */
   // TODO: If we have created an empty file at /foo/bar and we then call
   // mkdirs for /foo/bar/baz/roo what happens to the empty file /foo/bar/?
-  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
+  public boolean mkdirs(Path path, FsPermission permission) throws IOException,
+      FileAlreadyExistsException {
+    try {
+      return innerMkdirs(path, permission);
+    } catch (AmazonClientException e) {
+      throw translateException("innerMkdirs", path, e);
+    }
+  }
+  /**
+   *
+   * Make the given path and all non-existent parents into
+   * directories.
+   * See {@link #mkdirs(Path, FsPermission)}
+   * @param f path to create
+   * @param permission to apply to f
+   * @return true if a directory was created
+   * @throws FileAlreadyExistsException there is a file at the path specified
+   * @throws IOException other IO problems
+   * @throws AmazonClientException on failures inside the AWS SDK
+   */
+  // TODO: If we have created an empty file at /foo/bar and we then call
+  // mkdirs for /foo/bar/baz/roo what happens to the empty file /foo/bar/?
+  private boolean innerMkdirs(Path f, FsPermission permission)
+      throws IOException, FileAlreadyExistsException, AmazonClientException {
     LOG.debug("Making directory: {}", f);
-
+    incrementStatistic(INVOCATION_MKDIRS);
     try {
       FileStatus fileStatus = getFileStatus(f);
 
@@ -935,6 +1331,9 @@ public class S3AFileSystem extends FileSystem {
       do {
         try {
           FileStatus fileStatus = getFileStatus(fPart);
+          if (fileStatus.isDirectory()) {
+            break;
+          }
           if (fileStatus.isFile()) {
             throw new FileAlreadyExistsException(String.format(
                 "Can't make directory for path '%s' since it is a file.",
@@ -947,7 +1346,7 @@ public class S3AFileSystem extends FileSystem {
       } while (fPart != null);
 
       String key = pathToKey(f);
-      createFakeDirectory(bucket, key);
+      createFakeDirectory(key);
       return true;
     }
   }
@@ -957,16 +1356,16 @@ public class S3AFileSystem extends FileSystem {
    * @param f The path we want information from
    * @return a FileStatus object
    * @throws java.io.FileNotFoundException when the path does not exist;
-   *         IOException see specific implementation
+   * @throws IOException on other problems.
    */
   public S3AFileStatus getFileStatus(Path f) throws IOException {
     String key = pathToKey(f);
+    incrementStatistic(INVOCATION_GET_FILE_STATUS);
     LOG.debug("Getting path status for {}  ({})", f , key);
 
     if (!key.isEmpty()) {
       try {
-        ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
-        statistics.incrementReadOps(1);
+        ObjectMetadata meta = getObjectMetadata(key);
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
           LOG.debug("Found exact file: fake directory");
@@ -981,20 +1380,17 @@ public class S3AFileSystem extends FileSystem {
         }
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() != 404) {
-          printAmazonServiceException(f.toString(), e);
-          throw e;
+          throw translateException("getFileStatus", f, e);
         }
       } catch (AmazonClientException e) {
-        printAmazonClientException(f.toString(), e);
-        throw e;
+        throw translateException("getFileStatus", f, e);
       }
 
       // Necessary?
       if (!key.endsWith("/")) {
         String newKey = key + "/";
         try {
-          ObjectMetadata meta = s3.getObjectMetadata(bucket, newKey);
-          statistics.incrementReadOps(1);
+          ObjectMetadata meta = getObjectMetadata(newKey);
 
           if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
             LOG.debug("Found file (with /): fake directory");
@@ -1009,12 +1405,10 @@ public class S3AFileSystem extends FileSystem {
           }
         } catch (AmazonServiceException e) {
           if (e.getStatusCode() != 404) {
-            printAmazonServiceException(newKey, e);
-            throw e;
+            throw translateException("getFileStatus", newKey, e);
           }
         } catch (AmazonClientException e) {
-          printAmazonClientException(newKey, e);
-          throw e;
+          throw translateException("getFileStatus", newKey, e);
         }
       }
     }
@@ -1029,8 +1423,7 @@ public class S3AFileSystem extends FileSystem {
       request.setDelimiter("/");
       request.setMaxKeys(1);
 
-      ObjectListing objects = s3.listObjects(request);
-      statistics.incrementReadOps(1);
+      ObjectListing objects = listObjects(request);
 
       if (!objects.getCommonPrefixes().isEmpty()
           || !objects.getObjectSummaries().isEmpty()) {
@@ -1055,12 +1448,10 @@ public class S3AFileSystem extends FileSystem {
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {
-        printAmazonServiceException(key, e);
-        throw e;
+        throw translateException("getFileStatus", key, e);
       }
     } catch (AmazonClientException e) {
-      printAmazonClientException(key, e);
-      throw e;
+      throw translateException("getFileStatus", key, e);
     }
 
     LOG.debug("Not Found: {}", f);
@@ -1079,11 +1470,44 @@ public class S3AFileSystem extends FileSystem {
    * @param overwrite whether to overwrite an existing file
    * @param src path
    * @param dst path
+   * @throws IOException IO problem
+   * @throws FileAlreadyExistsException the destination file exists and
+   * overwrite==false
+   * @throws AmazonClientException failure in the AWS SDK
    */
   @Override
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
       Path dst) throws IOException {
-    String key = pathToKey(dst);
+    try {
+      innerCopyFromLocalFile(delSrc, overwrite, src, dst);
+    } catch (AmazonClientException e) {
+      throw translateException("copyFromLocalFile(" + src + ", " + dst + ")",
+          src, e);
+    }
+  }
+
+  /**
+   * The src file is on the local disk.  Add it to FS at
+   * the given dst name.
+   *
+   * This version doesn't need to create a temporary file to calculate the md5.
+   * Sadly this doesn't seem to be used by the shell cp :(
+   *
+   * delSrc indicates if the source should be removed
+   * @param delSrc whether to delete the src
+   * @param overwrite whether to overwrite an existing file
+   * @param src path
+   * @param dst path
+   * @throws IOException IO problem
+   * @throws FileAlreadyExistsException the destination file exists and
+   * overwrite==false
+   * @throws AmazonClientException failure in the AWS SDK
+   */
+  private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
+      Path src, Path dst)
+      throws IOException, FileAlreadyExistsException, AmazonClientException {
+    incrementStatistic(INVOCATION_COPY_FROM_LOCAL_FILE);
+    final String key = pathToKey(dst);
 
     if (!overwrite && exists(dst)) {
       throw new FileAlreadyExistsException(dst + " already exists");
@@ -1094,35 +1518,19 @@ public class S3AFileSystem extends FileSystem {
     LocalFileSystem local = getLocal(getConf());
     File srcfile = local.pathToFile(src);
 
-    final ObjectMetadata om = new ObjectMetadata();
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
-    PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, srcfile);
-    putObjectRequest.setCannedAcl(cannedACL);
-    putObjectRequest.setMetadata(om);
-
-    ProgressListener progressListener = new ProgressListener() {
-      public void progressChanged(ProgressEvent progressEvent) {
-        switch (progressEvent.getEventType()) {
-          case TRANSFER_PART_COMPLETED_EVENT:
-            statistics.incrementWriteOps(1);
-            break;
-          default:
-            break;
-        }
-      }
-    };
-
-    statistics.incrementWriteOps(1);
-    Upload up = transfers.upload(putObjectRequest);
-    up.addProgressListener(progressListener);
+    final ObjectMetadata om = newObjectMetadata();
+    PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
+    Upload up = putObject(putObjectRequest);
+    ProgressableProgressListener listener = new ProgressableProgressListener(
+        this, key, up, null);
+    up.addProgressListener(listener);
     try {
       up.waitForUploadResult();
     } catch (InterruptedException e) {
       throw new InterruptedIOException("Interrupted copying " + src
           + " to "  + dst + ", cancelling");
     }
+    listener.uploadCompleted();
 
     // This will delete unnecessary fake parent directories
     finishedWrite(key);
@@ -1132,8 +1540,12 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Close the filesystem. This shuts down all transfers.
+   * @throws IOException IO problem
+   */
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     try {
       super.close();
     } finally {
@@ -1145,72 +1557,81 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-  * Override getCanonicalServiceName because we don't support token in S3A.
-  */
+   * Override getCanonicalServiceName because we don't support token in S3A.
+   */
   @Override
   public String getCanonicalServiceName() {
     // Does not support Token
     return null;
   }
 
+  /**
+   * Copy a single object in the bucket via a COPY operation.
+   * @param srcKey source object path
+   * @param dstKey destination object path
+   * @param size object size
+   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws InterruptedIOException the operation was interrupted
+   * @throws IOException Other IO problems
+   */
   private void copyFile(String srcKey, String dstKey, long size)
-      throws IOException {
+      throws IOException, InterruptedIOException, AmazonClientException {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
-    ObjectMetadata srcom = s3.getObjectMetadata(bucket, srcKey);
-    ObjectMetadata dstom = cloneObjectMetadata(srcom);
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
-    CopyObjectRequest copyObjectRequest =
-        new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
-    copyObjectRequest.setCannedAccessControlList(cannedACL);
-    copyObjectRequest.setNewObjectMetadata(dstom);
-
-    ProgressListener progressListener = new ProgressListener() {
-      public void progressChanged(ProgressEvent progressEvent) {
-        switch (progressEvent.getEventType()) {
-          case TRANSFER_PART_COMPLETED_EVENT:
-            statistics.incrementWriteOps(1);
-            break;
-          default:
-            break;
-        }
-      }
-    };
-
-    Copy copy = transfers.copy(copyObjectRequest);
-    copy.addProgressListener(progressListener);
     try {
-      copy.waitForCopyResult();
-      statistics.incrementWriteOps(1);
-      instrumentation.filesCopied(1, size);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted copying " + srcKey
-          + " to " + dstKey + ", cancelling");
+      ObjectMetadata srcom = getObjectMetadata(srcKey);
+      ObjectMetadata dstom = cloneObjectMetadata(srcom);
+      if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
+        dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+      }
+      CopyObjectRequest copyObjectRequest =
+          new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+      copyObjectRequest.setCannedAccessControlList(cannedACL);
+      copyObjectRequest.setNewObjectMetadata(dstom);
+
+      ProgressListener progressListener = new ProgressListener() {
+        public void progressChanged(ProgressEvent progressEvent) {
+          switch (progressEvent.getEventType()) {
+            case TRANSFER_PART_COMPLETED_EVENT:
+              incrementWriteOperations();
+              break;
+            default:
+              break;
+          }
+        }
+      };
+
+      Copy copy = transfers.copy(copyObjectRequest);
+      copy.addProgressListener(progressListener);
+      try {
+        copy.waitForCopyResult();
+        incrementWriteOperations();
+        instrumentation.filesCopied(1, size);
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException("Interrupted copying " + srcKey
+            + " to " + dstKey + ", cancelling");
+      }
+    } catch (AmazonClientException e) {
+      throw translateException("copyFile("+ srcKey+ ", " + dstKey + ")",
+          srcKey, e);
     }
   }
 
-  private boolean objectRepresentsDirectory(final String name, final long size) {
-    return !name.isEmpty()
-        && name.charAt(name.length() - 1) == '/'
-        && size == 0L;
-  }
-
-  // Handles null Dates that can be returned by AWS
-  private static long dateToLong(final Date date) {
-    if (date == null) {
-      return 0L;
-    }
-
-    return date.getTime();
-  }
-
-  public void finishedWrite(String key) throws IOException {
+  /**
+   * Perform post-write actions.
+   * @param key key written to
+   */
+  public void finishedWrite(String key) {
+    LOG.debug("Finished write to {}", key);
     deleteUnnecessaryFakeDirectories(keyToPath(key).getParent());
   }
 
-  private void deleteUnnecessaryFakeDirectories(Path f) throws IOException {
+  /**
+   * Delete mock parent directories which are no longer needed.
+   * This code swallows IO exceptions encountered
+   * @param f path
+   */
+  private void deleteUnnecessaryFakeDirectories(Path f) {
     while (true) {
       String key = "";
       try {
@@ -1223,10 +1644,9 @@ public class S3AFileSystem extends FileSystem {
 
         if (status.isDirectory() && status.isEmptyDirectory()) {
           LOG.debug("Deleting fake directory {}/", key);
-          s3.deleteObject(bucket, key + "/");
-          statistics.incrementWriteOps(1);
+          deleteObject(key + "/");
         }
-      } catch (FileNotFoundException | AmazonServiceException e) {
+      } catch (IOException | AmazonClientException e) {
         LOG.debug("While deleting key {} ", key, e);
         instrumentation.errorIgnored();
       }
@@ -1240,18 +1660,20 @@ public class S3AFileSystem extends FileSystem {
   }
 
 
-  private void createFakeDirectory(final String bucketName, final String objectName)
-      throws AmazonClientException, AmazonServiceException {
+  private void createFakeDirectory(final String objectName)
+      throws AmazonClientException, AmazonServiceException,
+      InterruptedIOException {
     if (!objectName.endsWith("/")) {
-      createEmptyObject(bucketName, objectName + "/");
+      createEmptyObject(objectName + "/");
     } else {
-      createEmptyObject(bucketName, objectName);
+      createEmptyObject(objectName);
     }
   }
 
   // Used to create an empty file that represents an empty directory
-  private void createEmptyObject(final String bucketName, final String objectName)
-      throws AmazonClientException, AmazonServiceException {
+  private void createEmptyObject(final String objectName)
+      throws AmazonClientException, AmazonServiceException,
+      InterruptedIOException {
     final InputStream im = new InputStream() {
       @Override
       public int read() throws IOException {
@@ -1259,16 +1681,16 @@ public class S3AFileSystem extends FileSystem {
       }
     };
 
-    final ObjectMetadata om = new ObjectMetadata();
-    om.setContentLength(0L);
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+    PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
+        newObjectMetadata(0L),
+        im);
+    Upload upload = putObject(putObjectRequest);
+    try {
+      upload.waitForUploadResult();
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted creating " + objectName);
     }
-    PutObjectRequest putObjectRequest =
-        new PutObjectRequest(bucketName, objectName, im, om);
-    putObjectRequest.setCannedAcl(cannedACL);
-    s3.putObject(putObjectRequest);
-    statistics.incrementWriteOps(1);
+    incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
 
@@ -1283,10 +1705,7 @@ public class S3AFileSystem extends FileSystem {
     // This approach may be too brittle, especially if
     // in future there are new attributes added to ObjectMetadata
     // that we do not explicitly call to set here
-    ObjectMetadata ret = new ObjectMetadata();
-
-    // Non null attributes
-    ret.setContentLength(source.getContentLength());
+    ObjectMetadata ret = newObjectMetadata(source.getContentLength());
 
     // Possibly null attributes
     // Allowing nulls to pass breaks it during later use
@@ -1349,28 +1768,6 @@ public class S3AFileSystem extends FileSystem {
     return getConf().getLong(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
-  private void printAmazonServiceException(String target,
-      AmazonServiceException ase) {
-    LOG.info("{}: caught an AmazonServiceException {}", target, ase);
-    LOG.info("This means your request made it to Amazon S3," +
-        " but was rejected with an error response for some reason.");
-    LOG.info("Error Message: {}", ase.getMessage());
-    LOG.info("HTTP Status Code: {}", ase.getStatusCode());
-    LOG.info("AWS Error Code: {}", ase.getErrorCode());
-    LOG.info("Error Type: {}", ase.getErrorType());
-    LOG.info("Request ID: {}", ase.getRequestId());
-    LOG.info("Class Name: {}", ase.getClass().getName());
-    LOG.info("Exception", ase);
-  }
-
-  private void printAmazonClientException(String target,
-      AmazonClientException ace) {
-    LOG.info("{}: caught an AmazonClientException {}", target, ace);
-    LOG.info("This means the client encountered " +
-        "a problem while trying to communicate with S3, " +
-        "such as not being able to access the network.", ace);
-  }
-
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -1392,7 +1789,7 @@ public class S3AFileSystem extends FileSystem {
           .append('\'');
     }
     sb.append(", statistics {")
-        .append(statistics.toString())
+        .append(statistics)
         .append("}");
     sb.append(", metrics {")
         .append(instrumentation.dump("{", "=", "} ", true))
@@ -1410,11 +1807,80 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Get the threshold for multipart files
+   * Get the threshold for multipart files.
    * @return the value as set during initialization
    */
   public long getMultiPartThreshold() {
     return multiPartThreshold;
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public FileStatus[] globStatus(Path pathPattern) throws IOException {
+    incrementStatistic(INVOCATION_GLOB_STATUS);
+    return super.globStatus(pathPattern);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    incrementStatistic(INVOCATION_GLOB_STATUS);
+    return super.globStatus(pathPattern, filter);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
+      throws FileNotFoundException, IOException {
+    incrementStatistic(INVOCATION_LIST_LOCATED_STATUS);
+    return super.listLocatedStatus(f);
+  }
+
+  @Override
+  public RemoteIterator<LocatedFileStatus> listFiles(Path f,
+      boolean recursive) throws FileNotFoundException, IOException {
+    incrementStatistic(INVOCATION_LIST_FILES);
+    return super.listFiles(f, recursive);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean exists(Path f) throws IOException {
+    incrementStatistic(INVOCATION_EXISTS);
+    return super.exists(f);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean isDirectory(Path f) throws IOException {
+    incrementStatistic(INVOCATION_IS_DIRECTORY);
+    return super.isDirectory(f);
+  }
+
+  /**
+   * Override superclass so as to add statistic collection.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean isFile(Path f) throws IOException {
+    incrementStatistic(INVOCATION_IS_FILE);
+    return super.isFile(f);
   }
 
   /**

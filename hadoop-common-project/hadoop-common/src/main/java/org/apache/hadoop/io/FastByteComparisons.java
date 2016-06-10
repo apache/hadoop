@@ -75,7 +75,7 @@ abstract class FastByteComparisons {
      * implementation if unable to do so.
      */
     static Comparer<byte[]> getBestComparer() {
-      if (System.getProperty("os.arch").equals("sparc")) {
+      if (System.getProperty("os.arch").toLowerCase().startsWith("sparc")) {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Lexicographical comparer selected for "
               + "byte aligned system architecture");

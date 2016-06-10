@@ -173,7 +173,7 @@ public class TestDFSUpgradeFromImage {
   private static FSInputStream dfsOpenFileWithRetries(DistributedFileSystem dfs,
       String pathName) throws IOException {
     IOException exc = null;
-    for (int tries = 0; tries < 10; tries++) {
+    for (int tries = 0; tries < 30; tries++) {
       try {
         return dfs.dfs.open(pathName);
       } catch (IOException e) {
@@ -184,6 +184,7 @@ public class TestDFSUpgradeFromImage {
         throw exc;
       }
       try {
+        LOG.info("Open failed. " + tries + " times. Retrying.");
         Thread.sleep(1000);
       } catch (InterruptedException ignored) {}
     }
@@ -570,8 +571,17 @@ public class TestDFSUpgradeFromImage {
     String pathStr = path.toString();
     HdfsFileStatus status = dfs.getFileInfo(pathStr);
     if (!status.isDir()) {
-      dfs.recoverLease(pathStr);
-      return;
+      for (int retries = 10; retries > 0; retries--) {
+        if (dfs.recoverLease(pathStr)) {
+          return;
+        } else {
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ignored) {
+          }
+        }
+      }
+      throw new IOException("Failed to recover lease of " + path);
     }
     byte prev[] = HdfsFileStatus.EMPTY_NAME;
     DirectoryListing dirList;

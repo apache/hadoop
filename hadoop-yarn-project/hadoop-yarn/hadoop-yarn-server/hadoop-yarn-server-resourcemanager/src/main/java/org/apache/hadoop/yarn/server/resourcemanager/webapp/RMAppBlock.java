@@ -113,10 +113,10 @@ public class RMAppBlock extends AppBlock{
     Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody =
         html.table("#attempts").thead().tr().th(".id", "Attempt ID")
             .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
-            .th(".appBlacklistednodes", "Nodes black listed by the application",
-                "App Blacklisted Nodes")
-            .th(".rmBlacklistednodes", "Nodes black listed by the RM for the"
-                + " app", "RM Blacklisted Nodes")._()._().tbody();
+            .th(".appBlacklistednodes", "Nodes blacklisted by the application",
+                "Nodes blacklisted by the app")
+            .th(".rmBlacklistednodes", "Nodes blacklisted by the RM for the"
+                + " app", "Nodes blacklisted by the system")._()._().tbody();
 
     RMApp rmApp = this.rm.getRMContext().getRMApps().get(this.appID);
     if (rmApp == null) {
@@ -136,8 +136,9 @@ public class RMAppBlock extends AppBlock{
       // nodes which are blacklisted by the application
       String appBlacklistedNodesCount = String.valueOf(nodes.size());
       // nodes which are blacklisted by the RM for AM launches
-      String rmBlacklistedNodesCount = String.valueOf(rmAppAttempt
-          .getAMBlacklist().getBlacklistUpdates().getAdditions().size());
+      String rmBlacklistedNodesCount =
+          String.valueOf(rmAppAttempt.getAMBlacklistManager()
+            .getBlacklistUpdates().getBlacklistAdditions().size());
       String nodeLink = attemptInfo.getNodeHttpAddress();
       if (nodeLink != null) {
         nodeLink = WebAppUtils.getHttpSchemePrefix(conf) + nodeLink;

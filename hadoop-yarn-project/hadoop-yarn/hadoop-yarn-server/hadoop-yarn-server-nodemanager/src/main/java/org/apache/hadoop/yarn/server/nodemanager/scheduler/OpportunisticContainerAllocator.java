@@ -160,7 +160,8 @@ public class OpportunisticContainerAllocator {
         containerTokenIdentifier);
     Container container = BuilderUtils.newContainer(
         cId, nodeId, nodeId.getHost() + ":" + webpagePort,
-        capability, rr.getPriority(), containerToken);
+        capability, rr.getPriority(), containerToken,
+        containerTokenIdentifier.getExecutionType());
     return container;
   }
 

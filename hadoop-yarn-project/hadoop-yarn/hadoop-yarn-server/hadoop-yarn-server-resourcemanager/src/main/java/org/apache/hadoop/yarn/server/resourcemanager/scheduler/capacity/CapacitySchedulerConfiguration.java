@@ -677,7 +677,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    */
   public Resource getMaximumAllocationPerQueue(String queue) {
     String queuePrefix = getQueuePrefix(queue);
-    int maxAllocationMbPerQueue = getInt(queuePrefix + MAXIMUM_ALLOCATION_MB,
+    long maxAllocationMbPerQueue = getInt(queuePrefix + MAXIMUM_ALLOCATION_MB,
         (int)UNDEFINED);
     int maxAllocationVcoresPerQueue = getInt(
         queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
@@ -690,7 +690,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     Resource clusterMax = getMaximumAllocation();
     if (maxAllocationMbPerQueue == (int)UNDEFINED) {
       LOG.info("max alloc mb per queue for " + queue + " is undefined");
-      maxAllocationMbPerQueue = clusterMax.getMemory();
+      maxAllocationMbPerQueue = clusterMax.getMemorySize();
     }
     if (maxAllocationVcoresPerQueue == (int)UNDEFINED) {
        LOG.info("max alloc vcore per queue for " + queue + " is undefined");
@@ -698,7 +698,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
     Resource result = Resources.createResource(maxAllocationMbPerQueue,
         maxAllocationVcoresPerQueue);
-    if (maxAllocationMbPerQueue > clusterMax.getMemory()
+    if (maxAllocationMbPerQueue > clusterMax.getMemorySize()
         || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()) {
       throw new IllegalArgumentException(
           "Queue maximum allocation cannot be larger than the cluster setting"

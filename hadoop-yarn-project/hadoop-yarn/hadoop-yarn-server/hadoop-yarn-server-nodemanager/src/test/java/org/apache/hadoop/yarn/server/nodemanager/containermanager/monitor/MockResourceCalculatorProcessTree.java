@@ -54,4 +54,9 @@ public class MockResourceCalculatorProcessTree extends ResourceCalculatorProcess
   public long getRssMemorySize() {
     return this.rssMemorySize;
   }
+
+  @Override
+  public float getCpuUsagePercent() {
+    return 0;
+  }
 }

@@ -1,5 +1,6 @@
 {
   "queue" : "dedicated",
+  "reservation-id" : "%s",
   "reservation-definition" : {
      "arrival" : %s,
      "deadline" : %s,

@@ -64,7 +64,7 @@ public abstract class CommandShell extends Configured implements Tool {
     int exitCode = 0;
     try {
       exitCode = init(args);
-      if (exitCode != 0) {
+      if (exitCode != 0 || subcommand == null) {
         printShellUsage();
         return exitCode;
       }
@@ -89,7 +89,7 @@ public abstract class CommandShell extends Configured implements Tool {
    */
   protected abstract int init(String[] args) throws Exception;
 
-  private void printShellUsage() {
+  protected final void printShellUsage() {
     if (subcommand != null) {
       out.println(subcommand.getUsage());
     } else {

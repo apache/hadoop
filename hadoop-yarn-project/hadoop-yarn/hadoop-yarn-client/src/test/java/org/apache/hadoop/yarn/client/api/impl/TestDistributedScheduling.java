@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -129,7 +130,9 @@ public class TestDistributedScheduling extends TestAMRMProxy {
           ResourceRequest newRR = ResourceRequest.newInstance(rr
                   .getPriority(), rr.getResourceName(),
               rr.getCapability(), rr.getNumContainers(), rr.getRelaxLocality(),
-              rr.getNodeLabelExpression(), ExecutionType.OPPORTUNISTIC);
+              rr.getNodeLabelExpression(),
+              ExecutionTypeRequest.newInstance(
+                  ExecutionType.OPPORTUNISTIC, true));
           newAskList.add(newRR);
         }
       }
@@ -235,7 +238,9 @@ public class TestDistributedScheduling extends TestAMRMProxy {
           ResourceRequest newRR = ResourceRequest.newInstance(rr
               .getPriority(), rr.getResourceName(),
               rr.getCapability(), rr.getNumContainers(), rr.getRelaxLocality(),
-              rr.getNodeLabelExpression(), ExecutionType.OPPORTUNISTIC);
+              rr.getNodeLabelExpression(),
+              ExecutionTypeRequest.newInstance(
+                  ExecutionType.OPPORTUNISTIC, true));
           newAskList.add(newRR);
         }
       }

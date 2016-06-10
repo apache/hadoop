@@ -266,7 +266,7 @@ final public class ResourceSchedulerWrapper
           // should have one container which is AM container
           RMContainer rmc = app.getLiveContainers().iterator().next();
           updateQueueMetrics(queue,
-                  rmc.getContainer().getResource().getMemory(),
+                  rmc.getContainer().getResource().getMemorySize(),
                   rmc.getContainer().getResource().getVirtualCores());
         }
       }
@@ -322,7 +322,7 @@ final public class ResourceSchedulerWrapper
         if (status.getExitStatus() == ContainerExitStatus.SUCCESS) {
           for (RMContainer rmc : app.getLiveContainers()) {
             if (rmc.getContainerId() == containerId) {
-              releasedMemory += rmc.getContainer().getResource().getMemory();
+              releasedMemory += rmc.getContainer().getResource().getMemorySize();
               releasedVCores += rmc.getContainer()
                       .getResource().getVirtualCores();
               break;
@@ -331,7 +331,7 @@ final public class ResourceSchedulerWrapper
         } else if (status.getExitStatus() == ContainerExitStatus.ABORTED) {
           if (preemptionContainerMap.containsKey(containerId)) {
             Resource preResource = preemptionContainerMap.get(containerId);
-            releasedMemory += preResource.getMemory();
+            releasedMemory += preResource.getMemorySize();
             releasedVCores += preResource.getVirtualCores();
             preemptionContainerMap.remove(containerId);
           }
@@ -422,9 +422,9 @@ final public class ResourceSchedulerWrapper
             "counter.queue." + queueName + ".pending.cores",
             "counter.queue." + queueName + ".allocated.memory",
             "counter.queue." + queueName + ".allocated.cores"};
-    int values[] = new int[]{pendingResource.getMemory(),
+    long values[] = new long[]{pendingResource.getMemorySize(),
             pendingResource.getVirtualCores(),
-            allocatedResource.getMemory(), allocatedResource.getVirtualCores()};
+            allocatedResource.getMemorySize(), allocatedResource.getVirtualCores()};
     for (int i = names.length - 1; i >= 0; i --) {
       if (! counterMap.containsKey(names[i])) {
         metrics.counter(names[i]);
@@ -530,11 +530,11 @@ final public class ResourceSchedulerWrapper
 
   private void registerClusterResourceMetrics() {
     metrics.register("variable.cluster.allocated.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
+        public Long getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0;
+            return 0L;
           } else {
             return scheduler.getRootQueueMetrics().getAllocatedMB();
           }
@@ -542,11 +542,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.allocated.vcores",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
+        public Long getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0;
+            return 0L;
           } else {
             return scheduler.getRootQueueMetrics().getAllocatedVirtualCores();
           }
@@ -554,11 +554,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.available.memory",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
+        public Long getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0;
+            return 0L;
           } else {
             return scheduler.getRootQueueMetrics().getAvailableMB();
           }
@@ -566,11 +566,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.available.vcores",
-      new Gauge<Integer>() {
+      new Gauge<Long>() {
         @Override
-        public Integer getValue() {
+        public Long getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0;
+            return 0L;
           } else {
             return scheduler.getRootQueueMetrics().getAvailableVirtualCores();
           }
@@ -748,7 +748,7 @@ final public class ResourceSchedulerWrapper
   }
 
   private void updateQueueMetrics(String queue,
-                                  int releasedMemory, int releasedVCores) {
+                                  long releasedMemory, int releasedVCores) {
     // update queue counters
     SortedMap<String, Counter> counterMap = metrics.getCounters();
     if (releasedMemory != 0) {

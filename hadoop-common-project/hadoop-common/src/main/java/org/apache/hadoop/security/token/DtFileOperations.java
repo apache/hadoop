@@ -199,6 +199,29 @@ public final class DtFileOperations {
     doFormattedWrite(tokenFile, fileFormat, creds, conf);
   }
 
+  /** Alias a token from a file and save back to file in the local filesystem.
+   *  @param tokenFile a local File object to hold the input and output.
+   *  @param fileFormat a string equal to FORMAT_PB or FORMAT_JAVA, for output
+   *  @param alias overwrite service field of fetched token with this text.
+   *  @param service only apply alias to tokens matching this service text.
+   *  @param conf Configuration object passed along.
+   *  @throws IOException
+   */
+  public static void aliasTokenFile(File tokenFile, String fileFormat,
+      Text alias, Text service, Configuration conf) throws Exception {
+    Credentials newCreds = new Credentials();
+    Credentials creds = Credentials.readTokenStorageFile(tokenFile, conf);
+    for (Token<?> token : creds.getAllTokens()) {
+      newCreds.addToken(token.getService(), token);
+      if (token.getService().equals(service)) {
+        Token<?> aliasedToken = token.copyToken();
+        aliasedToken.setService(alias);
+        newCreds.addToken(alias, aliasedToken);
+      }
+    }
+    doFormattedWrite(tokenFile, fileFormat, newCreds, conf);
+  }
+
   /** Append tokens from list of files in local filesystem, saving to last file.
    *  @param tokenFiles list of local File objects.  Last file holds the output.
    *  @param fileFormat a string equal to FORMAT_PB or FORMAT_JAVA, for output

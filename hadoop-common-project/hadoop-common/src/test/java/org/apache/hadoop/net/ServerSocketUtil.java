@@ -63,4 +63,43 @@ public class ServerSocketUtil {
     }
   }
 
+  /**
+   * Check whether port is available or not.
+   *
+   * @param port given port
+   * @return
+   */
+  private static boolean isPortAvailable(int port) {
+    try (ServerSocket s = new ServerSocket(port)) {
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
+  /**
+   * Wait till the port available.
+   *
+   * @param port given port
+   * @param retries number of retries for given port
+   * @return
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public static int waitForPort(int port, int retries)
+      throws InterruptedException, IOException {
+    int tries = 0;
+    while (true) {
+      if (isPortAvailable(port)) {
+        return port;
+      } else {
+        tries++;
+        if (tries >= retries) {
+          throw new IOException(
+              "Port is already in use; giving up after " + tries + " times.");
+        }
+        Thread.sleep(1000);
+      }
+    }
+  }
 }

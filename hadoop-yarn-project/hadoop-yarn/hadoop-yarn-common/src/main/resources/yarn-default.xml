@@ -1511,6 +1511,22 @@
   </property>
 
   <property>
+    <description>The set of networks allowed when launching containers using the
+      DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-networks</name>
+    <value>host,none,bridge</value>
+  </property>
+
+  <property>
+    <description>The network used when launching containers using the
+      DockerContainerRuntime when no network is specified in the request
+      . This network must be one of the (configurable) set of allowed container
+      networks.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
+    <value>host</value>
+  </property>
+
+  <property>
     <description>This flag determines whether memory limit will be set for the Windows Job
     Object of the containers launched by the default container executor.</description>
     <name>yarn.nodemanager.windows-container.memory-limit.enabled</name>
@@ -1586,6 +1602,12 @@
       container case.</description>
     <name>yarn.nodemanager.container-diagnostics-maximum-size</name>
     <value>10000</value>
+  </property>
+
+  <property>
+    <description>Minimum container restart interval in milliseconds.</description>
+    <name>yarn.nodemanager.container-retry-minimum-interval-ms</name>
+    <value>1000</value>
   </property>
 
   <property>
@@ -2648,25 +2670,6 @@
     <value>4096</value>
   </property>
 
- <property>
-    <description>
-    Enable/disable blacklisting of hosts for AM based on AM failures on those
-    hosts.
-    </description>
-    <name>yarn.am.blacklisting.enabled</name>
-    <value>true</value>
-  </property>
-
-  <property>
-    <description>
-    Threshold of ratio number of NodeManager hosts that are allowed to be
-    blacklisted for AM. Beyond this ratio there is no blacklisting to avoid
-    danger of blacklisting the entire cluster.
-    </description>
-    <name>yarn.am.blacklisting.disable-failure-threshold</name>
-    <value>0.8f</value>
-  </property>
-
   <property>
     <description>
     Choose different implementation of node label's storage
@@ -2751,6 +2754,38 @@
     </description>
     <name>yarn.timeline-service.webapp.rest-csrf.methods-to-ignore</name>
     <value>GET,OPTIONS,HEAD</value>
+  </property>
+
+  <property>
+    <description>
+      Enable the XFS filter for YARN
+    </description>
+    <name>yarn.webapp.xfs-filter.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      Property specifying the xframe options value.
+    </description>
+    <name>yarn.resourcemanager.webapp.xfs-filter.xframe-options</name>
+    <value>SAMEORIGIN</value>
+  </property>
+
+  <property>
+    <description>
+      Property specifying the xframe options value.
+    </description>
+    <name>yarn.nodemanager.webapp.xfs-filter.xframe-options</name>
+    <value>SAMEORIGIN</value>
+  </property>
+
+  <property>
+    <description>
+      Property specifying the xframe options value.
+    </description>
+    <name>yarn.timeline-service.webapp.xfs-filter.xframe-options</name>
+    <value>SAMEORIGIN</value>
   </property>
 
   <property>

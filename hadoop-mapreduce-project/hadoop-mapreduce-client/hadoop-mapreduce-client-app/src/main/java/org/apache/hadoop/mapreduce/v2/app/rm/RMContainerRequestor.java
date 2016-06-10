@@ -41,6 +41,8 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
@@ -389,7 +391,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   protected Resource getAvailableResources() {
     return availableResources == null ? Resources.none() : availableResources;
   }
-  
+
   protected void addContainerReq(ContainerRequest req) {
     // Create resource requests
     for (String host : req.hosts) {
@@ -424,8 +426,21 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     decResourceRequest(req.priority, ResourceRequest.ANY, req.capability);
   }
 
+  protected void addOpportunisticResourceRequest(Priority priority,
+      Resource capability) {
+    addResourceRequest(priority, ResourceRequest.ANY, capability, null,
+        ExecutionType.OPPORTUNISTIC);
+  }
+
   private void addResourceRequest(Priority priority, String resourceName,
       Resource capability, String nodeLabelExpression) {
+    addResourceRequest(priority, resourceName, capability, nodeLabelExpression,
+        ExecutionType.GUARANTEED);
+  }
+
+  private void addResourceRequest(Priority priority, String resourceName,
+      Resource capability, String nodeLabelExpression,
+      ExecutionType executionType) {
     Map<String, Map<Resource, ResourceRequest>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     if (remoteRequests == null) {
@@ -448,6 +463,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       remoteRequest.setCapability(capability);
       remoteRequest.setNumContainers(0);
       remoteRequest.setNodeLabelExpression(nodeLabelExpression);
+      remoteRequest.setExecutionTypeRequest(
+          ExecutionTypeRequest.newInstance(executionType, true));
       reqMap.put(capability, remoteRequest);
     }
     remoteRequest.setNumContainers(remoteRequest.getNumContainers() + 1);

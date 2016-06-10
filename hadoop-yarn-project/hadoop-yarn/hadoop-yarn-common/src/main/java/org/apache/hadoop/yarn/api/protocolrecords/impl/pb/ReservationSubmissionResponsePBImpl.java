@@ -19,11 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
-import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ReservationIdPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionResponseProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
@@ -34,8 +30,6 @@ public class ReservationSubmissionResponsePBImpl extends
       .getDefaultInstance();
   ReservationSubmissionResponseProto.Builder builder = null;
   boolean viaProto = false;
-
-  private ReservationId reservationId;
 
   public ReservationSubmissionResponsePBImpl() {
     builder = ReservationSubmissionResponseProto.newBuilder();
@@ -48,62 +42,9 @@ public class ReservationSubmissionResponsePBImpl extends
   }
 
   public ReservationSubmissionResponseProto getProto() {
-    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
-  }
-
-  private void mergeLocalToBuilder() {
-    if (this.reservationId != null) {
-      builder.setReservationId(convertToProtoFormat(this.reservationId));
-    }
-  }
-
-  private void mergeLocalToProto() {
-    if (viaProto)
-      maybeInitBuilder();
-    mergeLocalToBuilder();
-    proto = builder.build();
-    viaProto = true;
-  }
-
-  private void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = ReservationSubmissionResponseProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-
-  @Override
-  public ReservationId getReservationId() {
-    ReservationSubmissionResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (reservationId != null) {
-      return reservationId;
-    }
-    if (!p.hasReservationId()) {
-      return null;
-    }
-    reservationId = convertFromProtoFormat(p.getReservationId());
-    return reservationId;
-  }
-
-  @Override
-  public void setReservationId(ReservationId reservationId) {
-    maybeInitBuilder();
-    if (reservationId == null) {
-      builder.clearReservationId();
-      return;
-    }
-    this.reservationId = reservationId;
-  }
-
-  private ReservationIdPBImpl convertFromProtoFormat(ReservationIdProto p) {
-    return new ReservationIdPBImpl(p);
-  }
-
-  private ReservationIdProto convertToProtoFormat(ReservationId t) {
-    return ((ReservationIdPBImpl) t).getProto();
   }
 
   @Override

@@ -53,7 +53,7 @@ public class TestSimpleCapacityReplanner {
   @Test
   public void testReplanningPlanCapacityLoss() throws PlanningException {
 
-    Resource clusterCapacity = Resource.newInstance(100 * 1024, 10);
+    Resource clusterCapacity = Resource.newInstance(100 * 1024, 100);
     Resource minAlloc = Resource.newInstance(1024, 1);
     Resource maxAlloc = Resource.newInstance(1024 * 8, 8);
 
@@ -153,9 +153,9 @@ public class TestSimpleCapacityReplanner {
 
     // check resources at each moment in time no more exceed capacity
     for (int i = 0; i < 20; i++) {
-      int tot = 0;
+      long tot = 0;
       for (ReservationAllocation r : plan.getReservationsAtTime(i)) {
-        tot = r.getResourcesAtTime(i).getMemory();
+        tot = r.getResourcesAtTime(i).getMemorySize();
       }
       assertTrue(tot <= 70 * 1024);
     }

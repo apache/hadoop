@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
  * Raw erasure coder factory that can be used to create raw encoder and decoder.
@@ -29,17 +30,15 @@ public interface RawErasureCoderFactory {
 
   /**
    * Create raw erasure encoder.
-   * @param numDataUnits number of data units in a coding group
-   * @param numParityUnits number of parity units in a coding group
+   * @param conf the configuration used to create the encoder
    * @return raw erasure encoder
    */
-  public RawErasureEncoder createEncoder(int numDataUnits, int numParityUnits);
+  RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions);
 
   /**
    * Create raw erasure decoder.
-   * @param numDataUnits number of data units in a coding group
-   * @param numParityUnits number of parity units in a coding group
+   * @param conf the configuration used to create the encoder
    * @return raw erasure decoder
    */
-  public RawErasureDecoder createDecoder(int numDataUnits, int numParityUnits);
+  RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions);
 }

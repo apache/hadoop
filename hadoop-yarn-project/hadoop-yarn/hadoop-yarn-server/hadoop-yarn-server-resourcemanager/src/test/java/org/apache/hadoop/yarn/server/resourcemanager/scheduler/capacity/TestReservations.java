@@ -266,88 +266,88 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(22 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Only 1 map - simulating reduce
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(5 * GB, a.getUsedResources().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(5 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(5 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(19 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Only 1 map to other node - simulating reduce
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(16 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(16 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(16 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // try to assign reducer (5G on node 0 and should reserve)
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(11 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(11 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(11 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(5 * GB, node_0.getReservedContainer().getReservedResource()
-        .getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+        .getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // assign reducer to node 2
     a.assignContainers(clusterResource, node_2,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(18 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(18 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(6 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(6 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(6 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(5 * GB, node_0.getReservedContainer().getReservedResource()
-        .getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+        .getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(1, app_0.getTotalRequiredResources(priorityReduce));
 
     // node_1 heartbeat and unreserves from node_0 in order to allocate
     // on node_1
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(18 * GB, a.getUsedResources().getMemory());
-    assertEquals(18 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(18 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(18 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(18 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(6 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(6 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(6 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(8 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(8 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(0, app_0.getTotalRequiredResources(priorityReduce));
   }
 
@@ -428,27 +428,27 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
-    assertEquals(0 * GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
+    assertEquals(0 * GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(22 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(4 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
-    assertEquals(2 * GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(4 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
+    assertEquals(2 * GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(4 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(20 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(2 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(2 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Add a few requests to each app
     app_0.updateResourceRequests(Collections.singletonList(TestUtils
@@ -461,29 +461,29 @@ public class TestReservations {
     // add a reservation for app_0
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(12 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
-    assertEquals(2 * GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(12 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
+    assertEquals(2 * GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(8 * GB, a.getMetrics().getReservedMB());
     assertEquals(4 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(12 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(2 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(2 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // next assignment is beyond user limit for user_0 but it should assign to
     // app_1 for user_1
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(14 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
-    assertEquals(4 * GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(14 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
+    assertEquals(4 * GB, app_1.getCurrentConsumption().getMemorySize());
     assertEquals(8 * GB, a.getMetrics().getReservedMB());
     assertEquals(6 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(10 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(4 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(4 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
   }
 
   @Test
@@ -563,89 +563,89 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(22 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Only 1 map - simulating reduce
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(5 * GB, a.getUsedResources().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(5 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(5 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(19 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Only 1 map to other node - simulating reduce
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(16 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(16 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(16 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // try to assign reducer (5G on node 0 and should reserve)
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(11 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(11 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(11 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(5 * GB, node_0.getReservedContainer().getReservedResource()
-        .getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+        .getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // assign reducer to node 2
     a.assignContainers(clusterResource, node_2,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(18 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(18 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(6 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(6 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(6 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(5 * GB, node_0.getReservedContainer().getReservedResource()
-        .getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+        .getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(1, app_0.getTotalRequiredResources(priorityReduce));
 
     // node_1 heartbeat and won't unreserve from node_0, potentially stuck
     // if AM doesn't handle
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(18 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(18 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(6 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(6 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(6 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(5 * GB, node_0.getReservedContainer().getReservedResource()
-        .getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+        .getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
     assertEquals(1, app_0.getTotalRequiredResources(priorityReduce));
   }
 
@@ -723,66 +723,66 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(14 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // Only 1 map - simulating reduce
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(5 * GB, a.getUsedResources().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(5 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(5 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(11 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // Only 1 map to other node - simulating reduce
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(8 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(8 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(8 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // try to assign reducer (5G on node 0 and should reserve)
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(3 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(3 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(3 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(5 * GB, node_0.getReservedContainer().getReservedResource()
-        .getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
+        .getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // could allocate but told need to unreserve first
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(3 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(3 * GB, app_0.getHeadroom().getMemory());
+    assertEquals(3 * GB, app_0.getHeadroom().getMemorySize());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(8 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(8 * GB, node_1.getAllocatedResource().getMemorySize());
     assertEquals(1, app_0.getTotalRequiredResources(priorityReduce));
   }
 
@@ -986,50 +986,50 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(14 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // Only 1 map - simulating reduce
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(5 * GB, a.getUsedResources().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(5 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(5 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(11 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // Only 1 map to other node - simulating reduce
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(8 * GB, a.getMetrics().getAvailableMB());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // now add in reservations and make sure it continues if config set
     // allocate to queue so that the potential new capacity is greater then
     // absoluteMaxCapacity
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(3 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(3 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(3 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
 
     ResourceLimits limits =
         new ResourceLimits(Resources.createResource(13 * GB));
@@ -1042,7 +1042,7 @@ public class TestReservations {
     // 16GB total, 13GB consumed (8 allocated, 5 reserved). asking for 5GB so we would have to
     // unreserve 2GB to get the total 5GB needed.
     // also note vcore checks not enabled
-    assertEquals(0, limits.getHeadroom().getMemory());
+    assertEquals(0, limits.getHeadroom().getMemorySize());
 
     refreshQueuesTurnOffReservationsContLook(a, csConf);
 
@@ -1160,52 +1160,52 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(14 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // Only 1 map - simulating reduce
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(5 * GB, a.getUsedResources().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(5 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(5 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(11 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // Only 1 map to other node - simulating reduce
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(8 * GB, a.getMetrics().getAvailableMB());
     assertEquals(null, node_0.getReservedContainer());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // now add in reservations and make sure it continues if config set
     // allocate to queue so that the potential new capacity is greater then
     // absoluteMaxCapacity
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentReservation().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentReservation().getMemorySize());
 
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(3 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(3 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
+    assertEquals(3 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
 
     // not over the limit
     Resource limit = Resources.createResource(14 * GB, 0);
@@ -1312,39 +1312,39 @@ public class TestReservations {
     // Only AM
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(2 * GB, a.getUsedResources().getMemory());
-    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(2 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(2 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(2 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(22 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(2 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Only 1 map - simulating reduce
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(5 * GB, a.getUsedResources().getMemory());
-    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(5 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(5 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(5 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(19 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // Only 1 map to other node - simulating reduce
     a.assignContainers(clusterResource, node_1,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(16 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(16 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(16 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // try to assign reducer (5G on node 0), but tell it's resource limits <
     // used (8G) + required (5G). It will not reserved since it has to unreserve
@@ -1352,72 +1352,72 @@ public class TestReservations {
     // unreserve resource to reserve container.
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(Resources.createResource(10 * GB)), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(16 * GB, a.getMetrics().getAvailableMB());
     // app_0's headroom = limit (10G) - used (8G) = 2G 
-    assertEquals(2 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // try to assign reducer (5G on node 0), but tell it's resource limits <
     // used (8G) + required (5G). It will not reserved since it has to unreserve
     // some resource. Unfortunately, there's nothing to unreserve.
     a.assignContainers(clusterResource, node_2,
         new ResourceLimits(Resources.createResource(10 * GB)), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(8 * GB, a.getUsedResources().getMemory());
-    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(8 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(8 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(8 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(16 * GB, a.getMetrics().getAvailableMB());
     // app_0's headroom = limit (10G) - used (8G) = 2G 
-    assertEquals(2 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(0 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(2 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(0 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // let it assign 5G to node_2
     a.assignContainers(clusterResource, node_2,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(13 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(13 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(11 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(11 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(11 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // reserve 8G node_0
     a.assignContainers(clusterResource, node_0,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(21 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(21 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(8 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(3 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(3 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(3 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
 
     // try to assign (8G on node 2). No room to allocate,
     // continued to try due to having reservation above,
     // but hits queue limits so can't reserve anymore.
     a.assignContainers(clusterResource, node_2,
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    assertEquals(21 * GB, a.getUsedResources().getMemory());
-    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
+    assertEquals(21 * GB, a.getUsedResources().getMemorySize());
+    assertEquals(13 * GB, app_0.getCurrentConsumption().getMemorySize());
     assertEquals(8 * GB, a.getMetrics().getReservedMB());
     assertEquals(13 * GB, a.getMetrics().getAllocatedMB());
     assertEquals(3 * GB, a.getMetrics().getAvailableMB());
-    assertEquals(3 * GB, app_0.getHeadroom().getMemory());
-    assertEquals(5 * GB, node_0.getAllocatedResource().getMemory());
-    assertEquals(3 * GB, node_1.getAllocatedResource().getMemory());
-    assertEquals(5 * GB, node_2.getAllocatedResource().getMemory());
+    assertEquals(3 * GB, app_0.getHeadroom().getMemorySize());
+    assertEquals(5 * GB, node_0.getAllocatedResource().getMemorySize());
+    assertEquals(3 * GB, node_1.getAllocatedResource().getMemorySize());
+    assertEquals(5 * GB, node_2.getAllocatedResource().getMemorySize());
   }
 }

@@ -124,15 +124,15 @@ public class ComputeFairShares {
     // have met all Schedulables' max shares.
     int totalMaxShare = 0;
     for (Schedulable sched : schedulables) {
-      int maxShare = getResourceValue(sched.getMaxShare(), type);
-      totalMaxShare = (int) Math.min((long)maxShare + (long)totalMaxShare,
+      long maxShare = getResourceValue(sched.getMaxShare(), type);
+      totalMaxShare = (int) Math.min(maxShare + (long)totalMaxShare,
           Integer.MAX_VALUE);
       if (totalMaxShare == Integer.MAX_VALUE) {
         break;
       }
     }
 
-    int totalResource = Math.max((getResourceValue(totalResources, type) -
+    long totalResource = Math.max((getResourceValue(totalResources, type) -
         takenResources), 0);
     totalResource = Math.min(totalMaxShare, totalResource);
 
@@ -207,7 +207,7 @@ public class ComputeFairShares {
     int totalResource = 0;
 
     for (Schedulable sched : schedulables) {
-      int fixedShare = getFairShareIfFixed(sched, isSteadyShare, type);
+      long fixedShare = getFairShareIfFixed(sched, isSteadyShare, type);
       if (fixedShare < 0) {
         nonFixedSchedulables.add(sched);
       } else {
@@ -229,7 +229,7 @@ public class ComputeFairShares {
    * The fairshare is fixed if either the maxShare is 0, weight is 0,
    * or the Schedulable is not active for instantaneous fairshare.
    */
-  private static int getFairShareIfFixed(Schedulable sched,
+  private static long getFairShareIfFixed(Schedulable sched,
       boolean isSteadyShare, ResourceType type) {
 
     // Check if maxShare is 0
@@ -245,17 +245,17 @@ public class ComputeFairShares {
 
     // Check if weight is 0
     if (sched.getWeights().getWeight(type) <= 0) {
-      int minShare = getResourceValue(sched.getMinShare(), type);
+      long minShare = getResourceValue(sched.getMinShare(), type);
       return (minShare <= 0) ? 0 : minShare;
     }
 
     return -1;
   }
 
-  private static int getResourceValue(Resource resource, ResourceType type) {
+  private static long getResourceValue(Resource resource, ResourceType type) {
     switch (type) {
     case MEMORY:
-      return resource.getMemory();
+      return resource.getMemorySize();
     case CPU:
       return resource.getVirtualCores();
     default:
@@ -263,7 +263,7 @@ public class ComputeFairShares {
     }
   }
   
-  private static void setResourceValue(int val, Resource resource, ResourceType type) {
+  private static void setResourceValue(long val, Resource resource, ResourceType type) {
     switch (type) {
     case MEMORY:
       resource.setMemory(val);

@@ -1425,7 +1425,7 @@ public abstract class TaskAttemptImpl implements
     }
     long duration = (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
     Resource allocatedResource = taskAttempt.container.getResource();
-    int mbAllocated = allocatedResource.getMemory();
+    int mbAllocated = (int) allocatedResource.getMemorySize();
     int vcoresAllocated = allocatedResource.getVirtualCores();
     int minSlotMemSize = taskAttempt.conf.getInt(
         YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
@@ -2115,7 +2115,7 @@ public abstract class TaskAttemptImpl implements
           taskAttempt.attemptId,
           taskAttempt.getAssignedContainerID(), taskAttempt.getAssignedContainerMgrAddress(),
           taskAttempt.container.getContainerToken(),
-          ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP));
+          ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP, false));
       taskAttempt.eventHandler.handle(new TaskTAttemptKilledEvent(
           taskAttempt.attemptId, false));
 
@@ -2179,7 +2179,8 @@ public abstract class TaskAttemptImpl implements
         taskAttempt.container.getId(), StringInterner
         .weakIntern(taskAttempt.container.getNodeId().toString()),
         taskAttempt.container.getContainerToken(),
-        ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP));
+        ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP,
+        event.getType() == TaskAttemptEventType.TA_TIMED_OUT));
   }
 
   /**

@@ -41,7 +41,7 @@ public class DtUtilShell extends CommandShell {
       DtFileOperations.FORMAT_PB + ")]";
   public static final String DT_USAGE = "hadoop dtutil " +
       "[-keytab <keytab_file> -principal <principal_name>] " +
-      "subcommand (help|print|get|append|cancel|remove|renew) " +
+      "subcommand (help|print|get|edit|append|cancel|remove|renew) " +
          FORMAT_SUBSTRING + " [-alias <alias>] filename...";
 
   // command line options
@@ -50,6 +50,7 @@ public class DtUtilShell extends CommandShell {
   private static final String PRINCIPAL = "-principal";
   private static final String PRINT = "print";
   private static final String GET = "get";
+  private static final String EDIT = "edit";
   private static final String APPEND = "append";
   private static final String CANCEL = "cancel";
   private static final String REMOVE = "remove";
@@ -127,6 +128,8 @@ public class DtUtilShell extends CommandShell {
           setSubCommand(new Print());
         } else if (command.equals(GET)) {
           setSubCommand(new Get(args[++i]));
+        } else if (command.equals(EDIT)) {
+          setSubCommand(new Edit());
         } else if (command.equals(APPEND)) {
           setSubCommand(new Append());
         } else if (command.equals(CANCEL)) {
@@ -172,10 +175,12 @@ public class DtUtilShell extends CommandShell {
 
   @Override
   public String getCommandUsage() {
-    return String.format("%n%s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n%n",
-                  DT_USAGE, (new Print()).getUsage(), (new Get()).getUsage(),
-                  (new Append()).getUsage(), (new Remove(true)).getUsage(),
-                  (new Remove(false)).getUsage(), (new Renew()).getUsage());
+    return String.format(
+        "%n%s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n   %s%n%n",
+        DT_USAGE, (new Print()).getUsage(), (new Get()).getUsage(),
+        (new Edit()).getUsage(), (new Append()).getUsage(),
+        (new Remove(true)).getUsage(), (new Remove(false)).getUsage(),
+        (new Renew()).getUsage());
   }
 
   private class Print extends SubCommand {
@@ -239,6 +244,38 @@ public class DtUtilShell extends CommandShell {
     @Override
     public String getUsage() {
       return GET_USAGE;
+    }
+  }
+
+  private class Edit extends SubCommand {
+    public static final String EDIT_USAGE =
+        "dtutil edit -service <service> -alias <alias> " +
+        FORMAT_SUBSTRING + "filename...";
+
+    @Override
+    public boolean validate() {
+      if (service == null) {
+        LOG.error("must pass -service field with dtutil edit command");
+        return false;
+      }
+      if (alias == null) {
+        LOG.error("must pass -alias field with dtutil edit command");
+        return false;
+      }
+      return true;
+    }
+
+    @Override
+    public void execute() throws Exception {
+      for (File tokenFile : tokenFiles) {
+        DtFileOperations.aliasTokenFile(
+            tokenFile, format, alias, service, getConf());
+      }
+    }
+
+    @Override
+    public String getUsage() {
+      return EDIT_USAGE;
     }
   }
 

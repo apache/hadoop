@@ -33,6 +33,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -155,6 +156,16 @@ public class ContainerImpl implements Container {
       this.containerRetryContext = ContainerRetryContext.NEVER_RETRY_CONTEXT;
     }
     this.remainingRetryAttempts = containerRetryContext.getMaxRetries();
+    int minimumRestartInterval = conf.getInt(
+        YarnConfiguration.NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_RETRY_MINIMUM_INTERVAL_MS);
+    if (containerRetryContext.getRetryPolicy()
+        != ContainerRetryPolicy.NEVER_RETRY
+        && containerRetryContext.getRetryInterval() < minimumRestartInterval) {
+      LOG.info("Set restart interval to minimum value " + minimumRestartInterval
+          + "ms for container " + containerTokenIdentifier.getContainerID());
+      this.containerRetryContext.setRetryInterval(minimumRestartInterval);
+    }
     this.diagnosticsMaxSize = conf.getInt(
         YarnConfiguration.NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE,
         YarnConfiguration.DEFAULT_NM_CONTAINER_DIAGNOSTICS_MAXIMUM_SIZE);
@@ -204,7 +215,7 @@ public class ContainerImpl implements Container {
     if (recoveredCapability != null
         && !this.resource.equals(recoveredCapability)) {
       // resource capability had been updated before NM was down
-      this.resource = Resource.newInstance(recoveredCapability.getMemory(),
+      this.resource = Resource.newInstance(recoveredCapability.getMemorySize(),
           recoveredCapability.getVirtualCores());
     }
     this.remainingRetryAttempts = rcs.getRemainingRetryAttempts();
@@ -600,7 +611,7 @@ public class ContainerImpl implements Container {
     long launchDuration = clock.getTime() - containerLaunchStartTime;
     metrics.addContainerLaunchDuration(launchDuration);
 
-    long pmemBytes = getResource().getMemory() * 1024 * 1024L;
+    long pmemBytes = getResource().getMemorySize() * 1024 * 1024L;
     float pmemRatio = daemonConf.getFloat(
         YarnConfiguration.NM_VMEM_PMEM_RATIO,
         YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
@@ -1367,5 +1378,10 @@ public class ContainerImpl implements Container {
   private static boolean shouldBeUploadedToSharedCache(ContainerImpl container,
       LocalResourceRequest resource) {
     return container.resourcesUploadPolicies.get(resource);
+  }
+
+  @VisibleForTesting
+  ContainerRetryContext getContainerRetryContext() {
+    return containerRetryContext;
   }
 }

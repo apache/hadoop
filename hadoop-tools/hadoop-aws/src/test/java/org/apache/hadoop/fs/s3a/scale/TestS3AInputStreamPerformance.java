@@ -36,8 +36,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+
 /**
- * Look at the performance of S3a operations
+ * Look at the performance of S3a operations.
  */
 public class TestS3AInputStreamPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -151,7 +153,7 @@ public class TestS3AInputStreamPerformance extends S3AScaleTestBase {
     readTimer.end("Time to read %d bytes", len);
     bandwidth(readTimer, count);
     assertEquals("Not enough bytes were read)", len, count);
-    long nanosPerByte = readTimer.nanosPerByte(count);
+    long nanosPerByte = readTimer.nanosPerOperation(count);
     LOG.info("An open() call has the equivalent duration of reading {} bytes",
         toHuman( timeOpen.duration() / nanosPerByte));
   }

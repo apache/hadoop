@@ -28,13 +28,14 @@ import java.util.Map;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
@@ -213,12 +214,12 @@ public class NodeManager implements ContainerManagementProtocol {
 
   synchronized public void checkResourceUsage() {
     LOG.info("Checking resource usage for " + containerManagerAddress);
-    Assert.assertEquals(available.getMemory(), 
+    Assert.assertEquals(available.getMemorySize(),
         resourceManager.getResourceScheduler().getNodeReport(
-            this.nodeId).getAvailableResource().getMemory());
-    Assert.assertEquals(used.getMemory(), 
+            this.nodeId).getAvailableResource().getMemorySize());
+    Assert.assertEquals(used.getMemorySize(),
         resourceManager.getResourceScheduler().getNodeReport(
-            this.nodeId).getUsedResource().getMemory());
+            this.nodeId).getUsedResource().getMemorySize());
   }
   
   @Override
@@ -316,5 +317,11 @@ public class NodeManager implements ContainerManagementProtocol {
     nodeHealthStatus.setIsNodeHealthy(true);
     nodeStatus.setNodeHealthStatus(nodeHealthStatus);
     return nodeStatus;
+  }
+
+  @Override
+  public synchronized SignalContainerResponse signalToContainer(
+      SignalContainerRequest request) throws YarnException, IOException {
+    throw new YarnException("Not supported yet!");
   }
 }

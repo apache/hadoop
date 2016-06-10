@@ -178,7 +178,7 @@ public abstract class AbstractYarnScheduler
     NodeFilter nodeFilter = new NodeFilter() {
       @Override
       public boolean accept(SchedulerNode node) {
-        return SchedulerAppUtils.isBlacklisted(app, node, LOG);
+        return SchedulerAppUtils.isPlaceBlacklisted(app, node, LOG);
       }
     };
     return nodeTracker.getNodes(nodeFilter);
@@ -350,14 +350,6 @@ public abstract class AbstractYarnScheduler
       if (rmApp == null) {
         LOG.error("Skip recovering container " + container
             + " for unknown application.");
-        killOrphanContainerOnNode(nm, container);
-        continue;
-      }
-
-      // Unmanaged AM recovery is addressed in YARN-1815
-      if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
-        LOG.info("Skip recovering container " + container + " for unmanaged AM."
-            + rmApp.getApplicationId());
         killOrphanContainerOnNode(nm, container);
         continue;
       }

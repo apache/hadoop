@@ -306,6 +306,7 @@ public abstract class Receiver implements DataTransferProtocol {
         PBHelperClient.convert(proto.getHeader().getBlock()),
         PBHelperClient.convert(proto.getDatanodes()),
         PBHelperClient.convertTokens(proto.getBlockTokensList()),
+        PBHelperClient.convertBlockIndices(proto.getBlockIndicesList()),
         PBHelperClient.convertErasureCodingPolicy(proto.getEcPolicy())
     );
 

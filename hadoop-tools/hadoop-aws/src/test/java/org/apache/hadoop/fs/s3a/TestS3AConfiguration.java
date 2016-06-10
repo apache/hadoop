@@ -21,11 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
-import com.amazonaws.AmazonClientException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -43,7 +41,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URI;
-import java.lang.reflect.Field;
 
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
@@ -122,10 +119,8 @@ public class TestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       fail("Expected a connection error for proxy server at " + proxy);
-    } catch (AmazonClientException e) {
-      if (!e.getMessage().contains(proxy + " refused")) {
-        throw e;
-      }
+    } catch (AWSClientIOException e) {
+      // expected
     }
   }
 
@@ -157,19 +152,15 @@ public class TestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       fail("Expected a connection error for proxy server");
-    } catch (AmazonClientException e) {
-      if (!e.getMessage().contains("443")) {
-        throw e;
-      }
+    } catch (AWSClientIOException e) {
+      // expected
     }
     conf.set(Constants.SECURE_CONNECTIONS, "false");
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       fail("Expected a connection error for proxy server");
-    } catch (AmazonClientException e) {
-      if (!e.getMessage().contains("80")) {
-        throw e;
-      }
+    } catch (AWSClientIOException e) {
+      // expected
     }
   }
 
@@ -382,7 +373,7 @@ public class TestS3AConfiguration {
           clientOptions.isPathStyleAccess());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs, new Path("/path/style/access/testFile"), file, file.length, conf.getInt(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
-    } catch (final AmazonS3Exception e) {
+    } catch (final AWSS3IOException e) {
       LOG.error("Caught exception: ", e);
       // Catch/pass standard path style access behaviour when live bucket
       // isn't in the same region as the s3 client default. See

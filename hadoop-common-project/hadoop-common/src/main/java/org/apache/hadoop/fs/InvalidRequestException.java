@@ -29,4 +29,8 @@ public class InvalidRequestException extends IOException {
   public InvalidRequestException(String str) {
     super(str);
   }
+
+  public InvalidRequestException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

@@ -91,6 +91,14 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.max.map</name>
+  <value>-1</value>
+  <description>Limit on the number of map tasks allowed per job.
+  There is no limit if this value is negative.
+  </description>
+</property>
+
   <property>
     <name>mapreduce.job.reducer.preempt.delay.sec</name>
     <value>0</value>
@@ -1886,6 +1894,14 @@
   </description>
   <name>mapreduce.jobhistory.webapp.rest-csrf.methods-to-ignore</name>
   <value>GET,OPTIONS,HEAD</value>
+</property>
+
+<property>
+  <description>
+    Value of the xframe-options
+  </description>
+  <name>mapreduce.jobhistory.webapp.xfs-filter.xframe-options</name>
+  <value>SAMEORIGIN</value>
 </property>
 
 </configuration>

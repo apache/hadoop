@@ -106,6 +106,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
     <maven-checkstyle-plugin.version>2.15</maven-checkstyle-plugin.version>
     <checkstyle.version>6.6</checkstyle.version>
+    <dependency-check-maven.version>1.3.6</dependency-check-maven.version>
 
     <shell-executable>bash</shell-executable>
   </properties>
@@ -316,12 +317,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           </dependencies>
           <configuration>
             <configLocation>checkstyle/checkstyle.xml</configLocation>
+            <suppressionsLocation>dev-support/checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <failOnViolation>false</failOnViolation>
             <format>xml</format>
             <format>html</format>
             <outputFile>${project.build.directory}/test/checkstyle-errors.xml</outputFile>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.owasp</groupId>
+          <artifactId>dependency-check-maven</artifactId>
+          <version>${dependency-check-maven.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -393,6 +400,43 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>${maven-checkstyle-plugin.version}</version>
+      </plugin>
+      <plugin>
+        <!-- OWASP's dependency-check plugin will scan the third party
+             dependencies of this project for known CVEs (security
+             vulnerabilities against them). It will produce a report
+             in target/dependency-check-report.html. To invoke, run
+             'mvn dependency-check:aggregate'
+        -->
+        <groupId>org.owasp</groupId>
+        <artifactId>dependency-check-maven</artifactId>
+        <version>${dependency-check-maven.version}</version>
+      </plugin>
+      <plugin>
+        <!-- Copy license and notice files into hadoop-build-tools'
+             metadata, which will then be bundled into jars.
+        -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy todir="${project.build.directory}/../hadoop-build-tools/src/main/resources/META-INF/">
+                  <fileset dir="${project.build.directory}/../">
+                    <include name="LICENSE.txt"/>
+                    <include name="NOTICE.txt"/>
+                  </fileset>
+                </copy>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

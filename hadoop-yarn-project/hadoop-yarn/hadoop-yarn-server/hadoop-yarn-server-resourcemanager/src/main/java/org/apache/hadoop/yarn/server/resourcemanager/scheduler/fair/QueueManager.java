@@ -430,11 +430,14 @@ public class QueueManager {
       FSQueueMetrics queueMetrics = queue.getMetrics();
       queueMetrics.setMinShare(queue.getMinShare());
       queueMetrics.setMaxShare(queue.getMaxShare());
-      // Set scheduling policies
+      // Set scheduling policies and update queue metrics
       try {
         SchedulingPolicy policy = queueConf.getSchedulingPolicy(queue.getName());
         policy.initialize(scheduler.getClusterResource());
         queue.setPolicy(policy);
+
+        queueMetrics.setMaxApps(queueConf.getQueueMaxApps(queue.getName()));
+        queueMetrics.setSchedulingPolicy(policy.getName());
       } catch (AllocationConfigurationException ex) {
         LOG.warn("Cannot apply configured scheduling policy to queue "
             + queue.getName(), ex);

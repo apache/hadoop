@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -34,6 +35,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -567,9 +570,27 @@ public class MRAppMaster extends CompositeService {
           NoopAMPreemptionPolicy.class, AMPreemptionPolicy.class), conf);
   }
 
-  protected boolean keepJobFiles(JobConf conf) {
-    return (conf.getKeepTaskFilesPattern() != null || conf
-        .getKeepFailedTaskFiles());
+  private boolean isJobNamePatternMatch(JobConf conf, String jobTempDir) {
+    // Matched staging files should be preserved after job is finished.
+    if (conf.getKeepTaskFilesPattern() != null && jobTempDir != null) {
+      String jobFileName = Paths.get(jobTempDir).getFileName().toString();
+      Pattern pattern = Pattern.compile(conf.getKeepTaskFilesPattern());
+      Matcher matcher = pattern.matcher(jobFileName);
+      return matcher.find();
+    } else {
+      return false;
+    }
+  }
+
+  private boolean isKeepFailedTaskFiles(JobConf conf) {
+    // TODO: Decide which failed task files that should
+    // be kept are in application log directory.
+    return conf.getKeepFailedTaskFiles();
+  }
+
+  protected boolean keepJobFiles(JobConf conf, String jobTempDir) {
+    return isJobNamePatternMatch(conf, jobTempDir)
+            || isKeepFailedTaskFiles(conf);
   }
   
   /**
@@ -592,11 +613,10 @@ public class MRAppMaster extends CompositeService {
    */
   public void cleanupStagingDir() throws IOException {
     /* make sure we clean the staging files */
-    String jobTempDir = null;
+    String jobTempDir = getConfig().get(MRJobConfig.MAPREDUCE_JOB_DIR);
     FileSystem fs = getFileSystem(getConfig());
     try {
-      if (!keepJobFiles(new JobConf(getConfig()))) {
-        jobTempDir = getConfig().get(MRJobConfig.MAPREDUCE_JOB_DIR);
+      if (!keepJobFiles(new JobConf(getConfig()), jobTempDir)) {
         if (jobTempDir == null) {
           LOG.warn("Job Staging directory is null");
           return;

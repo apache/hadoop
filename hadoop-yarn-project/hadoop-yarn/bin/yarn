@@ -70,6 +70,7 @@ function yarncmd_case
       hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
       set -- "${subcmd}" "$@"
+      HADOOP_SUBCMD_ARGS=("$@")
     ;;
     classpath)
       hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
@@ -216,6 +217,7 @@ function yarncmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.TopCLI
       hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
+      HADOOP_SUBCMD_ARGS=("$@")
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

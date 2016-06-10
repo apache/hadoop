@@ -103,7 +103,7 @@ public class TestCheckpointPreemptionPolicy {
          assignedContainers.entrySet()) {
       System.out.println("cont:" + ent.getKey().getContainerId() +
           " type:" + ent.getValue().getTaskId().getTaskType() +
-          " res:" + contToResourceMap.get(ent.getKey()).getMemory() + "MB" );
+          " res:" + contToResourceMap.get(ent.getKey()).getMemorySize() + "MB" );
     }
   }
 
@@ -180,8 +180,8 @@ public class TestCheckpointPreemptionPolicy {
     CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
     policy.init(mActxt);
 
-    int supposedMemPreemption = pM.getContract().getResourceRequest()
-        .get(0).getResourceRequest().getCapability().getMemory()
+    int supposedMemPreemption = (int) pM.getContract().getResourceRequest()
+        .get(0).getResourceRequest().getCapability().getMemorySize()
         * pM.getContract().getResourceRequest().get(0).getResourceRequest()
         .getNumContainers();
 
@@ -240,11 +240,11 @@ public class TestCheckpointPreemptionPolicy {
     }
 
     // preempt enough
-    assert (effectivelyPreempted.getMemory() >= supposedMemPreemption)
-      : " preempted: " + effectivelyPreempted.getMemory();
+    assert (effectivelyPreempted.getMemorySize() >= supposedMemPreemption)
+      : " preempted: " + effectivelyPreempted.getMemorySize();
 
     // preempt not too much enough
-    assert effectivelyPreempted.getMemory() <= supposedMemPreemption + minAlloc;
+    assert effectivelyPreempted.getMemorySize() <= supposedMemPreemption + minAlloc;
     return preempting;
   }
 
@@ -261,8 +261,8 @@ public class TestCheckpointPreemptionPolicy {
       Resources.addTo(tot,
           resPerCont.get(c));
     }
-    int numCont = (int) Math.ceil(tot.getMemory() /
-              (double) minimumAllocation.getMemory());
+    int numCont = (int) Math.ceil(tot.getMemorySize() /
+              (double) minimumAllocation.getMemorySize());
     ResourceRequest rr = ResourceRequest.newInstance(
         Priority.newInstance(0), ResourceRequest.ANY,
         minimumAllocation, numCont);

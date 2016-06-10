@@ -220,8 +220,9 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
     String appBlacklistedNodes =
         getNodeString(rmAppAttempt.getBlacklistedNodes());
     // nodes which are blacklisted by the RM for AM launches
-    String rmBlackListedNodes = getNodeString(
-        rmAppAttempt.getAMBlacklist().getBlacklistUpdates().getAdditions());
+    String rmBlackListedNodes =
+        getNodeString(rmAppAttempt.getAMBlacklistManager()
+          .getBlacklistUpdates().getBlacklistAdditions());
 
     info("Application Attempt Overview")
       ._(
@@ -256,8 +257,8 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
         "Diagnostics Info:",
         appAttempt.getDiagnosticsInfo() == null ? "" : appAttempt
           .getDiagnosticsInfo())
-      ._("Application Blacklisted Nodes:", appBlacklistedNodes)
-      ._("RM Blacklisted Nodes(for AM launches)", rmBlackListedNodes);
+      ._("Nodes blacklisted by the application:", appBlacklistedNodes)
+      ._("Nodes blacklisted by the system:", rmBlackListedNodes);
   }
 
   private String getNodeString(Collection<String> nodes) {

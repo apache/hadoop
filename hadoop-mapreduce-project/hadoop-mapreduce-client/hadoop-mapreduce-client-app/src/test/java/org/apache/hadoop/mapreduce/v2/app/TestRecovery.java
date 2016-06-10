@@ -1794,7 +1794,7 @@ public class TestRecovery {
     int appAttemptId = 3;
     MRAppMetrics metrics = mock(MRAppMetrics.class);
     Resource minContainerRequirements = mock(Resource.class);
-    when(minContainerRequirements.getMemory()).thenReturn(1000);
+    when(minContainerRequirements.getMemorySize()).thenReturn(1000L);
 
     ClusterInfo clusterInfo = mock(ClusterInfo.class);
     AppContext appContext = mock(AppContext.class);

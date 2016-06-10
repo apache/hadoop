@@ -161,6 +161,7 @@ public class HistoryClientService extends AbstractService {
         .withHttpSpnegoPrincipalKey(
             JHAdminConfig.MR_WEBAPP_SPNEGO_USER_NAME_KEY)
         .withCSRFProtection(JHAdminConfig.MR_HISTORY_CSRF_PREFIX)
+        .withXFSProtection(JHAdminConfig.MR_HISTORY_XFS_PREFIX)
         .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
     
     String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];

@@ -132,38 +132,38 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(6, expectedMaxMemory.length);
 
     Assert.assertEquals(0, scheduler.getNumClusterNodes());
-    int maxMemory = scheduler.getMaximumResourceCapability().getMemory();
+    long maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
     Assert.assertEquals(expectedMaxMemory[0], maxMemory);
 
     RMNode node1 = MockNodes.newNodeInfo(
         0, Resources.createResource(node1MaxMemory), 1, "127.0.0.2");
     scheduler.handle(new NodeAddedSchedulerEvent(node1));
     Assert.assertEquals(1, scheduler.getNumClusterNodes());
-    maxMemory = scheduler.getMaximumResourceCapability().getMemory();
+    maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
     Assert.assertEquals(expectedMaxMemory[1], maxMemory);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node1));
     Assert.assertEquals(0, scheduler.getNumClusterNodes());
-    maxMemory = scheduler.getMaximumResourceCapability().getMemory();
+    maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
     Assert.assertEquals(expectedMaxMemory[2], maxMemory);
 
     RMNode node2 = MockNodes.newNodeInfo(
         0, Resources.createResource(node2MaxMemory), 2, "127.0.0.3");
     scheduler.handle(new NodeAddedSchedulerEvent(node2));
     Assert.assertEquals(1, scheduler.getNumClusterNodes());
-    maxMemory = scheduler.getMaximumResourceCapability().getMemory();
+    maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
     Assert.assertEquals(expectedMaxMemory[3], maxMemory);
 
     RMNode node3 = MockNodes.newNodeInfo(
         0, Resources.createResource(node3MaxMemory), 3, "127.0.0.4");
     scheduler.handle(new NodeAddedSchedulerEvent(node3));
     Assert.assertEquals(2, scheduler.getNumClusterNodes());
-    maxMemory = scheduler.getMaximumResourceCapability().getMemory();
+    maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
     Assert.assertEquals(expectedMaxMemory[4], maxMemory);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node3));
     Assert.assertEquals(1, scheduler.getNumClusterNodes());
-    maxMemory = scheduler.getMaximumResourceCapability().getMemory();
+    maxMemory = scheduler.getMaximumResourceCapability().getMemorySize();
     Assert.assertEquals(expectedMaxMemory[5], maxMemory);
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node2));
@@ -617,8 +617,8 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     final Resource schedulerMaximumResourceCapability = scheduler
         .getMaximumResourceCapability();
-    Assert.assertEquals(expectedMaximumResource.getMemory(),
-        schedulerMaximumResourceCapability.getMemory());
+    Assert.assertEquals(expectedMaximumResource.getMemorySize(),
+        schedulerMaximumResourceCapability.getMemorySize());
     Assert.assertEquals(expectedMaximumResource.getVirtualCores(),
         schedulerMaximumResourceCapability.getVirtualCores());
   }

@@ -175,8 +175,8 @@ public class LeafQueue extends AbstractCSQueue {
       maxApplications =
           (int) (maxSystemApps * queueCapacities.getAbsoluteCapacity());
     }
-    maxApplicationsPerUser = 
-      (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor);
+    maxApplicationsPerUser = Math.min(maxApplications,
+        (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor));
     
     maxAMResourcePerQueuePercent =
         conf.getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
@@ -449,7 +449,7 @@ public class LeafQueue extends AbstractCSQueue {
     // since we have already told running AM's the size
     Resource oldMax = getMaximumAllocation();
     Resource newMax = newlyParsedLeafQueue.getMaximumAllocation();
-    if (newMax.getMemory() < oldMax.getMemory()
+    if (newMax.getMemorySize() < oldMax.getMemorySize()
         || newMax.getVirtualCores() < oldMax.getVirtualCores()) {
       throw new IOException(
           "Trying to reinitialize "

@@ -115,8 +115,8 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
     String cgroupId = container.getContainerId().toString();
     //memory is in MB
     long containerSoftLimit =
-        (long) (container.getResource().getMemory() * this.softLimit);
-    long containerHardLimit = container.getResource().getMemory();
+        (long) (container.getResource().getMemorySize() * this.softLimit);
+    long containerHardLimit = container.getResource().getMemorySize();
     cGroupsHandler.createCGroup(MEMORY, cgroupId);
     try {
       cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,

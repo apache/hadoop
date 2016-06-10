@@ -120,9 +120,9 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // NM1/NM2 has available resource = 2G/4G
     Assert.assertEquals(2 * GB, cs.getNode(nm1.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
     Assert.assertEquals(4 * GB, cs.getNode(nm2.getNodeId())
-        .getUnallocatedResource().getMemory());
+        .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container
     am2.allocate(Arrays.asList(ResourceRequest

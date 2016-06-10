@@ -1772,7 +1772,7 @@ public class TestRMContainerAllocator {
         when(excessC.getId()).thenReturn(containerId);
         when(excessC.getPriority()).thenReturn(RMContainerAllocator.PRIORITY_REDUCE);
         Resource mockR = mock(Resource.class);
-        when(mockR.getMemory()).thenReturn(2048);
+        when(mockR.getMemorySize()).thenReturn(2048L);
         when(excessC.getResource()).thenReturn(mockR);
         NodeId nId = mock(NodeId.class);
         when(nId.getHost()).thenReturn("local");

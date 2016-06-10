@@ -455,6 +455,15 @@ public class ContainersMonitorImpl extends AbstractService implements
             // cpuUsagePercentPerCore should be 300% and
             // cpuUsageTotalCoresPercentage should be 50%
             float cpuUsagePercentPerCore = pTree.getCpuUsagePercent();
+            if (cpuUsagePercentPerCore < 0) {
+              // CPU usage is not available likely because the container just
+              // started. Let us skip this turn and consider this container
+              // in the next iteration.
+              LOG.info("Skipping monitoring container " + containerId
+                  + " since CPU usage is not yet available.");
+              continue;
+            }
+
             float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore /
                 resourceCalculatorPlugin.getNumProcessors();
 
@@ -619,15 +628,16 @@ public class ContainersMonitorImpl extends AbstractService implements
     }
 
     ContainerId containerId = monitoringEvent.getContainerId();
-    ContainerMetrics usageMetrics = ContainerMetrics
-        .forContainer(containerId, containerMetricsPeriodMs,
-        containerMetricsUnregisterDelayMs);
+    ContainerMetrics usageMetrics;
 
     int vmemLimitMBs;
     int pmemLimitMBs;
     int cpuVcores;
     switch (monitoringEvent.getType()) {
     case START_MONITORING_CONTAINER:
+      usageMetrics = ContainerMetrics
+          .forContainer(containerId, containerMetricsPeriodMs,
+          containerMetricsUnregisterDelayMs);
       ContainerStartMonitoringEvent startEvent =
           (ContainerStartMonitoringEvent) monitoringEvent;
       usageMetrics.recordStateChangeDurations(
@@ -640,13 +650,20 @@ public class ContainersMonitorImpl extends AbstractService implements
           vmemLimitMBs, pmemLimitMBs, cpuVcores);
       break;
     case STOP_MONITORING_CONTAINER:
-      usageMetrics.finished();
+      usageMetrics = ContainerMetrics.getContainerMetrics(
+          containerId);
+      if (usageMetrics != null) {
+        usageMetrics.finished();
+      }
       break;
     case CHANGE_MONITORING_CONTAINER_RESOURCE:
+      usageMetrics = ContainerMetrics
+          .forContainer(containerId, containerMetricsPeriodMs,
+          containerMetricsUnregisterDelayMs);
       ChangeMonitoringContainerResourceEvent changeEvent =
           (ChangeMonitoringContainerResourceEvent) monitoringEvent;
       Resource resource = changeEvent.getResource();
-      pmemLimitMBs = resource.getMemory();
+      pmemLimitMBs = (int) resource.getMemorySize();
       vmemLimitMBs = (int) (pmemLimitMBs * vmemRatio);
       cpuVcores = resource.getVirtualCores();
       usageMetrics.recordResourceLimit(
@@ -769,12 +786,14 @@ public class ContainersMonitorImpl extends AbstractService implements
         (int) (getVmemAllocatedForContainers() >> 20), 1.0f);
   }
 
+  /**
+   * Calculates the vCores CPU usage that is assigned to the given
+   * {@link ProcessTreeInfo}. In particular, it takes into account the number of
+   * vCores that are allowed to be used by the NM and returns the CPU usage
+   * as a normalized value between {@literal >=} 0 and {@literal <=} 1.
+   */
   private float allocatedCpuUsage(ProcessTreeInfo pti) {
-    float cpuUsagePercentPerCore = pti.getCpuVcores() * 100.0f;
-    float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore
-        / resourceCalculatorPlugin.getNumProcessors();
-    return (cpuUsageTotalCoresPercentage * 1000 *
-        maxVCoresAllottedForContainers / nodeCpuPercentageForYARN) / 1000.0f;
+    return (float) pti.getCpuVcores() / getVCoresAllocatedForContainers();
   }
 
   @Override
@@ -820,7 +839,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     }
     LOG.info("Changing resource-monitoring for " + containerId);
     updateContainerMetrics(monitoringEvent);
-    long pmemLimit = changeEvent.getResource().getMemory() * 1024L * 1024L;
+    long pmemLimit = changeEvent.getResource().getMemorySize() * 1024L * 1024L;
     long vmemLimit = (long) (pmemLimit * vmemRatio);
     int cpuVcores = changeEvent.getResource().getVirtualCores();
     processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);

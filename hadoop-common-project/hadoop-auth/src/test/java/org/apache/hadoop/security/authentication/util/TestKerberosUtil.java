@@ -25,11 +25,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-import org.apache.directory.server.kerberos.shared.keytab.Keytab;
-import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
-import org.apache.directory.shared.kerberos.KerberosTime;
-import org.apache.directory.shared.kerberos.codec.types.EncryptionType;
-import org.apache.directory.shared.kerberos.components.EncryptionKey;
+import org.apache.kerby.kerberos.kerb.keytab.Keytab;
+import org.apache.kerby.kerberos.kerb.keytab.KeytabEntry;
+import org.apache.kerby.kerberos.kerb.type.KerberosTime;
+import org.apache.kerby.kerberos.kerb.type.base.EncryptionKey;
+import org.apache.kerby.kerberos.kerb.type.base.EncryptionType;
+import org.apache.kerby.kerberos.kerb.type.base.PrincipalName;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -96,14 +97,15 @@ public class TestKerberosUtil {
         KerberosUtil.getServicePrincipal(
             service, testHost.toLowerCase(Locale.US)));
   }
-  
+
   @Test
   public void testGetPrincipalNamesMissingKeytab() {
     try {
       KerberosUtil.getPrincipalNames(testKeytab);
       Assert.fail("Exception should have been thrown");
-    } catch (IOException e) {
+    } catch (IllegalArgumentException e) {
       //expects exception
+    } catch (IOException e) {
     }
   }
 
@@ -166,14 +168,14 @@ public class TestKerberosUtil {
       // duplicate principals
       for (int kvno=1; kvno <= 3; kvno++) {
         EncryptionKey key = new EncryptionKey(
-            EncryptionType.UNKNOWN, "samplekey1".getBytes(), kvno);
+            EncryptionType.NONE, "samplekey1".getBytes(), kvno);
         KeytabEntry keytabEntry = new KeytabEntry(
-            principal, 1 , new KerberosTime(), (byte) 1, key);
+            new PrincipalName(principal), new KerberosTime(), (byte) 1, key);
         lstEntries.add(keytabEntry);      
       }
     }
-    Keytab keytab = Keytab.getInstance();
-    keytab.setEntries(lstEntries);
-    keytab.write(new File(testKeytab));
+    Keytab keytab = new Keytab();
+    keytab.addKeytabEntries(lstEntries);
+    keytab.store(new File(testKeytab));
   }
 }

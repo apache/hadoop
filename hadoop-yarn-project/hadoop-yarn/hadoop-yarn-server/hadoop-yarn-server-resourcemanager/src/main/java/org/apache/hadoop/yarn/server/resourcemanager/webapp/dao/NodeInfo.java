@@ -63,8 +63,8 @@ public class NodeInfo {
     this.availMemoryMB = 0;
     if (report != null) {
       this.numContainers = report.getNumContainers();
-      this.usedMemoryMB = report.getUsedResource().getMemory();
-      this.availMemoryMB = report.getAvailableResource().getMemory();
+      this.usedMemoryMB = report.getUsedResource().getMemorySize();
+      this.availMemoryMB = report.getAvailableResource().getMemorySize();
       this.usedVirtualCores = report.getUsedResource().getVirtualCores();
       this.availableVirtualCores = report.getAvailableResource().getVirtualCores();
     }

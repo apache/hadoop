@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
@@ -29,10 +30,13 @@ import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
+
 import org.slf4j.Logger;
 
 import java.io.EOFException;
 import java.io.IOException;
+
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 
 /**
  * The input stream for an S3A object.
@@ -112,7 +116,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * @param reason reason for reopen
    * @param targetPos target position
    * @param length length requested
-   * @throws IOException
+   * @throws IOException on any failure to open the object
    */
   private synchronized void reopen(String reason, long targetPos, long length)
       throws IOException {
@@ -126,13 +130,17 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
         uri, reason, targetPos, length, requestedStreamLen, pos, nextReadPos);
 
     streamStatistics.streamOpened();
-    GetObjectRequest request = new GetObjectRequest(bucket, key)
-        .withRange(targetPos, requestedStreamLen);
-    wrappedStream = client.getObject(request).getObjectContent();
+    try {
+      GetObjectRequest request = new GetObjectRequest(bucket, key)
+          .withRange(targetPos, requestedStreamLen);
+      wrappedStream = client.getObject(request).getObjectContent();
 
-    if (wrappedStream == null) {
-      throw new IOException("Null IO stream from reopen of (" + reason +  ") "
-          + uri);
+      if (wrappedStream == null) {
+        throw new IOException("Null IO stream from reopen of (" + reason +  ") "
+            + uri);
+      }
+    } catch (AmazonClientException e) {
+      throw translateException("Reopen at position " + targetPos, uri, e);
     }
 
     this.pos = targetPos;
@@ -276,10 +284,10 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       return -1;
     }
 
-    lazySeek(nextReadPos, 1);
 
     int byteRead;
     try {
+      lazySeek(nextReadPos, 1);
       byteRead = wrappedStream.read();
     } catch (EOFException e) {
       return -1;
@@ -337,11 +345,16 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       return -1;
     }
 
-    lazySeek(nextReadPos, len);
-    streamStatistics.readOperationStarted(nextReadPos, len);
+    try {
+      lazySeek(nextReadPos, len);
+    } catch (EOFException e) {
+      // the end of the file has moved
+      return -1;
+    }
 
     int bytesRead;
     try {
+      streamStatistics.readOperationStarted(nextReadPos, len);
       bytesRead = wrappedStream.read(buf, off, len);
     } catch (EOFException e) {
       throw e;

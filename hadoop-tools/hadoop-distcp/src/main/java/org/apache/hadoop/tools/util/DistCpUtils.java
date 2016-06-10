@@ -195,9 +195,13 @@ public class DistCpUtils {
                               EnumSet<FileAttribute> attributes,
                               boolean preserveRawXattrs) throws IOException {
 
-    FileStatus targetFileStatus = targetFS.getFileStatus(path);
-    String group = targetFileStatus.getGroup();
-    String user = targetFileStatus.getOwner();
+    // If not preserving anything from FileStatus, don't bother fetching it.
+    FileStatus targetFileStatus = attributes.isEmpty() ? null :
+        targetFS.getFileStatus(path);
+    String group = targetFileStatus == null ? null :
+        targetFileStatus.getGroup();
+    String user = targetFileStatus == null ? null :
+        targetFileStatus.getOwner();
     boolean chown = false;
 
     if (attributes.contains(FileAttribute.ACL)) {

@@ -168,7 +168,7 @@ public class TestBalancerWithMultipleNameNodes {
         getStorageReports(s);
 
     // start rebalancing
-    final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(s.conf);
+    final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(s.conf);
     final int r = Balancer.run(namenodes, s.parameters, s.conf);
     Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 

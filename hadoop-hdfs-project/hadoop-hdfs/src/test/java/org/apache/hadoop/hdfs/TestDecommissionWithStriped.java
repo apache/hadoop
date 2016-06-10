@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -274,6 +275,52 @@ public class TestDecommissionWithStriped {
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
         null);
     cleanupFile(dfs, ecFile);
+  }
+
+  /**
+   * Tests to verify that the file checksum should be able to compute after the
+   * decommission operation.
+   *
+   * Below is the block indices list after the decommission. ' represents
+   * decommissioned node index.
+   *
+   * 0, 2, 3, 4, 5, 6, 7, 8, 1, 1'
+   *
+   * Here, this list contains duplicated blocks and does not maintaining any
+   * order.
+   */
+  @Test(timeout = 120000)
+  public void testFileChecksumAfterDecommission() throws Exception {
+    LOG.info("Starting test testFileChecksumAfterDecommission");
+
+    final Path ecFile = new Path(ecDir, "testFileChecksumAfterDecommission");
+    int writeBytes = BLOCK_STRIPED_CELL_SIZE * NUM_DATA_BLOCKS;
+    writeStripedFile(dfs, ecFile, writeBytes);
+    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    final List<DatanodeInfo> decommisionNodes = new ArrayList<DatanodeInfo>();
+    LocatedBlock lb = dfs.getClient().getLocatedBlocks(ecFile.toString(), 0)
+        .get(0);
+    DatanodeInfo[] dnLocs = lb.getLocations();
+    assertEquals(NUM_DATA_BLOCKS + NUM_PARITY_BLOCKS, dnLocs.length);
+    int decommNodeIndex = 1;
+
+    // add the node which will be decommissioning
+    decommisionNodes.add(dnLocs[decommNodeIndex]);
+    decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
+    assertEquals(decommisionNodes.size(), fsn.getNumDecomLiveDataNodes());
+    assertNull(checkFile(dfs, ecFile, 9, decommisionNodes, numDNs));
+    StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
+        null);
+
+    // verify checksum
+    FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
+    LOG.info("fileChecksum1:" + fileChecksum1);
+    LOG.info("fileChecksum2:" + fileChecksum2);
+
+    Assert.assertTrue("Checksum mismatches!",
+        fileChecksum1.equals(fileChecksum2));
   }
 
   private void testDecommission(int writeBytes, int storageCount,

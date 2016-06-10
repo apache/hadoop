@@ -414,17 +414,17 @@ public class TestProcfsBasedProcessTree {
       // assuming processes 100, 200, 300 are in tree and 400 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[4];
       procInfos[0] =
-          new ProcessStatInfo(new String[] { "100", "proc1", "1", "100", "100",
-              "100000", "100", "1000", "200" });
+          new ProcessStatInfo(new String[]{"100", "proc1", "1", "100", "100",
+              "100000", "100", "1000", "200"});
       procInfos[1] =
-          new ProcessStatInfo(new String[] { "200", "proc2", "100", "100",
-              "100", "200000", "200", "2000", "400" });
+          new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
+              "100", "200000", "200", "2000", "400"});
       procInfos[2] =
-          new ProcessStatInfo(new String[] { "300", "proc3", "200", "100",
-              "100", "300000", "300", "3000", "600" });
+          new ProcessStatInfo(new String[]{"300", "proc3", "200", "100",
+              "100", "300000", "300", "3000", "600"});
       procInfos[3] =
-          new ProcessStatInfo(new String[] { "400", "proc4", "1", "400", "400",
-              "400000", "400", "4000", "800" });
+          new ProcessStatInfo(new String[]{"400", "proc4", "1", "400", "400",
+              "400000", "400", "4000", "800"});
 
       ProcessTreeSmapMemInfo[] memInfo = new ProcessTreeSmapMemInfo[4];
       memInfo[0] = new ProcessTreeSmapMemInfo("100");
@@ -481,11 +481,11 @@ public class TestProcfsBasedProcessTree {
 
       // test the cpu time again to see if it cumulates
       procInfos[0] =
-          new ProcessStatInfo(new String[] { "100", "proc1", "1", "100", "100",
-              "100000", "100", "2000", "300" });
+          new ProcessStatInfo(new String[]{"100", "proc1", "1", "100", "100",
+              "100000", "100", "2000", "300"});
       procInfos[1] =
-          new ProcessStatInfo(new String[] { "200", "proc2", "100", "100",
-              "100", "200000", "200", "3000", "500" });
+          new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
+              "100", "200000", "200", "3000", "500"});
       writeStatFiles(procfsRootDir, pids, procInfos, memInfo);
 
       long elapsedTimeBetweenUpdatesMsec = 200000;
@@ -558,17 +558,17 @@ public class TestProcfsBasedProcessTree {
       // assuming 100, 200 and 400 are in tree, 300 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[4];
       procInfos[0] =
-          new ProcessStatInfo(new String[] { "100", "proc1", "1", "100", "100",
-              "100000", "100" });
+          new ProcessStatInfo(new String[]{"100", "proc1", "1", "100", "100",
+              "100000", "100"});
       procInfos[1] =
-          new ProcessStatInfo(new String[] { "200", "proc2", "100", "100",
-              "100", "200000", "200" });
+          new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
+              "100", "200000", "200"});
       procInfos[2] =
-          new ProcessStatInfo(new String[] { "300", "proc3", "1", "300", "300",
-              "300000", "300" });
+          new ProcessStatInfo(new String[]{"300", "proc3", "1", "300", "300",
+              "300000", "300"});
       procInfos[3] =
-          new ProcessStatInfo(new String[] { "400", "proc4", "100", "100",
-              "100", "400000", "400" });
+          new ProcessStatInfo(new String[]{"400", "proc4", "100", "100",
+              "100", "400000", "400"});
       // write smap information invariably for testing
       ProcessTreeSmapMemInfo[] memInfo = new ProcessTreeSmapMemInfo[4];
       memInfo[0] = new ProcessTreeSmapMemInfo("100");
@@ -804,23 +804,23 @@ public class TestProcfsBasedProcessTree {
       // Processes 200, 300, 400 and 500 are descendants of 100. 600 is not.
       ProcessStatInfo[] procInfos = new ProcessStatInfo[numProcesses];
       procInfos[0] =
-          new ProcessStatInfo(new String[] { "100", "proc1", "1", "100", "100",
-              "100000", "100", "1000", "200" });
+          new ProcessStatInfo(new String[]{"100", "proc1", "1", "100", "100",
+              "100000", "100", "1000", "200"});
       procInfos[1] =
-          new ProcessStatInfo(new String[] { "200", "proc2", "100", "100",
-              "100", "200000", "200", "2000", "400" });
+          new ProcessStatInfo(new String[]{"200", "process two", "100", "100",
+              "100", "200000", "200", "2000", "400"});
       procInfos[2] =
-          new ProcessStatInfo(new String[] { "300", "proc3", "200", "100",
-              "100", "300000", "300", "3000", "600" });
+          new ProcessStatInfo(new String[]{"300", "proc3", "200", "100",
+              "100", "300000", "300", "3000", "600"});
       procInfos[3] =
-          new ProcessStatInfo(new String[] { "400", "proc4", "200", "100",
-              "100", "400000", "400", "4000", "800" });
+          new ProcessStatInfo(new String[]{"400", "proc4", "200", "100",
+              "100", "400000", "400", "4000", "800"});
       procInfos[4] =
-          new ProcessStatInfo(new String[] { "500", "proc5", "400", "100",
-              "100", "400000", "400", "4000", "800" });
+          new ProcessStatInfo(new String[]{"500", "proc5", "400", "100",
+              "100", "400000", "400", "4000", "800"});
       procInfos[5] =
-          new ProcessStatInfo(new String[] { "600", "proc6", "1", "1", "1",
-              "400000", "400", "4000", "800" });
+          new ProcessStatInfo(new String[]{"600", "proc6", "1", "1", "1",
+              "400000", "400", "4000", "800"});
 
       ProcessTreeSmapMemInfo[] memInfos = new ProcessTreeSmapMemInfo[6];
       memInfos[0] = new ProcessTreeSmapMemInfo("100");
@@ -832,7 +832,7 @@ public class TestProcfsBasedProcessTree {
 
       String[] cmdLines = new String[numProcesses];
       cmdLines[0] = "proc1 arg1 arg2";
-      cmdLines[1] = "proc2 arg3 arg4";
+      cmdLines[1] = "process two arg3 arg4";
       cmdLines[2] = "proc3 arg5 arg6";
       cmdLines[3] = "proc4 arg7 arg8";
       cmdLines[4] = "proc5 arg9 arg10";

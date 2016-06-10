@@ -19,9 +19,19 @@ package org.apache.hadoop.hdfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -101,6 +111,83 @@ public class TestRead {
       // Expected
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testInterruptReader() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
+        DelayedSimulatedFSDataset.Factory.class.getName());
+
+    final MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(conf).numDataNodes(1).build();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      cluster.waitActive();
+      final Path file = new Path("/foo");
+      DFSTestUtil.createFile(fs, file, 1024, (short) 1, 0L);
+
+      final FSDataInputStream in = fs.open(file);
+      AtomicBoolean readInterrupted = new AtomicBoolean(false);
+      final Thread reader = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            in.read(new byte[1024], 0, 1024);
+          } catch (IOException e) {
+            if (e instanceof ClosedByInterruptException ||
+                e instanceof InterruptedIOException) {
+              readInterrupted.set(true);
+            }
+          }
+        }
+      });
+
+      reader.start();
+      Thread.sleep(1000);
+      reader.interrupt();
+      reader.join();
+
+      Assert.assertTrue(readInterrupted.get());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  private static class DelayedSimulatedFSDataset extends SimulatedFSDataset {
+    private volatile boolean isDelayed = true;
+
+    DelayedSimulatedFSDataset(DataNode datanode, DataStorage storage,
+        Configuration conf) {
+      super(datanode, storage, conf);
+    }
+
+    @Override
+    public synchronized InputStream getBlockInputStream(ExtendedBlock b,
+        long seekOffset) throws IOException {
+      while (isDelayed) {
+        try {
+          this.wait();
+        } catch (InterruptedException ignored) {
+        }
+      }
+      InputStream result = super.getBlockInputStream(b);
+      IOUtils.skipFully(result, seekOffset);
+      return result;
+    }
+
+    static class Factory extends FsDatasetSpi.Factory<DelayedSimulatedFSDataset> {
+      @Override
+      public DelayedSimulatedFSDataset newInstance(DataNode datanode,
+          DataStorage storage, Configuration conf) throws IOException {
+        return new DelayedSimulatedFSDataset(datanode, storage, conf);
+      }
+
+      @Override
+      public boolean isSimulated() {
+        return true;
+      }
     }
   }
 }

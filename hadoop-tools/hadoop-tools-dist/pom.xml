@@ -107,9 +107,9 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-ant</artifactId>
-      <version>${project.version}</version>
+      <artifactId>hadoop-azure-datalake</artifactId>
       <scope>compile</scope>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

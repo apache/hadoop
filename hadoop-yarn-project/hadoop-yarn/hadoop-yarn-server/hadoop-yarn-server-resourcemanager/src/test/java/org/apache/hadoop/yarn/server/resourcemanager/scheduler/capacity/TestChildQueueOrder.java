@@ -166,14 +166,14 @@ public class TestChildQueueOrder {
   private float computeQueueAbsoluteUsedCapacity(CSQueue queue, 
       int expectedMemory, Resource clusterResource) {
     return (
-        ((float)expectedMemory / (float)clusterResource.getMemory())
+        ((float)expectedMemory / (float)clusterResource.getMemorySize())
       );
   }
 
   private float computeQueueUsedCapacity(CSQueue queue,
       int expectedMemory, Resource clusterResource) {
     return (expectedMemory / 
-        (clusterResource.getMemory() * queue.getAbsoluteCapacity()));
+        (clusterResource.getMemorySize() * queue.getAbsoluteCapacity()));
   }
 
   final static float DELTA = 0.0001f;

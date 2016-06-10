@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -1091,9 +1092,7 @@ public class TestClientRMService {
     return yarnScheduler;
   }
 
-  @Test
-  public void testReservationAPIs() {
-    // initialize
+  private ResourceManager setupResourceManager() {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     ReservationSystemTestUtil.setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -1101,41 +1100,95 @@ public class TestClientRMService {
     conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
     MockRM rm = new MockRM(conf);
     rm.start();
-    MockNM nm;
     try {
-      nm = rm.registerNode("127.0.0.1:1", 102400, 100);
+      rm.registerNode("127.0.0.1:1", 102400, 100);
       // allow plan follower to synchronize
       Thread.sleep(1050);
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
+    return rm;
+  }
 
-    // Create a client.
-    ClientRMService clientService = rm.getClientRMService();
-
-    // create a reservation
-    Clock clock = new UTCClock();
-    long arrival = clock.getTime();
-    long duration = 60000;
-    long deadline = (long) (arrival + 1.05 * duration);
-    ReservationSubmissionRequest sRequest =
-        ReservationSystemTestUtil.createSimpleReservationRequest(4, arrival,
-            deadline, duration);
+  private ReservationSubmissionRequest submitReservationTestHelper(
+      ClientRMService clientService, long arrival, long deadline,
+      long duration) {
     ReservationSubmissionResponse sResponse = null;
+    GetNewReservationRequest newReservationRequest =
+        GetNewReservationRequest.newInstance();
+    ReservationId reservationID = null;
+    try {
+      reservationID = clientService.getNewReservation(newReservationRequest)
+          .getReservationId();
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    ReservationSubmissionRequest sRequest =
+        ReservationSystemTestUtil.createSimpleReservationRequest(reservationID,
+            4, arrival, deadline, duration);
     try {
       sResponse = clientService.submitReservation(sRequest);
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(sResponse);
-    ReservationId reservationID = sResponse.getReservationId();
     Assert.assertNotNull(reservationID);
-    LOG.info("Submit reservation response: " + reservationID);
+    System.out.println("Submit reservation response: " + reservationID);
+    return sRequest;
+  }
 
-    // Update the reservation
+  @Test
+  public void testCreateReservation() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
+    // Submit the reservation again with the same request and make sure it
+    // passes.
+    try {
+      clientService.submitReservation(sRequest);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // Submit the reservation with the same reservation id but different
+    // reservation definition, and ensure YarnException is thrown.
+    arrival = clock.getTime();
+    ReservationDefinition rDef = sRequest.getReservationDefinition();
+    rDef.setArrival(arrival + duration);
+    sRequest.setReservationDefinition(rDef);
+    try {
+      clientService.submitReservation(sRequest);
+      Assert.fail("Reservation submission should fail if a duplicate "
+          + "reservation id is used, but the reservation definition has been "
+          + "updated.");
+    } catch (Exception e) {
+      Assert.assertTrue(e instanceof YarnException);
+    }
+
+    rm.stop();
+  }
+
+  @Test
+  public void testUpdateReservation() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
     ReservationDefinition rDef = sRequest.getReservationDefinition();
     ReservationRequest rr =
         rDef.getReservationRequests().getReservationResources().get(0);
+    ReservationId reservationID = sRequest.getReservationId();
     rr.setNumContainers(5);
     arrival = clock.getTime();
     duration = 30000;
@@ -1151,14 +1204,61 @@ public class TestClientRMService {
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
-    Assert.assertNotNull(sResponse);
-    LOG.info("Update reservation response: " + uResponse);
+    Assert.assertNotNull(uResponse);
+    System.out.println("Update reservation response: " + uResponse);
 
-    // List reservations, search by reservation ID
-    ReservationListRequest request =
-            ReservationListRequest.newInstance(
-                    ReservationSystemTestUtil.reservationQ,
-                    reservationID.toString(), -1, -1, false);
+    rm.stop();
+  }
+
+  @Test
+  public void testListReservationsByReservationId() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
+    ReservationId reservationID = sRequest.getReservationId();
+    ReservationListResponse response = null;
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        ReservationSystemTestUtil.reservationQ, reservationID.toString(), -1,
+        -1, false);
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+        .getReservationId().getId(), reservationID.getId());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+        .getResourceAllocationRequests().size(), 0);
+
+    rm.stop();
+  }
+
+  @Test
+  public void testListReservationsByTimeInterval() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
+    // List reservations, search by a point in time within the reservation
+    // range.
+    arrival = clock.getTime();
+    ReservationId reservationID = sRequest.getReservationId();
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        ReservationSystemTestUtil.reservationQ, "", arrival + duration / 2,
+        arrival + duration / 2, true);
 
     ReservationListResponse response = null;
     try {
@@ -1167,16 +1267,12 @@ public class TestClientRMService {
       Assert.fail(e.getMessage());
     }
     Assert.assertNotNull(response);
-    Assert.assertEquals(response.getReservationAllocationState().size(), 1);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
     Assert.assertEquals(response.getReservationAllocationState().get(0)
-            .getReservationId().getId(), reservationID.getId());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
-            .getResourceAllocationRequests().size(), 0);
-
+        .getReservationId().getId(), reservationID.getId());
     // List reservations, search by time within reservation interval.
     request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", 1, Long.MAX_VALUE,
-            true);
+        ReservationSystemTestUtil.reservationQ, "", 1, Long.MAX_VALUE, true);
 
     response = null;
     try {
@@ -1187,75 +1283,83 @@ public class TestClientRMService {
     Assert.assertNotNull(response);
     Assert.assertEquals(1, response.getReservationAllocationState().size());
     Assert.assertEquals(response.getReservationAllocationState().get(0)
-            .getReservationId().getId(), reservationID.getId());
-
-    // List reservations, search by invalid end time == -1.
-    request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", 1, -1,
-            true);
-
-    response = null;
-    try {
-      response = clientService.listReservations(request);
-    } catch (Exception e) {
-      Assert.fail(e.getMessage());
-    }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
-            .getReservationId().getId(), reservationID.getId());
-
-    // List reservations, search by invalid end time < -1.
-    request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", 1, -10,
-            true);
-
-    response = null;
-    try {
-      response = clientService.listReservations(request);
-    } catch (Exception e) {
-      Assert.fail(e.getMessage());
-    }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
-            .getReservationId().getId(), reservationID.getId());
-
-    // List reservations, search by time interval.
-    request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", arrival +
-                    duration/2, arrival + duration/2, true);
-
-    response = null;
-    try {
-      response = clientService.listReservations(request);
-    } catch (Exception e) {
-      Assert.fail(e.getMessage());
-    }
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getReservationAllocationState().size());
-    Assert.assertEquals(response.getReservationAllocationState().get(0)
-            .getReservationId().getId(), reservationID.getId());
-
+        .getReservationId().getId(), reservationID.getId());
     // Verify that the full resource allocations exist.
     Assert.assertTrue(response.getReservationAllocationState().get(0)
-            .getResourceAllocationRequests().size() > 0);
+        .getResourceAllocationRequests().size() > 0);
 
     // Verify that the full RDL is returned.
-    ReservationRequests reservationRequests = response
-            .getReservationAllocationState().get(0).getReservationDefinition()
-            .getReservationRequests();
-    Assert.assertTrue(reservationRequests.getInterpreter().toString()
-            .equals("R_ALL"));
+    ReservationRequests reservationRequests =
+        response.getReservationAllocationState().get(0)
+            .getReservationDefinition().getReservationRequests();
+    Assert.assertTrue(
+        reservationRequests.getInterpreter().toString().equals("R_ALL"));
     Assert.assertTrue(reservationRequests.getReservationResources().get(0)
-            .getDuration() == duration);
+        .getDuration() == duration);
 
-      // List reservations, search by a very large start time.
-    request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", Long.MAX_VALUE,
-            -1, false);
+    rm.stop();
+  }
+
+  @Test
+  public void testListReservationsByInvalidTimeInterval() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
+    // List reservations, search by invalid end time == -1.
+    ReservationListRequest request = ReservationListRequest
+        .newInstance(ReservationSystemTestUtil.reservationQ, "", 1, -1, true);
+
+    ReservationListResponse response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+        .getReservationId().getId(), sRequest.getReservationId().getId());
+
+    // List reservations, search by invalid end time < -1.
+    request = ReservationListRequest
+        .newInstance(ReservationSystemTestUtil.reservationQ, "", 1, -10, true);
 
     response = null;
+    try {
+      response = clientService.listReservations(request);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().get(0)
+        .getReservationId().getId(), sRequest.getReservationId().getId());
+
+    rm.stop();
+  }
+
+  @Test
+  public void testListReservationsByTimeIntervalContainingNoReservations() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
+    // List reservations, search by very large start time.
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        ReservationSystemTestUtil.reservationQ, "", Long.MAX_VALUE, -1, false);
+
+    ReservationListResponse response = null;
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
@@ -1264,13 +1368,16 @@ public class TestClientRMService {
 
     // Ensure all reservations are filtered out.
     Assert.assertNotNull(response);
-    Assert.assertEquals(0, response.getReservationAllocationState().size());
+    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+
+    duration = 30000;
+    deadline = sRequest.getReservationDefinition().getDeadline();
 
     // List reservations, search by start time after the reservation
     // end time.
     request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", deadline + duration,
-            deadline + 2 * duration, false);
+        ReservationSystemTestUtil.reservationQ, "", deadline + duration,
+        deadline + 2 * duration, false);
 
     response = null;
     try {
@@ -1283,11 +1390,12 @@ public class TestClientRMService {
     Assert.assertNotNull(response);
     Assert.assertEquals(response.getReservationAllocationState().size(), 0);
 
-    // List reservations, search by  end time before the reservation start
+    arrival = clock.getTime();
+    // List reservations, search by end time before the reservation start
     // time.
     request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", 0, arrival -
-                    duration, false);
+        ReservationSystemTestUtil.reservationQ, "", 0, arrival - duration,
+        false);
 
     response = null;
     try {
@@ -1300,10 +1408,9 @@ public class TestClientRMService {
     Assert.assertNotNull(response);
     Assert.assertEquals(response.getReservationAllocationState().size(), 0);
 
-    // List reservations, search by a very small end time.
-    request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, "", 0, 1,
-            false);
+    // List reservations, search by very small end time.
+    request = ReservationListRequest
+        .newInstance(ReservationSystemTestUtil.reservationQ, "", 0, 1, false);
 
     response = null;
     try {
@@ -1316,6 +1423,21 @@ public class TestClientRMService {
     Assert.assertNotNull(response);
     Assert.assertEquals(response.getReservationAllocationState().size(), 0);
 
+    rm.stop();
+  }
+
+  @Test
+  public void testReservationDelete() {
+    ResourceManager rm = setupResourceManager();
+    ClientRMService clientService = rm.getClientRMService();
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        submitReservationTestHelper(clientService, arrival, deadline, duration);
+
+    ReservationId reservationID = sRequest.getReservationId();
     // Delete the reservation
     ReservationDeleteRequest dRequest =
         ReservationDeleteRequest.newInstance(reservationID);
@@ -1325,15 +1447,15 @@ public class TestClientRMService {
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
-    Assert.assertNotNull(sResponse);
-    LOG.info("Delete reservation response: " + dResponse);
+    Assert.assertNotNull(dResponse);
+    System.out.println("Delete reservation response: " + dResponse);
 
     // List reservations, search by non-existent reservationID
-    request = ReservationListRequest.newInstance(
-            ReservationSystemTestUtil.reservationQ, reservationID.toString(),
-            -1, -1, false);
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        ReservationSystemTestUtil.reservationQ, reservationID.toString(), -1,
+        -1, false);
 
-    response = null;
+    ReservationListResponse response = null;
     try {
       response = clientService.listReservations(request);
     } catch (Exception e) {
@@ -1342,10 +1464,7 @@ public class TestClientRMService {
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getReservationAllocationState().size());
 
-    // clean-up
     rm.stop();
-    nm = null;
-    rm = null;
   }
 
   @Test

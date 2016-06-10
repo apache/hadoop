@@ -786,9 +786,9 @@ public class CLI extends Configured implements Tool {
     for (JobStatus job : jobs) {
       int numUsedSlots = job.getNumUsedSlots();
       int numReservedSlots = job.getNumReservedSlots();
-      int usedMem = job.getUsedMem();
-      int rsvdMem = job.getReservedMem();
-      int neededMem = job.getNeededMem();
+      long usedMem = job.getUsedMem();
+      long rsvdMem = job.getReservedMem();
+      long neededMem = job.getNeededMem();
       int jobNameLength = job.getJobName().length();
       writer.printf(dataPattern, job.getJobID().toString(),
           job.getJobName().substring(0, jobNameLength > 20 ? 20 : jobNameLength),

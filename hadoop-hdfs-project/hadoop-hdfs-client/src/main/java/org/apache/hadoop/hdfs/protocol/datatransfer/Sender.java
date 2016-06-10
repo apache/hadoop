@@ -274,6 +274,8 @@ public class Sender implements DataTransferProtocol {
             stripedBlockInfo.getDatanodes()))
         .addAllBlockTokens(PBHelperClient.convert(
             stripedBlockInfo.getBlockTokens()))
+        .addAllBlockIndices(PBHelperClient
+            .convertBlockIndices(stripedBlockInfo.getBlockIndices()))
         .setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
             stripedBlockInfo.getErasureCodingPolicy()))
         .build();

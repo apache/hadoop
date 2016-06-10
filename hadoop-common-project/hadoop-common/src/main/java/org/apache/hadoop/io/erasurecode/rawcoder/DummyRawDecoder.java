@@ -18,8 +18,7 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-
-import java.nio.ByteBuffer;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
  * A dummy raw decoder that does no real computation.
@@ -28,20 +27,19 @@ import java.nio.ByteBuffer;
  * instead of codec, and is intended for test only.
  */
 @InterfaceAudience.Private
-public class DummyRawDecoder extends AbstractRawErasureDecoder {
-  public DummyRawDecoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
+public class DummyRawDecoder extends RawErasureDecoder {
+
+  public DummyRawDecoder(ErasureCoderOptions coderOptions) {
+    super(coderOptions);
   }
 
   @Override
-  protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
-      ByteBuffer[] outputs) {
+  protected void doDecode(ByteBufferDecodingState decodingState) {
     // Nothing to do. Output buffers have already been reset
   }
 
   @Override
-  protected void doDecode(byte[][] inputs, int[] inputOffsets, int dataLen,
-      int[] erasedIndexes, byte[][] outputs, int[] outputOffsets) {
+  protected void doDecode(ByteArrayDecodingState decodingState) {
     // Nothing to do. Output buffers have already been reset
   }
 }

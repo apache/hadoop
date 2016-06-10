@@ -127,17 +127,19 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
             hasResourcesAvailable(allocatedContInfo.getPti())) {
       startAllocatedContainer(allocatedContInfo);
     } else {
-      this.context.getNMStateStore().storeContainer(containerTokenIdentifier
-          .getContainerID(), request);
-      this.context.getNMStateStore().storeContainerQueued(
-          containerTokenIdentifier.getContainerID());
-
+      ContainerId cIdToStart = containerTokenIdentifier.getContainerID();
+      this.context.getNMStateStore().storeContainer(cIdToStart, request);
+      this.context.getNMStateStore().storeContainerQueued(cIdToStart);
+      LOG.info("No available resources for container {} to start its execution "
+          + "immediately.", cIdToStart);
       if (allocatedContInfo.getExecutionType() == ExecutionType.GUARANTEED) {
         queuedGuaranteedContainers.add(allocatedContInfo);
         // Kill running opportunistic containers to make space for
         // guaranteed container.
         killOpportunisticContainers(allocatedContInfo);
       } else {
+        LOG.info("Opportunistic container {} will be queued at the NM.",
+            cIdToStart);
         queuedOpportunisticContainers.add(allocatedContInfo);
       }
     }
@@ -158,6 +160,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
           containerTokenId.getExecutionType());
 
       if (foundInQueue) {
+        LOG.info("Removing queued container with ID " + containerID);
         this.context.getQueuingContext().getKilledQueuedContainers().put(
             containerTokenId,
             "Queued container request removed by ApplicationMaster.");
@@ -172,8 +175,9 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
       }
 
       nodeStatusUpdater.sendOutofBandHeartBeat();
+    } else {
+      super.stopContainerInternal(containerID);
     }
-    super.stopContainerInternal(containerID);
   }
 
   /**
@@ -401,7 +405,6 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
     // Subtract the overall node resources.
     getContainersMonitor().subtractNodeResourcesFromResourceUtilization(
         resourceAllocationToFreeUp);
-
     return resourceAllocationToFreeUp;
   }
 
@@ -454,6 +457,18 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
             ContainerExitStatus.INVALID, this.context.getQueuingContext()
                 .getQueuedContainers().get(containerID).getResource(),
             executionType);
+      } else {
+        // Check if part of the stopped/killed queued containers.
+        for (ContainerTokenIdentifier cTokenId : this.context
+            .getQueuingContext().getKilledQueuedContainers().keySet()) {
+          if (cTokenId.getContainerID().equals(containerID)) {
+            return BuilderUtils.newContainerStatus(containerID,
+                org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE,
+                this.context.getQueuingContext().getKilledQueuedContainers()
+                    .get(cTokenId), ContainerExitStatus.ABORTED, cTokenId
+                        .getResource(), cTokenId.getExecutionType());
+          }
+        }
       }
     }
     return super.getContainerStatusInternal(containerID, nmTokenIdentifier);
@@ -499,6 +514,16 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
   @VisibleForTesting
   public int getNumAllocatedOpportunisticContainers() {
     return allocatedOpportunisticContainers.size();
+  }
+
+  @VisibleForTesting
+  public int getNumQueuedGuaranteedContainers() {
+    return queuedGuaranteedContainers.size();
+  }
+
+  @VisibleForTesting
+  public int getNumQueuedOpportunisticContainers() {
+    return queuedOpportunisticContainers.size();
   }
 
   class QueuingApplicationEventDispatcher implements
@@ -599,7 +624,7 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
 
     private ProcessTreeInfo createProcessTreeInfo(ContainerId containerId,
         Resource resource, Configuration conf) {
-      long pmemBytes = resource.getMemory() * 1024 * 1024L;
+      long pmemBytes = resource.getMemorySize() * 1024 * 1024L;
       float pmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
           YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
       long vmemBytes = (long) (pmemRatio * pmemBytes);

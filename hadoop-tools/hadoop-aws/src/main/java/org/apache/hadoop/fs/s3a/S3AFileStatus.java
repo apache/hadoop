@@ -93,4 +93,11 @@ public class S3AFileStatus extends FileStatus {
       return super.getModificationTime();
     }
   }
+
+  @Override
+  public String toString() {
+    return super.toString() +
+        String.format(" isEmptyDirectory=%s", isEmptyDirectory());
+  }
+
 }

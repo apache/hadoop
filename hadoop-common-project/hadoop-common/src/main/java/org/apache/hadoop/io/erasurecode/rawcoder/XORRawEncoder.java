@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+
+import java.nio.ByteBuffer;
 
 /**
  * A raw encoder in XOR code scheme in pure Java, adapted from HDFS-RAID.
@@ -29,50 +30,56 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * deployed independently.
  */
 @InterfaceAudience.Private
-public class XORRawEncoder extends AbstractRawErasureEncoder {
+public class XORRawEncoder extends RawErasureEncoder {
 
-  public XORRawEncoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
+  public XORRawEncoder(ErasureCoderOptions coderOptions) {
+    super(coderOptions);
   }
 
-  protected void doEncode(ByteBuffer[] inputs, ByteBuffer[] outputs) {
-    ByteBuffer output = outputs[0];
+  protected void doEncode(ByteBufferEncodingState encodingState) {
+    CoderUtil.resetOutputBuffers(encodingState.outputs,
+        encodingState.encodeLength);
+    ByteBuffer output = encodingState.outputs[0];
 
     // Get the first buffer's data.
     int iIdx, oIdx;
-    for (iIdx = inputs[0].position(), oIdx = output.position();
-         iIdx < inputs[0].limit(); iIdx++, oIdx++) {
-      output.put(oIdx, inputs[0].get(iIdx));
+    for (iIdx = encodingState.inputs[0].position(), oIdx = output.position();
+         iIdx < encodingState.inputs[0].limit(); iIdx++, oIdx++) {
+      output.put(oIdx, encodingState.inputs[0].get(iIdx));
     }
 
     // XOR with everything else.
-    for (int i = 1; i < inputs.length; i++) {
-      for (iIdx = inputs[i].position(), oIdx = output.position();
-           iIdx < inputs[i].limit();
+    for (int i = 1; i < encodingState.inputs.length; i++) {
+      for (iIdx = encodingState.inputs[i].position(), oIdx = output.position();
+           iIdx < encodingState.inputs[i].limit();
            iIdx++, oIdx++) {
-        output.put(oIdx, (byte) (output.get(oIdx) ^ inputs[i].get(iIdx)));
+        output.put(oIdx, (byte) (output.get(oIdx) ^
+            encodingState.inputs[i].get(iIdx)));
       }
     }
   }
 
   @Override
-  protected void doEncode(byte[][] inputs, int[] inputOffsets, int dataLen,
-                          byte[][] outputs, int[] outputOffsets) {
-    byte[] output = outputs[0];
-    resetBuffer(output, outputOffsets[0], dataLen);
+  protected void doEncode(ByteArrayEncodingState encodingState) {
+    int dataLen = encodingState.encodeLength;
+    CoderUtil.resetOutputBuffers(encodingState.outputs,
+        encodingState.outputOffsets, dataLen);
+    byte[] output = encodingState.outputs[0];
 
     // Get the first buffer's data.
     int iIdx, oIdx;
-    for (iIdx = inputOffsets[0], oIdx = outputOffsets[0];
-         iIdx < inputOffsets[0] + dataLen; iIdx++, oIdx++) {
-      output[oIdx] = inputs[0][iIdx];
+    for (iIdx = encodingState.inputOffsets[0],
+             oIdx = encodingState.outputOffsets[0];
+         iIdx < encodingState.inputOffsets[0] + dataLen; iIdx++, oIdx++) {
+      output[oIdx] = encodingState.inputs[0][iIdx];
     }
 
     // XOR with everything else.
-    for (int i = 1; i < inputs.length; i++) {
-      for (iIdx = inputOffsets[i], oIdx = outputOffsets[0];
-           iIdx < inputOffsets[i] + dataLen; iIdx++, oIdx++) {
-        output[oIdx] ^= inputs[i][iIdx];
+    for (int i = 1; i < encodingState.inputs.length; i++) {
+      for (iIdx = encodingState.inputOffsets[i],
+               oIdx = encodingState.outputOffsets[0];
+           iIdx < encodingState.inputOffsets[i] + dataLen; iIdx++, oIdx++) {
+        output[oIdx] ^= encodingState.inputs[i][iIdx];
       }
     }
   }

@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.log4j.*;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -41,7 +43,7 @@ public class AdHocLogDumper {
   private Map<String, Priority> appenderLevels;
   private Level currentLogLevel;
   public static final String AD_HOC_DUMPER_APPENDER = "ad-hoc-dumper-appender";
-  private static boolean logFlag = false;
+  private static volatile boolean logFlag = false;
   private static final Object lock = new Object();
 
   public AdHocLogDumper(String name, String targetFilename) {
@@ -105,6 +107,11 @@ public class AdHocLogDumper {
         restoreLogLevelTimer.schedule(restoreLogLevel, timePeriod);
       }
     }
+  }
+
+  @VisibleForTesting
+  public static boolean getState() {
+    return logFlag;
   }
 
   class RestoreLogLevel extends TimerTask {

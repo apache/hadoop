@@ -168,12 +168,20 @@ public class StageAllocatorGreedyRLE implements StageAllocator {
       if (allocateLeft) {
         // set earliest start to the min of the constraining "range" or my the
         // end of this allocation
-        stageEarliestStart =
-            Math.min(partialMap.higherKey(minPoint), stageEarliestStart + dur);
+        if(partialMap.higherKey(minPoint) == null){
+          stageEarliestStart = stageEarliestStart + dur;
+        } else {
+          stageEarliestStart =
+             Math.min(partialMap.higherKey(minPoint), stageEarliestStart + dur);
+        }
       } else {
         // same as above moving right-to-left
-        stageDeadline =
-            Math.max(partialMap.higherKey(minPoint), stageDeadline - dur);
+        if(partialMap.higherKey(minPoint) == null){
+          stageDeadline = stageDeadline - dur;
+        } else {
+          stageDeadline =
+              Math.max(partialMap.higherKey(minPoint), stageDeadline - dur);
+        }
       }
     }
 

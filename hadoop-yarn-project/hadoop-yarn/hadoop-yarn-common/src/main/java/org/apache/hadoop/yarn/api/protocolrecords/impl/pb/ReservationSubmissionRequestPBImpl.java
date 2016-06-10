@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ReservationIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationDefinitionProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ReservationSubmissionRequestProtoOrBuilder;
 
@@ -119,6 +122,25 @@ public class ReservationSubmissionRequestPBImpl extends
     builder.setQueue(planName);
   }
 
+  @Override
+  public ReservationId getReservationId() {
+    ReservationSubmissionRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasReservationId()) {
+      return null;
+    }
+    return (convertFromProtoFormat(p.getReservationId()));
+  }
+
+  @Override
+  public void setReservationId(ReservationId reservationId) {
+    maybeInitBuilder();
+    if (reservationId == null) {
+      builder.clearReservationId();
+      return;
+    }
+    builder.setReservationId(convertToProtoFormat(reservationId));
+  }
+
   private ReservationDefinitionProto convertToProtoFormat(
       ReservationDefinition r) {
     return ((ReservationDefinitionPBImpl) r).getProto();
@@ -127,6 +149,14 @@ public class ReservationSubmissionRequestPBImpl extends
   private ReservationDefinitionPBImpl convertFromProtoFormat(
       ReservationDefinitionProto r) {
     return new ReservationDefinitionPBImpl(r);
+  }
+
+  private ReservationIdProto convertToProtoFormat(ReservationId r) {
+    return ((ReservationIdPBImpl) r).getProto();
+  }
+
+  private ReservationIdPBImpl convertFromProtoFormat(ReservationIdProto r) {
+    return new ReservationIdPBImpl(r);
   }
 
   @Override

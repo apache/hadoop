@@ -87,9 +87,6 @@ public class ApplicationSubmissionContextInfo {
   @XmlElement(name = "reservation-id")
   String reservationId;
 
-  @XmlElement(name = "am-black-listing-requests")
-  AMBlackListingRequestInfo amBlackListingRequestInfo;
-
   public ApplicationSubmissionContextInfo() {
     applicationId = "";
     applicationName = "";
@@ -106,7 +103,6 @@ public class ApplicationSubmissionContextInfo {
     logAggregationContextInfo = null;
     attemptFailuresValidityInterval = -1;
     reservationId = "";
-    amBlackListingRequestInfo = null;
   }
 
   public String getApplicationId() {
@@ -171,10 +167,6 @@ public class ApplicationSubmissionContextInfo {
 
   public long getAttemptFailuresValidityInterval() {
     return attemptFailuresValidityInterval;
-  }
-
-  public AMBlackListingRequestInfo getAMBlackListingRequestInfo() {
-    return amBlackListingRequestInfo;
   }
 
   public String getReservationId() {
@@ -251,10 +243,5 @@ public class ApplicationSubmissionContextInfo {
 
   public void setReservationId(String reservationId) {
     this.reservationId = reservationId;
-  }
-
-  public void setAMBlackListingRequestInfo(
-      AMBlackListingRequestInfo amBlackListingRequestInfo) {
-    this.amBlackListingRequestInfo = amBlackListingRequestInfo;
   }
 }

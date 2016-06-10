@@ -22,6 +22,8 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
@@ -43,8 +45,10 @@ public class XORErasureEncoder extends AbstractErasureEncoder {
   @Override
   protected ErasureCodingStep prepareEncodingStep(
       final ECBlockGroup blockGroup) {
-    RawErasureEncoder rawEncoder = CodecUtil.createXORRawEncoder(getConf(),
+    ErasureCoderOptions coderOptions = new ErasureCoderOptions(
         getNumDataUnits(), getNumParityUnits());
+    RawErasureEncoder rawEncoder = CodecUtil.createRawEncoder(getConf(),
+        ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
 
     ECBlock[] inputBlocks = getInputBlocks(blockGroup);
 

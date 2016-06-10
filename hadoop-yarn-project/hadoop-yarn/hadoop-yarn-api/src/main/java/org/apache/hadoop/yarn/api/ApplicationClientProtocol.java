@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -302,6 +304,28 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
       MoveApplicationAcrossQueuesRequest request) throws YarnException, IOException;
 
   /**
+   * <p>The interface used by clients to obtain a new {@link ReservationId} for
+   * submitting new reservations.</p>
+   *
+   * <p>The <code>ResourceManager</code> responds with a new, unique,
+   * {@link ReservationId} which is used by the client to submit
+   * a new reservation.</p>
+   *
+   * @param request to get a new <code>ReservationId</code>
+   * @return response containing the new <code>ReservationId</code> to be used
+   * to submit a new reservation
+   * @throws YarnException if the reservation system is not enabled.
+   * @throws IOException on IO failures.
+   * @see #submitReservation(ReservationSubmissionRequest)
+   */
+  @Public
+  @Unstable
+  @Idempotent
+  GetNewReservationResponse getNewReservation(
+          GetNewReservationRequest request)
+          throws YarnException, IOException;
+
+  /**
    * <p>
    * The interface used by clients to submit a new reservation to the
    * {@code ResourceManager}.
@@ -349,6 +373,7 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    */
   @Public
   @Unstable
+  @Idempotent
   public ReservationSubmissionResponse submitReservation(
       ReservationSubmissionRequest request) throws YarnException, IOException;
 
@@ -538,7 +563,7 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    */
   @Public
   @Unstable
-  public SignalContainerResponse signalContainer(
+  SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException,
       IOException;
 }

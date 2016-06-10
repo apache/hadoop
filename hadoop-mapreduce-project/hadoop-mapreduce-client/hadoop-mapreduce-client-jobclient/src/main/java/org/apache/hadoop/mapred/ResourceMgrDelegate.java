@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
@@ -436,6 +437,12 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
+  public GetNewReservationResponse createReservation() throws YarnException,
+      IOException {
+    return client.createReservation();
+  }
+
+  @Override
   public ReservationSubmissionResponse submitReservation(
       ReservationSubmissionRequest request) throws YarnException, IOException {
     return client.submitReservation(request);
@@ -489,8 +496,9 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
-  public void signalContainer(ContainerId containerId, SignalContainerCommand command)
+  public void signalToContainer(ContainerId containerId,
+      SignalContainerCommand command)
       throws YarnException, IOException {
-    client.signalContainer(containerId, command);
+    client.signalToContainer(containerId, command);
   }
 }

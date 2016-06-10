@@ -275,8 +275,8 @@ public class FairSchedulerTestBase {
     }
 
     // available resource
-    Assert.assertEquals(resource.getMemory(),
-        app.getCurrentConsumption().getMemory());
+    Assert.assertEquals(resource.getMemorySize(),
+        app.getCurrentConsumption().getMemorySize());
     Assert.assertEquals(resource.getVirtualCores(),
         app.getCurrentConsumption().getVirtualCores());
   }

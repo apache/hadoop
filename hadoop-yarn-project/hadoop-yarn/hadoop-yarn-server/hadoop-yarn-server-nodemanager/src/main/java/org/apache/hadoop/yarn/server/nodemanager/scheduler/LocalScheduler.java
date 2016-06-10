@@ -214,7 +214,8 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
     PartitionedResourceRequests partitionedRequests =
         new PartitionedResourceRequests();
     for (ResourceRequest rr : askList) {
-      if (rr.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+      if (rr.getExecutionTypeRequest().getExecutionType() ==
+          ExecutionType.OPPORTUNISTIC) {
         partitionedRequests.getOpportunistic().add(rr);
       } else {
         partitionedRequests.getGuaranteed().add(rr);
