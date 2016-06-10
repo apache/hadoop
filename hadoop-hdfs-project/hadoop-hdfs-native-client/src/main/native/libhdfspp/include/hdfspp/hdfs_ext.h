@@ -275,6 +275,49 @@ LIBHDFS_EXTERNAL
 int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cookie);
 
 
+/*****************************************************************************
+ *                    HDFS SNAPSHOT FUNCTIONS
+ ****************************************************************************/
+
+/**
+ * Creates a snapshot of a snapshottable directory specified by path
+ *
+ *  @param fs      The filesystem (required)
+ *  @param path    Path to the directory to be snapshotted (must be non-blank)
+ *  @param name    Name to be given to the created snapshot (may be NULL)
+ *  @return        0 on success, corresponding errno on failure
+ **/
+int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name);
+
+/**
+ * Deletes the directory snapshot specified by path and name
+ *
+ *  @param fs      The filesystem (required)
+ *  @param path    Path to the snapshotted directory (must be non-blank)
+ *  @param name    Name of the snapshot to be deleted (must be non-blank)
+ *  @return        0 on success, corresponding errno on failure
+ **/
+int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name);
+
+/**
+ * Allows snapshots to be made on the specified directory
+ *
+ *  @param fs      The filesystem (required)
+ *  @param path    Path to the directory to be made snapshottable (must be non-blank)
+ *  @return        0 on success, corresponding errno on failure
+ **/
+int hdfsAllowSnapshot(hdfsFS fs, const char* path);
+
+/**
+ * Disallows snapshots to be made on the specified directory
+ *
+ *  @param fs      The filesystem (required)
+ *  @param path    Path to the directory to be made non-snapshottable (must be non-blank)
+ *  @return        0 on success, corresponding errno on failure
+ **/
+int hdfsDisallowSnapshot(hdfsFS fs, const char* path);
+
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

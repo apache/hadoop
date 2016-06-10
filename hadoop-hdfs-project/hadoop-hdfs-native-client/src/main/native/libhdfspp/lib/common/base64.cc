@@ -25,47 +25,49 @@
 namespace hdfs {
 
 std::string Base64Encode(const std::string &src) {
-  static const char kDictionary[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                    "abcdefghijklmnopqrstuvwxyz"
-                                    "0123456789+/";
+  //encoded size is (sizeof(buf) + 2) / 3 * 4
+  static const std::string base64_chars =
+               "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+               "abcdefghijklmnopqrstuvwxyz"
+               "0123456789+/";
+  std::string ret;
+  int i = 0;
+  int j = 0;
+  unsigned char char_array_3[3];
+  unsigned char char_array_4[4];
+  unsigned const char *bytes_to_encode = reinterpret_cast<unsigned const char *>(&src[i]);
+  unsigned int in_len = src.size();
 
-  int encoded_size = (src.size() + 2) / 3 * 4;
-  std::string dst;
-  dst.reserve(encoded_size);
+  while (in_len--) {
+    char_array_3[i++] = *(bytes_to_encode++);
+    if (i == 3) {
+      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+      char_array_4[3] = char_array_3[2] & 0x3f;
 
-  size_t i = 0;
-  while (i + 3 < src.length()) {
-    const char *s = &src[i];
-    const int32_t r[4] = {s[0] >> 2, ((s[0] << 4) | (s[1] >> 4)) & 0x3f,
-                      ((s[1] << 2) | (s[2] >> 6)) & 0x3f, s[2] & 0x3f};
-
-    std::transform(r, r + sizeof(r) / sizeof(int32_t), std::back_inserter(dst),
-                   [&r](unsigned char v) { return kDictionary[v]; });
-    i += 3;
+      for(i = 0; (i <4) ; i++)
+        ret += base64_chars[char_array_4[i]];
+      i = 0;
+    }
   }
 
-  size_t remained = src.length() - i;
-  const char *s = &src[i];
+  if (i)  {
+    for(j = i; j < 3; j++)
+      char_array_3[j] = '\0';
 
-  switch (remained) {
-  case 0:
-    break;
-  case 1: {
-    char padding[4] = {kDictionary[s[0] >> 2], kDictionary[(s[0] << 4) & 0x3f],
-                       '=', '='};
-    dst.append(padding, sizeof(padding));
-  } break;
-  case 2: {
-    char padding[4] = {kDictionary[src[i] >> 2],
-                       kDictionary[((s[0] << 4) | (s[1] >> 4)) & 0x3f],
-                       kDictionary[(s[1] << 2) & 0x3f], '='};
-    dst.append(padding, sizeof(padding));
-  } break;
-  default:
-    assert("Unreachable");
-    break;
+    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+    char_array_4[3] = char_array_3[2] & 0x3f;
+
+    for (j = 0; (j < i + 1); j++)
+      ret += base64_chars[char_array_4[j]];
+
+    while((i++ < 3))
+      ret += '=';
   }
-  return dst;
+  return ret;
 }
 
 }

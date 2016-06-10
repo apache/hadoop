@@ -94,3 +94,7 @@
 #define hdfsCancel libhdfspp_hdfsCancel
 #define hdfsGetBlockLocations libhdfspp_hdfsGetBlockLocations
 #define hdfsFreeBlockLocations libhdfspp_hdfsFreeBlockLocations
+#define hdfsCreateSnapshot libhdfspp_hdfsCreateSnapshot
+#define hdfsDeleteSnapshot libhdfspp_hdfsDeleteSnapshot
+#define hdfsAllowSnapshot libhdfspp_hdfsAllowSnapshot
+#define hdfsDisallowSnapshot libhdfspp_hdfsDisallowSnapshot

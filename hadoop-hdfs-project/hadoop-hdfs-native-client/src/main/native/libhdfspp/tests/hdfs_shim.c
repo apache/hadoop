@@ -328,11 +328,11 @@ tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
 }
 
 tOffset hdfsGetCapacity(hdfsFS fs) {
-  return libhdfs_hdfsGetCapacity(fs->libhdfsRep);
+  return libhdfspp_hdfsGetCapacity(fs->libhdfsppRep);
 }
 
 tOffset hdfsGetUsed(hdfsFS fs) {
-  return libhdfs_hdfsGetUsed(fs->libhdfsRep);
+  return libhdfspp_hdfsGetUsed(fs->libhdfsppRep);
 }
 
 int hdfsChown(hdfsFS fs, const char* path, const char *owner,
@@ -403,4 +403,20 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
 
 int hdfsFreeBlockLocations(struct hdfsBlockLocations * locations) {
   return libhdfspp_hdfsFreeBlockLocations(locations);
+}
+
+int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
+  return libhdfspp_hdfsCreateSnapshot(fs->libhdfsppRep, path, name);
+}
+
+int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
+  return libhdfspp_hdfsDeleteSnapshot(fs->libhdfsppRep, path, name);
+}
+
+int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
+  return libhdfspp_hdfsAllowSnapshot(fs->libhdfsppRep, path);
+}
+
+int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
+  return libhdfspp_hdfsDisallowSnapshot(fs->libhdfsppRep, path);
 }

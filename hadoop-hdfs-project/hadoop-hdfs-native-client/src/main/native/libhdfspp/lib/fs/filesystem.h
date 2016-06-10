@@ -71,6 +71,17 @@ public:
 
   Status GetFileInfo(const std::string &path, StatInfo & stat_info) override;
 
+  /**
+   * Retrieves the file system information such as the total raw size of all files in the filesystem
+   * and the raw capacity of the filesystem
+   *
+   *  @param FsInfo      struct to be populated by GetFsStats
+   **/
+  void GetFsStats(
+      const std::function<void(const Status &, const FsInfo &)> &handler) override;
+
+  Status GetFsStats(FsInfo & fs_info) override;
+
   void GetListing(
         const std::string &path,
         const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> &handler) override;
@@ -82,6 +93,46 @@ public:
   virtual Status GetBlockLocations(const std::string & path,
     std::shared_ptr<FileBlockLocation> * locations) override;
 
+
+  /*****************************************************************************
+   *                    FILE SYSTEM SNAPSHOT FUNCTIONS
+   ****************************************************************************/
+
+  /**
+   * Creates a snapshot of a snapshottable directory specified by path
+   *
+   *  @param path    Path to the directory to be snapshotted (must be non-empty)
+   *  @param name    Name to be given to the created snapshot (may be empty)
+   **/
+  void CreateSnapshot(const std::string &path, const std::string &name,
+      const std::function<void(const Status &)> &handler) override;
+  Status CreateSnapshot(const std::string &path, const std::string &name) override;
+
+  /**
+   * Deletes the directory snapshot specified by path and name
+   *
+   *  @param path    Path to the snapshotted directory (must be non-empty)
+   *  @param name    Name of the snapshot to be deleted (must be non-empty)
+   **/
+  void DeleteSnapshot(const std::string &path, const std::string &name,
+        const std::function<void(const Status &)> &handler) override;
+  Status DeleteSnapshot(const std::string &path, const std::string &name) override;
+
+  /**
+   * Allows snapshots to be made on the specified directory
+   *
+   *  @param path    Path to the directory to be made snapshottable (must be non-empty)
+   **/
+  void AllowSnapshot(const std::string &path, const std::function<void(const Status &)> &handler) override;
+  Status AllowSnapshot(const std::string &path) override;
+
+  /**
+   * Disallows snapshots to be made on the specified directory
+   *
+   *  @param path    Path to the directory to be made non-snapshottable (must be non-empty)
+   **/
+  void DisallowSnapshot(const std::string &path, const std::function<void(const Status &)> &handler) override;
+  Status DisallowSnapshot(const std::string &path) override;
 
   void SetFsEventCallback(fs_event_callback callback) override;
 
@@ -97,7 +148,7 @@ public:
 
 private:
   const Options options_;
-
+  const std::string client_name_;
   std::string cluster_name_;
   /**
    *  The IoService must be the first member variable to ensure that it gets
@@ -106,7 +157,6 @@ private:
    **/
   std::unique_ptr<IoServiceImpl> io_service_;
   NameNodeOperations nn_;
-  const std::string client_name_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
 
   struct WorkerDeleter {
