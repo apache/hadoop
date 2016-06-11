@@ -376,10 +376,11 @@ public class ResourceTrackerService extends AbstractService implements
     // Check if this node has minimum allocations
     if (capability.getMemorySize() < minAllocMb
         || capability.getVirtualCores() < minAllocVcores) {
-      String message =
-          "NodeManager from  " + host
-              + " doesn't satisfy minimum allocations, Sending SHUTDOWN"
-              + " signal to the NodeManager.";
+      String message = "NodeManager from  " + host
+          + " doesn't satisfy minimum allocations, Sending SHUTDOWN"
+          + " signal to the NodeManager. Node capabilities are " + capability
+          + "; minimums are " + minAllocMb + "mb and " + minAllocVcores
+          + " vcores";
       LOG.info(message);
       response.setDiagnosticsMessage(message);
       response.setNodeAction(NodeAction.SHUTDOWN);
