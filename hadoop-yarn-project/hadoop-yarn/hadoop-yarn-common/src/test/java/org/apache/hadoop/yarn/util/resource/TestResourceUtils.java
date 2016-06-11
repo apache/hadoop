@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.util.resource;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -243,6 +243,33 @@ public class TestResourceUtils {
       } catch (Exception e) {
         // do nothing
       }
+    }
+  }
+
+  @Test
+  public void testGetResourceInformation() throws Exception {
+
+    Configuration conf = new YarnConfiguration();
+    Map<String, Resource> testRun = new HashMap<>();
+    // testRun.put("node-resources-1.xml", Resource.newInstance(1024, 1));
+    Resource test3Resources = Resource.newInstance(1024, 1);
+    test3Resources.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "Gi", 5L));
+    test3Resources.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "m", 2L));
+    testRun.put("node-resources-2.xml", test3Resources);
+
+    for (Map.Entry<String, Resource> entry : testRun.entrySet()) {
+      String resourceFile = entry.getKey();
+      ResourceUtils.resetNodeResources();
+      File dest;
+      File source =
+          new File(conf.getClassLoader().getResource(resourceFile).getFile());
+      dest = new File(source.getParent(), "node-resources.xml");
+      FileUtils.copyFile(source, dest);
+      Map<String, ResourceInformation> actual =
+          ResourceUtils.getNodeResourceInformation(conf);
+      Assert.assertEquals(entry.getValue().getResources(), actual);
     }
   }
 }
