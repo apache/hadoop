@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.util.resource;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,15 +52,21 @@ public class ResourceUtils {
   public static final String UNITS = ".units";
   public static final String TYPE = ".type";
 
+  private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
+  private static final String VCORES = ResourceInformation.VCORES.getName();
+
   private static final Set<String> DISALLOWED_NAMES = new HashSet<>();
   static {
     DISALLOWED_NAMES.add("memory");
-    DISALLOWED_NAMES.add(ResourceInformation.MEMORY_MB.getName());
-    DISALLOWED_NAMES.add(ResourceInformation.VCORES.getName());
+    DISALLOWED_NAMES.add(MEMORY);
+    DISALLOWED_NAMES.add(VCORES);
   }
 
   private static volatile Object lock;
   private static Map<String, ResourceInformation> readOnlyResources;
+  private static volatile Object nodeLock;
+  private static Map<String, ResourceInformation> readOnlyNodeResources;
+
 
   static final Log LOG = LogFactory.getLog(ResourceUtils.class);
 
@@ -69,22 +76,20 @@ public class ResourceUtils {
   private static void checkMandatatoryResources(
       Map<String, ResourceInformation> resourceInformationMap)
       throws YarnRuntimeException {
-    String memory = ResourceInformation.MEMORY_MB.getName();
-    String vcores = ResourceInformation.VCORES.getName();
-    if (resourceInformationMap.containsKey(memory)) {
-      ResourceInformation memInfo = resourceInformationMap.get(memory);
+    if (resourceInformationMap.containsKey(MEMORY)) {
+      ResourceInformation memInfo = resourceInformationMap.get(MEMORY);
       String memUnits = ResourceInformation.MEMORY_MB.getUnits();
       ResourceTypes memType = ResourceInformation.MEMORY_MB.getResourceType();
       if (!memInfo.getUnits().equals(memUnits) || !memInfo.getResourceType()
           .equals(memType)) {
         throw new YarnRuntimeException(
             "Attempt to re-define mandatory resource 'memory-mb'. It can only"
-                + " be of type 'COUNTABLE' and have units 'M'.");
+                + " be of type 'COUNTABLE' and have units 'Mi'.");
       }
     }
 
-    if (resourceInformationMap.containsKey(vcores)) {
-      ResourceInformation vcoreInfo = resourceInformationMap.get(vcores);
+    if (resourceInformationMap.containsKey(VCORES)) {
+      ResourceInformation vcoreInfo = resourceInformationMap.get(VCORES);
       String vcoreUnits = ResourceInformation.VCORES.getUnits();
       ResourceTypes vcoreType = ResourceInformation.VCORES.getResourceType();
       if (!vcoreInfo.getUnits().equals(vcoreUnits) || !vcoreInfo
@@ -99,21 +104,21 @@ public class ResourceUtils {
   private static void addManadtoryResources(
       Map<String, ResourceInformation> res) {
     ResourceInformation ri;
-    if (!res.containsKey(ResourceInformation.MEMORY_MB.getName())) {
-      LOG.info("Adding resource type - name = " + ResourceInformation.MEMORY_MB
-          .getName() + ", units = " + ResourceInformation.MEMORY_MB.getUnits()
-          + ", type = " + ResourceTypes.COUNTABLE);
+    if (!res.containsKey(MEMORY)) {
+      LOG.info("Adding resource type - name = " + MEMORY + ", units = "
+          + ResourceInformation.MEMORY_MB.getUnits() + ", type = "
+          + ResourceTypes.COUNTABLE);
       ri = ResourceInformation
-          .newInstance(ResourceInformation.MEMORY_MB.getName(),
+          .newInstance(MEMORY,
               ResourceInformation.MEMORY_MB.getUnits());
-      res.put(ResourceInformation.MEMORY_MB.getName(), ri);
+      res.put(MEMORY, ri);
     }
-    if (!res.containsKey(ResourceInformation.VCORES.getName())) {
-      LOG.info("Adding resource type - name = " + ResourceInformation.VCORES
-          .getName() + ", units = , type = " + ResourceTypes.COUNTABLE);
+    if (!res.containsKey(VCORES)) {
+      LOG.info("Adding resource type - name = " + VCORES + ", units = , type = "
+          + ResourceTypes.COUNTABLE);
       ri =
-          ResourceInformation.newInstance(ResourceInformation.VCORES.getName());
-      res.put(ResourceInformation.VCORES.getName(), ri);
+          ResourceInformation.newInstance(VCORES);
+      res.put(VCORES, ri);
     }
   }
 
@@ -122,6 +127,7 @@ public class ResourceUtils {
       Map<String, ResourceInformation> resourceInformationMap) {
 
     String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
+
     if (resourceNames != null && resourceNames.length != 0) {
       for (String resourceName : resourceNames) {
         String resourceUnits = conf.get(
@@ -178,25 +184,13 @@ public class ResourceUtils {
               conf = new YarnConfiguration();
             }
             try {
-              InputStream ris = getConfInputStream(resourceFile, conf);
+              addResourcesFileToConf(resourceFile, conf);
               LOG.debug("Found " + resourceFile + ", adding to configuration");
-              conf.addResource(ris);
               initializeResourcesMap(conf, resources);
-              return resources;
             } catch (FileNotFoundException fe) {
               LOG.info("Unable to find '" + resourceFile
                   + "'. Falling back to memory and vcores as resources", fe);
               initializeResourcesMap(conf, resources);
-            } catch (IOException ie) {
-              LOG.fatal(
-                  "Exception trying to read resource types configuration '"
-                      + resourceFile + "'.", ie);
-              throw new YarnRuntimeException(ie);
-            } catch (YarnException ye) {
-              LOG.fatal(
-                  "YARN Exception trying to read resource types configuration '"
-                      + resourceFile + "'.", ye);
-              throw new YarnRuntimeException(ye);
             }
           }
         }
@@ -205,8 +199,8 @@ public class ResourceUtils {
     return readOnlyResources;
   }
 
-  static InputStream getConfInputStream(String resourceFile, Configuration conf)
-      throws IOException, YarnException {
+  private static InputStream getConfInputStream(String resourceFile,
+      Configuration conf) throws IOException, YarnException {
 
     ConfigurationProvider provider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
@@ -222,8 +216,112 @@ public class ResourceUtils {
     return ris;
   }
 
+  private static void addResourcesFileToConf(String resourceFile,
+      Configuration conf) throws FileNotFoundException {
+    try {
+      InputStream ris = getConfInputStream(resourceFile, conf);
+      LOG.debug("Found " + resourceFile + ", adding to configuration");
+      conf.addResource(ris);
+    } catch (FileNotFoundException fe) {
+      throw fe;
+    } catch (IOException ie) {
+      LOG.fatal("Exception trying to read resource types configuration '"
+          + resourceFile + "'.", ie);
+      throw new YarnRuntimeException(ie);
+    } catch (YarnException ye) {
+      LOG.fatal("YARN Exception trying to read resource types configuration '"
+          + resourceFile + "'.", ye);
+      throw new YarnRuntimeException(ye);
+    }
+  }
+
   @VisibleForTesting
   static void resetResourceTypes() {
     lock = null;
+  }
+
+  private static String getUnits(String resourceValue) {
+    String units;
+    for (int i = 0; i < resourceValue.length(); i++) {
+      if (Character.isAlphabetic(resourceValue.charAt(i))) {
+        units = resourceValue.substring(i);
+        if (StringUtils.isAlpha(units)) {
+          return units;
+        }
+      }
+    }
+    return "";
+  }
+
+  /**
+   * Function to get the resources for a node. This function will look at the
+   * file {@link YarnConfiguration#NODE_RESOURCES_CONFIGURATION_FILE} to
+   * determine the node resources.
+   *
+   * @param conf configuration file
+   * @return a map to resource name to the ResourceInformation object. The map
+   * is guaranteed to have entries for memory and vcores
+   */
+  public static Map<String, ResourceInformation> getNodeResourceInformation(
+      Configuration conf) {
+    if (nodeLock == null) {
+      synchronized (ResourceUtils.class) {
+        if (nodeLock == null) {
+          synchronized (ResourceUtils.class) {
+            nodeLock = new Object();
+            Map<String, ResourceInformation> nodeResources =
+                initializeNodeResourceInformation(conf);
+            addManadtoryResources(nodeResources);
+            checkMandatatoryResources(nodeResources);
+            readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
+          }
+        }
+      }
+    }
+    return readOnlyNodeResources;
+  }
+
+  private static Map<String, ResourceInformation>
+  initializeNodeResourceInformation(Configuration conf) {
+    Map<String, ResourceInformation> nodeResources = new HashMap<>();
+    try {
+      addResourcesFileToConf(
+          YarnConfiguration.NODE_RESOURCES_CONFIGURATION_FILE, conf);
+      for (Map.Entry<String, String> entry : conf) {
+        String key = entry.getKey();
+        String value = entry.getValue();
+        if (key.startsWith(YarnConfiguration.NM_RESOURCES_PREFIX)) {
+          addResourceInformation(key, value, nodeResources);
+        }
+      }
+    } catch (FileNotFoundException fe) {
+      LOG.info("Couldn't find node resources file");
+    }
+    return nodeResources;
+  }
+
+  private static void addResourceInformation(String prop, String value,
+      Map<String, ResourceInformation> nodeResources) {
+    String[] parts = prop.split("\\.");
+    LOG.info("Found resource entry " + prop);
+    if (parts.length == 4) {
+      String resourceType = parts[3];
+      if (!nodeResources.containsKey(resourceType)) {
+        nodeResources
+            .put(resourceType, ResourceInformation.newInstance(resourceType));
+      }
+      String units = getUnits(value);
+      Long resourceValue =
+          Long.valueOf(value.substring(0, value.length() - units.length()));
+      nodeResources.get(resourceType).setValue(resourceValue);
+      nodeResources.get(resourceType).setUnits(units);
+      LOG.debug("Setting value for resource type " + resourceType + " to "
+              + resourceValue + " with units " + units);
+    }
+  }
+
+  @VisibleForTesting
+  synchronized public static void resetNodeResources() {
+    nodeLock = null;
   }
 }
