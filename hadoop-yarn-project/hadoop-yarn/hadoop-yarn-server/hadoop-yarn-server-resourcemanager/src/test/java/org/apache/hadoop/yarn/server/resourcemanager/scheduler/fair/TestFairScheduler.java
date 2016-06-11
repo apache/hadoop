@@ -4480,4 +4480,76 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     resourceManager.getResourceScheduler().handle(nodeAddEvent1);
     return nm;
   }
+
+  @Test(timeout = 120000)
+  public void testContainerAllocationWithContainerIdLeap() throws Exception {
+    conf.setFloat(FairSchedulerConfiguration.RESERVABLE_NODES, 0.50f);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add two node
+    RMNode node1 = MockNodes.newNodeInfo(1,
+        Resources.createResource(3072, 10), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    RMNode node2 = MockNodes.newNodeInfo(1,
+        Resources.createResource(3072, 10), 1, "127.0.0.2");
+    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+    scheduler.handle(nodeEvent2);
+
+    ApplicationAttemptId app1 =
+        createSchedulingRequest(2048, "queue1", "user1", 2);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+
+    ApplicationAttemptId app2 =
+        createSchedulingRequest(2048, "queue1", "user1", 1);
+    scheduler.update();
+    scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+
+    assertEquals(4096, scheduler.getQueueManager().getQueue("queue1").
+        getResourceUsage().getMemory());
+
+    //container will be reserved at node1
+    RMContainer reservedContainer1 =
+        scheduler.getSchedulerNode(node1.getNodeID()).getReservedContainer();
+    assertNotEquals(reservedContainer1, null);
+    RMContainer reservedContainer2 =
+        scheduler.getSchedulerNode(node2.getNodeID()).getReservedContainer();
+    assertEquals(reservedContainer2, null);
+
+    for (int i = 0; i < 10; i++) {
+      scheduler.handle(new NodeUpdateSchedulerEvent(node1));
+      scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    }
+
+    // release resource
+    scheduler.handle(new AppAttemptRemovedSchedulerEvent(
+        app1, RMAppAttemptState.KILLED, false));
+
+    assertEquals(0, scheduler.getQueueManager().getQueue("queue1").
+        getResourceUsage().getMemory());
+
+    // container will be allocated at node2
+    scheduler.handle(new NodeUpdateSchedulerEvent(node2));
+    assertEquals(scheduler.getSchedulerApp(app2).
+        getLiveContainers().size(), 1);
+
+    long maxId = 0;
+    for (RMContainer container :
+        scheduler.getSchedulerApp(app2).getLiveContainers()) {
+      assertTrue(
+          container.getContainer().getNodeId().equals(node2.getNodeID()));
+      if (container.getContainerId().getContainerId() > maxId) {
+        maxId = container.getContainerId().getContainerId();
+      }
+    }
+
+    long reservedId = reservedContainer1.getContainerId().getContainerId();
+    assertEquals(reservedId + 1, maxId);
+  }
 }
