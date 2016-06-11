@@ -308,7 +308,8 @@ public abstract class Resource implements Comparable<Resource> {
         continue;
       }
       if (entry.getKey().equals(ResourceInformation.VCORES.getName())
-          && entry.getValue().getUnits().equals("")) {
+          && entry.getValue().getUnits()
+          .equals(ResourceInformation.VCORES.getUnits())) {
         continue;
       }
       sb.append(", ").append(entry.getKey()).append(": ")

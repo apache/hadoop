@@ -21,10 +21,16 @@ package org.apache.hadoop.yarn.server.nodemanager.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+
+import java.util.Map;
 
 /**
  * Helper class to determine hardware related characteristics such as the
@@ -331,5 +337,51 @@ public class NodeManagerHardwareUtils {
       throw new IllegalArgumentException(message);
     }
     return memoryMb;
+  }
+
+  /**
+   * Get the resources for the node.
+   * @param configuration configuration file
+   * @return the resources for the node
+   */
+  public static Resource getNodeResources(Configuration configuration) {
+    Configuration conf = new Configuration(configuration);
+    String memory = ResourceInformation.MEMORY_MB.getName();
+    String vcores = ResourceInformation.VCORES.getName();
+
+    Resource ret = Resource.newInstance(0, 0);
+    Map<String, ResourceInformation> resourceInformation =
+        ResourceUtils.getNodeResourceInformation(conf);
+    for (Map.Entry<String, ResourceInformation> entry : resourceInformation
+        .entrySet()) {
+      ret.setResourceInformation(entry.getKey(), entry.getValue());
+      LOG.debug("Setting key " + entry.getKey() + " to " + entry.getValue());
+    }
+    if (resourceInformation.containsKey(memory)) {
+      Long value = resourceInformation.get(memory).getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new YarnRuntimeException("Value '" + value
+            + "' for resource memory is more than the maximum for an integer.");
+      }
+      ResourceInformation memResInfo = resourceInformation.get(memory);
+      if(memResInfo.getValue() == 0) {
+        ret.setMemory(getContainerMemoryMB(conf));
+        LOG.debug("Set memory to " + ret.getMemory());
+      }
+    }
+    if (resourceInformation.containsKey(vcores)) {
+      Long value = resourceInformation.get(vcores).getValue();
+      if (value > Integer.MAX_VALUE) {
+        throw new YarnRuntimeException("Value '" + value
+            + "' for resource vcores is more than the maximum for an integer.");
+      }
+      ResourceInformation vcoresResInfo = resourceInformation.get(vcores);
+      if(vcoresResInfo.getValue() == 0) {
+        ret.setVirtualCores(getVCores(conf));
+        LOG.debug("Set vcores to " + ret.getVirtualCores());
+      }
+    }
+    LOG.debug("Node resource information map is " + ret);
+    return ret;
   }
 }
