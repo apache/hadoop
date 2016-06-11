@@ -29,12 +29,14 @@ import org.apache.hadoop.hdfs.server.diskbalancer.command.Command;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.ExecuteCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.PlanCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.QueryCommand;
+import org.apache.hadoop.hdfs.server.diskbalancer.command.ReportCommand;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URISyntaxException;
 
 /**
@@ -93,6 +95,22 @@ public class DiskBalancer extends Configured implements Tool {
    * Executes a given plan file on the target datanode.
    */
   public static final String EXECUTE = "execute";
+  /**
+   * The report command prints out a disk fragmentation report about the data
+   * cluster. By default it prints the DEFAULT_TOP machines names with high
+   * nodeDataDensity {DiskBalancerDataNode#getNodeDataDensity} values. This
+   * means that these are the nodes that deviates from the ideal data
+   * distribution.
+   */
+  public static final String REPORT = "report";
+  /**
+   * specify top number of nodes to be processed.
+   */
+  public static final String TOP = "top";
+  /**
+   * specify default top number of nodes to be processed.
+   */
+  public static final int DEFAULT_TOP = 100;
   /**
    * Name or address of the node to execute against.
    */
@@ -157,9 +175,21 @@ public class DiskBalancer extends Configured implements Tool {
    */
   @Override
   public int run(String[] args) throws Exception {
+    return run(args, System.out);
+  }
+
+  /**
+   * Execute the command with the given arguments.
+   *
+   * @param args command specific arguments.
+   * @param out the output stream used for printing
+   * @return exit code.
+   * @throws Exception
+   */
+  public int run(String[] args, final PrintStream out) throws Exception {
     Options opts = getOpts();
     CommandLine cmd = parseArgs(args, opts);
-    return dispatch(cmd, opts);
+    return dispatch(cmd, opts, out);
   }
 
   /**
@@ -173,6 +203,7 @@ public class DiskBalancer extends Configured implements Tool {
     addExecuteCommands(opts);
     addQueryCommands(opts);
     addCancelCommands(opts);
+    addReportCommands(opts);
     return opts;
   }
 
@@ -256,6 +287,26 @@ public class DiskBalancer extends Configured implements Tool {
   }
 
   /**
+   * Adds report command options.
+   * @param opt Options
+   */
+  private void addReportCommands(Options opt) {
+    Option report = new Option(REPORT, false,
+        "Report volume information of DataNode(s)"
+            + " benefiting from running DiskBalancer. "
+            + "-report [top -X] | [-node {DataNodeID | IP | Hostname}].");
+    opt.addOption(report);
+
+    Option top = new Option(TOP, true,
+        "specify the top number of nodes to be processed.");
+    opt.addOption(top);
+
+    Option node = new Option(NODE, true,
+        "Name of the datanode in the format of DataNodeID, IP or hostname.");
+    opt.addOption(node);
+  }
+
+  /**
    * This function parses all command line arguments and returns the appropriate
    * values.
    *
@@ -272,10 +323,12 @@ public class DiskBalancer extends Configured implements Tool {
    * Dispatches calls to the right command Handler classes.
    *
    * @param cmd - CommandLine
+   * @param opts options of command line
+   * @param out the output stream used for printing
    * @throws IOException
    * @throws URISyntaxException
    */
-  private int dispatch(CommandLine cmd, Options opts)
+  private int dispatch(CommandLine cmd, Options opts, final PrintStream out)
       throws IOException, URISyntaxException {
     Command currentCommand = null;
 
@@ -295,6 +348,10 @@ public class DiskBalancer extends Configured implements Tool {
 
       if(cmd.hasOption(DiskBalancer.CANCEL)) {
         currentCommand = new CancelCommand(getConf());
+      }
+
+      if (cmd.hasOption(DiskBalancer.REPORT)) {
+        currentCommand = new ReportCommand(getConf(), out);
       }
 
       if(currentCommand == null) {

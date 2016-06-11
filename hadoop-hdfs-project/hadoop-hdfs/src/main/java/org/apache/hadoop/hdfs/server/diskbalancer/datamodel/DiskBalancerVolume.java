@@ -140,6 +140,36 @@ public class DiskBalancerVolume {
   }
 
   /**
+   * Get free space of the volume.
+   *
+   * @return long
+   */
+  @JsonIgnore
+  public long getFreeSpace() {
+    return getCapacity() - getUsed();
+  }
+
+  /**
+   * Get ratio between used space and capacity.
+   *
+   * @return double
+   */
+  @JsonIgnore
+  public double getUsedRatio() {
+    return (1.0 * getUsed()) / getCapacity();
+  }
+
+  /**
+   * Get ratio between free space and capacity.
+   *
+   * @return double
+   */
+  @JsonIgnore
+  public double getFreeRatio() {
+    return (1.0 * getFreeSpace()) / getCapacity();
+  }
+
+  /**
    * Sets the capacity of this volume.
    *
    * @param totalCapacity long

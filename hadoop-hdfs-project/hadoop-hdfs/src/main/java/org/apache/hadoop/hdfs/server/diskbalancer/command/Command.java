@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs.server.diskbalancer.command;
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.text.StrBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -70,6 +72,7 @@ public abstract class Command extends Configured {
   private URI clusterURI;
   private FileSystem fs = null;
   private DiskBalancerCluster cluster = null;
+  private int topNodes;
 
   private static final Path DEFAULT_LOG_DIR = new Path("/system/diskbalancer");
 
@@ -83,6 +86,7 @@ public abstract class Command extends Configured {
     // These arguments are valid for all commands.
     addValidCommandParameters(DiskBalancer.HELP, "Help for this command");
     addValidCommandParameters("arg", "");
+    topNodes = 0;
   }
 
   /**
@@ -390,5 +394,68 @@ public abstract class Command extends Configured {
    */
   protected DiskBalancerCluster getCluster() {
     return cluster;
+  }
+
+  /**
+   * returns default top number of nodes.
+   * @return default top number of nodes.
+   */
+  protected int getDefaultTop() {
+    return DiskBalancer.DEFAULT_TOP;
+  }
+
+  /**
+   * Put output line to log and string buffer.
+   * */
+  protected void recordOutput(final StrBuilder result,
+      final String outputLine) {
+    LOG.info(outputLine);
+    result.appendln(outputLine);
+  }
+
+  /**
+   * Parse top number of nodes to be processed.
+   * @return top number of nodes to be processed.
+   */
+  protected int parseTopNodes(final CommandLine cmd, final StrBuilder result) {
+    String outputLine = "";
+    int nodes = 0;
+    final String topVal = cmd.getOptionValue(DiskBalancer.TOP);
+    if (StringUtils.isBlank(topVal)) {
+      outputLine = String.format(
+          "No top limit specified, using default top value %d.",
+          getDefaultTop());
+      LOG.info(outputLine);
+      result.appendln(outputLine);
+      nodes = getDefaultTop();
+    } else {
+      try {
+        nodes = Integer.parseInt(topVal);
+      } catch (NumberFormatException nfe) {
+        outputLine = String.format(
+            "Top limit input is not numeric, using default top value %d.",
+            getDefaultTop());
+        LOG.info(outputLine);
+        result.appendln(outputLine);
+        nodes = getDefaultTop();
+      }
+    }
+
+    return Math.min(nodes, cluster.getNodes().size());
+  }
+
+  /**
+   * Set top number of nodes to be processed.
+   * */
+  public void setTopNodes(int topNodes) {
+    this.topNodes = topNodes;
+  }
+
+  /**
+   * Get top number of nodes to be processed.
+   * @return top number of nodes to be processed.
+   * */
+  public int getTopNodes() {
+    return topNodes;
   }
 }
