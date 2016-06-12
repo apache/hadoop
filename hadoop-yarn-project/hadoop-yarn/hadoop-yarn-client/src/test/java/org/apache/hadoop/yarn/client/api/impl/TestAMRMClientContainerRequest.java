@@ -26,6 +26,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -35,6 +37,46 @@ import org.apache.hadoop.yarn.client.api.InvalidContainerRequestException;
 import org.junit.Test;
 
 public class TestAMRMClientContainerRequest {
+
+  @Test
+  public void testOpportunisticAndGuaranteedRequests() {
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
+
+    Configuration conf = new Configuration();
+    conf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        MyResolver.class, DNSToSwitchMapping.class);
+    client.init(conf);
+
+    Resource capability = Resource.newInstance(1024, 1);
+    ContainerRequest request =
+        new ContainerRequest(capability, new String[] {"host1", "host2"},
+            new String[] {"/rack2"}, Priority.newInstance(1));
+    client.addContainerRequest(request);
+    verifyResourceRequest(client, request, "host1", true);
+    verifyResourceRequest(client, request, "host2", true);
+    verifyResourceRequest(client, request, "/rack1", true);
+    verifyResourceRequest(client, request, "/rack2", true);
+    verifyResourceRequest(client, request, ResourceRequest.ANY, true);
+    ContainerRequest request2 =
+        new ContainerRequest(capability, new String[] {"host1", "host2"},
+            new String[] {"/rack2"}, Priority.newInstance(1), true, null,
+            ExecutionTypeRequest.newInstance(
+                ExecutionType.OPPORTUNISTIC, true));
+    client.addContainerRequest(request2);
+    verifyResourceRequest(client, request, "host1", true,
+        ExecutionType.OPPORTUNISTIC);
+    verifyResourceRequest(client, request, "host2", true,
+        ExecutionType.OPPORTUNISTIC);
+    verifyResourceRequest(client, request, "/rack1", true,
+        ExecutionType.OPPORTUNISTIC);
+    verifyResourceRequest(client, request, "/rack2", true,
+        ExecutionType.OPPORTUNISTIC);
+    verifyResourceRequest(client, request, ResourceRequest.ANY, true,
+        ExecutionType.OPPORTUNISTIC);
+  }
+
   @Test
   public void testFillInRacks() {
     AMRMClientImpl<ContainerRequest> client =
@@ -224,8 +266,16 @@ public class TestAMRMClientContainerRequest {
   private void verifyResourceRequest(
       AMRMClientImpl<ContainerRequest> client, ContainerRequest request,
       String location, boolean expectedRelaxLocality) {
-    ResourceRequest ask =  client.remoteRequestsTable.get(request.getPriority())
-        .get(location).get(request.getCapability()).remoteRequest;
+    verifyResourceRequest(client, request, location, expectedRelaxLocality,
+        ExecutionType.GUARANTEED);
+  }
+
+  private void verifyResourceRequest(
+      AMRMClientImpl<ContainerRequest> client, ContainerRequest request,
+      String location, boolean expectedRelaxLocality,
+      ExecutionType executionType) {
+    ResourceRequest ask = client.remoteRequestsTable.get(request.getPriority(),
+        location, executionType, request.getCapability()).remoteRequest;
     assertEquals(location, ask.getResourceName());
     assertEquals(1, ask.getNumContainers());
     assertEquals(expectedRelaxLocality, ask.getRelaxLocality());
