@@ -15,27 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.registry.client.impl.zk;
 
-package org.apache.hadoop.registry.client.types.yarn;
+import java.io.IOException;
 
 /**
- * YARN specific attributes in the registry.
+ *
  */
-public final class YarnRegistryAttributes {
+public interface PathListener {
 
-  /**
-   * Hidden constructor.
-   */
-  private YarnRegistryAttributes() {
-  }
+  void nodeAdded(String path) throws IOException;
 
-  /**
-   * ID. For containers: container ID. For application instances,
-   * application ID.
-   */
-  public static final String YARN_ID = "yarn:id";
-  public static final String YARN_PERSISTENCE = "yarn:persistence";
-  public static final String YARN_PATH = "yarn:path";
-  public static final String YARN_HOSTNAME = "yarn:hostname";
-  public static final String YARN_IP = "yarn:ip";
+  void nodeRemoved(String path) throws IOException;
 }

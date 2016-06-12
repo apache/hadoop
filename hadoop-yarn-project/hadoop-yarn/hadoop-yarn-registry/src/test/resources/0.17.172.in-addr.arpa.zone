@@ -1,0 +1,36 @@
+;
+; Licensed to the Apache Software Foundation (ASF) under one
+; or more contributor license agreements.  See the NOTICE file
+; distributed with this work for additional information
+; regarding copyright ownership.  The ASF licenses this file
+; to you under the Apache License, Version 2.0 (the
+; "License"); you may not use this file except in compliance
+; with the License.  You may obtain a copy of the License at
+;
+;      http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+;
+;
+$ORIGIN .
+$TTL 1800 ; 30 minutes
+0.17.172.in-addr.arpa IN SOA ns.hwhq.hortonworks.com. it.hortonworks.com. (
+	2015081000 ; serial
+	10800      ; refresh (3 hours)
+	900        ; retry (15 minutes)
+	1814400    ; expire (3 weeks)
+	10800      ; minimum (3 hours)
+)
+	NS	ns.hwhq.hortonworks.com.
+	NS	ns2.hwhq.hortonworks.com.
+
+$ORIGIN 0.17.172.in-addr.arpa.
+5 	PTR 	cn005.hwx.test.
+6 	PTR 	cn006.hwx.test.
+7 	PTR 	cn007.hwx.test.
+8	PTR 	cn008.hwx.test.
+9 	PTR 	cn009.hwx.test.

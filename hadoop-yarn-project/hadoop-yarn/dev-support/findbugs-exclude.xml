@@ -552,4 +552,20 @@
     <Package name="org.apache.hadoop.yarn.api.records.impl.pb" />
     <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
   </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
+    <Method name="addNIOTCP" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
+    <Method name="addNIOUDP" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
+    <Method name="serveNIOTCP" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+  </Match>
 </FindBugsFilter>

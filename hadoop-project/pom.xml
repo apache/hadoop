@@ -85,6 +85,7 @@
     <zookeeper.version>3.4.6</zookeeper.version>
     <curator.version>2.7.1</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
+    <dnsjava.version>2.1.7</dnsjava.version>
 
     <tomcat.version>6.0.44</tomcat.version>
     <guice.version>4.0</guice.version>
@@ -1044,6 +1045,13 @@
           </exclusion>
         </exclusions>
       </dependency>
+
+      <dependency>
+        <groupId>dnsjava</groupId>
+        <artifactId>dnsjava</artifactId>
+        <version>${dnsjava.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>
