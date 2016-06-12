@@ -448,19 +448,25 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
       try {
         ApplicationMasterProtocol mockRM = mock(ApplicationMasterProtocol
             .class);
+        final Resource _capability = capability;
+        final String[] _nodes = nodes;
+        final String[] _racks = racks;
+        final Priority _priority = priority;
+        final Priority _priority2 = priority2;
+
         when(mockRM.allocate(any(AllocateRequest.class))).thenAnswer(
             new Answer<AllocateResponse>() {
               public AllocateResponse answer(InvocationOnMock invocation)
                   throws Exception {
                 amc.removeContainerRequest(
-                    new AMRMClient.ContainerRequest(capability, nodes,
-                        racks, priority));
+                    new AMRMClient.ContainerRequest(_capability, _nodes,
+                        _racks, _priority));
                 amc.removeContainerRequest(
-                    new AMRMClient.ContainerRequest(capability, nodes, racks,
-                        priority));
+                    new AMRMClient.ContainerRequest(_capability, _nodes, _racks,
+                        _priority));
                 amc.removeContainerRequest(
-                    new AMRMClient.ContainerRequest(capability, null, null,
-                        priority2, true, null,
+                    new AMRMClient.ContainerRequest(_capability, null, null,
+                        _priority2, true, null,
                         ExecutionTypeRequest.newInstance(
                             ExecutionType.OPPORTUNISTIC, true)));
                 throw new Exception();

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -126,12 +127,12 @@ public abstract class BaseAMRMProxyE2ETest {
     }
 
     ResourceBlacklistRequest resourceBlacklistRequest = ResourceBlacklistRequest
-        .newInstance(new ArrayList<>(), new ArrayList<>());
+        .newInstance(new ArrayList<String>(), new ArrayList<String>());
 
     int responseId = 1;
 
     return AllocateRequest.newInstance(responseId, 0, resourceAsk,
-        new ArrayList<>(), resourceBlacklistRequest);
+        new ArrayList<ContainerId>(), resourceBlacklistRequest);
   }
 
   protected ApplicationAttemptId createApp(YarnClient yarnClient,
