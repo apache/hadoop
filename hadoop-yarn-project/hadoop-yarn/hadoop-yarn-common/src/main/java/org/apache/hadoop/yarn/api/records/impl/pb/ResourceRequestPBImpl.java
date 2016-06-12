@@ -214,7 +214,8 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
         + ", # Containers: " + getNumContainers()
         + ", Location: " + getResourceName()
         + ", Relax Locality: " + getRelaxLocality()
-        + ", Execution Spec: " + getExecutionTypeRequest() + "}";
+        + ", Execution Type Request: " + getExecutionTypeRequest()
+        + ", Node Label Expression: " + getNodeLabelExpression() + "}";
   }
 
   @Override
