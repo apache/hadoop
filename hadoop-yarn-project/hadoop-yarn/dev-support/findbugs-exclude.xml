@@ -629,8 +629,18 @@
   </Match>
 
   <Match>
-    <Class name="org.apache.hadoop.yarn.api.records.Resource" />
-    <Method name="getResources" />
-    <Bug pattern="EI_EXPOSE_REP" />
+    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
+    <Method name="addNIOTCP" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
+    <Method name="addNIOUDP" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
+    <Method name="serveNIOTCP" />
+    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
   </Match>
 </FindBugsFilter>
