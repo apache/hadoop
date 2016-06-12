@@ -16,26 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.registry.client.types.yarn;
-
 /**
- * YARN specific attributes in the registry.
+ * DNS Server classes.
+ * <p>
+ *   These classes are leveraged to create a DNS server that can provide the
+ *   facilities necessary for YARN application and/or service discovery.
+ * </p>
  */
-public final class YarnRegistryAttributes {
-
-  /**
-   * Hidden constructor.
-   */
-  private YarnRegistryAttributes() {
-  }
-
-  /**
-   * ID. For containers: container ID. For application instances,
-   * application ID.
-   */
-  public static final String YARN_ID = "yarn:id";
-  public static final String YARN_PERSISTENCE = "yarn:persistence";
-  public static final String YARN_PATH = "yarn:path";
-  public static final String YARN_HOSTNAME = "yarn:hostname";
-  public static final String YARN_IP = "yarn:ip";
-}
+package org.apache.hadoop.registry.server.dns;

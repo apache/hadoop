@@ -15,27 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.registry.server.dns;
 
-package org.apache.hadoop.registry.client.types.yarn;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.Zone;
 
 /**
- * YARN specific attributes in the registry.
+ * A selector that returns the zone associated with a provided name.
  */
-public final class YarnRegistryAttributes {
-
+public interface ZoneSelector {
   /**
-   * Hidden constructor.
+   * Finds the best matching zone given the provided name.
+   * @param name the record name for which a zone is requested.
+   * @return the matching zone.
    */
-  private YarnRegistryAttributes() {
-  }
-
-  /**
-   * ID. For containers: container ID. For application instances,
-   * application ID.
-   */
-  public static final String YARN_ID = "yarn:id";
-  public static final String YARN_PERSISTENCE = "yarn:persistence";
-  public static final String YARN_PATH = "yarn:path";
-  public static final String YARN_HOSTNAME = "yarn:hostname";
-  public static final String YARN_IP = "yarn:ip";
+  Zone findBestZone(Name name);
 }

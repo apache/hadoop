@@ -89,6 +89,7 @@
     <curator.version>2.12.0</curator.version>
     <findbugs.version>3.0.0</findbugs.version>
     <spotbugs.version>3.1.0-RC1</spotbugs.version>
+    <dnsjava.version>2.1.7</dnsjava.version>
 
     <guava.version>11.0.2</guava.version>
     <guice.version>4.0</guice.version>
@@ -1217,6 +1218,13 @@
           </exclusion>
         </exclusions>
       </dependency>
+
+      <dependency>
+        <groupId>dnsjava</groupId>
+        <artifactId>dnsjava</artifactId>
+        <version>${dnsjava.version}</version>
+      </dependency>
+
       <dependency>
         <!-- HACK.  Transitive dependency for nimbus-jose-jwt.  Needed for
              packaging.  Please re-check this version when updating
