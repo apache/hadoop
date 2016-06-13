@@ -65,7 +65,7 @@ Centralized cache management is also useful for mixed workloads with performance
 Architecture
 ------------
 
-![Caching Architecture](images/caching.png)
+![Caching Architecture](resources/images/caching.png)
 
 In this architecture, the NameNode is responsible for coordinating all the DataNode off-heap caches in the cluster. The NameNode periodically receives a *cache report* from each DataNode which describes all the blocks cached on a given DN. The NameNode manages DataNode caches by piggybacking cache and uncache commands on the DataNode heartbeat.
 
