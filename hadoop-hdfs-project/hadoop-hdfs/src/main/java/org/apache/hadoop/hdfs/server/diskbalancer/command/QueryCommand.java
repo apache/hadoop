@@ -46,6 +46,7 @@ public class QueryCommand extends Command {
         " plan running on a given datanode.");
     addValidCommandParameters(DiskBalancer.VERBOSE, "Prints verbose results.");
   }
+
   /**
    * Executes the Client Calls.
    *
@@ -62,7 +63,7 @@ public class QueryCommand extends Command {
     String nodeAddress = nodeName;
 
     // if the string is not name:port format use the default port.
-    if(!nodeName.matches("^.*:\\d$")) {
+    if (!nodeName.matches("^.*:\\d$")) {
       int defaultIPC = NetUtils.createSocketAddr(
           getConf().getTrimmed(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY,
               DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_DEFAULT)).getPort();
@@ -76,7 +77,7 @@ public class QueryCommand extends Command {
       System.out.printf("Plan ID: %s %nResult: %s%n", workStatus.getPlanID(),
           workStatus.getResult().toString());
 
-      if(cmd.hasOption(DiskBalancer.VERBOSE)) {
+      if (cmd.hasOption(DiskBalancer.VERBOSE)) {
         System.out.printf("%s", workStatus.currentStateString());
       }
     } catch (DiskBalancerException ex) {

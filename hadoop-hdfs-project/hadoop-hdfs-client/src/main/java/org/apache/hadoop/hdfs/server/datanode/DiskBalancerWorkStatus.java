@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
 
 import static org.codehaus.jackson.map.type.TypeFactory.defaultInstance;
 
@@ -128,6 +129,7 @@ public class DiskBalancerWorkStatus {
    **/
   public String currentStateString() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
+    mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
     return mapper.writeValueAsString(currentState);
   }
 

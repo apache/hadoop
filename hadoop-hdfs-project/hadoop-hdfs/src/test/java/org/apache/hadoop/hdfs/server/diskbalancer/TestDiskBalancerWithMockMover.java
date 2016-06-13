@@ -436,6 +436,26 @@ public class TestDiskBalancerWithMockMover {
       return this.dataset;
     }
 
+    /**
+     * Returns time when this plan started executing.
+     *
+     * @return Start time in milliseconds.
+     */
+    @Override
+    public long getStartTime() {
+      return 0;
+    }
+
+    /**
+     * Number of seconds elapsed.
+     *
+     * @return time in seconds
+     */
+    @Override
+    public long getElapsedSeconds() {
+      return 0;
+    }
+
     public int getRunCount() {
       synchronized (runCount) {
         LOG.info("Run count : " + runCount.intValue());

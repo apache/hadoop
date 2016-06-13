@@ -34,6 +34,8 @@ import java.io.IOException;
 @InterfaceStability.Unstable
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class DiskBalancerWorkItem {
+  private  long startTime;
+  private long secondsElapsed;
   private long bytesToCopy;
   private long bytesCopied;
   private long errorCount;
@@ -241,5 +243,45 @@ public class DiskBalancerWorkItem {
    */
   public void setBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
+  }
+
+
+  /**
+   * Records the Start time of execution.
+   * @return startTime
+   */
+  public long getStartTime() {
+    return startTime;
+  }
+
+  /**
+   * Sets the Start time.
+   * @param startTime  - Time stamp for start of execution.
+   */
+  public void setStartTime(long startTime) {
+    this.startTime = startTime;
+  }
+
+  /**
+   * Gets the number of seconds elapsed from the start time.
+   *
+   * The reason why we have this is of time skews. The client's current time
+   * may not match with the server time stamp, hence the elapsed second
+   * cannot be computed from only startTime.
+   *
+   * @return seconds elapsed from start time.
+   */
+  public long getSecondsElapsed() {
+    return secondsElapsed;
+  }
+
+  /**
+   * Sets number of seconds elapsed.
+   *
+   * This is updated whenever we update the other counters.
+   * @param secondsElapsed  - seconds elapsed.
+   */
+  public void setSecondsElapsed(long secondsElapsed) {
+    this.secondsElapsed = secondsElapsed;
   }
 }
