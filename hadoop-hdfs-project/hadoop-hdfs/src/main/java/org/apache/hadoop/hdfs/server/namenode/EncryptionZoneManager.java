@@ -416,7 +416,7 @@ public class EncryptionZoneManager {
     int index = 0;
     for (Map.Entry<Long, EncryptionZoneInt> entry : encryptionZones
         .entrySet()) {
-      ret[index] = entry.getValue().getKeyName();
+      ret[index++] = entry.getValue().getKeyName();
     }
     return ret;
   }
