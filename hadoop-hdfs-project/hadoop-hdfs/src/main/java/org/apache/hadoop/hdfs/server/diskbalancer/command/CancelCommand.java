@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -126,12 +127,21 @@ public class CancelCommand extends Command {
 
   /**
    * Gets extended help for this command.
-   *
-   * @return Help Message
    */
   @Override
-  protected String getHelp() {
-    return "Cancels a running command. e.g -cancel <PlanFile> or -cancel " +
-        "<planID> -node <datanode>";
+  public void printHelp() {
+    String header = "Cancel command cancels a running disk balancer operation" +
+        ".\n\n";
+
+    String footer = "\nCancel command can be run via pointing to a plan file," +
+        " or by reading the plan ID using the query command and then using " +
+        "planID and hostname. Examples of how to run this command are \n" +
+        "hdfs diskbalancer -cancel <planfile> \n" +
+        "hdfs diskbalancer -cancel <planID> -node <hostname>";
+
+    HelpFormatter helpFormatter = new HelpFormatter();
+    helpFormatter.printHelp("hdfs diskbalancer -cancel <planFile> | -cancel " +
+        "<planID> -node <hostname>",
+        header, DiskBalancer.getCancelOptions(), footer);
   }
 }

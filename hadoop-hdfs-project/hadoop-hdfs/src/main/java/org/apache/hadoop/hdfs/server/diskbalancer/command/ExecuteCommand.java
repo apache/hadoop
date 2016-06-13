@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -98,12 +99,18 @@ public class ExecuteCommand extends Command {
 
   /**
    * Gets extended help for this command.
-   *
-   * @return Help Message
    */
   @Override
-  protected String getHelp() {
-    return "Execute command takes a plan and runs it against the node. e.g. " +
-        "hdfs diskbalancer -execute <nodename.plan.json> ";
+  public void printHelp() {
+    String header = "Execute command runs a submits a plan for execution on " +
+        "the given data node.\n\n";
+
+    String footer = "\nExecute command submits the job to data node and " +
+        "returns immediately. The state of job can be monitored via query " +
+        "command. ";
+
+    HelpFormatter helpFormatter = new HelpFormatter();
+    helpFormatter.printHelp("hdfs diskbalancer -execute <planfile>",
+        header, DiskBalancer.getExecuteOptions(), footer);
   }
 }

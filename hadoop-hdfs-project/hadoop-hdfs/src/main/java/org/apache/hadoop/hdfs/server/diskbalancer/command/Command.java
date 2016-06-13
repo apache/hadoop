@@ -100,10 +100,8 @@ public abstract class Command extends Configured {
 
   /**
    * Gets extended help for this command.
-   *
-   * @return Help Message
    */
-  protected abstract String getHelp();
+  public abstract void printHelp();
 
   /**
    * verifies user provided URL.

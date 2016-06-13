@@ -18,8 +18,8 @@ package org.apache.hadoop.hdfs.tools;
 
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.CancelCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.Command;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.ExecuteCommand;
+import org.apache.hadoop.hdfs.server.diskbalancer.command.HelpCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.PlanCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.QueryCommand;
 import org.apache.hadoop.hdfs.server.diskbalancer.command.ReportCommand;
@@ -139,6 +140,13 @@ public class DiskBalancer extends Configured implements Tool {
   private static final Logger LOG =
       LoggerFactory.getLogger(DiskBalancer.class);
 
+  private static final Options PLAN_OPTIONS = new Options();
+  private static final Options EXECUTE_OPTIONS = new Options();
+  private static final Options QUERY_OPTIONS = new Options();
+  private static final Options HELP_OPTIONS = new Options();
+  private static final Options CANCEL_OPTIONS = new Options();
+  private static final Options REPORT_OPTIONS = new Options();
+
   /**
    * Construct a DiskBalancer.
    *
@@ -182,7 +190,7 @@ public class DiskBalancer extends Configured implements Tool {
    * Execute the command with the given arguments.
    *
    * @param args command specific arguments.
-   * @param out the output stream used for printing
+   * @param out  the output stream used for printing
    * @return exit code.
    * @throws Exception
    */
@@ -200,6 +208,7 @@ public class DiskBalancer extends Configured implements Tool {
   private Options getOpts() {
     Options opts = new Options();
     addPlanCommands(opts);
+    addHelpCommands(opts);
     addExecuteCommands(opts);
     addQueryCommands(opts);
     addCancelCommands(opts);
@@ -208,101 +217,216 @@ public class DiskBalancer extends Configured implements Tool {
   }
 
   /**
+   * Returns Plan options.
+   *
+   * @return Options.
+   */
+  public static Options getPlanOptions() {
+    return PLAN_OPTIONS;
+  }
+
+  /**
+   * Returns help options.
+   *
+   * @return - help options.
+   */
+  public static Options getHelpOptions() {
+    return HELP_OPTIONS;
+  }
+
+  /**
+   * Retuns execute options.
+   *
+   * @return - execute options.
+   */
+  public static Options getExecuteOptions() {
+    return EXECUTE_OPTIONS;
+  }
+
+  /**
+   * Returns Query Options.
+   *
+   * @return query Options
+   */
+  public static Options getQueryOptions() {
+    return QUERY_OPTIONS;
+  }
+
+  /**
+   * Returns Cancel Options.
+   *
+   * @return Options
+   */
+  public static Options getCancelOptions() {
+    return CANCEL_OPTIONS;
+  }
+
+  /**
+   * Returns Report Options.
+   *
+   * @return Options
+   */
+  public static Options getReportOptions() {
+    return REPORT_OPTIONS;
+  }
+
+  /**
    * Adds commands for plan command.
    *
-   * @param opt - Options
+   * @return Options.
    */
   private void addPlanCommands(Options opt) {
 
-    Option nameNodeUri =
-        new Option(NAMENODEURI, true, "NameNode URI. e.g http://namenode" +
-            ".mycluster.com or file:///myCluster" +
-            ".json");
-    opt.addOption(nameNodeUri);
+    Option uri = OptionBuilder.withLongOpt(NAMENODEURI)
+        .withDescription("Address of the Namenode. e,g. hdfs://namenode")
+        .hasArg()
+        .create();
+    getPlanOptions().addOption(uri);
+    opt.addOption(uri);
 
-    Option outFile =
-        new Option(OUTFILE, true, "File to write output to, if not specified " +
-            "defaults will be used." +
-            "e.g -out outfile.txt");
-    opt.addOption(outFile);
-
-    Option plan = new Option(PLAN, true , "create a plan for the given node. " +
-        "e.g -plan <nodename> | <nodeIP> | <nodeUUID>");
+    Option plan = OptionBuilder.withLongOpt(PLAN)
+        .withDescription("creates a plan for datanode.")
+        .hasArg()
+        .create();
+    getPlanOptions().addOption(plan);
     opt.addOption(plan);
 
-    Option bandwidth = new Option(BANDWIDTH, true, "Maximum disk bandwidth to" +
-        " be consumed by diskBalancer. " +
-        "Expressed as MBs per second.");
+
+    Option outFile = OptionBuilder.withLongOpt(OUTFILE)
+        .hasArg()
+        .withDescription("File to write output to, if not specified " +
+            "defaults will be used.")
+        .create();
+    getPlanOptions().addOption(outFile);
+    opt.addOption(outFile);
+
+    Option bandwidth = OptionBuilder.withLongOpt(BANDWIDTH)
+        .hasArg()
+        .withDescription("Maximum disk bandwidth to be consumed by " +
+            "diskBalancer. e.g. 10")
+        .create();
+    getPlanOptions().addOption(bandwidth);
     opt.addOption(bandwidth);
 
-    Option threshold = new Option(THRESHOLD, true, "Percentage skew that we " +
-        "tolerate before diskbalancer starts working or stops when reaching " +
-        "that range.");
+    Option threshold = OptionBuilder.withLongOpt(THRESHOLD)
+        .hasArg()
+        .withDescription("Percentage skew that we" +
+            "tolerate before diskbalancer starts working e.g. 10")
+        .create();
+    getPlanOptions().addOption(threshold);
     opt.addOption(threshold);
 
-    Option maxErrors = new Option(MAXERROR, true, "Describes how many errors " +
-        "can be tolerated while copying between a pair of disks.");
-    opt.addOption(maxErrors);
 
-    Option help =
-        new Option(HELP, true, "Help about a command or this message");
-    opt.addOption(help);
+    Option maxError = OptionBuilder.withLongOpt(MAXERROR)
+        .hasArg()
+        .withDescription("Describes how many errors " +
+            "can be tolerated while copying between a pair of disks.")
+        .create();
+    getPlanOptions().addOption(maxError);
+    opt.addOption(maxError);
 
-    Option verbose = new Option(VERBOSE, "Print out the summary of the plan");
+    Option verbose = OptionBuilder.withLongOpt(VERBOSE)
+        .withDescription("Print out the summary of the plan on console")
+        .create();
+    getPlanOptions().addOption(verbose);
     opt.addOption(verbose);
+  }
 
+  /**
+   * Adds Help to the options.
+   */
+  private void addHelpCommands(Options opt) {
+    Option help = OptionBuilder.withLongOpt(HELP)
+        .hasOptionalArg()
+        .withArgName(HELP)
+        .withDescription("valid commands are plan | execute | query | cancel" +
+            " | report")
+        .create();
+    getHelpOptions().addOption(help);
+    opt.addOption(help);
   }
 
   /**
    * Adds execute command options.
+   *
    * @param opt Options
    */
   private void addExecuteCommands(Options opt) {
-    Option execute = new Option(EXECUTE, true , "Takes a plan file and " +
-        "submits it for execution to the datanode. e.g -execute <planfile>");
+    Option execute = OptionBuilder.withLongOpt(EXECUTE)
+        .hasArg()
+        .withDescription("Takes a plan file and " +
+            "submits it for execution by the datanode.")
+        .create();
+    getExecuteOptions().addOption(execute);
     opt.addOption(execute);
   }
 
   /**
    * Adds query command options.
+   *
    * @param opt Options
    */
   private void addQueryCommands(Options opt) {
-    Option query = new Option(QUERY, true, "Queries the disk balancer " +
-        "status of a given datanode. e.g. -query <nodename>");
+    Option query = OptionBuilder.withLongOpt(QUERY)
+        .hasArg()
+        .withDescription("Queries the disk balancer " +
+            "status of a given datanode.")
+        .create();
+    getQueryOptions().addOption(query);
     opt.addOption(query);
+
+    // Please note: Adding this only to Query options since -v is already
+    // added to global table.
+    Option verbose = OptionBuilder.withLongOpt(VERBOSE)
+        .withDescription("Prints details of the plan that is being executed " +
+            "on the node.")
+        .create();
+    getQueryOptions().addOption(verbose);
   }
 
   /**
    * Adds cancel command options.
+   *
    * @param opt Options
    */
   private void addCancelCommands(Options opt) {
-    Option cancel = new Option(CANCEL, true, "Cancels a running plan. -cancel" +
-        " <planFile> or -cancel <planID> -node <datanode:port>");
+    Option cancel = OptionBuilder.withLongOpt(CANCEL)
+        .hasArg()
+        .withDescription("Cancels a running plan using a plan file.")
+        .create();
+    getCancelOptions().addOption(cancel);
     opt.addOption(cancel);
-    Option node = new Option(NODE, true, "Name of the datanode in name:port " +
-        "format");
+
+    Option node = OptionBuilder.withLongOpt(NODE)
+        .hasArg()
+        .withDescription("Cancels a running plan using a plan ID and hostName")
+        .create();
+
+    getCancelOptions().addOption(node);
     opt.addOption(node);
   }
 
   /**
    * Adds report command options.
+   *
    * @param opt Options
    */
   private void addReportCommands(Options opt) {
-    Option report = new Option(REPORT, false,
-        "Report volume information of DataNode(s)"
-            + " benefiting from running DiskBalancer. "
-            + "-report [top -X] | [-node {DataNodeID | IP | Hostname}].");
+    Option report = OptionBuilder.withLongOpt(REPORT)
+        .withDescription("List nodes that will benefit from running " +
+            "DiskBalancer.")
+        .create();
+    getReportOptions().addOption(report);
     opt.addOption(report);
 
     Option top = new Option(TOP, true,
-        "specify the top number of nodes to be processed.");
+        "specify the number of nodes to be listed which has data imbalance.");
+    getReportOptions().addOption(top);
     opt.addOption(top);
 
     Option node = new Option(NODE, true,
-        "Name of the datanode in the format of DataNodeID, IP or hostname.");
+        "Datanode address, it can be DataNodeID, IP or hostname.");
+    getReportOptions().addOption(node);
     opt.addOption(node);
   }
 
@@ -322,9 +446,9 @@ public class DiskBalancer extends Configured implements Tool {
   /**
    * Dispatches calls to the right command Handler classes.
    *
-   * @param cmd - CommandLine
+   * @param cmd  - CommandLine
    * @param opts options of command line
-   * @param out the output stream used for printing
+   * @param out  the output stream used for printing
    * @throws IOException
    * @throws URISyntaxException
    */
@@ -338,15 +462,15 @@ public class DiskBalancer extends Configured implements Tool {
         currentCommand = new PlanCommand(getConf());
       }
 
-      if(cmd.hasOption(DiskBalancer.EXECUTE)) {
+      if (cmd.hasOption(DiskBalancer.EXECUTE)) {
         currentCommand = new ExecuteCommand(getConf());
       }
 
-      if(cmd.hasOption(DiskBalancer.QUERY)) {
+      if (cmd.hasOption(DiskBalancer.QUERY)) {
         currentCommand = new QueryCommand(getConf());
       }
 
-      if(cmd.hasOption(DiskBalancer.CANCEL)) {
+      if (cmd.hasOption(DiskBalancer.CANCEL)) {
         currentCommand = new CancelCommand(getConf());
       }
 
@@ -354,13 +478,16 @@ public class DiskBalancer extends Configured implements Tool {
         currentCommand = new ReportCommand(getConf(), out);
       }
 
-      if(currentCommand == null) {
-        HelpFormatter helpFormatter = new HelpFormatter();
-        helpFormatter.printHelp(80, "hdfs diskbalancer -uri [args]",
-            "disk balancer commands", opts,
-            "Please correct your command and try again.");
+      if (cmd.hasOption(DiskBalancer.HELP)) {
+        currentCommand = new HelpCommand(getConf());
+      }
+
+      // Invoke Main help here.
+      if (currentCommand == null) {
+        new HelpCommand(getConf()).execute(null);
         return 1;
       }
+
       currentCommand.execute(cmd);
     } catch (Exception ex) {
       System.err.printf(ex.getMessage());

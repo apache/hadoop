@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -86,11 +87,17 @@ public class QueryCommand extends Command {
 
   /**
    * Gets extended help for this command.
-   *
-   * @return Help Message
    */
   @Override
-  protected String getHelp() {
-    return "Gets the status of disk balancing on a given node";
+  public void printHelp() {
+    String header = "Query Plan queries a given data node about the " +
+        "current state of disk balancer execution.\n\n";
+
+    String footer = "\nQuery command retrievs the plan ID and the current " +
+        "running state. ";
+
+    HelpFormatter helpFormatter = new HelpFormatter();
+    helpFormatter.printHelp("hdfs diskbalancer -query <hostname>  [options]",
+        header, DiskBalancer.getQueryOptions(), footer);
   }
 }

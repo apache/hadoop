@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.ListIterator;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.apache.hadoop.conf.Configuration;
@@ -184,14 +185,23 @@ public class ReportCommand extends Command {
     }
   }
 
+  /**
+   * Prints the help message.
+   */
   @Override
-  protected String getHelp() {
-    return "Report volume information for a specific DataNode or top X "
-        + "one(s) benefiting from running DiskBalancer, "
-        + "top defaults to " + getDefaultTop() + ". E.g.:\n"
+  public void printHelp() {
+    String header = "Report command reports the volume information of a given" +
+        " datanode, or prints out the list of nodes that will benefit from " +
+        "running disk balancer. Top defaults to " + getDefaultTop();
+    String footer = ". E.g.:\n"
         + "hdfs diskbalancer -uri http://namenode.uri -report\n"
         + "hdfs diskbalancer -uri http://namenode.uri -report -top 5\n"
         + "hdfs diskbalancer -uri http://namenode.uri -report "
         + "-node {DataNodeID | IP | Hostname}";
+
+    HelpFormatter helpFormatter = new HelpFormatter();
+    helpFormatter.printHelp("hdfs diskbalancer -uri http://namenode.uri " +
+        "-report [options]",
+        header, DiskBalancer.getReportOptions(), footer);
   }
 }
