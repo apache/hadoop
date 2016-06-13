@@ -100,9 +100,14 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
 
   @Test(timeout = 120000)
   public void testWarmupEDEKCacheOnStartup() throws Exception {
-    final Path zonePath = new Path("/TestEncryptionZone");
+    Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
     dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
+    final String anotherKey = "k2";
+    zonePath = new Path("/TestEncryptionZone2");
+    DFSTestUtil.createKey(anotherKey, cluster, conf);
+    fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
+    dfsAdmin.createEncryptionZone(zonePath, anotherKey, NO_TRASH);
 
     @SuppressWarnings("unchecked")
     KMSClientProvider spy = (KMSClientProvider) Whitebox
