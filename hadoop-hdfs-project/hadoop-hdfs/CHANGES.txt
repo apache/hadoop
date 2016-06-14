@@ -27,6 +27,9 @@ Release 2.6.5 - UNRELEASED
     HDFS-10271. Extra bytes are getting released from reservedSpace for append
     (Brahma Reddy Battula via vinayakumarb)
 
+    HDFS-8581. ContentSummary on / skips further counts on yielding lock
+    (J.Andreina via vinayakumarb)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
