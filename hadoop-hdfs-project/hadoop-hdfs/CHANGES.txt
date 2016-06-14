@@ -122,7 +122,6 @@ Release 2.7.3 - UNRELEASED
     HDFS-9779 . TestReplicationPolicyWithNodeGroup NODE variable picks wrong rack value
     (Kuhu Shukla via umamahesh)
 
-
     HDFS-9784. Example usage is not correct in Transparent Encryption document.
     (Takashi Ohnishi via aajisaka)
 
@@ -183,6 +182,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-8548. Minicluster throws NPE on shutdown.
     (surendra singh lilhore via xyao)
+
+    HDFS-8581. ContentSummary on / skips further counts on yielding lock
+    (J.Andreina via vinayakumarb)
 
 Release 2.7.2 - 2016-01-25
 
