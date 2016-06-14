@@ -59,7 +59,7 @@ public class LogCLIHelpers implements Configurable {
   public int dumpAContainersLogs(String appId, String containerId,
       String nodeId, String jobOwner) throws IOException {
     ContainerLogsRequest options = new ContainerLogsRequest();
-    options.setAppId(ConverterUtils.toApplicationId(appId));
+    options.setAppId(ApplicationId.fromString(appId));
     options.setContainerId(containerId);
     options.setNodeId(nodeId);
     options.setAppOwner(jobOwner);

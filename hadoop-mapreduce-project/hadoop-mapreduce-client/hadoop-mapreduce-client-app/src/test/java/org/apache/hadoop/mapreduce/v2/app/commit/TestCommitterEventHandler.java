@@ -129,8 +129,8 @@ public class TestCommitterEventHandler {
 
     SystemClock clock = SystemClock.getInstance();
     AppContext appContext = mock(AppContext.class);
-    ApplicationAttemptId attemptid = 
-      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    ApplicationAttemptId attemptid = ApplicationAttemptId.fromString(
+        "appattempt_1234567890000_0001_0");
     when(appContext.getApplicationID()).thenReturn(attemptid.getApplicationId());
     when(appContext.getApplicationAttemptId()).thenReturn(attemptid);
     when(appContext.getEventHandler()).thenReturn(
@@ -240,8 +240,8 @@ public class TestCommitterEventHandler {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     JobContext mockJobContext = mock(JobContext.class);
-    ApplicationAttemptId attemptid = 
-      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    ApplicationAttemptId attemptid = ApplicationAttemptId.fromString(
+        "appattempt_1234567890000_0001_0");
     JobId jobId =  TypeConverter.toYarn(
         TypeConverter.fromYarn(attemptid.getApplicationId()));
     
@@ -288,8 +288,8 @@ public class TestCommitterEventHandler {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     JobContext mockJobContext = mock(JobContext.class);
-    ApplicationAttemptId attemptid = 
-      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    ApplicationAttemptId attemptid =
+        ApplicationAttemptId.fromString("appattempt_1234567890000_0001_0");
     JobId jobId =  TypeConverter.toYarn(
         TypeConverter.fromYarn(attemptid.getApplicationId()));
     

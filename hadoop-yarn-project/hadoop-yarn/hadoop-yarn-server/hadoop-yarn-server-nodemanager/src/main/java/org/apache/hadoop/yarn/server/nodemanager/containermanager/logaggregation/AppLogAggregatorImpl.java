@@ -164,7 +164,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.conf = conf;
     this.delService = deletionService;
     this.appId = appId;
-    this.applicationId = ConverterUtils.toString(appId);
+    this.applicationId = appId.toString();
     this.userUgi = userUgi;
     this.dirsHandler = dirsHandler;
     this.remoteNodeLogFileForApp = remoteNodeLogFileForApp;

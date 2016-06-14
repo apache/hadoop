@@ -514,7 +514,7 @@ public class ZKRMStateStore extends RMStateStore {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Loading application from znode: " + childNodeName);
         }
-        ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
+        ApplicationId appId = ApplicationId.fromString(childNodeName);
         ApplicationStateDataPBImpl appState =
             new ApplicationStateDataPBImpl(
                 ApplicationStateDataProto.parseFrom(childData));

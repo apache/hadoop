@@ -167,11 +167,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     ContainerId containerId = container.getContainerId();
 
     // create container dirs on all disks
-    String containerIdStr = ConverterUtils.toString(containerId);
+    String containerIdStr = containerId.toString();
     String appIdStr =
-        ConverterUtils.toString(
             containerId.getApplicationAttemptId().
-                getApplicationId());
+                getApplicationId().toString();
     for (String sLocalDir : localDirs) {
       Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, user);

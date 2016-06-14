@@ -50,6 +50,7 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -236,11 +237,11 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
     boolean appExists =
         rm.getRMContext().getRMApps()
-          .containsKey(ConverterUtils.toApplicationId(appid));
+          .containsKey(ApplicationId.fromString(appid));
     assertTrue(appExists);
     RMApp actualApp =
         rm.getRMContext().getRMApps()
-          .get(ConverterUtils.toApplicationId(appid));
+          .get(ApplicationId.fromString(appid));
     String owner = actualApp.getUser();
     assertEquals("client", owner);
   }

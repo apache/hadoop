@@ -59,7 +59,7 @@ public class ContainerBlock extends HtmlBlock {
 
     ContainerId containerId = null;
     try {
-      containerId = ConverterUtils.toContainerId(containerid);
+      containerId = ContainerId.fromString(containerid);
     } catch (IllegalArgumentException e) {
       puts("Invalid container ID: " + containerid);
       return;

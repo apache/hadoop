@@ -481,7 +481,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
     ApplicationId appId = null;
     if (appIdStr.startsWith(ApplicationId.appIdStrPrefix)) {
       try {
-        appId = ConverterUtils.toApplicationId(appIdStr);
+        appId = ApplicationId.fromString(appIdStr);
       } catch (IllegalArgumentException e) {
         appId = null;
       }

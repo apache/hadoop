@@ -63,7 +63,7 @@ public class ContainerPage extends NMView implements YarnWebParams {
     protected void render(Block html) {
       ContainerId containerID;
       try {
-        containerID = ConverterUtils.toContainerId($(CONTAINER_ID));
+        containerID = ContainerId.fromString($(CONTAINER_ID));
       } catch (IllegalArgumentException e) {
         html.p()._("Invalid containerId " + $(CONTAINER_ID))._();
         return;

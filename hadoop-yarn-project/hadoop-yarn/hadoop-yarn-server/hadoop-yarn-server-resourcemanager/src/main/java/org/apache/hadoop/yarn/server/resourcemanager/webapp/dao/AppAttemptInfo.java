@@ -67,7 +67,7 @@ public class AppAttemptInfo {
         this.nodeId = masterContainer.getNodeId().toString();
         this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
             + masterContainer.getNodeHttpAddress(),
-            ConverterUtils.toString(masterContainer.getId()), user);
+            masterContainer.getId().toString(), user);
 
         nodesBlacklistedBySystem =
             StringUtils.join(attempt.getAMBlacklistManager()

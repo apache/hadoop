@@ -34,15 +34,16 @@ class EntityGroupPlugInForTest extends TimelineEntityGroupPlugin {
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityType,
       NameValuePair primaryFilter,
       Collection<NameValuePair> secondaryFilters) {
-    ApplicationId appId
-        = ConverterUtils.toApplicationId(primaryFilter.getValue().toString());
+    ApplicationId appId = ApplicationId.fromString(
+        primaryFilter.getValue().toString());
     return Sets.newHashSet(getStandardTimelineGroupId(appId));
   }
 
   @Override
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityId,
       String entityType) {
-    ApplicationId appId = ConverterUtils.toApplicationId(entityId);
+    ApplicationId appId = ApplicationId.fromString(
+        entityId);
     return Sets.newHashSet(getStandardTimelineGroupId(appId));
   }
 

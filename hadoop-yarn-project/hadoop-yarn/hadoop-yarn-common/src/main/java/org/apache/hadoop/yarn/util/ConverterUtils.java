@@ -18,18 +18,13 @@
 
 package org.apache.hadoop.yarn.util;
 
-import static org.apache.hadoop.yarn.util.StringHelper._split;
-
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
@@ -41,7 +36,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 
 /**
@@ -49,7 +43,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
  * from/to 'serializableFormat' to/from hadoop/nativejava data structures.
  *
  */
-@Private
+@Public
 public class ConverterUtils {
 
   public static final String APPLICATION_PREFIX = "application";
@@ -58,174 +52,114 @@ public class ConverterUtils {
 
   /**
    * return a hadoop path from a given url
+   * This method is deprecated, use {@link URL#toPath()} instead.
    * 
    * @param url
    *          url to convert
    * @return path from {@link URL}
    * @throws URISyntaxException
    */
+  @Public
+  @Deprecated
   public static Path getPathFromYarnURL(URL url) throws URISyntaxException {
-    String scheme = url.getScheme() == null ? "" : url.getScheme();
-    
-    String authority = "";
-    if (url.getHost() != null) {
-      authority = url.getHost();
-      if (url.getUserInfo() != null) {
-        authority = url.getUserInfo() + "@" + authority;
-      }
-      if (url.getPort() > 0) {
-        authority += ":" + url.getPort();
-      }
-    }
-    
-    return new Path(
-        (new URI(scheme, authority, url.getFile(), null, null)).normalize());
+    return url.toPath();
   }
-  
-  /**
-   * change from CharSequence to string for map key and value
-   * @param env map for converting
-   * @return string,string map
+
+  /*
+   * This method is deprecated, use {@link URL#fromPath(Path)} instead.
    */
-  public static Map<String, String> convertToString(
-      Map<CharSequence, CharSequence> env) {
-    
-    Map<String, String> stringMap = new HashMap<String, String>();
-    for (Entry<CharSequence, CharSequence> entry: env.entrySet()) {
-      stringMap.put(entry.getKey().toString(), entry.getValue().toString());
-    }
-    return stringMap;
-   }
-
+  @Public
+  @Deprecated
   public static URL getYarnUrlFromPath(Path path) {
-    return getYarnUrlFromURI(path.toUri());
+    return URL.fromPath(path);
   }
   
+  /*
+   * This method is deprecated, use {@link URL#fromURI(URI)} instead.
+   */
+  @Public
+  @Deprecated
   public static URL getYarnUrlFromURI(URI uri) {
-    URL url = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(URL.class);
-    if (uri.getHost() != null) {
-      url.setHost(uri.getHost());
-    }
-    if (uri.getUserInfo() != null) {
-      url.setUserInfo(uri.getUserInfo());
-    }
-    url.setPort(uri.getPort());
-    url.setScheme(uri.getScheme());
-    url.setFile(uri.getPath());
-    return url;
+    return URL.fromURI(uri);
   }
 
+  /*
+   * This method is deprecated, use {@link ApplicationId#toString()} instead.
+   */
+  @Public
+  @Deprecated
   public static String toString(ApplicationId appId) {
     return appId.toString();
   }
 
+  /*
+   * This method is deprecated, use {@link ApplicationId#fromString(String)}
+   * instead.
+   */
+  @Public
+  @Deprecated
   public static ApplicationId toApplicationId(RecordFactory recordFactory,
-      String appIdStr) {
-    Iterator<String> it = _split(appIdStr).iterator();
-    if (!it.next().equals(APPLICATION_PREFIX)) {
-      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
-          + appIdStr + ". The valid ApplicationId should start with prefix "
-          + APPLICATION_PREFIX);
-    }
-    try {
-      return toApplicationId(recordFactory, it);
-    } catch (NumberFormatException n) {
-      throw new IllegalArgumentException("Invalid ApplicationId: " + appIdStr,
-          n);
-    } catch (NoSuchElementException e) {
-      throw new IllegalArgumentException("Invalid ApplicationId: " + appIdStr,
-          e);
-    }
+      String applicationIdStr) {
+    return ApplicationId.fromString(applicationIdStr);
   }
 
-  private static ApplicationId toApplicationId(RecordFactory recordFactory,
-      Iterator<String> it) {
-    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
-        Integer.parseInt(it.next()));
-    return appId;
-  }
-
-  private static ApplicationAttemptId toApplicationAttemptId(
-      Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
-        Integer.parseInt(it.next()));
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, Integer.parseInt(it.next()));
-    return appAttemptId;
-  }
-
-  private static ApplicationId toApplicationId(
-      Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
-        Integer.parseInt(it.next()));
-    return appId;
-  }
-
+  /*
+   * This method is deprecated, use {@link ContainerId#toString()} instead.
+   */
+  @Public
+  @Deprecated
   public static String toString(ContainerId cId) {
     return cId == null ? null : cId.toString();
   }
-  
+
+  @Private
+  @InterfaceStability.Unstable
   public static NodeId toNodeIdWithDefaultPort(String nodeIdStr) {
     if (nodeIdStr.indexOf(":") < 0) {
-      return toNodeId(nodeIdStr + ":0");
+      return NodeId.fromString(nodeIdStr + ":0");
     }
-    return toNodeId(nodeIdStr);
+    return NodeId.fromString(nodeIdStr);
   }
 
+  /*
+   * This method is deprecated, use {@link NodeId#fromString(String)} instead.
+   */
+  @Public
+  @Deprecated
   public static NodeId toNodeId(String nodeIdStr) {
-    String[] parts = nodeIdStr.split(":");
-    if (parts.length != 2) {
-      throw new IllegalArgumentException("Invalid NodeId [" + nodeIdStr
-          + "]. Expected host:port");
-    }
-    try {
-      NodeId nodeId =
-          NodeId.newInstance(parts[0].trim(), Integer.parseInt(parts[1]));
-      return nodeId;
-    } catch (NumberFormatException e) {
-      throw new IllegalArgumentException("Invalid port: " + parts[1], e);
-    }
+    return NodeId.fromString(nodeIdStr);
   }
 
+  /*
+   * This method is deprecated, use {@link ContainerId#fromString(String)}
+   * instead.
+   */
+  @Public
+  @Deprecated
   public static ContainerId toContainerId(String containerIdStr) {
     return ContainerId.fromString(containerIdStr);
   }
-
+  
+  /*
+   * This method is deprecated, use {@link ApplicationAttemptId#toString()}
+   * instead.
+   */
+  @Public
+  @Deprecated
   public static ApplicationAttemptId toApplicationAttemptId(
-      String applicationAttmeptIdStr) {
-    Iterator<String> it = _split(applicationAttmeptIdStr).iterator();
-    if (!it.next().equals(APPLICATION_ATTEMPT_PREFIX)) {
-      throw new IllegalArgumentException("Invalid AppAttemptId prefix: "
-          + applicationAttmeptIdStr);
-    }
-    try {
-      return toApplicationAttemptId(it);
-    } catch (NumberFormatException n) {
-      throw new IllegalArgumentException("Invalid AppAttemptId: "
-          + applicationAttmeptIdStr, n);
-    } catch (NoSuchElementException e) {
-      throw new IllegalArgumentException("Invalid AppAttemptId: "
-          + applicationAttmeptIdStr, e);
-    }
+      String applicationAttemptIdStr) {
+    return ApplicationAttemptId.fromString(applicationAttemptIdStr);
   }
   
+  /*
+   * This method is deprecated, use {@link ApplicationId#fromString(String)}
+   * instead.
+   */
+  @Public
+  @Deprecated
   public static ApplicationId toApplicationId(
       String appIdStr) {
-    Iterator<String> it = _split(appIdStr).iterator();
-    if (!it.next().equals(APPLICATION_PREFIX)) {
-      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
-          + appIdStr + ". The valid ApplicationId should start with prefix "
-          + APPLICATION_PREFIX);
-    }
-    try {
-      return toApplicationId(it);
-    } catch (NumberFormatException n) {
-      throw new IllegalArgumentException("Invalid ApplicationId: "
-          + appIdStr, n);
-    } catch (NoSuchElementException e) {
-      throw new IllegalArgumentException("Invalid ApplicationId: "
-          + appIdStr, e);
-    }
+    return ApplicationId.fromString(appIdStr);
   }
 
   /**

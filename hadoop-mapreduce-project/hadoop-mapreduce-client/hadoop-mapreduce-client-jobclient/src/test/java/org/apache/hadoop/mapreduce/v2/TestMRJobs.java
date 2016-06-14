@@ -749,7 +749,7 @@ public class TestMRJobs {
           boolean foundAppMaster = job.isUber();
           final Path containerPathComponent = slog.getPath().getParent();
           if (!foundAppMaster) {
-            final ContainerId cid = ConverterUtils.toContainerId(
+            final ContainerId cid = ContainerId.fromString(
                 containerPathComponent.getName());
             foundAppMaster =
                 ((cid.getContainerId() & ContainerId.CONTAINER_ID_BITMASK)== 1);

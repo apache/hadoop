@@ -165,8 +165,7 @@ public class AppInfo {
             this.amContainerLogsExist = true;
             this.amContainerLogs = WebAppUtils.getRunningLogURL(
                 schemePrefix + masterContainer.getNodeHttpAddress(),
-                ConverterUtils.toString(masterContainer.getId()),
-                app.getUser());
+                masterContainer.getId().toString(), app.getUser());
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
           }
           

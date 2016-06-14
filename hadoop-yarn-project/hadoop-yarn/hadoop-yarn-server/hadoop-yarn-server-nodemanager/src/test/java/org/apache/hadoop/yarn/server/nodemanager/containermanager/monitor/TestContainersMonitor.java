@@ -210,7 +210,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
 
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);

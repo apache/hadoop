@@ -435,13 +435,13 @@ public class ApplicationMaster {
     if (!envs.containsKey(Environment.CONTAINER_ID.name())) {
       if (cliParser.hasOption("app_attempt_id")) {
         String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
-        appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
+        appAttemptID = ApplicationAttemptId.fromString(appIdStr);
       } else {
         throw new IllegalArgumentException(
             "Application Attempt Id not set in the environment");
       }
     } else {
-      ContainerId containerId = ConverterUtils.toContainerId(envs
+      ContainerId containerId = ContainerId.fromString(envs
           .get(Environment.CONTAINER_ID.name()));
       appAttemptID = containerId.getApplicationAttemptId();
     }
@@ -1048,8 +1048,7 @@ public class ApplicationMaster {
 
         URL yarnUrl = null;
         try {
-          yarnUrl = ConverterUtils.getYarnUrlFromURI(
-            new URI(renamedScriptPath.toString()));
+          yarnUrl = URL.fromURI(new URI(renamedScriptPath.toString()));
         } catch (URISyntaxException e) {
           LOG.error("Error when trying to use shell script path specified"
               + " in env, path=" + renamedScriptPath, e);

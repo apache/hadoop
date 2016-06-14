@@ -76,10 +76,9 @@ public class ApplicationPage extends NMView implements YarnWebParams {
 
     @Override
     protected void render(Block html) {
-      ApplicationId applicationID = null;
+      ApplicationId applicationID;
       try {
-        applicationID = ConverterUtils.toApplicationId(this.recordFactory,
-            $(APPLICATION_ID));
+        applicationID = ApplicationId.fromString($(APPLICATION_ID));
       } catch (IllegalArgumentException e) {
         html.p()._("Invalid Application Id " + $(APPLICATION_ID))._();
         return;

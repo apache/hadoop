@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.Apps;
@@ -608,8 +609,7 @@ public class MRApps extends Apps {
         }
         String linkName = name.toUri().getPath();
         LocalResource orig = localResources.get(linkName);
-        org.apache.hadoop.yarn.api.records.URL url = 
-          ConverterUtils.getYarnUrlFromURI(p.toUri());
+        URL url = URL.fromURI(p.toUri());
         if(orig != null && !orig.getResource().equals(url)) {
           LOG.warn(
               getResourceDescription(orig.getType()) + 
@@ -618,8 +618,8 @@ public class MRApps extends Apps {
               " This will be an error in Hadoop 2.0");
           continue;
         }
-        localResources.put(linkName, LocalResource.newInstance(ConverterUtils
-          .getYarnUrlFromURI(p.toUri()), type, visibilities[i]
+        localResources.put(linkName, LocalResource
+            .newInstance(URL.fromURI(p.toUri()), type, visibilities[i]
             ? LocalResourceVisibility.PUBLIC : LocalResourceVisibility.PRIVATE,
           sizes[i], timestamps[i]));
       }

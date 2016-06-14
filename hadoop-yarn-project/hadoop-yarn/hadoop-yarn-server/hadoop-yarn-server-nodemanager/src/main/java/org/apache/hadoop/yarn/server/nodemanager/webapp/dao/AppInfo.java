@@ -42,14 +42,14 @@ public class AppInfo {
   } // JAXB needs this
 
   public AppInfo(final Application app) {
-    this.id = ConverterUtils.toString(app.getAppId());
+    this.id = app.getAppId().toString();
     this.state = app.getApplicationState().toString();
     this.user = app.getUser();
 
     this.containerids = new ArrayList<String>();
     Map<ContainerId, Container> appContainers = app.getContainers();
     for (ContainerId containerId : appContainers.keySet()) {
-      String containerIdStr = ConverterUtils.toString(containerId);
+      String containerIdStr = containerId.toString();
       containerids.add(containerIdStr);
     }
   }

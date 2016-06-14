@@ -499,7 +499,7 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   private ApplicationStateData createApplicationState(String appIdStr,
       byte[] data) throws IOException {
-    ApplicationId appId = ConverterUtils.toApplicationId(appIdStr);
+    ApplicationId appId = ApplicationId.fromString(appIdStr);
     ApplicationStateDataPBImpl appState =
         new ApplicationStateDataPBImpl(
             ApplicationStateDataProto.parseFrom(data));
@@ -545,8 +545,7 @@ public class LeveldbRMStateStore extends RMStateStore {
 
   private ApplicationAttemptStateData createAttemptState(String itemName,
       byte[] data) throws IOException {
-    ApplicationAttemptId attemptId =
-        ConverterUtils.toApplicationAttemptId(itemName);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(itemName);
     ApplicationAttemptStateDataPBImpl attemptState =
         new ApplicationAttemptStateDataPBImpl(
             ApplicationAttemptStateDataProto.parseFrom(data));

@@ -183,7 +183,7 @@ public class RMStateStoreTestBase {
     RMAppAttemptMetrics mockRmAppAttemptMetrics = 
         mock(RMAppAttemptMetrics.class);
     Container container = new ContainerPBImpl();
-    container.setId(ConverterUtils.toContainerId(containerIdStr));
+    container.setId(ContainerId.fromString(containerIdStr));
     RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
     when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
     when(mockAttempt.getMasterContainer()).thenReturn(container);
@@ -227,8 +227,8 @@ public class RMStateStoreTestBase {
     ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
         new ClientToAMTokenSecretManagerInRM();
 
-    ApplicationAttemptId attemptId1 = ConverterUtils
-        .toApplicationAttemptId("appattempt_1352994193343_0001_000001");
+    ApplicationAttemptId attemptId1 = ApplicationAttemptId.fromString(
+        "appattempt_1352994193343_0001_000001");
     ApplicationId appId1 = attemptId1.getApplicationId();
     storeApp(store, appId1, submitTime, startTime);
     verifier.afterStoreApp(store, appId1);
@@ -245,8 +245,8 @@ public class RMStateStoreTestBase {
         .getMasterContainer().getId();
 
     String appAttemptIdStr2 = "appattempt_1352994193343_0001_000002";
-    ApplicationAttemptId attemptId2 =
-        ConverterUtils.toApplicationAttemptId(appAttemptIdStr2);
+    ApplicationAttemptId attemptId2 = ApplicationAttemptId.fromString(
+        appAttemptIdStr2);
 
     // create application token and client token key for attempt2
     Token<AMRMTokenIdentifier> appAttemptToken2 =
@@ -259,8 +259,8 @@ public class RMStateStoreTestBase {
         appAttemptToken2, clientTokenKey2, dispatcher)
         .getMasterContainer().getId();
 
-    ApplicationAttemptId attemptIdRemoved = ConverterUtils
-        .toApplicationAttemptId("appattempt_1352994193343_0002_000001");
+    ApplicationAttemptId attemptIdRemoved = ApplicationAttemptId.fromString(
+        "appattempt_1352994193343_0002_000001");
     ApplicationId appIdRemoved = attemptIdRemoved.getApplicationId();
     storeApp(store, appIdRemoved, submitTime, startTime);
     storeAttempt(store, attemptIdRemoved,

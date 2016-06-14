@@ -1361,7 +1361,7 @@ public class ContainerImpl implements Container {
   public String toString() {
     this.readLock.lock();
     try {
-      return ConverterUtils.toString(this.containerId);
+      return this.containerId.toString();
     } finally {
       this.readLock.unlock();
     }

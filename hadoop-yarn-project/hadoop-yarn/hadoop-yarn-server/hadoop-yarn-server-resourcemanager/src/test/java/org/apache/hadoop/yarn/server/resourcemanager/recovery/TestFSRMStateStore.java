@@ -183,7 +183,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
               (FileSystemRMStateStore) fsTester.getRMStateStore();
       String appAttemptIdStr3 = "appattempt_1352994193343_0001_000003";
       ApplicationAttemptId attemptId3 =
-              ConverterUtils.toApplicationAttemptId(appAttemptIdStr3);
+          ApplicationAttemptId.fromString(appAttemptIdStr3);
       Path appDir =
               fsTester.store.getAppDir(attemptId3.getApplicationId().toString());
       Path tempAppAttemptFile =
@@ -364,7 +364,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     // imitate appAttemptFile1 is still .new, but old one is deleted
     String appAttemptIdStr1 = "appattempt_1352994193343_0001_000001";
     ApplicationAttemptId attemptId1 =
-        ConverterUtils.toApplicationAttemptId(appAttemptIdStr1);
+        ApplicationAttemptId.fromString(appAttemptIdStr1);
     Path appDir =
             fsTester.store.getAppDir(attemptId1.getApplicationId().toString());
     Path appAttemptFile1 =

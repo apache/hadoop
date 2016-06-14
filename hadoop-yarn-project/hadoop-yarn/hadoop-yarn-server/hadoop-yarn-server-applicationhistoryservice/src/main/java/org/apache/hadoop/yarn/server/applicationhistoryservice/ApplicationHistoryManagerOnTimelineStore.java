@@ -278,7 +278,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
       if (field == ApplicationReportField.USER_AND_ACLS) {
         return new ApplicationReportExt(ApplicationReport.newInstance(
-            ConverterUtils.toApplicationId(entity.getEntityId()),
+            ApplicationId.fromString(entity.getEntityId()),
             latestApplicationAttemptId, user, queue, name, null, -1, null,
             state, diagnosticsInfo, null, createdTime, finishedTime,
             finalStatus, null, null, progress, type, null, appTags,
@@ -394,13 +394,10 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           }
           if (eventInfo
               .containsKey(ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO)) {
-            latestApplicationAttemptId =
-                ConverterUtils
-                    .toApplicationAttemptId(
-                    eventInfo
-                        .get(
-                            ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO)
-                        .toString());
+            latestApplicationAttemptId = ApplicationAttemptId.fromString(
+                eventInfo.get(
+                    ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO)
+                    .toString());
           }
           if (eventInfo
               .containsKey(ApplicationMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO)) {
@@ -426,7 +423,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
     }
     return new ApplicationReportExt(ApplicationReport.newInstance(
-        ConverterUtils.toApplicationId(entity.getEntityId()),
+        ApplicationId.fromString(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
         diagnosticsInfo, null, createdTime, finishedTime, finalStatus,
         appResources, null, progress, type, null, appTags, unmanagedApplication,
@@ -471,7 +468,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           if (eventInfo
               .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)) {
             amContainerId =
-                ConverterUtils.toContainerId(eventInfo.get(
+                ContainerId.fromString(eventInfo.get(
                     AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)
                     .toString());
           }
@@ -513,7 +510,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           if (eventInfo
               .containsKey(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)) {
             amContainerId =
-                ConverterUtils.toContainerId(eventInfo.get(
+                ContainerId.fromString(eventInfo.get(
                     AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO)
                     .toString());
           }
@@ -521,7 +518,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
     }
     return ApplicationAttemptReport.newInstance(
-        ConverterUtils.toApplicationAttemptId(entity.getEntityId()),
+        ApplicationAttemptId.fromString(entity.getEntityId()),
         host, rpcPort, trackingUrl, originalTrackingUrl, diagnosticsInfo,
         state, amContainerId);
   }
@@ -610,7 +607,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
     }
     ContainerId containerId =
-        ConverterUtils.toContainerId(entity.getEntityId());
+        ContainerId.fromString(entity.getEntityId());
     String logUrl = null;
     NodeId allocatedNode = null;
     if (allocatedHost != null) {
@@ -623,7 +620,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           user);
     }
     return ContainerReport.newInstance(
-        ConverterUtils.toContainerId(entity.getEntityId()),
+        ContainerId.fromString(entity.getEntityId()),
         Resource.newInstance(allocatedMem, allocatedVcore), allocatedNode,
         Priority.newInstance(allocatedPriority),
         createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,
