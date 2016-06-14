@@ -95,6 +95,11 @@ ENV FINDBUGS_HOME /opt/findbugs
 RUN apt-get install -y cabal-install
 RUN cabal update && cabal install shellcheck --global
 
+####
+# Install dateutil.parser
+####
+RUN pip install python-dateutil
+
 ###
 # Avoid out of memory errors in builds
 ###
