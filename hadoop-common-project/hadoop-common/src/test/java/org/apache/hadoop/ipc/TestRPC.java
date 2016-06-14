@@ -348,6 +348,10 @@ public class TestRPC extends TestRpcBase {
 
     assertEquals(3, server.getNumReaders());
     assertEquals(200, server.getMaxQueueSize());
+
+    server = newServerBuilder(conf).setQueueSizePerHandler(10)
+        .setNumHandlers(2).setVerbose(false).build();
+    assertEquals(2 * 10, server.getMaxQueueSize());
   }
 
   @Test
