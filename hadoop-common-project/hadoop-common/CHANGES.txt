@@ -98,6 +98,10 @@ Release 2.7.3 - UNRELEASED
     printAmazonServiceException/printAmazonClientException appear copy & paste
     of AWS examples. (Steve Loughran via cnauroth)
 
+    HADOOP-13270. BZip2CompressionInputStream finds the same compression marker
+    twice in corner case, causing duplicate data blocks.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
