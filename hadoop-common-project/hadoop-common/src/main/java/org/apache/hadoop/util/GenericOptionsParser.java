@@ -208,7 +208,7 @@ public class GenericOptionsParser {
    * Specify properties of each generic option
    */
   @SuppressWarnings("static-access")
-  private static Options buildGeneralOptions(Options opts) {
+  private static synchronized Options buildGeneralOptions(Options opts) {
     Option fs = OptionBuilder.withArgName("local|namenode:port")
     .hasArg()
     .withDescription("specify a namenode")
