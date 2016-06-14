@@ -129,6 +129,11 @@ RUN apt-get -q install --no-install-recommends -y bats
 ####
 RUN pip install pylint
 
+####
+# Install dateutil.parser
+####
+RUN pip install python-dateutil
+
 ###
 # Avoid out of memory errors in builds
 ###
