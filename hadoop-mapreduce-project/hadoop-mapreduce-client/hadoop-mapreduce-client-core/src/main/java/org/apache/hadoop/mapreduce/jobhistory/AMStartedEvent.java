@@ -107,8 +107,8 @@ public class AMStartedEvent implements HistoryEvent {
    * @return the ApplicationAttemptId
    */
   public ApplicationAttemptId getAppAttemptId() {
-    return ConverterUtils.toApplicationAttemptId(datum.getApplicationAttemptId()
-        .toString());
+    return ApplicationAttemptId.fromString(
+        datum.getApplicationAttemptId().toString());
   }
 
   /**
@@ -122,7 +122,7 @@ public class AMStartedEvent implements HistoryEvent {
    * @return the ContainerId for the MRAppMaster.
    */
   public ContainerId getContainerId() {
-    return ConverterUtils.toContainerId(datum.getContainerId().toString());
+    return ContainerId.fromString(datum.getContainerId().toString());
   }
 
   /**

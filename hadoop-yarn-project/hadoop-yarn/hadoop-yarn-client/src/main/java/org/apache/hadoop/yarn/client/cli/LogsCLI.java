@@ -153,7 +153,7 @@ public class LogsCLI extends Configured implements Tool {
 
     ApplicationId appId = null;
     try {
-      appId = ConverterUtils.toApplicationId(appIdStr);
+      appId = ApplicationId.fromString(appIdStr);
     } catch (Exception e) {
       System.err.println("Invalid ApplicationId specified");
       return -1;
@@ -456,8 +456,8 @@ public class LogsCLI extends Configured implements Tool {
       throws YarnException, IOException {
     YarnClient yarnClient = createYarnClient();
     try {
-      return yarnClient.getContainerReport(ConverterUtils
-        .toContainerId(containerIdStr));
+      return yarnClient.getContainerReport(
+          ContainerId.fromString(containerIdStr));
     } finally {
       yarnClient.close();
     }

@@ -181,7 +181,7 @@ public class NMWebServices {
     ContainerId containerId = null;
     init();
     try {
-      containerId = ConverterUtils.toContainerId(id);
+      containerId = ContainerId.fromString(id);
     } catch (Exception e) {
       throw new BadRequestException("invalid container id, " + id);
     }
@@ -224,7 +224,7 @@ public class NMWebServices {
       @QueryParam("size") String size) {
     ContainerId containerId;
     try {
-      containerId = ConverterUtils.toContainerId(containerIdStr);
+      containerId = ContainerId.fromString(containerIdStr);
     } catch (IllegalArgumentException ex) {
       return Response.status(Status.BAD_REQUEST).build();
     }

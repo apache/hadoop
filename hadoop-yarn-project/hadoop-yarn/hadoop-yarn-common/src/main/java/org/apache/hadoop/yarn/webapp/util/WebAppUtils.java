@@ -392,7 +392,7 @@ public class WebAppUtils {
     }
     ApplicationId aid = null;
     try {
-      aid = ConverterUtils.toApplicationId(recordFactory, appId);
+      aid = ApplicationId.fromString(appId);
     } catch (Exception e) {
       throw new BadRequestException(e);
     }

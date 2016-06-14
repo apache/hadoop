@@ -999,7 +999,7 @@ public class ShuffleHandler extends AuxiliaryService {
       final String baseStr =
           ContainerLocalizer.USERCACHE + "/" + user + "/"
               + ContainerLocalizer.APPCACHE + "/"
-              + ConverterUtils.toString(appID) + "/output" + "/";
+              + appID.toString() + "/output" + "/";
       return baseStr;
     }
 

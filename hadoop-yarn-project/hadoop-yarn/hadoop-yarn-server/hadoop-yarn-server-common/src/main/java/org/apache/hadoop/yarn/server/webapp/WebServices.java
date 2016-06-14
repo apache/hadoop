@@ -431,7 +431,7 @@ public class WebServices {
     }
     ApplicationId aid = null;
     try {
-      aid = ConverterUtils.toApplicationId(appId);
+      aid = ApplicationId.fromString(appId);
     } catch (Exception e) {
       throw new BadRequestException(e);
     }
@@ -449,7 +449,7 @@ public class WebServices {
     }
     ApplicationAttemptId aaid = null;
     try {
-      aaid = ConverterUtils.toApplicationAttemptId(appAttemptId);
+      aaid = ApplicationAttemptId.fromString(appAttemptId);
     } catch (Exception e) {
       throw new BadRequestException(e);
     }
@@ -466,7 +466,7 @@ public class WebServices {
     }
     ContainerId cid = null;
     try {
-      cid = ConverterUtils.toContainerId(containerId);
+      cid = ContainerId.fromString(containerId);
     } catch (Exception e) {
       throw new BadRequestException(e);
     }

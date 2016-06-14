@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -119,4 +124,48 @@ public abstract class URL {
   @Public
   @Stable
   public abstract void setFile(String file);
+  
+  @Public
+  @Stable
+  public Path toPath() throws URISyntaxException {
+    String scheme = getScheme() == null ? "" : getScheme();
+    
+    String authority = "";
+    if (getHost() != null) {
+      authority = getHost();
+      if (getUserInfo() != null) {
+        authority = getUserInfo() + "@" + authority;
+      }
+      if (getPort() > 0) {
+        authority += ":" + getPort();
+      }
+    }
+    
+    return new Path(
+        (new URI(scheme, authority, getFile(), null, null)).normalize());
+  }
+  
+  @Public
+  @Stable
+  public static URL fromURI(URI uri) {
+    URL url =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            URL.class);
+    if (uri.getHost() != null) {
+      url.setHost(uri.getHost());
+    }
+    if (uri.getUserInfo() != null) {
+      url.setUserInfo(uri.getUserInfo());
+    }
+    url.setPort(uri.getPort());
+    url.setScheme(uri.getScheme());
+    url.setFile(uri.getPath());
+    return url;
+  }
+  
+  @Public
+  @Stable
+  public static URL fromPath(Path path) {
+    return fromURI(path.toUri());
+  }
 }

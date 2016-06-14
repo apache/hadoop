@@ -346,7 +346,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
       logURL.append(WebAppUtils.getHttpSchemePrefix(rmContext
           .getYarnConfiguration()));
       logURL.append(WebAppUtils.getRunningLogURL(
-          container.getNodeHttpAddress(), ConverterUtils.toString(containerId),
+          container.getNodeHttpAddress(), containerId.toString(),
           user));
       return logURL.toString();
     } finally {

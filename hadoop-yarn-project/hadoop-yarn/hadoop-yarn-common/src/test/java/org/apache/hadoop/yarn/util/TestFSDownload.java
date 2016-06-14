@@ -53,6 +53,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.junit.Assert;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -103,7 +104,7 @@ public class TestFSDownload {
       Random r, LocalResourceVisibility vis) throws IOException {
     createFile(files, p, len, r);
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(p));
+    ret.setResource(URL.fromPath(p));
     ret.setSize(len);
     ret.setType(LocalResourceType.FILE);
     ret.setVisibility(vis);
@@ -134,7 +135,7 @@ public class TestFSDownload {
     LOG.info("Done writing jar stream ");
     out.close();
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(p));
+    ret.setResource(URL.fromPath(p));
     FileStatus status = files.getFileStatus(p);
     ret.setSize(status.getLen());
     ret.setTimestamp(status.getModificationTime());
@@ -162,7 +163,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".tar")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
@@ -190,7 +191,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".tar.gz")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
@@ -216,7 +217,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".jar")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
@@ -242,7 +243,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".ZIP")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);

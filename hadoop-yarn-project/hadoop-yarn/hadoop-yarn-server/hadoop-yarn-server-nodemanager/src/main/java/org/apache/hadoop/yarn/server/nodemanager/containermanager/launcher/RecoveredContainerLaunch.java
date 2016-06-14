@@ -68,9 +68,9 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
   public Integer call() {
     int retCode = ExitCode.LOST.getExitCode();
     ContainerId containerId = container.getContainerId();
-    String appIdStr = ConverterUtils.toString(
-        containerId.getApplicationAttemptId().getApplicationId());
-    String containerIdStr = ConverterUtils.toString(containerId);
+    String appIdStr =
+        containerId.getApplicationAttemptId().getApplicationId().toString();
+    String containerIdStr = containerId.toString();
 
     dispatcher.getEventHandler().handle(new ContainerEvent(containerId,
         ContainerEventType.CONTAINER_LAUNCHED));

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -35,8 +35,8 @@ import org.apache.hadoop.yarn.util.Records;
 @Stable
 public abstract class NodeId implements Comparable<NodeId> {
 
-  @Private
-  @Unstable
+  @Public
+  @Stable
   public static NodeId newInstance(String host, int port) {
     NodeId nodeId = Records.newRecord(NodeId.class);
     nodeId.setHost(host);
@@ -111,6 +111,23 @@ public abstract class NodeId implements Comparable<NodeId> {
       return 0;
     }
     return hostCompare;
+  }
+  
+  @Public
+  @Stable
+  public static NodeId fromString(String nodeIdStr) {
+    String[] parts = nodeIdStr.split(":");
+    if (parts.length != 2) {
+      throw new IllegalArgumentException("Invalid NodeId [" + nodeIdStr
+          + "]. Expected host:port");
+    }
+    try {
+      NodeId nodeId =
+          NodeId.newInstance(parts[0].trim(), Integer.parseInt(parts[1]));
+      return nodeId;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid port: " + parts[1], e);
+    }
   }
 
   protected abstract void build();
