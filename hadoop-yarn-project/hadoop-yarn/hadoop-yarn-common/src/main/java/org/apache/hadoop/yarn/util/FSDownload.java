@@ -346,7 +346,7 @@ public class FSDownload implements Callable<Path> {
   public Path call() throws Exception {
     final Path sCopy;
     try {
-      sCopy = ConverterUtils.getPathFromYarnURL(resource.getResource());
+      sCopy = resource.getResource().toPath();
     } catch (URISyntaxException e) {
       throw new IOException("Invalid resource", e);
     }

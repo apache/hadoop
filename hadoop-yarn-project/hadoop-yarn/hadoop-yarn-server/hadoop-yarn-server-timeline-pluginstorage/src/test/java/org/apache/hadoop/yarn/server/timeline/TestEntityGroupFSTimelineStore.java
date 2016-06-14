@@ -68,7 +68,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
 
   private static final String SAMPLE_APP_PREFIX_CACHE_TEST = "1234_000";
   private static final int CACHE_TEST_CACHE_SIZE = 5;
-
+  
   private static final String TEST_SUMMARY_LOG_FILE_NAME
       = EntityGroupFSTimelineStore.SUMMARY_LOG_PREFIX + "test";
   private static final String TEST_DOMAIN_LOG_FILE_NAME
@@ -117,7 +117,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
 
     sampleAppIds = new ArrayList<>(CACHE_TEST_CACHE_SIZE + 1);
     for (int i = 0; i < CACHE_TEST_CACHE_SIZE + 1; i++) {
-      ApplicationId appId = ConverterUtils.toApplicationId(
+      ApplicationId appId = ApplicationId.fromString(
           ConverterUtils.APPLICATION_PREFIX + "_" + SAMPLE_APP_PREFIX_CACHE_TEST
               + i);
       sampleAppIds.add(appId);

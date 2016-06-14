@@ -211,7 +211,7 @@ class SharedCacheUploader implements Callable<Boolean> {
 
     final Path remotePath;
     try {
-      remotePath = ConverterUtils.getPathFromYarnURL(resource.getResource());
+      remotePath = resource.getResource().toPath();
     } catch (URISyntaxException e) {
       throw new IOException("Invalid resource", e);
     }

@@ -62,7 +62,7 @@ public class LogCLIHelpers implements Configurable {
         YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
-    ApplicationId applicationId = ConverterUtils.toApplicationId(appId);
+    ApplicationId applicationId = ApplicationId.fromString(appId);
     Path remoteAppLogDir = LogAggregationUtils.getRemoteAppLogDir(
         remoteRootLogDir, applicationId, jobOwner,
         suffix);

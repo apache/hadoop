@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -301,7 +302,7 @@ public class ResourceLocalizationService extends CompositeService
         trackerState = appEntry.getValue();
         if (!trackerState.isEmpty()) {
           ApplicationId appId = appEntry.getKey();
-          String appIdStr = ConverterUtils.toString(appId);
+          String appIdStr = appId.toString();
           LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
               appId, dispatcher, false, super.getConfig(), stateStore);
           LocalResourcesTracker oldTracker = appRsrc.putIfAbsent(appIdStr,
@@ -442,7 +443,7 @@ public class ResourceLocalizationService extends CompositeService
     String userName = app.getUser();
     privateRsrc.putIfAbsent(userName, new LocalResourcesTrackerImpl(userName,
         null, dispatcher, true, super.getConfig(), stateStore));
-    String appIdStr = ConverterUtils.toString(app.getAppId());
+    String appIdStr = app.getAppId().toString();
     appRsrc.putIfAbsent(appIdStr, new LocalResourcesTrackerImpl(app.getUser(),
         app.getAppId(), dispatcher, false, super.getConfig(), stateStore));
     // 1) Signal container init
@@ -491,7 +492,7 @@ public class ResourceLocalizationService extends CompositeService
   private void handleContainerResourcesLocalized(
       ContainerLocalizationEvent event) {
     Container c = event.getContainer();
-    String locId = ConverterUtils.toString(c.getContainerId());
+    String locId = c.getContainerId().toString();
     localizerTracker.endContainerLocalization(locId);
   }
 
@@ -528,14 +529,15 @@ public class ResourceLocalizationService extends CompositeService
             c.getContainerId()));
       }
     }
-    String locId = ConverterUtils.toString(c.getContainerId());
+    String locId = c.getContainerId().toString();
     localizerTracker.cleanupPrivLocalizers(locId);
     
     // Delete the container directories
     String userName = c.getUser();
     String containerIDStr = c.toString();
-    String appIDStr = ConverterUtils.toString(
-        c.getContainerId().getApplicationAttemptId().getApplicationId());
+    String appIDStr =
+        c.getContainerId().getApplicationAttemptId().getApplicationId()
+            .toString();
     
     // Try deleting from good local dirs and full local dirs because a dir might
     // have gone bad while the app was running(disk full). In addition
@@ -583,7 +585,7 @@ public class ResourceLocalizationService extends CompositeService
     ApplicationId appId = application.getAppId();
     String appIDStr = application.toString();
     LocalResourcesTracker appLocalRsrcsTracker =
-      appRsrc.remove(ConverterUtils.toString(appId));
+      appRsrc.remove(appId.toString());
     if (appLocalRsrcsTracker != null) {
       for (LocalizedResource rsrc : appLocalRsrcsTracker ) {
         Path localPath = rsrc.getLocalPath();
@@ -637,7 +639,7 @@ public class ResourceLocalizationService extends CompositeService
       case PRIVATE:
         return privateRsrc.get(user);
       case APPLICATION:
-        return appRsrc.get(ConverterUtils.toString(appId));
+        return appRsrc.get(appId.toString());
     }
   }
 
@@ -977,7 +979,7 @@ public class ResourceLocalizationService extends CompositeService
              LocalResourceRequest nextRsrc = nRsrc.getRequest();
              LocalResource next =
                  recordFactory.newRecordInstance(LocalResource.class);
-             next.setResource(ConverterUtils.getYarnUrlFromPath(nextRsrc
+             next.setResource(URL.fromPath(nextRsrc
                .getPath()));
              next.setTimestamp(nextRsrc.getTimestamp());
              next.setType(nextRsrc.getType());
@@ -1028,8 +1030,8 @@ public class ResourceLocalizationService extends CompositeService
             try {
             getLocalResourcesTracker(req.getVisibility(), user, applicationId)
               .handle(
-                new ResourceLocalizedEvent(req, ConverterUtils
-                  .getPathFromYarnURL(stat.getLocalPath()), stat.getLocalSize()));
+                new ResourceLocalizedEvent(req, stat.getLocalPath().toPath(),
+                    stat.getLocalSize()));
             } catch (URISyntaxException e) { }
 
             // unlocking the resource and removing it from scheduled resource
@@ -1142,8 +1144,8 @@ public class ResourceLocalizationService extends CompositeService
               .setNmPrivateContainerTokens(nmPrivateCTokensPath)
               .setNmAddr(localizationServerAddress)
               .setUser(context.getUser())
-              .setAppId(ConverterUtils.toString(context.getContainerId()
-                  .getApplicationAttemptId().getApplicationId()))
+              .setAppId(context.getContainerId()
+                  .getApplicationAttemptId().getApplicationId().toString())
               .setLocId(localizerId)
               .setDirsHandler(dirsHandler)
               .build());

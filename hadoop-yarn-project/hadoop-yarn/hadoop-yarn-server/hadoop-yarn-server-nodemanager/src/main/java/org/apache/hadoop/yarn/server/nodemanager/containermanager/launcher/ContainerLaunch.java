@@ -155,7 +155,7 @@ public class ContainerLaunch implements Callable<Integer> {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
     Map<Path,List<String>> localResources = null;
     ContainerId containerID = container.getContainerId();
-    String containerIdStr = ConverterUtils.toString(containerID);
+    String containerIdStr = containerID.toString();
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
@@ -377,7 +377,7 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked") // dispatcher not typed
   public void cleanupContainer() throws IOException {
     ContainerId containerId = container.getContainerId();
-    String containerIdStr = ConverterUtils.toString(containerId);
+    String containerIdStr = containerId.toString();
     LOG.info("Cleaning up container " + containerIdStr);
 
     try {
@@ -473,7 +473,7 @@ public class ContainerLaunch implements Callable<Integer> {
       throws IOException {
     ContainerId containerId =
         container.getContainerTokenIdentifier().getContainerID();
-    String containerIdStr = ConverterUtils.toString(containerId);
+    String containerIdStr = containerId.toString();
     String user = container.getUser();
     Signal signal = translateCommandToSignal(command);
     if (signal.equals(Signal.NULL)) {
@@ -565,7 +565,7 @@ public class ContainerLaunch implements Callable<Integer> {
    */
   private String getContainerPid(Path pidFilePath) throws Exception {
     String containerIdStr = 
-        ConverterUtils.toString(container.getContainerId());
+        container.getContainerId().toString();
     String processId = null;
     LOG.debug("Accessing pid for container " + containerIdStr
         + " from pid file " + pidFilePath);

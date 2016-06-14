@@ -212,7 +212,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(file.getAbsolutePath())));
     LocalResource rsrc_alpha = recordFactory.newRecordInstance(LocalResource.class);    
     rsrc_alpha.setResource(resource_alpha);
@@ -242,8 +242,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
 
     // Now ascertain that the resources are localised correctly.
     ApplicationId appId = cId.getApplicationAttemptId().getApplicationId();
-    String appIDStr = ConverterUtils.toString(appId);
-    String containerIDStr = ConverterUtils.toString(cId);
+    String appIDStr = appId.toString();
+    String containerIDStr = cId.toString();
     File userCacheDir = new File(localDir, ContainerLocalizer.USERCACHE);
     File userDir = new File(userCacheDir, user);
     File appCache = new File(userDir, ContainerLocalizer.APPCACHE);
@@ -301,7 +301,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);
@@ -408,7 +408,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 			  recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
 	  URL resource_alpha =
-			  ConverterUtils.getYarnUrlFromPath(localFS
+			  URL.fromPath(localFS
 					  .makeQualified(new Path(scriptFile.getAbsolutePath())));
 	  LocalResource rsrc_alpha =
 			  recordFactory.newRecordInstance(LocalResource.class);
@@ -501,7 +501,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
 //    containerLaunchContext.resources =
 //        new HashMap<CharSequence, LocalResource>();
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(FileContext.getLocalFSFileContext()
+        URL.fromPath(FileContext.getLocalFSFileContext()
             .makeQualified(new Path(file.getAbsolutePath())));
     LocalResource rsrc_alpha = recordFactory.newRecordInstance(LocalResource.class);
     rsrc_alpha.setResource(resource_alpha);
@@ -534,8 +534,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
         ApplicationState.RUNNING);
 
     // Now ascertain that the resources are localised correctly.
-    String appIDStr = ConverterUtils.toString(appId);
-    String containerIDStr = ConverterUtils.toString(cId);
+    String appIDStr = appId.toString();
+    String containerIDStr = cId.toString();
     File userCacheDir = new File(localDir, ContainerLocalizer.USERCACHE);
     File userDir = new File(userCacheDir, user);
     File appCache = new File(userDir, ContainerLocalizer.APPCACHE);
@@ -989,7 +989,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);
@@ -1073,7 +1073,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);
@@ -1227,7 +1227,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerId cId = createContainerId(0);
 
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);

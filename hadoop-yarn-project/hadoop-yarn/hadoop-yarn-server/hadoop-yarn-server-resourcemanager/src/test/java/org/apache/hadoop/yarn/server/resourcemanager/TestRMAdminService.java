@@ -218,7 +218,7 @@ public class TestRMAdminService {
       fail("Should not get any exceptions");
     }
 
-    NodeId nid = ConverterUtils.toNodeId("h1:1234");
+    NodeId nid = NodeId.fromString("h1:1234");
     RMNode ni = rm.getRMContext().getRMNodes().get(nid);
     Resource resource = ni.getTotalCapability();
     Assert.assertEquals("<memory:5120, vCores:5>", resource.toString());
@@ -256,7 +256,7 @@ public class TestRMAdminService {
       fail("Should not get any exceptions");
     }
 
-    NodeId nid = ConverterUtils.toNodeId("h1:1234");
+    NodeId nid = NodeId.fromString("h1:1234");
     RMNode ni = rm.getRMContext().getRMNodes().get(nid);
     Resource resource = ni.getTotalCapability();
     Assert.assertEquals("<memory:5120, vCores:5>", resource.toString());

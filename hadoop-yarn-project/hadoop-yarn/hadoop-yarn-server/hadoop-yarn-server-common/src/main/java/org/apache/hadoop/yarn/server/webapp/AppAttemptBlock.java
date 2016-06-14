@@ -65,7 +65,7 @@ public class AppAttemptBlock extends HtmlBlock {
     }
 
     try {
-      appAttemptId = ConverterUtils.toApplicationAttemptId(attemptid);
+      appAttemptId = ApplicationAttemptId.fromString(attemptid);
     } catch (IllegalArgumentException e) {
       puts("Invalid application attempt ID: " + attemptid);
       return;

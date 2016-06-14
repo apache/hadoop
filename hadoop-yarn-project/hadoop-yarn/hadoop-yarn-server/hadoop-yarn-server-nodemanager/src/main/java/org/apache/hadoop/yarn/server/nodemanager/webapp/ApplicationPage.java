@@ -75,9 +75,7 @@ public class ApplicationPage extends NMView implements YarnWebParams {
 
     @Override
     protected void render(Block html) {
-      ApplicationId applicationID =
-          ConverterUtils.toApplicationId(this.recordFactory,
-              $(APPLICATION_ID));
+      ApplicationId applicationID = ApplicationId.fromString($(APPLICATION_ID));
       Application app = this.nmContext.getApplications().get(applicationID);
       AppInfo info = new AppInfo(app);
       info("Application's information")

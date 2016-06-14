@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster;
@@ -302,7 +303,7 @@ public class HadoopArchiveLogs implements Tool {
         AppInfo app = it.next();
         try {
           ApplicationReport report = client.getApplicationReport(
-              ConverterUtils.toApplicationId(app.getAppId()));
+              ApplicationId.fromString(app.getAppId()));
           LogAggregationStatus aggStatus = report.getLogAggregationStatus();
           if (aggStatus.equals(LogAggregationStatus.RUNNING) ||
               aggStatus.equals(LogAggregationStatus.RUNNING_WITH_FAILURE) ||

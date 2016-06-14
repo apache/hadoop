@@ -19,12 +19,16 @@
 package org.apache.hadoop.yarn.api.records;
 
 import java.text.NumberFormat;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
+
+import com.google.common.base.Splitter;
 
 /**
  * <p><code>ApplicationId</code> represents the <em>globally unique</em> 
@@ -38,10 +42,11 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class ApplicationId implements Comparable<ApplicationId> {
+  private static Splitter _spliter = Splitter.on('_').trimResults();
 
   @Private
   @Unstable
-  public static final String appIdStrPrefix = "application_";
+  public static final String appIdStrPrefix = "application";
 
   @Public
   @Unstable
@@ -105,8 +110,35 @@ public abstract class ApplicationId implements Comparable<ApplicationId> {
 
   @Override
   public String toString() {
-    return appIdStrPrefix + this.getClusterTimestamp() + "_"
-        + appIdFormat.get().format(getId());
+    return appIdStrPrefix + "_" + this.getClusterTimestamp() + "_" + appIdFormat
+        .get().format(getId());
+  }
+  
+  private static ApplicationId toApplicationId(
+      Iterator<String> it) throws NumberFormatException {
+    ApplicationId appId = ApplicationId.newInstance(Long.parseLong(it.next()),
+        Integer.parseInt(it.next()));
+    return appId;
+  }
+  
+  @Public
+  @Stable
+  public static ApplicationId fromString(String appIdStr) {
+    Iterator<String> it = _spliter.split((appIdStr)).iterator();
+    if (!it.next().equals(appIdStrPrefix)) {
+      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
+          + appIdStr + ". The valid ApplicationId should start with prefix "
+          + appIdStrPrefix);
+    }
+    try {
+      return toApplicationId(it);
+    } catch (NumberFormatException n) {
+      throw new IllegalArgumentException("Invalid ApplicationId: "
+          + appIdStr, n);
+    } catch (NoSuchElementException e) {
+      throw new IllegalArgumentException("Invalid ApplicationId: "
+          + appIdStr, e);
+    }
   }
 
   @Override

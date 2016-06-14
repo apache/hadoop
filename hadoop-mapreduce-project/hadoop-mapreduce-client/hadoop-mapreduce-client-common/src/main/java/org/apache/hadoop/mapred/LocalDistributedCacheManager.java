@@ -158,7 +158,7 @@ class LocalDistributedCacheManager {
         }
         Path resourcePath;
         try {
-          resourcePath = ConverterUtils.getPathFromYarnURL(resource.getResource());
+          resourcePath = resource.getResource().toPath();
         } catch (URISyntaxException e) {
           throw new IOException(e);
         }

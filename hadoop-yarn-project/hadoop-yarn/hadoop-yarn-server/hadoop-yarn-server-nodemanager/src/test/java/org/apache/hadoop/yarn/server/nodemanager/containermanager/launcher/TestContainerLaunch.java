@@ -600,7 +600,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // upload the script file so that the container can run it
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);
@@ -801,7 +801,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // upload the script file so that the container can run it
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);
@@ -1140,7 +1140,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // upload the script file so that the container can run it
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha =
         recordFactory.newRecordInstance(LocalResource.class);

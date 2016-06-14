@@ -53,7 +53,7 @@ public class DistributedShellTimelinePlugin extends TimelineEntityGroupPlugin {
   public Set<TimelineEntityGroupId> getTimelineEntityGroupId(String entityId,
       String entityType) {
     if (ApplicationMaster.DSEntity.DS_CONTAINER.toString().equals(entityId)) {
-      ContainerId containerId = ConverterUtils.toContainerId(entityId);
+      ContainerId containerId = ContainerId.fromString(entityId);
       ApplicationId appId = containerId.getApplicationAttemptId()
           .getApplicationId();
       return toEntityGroupId(appId.toString());
@@ -69,7 +69,7 @@ public class DistributedShellTimelinePlugin extends TimelineEntityGroupPlugin {
   }
 
   private Set<TimelineEntityGroupId> toEntityGroupId(String strAppId) {
-    ApplicationId appId = ConverterUtils.toApplicationId(strAppId);
+    ApplicationId appId = ApplicationId.fromString(strAppId);
     TimelineEntityGroupId groupId = TimelineEntityGroupId.newInstance(
         appId, ApplicationMaster.CONTAINER_ENTITY_GROUP_ID);
     Set<TimelineEntityGroupId> result = new HashSet<>();

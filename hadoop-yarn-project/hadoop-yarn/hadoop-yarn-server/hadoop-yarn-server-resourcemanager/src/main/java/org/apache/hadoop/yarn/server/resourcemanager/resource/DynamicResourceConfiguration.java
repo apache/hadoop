@@ -133,7 +133,7 @@ public class DynamicResourceConfiguration extends Configuration {
       = new HashMap<NodeId, ResourceOption> ();
 
     for (String node : nodes) {
-      NodeId nid = ConverterUtils.toNodeId(node);
+      NodeId nid = NodeId.fromString(node);
       int vcores = getVcoresPerNode(node);
       int memory = getMemoryPerNode(node);
       int overCommitTimeout = getOverCommitTimeoutPerNode(node);

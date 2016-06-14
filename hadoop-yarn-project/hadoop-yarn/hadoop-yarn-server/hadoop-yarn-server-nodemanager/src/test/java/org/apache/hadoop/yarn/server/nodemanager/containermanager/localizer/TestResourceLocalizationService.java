@@ -945,7 +945,7 @@ public class TestResourceLocalizationService {
       // Sigh. Thread init of private localizer not accessible
       Thread.sleep(1000);
       dispatcher.await();
-      String appStr = ConverterUtils.toString(appId);
+      String appStr = appId.toString();
       String ctnrStr = c.getContainerId().toString();
       ArgumentCaptor<LocalizerStartContext> contextCaptor = ArgumentCaptor
           .forClass(LocalizerStartContext.class);
@@ -2144,12 +2144,16 @@ public class TestResourceLocalizationService {
       // removing pending download request.
       spyService.getPublicLocalizer().pending.clear();
 
+      LocalizerContext lc = mock(LocalizerContext.class);
+      when(lc.getContainerId()).thenReturn(ContainerId.newContainerId(
+          ApplicationAttemptId.newInstance(ApplicationId.newInstance(1L, 1), 1),
+          1L));
+
       // Now I need to simulate a race condition wherein Event is added to
       // dispatcher before resource state changes to either FAILED or LOCALIZED
       // Hence sending event directly to dispatcher.
       LocalizerResourceRequestEvent localizerEvent =
-          new LocalizerResourceRequestEvent(lr, null,
-            mock(LocalizerContext.class), null);
+          new LocalizerResourceRequestEvent(lr, null, lc, null);
 
       dispatcher1.getEventHandler().handle(localizerEvent);
       // Waiting for download to start. This should return false as new download
@@ -2457,7 +2461,7 @@ public class TestResourceLocalizationService {
         BuilderUtils.newApplicationId(314159265358979L, 3);
     when(app.getUser()).thenReturn(user);
     when(app.getAppId()).thenReturn(appId);
-    when(app.toString()).thenReturn(ConverterUtils.toString(appId));
+    when(app.toString()).thenReturn(appId.toString());
 
     // init container.
     final Container c = getMockContainer(appId, 42, user);
@@ -2468,17 +2472,16 @@ public class TestResourceLocalizationService {
       Path usersdir = new Path(tmpDirs.get(i), ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, user);
       Path allAppsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
-      Path appDir = new Path(allAppsdir, ConverterUtils.toString(appId));
+      Path appDir = new Path(allAppsdir, appId.toString());
       Path containerDir =
-          new Path(appDir, ConverterUtils.toString(c.getContainerId()));
+          new Path(appDir, c.getContainerId().toString());
       containerLocalDirs.add(containerDir);
       appLocalDirs.add(appDir);
 
       Path sysDir =
           new Path(tmpDirs.get(i), ResourceLocalizationService.NM_PRIVATE_DIR);
-      Path appSysDir = new Path(sysDir, ConverterUtils.toString(appId));
-      Path containerSysDir =
-          new Path(appSysDir, ConverterUtils.toString(c.getContainerId()));
+      Path appSysDir = new Path(sysDir, appId.toString());
+      Path containerSysDir = new Path(appSysDir, c.getContainerId().toString());
 
       nmLocalContainerDirs.add(containerSysDir);
       nmLocalAppDirs.add(appSysDir);

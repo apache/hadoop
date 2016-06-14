@@ -297,7 +297,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     String runAsUser = getRunAsUser(user);
 
     ContainerId containerId = container.getContainerId();
-    String containerIdStr = ConverterUtils.toString(containerId);
+    String containerIdStr = containerId.toString();
 
     resourcesHandler.preExecute(containerId,
             container.getResource());

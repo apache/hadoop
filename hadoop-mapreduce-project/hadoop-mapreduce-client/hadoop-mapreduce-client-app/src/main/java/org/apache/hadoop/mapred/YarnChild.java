@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
@@ -290,11 +291,10 @@ class YarnChild {
   private static void configureTask(JobConf job, Task task,
       Credentials credentials, Token<JobTokenIdentifier> jt) throws IOException {
     job.setCredentials(credentials);
-    
-    ApplicationAttemptId appAttemptId =
-        ConverterUtils.toContainerId(
-            System.getenv(Environment.CONTAINER_ID.name()))
-            .getApplicationAttemptId();
+
+    ApplicationAttemptId appAttemptId = ContainerId.fromString(
+        System.getenv(Environment.CONTAINER_ID.name()))
+        .getApplicationAttemptId();
     LOG.debug("APPLICATION_ATTEMPT_ID: " + appAttemptId);
     // Set it in conf, so as to be able to be used the the OutputCommitter.
     job.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID,

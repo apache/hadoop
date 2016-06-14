@@ -321,7 +321,7 @@ public class YARNRunner implements ClientProtocol {
       throws IOException {
     LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
     FileStatus rsrcStat = fs.getFileStatus(p);
-    rsrc.setResource(ConverterUtils.getYarnUrlFromPath(fs
+    rsrc.setResource(URL.fromPath(fs
         .getDefaultFileSystem().resolvePath(rsrcStat.getPath())));
     rsrc.setSize(rsrcStat.getLen());
     rsrc.setTimestamp(rsrcStat.getModificationTime());
@@ -355,8 +355,7 @@ public class YARNRunner implements ClientProtocol {
 
     Path jobConfPath = new Path(jobSubmitDir, MRJobConfig.JOB_CONF_FILE);
 
-    URL yarnUrlForJobSubmitDir = ConverterUtils
-        .getYarnUrlFromPath(defaultFileContext.getDefaultFileSystem()
+    URL yarnUrlForJobSubmitDir = URL.fromPath(defaultFileContext.getDefaultFileSystem()
             .resolvePath(
                 defaultFileContext.makeQualified(new Path(jobSubmitDir))));
     LOG.debug("Creating setup context, jobSubmitDir url is "

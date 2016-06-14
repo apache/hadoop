@@ -181,7 +181,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         if (idEndPos < 0) {
           throw new IOException("Unable to determine container in key: " + key);
         }
-        ContainerId containerId = ConverterUtils.toContainerId(
+        ContainerId containerId = ContainerId.fromString(
             key.substring(CONTAINERS_KEY_PREFIX.length(), idEndPos));
         String keyPrefix = key.substring(0, idEndPos+1);
         RecoveredContainerState rcs = loadContainerState(containerId,
@@ -545,7 +545,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
           throw new IOException("Unable to determine appID in resource key: "
               + key);
         }
-        ApplicationId appId = ConverterUtils.toApplicationId(
+        ApplicationId appId = ApplicationId.fromString(
             key.substring(appIdStartPos, appIdEndPos));
         userResources.appTrackerStates.put(appId,
             loadResourceTrackerState(iter, key.substring(0, appIdEndPos+1)));
@@ -713,7 +713,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             ApplicationAttemptId.appAttemptIdStrPrefix)) {
           ApplicationAttemptId attempt;
           try {
-            attempt = ConverterUtils.toApplicationAttemptId(key);
+            attempt = ApplicationAttemptId.fromString(key);
           } catch (IllegalArgumentException e) {
             throw new IOException("Bad application master key state for "
                 + fullKey, e);
@@ -817,7 +817,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     ContainerId containerId;
     Long expTime;
     try {
-      containerId = ConverterUtils.toContainerId(containerIdStr);
+      containerId = ContainerId.fromString(containerIdStr);
       expTime = Long.parseLong(asString(value));
     } catch (IllegalArgumentException e) {
       throw new IOException("Bad container token state for " + key, e);
@@ -879,7 +879,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         String appIdStr = fullKey.substring(logDeleterKeyPrefixLength);
         ApplicationId appId = null;
         try {
-          appId = ConverterUtils.toApplicationId(appIdStr);
+          appId = ApplicationId.fromString(appIdStr);
         } catch (IllegalArgumentException e) {
           LOG.warn("Skipping unknown log deleter key " + fullKey);
           continue;

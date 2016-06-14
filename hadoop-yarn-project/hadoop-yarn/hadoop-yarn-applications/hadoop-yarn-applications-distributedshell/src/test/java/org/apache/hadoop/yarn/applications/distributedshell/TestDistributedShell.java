@@ -371,8 +371,8 @@ public class TestDistributedShell {
     }
     String currAttemptEntityId
         = entitiesAttempts.getEntities().get(0).getEntityId();
-    ApplicationAttemptId attemptId
-        = ConverterUtils.toApplicationAttemptId(currAttemptEntityId);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(
+        currAttemptEntityId);
     NameValuePair primaryFilter = new NameValuePair(
         ApplicationMaster.APPID_TIMELINE_FILTER_NAME,
         attemptId.getApplicationId().toString());

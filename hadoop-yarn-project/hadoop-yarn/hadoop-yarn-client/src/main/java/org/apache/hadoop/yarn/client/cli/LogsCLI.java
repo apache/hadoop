@@ -45,6 +45,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -199,7 +200,7 @@ public class LogsCLI extends Configured implements Tool {
 
     ApplicationId appId = null;
     try {
-      appId = ConverterUtils.toApplicationId(appIdStr);
+      appId = ApplicationId.fromString(appIdStr);
     } catch (Exception e) {
       System.err.println("Invalid ApplicationId specified");
       return -1;
@@ -523,8 +524,8 @@ public class LogsCLI extends Configured implements Tool {
       throws YarnException, IOException {
     YarnClient yarnClient = createYarnClient();
     try {
-      return yarnClient.getContainerReport(ConverterUtils
-        .toContainerId(containerIdStr));
+      return yarnClient.getContainerReport(
+          ContainerId.fromString(containerIdStr));
     } finally {
       yarnClient.close();
     }

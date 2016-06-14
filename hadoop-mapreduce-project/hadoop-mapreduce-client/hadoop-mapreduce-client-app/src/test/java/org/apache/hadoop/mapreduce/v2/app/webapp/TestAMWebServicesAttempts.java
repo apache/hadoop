@@ -515,7 +515,7 @@ public class TestAMWebServicesAttempts extends JerseyTest {
     WebServicesTestUtils.checkStringMatch("diagnostics", expectDiag,
         diagnostics);
     WebServicesTestUtils.checkStringMatch("assignedContainerId",
-        ConverterUtils.toString(ta.getAssignedContainerID()),
+        ta.getAssignedContainerID().toString(),
         assignedContainerId);
 
     assertEquals("startTime wrong", ta.getLaunchTime(), startTime);

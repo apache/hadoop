@@ -415,7 +415,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     fileWriter.close();
     FileContext localFS = FileContext.getLocalFSFileContext();
     URL resource_alpha =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource rsrc_alpha = RecordFactoryProvider
         .getRecordFactory(null).newRecordInstance(LocalResource.class);

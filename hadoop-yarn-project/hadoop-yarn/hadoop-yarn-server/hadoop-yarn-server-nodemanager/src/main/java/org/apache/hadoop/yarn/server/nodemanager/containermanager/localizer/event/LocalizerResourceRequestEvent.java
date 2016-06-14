@@ -37,7 +37,7 @@ public class LocalizerResourceRequestEvent extends LocalizerEvent {
   public LocalizerResourceRequestEvent(LocalizedResource resource,
       LocalResourceVisibility vis, LocalizerContext context, String pattern) {
     super(LocalizerEventType.REQUEST_RESOURCE_LOCALIZATION,
-        ConverterUtils.toString(context.getContainerId()));
+        context.getContainerId().toString());
     this.vis = vis;
     this.context = context;
     this.resource = resource;

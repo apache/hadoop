@@ -18,12 +18,32 @@
 
 package org.apache.hadoop.yarn.util;
 
-import static org.apache.hadoop.fs.CreateFlag.CREATE;
-import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -53,33 +73,12 @@ import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.junit.Assert;
-
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.LocalResourceType;
-import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.AfterClass;
-import org.junit.Test;
-
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 public class TestFSDownload {
 
@@ -103,7 +102,7 @@ public class TestFSDownload {
       Random r, LocalResourceVisibility vis) throws IOException {
     createFile(files, p, len, r);
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(p));
+    ret.setResource(URL.fromPath(p));
     ret.setSize(len);
     ret.setType(LocalResourceType.FILE);
     ret.setVisibility(vis);
@@ -134,7 +133,7 @@ public class TestFSDownload {
     LOG.info("Done writing jar stream ");
     out.close();
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(p));
+    ret.setResource(URL.fromPath(p));
     FileStatus status = files.getFileStatus(p);
     ret.setSize(status.getLen());
     ret.setTimestamp(status.getModificationTime());
@@ -162,7 +161,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".tar")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
@@ -190,7 +189,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".tar.gz")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
@@ -216,7 +215,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".jar")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
@@ -242,7 +241,7 @@ public class TestFSDownload {
     out.close();
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
+    ret.setResource(URL.fromPath(new Path(p.toString()
         + ".ZIP")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);

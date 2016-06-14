@@ -42,7 +42,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   private static final String CONTAINER_PREFIX = "container";
   private static final String EPOCH_PREFIX = "e";
 
-  @Private
+  @Public
   @Unstable
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
       long containerId) {
@@ -97,7 +97,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
    */
   @Public
   @Deprecated
-  @Stable
+  @Unstable
   public abstract int getId();
 
   /**
@@ -205,7 +205,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   }
 
   @Public
-  @Unstable
+  @Stable
   public static ContainerId fromString(String containerIdStr) {
     Iterator<String> it = _SPLITTER.split(containerIdStr).iterator();
     if (!it.next().equals(CONTAINER_PREFIX)) {

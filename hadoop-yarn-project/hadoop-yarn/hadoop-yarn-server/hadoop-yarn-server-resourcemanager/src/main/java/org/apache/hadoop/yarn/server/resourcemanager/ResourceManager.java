@@ -1310,7 +1310,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmStore.init(conf);
     rmStore.start();
     try {
-      ApplicationId removeAppId = ConverterUtils.toApplicationId(applicationId);
+      ApplicationId removeAppId = ApplicationId.fromString(applicationId);
       LOG.info("Deleting application " + removeAppId + " from state store");
       rmStore.removeApplication(removeAppId);
       LOG.info("Application is deleted from state store");

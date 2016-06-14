@@ -63,7 +63,7 @@ public class AppAttemptInfo {
         this.nodeId = masterContainer.getNodeId().toString();
         this.logsLink = WebAppUtils.getRunningLogURL(schemePrefix
             + masterContainer.getNodeHttpAddress(),
-            ConverterUtils.toString(masterContainer.getId()), user);
+            masterContainer.getId().toString(), user);
         if (rm.getResourceScheduler() instanceof AbstractYarnScheduler) {
           AbstractYarnScheduler ayScheduler =
               (AbstractYarnScheduler) rm.getResourceScheduler();

@@ -279,7 +279,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
     }
     ContainerId containerId = null;
     try {
-      containerId = ConverterUtils.toContainerId(containerIdStr);
+      containerId = ContainerId.fromString(containerIdStr);
     } catch (IllegalArgumentException e) {
       html.h1()
           ._("Cannot get container logs for invalid containerId: "
@@ -297,7 +297,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
     }
     NodeId nodeId = null;
     try {
-      nodeId = ConverterUtils.toNodeId(nodeIdStr);
+      nodeId = NodeId.fromString(nodeIdStr);
     } catch (IllegalArgumentException e) {
       html.h1()._("Cannot get container logs. Invalid nodeId: " + nodeIdStr)
           ._();
