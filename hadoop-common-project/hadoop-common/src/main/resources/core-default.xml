@@ -316,6 +316,19 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.search.group.hierarchy.levels</name>
+  <value>0</value>
+  <description>
+    The number of levels to go up the group hierarchy when determining
+    which groups a user is part of. 0 Will represent checking just the
+    group that the user belongs to.  Each additional level will raise the
+    time it takes to exectue a query by at most
+    hadoop.security.group.mapping.ldap.directory.search.timeout.
+    The default will usually be appropriate for all LDAP systems.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.posix.attr.uid.name</name>
   <value>uidNumber</value>
   <description>

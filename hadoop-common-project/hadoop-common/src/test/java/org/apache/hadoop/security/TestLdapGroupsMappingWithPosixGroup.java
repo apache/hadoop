@@ -69,7 +69,7 @@ public class TestLdapGroupsMappingWithPosixGroup
         any(Object[].class), any(SearchControls.class)))
         .thenReturn(getUserNames(), getGroupNames());
 
-    doTestGetGroups(Arrays.asList(testGroups), 2);
+    doTestGetGroups(Arrays.asList(getTestGroups()), 2);
   }
 
   private void doTestGetGroups(List<String> expectedGroups, int searchTimes)
