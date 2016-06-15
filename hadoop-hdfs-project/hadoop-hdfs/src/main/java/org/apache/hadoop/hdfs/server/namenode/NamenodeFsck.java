@@ -118,6 +118,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final String DECOMMISSIONED_STATUS = "is DECOMMISSIONED";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
+  public static final String UNDEFINED = "undefined";
 
   private final NameNode namenode;
   private final NetworkTopology networktopology;
@@ -136,6 +137,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showCorruptFileBlocks = false;
 
   private boolean showReplicaDetails = false;
+  private boolean showUpgradeDomains = false;
   private long staleInterval;
   private Tracer tracer;
 
@@ -216,10 +218,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       else if (key.equals("racks")) { this.showRacks = true; }
       else if (key.equals("replicadetails")) {
         this.showReplicaDetails = true;
-      }
-      else if (key.equals("storagepolicies")) { this.showStoragePolcies = true; }
-      else if (key.equals("openforwrite")) {this.showOpenFiles = true; }
-      else if (key.equals("listcorruptfileblocks")) {
+      } else if (key.equals("upgradedomains")) {
+        this.showUpgradeDomains = true;
+      } else if (key.equals("storagepolicies")) {
+        this.showStoragePolcies = true;
+      } else if (key.equals("openforwrite")) {
+        this.showOpenFiles = true;
+      } else if (key.equals("listcorruptfileblocks")) {
         this.showCorruptFileBlocks = true;
       } else if (key.equals("startblockafter")) {
         this.currentCookie[0] = pmap.get("startblockafter")[0];
@@ -524,8 +529,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     if (res.totalFiles % 100 == 0) { out.println(); out.flush(); }
   }
 
-  private void collectBlocksSummary(String parent, HdfsFileStatus file, Result res,
-      LocatedBlocks blocks) throws IOException {
+  private void collectBlocksSummary(String parent, HdfsFileStatus file,
+      Result res, LocatedBlocks blocks) throws IOException {
     String path = file.getFullName(parent);
     boolean isOpen = blocks.isUnderConstruction();
     if (isOpen && !showOpenFiles) {
@@ -638,7 +643,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         missize += block.getNumBytes();
       } else {
         report.append(" Live_repl=" + liveReplicas);
-        if (showLocations || showRacks || showReplicaDetails) {
+        if (showLocations || showRacks || showReplicaDetails ||
+            showUpgradeDomains) {
           StringBuilder sb = new StringBuilder("[");
           Iterable<DatanodeStorageInfo> storages = bm.getStorages(block.getLocalBlock());
           for (Iterator<DatanodeStorageInfo> iterator = storages.iterator(); iterator.hasNext();) {
@@ -649,6 +655,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             } else {
               sb.append(new DatanodeInfoWithStorage(dnDesc, storage.getStorageID(), storage
                   .getStorageType()));
+            }
+            if (showUpgradeDomains) {
+              String upgradeDomain = (dnDesc.getUpgradeDomain() != null) ?
+                  dnDesc.getUpgradeDomain() : UNDEFINED;
+              sb.append("(ud=" + upgradeDomain +")");
             }
             if (showReplicaDetails) {
               LightWeightHashSet<Block> blocksExcess =
