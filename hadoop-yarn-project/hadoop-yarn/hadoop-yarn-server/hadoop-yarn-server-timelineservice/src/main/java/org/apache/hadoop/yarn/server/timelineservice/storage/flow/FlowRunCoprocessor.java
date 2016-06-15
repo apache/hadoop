@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
@@ -59,7 +59,7 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
   private static final Log LOG = LogFactory.getLog(FlowRunCoprocessor.class);
   private boolean isFlowRunRegion = false;
 
-  private HRegion region;
+  private Region region;
   /**
    * generate a timestamp that is unique per row in a region this is per region.
    */
@@ -178,7 +178,7 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
     scan.setMaxVersions();
     RegionScanner scanner = null;
     try {
-      scanner = new FlowScanner(e.getEnvironment(), scan.getBatch(),
+      scanner = new FlowScanner(e.getEnvironment(), scan,
           region.getScanner(scan), FlowScannerOperation.READ);
       scanner.next(results);
       e.bypass();
@@ -233,7 +233,7 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
     if (!isFlowRunRegion) {
       return scanner;
     }
-    return new FlowScanner(e.getEnvironment(), scan.getBatch(),
+    return new FlowScanner(e.getEnvironment(), scan,
         scanner, FlowScannerOperation.READ);
   }
 
@@ -257,7 +257,7 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
             + " storeFilesCount=" + store.getStorefilesCount());
       }
     }
-    return new FlowScanner(c.getEnvironment(), -1, scanner,
+    return new FlowScanner(c.getEnvironment(), scanner,
         FlowScannerOperation.FLUSH);
   }
 
@@ -296,10 +296,9 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
       requestOp = (request.isMajor() ? FlowScannerOperation.MAJOR_COMPACTION
           : FlowScannerOperation.MINOR_COMPACTION);
       LOG.info("Compactionrequest= " + request.toString() + " "
-          + requestOp.toString() + " RegionName="
-          + e.getEnvironment().getRegion().getRegionNameAsString());
+          + requestOp.toString() + " RegionName=" + e.getEnvironment()
+              .getRegion().getRegionInfo().getRegionNameAsString());
     }
-
-    return new FlowScanner(e.getEnvironment(), -1, scanner, requestOp);
+    return new FlowScanner(e.getEnvironment(), scanner, requestOp);
   }
 }
