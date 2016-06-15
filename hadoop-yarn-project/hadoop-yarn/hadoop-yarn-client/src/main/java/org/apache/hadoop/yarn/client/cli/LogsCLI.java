@@ -412,7 +412,9 @@ public class LogsCLI extends Configured implements Tool {
                 .queryParam("size", Long.toString(request.getBytes()))
                 .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
           out.println(response.getEntity(String.class));
-          out.println("End of LogType:" + logFile);
+          out.println("End of LogType:" + logFile + ". This log file belongs"
+              + " to a running container (" + containerIdStr + ") and so may"
+              + " not be complete.");
           out.flush();
         } catch (ClientHandlerException | UniformInterfaceException ex) {
           System.err.println("Can not find the log file:" + logFile
