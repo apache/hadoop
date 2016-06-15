@@ -62,7 +62,7 @@ public class TaskUpdatedEvent implements HistoryEvent {
   public EventType getEventType() {
     return EventType.TASK_UPDATED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

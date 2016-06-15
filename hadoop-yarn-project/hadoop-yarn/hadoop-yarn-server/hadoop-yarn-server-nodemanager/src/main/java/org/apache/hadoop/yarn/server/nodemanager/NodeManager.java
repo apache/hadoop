@@ -464,9 +464,9 @@ public class NodeManager extends CompositeService
   public static class NMContext implements Context {
 
     private NodeId nodeId = null;
-    
+
     private Configuration conf = null;
-    
+
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
 
@@ -544,7 +544,7 @@ public class NodeManager extends CompositeService
     public ConcurrentMap<ApplicationId, Application> getApplications() {
       return this.applications;
     }
-    
+
     @Override
     public Configuration getConf() {
       return this.conf;
@@ -677,7 +677,12 @@ public class NodeManager extends CompositeService
 
     public void addRegisteredCollectors(
         Map<ApplicationId, String> newRegisteredCollectors) {
-      this.registeredCollectors.putAll(newRegisteredCollectors);
+      if (registeredCollectors != null) {
+        this.registeredCollectors.putAll(newRegisteredCollectors);
+      } else {
+        LOG.warn("collectors are added when the registered collectors are " +
+            "initialized");
+      }
     }
 
     @Override

@@ -77,7 +77,7 @@ public class JobInitedEvent implements HistoryEvent {
   }
   /** Get whether the job's map and reduce stages were combined */
   public boolean getUberized() { return datum.getUberized(); }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

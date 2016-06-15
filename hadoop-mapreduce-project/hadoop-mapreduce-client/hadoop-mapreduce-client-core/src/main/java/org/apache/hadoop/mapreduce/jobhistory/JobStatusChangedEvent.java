@@ -62,7 +62,7 @@ public class JobStatusChangedEvent implements HistoryEvent {
   public EventType getEventType() {
     return EventType.JOB_STATUS_CHANGED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

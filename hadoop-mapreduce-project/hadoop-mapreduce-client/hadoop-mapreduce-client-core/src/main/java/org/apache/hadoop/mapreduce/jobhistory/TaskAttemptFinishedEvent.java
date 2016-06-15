@@ -141,7 +141,7 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
            ? EventType.MAP_ATTEMPT_FINISHED
            : EventType.REDUCE_ATTEMPT_FINISHED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

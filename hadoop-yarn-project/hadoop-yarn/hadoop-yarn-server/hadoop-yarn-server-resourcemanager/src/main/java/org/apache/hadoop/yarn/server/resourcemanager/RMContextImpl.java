@@ -380,7 +380,7 @@ public class RMContextImpl implements RMContext {
   public RMTimelineCollectorManager getRMTimelineCollectorManager() {
     return activeServiceContext.getRMTimelineCollectorManager();
   }
-  
+
   @Override
   public void setSystemMetricsPublisher(
       SystemMetricsPublisher metricsPublisher) {

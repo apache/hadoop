@@ -111,7 +111,6 @@ public class TestNMWebServer {
         return true;
       }
     };
-    
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
     NodeHealthCheckerService healthChecker = createNodeHealthCheckerService(conf);
@@ -175,7 +174,6 @@ public class TestNMWebServer {
         return true;
       }
     };
-    
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
     NodeHealthCheckerService healthChecker = createNodeHealthCheckerService(conf);

@@ -495,8 +495,8 @@ public class TimelineClientImpl extends TimelineClient {
     }
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
-      String msg = "Response from the timeline server is " + 
-          ((resp == null) ? "null": 
+      String msg = "Response from the timeline server is " +
+          ((resp == null) ? "null":
           "not successful," + " HTTP error code: " + resp.getStatus()
           + ", Server response:\n" + resp.getEntity(String.class));
       LOG.error(msg);

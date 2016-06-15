@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -123,15 +123,6 @@ import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -311,6 +302,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
         createRMApplicationHistoryWriter();
     addService(rmApplicationHistoryWriter);
     rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
+
+    // initialize the RM timeline collector first so that the system metrics
+    // publisher can bind to it
+    if (YarnConfiguration.timelineServiceV2Enabled(this.conf)) {
+      RMTimelineCollectorManager timelineCollectorManager =
+          createRMTimelineCollectorManager();
+      addService(timelineCollectorManager);
+      rmContext.setRMTimelineCollectorManager(timelineCollectorManager);
+    }
 
     SystemMetricsPublisher systemMetricsPublisher =
         createSystemMetricsPublisher();
@@ -600,18 +600,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       if (UserGroupInformation.isSecurityEnabled()) {
         delegationTokenRenewer = createDelegationTokenRenewer();
         rmContext.setDelegationTokenRenewer(delegationTokenRenewer);
-      }
-
-      RMApplicationHistoryWriter rmApplicationHistoryWriter =
-          createRMApplicationHistoryWriter();
-      addService(rmApplicationHistoryWriter);
-      rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
-
-      if (YarnConfiguration.timelineServiceV2Enabled(configuration)) {
-        RMTimelineCollectorManager timelineCollectorManager =
-            createRMTimelineCollectorManager();
-        addService(timelineCollectorManager);
-        rmContext.setRMTimelineCollectorManager(timelineCollectorManager);
       }
 
       // Register event handler for NodesListManager

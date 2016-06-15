@@ -30,10 +30,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
-import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -95,8 +93,6 @@ public class RMActiveServiceContext {
   private NodesListManager nodesListManager;
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
-  private RMApplicationHistoryWriter rmApplicationHistoryWriter;
-  private SystemMetricsPublisher systemMetricsPublisher;
   private RMTimelineCollectorManager timelineCollectorManager;
 
   private RMNodeLabelsManager nodeLabelManager;
@@ -375,12 +371,6 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
-  public RMApplicationHistoryWriter getRMApplicationHistoryWriter() {
-    return rmApplicationHistoryWriter;
-  }
-
-  @Private
-  @Unstable
   public RMTimelineCollectorManager getRMTimelineCollectorManager() {
     return timelineCollectorManager;
   }
@@ -390,26 +380,6 @@ public class RMActiveServiceContext {
   public void setRMTimelineCollectorManager(
       RMTimelineCollectorManager collectorManager) {
     this.timelineCollectorManager = collectorManager;
-  }
-
-  @Private
-  @Unstable
-  public void setSystemMetricsPublisher(
-      SystemMetricsPublisher metricsPublisher) {
-    this.systemMetricsPublisher = metricsPublisher;
-  }
-
-  @Private
-  @Unstable
-  public SystemMetricsPublisher getSystemMetricsPublisher() {
-    return systemMetricsPublisher;
-  }
-
-  @Private
-  @Unstable
-  public void setRMApplicationHistoryWriter(
-      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
-    this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
   }
 
   @Private
