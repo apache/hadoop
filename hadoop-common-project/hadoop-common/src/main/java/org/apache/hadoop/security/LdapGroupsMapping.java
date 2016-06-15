@@ -25,6 +25,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Collection;
+import java.util.Set;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
@@ -66,9 +69,11 @@ import org.apache.hadoop.conf.Configuration;
  * is used for searching users or groups which returns more results than are
  * allowed by the server, an exception will be thrown.
  * 
- * The implementation also does not attempt to resolve group hierarchies. In
- * order to be considered a member of a group, the user must be an explicit
- * member in LDAP.
+ * The implementation attempts to resolve group hierarchies,
+ * to a configurable limit.
+ * If the limit is 0, in order to be considered a member of a group,
+ * the user must be an explicit member in LDAP.  Otherwise, it will traverse the
+ * group hierarchy n levels up.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -157,6 +162,13 @@ public class LdapGroupsMapping
   public static final String GROUP_NAME_ATTR_DEFAULT = "cn";
 
   /*
+   * How many levels to traverse when checking for groups in the org hierarchy
+   */
+  public static final String GROUP_HIERARCHY_LEVELS_KEY =
+        LDAP_CONFIG_PREFIX + ".search.group.hierarchy.levels";
+  public static final int GROUP_HIERARCHY_LEVELS_DEFAULT = 0;
+
+  /*
    * LDAP attribute names to use when doing posix-like lookups
    */
   public static final String POSIX_UID_ATTR_KEY = LDAP_CONFIG_PREFIX + ".posix.attr.uid.name";
@@ -208,6 +220,7 @@ public class LdapGroupsMapping
   private String memberOfAttr;
   private String groupMemberAttr;
   private String groupNameAttr;
+  private int    groupHierarchyLevels;
   private String posixUidAttr;
   private String posixGidAttr;
   private boolean isPosix;
@@ -234,7 +247,7 @@ public class LdapGroupsMapping
      */
     for(int retry = 0; retry < RECONNECT_RETRY_COUNT; retry++) {
       try {
-        return doGetGroups(user);
+        return doGetGroups(user, groupHierarchyLevels);
       } catch (NamingException e) {
         LOG.warn("Failed to get groups for user " + user + " (retry=" + retry
             + ") by " + e);
@@ -324,9 +337,11 @@ public class LdapGroupsMapping
    * @return a list of strings representing group names of the user.
    * @throws NamingException if unable to find group names
    */
-  private List<String> lookupGroup(SearchResult result, DirContext c)
+  private List<String> lookupGroup(SearchResult result, DirContext c,
+      int goUpHierarchy)
       throws NamingException {
     List<String> groups = new ArrayList<String>();
+    Set<String> groupDNs = new HashSet<String>();
 
     NamingEnumeration<SearchResult> groupResults = null;
     // perform the second LDAP query
@@ -345,12 +360,14 @@ public class LdapGroupsMapping
     if (groupResults != null) {
       while (groupResults.hasMoreElements()) {
         SearchResult groupResult = groupResults.nextElement();
-        Attribute groupName = groupResult.getAttributes().get(groupNameAttr);
-        if (groupName == null) {
-          throw new NamingException("The group object does not have " +
-              "attribute '" + groupNameAttr + "'.");
-        }
-        groups.add(groupName.get().toString());
+        getGroupNames(groupResult, groups, groupDNs, goUpHierarchy > 0);
+      }
+      if (goUpHierarchy > 0 && !isPosix) {
+        // convert groups to a set to ensure uniqueness
+        Set<String> groupset = new HashSet<String>(groups);
+        goUpGroupHierarchy(groupDNs, goUpHierarchy, groupset);
+        // convert set back to list for compatibility
+        groups = new ArrayList<String>(groupset);
       }
     }
     return groups;
@@ -369,7 +386,8 @@ public class LdapGroupsMapping
    * return an empty string array.
    * @throws NamingException if unable to get group names
    */
-  List<String> doGetGroups(String user) throws NamingException {
+  List<String> doGetGroups(String user, int goUpHierarchy)
+      throws NamingException {
     DirContext c = getDirContext();
 
     // Search for the user. We'll only ever need to look at the first result
@@ -378,7 +396,7 @@ public class LdapGroupsMapping
     // return empty list if the user can not be found.
     if (!results.hasMoreElements()) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("doGetGroups(" + user + ") return no groups because the " +
+        LOG.debug("doGetGroups(" + user + ") returned no groups because the " +
             "user is not found.");
       }
       return new ArrayList<String>();
@@ -411,13 +429,74 @@ public class LdapGroupsMapping
                 "the second LDAP query using the user's DN.", e);
       }
     }
-    if (groups == null || groups.isEmpty()) {
-      groups = lookupGroup(result, c);
+    if (groups == null || groups.isEmpty() || goUpHierarchy > 0) {
+      groups = lookupGroup(result, c, goUpHierarchy);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("doGetGroups(" + user + ") return " + groups);
+      LOG.debug("doGetGroups(" + user + ") returned " + groups);
     }
     return groups;
+  }
+
+  /* Helper function to get group name from search results.
+  */
+  void getGroupNames(SearchResult groupResult, Collection<String> groups,
+                     Collection<String> groupDNs, boolean doGetDNs)
+                     throws NamingException  {
+    Attribute groupName = groupResult.getAttributes().get(groupNameAttr);
+    if (groupName == null) {
+      throw new NamingException("The group object does not have " +
+        "attribute '" + groupNameAttr + "'.");
+    }
+    groups.add(groupName.get().toString());
+    if (doGetDNs) {
+      groupDNs.add(groupResult.getNameInNamespace());
+    }
+  }
+
+  /* Implementation for walking up the ldap hierarchy
+   * This function will iteratively find the super-group memebership of
+   *    groups listed in groupDNs and add them to
+   * the groups set.  It will walk up the hierarchy goUpHierarchy levels.
+   * Note: This is an expensive operation and settings higher than 1
+   *    are NOT recommended as they will impact both the speed and
+   *    memory usage of all operations.
+   * The maximum time for this function will be bounded by the ldap query
+   * timeout and the number of ldap queries that it will make, which is
+   * max(Recur Depth in LDAP, goUpHierarcy) * DIRECTORY_SEARCH_TIMEOUT
+   *
+   * @param ctx - The context for contacting the ldap server
+   * @param groupDNs - the distinguished name of the groups whose parents we
+   *    want to look up
+   * @param goUpHierarchy - the number of levels to go up,
+   * @param groups - Output variable to store all groups that will be added
+  */
+  void goUpGroupHierarchy(Set<String> groupDNs,
+                          int goUpHierarchy,
+                          Set<String> groups)
+      throws NamingException {
+    if (goUpHierarchy <= 0 || groups.isEmpty()) {
+      return;
+    }
+    DirContext context = getDirContext();
+    Set<String> nextLevelGroups = new HashSet<String>();
+    StringBuilder filter = new StringBuilder();
+    filter.append("(&").append(groupSearchFilter).append("(|");
+    for (String dn : groupDNs) {
+      filter.append("(").append(groupMemberAttr).append("=")
+        .append(dn).append(")");
+    }
+    filter.append("))");
+    LOG.debug("Ldap group query string: " + filter.toString());
+    NamingEnumeration<SearchResult> groupResults =
+        context.search(baseDN,
+           filter.toString(),
+           SEARCH_CONTROLS);
+    while (groupResults.hasMoreElements()) {
+      SearchResult groupResult = groupResults.nextElement();
+      getGroupNames(groupResult, groups, nextLevelGroups, true);
+    }
+    goUpGroupHierarchy(nextLevelGroups, goUpHierarchy - 1, groups);
   }
 
   DirContext getDirContext() throws NamingException {
@@ -446,7 +525,6 @@ public class LdapGroupsMapping
 
       ctx = new InitialDirContext(env);
     }
-
     return ctx;
   }
   
@@ -513,6 +591,8 @@ public class LdapGroupsMapping
         conf.get(GROUP_MEMBERSHIP_ATTR_KEY, GROUP_MEMBERSHIP_ATTR_DEFAULT);
     groupNameAttr =
         conf.get(GROUP_NAME_ATTR_KEY, GROUP_NAME_ATTR_DEFAULT);
+    groupHierarchyLevels =
+        conf.getInt(GROUP_HIERARCHY_LEVELS_KEY, GROUP_HIERARCHY_LEVELS_DEFAULT);
     posixUidAttr =
         conf.get(POSIX_UID_ATTR_KEY, POSIX_UID_ATTR_DEFAULT);
     posixGidAttr =

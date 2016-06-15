@@ -46,13 +46,17 @@ public class TestLdapGroupsMappingBase {
   @Mock
   private NamingEnumeration<SearchResult> groupNames;
   @Mock
+  private NamingEnumeration<SearchResult> parentGroupNames;
+  @Mock
   private SearchResult userSearchResult;
   @Mock
   private Attributes attributes;
   @Spy
   private LdapGroupsMapping groupsMapping = new LdapGroupsMapping();
 
-  protected String[] testGroups = new String[] {"group1", "group2"};
+  private String[] testGroups = new String[] {"group1", "group2"};
+  private String[] testParentGroups =
+      new String[] {"group1", "group2", "group1_1"};
 
   @Before
   public void setupMocksBase() throws NamingException {
@@ -93,6 +97,24 @@ public class TestLdapGroupsMappingBase {
         thenReturn(getUserSearchResult());
 
     when(getUserSearchResult().getAttributes()).thenReturn(getAttributes());
+    // Define results for groups 1 level up
+    SearchResult parentGroupResult = mock(SearchResult.class);
+
+    // only one parent group
+    when(parentGroupNames.hasMoreElements()).thenReturn(true, false);
+    when(parentGroupNames.nextElement()).
+        thenReturn(parentGroupResult);
+
+    // Define the attribute for the parent group
+    Attribute parentGroup1Attr = new BasicAttribute("cn");
+    parentGroup1Attr.add(testParentGroups[2]);
+    Attributes parentGroup1Attrs = new BasicAttributes();
+    parentGroup1Attrs.put(parentGroup1Attr);
+
+    // attach the attributes to the result
+    when(parentGroupResult.getAttributes()).thenReturn(parentGroup1Attrs);
+    when(parentGroupResult.getNameInNamespace()).
+        thenReturn("CN=some_group,DC=test,DC=com");
   }
 
   protected DirContext getContext() {
@@ -116,5 +138,14 @@ public class TestLdapGroupsMappingBase {
 
   protected LdapGroupsMapping getGroupsMapping() {
     return groupsMapping;
+  }
+  protected String[] getTestGroups() {
+    return testGroups;
+  }
+  protected NamingEnumeration getParentGroupNames() {
+    return parentGroupNames;
+  }
+  protected String[] getTestParentGroups() {
+    return testParentGroups;
   }
 }
