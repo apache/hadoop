@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -124,6 +124,153 @@ public class TestHBaseStorageFlowRunCompaction {
   }
 
   @Test
+  public void testWriteScanBatchLimit() throws Exception {
+    String rowKey = "nonNumericRowKey";
+    String column = "nonNumericColumnName";
+    String value = "nonNumericValue";
+    String column2 = "nonNumericColumnName2";
+    String value2 = "nonNumericValue2";
+    String column3 = "nonNumericColumnName3";
+    String value3 = "nonNumericValue3";
+    String column4 = "nonNumericColumnName4";
+    String value4 = "nonNumericValue4";
+
+    byte[] rowKeyBytes = Bytes.toBytes(rowKey);
+    byte[] columnNameBytes = Bytes.toBytes(column);
+    byte[] valueBytes = Bytes.toBytes(value);
+    byte[] columnName2Bytes = Bytes.toBytes(column2);
+    byte[] value2Bytes = Bytes.toBytes(value2);
+    byte[] columnName3Bytes = Bytes.toBytes(column3);
+    byte[] value3Bytes = Bytes.toBytes(value3);
+    byte[] columnName4Bytes = Bytes.toBytes(column4);
+    byte[] value4Bytes = Bytes.toBytes(value4);
+
+    Put p = new Put(rowKeyBytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnNameBytes,
+        valueBytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName2Bytes,
+        value2Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName3Bytes,
+        value3Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName4Bytes,
+        value4Bytes);
+
+    Configuration hbaseConf = util.getConfiguration();
+    TableName table = TableName.valueOf(hbaseConf.get(
+        FlowRunTable.TABLE_NAME_CONF_NAME, FlowRunTable.DEFAULT_TABLE_NAME));
+    Connection conn = null;
+    conn = ConnectionFactory.createConnection(hbaseConf);
+    Table flowRunTable = conn.getTable(table);
+    flowRunTable.put(p);
+
+    String rowKey2 = "nonNumericRowKey2";
+    byte[] rowKey2Bytes = Bytes.toBytes(rowKey2);
+    p = new Put(rowKey2Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnNameBytes,
+        valueBytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName2Bytes,
+        value2Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName3Bytes,
+        value3Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName4Bytes,
+        value4Bytes);
+    flowRunTable.put(p);
+
+    String rowKey3 = "nonNumericRowKey3";
+    byte[] rowKey3Bytes = Bytes.toBytes(rowKey3);
+    p = new Put(rowKey3Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnNameBytes,
+        valueBytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName2Bytes,
+        value2Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName3Bytes,
+        value3Bytes);
+    p.addColumn(FlowRunColumnFamily.INFO.getBytes(), columnName4Bytes,
+        value4Bytes);
+    flowRunTable.put(p);
+
+    Scan s = new Scan();
+    s.addFamily(FlowRunColumnFamily.INFO.getBytes());
+    s.setStartRow(rowKeyBytes);
+    // set number of cells to fetch per scanner next invocation
+    int batchLimit = 2;
+    s.setBatch(batchLimit);
+    ResultScanner scanner = flowRunTable.getScanner(s);
+    for (Result result : scanner) {
+      assertNotNull(result);
+      assertTrue(!result.isEmpty());
+      assertTrue(result.rawCells().length <= batchLimit);
+      Map<byte[], byte[]> values = result
+          .getFamilyMap(FlowRunColumnFamily.INFO.getBytes());
+      assertTrue(values.size() <= batchLimit);
+    }
+
+    s = new Scan();
+    s.addFamily(FlowRunColumnFamily.INFO.getBytes());
+    s.setStartRow(rowKeyBytes);
+    // set number of cells to fetch per scanner next invocation
+    batchLimit = 3;
+    s.setBatch(batchLimit);
+    scanner = flowRunTable.getScanner(s);
+    for (Result result : scanner) {
+      assertNotNull(result);
+      assertTrue(!result.isEmpty());
+      assertTrue(result.rawCells().length <= batchLimit);
+      Map<byte[], byte[]> values = result
+          .getFamilyMap(FlowRunColumnFamily.INFO.getBytes());
+      assertTrue(values.size() <= batchLimit);
+    }
+
+    s = new Scan();
+    s.addFamily(FlowRunColumnFamily.INFO.getBytes());
+    s.setStartRow(rowKeyBytes);
+    // set number of cells to fetch per scanner next invocation
+    batchLimit = 1000;
+    s.setBatch(batchLimit);
+    scanner = flowRunTable.getScanner(s);
+    int rowCount = 0;
+    for (Result result : scanner) {
+      assertNotNull(result);
+      assertTrue(!result.isEmpty());
+      assertTrue(result.rawCells().length <= batchLimit);
+      Map<byte[], byte[]> values = result
+          .getFamilyMap(FlowRunColumnFamily.INFO.getBytes());
+      assertTrue(values.size() <= batchLimit);
+      // we expect all back in one next call
+      assertEquals(4, values.size());
+      rowCount++;
+    }
+    // should get back 1 row with each invocation
+    // if scan batch is set sufficiently high
+    assertEquals(3, rowCount);
+
+    // test with a negative number
+    // should have same effect as setting it to a high number
+    s = new Scan();
+    s.addFamily(FlowRunColumnFamily.INFO.getBytes());
+    s.setStartRow(rowKeyBytes);
+    // set number of cells to fetch per scanner next invocation
+    batchLimit = -2992;
+    s.setBatch(batchLimit);
+    scanner = flowRunTable.getScanner(s);
+    rowCount = 0;
+    for (Result result : scanner) {
+      assertNotNull(result);
+      assertTrue(!result.isEmpty());
+      assertEquals(4, result.rawCells().length);
+      Map<byte[], byte[]> values = result
+          .getFamilyMap(FlowRunColumnFamily.INFO.getBytes());
+      // we expect all back in one next call
+      assertEquals(4, values.size());
+      System.out.println(" values size " + values.size() +  " " + batchLimit );
+      rowCount++;
+    }
+    // should get back 1 row with each invocation
+    // if scan batch is set sufficiently high
+    assertEquals(3, rowCount);
+  }
+
+  @Test
   public void testWriteFlowRunCompaction() throws Exception {
     String cluster = "kompaction_cluster1";
     String user = "kompaction_FlowRun__user1";
@@ -176,13 +323,13 @@ public class TestHBaseStorageFlowRunCompaction {
     // check in flow run table
     HRegionServer server = util.getRSForFirstRegionInTable(TableName
         .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
-    List<HRegion> regions = server.getOnlineRegions(TableName
+    List<Region> regions = server.getOnlineRegions(TableName
         .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
     assertTrue("Didn't find any regions for primary table!", regions.size() > 0);
     // flush and compact all the regions of the primary table
-    for (HRegion region : regions) {
-       region.flushcache();
-      region.compactStores(true);
+    for (Region region : regions) {
+       region.flush(true);
+       region.compact(true);
     }
 
     // check flow run for one flow many apps
@@ -237,7 +384,7 @@ public class TestHBaseStorageFlowRunCompaction {
     request.setIsMajor(true, true);
     // okay to pass in nulls for the constructor arguments
     // because all we want to do is invoke the process summation
-    FlowScanner fs = new FlowScanner(null, -1, null,
+    FlowScanner fs = new FlowScanner(null, null,
         (request.isMajor() == true ? FlowScannerOperation.MAJOR_COMPACTION
             : FlowScannerOperation.MINOR_COMPACTION));
     assertNotNull(fs);
