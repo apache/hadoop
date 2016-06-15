@@ -1362,7 +1362,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public ReplicaInfo moveBlockAcrossVolumes(ExtendedBlock block,
-    FsVolumeSpi destination) throws IOException {
+      FsVolumeSpi destination) throws IOException {
     return null;
   }
 

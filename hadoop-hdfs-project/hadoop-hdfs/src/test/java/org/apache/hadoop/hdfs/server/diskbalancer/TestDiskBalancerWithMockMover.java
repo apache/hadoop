@@ -59,19 +59,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Tests diskbalancer with a mock mover.
+ */
 public class TestDiskBalancerWithMockMover {
   static final Log LOG = LogFactory.getLog(TestDiskBalancerWithMockMover.class);
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  MiniDFSCluster cluster;
-  String sourceName;
-  String destName;
-  String sourceUUID;
-  String destUUID;
-  String nodeID;
-  DataNode dataNode;
+  private MiniDFSCluster cluster;
+  private String sourceName;
+  private String destName;
+  private String sourceUUID;
+  private String destUUID;
+  private String nodeID;
+  private DataNode dataNode;
 
   /**
    * Checks that we return the right error if diskbalancer is not enabled.
@@ -178,12 +181,12 @@ public class TestDiskBalancerWithMockMover {
 
   @Test
   public void testSubmitWithOlderPlan() throws Exception {
-    final long MILLISECOND_IN_AN_HOUR = 1000 * 60 * 60L;
+    final long millisecondInAnHour = 1000 * 60 * 60L;
     MockMoverHelper mockMoverHelper = new MockMoverHelper().invoke();
     NodePlan plan = mockMoverHelper.getPlan();
     DiskBalancer balancer = mockMoverHelper.getBalancer();
 
-    plan.setTimeStamp(Time.now() - (32 * MILLISECOND_IN_AN_HOUR));
+    plan.setTimeStamp(Time.now() - (32 * millisecondInAnHour));
     thrown.expect(DiskBalancerException.class);
     thrown.expect(new DiskBalancerResultVerifier(DiskBalancerException
         .Result.OLD_PLAN_SUBMITTED));
@@ -316,10 +319,10 @@ public class TestDiskBalancerWithMockMover {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    final int NUM_STORAGES_PER_DN = 2;
+    final int numStoragesPerDn = 2;
     cluster = new MiniDFSCluster
         .Builder(conf).numDataNodes(3)
-        .storagesPerDatanode(NUM_STORAGES_PER_DN)
+        .storagesPerDatanode(numStoragesPerDn)
         .build();
     cluster.waitActive();
     dataNode = cluster.getDataNodes().get(0);
@@ -602,8 +605,8 @@ public class TestDiskBalancerWithMockMover {
       DiskBalancerDataNode node = balancerCluster.getNodes().get(dnIndex);
       node.setDataNodeUUID(nodeID);
       GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-      NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-          ());
+      NodePlan plan = new NodePlan(node.getDataNodeName(),
+          node.getDataNodePort());
       planner.balanceVolumeSet(node, node.getVolumeSets().get("DISK"), plan);
       setVolumeNames(plan);
       return plan;

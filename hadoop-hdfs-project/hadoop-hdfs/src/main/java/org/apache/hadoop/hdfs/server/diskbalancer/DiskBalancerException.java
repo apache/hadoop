@@ -22,6 +22,9 @@ import java.io.IOException;
  * Disk Balancer Exceptions.
  */
 public class DiskBalancerException extends IOException {
+  /**
+   * Results returned by the RPC layer of DiskBalancer.
+   */
   public enum Result {
     DISK_BALANCER_NOT_ENABLED,
     INVALID_PLAN_VERSION,

@@ -40,6 +40,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Test Planner.
+ */
 public class TestPlanner {
   static final Logger LOG =
       LoggerFactory.getLogger(TestPlanner.class);
@@ -56,8 +59,8 @@ public class TestPlanner {
     cluster.setNodesToProcess(cluster.getNodes());
     DiskBalancerDataNode node = cluster.getNodes().get(0);
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-        ());
+    NodePlan plan = new NodePlan(node.getDataNodeName(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
   }
 
@@ -115,8 +118,8 @@ public class TestPlanner {
     Assert.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-        ());
+    NodePlan plan = new NodePlan(node.getDataNodeName(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
     // With a single volume we should not have any plans for moves.
@@ -183,8 +186,8 @@ public class TestPlanner {
     Assert.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(5.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeUUID(), node.getDataNodePort
-        ());
+    NodePlan plan = new NodePlan(node.getDataNodeUUID(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
     // We should have only one planned move from
@@ -219,8 +222,8 @@ public class TestPlanner {
     Assert.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-        ());
+    NodePlan plan = new NodePlan(node.getDataNodeName(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
     // since we have same size of data in all disks , we should have
@@ -250,8 +253,8 @@ public class TestPlanner {
     Assert.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-        ());
+    NodePlan plan = new NodePlan(node.getDataNodeName(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
     // We should see 2 move plans. One from volume100 to volume0-1
@@ -260,10 +263,12 @@ public class TestPlanner {
     assertEquals(2, plan.getVolumeSetPlans().size());
     Step step = plan.getVolumeSetPlans().get(0);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertTrue(step.getSizeString(step.getBytesToMove()).matches("33.[2|3|4] G"));
+    assertTrue(step.getSizeString(
+        step.getBytesToMove()).matches("33.[2|3|4] G"));
     step = plan.getVolumeSetPlans().get(1);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertTrue(step.getSizeString(step.getBytesToMove()).matches("33.[2|3|4] G"));
+    assertTrue(step.getSizeString(
+        step.getBytesToMove()).matches("33.[2|3|4] G"));
   }
 
   @Test
@@ -287,8 +292,8 @@ public class TestPlanner {
     Assert.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
-    NodePlan plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort
-        ());
+    NodePlan plan = new NodePlan(node.getDataNodeName(),
+        node.getDataNodePort());
     planner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"), plan);
 
     //We should see NO moves since the total data on the volume100
@@ -315,11 +320,13 @@ public class TestPlanner {
 
     Step step = newPlan.getVolumeSetPlans().get(0);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertTrue(step.getSizeString(step.getBytesToMove()).matches("18.[6|7|8] G"));
+    assertTrue(step.getSizeString(
+        step.getBytesToMove()).matches("18.[6|7|8] G"));
 
     step = newPlan.getVolumeSetPlans().get(1);
     assertEquals("volume100", step.getSourceVolume().getPath());
-    assertTrue(step.getSizeString(step.getBytesToMove()).matches("18.[6|7|8] G"));
+    assertTrue(
+        step.getSizeString(step.getBytesToMove()).matches("18.[6|7|8] G"));
 
   }
 

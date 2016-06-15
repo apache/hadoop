@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.server.diskbalancer;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 
+/**
+ * Helps in verifying test results.
+ */
 public class DiskBalancerResultVerifier
     extends TypeSafeMatcher<DiskBalancerException> {
   private final DiskBalancerException.Result expectedResult;

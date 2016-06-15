@@ -30,9 +30,12 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.UUID;
 
+/**
+ * Tests DiskBalancer Data models.
+ */
 public class TestDataModels {
   @Test
-  public void TestCreateRandomVolume() throws Exception {
+  public void testCreateRandomVolume() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerVolume vol = util.createRandomVolume(StorageType.DISK);
     Assert.assertNotNull(vol.getUuid());
@@ -46,7 +49,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestCreateRandomVolumeSet() throws Exception {
+  public void testCreateRandomVolumeSet() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerVolumeSet vSet =
         util.createRandomVolumeSet(StorageType.SSD, 10);
@@ -57,7 +60,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestCreateRandomDataNode() throws Exception {
+  public void testCreateRandomDataNode() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerDataNode node = util.createRandomDataNode(
         new StorageType[]{StorageType.DISK, StorageType.RAM_DISK}, 10);
@@ -65,7 +68,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestDiskQueues() throws Exception {
+  public void testDiskQueues() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerDataNode node = util.createRandomDataNode(
         new StorageType[]{StorageType.DISK, StorageType.RAM_DISK}, 3);
@@ -93,7 +96,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestNoBalancingNeededEvenDataSpread() throws Exception {
+  public void testNoBalancingNeededEvenDataSpread() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerDataNode node =
         new DiskBalancerDataNode(UUID.randomUUID().toString());
@@ -119,7 +122,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestNoBalancingNeededTransientDisks() throws Exception {
+  public void testNoBalancingNeededTransientDisks() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerDataNode node =
         new DiskBalancerDataNode(UUID.randomUUID().toString());
@@ -145,7 +148,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestNoBalancingNeededFailedDisks() throws Exception {
+  public void testNoBalancingNeededFailedDisks() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerDataNode node =
         new DiskBalancerDataNode(UUID.randomUUID().toString());
@@ -172,7 +175,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestNeedBalancingUnevenDataSpread() throws Exception {
+  public void testNeedBalancingUnevenDataSpread() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerDataNode node =
         new DiskBalancerDataNode(UUID.randomUUID().toString());
@@ -196,7 +199,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestVolumeSerialize() throws Exception {
+  public void testVolumeSerialize() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
     DiskBalancerVolume volume = util.createRandomVolume(StorageType.DISK);
     String originalString = volume.toJson();
@@ -207,7 +210,7 @@ public class TestDataModels {
   }
 
   @Test
-  public void TestClusterSerialize() throws Exception {
+  public void testClusterSerialize() throws Exception {
     DiskBalancerTestUtil util = new DiskBalancerTestUtil();
 
     // Create a Cluster with 3 datanodes, 3 disk types and 3 disks in each type

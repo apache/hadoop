@@ -42,7 +42,7 @@ public class DiskBalancerTestUtil {
   public static final long TB = GB * 1024L;
   private static int[] diskSizes =
       {1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 200, 300, 400, 500, 600, 700, 800, 900};
-  Random rand;
+  private Random rand;
   private String stringTable =
       "ABCDEDFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0987654321";
 
@@ -251,7 +251,7 @@ public class DiskBalancerTestUtil {
    * @throws IOException
    */
   public static void moveAllDataToDestVolume(FsDatasetSpi fsDataset,
-    FsVolumeSpi source, FsVolumeSpi dest) throws IOException {
+      FsVolumeSpi source, FsVolumeSpi dest) throws IOException {
 
     for (String blockPoolID : source.getBlockPoolList()) {
       FsVolumeSpi.BlockIterator sourceIter =

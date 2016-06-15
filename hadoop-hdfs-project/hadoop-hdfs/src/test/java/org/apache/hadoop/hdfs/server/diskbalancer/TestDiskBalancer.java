@@ -35,7 +35,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
+    .DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -51,10 +52,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Test Disk Balancer.
+ */
 public class TestDiskBalancer {
 
   @Test
-  public void TestDiskBalancerNameNodeConnectivity() throws Exception {
+  public void testDiskBalancerNameNodeConnectivity() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     final int numDatanodes = 2;
@@ -65,13 +69,13 @@ public class TestDiskBalancer {
       ClusterConnector nameNodeConnector =
           ConnectorFactory.getCluster(cluster.getFileSystem(0).getUri(), conf);
 
-      DiskBalancerCluster DiskBalancerCluster = new DiskBalancerCluster
-          (nameNodeConnector);
-      DiskBalancerCluster.readClusterInfo();
-      assertEquals(DiskBalancerCluster.getNodes().size(), numDatanodes);
+      DiskBalancerCluster diskBalancerCluster =
+          new DiskBalancerCluster(nameNodeConnector);
+      diskBalancerCluster.readClusterInfo();
+      assertEquals(diskBalancerCluster.getNodes().size(), numDatanodes);
       DataNode dnNode = cluster.getDataNodes().get(0);
       DiskBalancerDataNode dbDnNode =
-          DiskBalancerCluster.getNodeByUUID(dnNode.getDatanodeUuid());
+          diskBalancerCluster.getNodeByUUID(dnNode.getDatanodeUuid());
       assertEquals(dnNode.getDatanodeUuid(), dbDnNode.getDataNodeUUID());
       assertEquals(dnNode.getDatanodeId().getIpAddr(),
           dbDnNode.getDataNodeIP());
@@ -88,24 +92,23 @@ public class TestDiskBalancer {
 
   /**
    * This test simulates a real Data node working with DiskBalancer.
-   *
+   * <p>
    * Here is the overview of this test.
-   *
+   * <p>
    * 1. Write a bunch of blocks and move them to one disk to create imbalance.
-   * 2. Rewrite  the capacity of the disks in DiskBalancer Model so that
-   * planner will produce a move plan.
-   * 3. Execute the move plan and wait unitl the plan is done.
-   * 4. Verify the source disk has blocks now.
+   * 2. Rewrite  the capacity of the disks in DiskBalancer Model so that planner
+   * will produce a move plan. 3. Execute the move plan and wait unitl the plan
+   * is done. 4. Verify the source disk has blocks now.
    *
    * @throws Exception
    */
   @Test
-  public void TestDiskBalancerEndToEnd() throws Exception {
+  public void testDiskBalancerEndToEnd() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    final int DEFAULT_BLOCK_SIZE = 100;
+    final int defaultBlockSize = 100;
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, defaultBlockSize);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     final int numDatanodes = 1;
     final String fileName = "/tmp.txt";
@@ -116,12 +119,12 @@ public class TestDiskBalancer {
 
 
     // Write a file and restart the cluster
-    long [] capacities = new long[]{ DEFAULT_BLOCK_SIZE * 2 * fileLen,
-        DEFAULT_BLOCK_SIZE * 2 * fileLen };
+    long[] capacities = new long[]{defaultBlockSize * 2 * fileLen,
+        defaultBlockSize * 2 * fileLen};
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(numDatanodes)
         .storageCapacities(capacities)
-        .storageTypes(new StorageType[] {StorageType.DISK, StorageType.DISK})
+        .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
         .storagesPerDatanode(2)
         .build();
     FsVolumeImpl source = null;
@@ -144,9 +147,9 @@ public class TestDiskBalancer {
         source = (FsVolumeImpl) refs.get(0);
         dest = (FsVolumeImpl) refs.get(1);
         assertTrue(DiskBalancerTestUtil.getBlockCount(source) > 0);
-        DiskBalancerTestUtil.moveAllDataToDestVolume(
-            dnNode.getFSDataset(), source, dest);
-       assertTrue(DiskBalancerTestUtil.getBlockCount(source) == 0);
+        DiskBalancerTestUtil.moveAllDataToDestVolume(dnNode.getFSDataset(),
+            source, dest);
+        assertTrue(DiskBalancerTestUtil.getBlockCount(source) == 0);
       }
 
       cluster.restartDataNodes();
@@ -164,7 +167,8 @@ public class TestDiskBalancer {
 
       // Rewrite the capacity in the model to show that disks need
       // re-balancing.
-      setVolumeCapacity(diskBalancerCluster, DEFAULT_BLOCK_SIZE * 2 * fileLen, "DISK");
+      setVolumeCapacity(diskBalancerCluster, defaultBlockSize * 2 * fileLen,
+          "DISK");
       // Pick a node to process.
       nodesToProcess.add(diskBalancerCluster.getNodeByUUID(dnNode
           .getDatanodeUuid()));
@@ -220,13 +224,12 @@ public class TestDiskBalancer {
       }
 
 
-
       // Tolerance
       long delta = (plan.getVolumeSetPlans().get(0).getBytesToMove()
           * 10) / 100;
       assertTrue(
           (DiskBalancerTestUtil.getBlockCount(source) *
-              DEFAULT_BLOCK_SIZE + delta) >=
+              defaultBlockSize + delta) >=
               plan.getVolumeSetPlans().get(0).getBytesToMove());
 
     } finally {
@@ -236,13 +239,14 @@ public class TestDiskBalancer {
 
   /**
    * Sets alll Disks capacity to size specified.
-   * @param cluster   - DiskBalancerCluster
-   * @param size   - new size of the disk
+   *
+   * @param cluster - DiskBalancerCluster
+   * @param size    - new size of the disk
    */
   private void setVolumeCapacity(DiskBalancerCluster cluster, long size,
                                  String diskType) {
     Preconditions.checkNotNull(cluster);
-    for(DiskBalancerDataNode node : cluster.getNodes()) {
+    for (DiskBalancerDataNode node : cluster.getNodes()) {
       for (DiskBalancerVolume vol :
           node.getVolumeSets().get(diskType).getVolumes()) {
         vol.setCapacity(size);
