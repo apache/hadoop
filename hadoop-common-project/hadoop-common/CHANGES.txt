@@ -33,6 +33,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-7817. RawLocalFileSystem.append() should give FSDataOutputStream
     with accurate .getPos() (kanaka kumar avvaru via vinayakumarb)
 
+    HADOOP-12893. Verify LICENSE.txt and NOTICE.txt.
+    (Xiao Chen and Andrew Wang via aajisaka)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES

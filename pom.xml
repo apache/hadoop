@@ -104,6 +104,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <module>hadoop-dist</module>
     <module>hadoop-client</module>
     <module>hadoop-minicluster</module>
+    <module>hadoop-build-tools</module>
   </modules>
 
   <build>
@@ -241,6 +242,32 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <artifactId>maven-bundle-plugin</artifactId>
         <inherited>true</inherited>
         <extensions>true</extensions>
+      </plugin>
+      <plugin>
+        <!-- Copy license and notice files into hadoop-build-tools'
+             metadata, which will then be bundled into jars.
+        -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy todir="${project.build.directory}/../hadoop-build-tools/src/main/resources/META-INF/">
+                  <fileset dir="${project.build.directory}/../">
+                    <include name="LICENSE.txt"/>
+                    <include name="NOTICE.txt"/>
+                  </fileset>
+                </copy>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
