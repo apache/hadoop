@@ -463,6 +463,8 @@ public class TestLogsCLI {
         "Hello container_0_0001_01_000003 in syslog!"));
     assertTrue(sysOutStream.toString().contains(
         "Hello container_0_0001_01_000003 in stdout!"));
+    assertTrue(sysOutStream.toString().contains(
+        containerId3 + " on " + LogAggregationUtils.getNodeString(nodeId)));
     sysOutStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);

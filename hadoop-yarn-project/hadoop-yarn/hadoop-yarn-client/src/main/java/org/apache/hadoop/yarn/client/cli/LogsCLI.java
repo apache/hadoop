@@ -393,7 +393,8 @@ public class LogsCLI extends Configured implements Tool {
       newOptions.setLogTypes(matchedFiles);
 
       Client webServiceClient = Client.create();
-      String containerString = "\n\nContainer: " + containerIdStr;
+      String containerString = "\n\nContainer: " + containerIdStr + " on "
+          + nodeId;
       out.println(containerString);
       out.println(StringUtils.repeat("=", containerString.length()));
 
