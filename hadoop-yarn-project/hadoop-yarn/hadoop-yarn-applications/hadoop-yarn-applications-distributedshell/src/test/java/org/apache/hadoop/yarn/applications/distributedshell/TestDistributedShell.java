@@ -149,7 +149,7 @@ public class TestDistributedShell {
     // Enable ContainersMonitorImpl
     conf.set(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class.getName());
-    conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, 
+    conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
         ProcfsBasedProcessTree.class.getName());
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);

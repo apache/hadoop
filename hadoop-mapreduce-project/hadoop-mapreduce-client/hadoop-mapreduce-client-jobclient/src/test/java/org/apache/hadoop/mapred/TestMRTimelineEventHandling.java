@@ -65,7 +65,7 @@ public class TestMRTimelineEventHandling {
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
   private static final Log LOG =
     LogFactory.getLog(TestMRTimelineEventHandling.class);
-  
+
   @Test
   public void testTimelineServiceStartInMiniCluster() throws Exception {
     Configuration conf = new YarnConfiguration();
@@ -168,7 +168,7 @@ public class TestMRTimelineEventHandling {
       }
     }
   }
-  
+
   @Test
   public void testMRNewTimelineServiceEventHandling() throws Exception {
     LOG.info("testMRNewTimelineServiceEventHandling start.");
@@ -184,7 +184,7 @@ public class TestMRTimelineEventHandling {
     conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
     conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
       + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
-    
+
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
 
     MiniMRYarnCluster cluster = null;
@@ -215,9 +215,9 @@ public class TestMRTimelineEventHandling {
       YarnClient yarnClient = YarnClient.createYarnClient();
       yarnClient.init(new Configuration(cluster.getConfig()));
       yarnClient.start();
-      EnumSet<YarnApplicationState> appStates = 
+      EnumSet<YarnApplicationState> appStates =
           EnumSet.allOf(YarnApplicationState.class);
-      
+
       ApplicationId firstAppId = null;
       List<ApplicationReport> apps = yarnClient.getApplications(appStates);
       Assert.assertEquals(apps.size(), 1);
@@ -230,7 +230,7 @@ public class TestMRTimelineEventHandling {
       job = UtilsForTests.runJobFail(new JobConf(conf), inDir, outDir);
       Assert.assertEquals(JobStatus.FAILED,
           job.getJobStatus().getState().getValue());
-      
+
       apps = yarnClient.getApplications(appStates);
       Assert.assertEquals(apps.size(), 2);
 
@@ -250,10 +250,10 @@ public class TestMRTimelineEventHandling {
       if(testRootFolder.isDirectory()) {
         FileUtils.deleteDirectory(testRootFolder);
       }
-      
+
     }
   }
-  
+
   private void checkNewTimelineEvent(ApplicationId appId,
       ApplicationReport appReport) throws IOException {
     String tmpRoot =
@@ -261,7 +261,7 @@ public class TestMRTimelineEventHandling {
             + "/entities/";
 
     File tmpRootFolder = new File(tmpRoot);
-    
+
     Assert.assertTrue(tmpRootFolder.isDirectory());
     String basePath = tmpRoot + YarnConfiguration.DEFAULT_RM_CLUSTER_ID +
         "/" + UserGroupInformation.getCurrentUser().getShortUserName() +
@@ -319,7 +319,7 @@ public class TestMRTimelineEventHandling {
     Assert.assertTrue("Task output directory: " + outputDirTask +
         " does not exist.",
         taskFolder.isDirectory());
-    
+
     String taskEventFileName = appId.toString().replaceAll("application", "task")
         + "_m_000000" + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
 
@@ -330,15 +330,15 @@ public class TestMRTimelineEventHandling {
         taskEventFile.exists());
     verifyEntity(taskEventFile, EventType.TASK_FINISHED.name(),
         true, false, null);
-    
+
     // check for task attempt event file
     String outputDirTaskAttempt = basePath + "/MAPREDUCE_TASK_ATTEMPT/";
     File taskAttemptFolder = new File(outputDirTaskAttempt);
-    Assert.assertTrue("TaskAttempt output directory: " + outputDirTaskAttempt + 
+    Assert.assertTrue("TaskAttempt output directory: " + outputDirTaskAttempt +
         " does not exist.", taskAttemptFolder.isDirectory());
-    
+
     String taskAttemptEventFileName = appId.toString().replaceAll(
-        "application", "attempt") + "_m_000000_0" + 
+        "application", "attempt") + "_m_000000_0" +
         FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
 
     String taskAttemptEventFilePath = outputDirTaskAttempt +

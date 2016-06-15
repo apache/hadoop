@@ -137,7 +137,7 @@ public class JobHistoryEventHandler extends AbstractService
   protected volatile boolean forceJobCompletion = false;
 
   protected TimelineClient timelineClient;
-  
+
   private boolean timelineServiceV2Enabled = false;
 
   private static String MAPREDUCE_JOB_ENTITY_TYPE = "MAPREDUCE_JOB";
@@ -263,16 +263,16 @@ public class JobHistoryEventHandler extends AbstractService
             MRJobConfig.MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD,
             MRJobConfig.DEFAULT_MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD);
 
-    // TODO replace MR specific configurations on timeline service with getting 
-    // configuration from RM through registerApplicationMaster() in 
-    // ApplicationMasterProtocol with return value for timeline service 
+    // TODO replace MR specific configurations on timeline service with getting
+    // configuration from RM through registerApplicationMaster() in
+    // ApplicationMasterProtocol with return value for timeline service
     // configuration status: off, on_with_v1 or on_with_v2.
     if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA,
         MRJobConfig.DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA)) {
       LOG.info("Emitting job history data to the timeline service is enabled");
       if (YarnConfiguration.timelineServiceEnabled(conf)) {
 
-        timelineClient = 
+        timelineClient =
             ((MRAppMaster.RunningAppContext)context).getTimelineClient();
         timelineClient.init(conf);
         timelineServiceV2Enabled =
@@ -1062,11 +1062,11 @@ public class JobHistoryEventHandler extends AbstractService
           + "Server", ex);
     }
   }
-  
-  // create JobEntity from HistoryEvent with adding other info, like: 
+
+  // create JobEntity from HistoryEvent with adding other info, like:
   // jobId, timestamp and entityType.
-  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
-      createJobEntity(HistoryEvent event, long timestamp, JobId jobId, 
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+      createJobEntity(HistoryEvent event, long timestamp, JobId jobId,
       String entityType, boolean setCreatedTime) {
 
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
@@ -1093,16 +1093,16 @@ public class JobHistoryEventHandler extends AbstractService
     return entity;
   }
 
-  // create BaseEntity from HistoryEvent with adding other info, like: 
+  // create BaseEntity from HistoryEvent with adding other info, like:
   // timestamp and entityType.
-  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
       createBaseEntity(HistoryEvent event, long timestamp, String entityType,
       boolean setCreatedTime) {
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent tEvent =
         event.toTimelineEvent();
     tEvent.setTimestamp(timestamp);
-    
-    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
+
+    org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
     entity.addEvent(tEvent);
     entity.setType(entityType);
@@ -1115,10 +1115,10 @@ public class JobHistoryEventHandler extends AbstractService
     }
     return entity;
   }
-  
-  // create TaskEntity from HistoryEvent with adding other info, like: 
+
+  // create TaskEntity from HistoryEvent with adding other info, like:
   // taskId, jobId, timestamp, entityType and relatedJobEntity.
-  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
       createTaskEntity(HistoryEvent event, long timestamp, String taskId,
       String entityType, String relatedJobEntity, JobId jobId,
       boolean setCreatedTime) {
@@ -1128,12 +1128,12 @@ public class JobHistoryEventHandler extends AbstractService
     entity.addIsRelatedToEntity(relatedJobEntity, jobId.toString());
     return entity;
   }
-  
-  // create TaskAttemptEntity from HistoryEvent with adding other info, like: 
+
+  // create TaskAttemptEntity from HistoryEvent with adding other info, like:
   // timestamp, taskAttemptId, entityType, relatedTaskEntity and taskId.
-  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity 
-      createTaskAttemptEntity(HistoryEvent event, long timestamp, 
-      String taskAttemptId, String entityType, String relatedTaskEntity, 
+  private org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+      createTaskAttemptEntity(HistoryEvent event, long timestamp,
+      String taskAttemptId, String entityType, String relatedTaskEntity,
       String taskId, boolean setCreatedTime) {
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         createBaseEntity(event, timestamp, entityType, setCreatedTime);

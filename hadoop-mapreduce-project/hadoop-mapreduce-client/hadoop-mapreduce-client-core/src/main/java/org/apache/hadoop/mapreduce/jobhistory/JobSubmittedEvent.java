@@ -259,7 +259,7 @@ public class JobSubmittedEvent implements HistoryEvent {
     tEvent.addInfo("WORKFLOW_ADJACENCIES",
         getWorkflowAdjacencies());
     tEvent.addInfo("WORKFLOW_TAGS", getWorkflowTags());
-    
+
     return tEvent;
   }
 

@@ -113,10 +113,10 @@ public interface RMContext {
   void setSystemMetricsPublisher(SystemMetricsPublisher systemMetricsPublisher);
 
   SystemMetricsPublisher getSystemMetricsPublisher();
-  
+
   void setRMTimelineCollectorManager(
       RMTimelineCollectorManager timelineCollectorManager);
-  
+
   RMTimelineCollectorManager getRMTimelineCollectorManager();
 
   ConfigurationProvider getConfigurationProvider();

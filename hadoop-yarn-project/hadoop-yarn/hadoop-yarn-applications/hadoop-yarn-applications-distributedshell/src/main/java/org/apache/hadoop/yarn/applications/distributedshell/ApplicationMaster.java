@@ -631,7 +631,7 @@ public class ApplicationMaster {
             DSEvent.DS_APP_ATTEMPT_START);
       } else {
         publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
-          DSEvent.DS_APP_ATTEMPT_END, domainId, appSubmitterUgi);
+            DSEvent.DS_APP_ATTEMPT_START, domainId, appSubmitterUgi);
       }
     }
 

@@ -142,7 +142,7 @@ public class TaskFailedEvent implements HistoryEvent {
   public EventType getEventType() {
     return EventType.TASK_FAILED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

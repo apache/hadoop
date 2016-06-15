@@ -76,7 +76,7 @@ public class NormalizedResourceEvent implements HistoryEvent {
   public void setDatum(Object datum) {
     throw new UnsupportedOperationException("Not a seriable object");
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

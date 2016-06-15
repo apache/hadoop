@@ -102,7 +102,7 @@ public interface Context {
   NMStateStoreService getNMStateStore();
 
   boolean getDecommissioned();
-  
+
   Configuration getConf();
 
   void setDecommissioned(boolean isDecommissioned);

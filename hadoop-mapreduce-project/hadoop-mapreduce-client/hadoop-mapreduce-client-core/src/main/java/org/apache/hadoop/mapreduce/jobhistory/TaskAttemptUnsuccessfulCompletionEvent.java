@@ -251,7 +251,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public int[] getPhysMemKbytes() {
     return physMemKbytes;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

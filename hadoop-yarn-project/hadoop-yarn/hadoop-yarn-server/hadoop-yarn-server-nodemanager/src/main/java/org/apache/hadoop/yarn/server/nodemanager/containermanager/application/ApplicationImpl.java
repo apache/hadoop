@@ -184,7 +184,7 @@ public class ApplicationImpl implements Application {
   public ApplicationId getAppId() {
     return appId;
   }
-  
+
   @Override
   public ApplicationState getApplicationState() {
     this.readLock.lock();

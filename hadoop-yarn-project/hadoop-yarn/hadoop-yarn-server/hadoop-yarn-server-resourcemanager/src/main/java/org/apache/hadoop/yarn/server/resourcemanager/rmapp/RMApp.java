@@ -177,19 +177,25 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   String getTrackingUrl();
 
   /**
-   * The collector address for the application.
-   * @return the address for the application's collector.
+   * The collector address for the application. It should be used only if the
+   * timeline service v.2 is enabled.
+   *
+   * @return the address for the application's collector, or null if the
+   * timeline service v.2 is not enabled.
    */
   String getCollectorAddr();
 
   /**
-   * Set collector address for the application
+   * Set collector address for the application. It should be used only if the
+   * timeline service v.2 is enabled.
+   *
    * @param collectorAddr the address of collector
    */
   void setCollectorAddr(String collectorAddr);
 
   /**
-   * Remove collector address when application is finished or killed.
+   * Remove collector address when application is finished or killed. It should
+   * be used only if the timeline service v.2 is enabled.
    */
   void removeCollectorAddr();
 

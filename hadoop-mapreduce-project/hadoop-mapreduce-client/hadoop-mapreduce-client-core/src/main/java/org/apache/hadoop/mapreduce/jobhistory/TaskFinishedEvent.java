@@ -130,7 +130,7 @@ public class TaskFinishedEvent implements HistoryEvent {
     tEvent.addInfo("FINISH_TIME", getFinishTime());
     tEvent.addInfo("STATUS", TaskStatus.State.SUCCEEDED.toString());
     tEvent.addInfo("SUCCESSFUL_TASK_ATTEMPT_ID",
-        getSuccessfulTaskAttemptId() == null ? "" : 
+        getSuccessfulTaskAttemptId() == null ? "" :
             getSuccessfulTaskAttemptId().toString());
     return tEvent;
   }

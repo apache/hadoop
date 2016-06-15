@@ -93,7 +93,7 @@ public class MapredTestDriver {
       pgd.addClass("timelineperformance", TimelineServicePerformance.class,
                    "A job that launches mappers to test timline service " +
                    "performance.");
-      pgd.addClass("nnbench", NNBench.class, 
+      pgd.addClass("nnbench", NNBench.class,
           "A benchmark that stresses the namenode w/ MR.");
       pgd.addClass("nnbenchWithoutMR", NNBenchWithoutMR.class,
           "A benchmark that stresses the namenode w/o MR.");

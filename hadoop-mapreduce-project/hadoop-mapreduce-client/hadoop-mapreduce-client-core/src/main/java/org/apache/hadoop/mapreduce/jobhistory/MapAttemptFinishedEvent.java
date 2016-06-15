@@ -247,5 +247,5 @@ public class MapAttemptFinishedEvent implements HistoryEvent {
         .countersToTimelineMetric(getCounters(), finishTime);
     return metrics;
   }
-  
+
 }
