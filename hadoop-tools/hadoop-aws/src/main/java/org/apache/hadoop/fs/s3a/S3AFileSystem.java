@@ -1328,22 +1328,16 @@ public class S3AFileSystem extends FileSystem {
       }
     } catch (FileNotFoundException e) {
       Path fPart = f;
-      do {
-        try {
-          FileStatus fileStatus = getFileStatus(fPart);
-          if (fileStatus.isDirectory()) {
-            break;
-          }
-          if (fileStatus.isFile()) {
-            throw new FileAlreadyExistsException(String.format(
-                "Can't make directory for path '%s' since it is a file.",
-                fPart));
-          }
-        } catch (FileNotFoundException fnfe) {
-          instrumentation.errorIgnored();
+      try {
+        FileStatus fileStatus = getFileStatus(fPart);
+        if (fileStatus.isFile()) {
+          throw new FileAlreadyExistsException(String.format(
+              "Can't make directory for path '%s' since it is a file.",
+              fPart));
         }
-        fPart = fPart.getParent();
-      } while (fPart != null);
+      } catch (FileNotFoundException fnfe) {
+        instrumentation.errorIgnored();
+      }
 
       String key = pathToKey(f);
       createFakeDirectory(key);
