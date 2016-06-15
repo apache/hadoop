@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -237,8 +238,8 @@ public class TestNameNodeRespectsBindHostKeys {
     }
   }
 
-  private static final String BASEDIR = System.getProperty("test.build.dir",
-      "target/test-dir") + "/" + TestNameNodeRespectsBindHostKeys.class.getSimpleName();
+  private static final String BASEDIR = GenericTestUtils
+      .getTempPath(TestNameNodeRespectsBindHostKeys.class.getSimpleName());
 
   private static void setupSsl() throws Exception {
     Configuration conf = new Configuration();

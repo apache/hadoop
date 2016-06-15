@@ -73,16 +73,26 @@ public class HostsFileWriter {
   }
 
   public void initExcludeHost(String hostNameAndPort) throws IOException {
+    initExcludeHosts(hostNameAndPort);
+  }
+
+  public void initExcludeHosts(String... hostNameAndPorts) throws IOException {
+    StringBuilder excludeHosts = new StringBuilder();
     if (isLegacyHostsFile) {
-      DFSTestUtil.writeFile(localFileSys, excludeFile, hostNameAndPort);
+      for (String hostNameAndPort : hostNameAndPorts) {
+        excludeHosts.append(hostNameAndPort).append("\n");
+      }
+      DFSTestUtil.writeFile(localFileSys, excludeFile, excludeHosts.toString());
     } else {
-      DatanodeAdminProperties dn = new DatanodeAdminProperties();
-      String [] hostAndPort = hostNameAndPort.split(":");
-      dn.setHostName(hostAndPort[0]);
-      dn.setPort(Integer.parseInt(hostAndPort[1]));
-      dn.setAdminState(AdminStates.DECOMMISSIONED);
       HashSet<DatanodeAdminProperties> allDNs = new HashSet<>();
-      allDNs.add(dn);
+      for (String hostNameAndPort : hostNameAndPorts) {
+        DatanodeAdminProperties dn = new DatanodeAdminProperties();
+        String[] hostAndPort = hostNameAndPort.split(":");
+        dn.setHostName(hostAndPort[0]);
+        dn.setPort(Integer.parseInt(hostAndPort[1]));
+        dn.setAdminState(AdminStates.DECOMMISSIONED);
+        allDNs.add(dn);
+      }
       CombinedHostsFileWriter.writeFile(combinedFile.toString(), allDNs);
     }
   }
@@ -118,5 +128,13 @@ public class HostsFileWriter {
     if (localFileSys.exists(fullDir)) {
       FileUtils.deleteQuietly(new File(fullDir.toUri().getPath()));
     }
+  }
+
+  public Path getIncludeFile() {
+    return includeFile;
+  }
+
+  public Path getExcludeFile() {
+    return excludeFile;
   }
 }

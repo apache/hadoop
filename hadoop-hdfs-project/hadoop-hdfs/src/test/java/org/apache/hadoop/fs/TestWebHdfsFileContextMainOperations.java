@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -63,7 +64,7 @@ public class TestWebHdfsFileContextMainOperations
 
   @Override
   protected FileContextTestHelper createFileContextHelper() {
-    return new FileContextTestHelper("/tmp/TestWebHdfsFileContextMainOperations");
+    return new FileContextTestHelper();
   }
 
   public URI getWebhdfsUrl() {
@@ -88,8 +89,8 @@ public class TestWebHdfsFileContextMainOperations
   public void setUp() throws Exception {
     URI webhdfsUrlReal = getWebhdfsUrl();
     Path testBuildData = new Path(
-        webhdfsUrlReal + "/build/test/data/" + RandomStringUtils
-            .randomAlphanumeric(10));
+        webhdfsUrlReal + "/" + GenericTestUtils.DEFAULT_TEST_DATA_PATH
+            + RandomStringUtils.randomAlphanumeric(10));
     Path rootPath = new Path(testBuildData, "root-uri");
 
     localFsRootPath = rootPath.makeQualified(webhdfsUrlReal, null);

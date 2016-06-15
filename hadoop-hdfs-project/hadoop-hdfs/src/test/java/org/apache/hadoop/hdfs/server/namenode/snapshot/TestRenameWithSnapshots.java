@@ -95,7 +95,7 @@ public class TestRenameWithSnapshots {
   private static FSDirectory fsdir;
   private static DistributedFileSystem hdfs;
   private static final String testDir =
-      System.getProperty("test.build.data", "build/test/data");
+      GenericTestUtils.getTestDir().getAbsolutePath();
   static private final Path dir = new Path("/testRenameWithSnapshots");
   static private final Path sub1 = new Path(dir, "sub1");
   static private final Path file1 = new Path(sub1, "file1");

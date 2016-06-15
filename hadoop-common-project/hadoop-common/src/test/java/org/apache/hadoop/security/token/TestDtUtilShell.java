@@ -31,6 +31,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.security.token.DtFetcher;
 
 import static org.junit.Assert.assertEquals;
@@ -71,7 +72,7 @@ public class TestDtUtilShell {
 
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final Path workDir = new Path(
-             System.getProperty("test.build.data", "/tmp"), "TestDtUtilShell");
+      GenericTestUtils.getTestDir("TestDtUtilShell").getAbsolutePath());
   private final Path tokenFile = new Path(workDir, "testPrintTokenFile");
   private final Path tokenFile2 = new Path(workDir, "testPrintTokenFile2");
   private final Path tokenLegacyFile = new Path(workDir, "testPrintTokenFile3");

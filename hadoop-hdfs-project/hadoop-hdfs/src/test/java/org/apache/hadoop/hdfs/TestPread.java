@@ -482,7 +482,7 @@ public class TestPread {
     Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
-      Path file1 = new Path("build/test/data", "preadtest.dat");
+      Path file1 = new Path(GenericTestUtils.getTempPath("preadtest.dat"));
       writeFile(fileSys, file1);
       pReadFile(fileSys, file1);
       cleanupFile(fileSys, file1);

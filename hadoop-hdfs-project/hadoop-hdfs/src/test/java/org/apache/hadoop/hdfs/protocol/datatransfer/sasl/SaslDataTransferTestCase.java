@@ -43,6 +43,7 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -74,8 +75,8 @@ public abstract class SaslDataTransferTestCase {
 
   @BeforeClass
   public static void initKdc() throws Exception {
-    baseDir = new File(System.getProperty("test.build.dir", "target/test-dir"),
-      SaslDataTransferTestCase.class.getSimpleName());
+    baseDir = GenericTestUtils
+        .getTestDir(SaslDataTransferTestCase.class.getSimpleName());
     FileUtil.fullyDelete(baseDir);
     assertTrue(baseDir.mkdirs());
 
