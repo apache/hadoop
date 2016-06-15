@@ -118,6 +118,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final String DECOMMISSIONED_STATUS = "is DECOMMISSIONED";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
+  public static final String UNDEFINED = "undefined";
 
   private final NameNode namenode;
   private final BlockManager blockManager;
@@ -141,6 +142,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showCorruptFileBlocks = false;
 
   private boolean showReplicaDetails = false;
+  private boolean showUpgradeDomains = false;
   private long staleInterval;
   private Tracer tracer;
 
@@ -222,11 +224,15 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       else if (key.equals("racks")) { this.showRacks = true; }
       else if (key.equals("replicadetails")) {
         this.showReplicaDetails = true;
-      }
-      else if (key.equals("storagepolicies")) { this.showStoragePolcies = true; }
-      else if (key.equals("showprogress")) { this.showprogress = true; }
-      else if (key.equals("openforwrite")) {this.showOpenFiles = true; }
-      else if (key.equals("listcorruptfileblocks")) {
+      } else if (key.equals("upgradedomains")) {
+        this.showUpgradeDomains = true;
+      } else if (key.equals("storagepolicies")) {
+        this.showStoragePolcies = true;
+      } else if (key.equals("showprogress")) {
+        this.showprogress = true;
+      } else if (key.equals("openforwrite")) {
+        this.showOpenFiles = true;
+      } else if (key.equals("listcorruptfileblocks")) {
         this.showCorruptFileBlocks = true;
       } else if (key.equals("startblockafter")) {
         this.currentCookie[0] = pmap.get("startblockafter")[0];
@@ -550,7 +556,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * For striped block group, display info of each internal block.
    */
   private String getReplicaInfo(BlockInfo storedBlock) {
-    if (!(showLocations || showRacks || showReplicaDetails)) {
+    if (!(showLocations || showRacks || showReplicaDetails ||
+        showUpgradeDomains)) {
       return "";
     }
     final boolean isComplete = storedBlock.isComplete();
@@ -567,6 +574,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       } else {
         sb.append(new DatanodeInfoWithStorage(dnDesc, storage.getStorageID(),
             storage.getStorageType()));
+      }
+      if (showUpgradeDomains) {
+        String upgradeDomain = (dnDesc.getUpgradeDomain() != null) ?
+            dnDesc.getUpgradeDomain() : UNDEFINED;
+        sb.append("(ud=" + upgradeDomain +")");
       }
       if (showReplicaDetails) {
         Collection<DatanodeDescriptor> corruptReplicas =
