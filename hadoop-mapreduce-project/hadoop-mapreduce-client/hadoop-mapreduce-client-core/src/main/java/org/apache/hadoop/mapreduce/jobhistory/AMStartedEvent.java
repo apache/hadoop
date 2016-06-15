@@ -170,7 +170,7 @@ public class AMStartedEvent implements HistoryEvent {
   public EventType getEventType() {
     return EventType.AM_STARTED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

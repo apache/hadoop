@@ -64,7 +64,7 @@ public class JobQueueChangeEvent implements HistoryEvent {
     }
     return null;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

@@ -66,7 +66,7 @@ public class JobPriorityChangeEvent implements HistoryEvent {
   public EventType getEventType() {
     return EventType.JOB_PRIORITY_CHANGED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

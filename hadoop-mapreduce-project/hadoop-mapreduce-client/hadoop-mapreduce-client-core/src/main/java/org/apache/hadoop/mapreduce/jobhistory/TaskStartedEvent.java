@@ -76,7 +76,7 @@ public class TaskStartedEvent implements HistoryEvent {
   public EventType getEventType() {
     return EventType.TASK_STARTED;
   }
-  
+
   @Override
   public TimelineEvent toTimelineEvent() {
     TimelineEvent tEvent = new TimelineEvent();

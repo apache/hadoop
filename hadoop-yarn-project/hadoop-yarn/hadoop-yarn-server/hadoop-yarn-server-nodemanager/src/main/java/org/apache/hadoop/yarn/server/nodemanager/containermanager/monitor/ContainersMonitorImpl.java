@@ -243,7 +243,6 @@ public class ContainersMonitorImpl extends AbstractService implements
         ;
       }
     }
-    
     super.serviceStop();
   }
 
@@ -422,7 +421,6 @@ public class ContainersMonitorImpl extends AbstractService implements
             .entrySet()) {
           ContainerId containerId = entry.getKey();
           ProcessTreeInfo ptInfo = entry.getValue();
-          
           try {
             String pId = ptInfo.getPID();
 
@@ -478,7 +476,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
             float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore /
                 resourceCalculatorPlugin.getNumProcessors();
-            
+
             // Multiply by 1000 to avoid losing data when converting to int
             int milliVcoresUsed = (int) (cpuUsageTotalCoresPercentage * 1000
                 * maxVCoresAllottedForContainers /nodeCpuPercentageForYARN);
@@ -514,7 +512,7 @@ public class ContainersMonitorImpl extends AbstractService implements
                   containerMetricsUnregisterDelayMs).recordCpuUsage
                   ((int)cpuUsagePercentPerCore, milliVcoresUsed);
             }
-            
+
             boolean isMemoryOverLimit = false;
             String msg = "";
             int containerExitStatus = ContainerExitStatus.INVALID;

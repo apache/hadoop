@@ -59,7 +59,7 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private List<LogAggregationReport> logAggregationReportsForApps = null;
 
   Map<ApplicationId, String> registeredCollectors = null;
-  
+
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
   }
@@ -157,7 +157,7 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
       LogAggregationReport value) {
     return ((LogAggregationReportPBImpl) value).getProto();
   }
-  
+
   private void addRegisteredCollectorsToProto() {
     maybeInitBuilder();
     builder.clearRegisteredCollectors();

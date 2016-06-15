@@ -41,7 +41,7 @@ public interface HistoryEvent {
 
   /** Set the Avro datum wrapped by this. */
   void setDatum(Object datum);
-  
+
   /** Map HistoryEvent to TimelineEvent */
   TimelineEvent toTimelineEvent();
 
