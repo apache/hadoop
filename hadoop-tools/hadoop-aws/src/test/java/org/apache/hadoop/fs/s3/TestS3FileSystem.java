@@ -27,24 +27,26 @@ import org.apache.hadoop.conf.Configuration;
 
 public class TestS3FileSystem extends TestCase {
 
+  public static final URI EXPECTED = URI.create("s3://c");
+
   public void testInitialization() throws IOException {
-    initializationTest("s3://a:b@c", "s3://a:b@c");
-    initializationTest("s3://a:b@c/", "s3://a:b@c");
-    initializationTest("s3://a:b@c/path", "s3://a:b@c");
-    initializationTest("s3://a@c", "s3://a@c");
-    initializationTest("s3://a@c/", "s3://a@c");
-    initializationTest("s3://a@c/path", "s3://a@c");
-    initializationTest("s3://c", "s3://c");
-    initializationTest("s3://c/", "s3://c");
-    initializationTest("s3://c/path", "s3://c");
+    initializationTest("s3://a:b@c");
+    initializationTest("s3://a:b@c/");
+    initializationTest("s3://a:b@c/path");
+    initializationTest("s3://a@c");
+    initializationTest("s3://a@c/");
+    initializationTest("s3://a@c/path");
+    initializationTest("s3://c");
+    initializationTest("s3://c/");
+    initializationTest("s3://c/path");
   }
   
-  private void initializationTest(String initializationUri, String expectedUri)
+  private void initializationTest(String initializationUri)
     throws IOException {
     
     S3FileSystem fs = new S3FileSystem(new InMemoryFileSystemStore());
     fs.initialize(URI.create(initializationUri), new Configuration());
-    assertEquals(URI.create(expectedUri), fs.getUri());
+    assertEquals(EXPECTED, fs.getUri());
   }
 
 }
