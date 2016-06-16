@@ -536,8 +536,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           UserGroupInformation.AuthenticationMethod.PROXY)
                               ? currentUgi.getShortUserName() : null;
 
-      // check and renew TGT to handle potential expiration
-      actualUgi.checkTGTAndReloginFromKeytab();
       // creating the HTTP connection using the current UGI at constructor time
       conn = actualUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
         @Override

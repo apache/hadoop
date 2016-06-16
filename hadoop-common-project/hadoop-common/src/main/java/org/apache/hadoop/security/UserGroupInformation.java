@@ -103,7 +103,7 @@ public class UserGroupInformation {
    * @param immediate true if we should login without waiting for ticket window
    */
   @VisibleForTesting
-  static void setShouldRenewImmediatelyForTests(boolean immediate) {
+  public static void setShouldRenewImmediatelyForTests(boolean immediate) {
     shouldRenewImmediatelyForTests = immediate;
   }
 
