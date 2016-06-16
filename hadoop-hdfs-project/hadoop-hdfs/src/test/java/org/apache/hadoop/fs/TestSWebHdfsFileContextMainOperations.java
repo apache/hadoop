@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -50,9 +51,8 @@ public class TestSWebHdfsFileContextMainOperations
 
   private static final HdfsConfiguration CONF = new HdfsConfiguration();
 
-  private static final String BASEDIR =
-      System.getProperty("test.build.dir", "target/test-dir") + "/"
-          + TestSWebHdfsFileContextMainOperations.class.getSimpleName();
+  private static final String BASEDIR = GenericTestUtils
+      .getTempPath(TestSWebHdfsFileContextMainOperations.class.getSimpleName());
   protected static int numBlocks = 2;
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());

@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.AfterClass;
 import org.junit.runner.RunWith;
@@ -37,8 +38,8 @@ import java.util.UUID;
 public class TestHttpFSFWithSWebhdfsFileSystem
   extends TestHttpFSWithHttpFSFileSystem {
   private static String classpathDir;
-  private static final String BASEDIR = System.getProperty("test.build.dir",
-      "target/test-dir") + "/" + UUID.randomUUID();
+  private static final String BASEDIR =
+      GenericTestUtils.getTempPath(UUID.randomUUID().toString());
 
   private static Configuration sslConf;
 

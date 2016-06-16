@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
@@ -208,7 +209,7 @@ public class TestSeekBug {
     Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     try {
-      Path file1 = new Path("build/test/data", "seektest.dat");
+      Path file1 = new Path(GenericTestUtils.getTempPath("seektest.dat"));
       writeFile(fileSys, file1);
       seekReadFile(fileSys, file1);
       cleanupFile(fileSys, file1);
