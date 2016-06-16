@@ -123,6 +123,8 @@
                       run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs-httpfs/target/hadoop-hdfs-httpfs-${project.version}/* .
                       run cp -r $ROOT/hadoop-common-project/hadoop-kms/target/hadoop-kms-${project.version}/* .
                       run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs-nfs/target/hadoop-hdfs-nfs-${project.version}/* .
+                      run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-client-${project.version}/* .
+                      run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs-native-client/target/hadoop-hdfs-native-client-${project.version}/* .
                       run cp -r $ROOT/hadoop-yarn-project/target/hadoop-yarn-project-${project.version}/* .
                       run cp -r $ROOT/hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}/* .
                       run cp -r $ROOT/hadoop-tools/hadoop-tools-dist/target/hadoop-tools-dist-${project.version}/* .

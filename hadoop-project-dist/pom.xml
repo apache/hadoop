@@ -39,12 +39,14 @@
     <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
 
     <hadoop.component>UNDEF</hadoop.component>
+    <snappy.lib></snappy.lib>
     <bundle.snappy>false</bundle.snappy>
     <bundle.snappy.in.bin>false</bundle.snappy.in.bin>
+    <openssl.lib></openssl.lib>
     <bundle.openssl>false</bundle.openssl>
     <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
   </properties>
-  
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -312,63 +314,39 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${exec-maven-plugin.version}</version>
             <executions>
               <execution>
                 <id>pre-dist</id>
                 <phase>prepare-package</phase>
                 <goals>
-                  <goal>run</goal>
+                  <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <target>
-                    <!-- Using Unix script to preserve symlinks -->
-                    <echo file="${project.build.directory}/dist-copynativelibs.sh">
-                      BUILD_DIR="${project.build.directory}"
-                      TAR='tar cf -'
-                      UNTAR='tar xfBp -'
-                      LIB_DIR="${BUILD_DIR}/native/target/usr/local/lib"
-                      if [ -d $${LIB_DIR} ] ; then
-                        TARGET_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}/lib/native"
-                        mkdir -p $${TARGET_DIR}
-                        cd $${LIB_DIR}
-                        $$TAR lib* | (cd $${TARGET_DIR}/; $$UNTAR)
-                        if [ "${bundle.snappy}" = "true" ] ; then
-                          cd "${snappy.lib}"
-                          $$TAR *snappy* | (cd $${TARGET_DIR}/; $$UNTAR)
-                        fi
-                        if [ "${bundle.openssl}" = "true" ] ; then
-                          cd "${openssl.lib}"
-                          $$TAR *crypto* | (cd $${TARGET_DIR}/; $$UNTAR)
-                        fi
-                      fi
-                      BIN_DIR="${BUILD_DIR}/bin"
-                      if [ -d $${BIN_DIR} ] ; then
-                        TARGET_BIN_DIR="${BUILD_DIR}/${project.artifactId}-${project.version}/bin"
-                        mkdir -p $${TARGET_BIN_DIR}
-                        cd $${BIN_DIR}
-                        $$TAR * | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
-                        if [ "${bundle.snappy.in.bin}" = "true" ] ; then
-                          if [ "${bundle.snappy}" = "true" ] ; then
-                            cd "${snappy.lib}"
-                            $$TAR *snappy* | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
-                          fi
-                        fi
-                        if [ "${bundle.openssl.in.bin}" = "true" ] ; then
-                          if [ "${bundle.openssl}" = "true" ] ; then
-                            cd "${openssl.lib}"
-                            $$TAR *crypto* | (cd $${TARGET_BIN_DIR}/; $$UNTAR)
-                          fi
-                        fi
-                      fi
-                    </echo>
-                    <exec executable="${shell-executable}" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./dist-copynativelibs.sh"/>
-                    </exec>
-                  </target>
+                  <executable>${project.parent.basedir}/../dev-support/bin/dist-copynativelibs</executable>
+                  <workingDirectory>${project.build.directory}</workingDirectory>
+                  <requiresOnline>false</requiresOnline>
+                  <arguments>
+                    <argument>--version=${project.version}</argument>
+                    <argument>--builddir=${project.build.directory}</argument>
+                    <argument>--artifactid=${project.artifactId}</argument>
+                    <argument>--openssllib=${openssl.lib}</argument>
+                    <argument>--opensslbinbundle=${bundle.openssl.in.bin}</argument>
+                    <argument>--openssllibbundle=${bundle.openssl}</argument>
+                    <argument>--snappybinbundle=${bundle.snappy.in.bin}</argument>
+                    <argument>--snappylib=${snappy.lib}</argument>
+                    <argument>--snappylibbundle=${bundle.snappy}</argument>
+                  </arguments>
                 </configuration>
               </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
               <execution>
                 <id>tar</id>
                 <phase>package</phase>
