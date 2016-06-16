@@ -348,7 +348,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           containerLogAggregators.put(container, aggregator);
         }
         Set<Path> uploadedFilePathsInThisCycle =
-            aggregator.doContainerLogAggregation(writer, appFinished);
+            aggregator.doContainerLogAggregation(writer, appFinished,
+            finishedContainers.contains(container));
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
           this.delService.delete(this.userUgi.getShortUserName(), null,
@@ -650,15 +651,15 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     public Set<Path> doContainerLogAggregation(LogWriter writer,
-        boolean appFinished) {
+        boolean appFinished, boolean containerFinished) {
       LOG.info("Uploading logs for container " + containerId
           + ". Current good log dirs are "
           + StringUtils.join(",", dirsHandler.getLogDirsForRead()));
       final LogKey logKey = new LogKey(containerId);
       final LogValue logValue =
           new LogValue(dirsHandler.getLogDirsForRead(), containerId,
-            userUgi.getShortUserName(), logAggregationContext,
-            this.uploadedFileMeta, appFinished);
+              userUgi.getShortUserName(), logAggregationContext,
+              this.uploadedFileMeta, appFinished, containerFinished);
       try {
         writer.append(logKey, logValue);
       } catch (Exception e) {
