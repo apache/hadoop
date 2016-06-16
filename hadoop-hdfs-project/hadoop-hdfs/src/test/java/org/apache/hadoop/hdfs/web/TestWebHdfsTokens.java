@@ -55,6 +55,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -199,8 +200,8 @@ public class TestWebHdfsTokens {
       SecurityUtil.setAuthenticationMethod(SIMPLE, clusterConf);
       clusterConf.setBoolean(DFSConfigKeys
 	    .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
-      String BASEDIR = System.getProperty("test.build.dir",
-	      	  "target/test-dir") + "/" + TestWebHdfsTokens.class.getSimpleName();
+      String baseDir =
+          GenericTestUtils.getTempPath(TestWebHdfsTokens.class.getSimpleName());
       String keystoresDir;
       String sslConfDir;
 	    
@@ -208,10 +209,10 @@ public class TestWebHdfsTokens {
       clusterConf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
       clusterConf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
 	  
-      File base = new File(BASEDIR);
+      File base = new File(baseDir);
       FileUtil.fullyDelete(base);
       base.mkdirs();
-      keystoresDir = new File(BASEDIR).getAbsolutePath();
+      keystoresDir = new File(baseDir).getAbsolutePath();
       sslConfDir = KeyStoreTestUtil.getClasspathDir(TestWebHdfsTokens.class);
       KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, clusterConf, false);
       clusterConf.set(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
