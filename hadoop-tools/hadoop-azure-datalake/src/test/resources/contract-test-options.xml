@@ -1,0 +1,57 @@
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<configuration>
+  <property>
+    <name>dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch</name>
+    <value>0</value>
+  </property>
+  <property>
+    <name>dfs.webhdfs.oauth2.credential</name>
+    <value>bearer.and.refresh.token</value>
+  </property>
+  <property>
+    <name>dfs.webhdfs.oauth2.refresh.url</name>
+    <value>https://login.windows.net/common/oauth2/token/</value>
+  </property>
+  <property>
+    <name>dfs.webhdfs.oauth2.access.token.provider</name>
+    <value>
+      org.apache.hadoop.fs.adl.oauth2.CachedRefreshTokenBasedAccessTokenProvider
+    </value>
+  </property>
+  <property>
+    <name>dfs.webhdfs.oauth2.enabled</name>
+    <value>true</value>
+  </property>
+  <!--USER INPUT REQUIRED-->
+  <property>
+    <name>dfs.webhdfs.oauth2.client.id</name>
+    <value>ADD CLIENT ID</value>
+  </property>
+  <!--USER INPUT REQUIRED-->
+  <property>
+    <name>dfs.webhdfs.oauth2.refresh.token</name>
+    <value>ADD REFRESH TOKEN</value>
+  </property>
+  <!--USER INPUT REQUIRED-->
+  <property>
+    <name>fs.defaultFS</name>
+    <value>adl://urAdlAccountGoesHere.azuredatalakestore.net:443/</value>
+  </property>
+  <!--USER INPUT REQUIRED-->
+  <property>
+    <name>dfs.adl.test.contract.enable</name>
+    <value>false</value>
+  </property>
+</configuration>
