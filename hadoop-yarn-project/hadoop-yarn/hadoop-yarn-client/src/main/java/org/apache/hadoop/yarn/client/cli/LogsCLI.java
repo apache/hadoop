@@ -274,7 +274,7 @@ public class LogsCLI extends Configured implements Tool {
     formatter.printHelp("general options are:", options);
   }
 
-  private List<JSONObject> getAMContainerInfoForRMWebService(
+  protected List<JSONObject> getAMContainerInfoForRMWebService(
       Configuration conf, String appId) throws ClientHandlerException,
       UniformInterfaceException, JSONException {
     Client webServiceClient = Client.create();
@@ -538,6 +538,11 @@ public class LogsCLI extends Configured implements Tool {
           if (amContainerId <= requests.size()) {
             outputAMContainerLogs(requests.get(amContainerId - 1), conf,
                 logCliHelper);
+          } else {
+            System.err.println(String.format("ERROR: Specified AM containerId"
+                + " (%s) exceeds the number of AM containers (%s).",
+                amContainerId, requests.size()));
+            return -1;
           }
         }
       }
