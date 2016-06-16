@@ -76,6 +76,8 @@
               <includes>
                 <include>**/*.class</include>
                 <include>webapps/**</include>
+                <include>META-INF/LICENSE.txt</include>
+                <include>META-INF/NOTICE.txt</include>
               </includes>
             </configuration>
           </execution>

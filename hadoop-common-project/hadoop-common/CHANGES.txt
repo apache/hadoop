@@ -102,6 +102,9 @@ Release 2.7.3 - UNRELEASED
     twice in corner case, causing duplicate data blocks.
     (Kai Sasaki via aajisaka)
 
+    HADOOP-12893. Verify LICENSE.txt and NOTICE.txt.
+    (Xiao Chen and Andrew Wang via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
