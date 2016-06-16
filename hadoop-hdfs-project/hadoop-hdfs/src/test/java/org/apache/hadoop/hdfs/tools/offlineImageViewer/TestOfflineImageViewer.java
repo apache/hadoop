@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
+import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -49,6 +57,7 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import com.google.common.io.Files;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.logging.Log;
@@ -82,6 +91,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class TestOfflineImageViewer {
@@ -113,6 +123,7 @@ public class TestOfflineImageViewer {
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
       conf.setBoolean(
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+      conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -179,6 +190,14 @@ public class TestOfflineImageViewer {
       // as UTF8
       hdfs.setXAttr(xattr, "user.a4", new byte[]{ -0x3d, 0x28 });
       writtenFiles.put(xattr.toString(), hdfs.getFileStatus(xattr));
+      // Set ACLs
+      hdfs.setAcl(
+          xattr,
+          Lists.newArrayList(aclEntry(ACCESS, USER, ALL),
+              aclEntry(ACCESS, USER, "foo", ALL),
+              aclEntry(ACCESS, GROUP, READ_EXECUTE),
+              aclEntry(ACCESS, GROUP, "bar", READ_EXECUTE),
+              aclEntry(ACCESS, OTHER, EXECUTE)));
 
       // Write results to the fsimage file
       hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
