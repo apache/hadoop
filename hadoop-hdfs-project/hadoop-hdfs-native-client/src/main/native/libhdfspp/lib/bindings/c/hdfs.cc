@@ -741,11 +741,11 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
 
         char * buf;
         buf = new char[ppDNInfo.getHostname().size() + 1];
-        strncpy(buf, ppDNInfo.getHostname().c_str(), ppDNInfo.getHostname().size());
+        strncpy(buf, ppDNInfo.getHostname().c_str(), ppDNInfo.getHostname().size() + 1);
         dn_info->hostname = buf;
 
         buf = new char[ppDNInfo.getIPAddr().size() + 1];
-        strncpy(buf, ppDNInfo.getIPAddr().c_str(), ppDNInfo.getIPAddr().size());
+        strncpy(buf, ppDNInfo.getIPAddr().c_str(), ppDNInfo.getIPAddr().size() + 1);
         dn_info->ip_address = buf;
       }
     }
