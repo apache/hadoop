@@ -20,6 +20,13 @@ package org.apache.hadoop.yarn.webapp;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
 
+/**
+ * GuiceServletConfig is a wrapper class to have a static Injector instance
+ * instead of having the instance inside test classes. This allow us to use
+ * Jersey test framework after 1.13.
+ * Please check test cases to know how to use this class:
+ * e.g. TestRMWithCSRFFilter.java
+ */
 public class GuiceServletConfig extends GuiceServletContextListener {
 
   public static Injector injector = null;
