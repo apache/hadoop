@@ -74,8 +74,33 @@ Do not inadvertently share these credentials through means such as
 
 If you do any of these: change your credentials immediately!
 
+### Warning #4: the S3 client provided by Amazon EMR are not from the Apache
+Software foundation, and are only supported by Amazon.
+
+Specifically: on Amazon EMR, s3a is not supported, and amazon recommend
+a different filesystem implementation. If you are using Amazon EMR, follow
+these instructions —and be aware that all issues related to S3 integration
+in EMR can only be addressed by Amazon themselves: please raise your issues
+with them.
 
 ## S3
+
+The `s3://` filesystem is the original S3 store in the Hadoop codebase.
+It implements an inode-style filesystem atop S3, and was written to
+provide scaleability when S3 had significant limits on the size of blobs.
+It is incompatible with any other application's use of data in S3.
+
+It is now deprecated and will be removed in Hadoop 3. Please do not use,
+and migrate off data which is on it.
+
+### Dependencies
+
+* `jets3t` jar
+* `commons-codec` jar
+* `commons-logging` jar
+* `httpclient` jar
+* `httpcore` jar
+* `java-xmlbuilder` jar
 
 ### Authentication properties
 
@@ -91,6 +116,42 @@ If you do any of these: change your credentials immediately!
 
 
 ## S3N
+
+S3N was the first S3 Filesystem client which used "native" S3 objects, hence
+the schema `s3n://`.
+
+### Features
+
+* Directly reads and writes S3 objects.
+* Compatible with standard S3 clients.
+* Supports partitioned uploads for many-GB objects.
+* Available across all Hadoop 2.x releases.
+
+The S3N filesystem client, while widely used, is no longer undergoing
+active maintenance except for emergency security issues. There are
+known bugs, especially: it reads to end of a stream when closing a read;
+this can make `seek()` slow on large files. The reason there has been no
+attempt to fix this is that every upgrade of the Jets3t library, while
+fixing some problems, has unintentionally introduced new ones in either the changed
+Hadoop code, or somewhere in the Jets3t/Httpclient code base.
+The number of defects remained constant, they merely moved around.
+
+By freezing the Jets3t jar version and avoiding changes to the code,
+we reduce the risk of making things worse.
+
+The S3A filesystem client can read all files created by S3N. Accordingly
+it should be used wherever possible.
+
+
+### Dependencies
+
+* `jets3t` jar
+* `commons-codec` jar
+* `commons-logging` jar
+* `httpclient` jar
+* `httpcore` jar
+* `java-xmlbuilder` jar
+
 
 ### Authentication properties
 
@@ -172,6 +233,45 @@ If you do any of these: change your credentials immediately!
 
 ## S3A
 
+
+The S3A filesystem client, prefix `s3a://`, is the S3 client undergoing
+active development and maintenance.
+While this means that there is a bit of instability
+of configuration options and behavior, it also means
+that the code is getting better in terms of reliability, performance,
+monitoring and other features.
+
+### Features
+
+* Directly reads and writes S3 objects.
+* Compatible with standard S3 clients.
+* Can read data created with S3N.
+* Can write data back that is readable by S3N. (Note: excluding encryption).
+* Supports partitioned uploads for many-GB objects.
+* Instrumented with Hadoop metrics.
+* Performance optimized operations, including `seek()` and `readFully()`.
+* Uses Amazon's Java S3 SDK with support for latest S3 features and authentication
+schemes.
+* Supports authentication via: environment variables, Hadoop configuration
+properties, the Hadoop key management store and IAM roles.
+* Supports S3 "Server Side Encryption" for both reading and writing.
+* Supports proxies
+* Test suites includes distcp and suites in downstream projects.
+* Available since Hadoop 2.6; considered production ready in Hadoop 2.7.
+* Actively maintained.
+
+S3A is now the recommended client for working with S3 objects. It is also the
+one where patches for functionality and performance are very welcome.
+
+### Dependencies
+
+* `hadoop-aws` jar.
+* `aws-java-sdk-s3` jar.
+* `aws-java-sdk-core` jar.
+* `aws-java-sdk-kms` jar.
+* `joda-time` jar; use version 2.8.1 or later.
+* `httpclient` jar.
+* Jackson `jackson-core`, `jackson-annotations`, `jackson-databind` jars.
 
 ### Authentication properties
 
@@ -330,6 +430,7 @@ this capability.
 
     <property>
       <name>fs.s3a.path.style.access</name>
+      <value>false</value>
       <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
         Useful for S3A-compliant storage providers as it removes the need to set up DNS for virtual hosting.
       </description>
@@ -435,7 +536,7 @@ this capability.
 
     <property>
       <name>fs.s3a.multiobjectdelete.enable</name>
-      <value>false</value>
+      <value>true</value>
       <description>When enabled, multiple single-object delete requests are replaced by
         a single 'delete multiple objects'-request, reducing the number of requests.
         Beware: legacy S3-compatible object stores might not support this request.
@@ -558,6 +659,211 @@ parts of size `fs.s3a.multipart.size` are used to protect against overflowing
 the available memory. These settings should be tuned to the envisioned
 workflow (some large files, many small ones, ...) and the physical
 limitations of the machine and cluster (memory, network bandwidth).
+
+## Troubleshooting S3A
+
+Common problems working with S3A are
+
+1. Classpath
+1. Authentication
+1. S3 Inconsistency side-effects
+
+Classpath is usually the first problem. For the S3x filesystem clients,
+you need the Hadoop-specific filesystem clients, third party S3 client libraries
+compatible with the Hadoop code, and any dependent libraries compatible with
+Hadoop and the specific JVM.
+
+The classpath must be set up for the process talking to S3: if this is code
+running in the Hadoop cluster, the JARs must be on that classpath. That
+includes `distcp`.
+
+
+### `ClassNotFoundException: org.apache.hadoop.fs.s3a.S3AFileSystem`
+
+(or `org.apache.hadoop.fs.s3native.NativeS3FileSystem`, `org.apache.hadoop.fs.s3.S3FileSystem`).
+
+These are the Hadoop classes, found in the `hadoop-aws` JAR. An exception
+reporting one of these classes is missing means that this JAR is not on
+the classpath.
+
+### `ClassNotFoundException: com.amazonaws.services.s3.AmazonS3Client`
+
+(or other `com.amazonaws` class.)
+`
+This means that one or more of the `aws-*-sdk` JARs are missing. Add them.
+
+### Missing method in AWS class
+
+This can be triggered by incompatibilities between the AWS SDK on the classpath
+and the version which Hadoop was compiled with.
+
+The AWS SDK JARs change their signature enough between releases that the only
+way to safely update the AWS SDK version is to recompile Hadoop against the later
+version.
+
+There's nothing the Hadoop team can do here: if you get this problem, then sorry,
+but you are on your own. The Hadoop developer team did look at using reflection
+to bind to the SDK, but there were too many changes between versions for this
+to work reliably. All it did was postpone version compatibility problems until
+the specific codepaths were executed at runtime —this was actually a backward
+step in terms of fast detection of compatibility problems.
+
+### Missing method in a Jackson class
+
+This is usually caused by version mismatches between Jackson JARs on the
+classpath. All Jackson JARs on the classpath *must* be of the same version.
+
+
+### Authentication failure
+
+One authentication problem is caused by classpath mismatch; see the joda time
+issue above.
+
+Otherwise, the general cause is: you have the wrong credentials —or somehow
+the credentials were not readable on the host attempting to read or write
+the S3 Bucket.
+
+There's not much that Hadoop can do/does for diagnostics here,
+though enabling debug logging for the package `org.apache.hadoop.fs.s3a`
+can help.
+
+There is also some logging in the AWS libraries which provide some extra details.
+In particular, the setting the log `com.amazonaws.auth.AWSCredentialsProviderChain`
+to log at DEBUG level will mean the invidual reasons for the (chained)
+authentication clients to fail will be printed.
+
+Otherwise, try to use the AWS command line tools with the same credentials.
+If you set the environment variables, you can take advantage of S3A's support
+of environment-variable authentication by attempting to use the `hdfs fs` command
+to read or write data on S3. That is: comment out the `fs.s3a` secrets and rely on
+the environment variables.
+
+S3 Frankfurt is a special case. It uses the V4 authentication API.
+
+### Authentication failures running on Java 8u60+
+
+A change in the Java 8 JVM broke some of the `toString()` string generation
+of Joda Time 2.8.0, which stopped the amazon s3 client from being able to
+generate authentication headers suitable for validation by S3.
+
+Fix: make sure that the version of Joda Time is 2.8.1 or later.
+
+## Visible S3 Inconsistency
+
+Amazon S3 is *an eventually consistent object store*. That is: not a filesystem.
+
+It offers read-after-create consistency: a newly created file is immediately
+visible. Except, there is a small quirk: a negative GET may be cached, such
+that even if an object is immediately created, the fact that there "wasn't"
+an object is still remembered.
+
+That means the following sequence on its own will be consistent
+```
+touch(path) -> getFileStatus(path)
+```
+
+But this sequence *may* be inconsistent.
+
+```
+getFileStatus(path) -> touch(path) -> getFileStatus(path)
+```
+
+A common source of visible inconsistencies is that the S3 metadata
+database —the part of S3 which serves list requests— is updated asynchronously.
+Newly added or deleted files may not be visible in the index, even though direct
+operations on the object (`HEAD` and `GET`) succeed.
+
+In S3A, that means the `getFileStatus()` and `open()` operations are more likely
+to be consistent with the state of the object store than any directory list
+operations (`listStatus()`, `listFiles()`, `listLocatedStatus()`,
+`listStatusIterator()`).
+
+
+### `FileNotFoundException` even though the file was just written.
+
+This can be a sign of consistency problems. It may also surface if there is some
+asynchronous file write operation still in progress in the client: the operation
+has returned, but the write has not yet completed. While the S3A client code
+does block during the `close()` operation, we suspect that asynchronous writes
+may be taking place somewhere in the stack —this could explain why parallel tests
+fail more often than serialized tests.
+
+### File not found in a directory listing, even though `getFileStatus()` finds it
+
+(Similarly: deleted file found in listing, though `getFileStatus()` reports
+that it is not there)
+
+This is a visible sign of updates to the metadata server lagging
+behind the state of the underlying filesystem.
+
+
+### File not visible/saved
+
+The files in an object store are not visible until the write has been completed.
+In-progress writes are simply saved to a local file/cached in RAM and only uploaded.
+at the end of a write operation. If a process terminated unexpectedly, or failed
+to call the `close()` method on an output stream, the pending data will have
+been lost.
+
+### File `flush()` and `hflush()` calls do not save data to S3A
+
+Again, this is due to the fact that the data is cached locally until the
+`close()` operation. The S3A filesystem cannot be used as a store of data
+if it is required that the data is persisted durably after every
+`flush()/hflush()` call. This includes resilient logging, HBase-style journalling
+and the like. The standard strategy here is to save to HDFS and then copy to S3.
+
+### Other issues
+
+*Performance slow*
+
+S3 is slower to read data than HDFS, even on virtual clusters running on
+Amazon EC2.
+
+* HDFS replicates data for faster query performance
+* HDFS stores the data on the local hard disks, avoiding network traffic
+ if the code can be executed on that host. As EC2 hosts often have their
+ network bandwidth throttled, this can make a tangible difference.
+* HDFS is significantly faster for many "metadata" operations: listing
+the contents of a directory, calling `getFileStatus()` on path,
+creating or deleting directories.
+* On HDFS, Directory renames and deletes are `O(1)` operations. On
+S3 renaming is a very expensive `O(data)` operation which may fail partway through
+in which case the final state depends on where the copy+ delete sequence was when it failed.
+All the objects are copied, then the original set of objects are deleted, so
+a failure should not lose data —it may result in duplicate datasets.
+* Because the write only begins on a `close()` operation, it may be in the final
+phase of a process where the write starts —this can take so long that some things
+can actually time out.
+
+The slow performance of `rename()` surfaces during the commit phase of work,
+including
+
+* The MapReduce FileOutputCommitter.
+* DistCp's rename after copy operation.
+
+Both these operations can be significantly slower when S3 is the destination
+compared to HDFS or other "real" filesystem.
+
+*Improving S3 load-balancing behavior*
+
+Amazon S3 uses a set of front-end servers to provide access to the underlying data.
+The choice of which front-end server to use is handled via load-balancing DNS
+service: when the IP address of an S3 bucket is looked up, the choice of which
+IP address to return to the client is made based on the the current load
+of the front-end servers.
+
+Over time, the load across the front-end changes, so those servers considered
+"lightly loaded" will change. If the DNS value is cached for any length of time,
+your application may end up talking to an overloaded server. Or, in the case
+of failures, trying to talk to a server that is no longer there.
+
+And by default, for historical security reasons in the era of applets,
+the DNS TTL of a JVM is "infinity".
+
+To work with AWS better, set the DNS time-to-live of an application which
+works with S3 to something lower. See [AWS documentation](http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/java-dg-jvm-ttl.html).
+
 
 ## Testing the S3 filesystem clients
 
