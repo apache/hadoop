@@ -32,6 +32,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <require.fuse>false</require.fuse>
+    <hadoop.component>hdfs</hadoop.component>
   </properties>
 
   <dependencies>
@@ -222,7 +223,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <exec executable="ctest" failonerror="true" dir="${project.build.directory}/">
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
                       <!-- Make sure libhadoop.so is on LD_LIBRARY_PATH. -->
-                      <env key="LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}:${project.build.directory}/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib"/>
+                      <env key="LD_LIBRARY_PATH" value="${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib"/>
                     </exec>
                   </target>
                 </configuration>
