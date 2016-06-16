@@ -26,8 +26,11 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.concurrent.TimeUnit;
 
 public interface GetSpaceUsed {
+
+
   long getUsed() throws IOException;
 
   /**
@@ -37,11 +40,15 @@ public interface GetSpaceUsed {
     static final Logger LOG = LoggerFactory.getLogger(Builder.class);
 
     static final String CLASSNAME_KEY = "fs.getspaceused.classname";
+    static final String JITTER_KEY = "fs.getspaceused.jitterMillis";
+    static final long DEFAULT_JITTER = TimeUnit.MINUTES.toMillis(1);
+
 
     private Configuration conf;
     private Class<? extends GetSpaceUsed> klass = null;
     private File path = null;
     private Long interval = null;
+    private Long jitter = null;
     private Long initialUsed = null;
 
     public Configuration getConf() {
@@ -108,6 +115,24 @@ public interface GetSpaceUsed {
 
     public Builder setInitialUsed(long initialUsed) {
       this.initialUsed = initialUsed;
+      return this;
+    }
+
+
+    public long getJitter() {
+      if (jitter == null) {
+        Configuration configuration = this.conf;
+
+        if (configuration == null) {
+          return DEFAULT_JITTER;
+        }
+        return configuration.getLong(JITTER_KEY, DEFAULT_JITTER);
+      }
+      return jitter;
+    }
+
+    public Builder setJitter(Long jit) {
+      this.jitter = jit;
       return this;
     }
 

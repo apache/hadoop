@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -43,6 +44,7 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   protected final AtomicLong used = new AtomicLong();
   private final AtomicBoolean running = new AtomicBoolean(true);
   private final long refreshInterval;
+  private final long jitter;
   private final String dirPath;
   private Thread refreshUsed;
 
@@ -52,7 +54,10 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
    */
   public CachingGetSpaceUsed(CachingGetSpaceUsed.Builder builder)
       throws IOException {
-    this(builder.getPath(), builder.getInterval(), builder.getInitialUsed());
+    this(builder.getPath(),
+        builder.getInterval(),
+        builder.getJitter(),
+        builder.getInitialUsed());
   }
 
   /**
@@ -65,10 +70,12 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
    */
   CachingGetSpaceUsed(File path,
                       long interval,
+                      long jitter,
                       long initialUsed) throws IOException {
-    dirPath = path.getCanonicalPath();
-    refreshInterval = interval;
-    used.set(initialUsed);
+    this.dirPath = path.getCanonicalPath();
+    this.refreshInterval = interval;
+    this.jitter = jitter;
+    this.used.set(initialUsed);
   }
 
   void init() {
@@ -155,7 +162,18 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
     public void run() {
       while (spaceUsed.running()) {
         try {
-          Thread.sleep(spaceUsed.getRefreshInterval());
+          long refreshInterval = spaceUsed.refreshInterval;
+
+          if (spaceUsed.jitter > 0) {
+            long jitter = spaceUsed.jitter;
+            // add/subtract the jitter.
+            refreshInterval +=
+                ThreadLocalRandom.current()
+                                 .nextLong(-jitter, jitter);
+          }
+          // Make sure that after the jitter we didn't end up at 0.
+          refreshInterval = Math.max(refreshInterval, 1);
+          Thread.sleep(refreshInterval);
           // update the used variable
           spaceUsed.refresh();
         } catch (InterruptedException e) {
