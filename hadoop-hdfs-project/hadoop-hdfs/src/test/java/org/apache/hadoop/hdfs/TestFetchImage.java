@@ -32,13 +32,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Test;
 
 public class TestFetchImage {
   
-  private static final File FETCHED_IMAGE_FILE = new File(
-      System.getProperty("test.build.dir"), "target/fetched-image-dir");
+  private static final File FETCHED_IMAGE_FILE =
+      GenericTestUtils.getTestDir("target/fetched-image-dir");
   // Shamelessly stolen from NNStorage.
   private static final Pattern IMAGE_REGEX = Pattern.compile("fsimage_(\\d+)");
 

@@ -87,12 +87,12 @@ public class TestDatanodeStartupFixesLegacyStorageIDs {
 
   private static void initStorageDirs(final Configuration conf,
                                       final String testName) {
-    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
-             System.getProperty("test.build.data") + File.separator +
-                 testName + File.separator + "dfs" + File.separator + "data");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-             System.getProperty("test.build.data") + File.separator +
-                 testName + File.separator + "dfs" + File.separator + "name");
+    conf.set(
+        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, GenericTestUtils.getTempPath(
+            testName + File.separator + "dfs" + File.separator + "data"));
+    conf.set(
+        DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, GenericTestUtils.getTempPath(
+            testName + File.separator + "dfs" + File.separator + "name"));
 
   }
 

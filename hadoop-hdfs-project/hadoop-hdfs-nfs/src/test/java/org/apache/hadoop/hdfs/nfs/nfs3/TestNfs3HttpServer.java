@@ -30,13 +30,14 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestNfs3HttpServer {
-  private static final String BASEDIR = System.getProperty("test.build.dir",
-      "target/test-dir") + "/" + TestNfs3HttpServer.class.getSimpleName();
+  private static final String BASEDIR =
+      GenericTestUtils.getTempPath(TestNfs3HttpServer.class.getSimpleName());
   private static NfsConfiguration conf = new NfsConfiguration();
   private static MiniDFSCluster cluster;
   private static String keystoresDir;

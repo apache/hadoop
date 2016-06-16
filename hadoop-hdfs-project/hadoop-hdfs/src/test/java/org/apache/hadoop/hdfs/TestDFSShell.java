@@ -3274,8 +3274,8 @@ public class TestDFSShell {
       assertTrue(e.getMessage().contains("Invalid path name /.reserved"));
     }
 
-    final String testdir = System.getProperty("test.build.data")
-        + "/TestDFSShell-testCopyReserved";
+    final String testdir = GenericTestUtils.getTempPath(
+        "TestDFSShell-testCopyReserved");
     final Path hdfsTestDir = new Path(testdir);
     writeFile(fs, new Path(testdir, "testFileForPut"));
     final Path src = new Path(hdfsTestDir, "srcfile");

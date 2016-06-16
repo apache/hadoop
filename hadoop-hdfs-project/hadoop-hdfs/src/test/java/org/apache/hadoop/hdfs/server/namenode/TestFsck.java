@@ -119,8 +119,8 @@ import com.google.common.collect.Sets;
  * A JUnit test for doing fsck
  */
 public class TestFsck {
-  static final String auditLogFile = System.getProperty("test.build.dir",
-      "build/test") + "/TestFsck-audit.log";
+  static final String AUDITLOG_FILE =
+      GenericTestUtils.getTempPath("TestFsck-audit.log");
   
   // Pattern for: 
   // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
@@ -212,14 +212,15 @@ public class TestFsck {
 
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
-    File file = new File(auditLogFile);
+    File file = new File(AUDITLOG_FILE);
     if (file.exists()) {
       file.delete();
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     logger.setLevel(Level.INFO);
     PatternLayout layout = new PatternLayout("%m%n");
-    RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
+    RollingFileAppender appender =
+        new RollingFileAppender(layout, AUDITLOG_FILE);
     logger.addAppender(appender);
   }
   
@@ -231,7 +232,7 @@ public class TestFsck {
     BufferedReader reader = null;
     try {
       // Audit log should contain one getfileinfo and one fsck
-      reader = new BufferedReader(new FileReader(auditLogFile));
+      reader = new BufferedReader(new FileReader(AUDITLOG_FILE));
       String line;
 
       // one extra getfileinfo stems from resolving the path

@@ -557,27 +557,25 @@ public class TestEnhancedByteBufferAccess {
    */
   @Test
   public void testIndirectFallbackReads() throws Exception {
-    final File TEST_DIR = new File(
-      System.getProperty("test.build.data","build/test/data"));
-    final String TEST_PATH = TEST_DIR + File.separator +
-        "indirectFallbackTestFile";
+    final String testPath = GenericTestUtils
+        .getTestDir("indirectFallbackTestFile").getAbsolutePath();
     final int TEST_FILE_LENGTH = 16385;
     final int RANDOM_SEED = 23453;
     FileOutputStream fos = null;
     FileInputStream fis = null;
     try {
-      fos = new FileOutputStream(TEST_PATH);
+      fos = new FileOutputStream(testPath);
       Random random = new Random(RANDOM_SEED);
       byte original[] = new byte[TEST_FILE_LENGTH];
       random.nextBytes(original);
       fos.write(original);
       fos.close();
       fos = null;
-      fis = new FileInputStream(TEST_PATH);
+      fis = new FileInputStream(testPath);
       testFallbackImpl(fis, original);
     } finally {
       IOUtils.cleanup(LOG, fos, fis);
-      new File(TEST_PATH).delete();
+      new File(testPath).delete();
     }
   }
 
