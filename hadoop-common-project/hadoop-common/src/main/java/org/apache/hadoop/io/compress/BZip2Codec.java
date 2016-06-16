@@ -207,7 +207,12 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     // time stream might start without a leading BZ.
     final long FIRST_BZIP2_BLOCK_MARKER_POSITION =
       CBZip2InputStream.numberOfBytesTillNextMarker(seekableIn);
-    long adjStart = Math.max(0L, start - FIRST_BZIP2_BLOCK_MARKER_POSITION);
+    long adjStart = 0L;
+    if (start != 0) {
+      // Other than the first of file, the marker size is 6 bytes.
+      adjStart = Math.max(0L, start - (FIRST_BZIP2_BLOCK_MARKER_POSITION
+          - (HEADER_LEN + SUB_HEADER_LEN)));
+    }
 
     ((Seekable)seekableIn).seek(adjStart);
     SplitCompressionInputStream in =

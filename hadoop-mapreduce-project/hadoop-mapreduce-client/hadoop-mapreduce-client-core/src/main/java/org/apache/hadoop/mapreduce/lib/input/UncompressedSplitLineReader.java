@@ -53,10 +53,10 @@ public class UncompressedSplitLineReader extends SplitLineReader {
       throws IOException {
     int maxBytesToRead = buffer.length;
     if (totalBytesRead < splitLength) {
-      long leftBytesForSplit = splitLength - totalBytesRead;
-      // check if leftBytesForSplit exceed Integer.MAX_VALUE
-      if (leftBytesForSplit <= Integer.MAX_VALUE) {
-        maxBytesToRead = Math.min(maxBytesToRead, (int)leftBytesForSplit);
+      long bytesLeftInSplit = splitLength - totalBytesRead;
+
+      if (bytesLeftInSplit < maxBytesToRead) {
+        maxBytesToRead = (int)bytesLeftInSplit;
       }
     }
     int bytesRead = in.read(buffer, 0, maxBytesToRead);

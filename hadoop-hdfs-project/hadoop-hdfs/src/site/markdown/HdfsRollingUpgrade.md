@@ -172,7 +172,7 @@ Then, the files created before or after *T* remain available in HDFS.
 The files deleted before or after *T* remain deleted in HDFS.
 
 A newer release is downgradable to the pre-upgrade release
-only if both the namenode layout version and the datenode layout version
+only if both the namenode layout version and the datanode layout version
 are not changed between these two releases.
 
 In a HA cluster,

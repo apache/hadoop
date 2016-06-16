@@ -30,6 +30,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.AccessControlException;
@@ -63,7 +64,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -76,6 +79,25 @@ public class TestAMAuthorization {
 
   private final Configuration conf;
   private MockRM rm;
+
+  // Note : Any test case in ResourceManager package that creates a proxy has
+  // to be run with enabling hadoop.security.token.service.use_ip. And reset
+  // to false at the end of test class. See YARN-5208
+  @BeforeClass
+  public static void setUp() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
+    SecurityUtil.setConfiguration(conf);
+  }
+
+  @AfterClass
+  public static void resetConf() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
+    SecurityUtil.setConfiguration(conf);
+  }
 
   @Parameters
   public static Collection<Object[]> configs() {

@@ -43,7 +43,7 @@ public class LocalResourceRequest
    */
   public LocalResourceRequest(LocalResource resource)
       throws URISyntaxException {
-    this(ConverterUtils.getPathFromYarnURL(resource.getResource()),
+    this(resource.getResource().toPath(),
         resource.getTimestamp(),
         resource.getType(),
         resource.getVisibility(),
@@ -133,7 +133,7 @@ public class LocalResourceRequest
 
   @Override
   public URL getResource() {
-    return ConverterUtils.getYarnUrlFromPath(loc);
+    return URL.fromPath(loc);
   }
 
   @Override

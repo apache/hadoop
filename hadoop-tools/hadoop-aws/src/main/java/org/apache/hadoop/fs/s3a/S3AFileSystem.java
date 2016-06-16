@@ -78,10 +78,11 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.VersionInfo;
 
+import static org.apache.commons.lang.StringUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -140,7 +141,7 @@ public class S3AFileSystem extends FileSystem {
     try {
       instrumentation = new S3AInstrumentation(name);
 
-      uri = URI.create(name.getScheme() + "://" + name.getAuthority());
+      uri = S3xLoginHelper.buildFSURI(name);
       workingDir = new Path("/user", System.getProperty("user.name"))
           .makeQualified(this.uri, this.getWorkingDirectory());
 
@@ -399,53 +400,6 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Return the access key and secret for S3 API use.
-   * Credentials may exist in configuration, within credential providers
-   * or indicated in the UserInfo of the name URI param.
-   * @param name the URI for which we need the access keys.
-   * @param conf the Configuration object to interogate for keys.
-   * @return AWSAccessKeys
-   */
-  AWSAccessKeys getAWSAccessKeys(URI name, Configuration conf)
-      throws IOException {
-    String accessKey = null;
-    String secretKey = null;
-    String userInfo = name.getUserInfo();
-    if (userInfo != null) {
-      int index = userInfo.indexOf(':');
-      if (index != -1) {
-        accessKey = userInfo.substring(0, index);
-        secretKey = userInfo.substring(index + 1);
-      } else {
-        accessKey = userInfo;
-      }
-    }
-    Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
-          conf, S3AFileSystem.class);
-    if (accessKey == null) {
-      try {
-        final char[] key = c.getPassword(ACCESS_KEY);
-        if (key != null) {
-          accessKey = (new String(key)).trim();
-        }
-      } catch(IOException ioe) {
-        throw new IOException("Cannot find AWS access key.", ioe);
-      }
-    }
-    if (secretKey == null) {
-      try {
-        final char[] pass = c.getPassword(SECRET_KEY);
-        if (pass != null) {
-          secretKey = (new String(pass)).trim();
-        }
-      } catch(IOException ioe) {
-        throw new IOException("Cannot find AWS secret key.", ioe);
-      }
-    }
-    return new AWSAccessKeys(accessKey, secretKey);
-  }
-
-  /**
    * Create the standard credential provider, or load in one explicitly
    * identified in the configuration.
    * @param binding the S3 binding/bucket.
@@ -460,10 +414,10 @@ public class S3AFileSystem extends FileSystem {
 
     String className = conf.getTrimmed(AWS_CREDENTIALS_PROVIDER);
     if (StringUtils.isEmpty(className)) {
-      AWSAccessKeys creds = getAWSAccessKeys(binding, conf);
+      S3xLoginHelper.Login creds = getAWSAccessKeys(binding, conf);
       credentials = new AWSCredentialsProviderChain(
           new BasicAWSCredentialsProvider(
-              creds.getAccessKey(), creds.getAccessSecret()),
+              creds.getUser(), creds.getPassword()),
           new InstanceProfileCredentialsProvider(),
           new EnvironmentVariableCredentialsProvider());
 
@@ -551,10 +505,27 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Opens an FSDataInputStream at the indicated Path.
-   * @param f the file name to open
-   * @param bufferSize the size of the buffer to be used.
+   * Check that a Path belongs to this FileSystem.
+   * Unlike the superclass, this version does not look at authority,
+   * only hostnames.
+   * @param path to check
+   * @throws IllegalArgumentException if there is an FS mismatch
    */
+  @Override
+  public void checkPath(Path path) {
+    S3xLoginHelper.checkPath(getConf(), getUri(), path, getDefaultPort());
+  }
+
+  @Override
+  protected URI canonicalizeUri(URI rawUri) {
+    return S3xLoginHelper.canonicalizeUri(rawUri, getDefaultPort());
+  }
+
+  /**
+     * Opens an FSDataInputStream at the indicated Path.
+     * @param f the file name to open
+     * @param bufferSize the size of the buffer to be used.
+     */
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
 

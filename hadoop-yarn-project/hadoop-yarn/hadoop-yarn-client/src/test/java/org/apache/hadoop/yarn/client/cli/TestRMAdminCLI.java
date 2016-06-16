@@ -222,7 +222,7 @@ public class TestRMAdminCLI {
     verify(admin).updateNodeResource(argument.capture());
     UpdateNodeResourceRequest request = argument.getValue();
     Map<NodeId, ResourceOption> resourceMap = request.getNodeResourceMap();
-    NodeId nodeId = ConverterUtils.toNodeId(nodeIdStr);
+    NodeId nodeId = NodeId.fromString(nodeIdStr);
     Resource expectedResource = Resources.createResource(memSize, cores);
     ResourceOption resource = resourceMap.get(nodeId);
     assertNotNull("resource for " + nodeIdStr + " shouldn't be null.",

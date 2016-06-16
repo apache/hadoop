@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,8 +29,8 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 
 public class TestGetSpaceUsed {
-  final static private File DIR = new File(
-      System.getProperty("test.build.data", "/tmp"), "TestGetSpaceUsed");
+  final static private File DIR =
+      GenericTestUtils.getTestDir("TestGetSpaceUsed");
 
   @Before
   public void setUp() {

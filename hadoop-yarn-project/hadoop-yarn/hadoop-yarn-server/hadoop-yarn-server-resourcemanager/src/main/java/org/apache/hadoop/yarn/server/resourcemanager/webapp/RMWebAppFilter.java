@@ -220,7 +220,7 @@ public class RMWebAppFilter extends GuiceContainer {
           break;
         case "appattempt":
           try{
-            appAttemptId = ConverterUtils.toApplicationAttemptId(parts[3]);
+            appAttemptId = ApplicationAttemptId.fromString(parts[3]);
           } catch (IllegalArgumentException e) {
             LOG.debug("Error parsing {} as an ApplicationAttemptId",
                 parts[3], e);

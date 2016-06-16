@@ -374,7 +374,7 @@ public class TestNMLeveldbStateStoreService {
     Path appRsrcPath = new Path("hdfs://some/app/resource");
     LocalResourcePBImpl rsrcPb = (LocalResourcePBImpl)
         LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(appRsrcPath),
+            URL.fromPath(appRsrcPath),
             LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
             123L, 456L);
     LocalResourceProto appRsrcProto = rsrcPb.getProto();
@@ -407,7 +407,7 @@ public class TestNMLeveldbStateStoreService {
     // start some public and private resources
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(pubRsrcPath1),
+            URL.fromPath(pubRsrcPath1),
             LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
             789L, 135L);
     LocalResourceProto pubRsrcProto1 = rsrcPb.getProto();
@@ -416,7 +416,7 @@ public class TestNMLeveldbStateStoreService {
         pubRsrcLocalPath1);
     Path pubRsrcPath2 = new Path("hdfs://some/public/resource2");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(pubRsrcPath2),
+            URL.fromPath(pubRsrcPath2),
             LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
             789L, 135L);
     LocalResourceProto pubRsrcProto2 = rsrcPb.getProto();
@@ -425,7 +425,7 @@ public class TestNMLeveldbStateStoreService {
         pubRsrcLocalPath2);
     Path privRsrcPath = new Path("hdfs://some/private/resource");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(privRsrcPath),
+            URL.fromPath(privRsrcPath),
             LocalResourceType.PATTERN, LocalResourceVisibility.PRIVATE,
             789L, 680L, "*pattern*");
     LocalResourceProto privRsrcProto = rsrcPb.getProto();
@@ -470,7 +470,7 @@ public class TestNMLeveldbStateStoreService {
     Path appRsrcPath = new Path("hdfs://some/app/resource");
     LocalResourcePBImpl rsrcPb = (LocalResourcePBImpl)
         LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(appRsrcPath),
+            URL.fromPath(appRsrcPath),
             LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
             123L, 456L);
     LocalResourceProto appRsrcProto = rsrcPb.getProto();
@@ -510,7 +510,7 @@ public class TestNMLeveldbStateStoreService {
     // start some public and private resources
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(pubRsrcPath1),
+            URL.fromPath(pubRsrcPath1),
             LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
             789L, 135L);
     LocalResourceProto pubRsrcProto1 = rsrcPb.getProto();
@@ -519,7 +519,7 @@ public class TestNMLeveldbStateStoreService {
         pubRsrcLocalPath1);
     Path pubRsrcPath2 = new Path("hdfs://some/public/resource2");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(pubRsrcPath2),
+            URL.fromPath(pubRsrcPath2),
             LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
             789L, 135L);
     LocalResourceProto pubRsrcProto2 = rsrcPb.getProto();
@@ -528,7 +528,7 @@ public class TestNMLeveldbStateStoreService {
         pubRsrcLocalPath2);
     Path privRsrcPath = new Path("hdfs://some/private/resource");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(privRsrcPath),
+            URL.fromPath(privRsrcPath),
             LocalResourceType.PATTERN, LocalResourceVisibility.PRIVATE,
             789L, 680L, "*pattern*");
     LocalResourceProto privRsrcProto = rsrcPb.getProto();
@@ -589,7 +589,7 @@ public class TestNMLeveldbStateStoreService {
     Path appRsrcPath = new Path("hdfs://some/app/resource");
     LocalResourcePBImpl rsrcPb = (LocalResourcePBImpl)
         LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(appRsrcPath),
+            URL.fromPath(appRsrcPath),
             LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION,
             123L, 456L);
     LocalResourceProto appRsrcProto = rsrcPb.getProto();
@@ -619,7 +619,7 @@ public class TestNMLeveldbStateStoreService {
     // add public and private resources and remove some
     Path pubRsrcPath1 = new Path("hdfs://some/public/resource1");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(pubRsrcPath1),
+            URL.fromPath(pubRsrcPath1),
             LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
             789L, 135L);
     LocalResourceProto pubRsrcProto1 = rsrcPb.getProto();
@@ -635,7 +635,7 @@ public class TestNMLeveldbStateStoreService {
     stateStore.finishResourceLocalization(null, null, pubLocalizedProto1);
     Path pubRsrcPath2 = new Path("hdfs://some/public/resource2");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(pubRsrcPath2),
+            URL.fromPath(pubRsrcPath2),
             LocalResourceType.FILE, LocalResourceVisibility.PUBLIC,
             789L, 135L);
     LocalResourceProto pubRsrcProto2 = rsrcPb.getProto();
@@ -652,7 +652,7 @@ public class TestNMLeveldbStateStoreService {
     stateStore.removeLocalizedResource(null, null, pubRsrcLocalPath2);
     Path privRsrcPath = new Path("hdfs://some/private/resource");
     rsrcPb = (LocalResourcePBImpl) LocalResource.newInstance(
-            ConverterUtils.getYarnUrlFromPath(privRsrcPath),
+            URL.fromPath(privRsrcPath),
             LocalResourceType.PATTERN, LocalResourceVisibility.PRIVATE,
             789L, 680L, "*pattern*");
     LocalResourceProto privRsrcProto = rsrcPb.getProto();

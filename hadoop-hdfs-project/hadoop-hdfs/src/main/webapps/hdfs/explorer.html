@@ -179,6 +179,13 @@
           data-target="#modal-upload-file" title="Upload Files">
             <span class="glyphicon glyphicon-cloud-upload"></span>
         </button>
+        <button class="btn btn-default dropdown-toggle" type="button"
+          data-toggle="dropdown" title="Cut & Paste">
+        <span class="glyphicon glyphicon-list-alt"></span></button>
+        <ul class="dropdown-menu cut-paste">
+          <li><a id="explorer-cut">Cut</a></li>
+          <li><a id="explorer-paste">Paste</a></li>
+        </ul>
       </div>
     </div>
 
@@ -236,6 +243,7 @@
       <table class="table" id="table-explorer">
         <thead>
           <tr>
+            <th><input type="checkbox" id="file-selector-all"></th>
             <th title="Permissions">Permission</th>
             <th>Owner</th>
             <th>Group</th>
@@ -251,6 +259,7 @@
           {#FileStatus}
           <tr inode-path="{pathSuffix}" data-permission="{permission}"
             class="explorer-entry">
+            <td><input type="checkbox" class="file_selector"> </td>
             <td><span class="explorer-perm-links editable-click">
               {type|helper_to_directory}{permission|helper_to_permission}
               {aclBit|helper_to_acl_bit}

@@ -118,15 +118,14 @@ public class TestRollingFileSystemSink {
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
     assertTrue("The initial flush time was calculated incorrectly: " + diff,
-        (diff >= -1000L) && (diff < -900L));
+        (diff == 0L) || ((diff > -1000L) && (diff < -900L)));
 
     calendar.set(Calendar.MILLISECOND, 10);
     rfsSink.setInitialFlushTime(calendar.getTime());
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
     assertTrue("The initial flush time was calculated incorrectly: " + diff,
-        ((diff >= -10L) && (diff <= 0L) ||
-            ((diff > -1000L) && (diff < -910L))));
+        (diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)));
 
     calendar.set(Calendar.SECOND, 1);
     calendar.set(Calendar.MILLISECOND, 10);
@@ -134,8 +133,7 @@ public class TestRollingFileSystemSink {
     diff = rfsSink.nextFlush.getTimeInMillis() - calendar.getTimeInMillis();
 
     assertTrue("The initial flush time was calculated incorrectly: " + diff,
-        ((diff >= -10L) && (diff <= 0L) ||
-            ((diff > -1000L) && (diff < -910L))));
+        (diff >= -10L) && (diff <= 0L) || ((diff > -1000L) && (diff < -910L)));
 
     // Now try pathological settings
     rfsSink = new RollingFileSystemSink(1000, 1000000);

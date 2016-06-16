@@ -168,6 +168,7 @@ public class AggregatedLogFormat {
     private final Set<String> alreadyUploadedLogFiles;
     private Set<String> allExistingFileMeta = new HashSet<String>();
     private final boolean appFinished;
+    private final boolean containerFinished;
 
     /**
      * The retention context to determine if log files are older than
@@ -186,13 +187,14 @@ public class AggregatedLogFormat {
     public LogValue(List<String> rootLogDirs, ContainerId containerId,
         String user) {
       this(rootLogDirs, containerId, user, null, new HashSet<String>(),
-          null, true);
+          null, true, true);
     }
 
     public LogValue(List<String> rootLogDirs, ContainerId containerId,
         String user, LogAggregationContext logAggregationContext,
         Set<String> alreadyUploadedLogFiles,
-        LogRetentionContext retentionContext, boolean appFinished) {
+        LogRetentionContext retentionContext, boolean appFinished,
+        boolean containerFinished) {
       this.rootLogDirs = new ArrayList<String>(rootLogDirs);
       this.containerId = containerId;
       this.user = user;
@@ -202,6 +204,7 @@ public class AggregatedLogFormat {
       this.logAggregationContext = logAggregationContext;
       this.alreadyUploadedLogFiles = alreadyUploadedLogFiles;
       this.appFinished = appFinished;
+      this.containerFinished = containerFinished;
       this.logRetentionContext = retentionContext;
     }
 
@@ -209,14 +212,11 @@ public class AggregatedLogFormat {
     public Set<File> getPendingLogFilesToUploadForThisContainer() {
       Set<File> pendingUploadFiles = new HashSet<File>();
       for (String rootLogDir : this.rootLogDirs) {
-        File appLogDir =
-            new File(rootLogDir, 
-                ConverterUtils.toString(
-                    this.containerId.getApplicationAttemptId().
-                        getApplicationId())
-                );
+        File appLogDir = new File(rootLogDir,
+            this.containerId.getApplicationAttemptId().
+                getApplicationId().toString());
         File containerLogDir =
-            new File(appLogDir, ConverterUtils.toString(this.containerId));
+            new File(appLogDir, this.containerId.toString());
 
         if (!containerLogDir.isDirectory()) {
           continue; // ContainerDir may have been deleted by the user.
@@ -321,29 +321,40 @@ public class AggregatedLogFormat {
         return candidates;
       }
 
+      Set<File> fileCandidates = new HashSet<File>(candidates);
       if (this.logAggregationContext != null && candidates.size() > 0) {
-        filterFiles(
-          this.appFinished ? this.logAggregationContext.getIncludePattern()
+        fileCandidates = getFileCandidates(fileCandidates, this.appFinished);
+        if (!this.appFinished && this.containerFinished) {
+          Set<File> addition = new HashSet<File>(candidates);
+          addition = getFileCandidates(addition, true);
+          fileCandidates.addAll(addition);
+        }
+      }
+
+      return fileCandidates;
+    }
+
+    private Set<File> getFileCandidates(Set<File> candidates,
+        boolean useRegularPattern) {
+      filterFiles(
+          useRegularPattern ? this.logAggregationContext.getIncludePattern()
               : this.logAggregationContext.getRolledLogsIncludePattern(),
           candidates, false);
 
-        filterFiles(
-          this.appFinished ? this.logAggregationContext.getExcludePattern()
+      filterFiles(
+          useRegularPattern ? this.logAggregationContext.getExcludePattern()
               : this.logAggregationContext.getRolledLogsExcludePattern(),
           candidates, true);
 
-        Iterable<File> mask =
-            Iterables.filter(candidates, new Predicate<File>() {
-              @Override
-              public boolean apply(File next) {
-                return !alreadyUploadedLogFiles
+      Iterable<File> mask =
+          Iterables.filter(candidates, new Predicate<File>() {
+            @Override
+            public boolean apply(File next) {
+              return !alreadyUploadedLogFiles
                   .contains(getLogFileMetaData(next));
-              }
-            });
-        candidates = Sets.newHashSet(mask);
-      }
-
-      return candidates;
+            }
+          });
+      return Sets.newHashSet(mask);
     }
 
     private void filterFiles(String pattern, Set<File> candidates,

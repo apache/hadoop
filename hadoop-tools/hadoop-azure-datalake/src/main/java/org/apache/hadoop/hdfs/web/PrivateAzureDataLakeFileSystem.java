@@ -922,7 +922,7 @@ public class PrivateAzureDataLakeFileSystem extends SWebHdfsFileSystem {
         size = maxBufferSize;
       }
 
-      int equalBufferSplit = Math.max(Math.round(size / SIZE4MB), 1);
+      int equalBufferSplit = Math.max(size / SIZE4MB, 1);
       int splitSize = Math.min(equalBufferSplit, maxConcurrentConnection);
       return splitSize;
     }

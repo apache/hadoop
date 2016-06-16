@@ -59,7 +59,7 @@ public class LogCLIHelpers implements Configurable {
   public int dumpAContainersLogs(String appId, String containerId,
       String nodeId, String jobOwner) throws IOException {
     ContainerLogsRequest options = new ContainerLogsRequest();
-    options.setAppId(ConverterUtils.toApplicationId(appId));
+    options.setAppId(ApplicationId.fromString(appId));
     options.setContainerId(containerId);
     options.setNodeId(nodeId);
     options.setAppOwner(jobOwner);
@@ -153,7 +153,8 @@ public class LogCLIHelpers implements Configurable {
         AggregatedLogFormat.LogReader reader = null;
         PrintStream out = createPrintStream(localDir, fileName, containerId);
         try {
-          String containerString = "\n\nContainer: " + containerId;
+          String containerString = "\n\nContainer: " + containerId + " on "
+              + thisNodeFile.getPath().getName();
           out.println(containerString);
           out.println(StringUtils.repeat("=", containerString.length()));
           reader =
@@ -220,7 +221,7 @@ public class LogCLIHelpers implements Configurable {
               thisNodeFile.getPath());
           out = createPrintStream(localDir, thisNodeFile.getPath().getName(),
               containerId);
-          out.println(containerId);
+          out.println(containerId + " on " + thisNodeFile.getPath().getName());
           out.println(StringUtils.repeat("=", containerId.length()));
           if (logType == null || logType.isEmpty()) {
             if (dumpAContainerLogs(containerId, reader, out,

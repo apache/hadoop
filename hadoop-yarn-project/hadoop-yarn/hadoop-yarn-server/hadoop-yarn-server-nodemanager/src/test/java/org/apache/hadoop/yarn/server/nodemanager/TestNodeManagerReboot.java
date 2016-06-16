@@ -118,7 +118,7 @@ public class TestNodeManagerReboot {
     ContainerId cId = createContainerId();
 
     URL localResourceUri =
-        ConverterUtils.getYarnUrlFromPath(localFS.makeQualified(new Path(
+        URL.fromPath(localFS.makeQualified(new Path(
           localResourceDir.getAbsolutePath())));
 
     LocalResource localResource =

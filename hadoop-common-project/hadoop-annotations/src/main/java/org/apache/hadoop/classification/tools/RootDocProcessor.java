@@ -127,6 +127,10 @@ class RootDocProcessor {
               return filter(((ClassDoc) target).constructors(true),
                   ConstructorDoc.class);
             }
+          } else {
+            if (methodName.equals("methods")) {
+              return filter(((ClassDoc) target).methods(true), MethodDoc.class);
+            }
           }
         } else if (target instanceof PackageDoc) {
           if (methodName.equals("allClasses")) {

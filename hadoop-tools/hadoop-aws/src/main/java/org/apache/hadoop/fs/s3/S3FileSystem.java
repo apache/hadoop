@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
+import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -91,7 +92,7 @@ public class S3FileSystem extends FileSystem {
     }
     store.initialize(uri, conf);
     setConf(conf);
-    this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+    this.uri = S3xLoginHelper.buildFSURI(uri);
     this.workingDir =
       new Path("/user", System.getProperty("user.name")).makeQualified(this);
   }
@@ -132,6 +133,23 @@ public class S3FileSystem extends FileSystem {
       return path;
     }
     return new Path(workingDir, path);
+  }
+
+  /**
+   * Check that a Path belongs to this FileSystem.
+   * Unlike the superclass, this version does not look at authority,
+   * only hostnames.
+   * @param path to check
+   * @throws IllegalArgumentException if there is an FS mismatch
+   */
+  @Override
+  protected void checkPath(Path path) {
+    S3xLoginHelper.checkPath(getConf(), getUri(), path, getDefaultPort());
+  }
+
+  @Override
+  protected URI canonicalizeUri(URI rawUri) {
+    return S3xLoginHelper.canonicalizeUri(rawUri, getDefaultPort());
   }
 
   /**

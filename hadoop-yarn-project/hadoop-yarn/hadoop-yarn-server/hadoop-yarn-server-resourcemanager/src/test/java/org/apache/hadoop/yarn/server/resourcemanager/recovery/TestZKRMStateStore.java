@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
@@ -399,14 +400,14 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     // Add a new attempt
     ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
             new ClientToAMTokenSecretManagerInRM();
-    ApplicationAttemptId attemptId = ConverterUtils
-            .toApplicationAttemptId("appattempt_1234567894321_0001_000001");
+    ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(
+        "appattempt_1234567894321_0001_000001");
     SecretKey clientTokenMasterKey =
                 clientToAMTokenMgr.createMasterKey(attemptId);
     RMAppAttemptMetrics mockRmAppAttemptMetrics = 
          mock(RMAppAttemptMetrics.class);
     Container container = new ContainerPBImpl();
-    container.setId(ConverterUtils.toContainerId("container_1234567891234_0001_01_000001"));
+    container.setId(ContainerId.fromString("container_1234567891234_0001_01_000001"));
     RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
     when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
     when(mockAttempt.getMasterContainer()).thenReturn(container);
@@ -491,8 +492,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     TestDispatcher dispatcher = new TestDispatcher();
     store.setRMDispatcher(dispatcher);
 
-    ApplicationAttemptId attemptIdRemoved = ConverterUtils
-        .toApplicationAttemptId("appattempt_1352994193343_0002_000001");
+    ApplicationAttemptId attemptIdRemoved = ApplicationAttemptId.fromString(
+        "appattempt_1352994193343_0002_000001");
     ApplicationId appIdRemoved = attemptIdRemoved.getApplicationId();
     storeApp(store, appIdRemoved, submitTime, startTime);
     storeAttempt(store, attemptIdRemoved,

@@ -77,11 +77,11 @@ public final class FSImageFormatPBINode {
   private final static int USER_STRID_OFFSET = 40;
   private final static int GROUP_STRID_OFFSET = 16;
 
-  private static final int ACL_ENTRY_NAME_MASK = (1 << 24) - 1;
-  private static final int ACL_ENTRY_NAME_OFFSET = 6;
-  private static final int ACL_ENTRY_TYPE_OFFSET = 3;
-  private static final int ACL_ENTRY_SCOPE_OFFSET = 5;
-  private static final int ACL_ENTRY_PERM_MASK = 7;
+  public static final int ACL_ENTRY_NAME_MASK = (1 << 24) - 1;
+  public static final int ACL_ENTRY_NAME_OFFSET = 6;
+  public static final int ACL_ENTRY_TYPE_OFFSET = 3;
+  public static final int ACL_ENTRY_SCOPE_OFFSET = 5;
+  public static final int ACL_ENTRY_PERM_MASK = 7;
   private static final int ACL_ENTRY_TYPE_MASK = 3;
   private static final int ACL_ENTRY_SCOPE_MASK = 1;
   private static final FsAction[] FSACTION_VALUES = FsAction.values();

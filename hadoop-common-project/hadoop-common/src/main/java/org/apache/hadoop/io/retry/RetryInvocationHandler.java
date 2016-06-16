@@ -27,6 +27,7 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -297,7 +298,16 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     log(method, isFailover, counters.failovers, retryInfo.delay, ex);
 
     if (retryInfo.delay > 0) {
-      Thread.sleep(retryInfo.delay);
+      try {
+        Thread.sleep(retryInfo.delay);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.warn("Interrupted while waiting to retry", e);
+        InterruptedIOException intIOE = new InterruptedIOException(
+            "Retry interrupted");
+        intIOE.initCause(e);
+        throw intIOE;
+      }
     }
 
     if (isFailover) {

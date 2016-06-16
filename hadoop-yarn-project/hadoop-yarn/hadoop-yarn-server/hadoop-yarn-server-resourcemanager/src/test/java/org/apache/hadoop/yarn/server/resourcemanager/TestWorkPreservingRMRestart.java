@@ -666,7 +666,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     // Wait for RM to settle down on recovering containers;
     waitForNumContainersToRecover(2, rm2, am1_1.getApplicationAttemptId());
     waitForNumContainersToRecover(2, rm2, am1_2.getApplicationAttemptId());
-    waitForNumContainersToRecover(2, rm2, am1_2.getApplicationAttemptId());
+    waitForNumContainersToRecover(2, rm2, am2.getApplicationAttemptId());
 
     // Calculate each queue's resource usage.
     Resource containerResource = Resource.newInstance(1024, 1);

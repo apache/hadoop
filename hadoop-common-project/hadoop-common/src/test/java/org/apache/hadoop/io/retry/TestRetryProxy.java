@@ -31,6 +31,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Collections;
 import java.util.Map;
@@ -320,7 +321,9 @@ public class TestRetryProxy {
     futureThread.get().interrupt();
     Throwable e = future.get(1, TimeUnit.SECONDS); // should return immediately 
     assertNotNull(e);
-    assertEquals(InterruptedException.class, e.getClass());
-    assertEquals("sleep interrupted", e.getMessage());
+    assertEquals(InterruptedIOException.class, e.getClass());
+    assertEquals("Retry interrupted", e.getMessage());
+    assertEquals(InterruptedException.class, e.getCause().getClass());
+    assertEquals("sleep interrupted", e.getCause().getMessage());
   }
 }

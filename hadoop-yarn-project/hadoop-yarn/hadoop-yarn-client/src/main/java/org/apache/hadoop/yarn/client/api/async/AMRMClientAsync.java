@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -196,6 +197,22 @@ extends AbstractService {
                                                    Priority priority, 
                                                    String resourceName, 
                                                    Resource capability);
+
+  /**
+   * Returns all matching ContainerRequests that match the given Priority,
+   * ResourceName, ExecutionType and Capability.
+   * @param priority Priority.
+   * @param resourceName Location.
+   * @param executionType ExecutionType.
+   * @param capability Capability.
+   * @return All matching ContainerRequests
+   */
+  public List<? extends Collection<T>> getMatchingRequests(
+      Priority priority, String resourceName, ExecutionType executionType,
+      Resource capability) {
+    return client.getMatchingRequests(priority, resourceName,
+        executionType, capability);
+  }
   
   /**
    * Registers this application master with the resource manager. On successful

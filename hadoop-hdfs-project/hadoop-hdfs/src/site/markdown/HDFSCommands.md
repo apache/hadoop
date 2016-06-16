@@ -117,7 +117,7 @@ Usage:
        hdfs fsck <path>
               [-list-corruptfileblocks |
               [-move | -delete | -openforwrite]
-              [-files [-blocks [-locations | -racks | -replicaDetails]]]
+              [-files [-blocks [-locations | -racks | -replicaDetails | -upgradedomains]]]
               [-includeSnapshots] [-showprogress]
               [-storagepolicies] [-blockId <blk_Id>]
 
@@ -130,6 +130,7 @@ Usage:
 | `-files` `-blocks` `-locations` | Print out locations for every block. |
 | `-files` `-blocks` `-racks` | Print out network topology for data-node locations. |
 | `-files` `-blocks` `-replicaDetails` | Print out each replica details. |
+| `-files` `-blocks` `-upgradedomains` | Print out upgrade domains for every block. |
 | `-includeSnapshots` | Include snapshot data if the given path indicates a snapshottable directory or there are snapshottable directories under it. |
 | `-list-corruptfileblocks` | Print out list of missing blocks and files they belong to. |
 | `-move` | Move corrupted files to /lost+found. |

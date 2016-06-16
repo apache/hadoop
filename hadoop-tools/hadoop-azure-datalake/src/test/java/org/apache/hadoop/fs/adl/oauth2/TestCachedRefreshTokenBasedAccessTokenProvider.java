@@ -20,17 +20,19 @@ package org.apache.hadoop.fs.adl.oauth2;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.oauth2.AccessTokenProvider;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_URL_KEY;
 import static org.apache.hadoop.hdfs.web.oauth2.ConfRefreshTokenBasedAccessTokenProvider.OAUTH_REFRESH_TOKEN_KEY;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Verify cache behavior of ConfRefreshTokenBasedAccessTokenProvider instances.

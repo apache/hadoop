@@ -240,6 +240,8 @@ function set_defaults
   OSNAME=$(uname -s)
 
   PUBKEYFILE="https://dist.apache.org/repos/dist/release/hadoop/common/KEYS"
+
+  SIGN=false
 }
 
 function startgpgagent
@@ -247,11 +249,23 @@ function startgpgagent
   if [[ "${SIGN}" = true ]]; then
     if [[ -n "${GPGAGENT}" && -z "${GPG_AGENT_INFO}" ]]; then
       echo "starting gpg agent"
-      touch "${LOGDIR}/gpgagent.conf"
+      echo "default-cache-ttl 7200" > "${LOGDIR}/gpgagent.conf"
+      # shellcheck disable=2046
       eval $("${GPGAGENT}" --daemon \
         --options "${LOGDIR}/gpgagent.conf" \
-        --log-file=${LOGDIR}/create-release-gpgagent.log)
-      GPGAGENTPID=$(echo ${GPG_AGENT_INFO} | cut -f 2 -d:)
+        --log-file="${LOGDIR}/create-release-gpgagent.log")
+      GPGAGENTPID=$(echo "${GPG_AGENT_INFO}" | cut -f 2 -d:)
+    fi
+
+    if [[ -n "${GPG_AGENT_INFO}" ]]; then
+      echo "Warming the gpg-agent cache prior to calling maven"
+      # warm the agent's cache:
+      touch "${LOGDIR}/warm"
+      ${GPG} --use-agent --armor --output "${LOGDIR}/warm.asc" --detach-sig "${LOGDIR}/warm"
+      rm "${LOGDIR}/warm.asc" "${LOGDIR}/warm"
+    else
+      SIGN=false
+      hadoop_error "ERROR: Unable to launch or acquire gpg-agent. Disable signing."
     fi
   fi
 }
@@ -259,7 +273,7 @@ function startgpgagent
 function stopgpgagent
 {
   if [[ -n "${GPGAGENTPID}" ]]; then
-    kill ${GPGAGENTPID}
+    kill "${GPGAGENTPID}"
   fi
 }
 
@@ -273,7 +287,7 @@ function usage
   echo "--mvncache=[path]       Path to the maven cache to use"
   echo "--native                Also build the native components"
   echo "--rc-label=[label]      Add this label to the builds"
-  echo "--sign                  Use .gnupg dir to sign the jars"
+  echo "--sign                  Use .gnupg dir to sign the artifacts and jars"
   echo "--version=[version]     Use an alternative version string"
 }
 
@@ -328,6 +342,16 @@ function option_parse
   if [[ ! -d "${HOME}/.gnupg" ]]; then
     hadoop_error "ERROR: No .gnupg dir. Disabling signing capability."
     SIGN=false
+  fi
+
+  if [[ "${SIGN}" = true ]]; then
+    if [[ -n "${GPG_AGENT_INFO}" ]]; then
+      echo "NOTE: Using existing gpg-agent. If the default-cache-ttl"
+      echo "is set to less than ~20 mins, maven commands will fail."
+    elif [[ -z "${GPGAGENT}" ]]; then
+      hadoop_error "ERROR: No gpg-agent. Disabling signing capability."
+      SIGN=false
+    fi
   fi
 
   DOCKERCMD=$(command -v docker)
@@ -439,6 +463,11 @@ function dockermode
     # make sure we put some space between, just in case last
     # line isn't an empty line or whatever
     printf "\n\n"
+
+    # force a new image for every run to make it easier to remove later
+    echo "LABEL org.apache.hadoop.create-release=\"cr-${RANDOM}\""
+
+    # setup ownerships, etc
     echo "RUN groupadd --non-unique -g ${group_id} ${user_name}"
     echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}"
     echo "RUN chown -R ${user_name} /home/${user_name}"
@@ -490,19 +519,27 @@ function makearelease
 
   big_console_header "Maven Build and Install"
 
+  if [[ "${SIGN}" = true ]]; then
+    signflags=("-Psign" "-Dgpg.useagent=true" -Dgpg.executable="${GPG}")
+  fi
+
   # Create SRC and BIN tarballs for release,
-  # Using 'install’ goal instead of 'package' so artifacts are available
-  # in the Maven local cache for the site generation
-  #
   # shellcheck disable=SC2046
   run_and_redirect "${LOGDIR}/mvn_install.log" \
-    "${MVN}" "${MVN_ARGS[@]}" install -Pdist,src \
+    "${MVN}" "${MVN_ARGS[@]}" install \
+      -Pdist,src \
+      "${signflags[@]}" \
       -DskipTests -Dtar $(hadoop_native_flags)
 
-  big_console_header "Maven Site"
-
   # Create site for release
-  run_and_redirect "${LOGDIR}/mvn_site.log" "${MVN}" "${MVN_ARGS[@]}" site site:stage -Pdist,src,releasedocs
+  # we need to do install again so that jdiff and
+  # a few other things get registered in the maven
+  # universe correctly
+  run_and_redirect "${LOGDIR}/mvn_site.log" \
+    "${MVN}" "${MVN_ARGS[@]}" install \
+      site site:stage \
+      -DskipTests \
+      -Pdist,src,releasedocs,docs
 
   big_console_header "Staging the release"
 
@@ -560,16 +597,16 @@ function signartifacts
   big_console_header "Signing the release"
 
   for i in ${ARTIFACTS_DIR}/*; do
-    gpg --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
-    gpg --print-mds "${i}" > "${i}.mds"
+    ${GPG} --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
+    ${GPG} --print-mds "${i}" > "${i}.mds"
     domd5 "${i}"
   done
 
   if [[ "${ASFRELEASE}" = true ]]; then
     echo "Fetching the Apache Hadoop KEYS file..."
     curl -L "${PUBKEYFILE}" -o "${BASEDIR}/target/KEYS"
-    gpg --import --trustdb "${BASEDIR}/target/testkeysdb" "${BASEDIR}/target/KEYS"
-    gpg --verify --trustdb "${BASEDIR}/target/testkeysdb" \
+    ${GPG} --import --trustdb "${BASEDIR}/target/testkeysdb" "${BASEDIR}/target/KEYS"
+    ${GPG} --verify --trustdb "${BASEDIR}/target/testkeysdb" \
       "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz.asc" \
         "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}.tar.gz"
     if [[ $? != 0 ]]; then

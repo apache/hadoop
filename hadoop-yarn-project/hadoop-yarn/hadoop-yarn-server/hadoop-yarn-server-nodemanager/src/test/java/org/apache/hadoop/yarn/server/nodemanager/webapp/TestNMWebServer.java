@@ -249,7 +249,7 @@ public class TestNMWebServer {
     containerLogDir.mkdirs();
     for (String fileType : new String[] { "stdout", "stderr", "syslog" }) {
       Writer writer = new FileWriter(new File(containerLogDir, fileType));
-      writer.write(ConverterUtils.toString(containerId) + "\n Hello "
+      writer.write(containerId.toString() + "\n Hello "
           + fileType + "!");
       writer.close();
     }

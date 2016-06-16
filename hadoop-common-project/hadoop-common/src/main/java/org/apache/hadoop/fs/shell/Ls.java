@@ -48,6 +48,7 @@ class Ls extends FsCommand {
   private static final String OPTION_PATHONLY = "C";
   private static final String OPTION_DIRECTORY = "d";
   private static final String OPTION_HUMAN = "h";
+  private static final String OPTION_HIDENONPRINTABLE = "q";
   private static final String OPTION_RECURSIVE = "R";
   private static final String OPTION_REVERSE = "r";
   private static final String OPTION_MTIME = "t";
@@ -55,10 +56,11 @@ class Ls extends FsCommand {
   private static final String OPTION_SIZE = "S";
 
   public static final String NAME = "ls";
-  public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-"
-      + OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" + OPTION_RECURSIVE
-      + "] [-" + OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE
-      + "] [-" + OPTION_ATIME + "] [<path> ...]";
+  public static final String USAGE = "[-" + OPTION_PATHONLY + "] [-" +
+      OPTION_DIRECTORY + "] [-" + OPTION_HUMAN + "] [-" +
+      OPTION_HIDENONPRINTABLE + "] [-" + OPTION_RECURSIVE + "] [-" +
+      OPTION_MTIME + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] [-" +
+      OPTION_ATIME + "] [<path> ...]";
 
   public static final String DESCRIPTION =
       "List the contents that match the specified file pattern. If " +
@@ -77,6 +79,8 @@ class Ls extends FsCommand {
           "  -" + OPTION_HUMAN +
           "  Formats the sizes of files in a human-readable fashion\n" +
           "      rather than a number of bytes.\n" +
+          "  -" + OPTION_HIDENONPRINTABLE +
+          "  Print ? instead of non-printable characters.\n" +
           "  -" + OPTION_RECURSIVE +
           "  Recursively list the contents of directories.\n" +
           "  -" + OPTION_MTIME +
@@ -104,6 +108,9 @@ class Ls extends FsCommand {
 
   protected boolean humanReadable = false;
 
+  /** Whether to print ? instead of non-printable characters. */
+  private boolean hideNonPrintable = false;
+
   protected Ls() {}
 
   protected Ls(Configuration conf) {
@@ -119,14 +126,16 @@ class Ls extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args)
   throws IOException {
-    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, OPTION_PATHONLY,
-        OPTION_DIRECTORY, OPTION_HUMAN, OPTION_RECURSIVE, OPTION_REVERSE,
+    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
+        OPTION_PATHONLY, OPTION_DIRECTORY, OPTION_HUMAN,
+        OPTION_HIDENONPRINTABLE, OPTION_RECURSIVE, OPTION_REVERSE,
         OPTION_MTIME, OPTION_SIZE, OPTION_ATIME);
     cf.parse(args);
     pathOnly = cf.getOpt(OPTION_PATHONLY);
     dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
     setRecursive(cf.getOpt(OPTION_RECURSIVE) && dirRecurse);
     humanReadable = cf.getOpt(OPTION_HUMAN);
+    hideNonPrintable = cf.getOpt(OPTION_HIDENONPRINTABLE);
     orderReverse = cf.getOpt(OPTION_REVERSE);
     orderTime = cf.getOpt(OPTION_MTIME);
     orderSize = !orderTime && cf.getOpt(OPTION_SIZE);
@@ -161,6 +170,11 @@ class Ls extends FsCommand {
   @InterfaceAudience.Private
   boolean isHumanReadable() {
     return this.humanReadable;
+  }
+
+  @InterfaceAudience.Private
+  private boolean isHideNonPrintable() {
+    return hideNonPrintable;
   }
 
   /**
@@ -241,7 +255,7 @@ class Ls extends FsCommand {
         dateFormat.format(new Date(isUseAtime()
             ? stat.getAccessTime()
             : stat.getModificationTime())),
-        item);
+        isHideNonPrintable() ? new PrintableString(item.toString()) : item);
     out.println(line);
   }
 

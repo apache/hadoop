@@ -113,7 +113,7 @@ public class BuilderUtils {
   public static LocalResource newLocalResource(URI uri,
       LocalResourceType type, LocalResourceVisibility visibility, long size,
       long timestamp, boolean shouldBeUploadedToSharedCache) {
-    return newLocalResource(ConverterUtils.getYarnUrlFromURI(uri), type,
+    return newLocalResource(URL.fromURI(uri), type,
         visibility, size, timestamp, shouldBeUploadedToSharedCache);
   }
 

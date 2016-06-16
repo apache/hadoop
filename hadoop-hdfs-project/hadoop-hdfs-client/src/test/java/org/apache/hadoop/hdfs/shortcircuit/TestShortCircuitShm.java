@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -38,8 +39,7 @@ public class TestShortCircuitShm {
   public static final Logger LOG = LoggerFactory.getLogger(
       TestShortCircuitShm.class);
   
-  private static final File TEST_BASE =
-      new File(System.getProperty("test.build.data", "/tmp"));
+  private static final File TEST_BASE = GenericTestUtils.getTestDir();
 
   @Before
   public void before() {

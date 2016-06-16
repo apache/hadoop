@@ -75,7 +75,7 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
       long startTime, String trackerName, int httpPort, int shufflePort,
       String locality, String avataar) {
     this(attemptId, taskType, startTime, trackerName, httpPort, shufflePort,
-        ConverterUtils.toContainerId("container_-1_-1_-1_-1"), locality,
+        ContainerId.fromString("container_-1_-1_-1_-1"), locality,
             avataar);
   }
 
@@ -116,7 +116,7 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
   }
   /** Get the ContainerId */
   public ContainerId getContainerId() {
-    return ConverterUtils.toContainerId(datum.getContainerId().toString());
+    return ContainerId.fromString(datum.getContainerId().toString());
   }
   /** Get the locality */
   public String getLocality() {

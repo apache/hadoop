@@ -153,7 +153,7 @@ public class LogsCLI extends Configured implements Tool {
 
     ApplicationId appId = null;
     try {
-      appId = ConverterUtils.toApplicationId(appIdStr);
+      appId = ApplicationId.fromString(appIdStr);
     } catch (Exception e) {
       System.err.println("Invalid ApplicationId specified");
       return -1;
@@ -274,7 +274,7 @@ public class LogsCLI extends Configured implements Tool {
     formatter.printHelp("general options are:", options);
   }
 
-  private List<JSONObject> getAMContainerInfoForRMWebService(
+  protected List<JSONObject> getAMContainerInfoForRMWebService(
       Configuration conf, String appId) throws ClientHandlerException,
       UniformInterfaceException, JSONException {
     Client webServiceClient = Client.create();
@@ -393,7 +393,8 @@ public class LogsCLI extends Configured implements Tool {
       newOptions.setLogTypes(matchedFiles);
 
       Client webServiceClient = Client.create();
-      String containerString = "\n\nContainer: " + containerIdStr;
+      String containerString = "\n\nContainer: " + containerIdStr + " on "
+          + nodeId;
       out.println(containerString);
       out.println(StringUtils.repeat("=", containerString.length()));
 
@@ -412,7 +413,9 @@ public class LogsCLI extends Configured implements Tool {
                 .queryParam("size", Long.toString(request.getBytes()))
                 .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
           out.println(response.getEntity(String.class));
-          out.println("End of LogType:" + logFile);
+          out.println("End of LogType:" + logFile + ". This log file belongs"
+              + " to a running container (" + containerIdStr + ") and so may"
+              + " not be complete.");
           out.flush();
         } catch (ClientHandlerException | UniformInterfaceException ex) {
           System.err.println("Can not find the log file:" + logFile
@@ -456,8 +459,8 @@ public class LogsCLI extends Configured implements Tool {
       throws YarnException, IOException {
     YarnClient yarnClient = createYarnClient();
     try {
-      return yarnClient.getContainerReport(ConverterUtils
-        .toContainerId(containerIdStr));
+      return yarnClient.getContainerReport(
+          ContainerId.fromString(containerIdStr));
     } finally {
       yarnClient.close();
     }
@@ -535,6 +538,11 @@ public class LogsCLI extends Configured implements Tool {
           if (amContainerId <= requests.size()) {
             outputAMContainerLogs(requests.get(amContainerId - 1), conf,
                 logCliHelper);
+          } else {
+            System.err.println(String.format("ERROR: Specified AM containerId"
+                + " (%s) exceeds the number of AM containers (%s).",
+                amContainerId, requests.size()));
+            return -1;
           }
         }
       }

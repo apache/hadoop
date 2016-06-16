@@ -942,8 +942,8 @@ public class TestJobImpl {
         callback.run();
       }
     };
-    ApplicationAttemptId id = 
-      ConverterUtils.toApplicationAttemptId("appattempt_1234567890000_0001_0");
+    ApplicationAttemptId id = ApplicationAttemptId.fromString(
+        "appattempt_1234567890000_0001_0");
     when(appContext.getApplicationID()).thenReturn(id.getApplicationId());
     when(appContext.getApplicationAttemptId()).thenReturn(id);
     CommitterEventHandler handler =

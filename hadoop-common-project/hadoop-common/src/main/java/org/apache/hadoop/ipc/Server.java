@@ -2553,7 +2553,7 @@ public abstract class Server {
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     if (queueSizePerHandler != -1) {
-      this.maxQueueSize = queueSizePerHandler;
+      this.maxQueueSize = handlerCount * queueSizePerHandler;
     } else {
       this.maxQueueSize = handlerCount * conf.getInt(
           CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,

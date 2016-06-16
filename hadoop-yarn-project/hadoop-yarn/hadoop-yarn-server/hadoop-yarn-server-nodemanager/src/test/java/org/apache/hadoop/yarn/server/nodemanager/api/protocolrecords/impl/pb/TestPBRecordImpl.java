@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.yarn.api.records.URL;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -62,7 +63,7 @@ public class TestPBRecordImpl {
   static LocalResource createResource() {
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
     assertTrue(ret instanceof LocalResourcePBImpl);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(
+    ret.setResource(URL.fromPath(new Path(
       "hdfs://y.ak:9820/foo/bar")));
     ret.setSize(4344L);
     ret.setTimestamp(3141592653589793L);
@@ -76,7 +77,7 @@ public class TestPBRecordImpl {
     assertTrue(ret instanceof LocalResourceStatusPBImpl);
     ret.setResource(createResource());
     ret.setLocalPath(
-        ConverterUtils.getYarnUrlFromPath(
+        URL.fromPath(
           new Path("file:///local/foo/bar")));
     ret.setStatus(ResourceStatusType.FETCH_SUCCESS);
     ret.setLocalSize(4443L);
@@ -109,8 +110,8 @@ public class TestPBRecordImpl {
     ResourceLocalizationSpec resource =
       recordFactory.newRecordInstance(ResourceLocalizationSpec.class);
     resource.setResource(rsrc);
-    resource.setDestinationDirectory(ConverterUtils
-      .getYarnUrlFromPath(new Path("/tmp" + System.currentTimeMillis())));
+    resource.setDestinationDirectory(
+        URL.fromPath((new Path("/tmp" + System.currentTimeMillis()))));
     rsrcs.add(resource);
     ret.setResourceSpecs(rsrcs);
     System.out.println(resource);

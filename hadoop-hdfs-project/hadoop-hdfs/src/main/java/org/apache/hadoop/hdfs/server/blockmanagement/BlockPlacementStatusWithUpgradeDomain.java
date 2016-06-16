@@ -60,7 +60,7 @@ public class BlockPlacementStatusWithUpgradeDomain implements
 
   private boolean isUpgradeDomainPolicySatisfied() {
     if (numberOfReplicas <= upgradeDomainFactor) {
-      return (numberOfReplicas == upgradeDomains.size());
+      return (numberOfReplicas <= upgradeDomains.size());
     } else {
       return upgradeDomains.size() >= upgradeDomainFactor;
     }

@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -129,6 +130,28 @@ public class TestLogsCLI {
     int exitCode = cli.run( new String[] { "-applicationId", "not_an_app_id"});
     assertTrue(exitCode == -1);
     assertTrue(sysErrStream.toString().startsWith("Invalid ApplicationId specified"));
+  }
+
+  @Test(timeout = 5000L)
+  public void testInvalidAMContainerId() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
+    YarnClient mockYarnClient =
+        createMockYarnClient(YarnApplicationState.FINISHED,
+            UserGroupInformation.getCurrentUser().getShortUserName());
+    LogsCLI cli = spy(new LogsCLIForTest(mockYarnClient));
+    List<JSONObject> list = Arrays.asList(new JSONObject());
+    doReturn(list).when(cli)
+        .getAMContainerInfoForRMWebService(any(Configuration.class),
+            any(String.class));
+    cli.setConf(conf);
+
+    int exitCode = cli.run(
+        new String[] {"-applicationId", "application_1465862913885_0027",
+            "-am", "1000" });
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString()
+        .contains("exceeds the number of AM containers"));
   }
 
   @Test(timeout = 5000l)
@@ -463,6 +486,8 @@ public class TestLogsCLI {
         "Hello container_0_0001_01_000003 in syslog!"));
     assertTrue(sysOutStream.toString().contains(
         "Hello container_0_0001_01_000003 in stdout!"));
+    assertTrue(sysOutStream.toString().contains(
+        containerId3 + " on " + LogAggregationUtils.getNodeString(nodeId)));
     sysOutStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);

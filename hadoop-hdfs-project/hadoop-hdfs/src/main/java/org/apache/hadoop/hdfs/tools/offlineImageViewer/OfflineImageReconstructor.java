@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_MASK;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_NAME_OFFSET;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_SCOPE_OFFSET;
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.ACL_ENTRY_TYPE_OFFSET;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAME_OFFSET;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;
@@ -49,10 +53,12 @@ import com.google.common.io.CountingOutputStream;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
@@ -66,6 +72,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.DiffEntry;
@@ -130,6 +137,8 @@ class OfflineImageReconstructor {
    * The latest string ID.  See registerStringId for details.
    */
   private int latestStringId = 0;
+
+  private static final String EMPTY_STRING = "";
 
   private OfflineImageReconstructor(CountingOutputStream out,
       InputStreamReader reader) throws XMLStreamException {
@@ -731,10 +740,25 @@ class OfflineImageReconstructor {
     // Will check remaining keys and serialize in processINodeXml
   }
 
-  private INodeSection.AclFeatureProto.Builder aclXmlToProto(Node acl)
+  private INodeSection.AclFeatureProto.Builder aclXmlToProto(Node acls)
       throws IOException {
-    // TODO: support ACLs
-    throw new IOException("ACLs are not supported yet.");
+    AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
+    while (true) {
+      Node acl = acls.removeChild(INODE_SECTION_ACL);
+      if (acl == null) {
+        break;
+      }
+      String val = acl.getVal();
+      AclEntry entry = AclEntry.parseAclEntry(val, true);
+      int nameId = registerStringId(entry.getName() == null ? EMPTY_STRING
+          : entry.getName());
+      int v = ((nameId & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
+          | (entry.getType().ordinal() << ACL_ENTRY_TYPE_OFFSET)
+          | (entry.getScope().ordinal() << ACL_ENTRY_SCOPE_OFFSET)
+          | (entry.getPermission().ordinal());
+      b.addEntries(v);
+    }
+    return b;
   }
 
   private INodeSection.XAttrFeatureProto.Builder xattrsXmlToProto(Node xattrs)

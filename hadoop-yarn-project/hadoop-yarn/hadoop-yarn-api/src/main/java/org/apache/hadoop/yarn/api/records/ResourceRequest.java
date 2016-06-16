@@ -312,6 +312,58 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Public
   @Evolving
   public abstract void setNodeLabelExpression(String nodelabelExpression);
+
+  /**
+   * Get the optional <em>ID</em> corresponding to this allocation request. This
+   * ID is an identifier for different {@code ResourceRequest}s from the <b>same
+   * application</b>. The allocated {@code Container}(s) received as part of the
+   * {@code AllocateResponse} response will have the ID corresponding to the
+   * original {@code ResourceRequest} for which the RM made the allocation.
+   * <p>
+   * The scheduler may return multiple {@code AllocateResponse}s corresponding
+   * to the same ID as and when scheduler allocates {@code Container}(s).
+   * <b>Applications</b> can continue to completely ignore the returned ID in
+   * the response and use the allocation for any of their outstanding requests.
+   * <p>
+   * If one wishes to replace an entire {@code ResourceRequest} corresponding to
+   * a specific ID, they can simply cancel the corresponding {@code
+   * ResourceRequest} and submit a new one afresh.
+   *
+   * @return the <em>ID</em> corresponding to this allocation request.
+   */
+  @Public
+  @Evolving
+  public long getAllocationRequestId() {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Set the optional <em>ID</em> corresponding to this allocation request. This
+   * ID is an identifier for different {@code ResourceRequest}s from the <b>same
+   * application</b>. The allocated {@code Container}(s) received as part of the
+   * {@code AllocateResponse} response will have the ID corresponding to the
+   * original {@code ResourceRequest} for which the RM made the allocation.
+   * <p>
+   * The scheduler may return multiple {@code AllocateResponse}s corresponding
+   * to the same ID as and when scheduler allocates {@code Container}(s).
+   * <b>Applications</b> can continue to completely ignore the returned ID in
+   * the response and use the allocation for any of their outstanding requests.
+   * <p>
+   * If one wishes to replace an entire {@code ResourceRequest} corresponding to
+   * a specific ID, they can simply cancel the corresponding {@code
+   * ResourceRequest} and submit a new one afresh.
+   * <p>
+   * If the ID is not set, scheduler will continue to work as previously and all
+   * allocated {@code Container}(s) will have the default ID, -1.
+   *
+   * @param allocationRequestID the <em>ID</em> corresponding to this allocation
+   *                            request.
+   */
+  @Public
+  @Evolving
+  public void setAllocationRequestId(long allocationRequestID) {
+    throw new UnsupportedOperationException();
+  }
   
   @Override
   public int hashCode() {

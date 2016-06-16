@@ -404,7 +404,7 @@ public class TestContainerLocalizer {
 
     when(resourceLocalizationSpec.getResource()).thenReturn(rsrc);
     when(resourceLocalizationSpec.getDestinationDirectory()).
-      thenReturn(ConverterUtils.getYarnUrlFromPath(p));
+      thenReturn(URL.fromPath(p));
     return resourceLocalizationSpec;
   }
 

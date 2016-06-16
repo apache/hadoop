@@ -39,6 +39,7 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.HashSet;
 
 import javax.naming.CommunicationException;
 import javax.naming.NamingException;
@@ -91,8 +92,23 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     when(getContext().search(anyString(), anyString(), any(Object[].class),
         any(SearchControls.class)))
         .thenReturn(getUserNames(), getGroupNames());
-    
-    doTestGetGroups(Arrays.asList(testGroups), 2);
+    doTestGetGroups(Arrays.asList(getTestGroups()), 2);
+  }
+
+  @Test
+  public void testGetGroupsWithHierarchy() throws IOException, NamingException {
+    // The search functionality of the mock context is reused, so we will
+    // return the user NamingEnumeration first, and then the group
+    // The parent search is run once for each level, and is a different search
+    // The parent group is returned once for each group, yet the final list
+    // should be unique
+    when(getContext().search(anyString(), anyString(), any(Object[].class),
+        any(SearchControls.class)))
+        .thenReturn(getUserNames(), getGroupNames());
+    when(getContext().search(anyString(), anyString(),
+        any(SearchControls.class)))
+        .thenReturn(getParentGroupNames());
+    doTestGetGroupsWithParent(Arrays.asList(getTestParentGroups()), 2, 1);
   }
 
   @Test
@@ -104,8 +120,10 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
         .thenThrow(new CommunicationException("Connection is closed"))
         .thenReturn(getUserNames(), getGroupNames());
     
-    // Although connection is down but after reconnected it still should retrieve the result groups
-    doTestGetGroups(Arrays.asList(testGroups), 1 + 2); // 1 is the first failure call 
+    // Although connection is down but after reconnected
+    // it still should retrieve the result groups
+    // 1 is the first failure call
+    doTestGetGroups(Arrays.asList(getTestGroups()), 1 + 2);
   }
 
   @Test
@@ -139,7 +157,37 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
                                          any(Object[].class),
                                          any(SearchControls.class));
   }
-  
+
+  private void doTestGetGroupsWithParent(List<String> expectedGroups,
+      int searchTimesGroup, int searchTimesParentGroup)
+          throws IOException, NamingException {
+    Configuration conf = new Configuration();
+    // Set this, so we don't throw an exception
+    conf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
+    // Set the config to get parents 1 level up
+    conf.setInt(LdapGroupsMapping.GROUP_HIERARCHY_LEVELS_KEY, 1);
+
+    LdapGroupsMapping groupsMapping = getGroupsMapping();
+    groupsMapping.setConf(conf);
+    // Username is arbitrary, since the spy is mocked to respond the same,
+    // regardless of input
+    List<String> groups = groupsMapping.getGroups("some_user");
+
+    // compare lists, ignoring the order
+    Assert.assertEquals(new HashSet<String>(expectedGroups),
+        new HashSet<String>(groups));
+
+    // We should have searched for a user, and group
+    verify(getContext(), times(searchTimesGroup)).search(anyString(),
+                                         anyString(),
+                                         any(Object[].class),
+                                         any(SearchControls.class));
+    // One groups search for the parent group should have been done
+    verify(getContext(), times(searchTimesParentGroup)).search(anyString(),
+                                         anyString(),
+                                         any(SearchControls.class));
+  }
+
   @Test
   public void testExtractPassword() throws IOException {
     File testDir = GenericTestUtils.getTestDir();
@@ -246,7 +294,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
       mapping.setConf(conf);
 
       try {
-        mapping.doGetGroups("hadoop");
+        mapping.doGetGroups("hadoop", 1);
         fail("The LDAP query should have timed out!");
       } catch (NamingException ne) {
         LOG.debug("Got the exception while LDAP querying: ", ne);
@@ -302,7 +350,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
       mapping.setConf(conf);
 
       try {
-        mapping.doGetGroups("hadoop");
+        mapping.doGetGroups("hadoop", 1);
         fail("The LDAP query should have timed out!");
       } catch (NamingException ne) {
         LOG.debug("Got the exception while LDAP querying: ", ne);

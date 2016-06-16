@@ -211,8 +211,7 @@ public class TestBalancer {
   }
 
   static void initSecureConf(Configuration conf) throws Exception {
-    baseDir = new File(System.getProperty("test.build.dir", "target/test-dir"),
-        TestBalancer.class.getSimpleName());
+    baseDir = GenericTestUtils.getTestDir(TestBalancer.class.getSimpleName());
     FileUtil.fullyDelete(baseDir);
     assertTrue(baseDir.mkdirs());
 

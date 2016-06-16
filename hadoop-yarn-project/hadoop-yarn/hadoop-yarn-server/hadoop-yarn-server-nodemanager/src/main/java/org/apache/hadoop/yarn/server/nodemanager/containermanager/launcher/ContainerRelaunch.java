@@ -65,7 +65,7 @@ public class ContainerRelaunch extends ContainerLaunch {
     }
 
     ContainerId containerId = container.getContainerId();
-    String containerIdStr = ConverterUtils.toString(containerId);
+    String containerIdStr = containerId.toString();
     int ret = -1;
     Path containerLogDir;
     try {

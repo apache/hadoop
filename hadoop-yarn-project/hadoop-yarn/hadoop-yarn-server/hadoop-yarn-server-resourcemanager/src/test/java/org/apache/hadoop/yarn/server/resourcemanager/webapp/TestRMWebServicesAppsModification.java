@@ -57,6 +57,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -65,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -859,7 +861,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
 
     RMApp app =
         rm.getRMContext().getRMApps()
-          .get(ConverterUtils.toApplicationId(appId));
+          .get(ApplicationId.fromString(appId));
     assertEquals(appName, app.getName());
     assertEquals(webserviceUserName, app.getUser());
     assertEquals(2, app.getMaxAppAttempts());
@@ -877,8 +879,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     Map<String, LocalResource> appLRs = ctx.getLocalResources();
     assertTrue(appLRs.containsKey(lrKey));
     LocalResource exampleLR = appLRs.get(lrKey);
-    assertEquals(ConverterUtils.getYarnUrlFromURI(y.getUrl()),
-      exampleLR.getResource());
+    assertEquals(URL.fromURI(y.getUrl()), exampleLR.getResource());
     assertEquals(y.getSize(), exampleLR.getSize());
     assertEquals(y.getTimestamp(), exampleLR.getTimestamp());
     assertEquals(y.getType(), exampleLR.getType());

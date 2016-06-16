@@ -78,8 +78,8 @@ public class ContainerLogsUtils {
     List<File> containerLogDirs = new ArrayList<File>(logDirs.size());
     for (String logDir : logDirs) {
       logDir = new File(logDir).toURI().getPath();
-      String appIdStr = ConverterUtils.toString(containerId
-          .getApplicationAttemptId().getApplicationId());
+      String appIdStr = containerId
+          .getApplicationAttemptId().getApplicationId().toString();
       File appLogDir = new File(logDir, appIdStr);
       containerLogDirs.add(new File(appLogDir, containerId.toString()));
     }
@@ -160,7 +160,7 @@ public class ContainerLogsUtils {
   
   public static FileInputStream openLogFileForRead(String containerIdStr, File logFile,
       Context context) throws IOException {
-    ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
+    ContainerId containerId = ContainerId.fromString(containerIdStr);
     ApplicationId applicationId = containerId.getApplicationAttemptId()
         .getApplicationId();
     String user = context.getApplications().get(

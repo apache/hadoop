@@ -200,7 +200,7 @@ public class TestNodeManagerShutdown {
         .getCanonicalHostName(), port);
     
     URL localResourceUri =
-        ConverterUtils.getYarnUrlFromPath(localFS
+        URL.fromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
     LocalResource localResource =
         recordFactory.newRecordInstance(LocalResource.class);

@@ -83,8 +83,8 @@ public class RMAppsBlock extends AppsBlock {
       }
 
       AppInfo app = new AppInfo(appReport);
-      ApplicationAttemptId appAttemptId =
-          ConverterUtils.toApplicationAttemptId(app.getCurrentAppAttemptId());
+      ApplicationAttemptId appAttemptId = ApplicationAttemptId.fromString(
+          app.getCurrentAppAttemptId());
       String queuePercent = "N/A";
       String clusterPercent = "N/A";
       if(appReport.getApplicationResourceUsageReport() != null) {

@@ -99,6 +99,20 @@ public class FileUtil {
   }
 
   /**
+   * Register all files recursively to be deleted on exit.
+   * @param file File/directory to be deleted
+   */
+  public static void fullyDeleteOnExit(final File file) {
+    file.deleteOnExit();
+    if (file.isDirectory()) {
+      File[] files = file.listFiles();
+      for (File child : files) {
+        fullyDeleteOnExit(child);
+      }
+    }
+  }
+
+  /**
    * Delete a directory and all its contents.  If
    * we return false, the directory may be partially-deleted.
    * (1) If dir is symlink to a file, the symlink is deleted. The file pointed

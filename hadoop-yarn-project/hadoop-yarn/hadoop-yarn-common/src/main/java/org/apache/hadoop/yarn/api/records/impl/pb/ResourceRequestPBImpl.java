@@ -192,6 +192,18 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     builder.setRelaxLocality(relaxLocality);
   }
 
+  @Override
+  public long getAllocationRequestId() {
+    ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getAllocationRequestId());
+  }
+
+  @Override
+  public void setAllocationRequestId(long allocationRequestID) {
+    maybeInitBuilder();
+    builder.setAllocationRequestId(allocationRequestID);
+  }
+
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
     return new PriorityPBImpl(p);
   }
@@ -210,11 +222,14 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   
   @Override
   public String toString() {
-    return "{Priority: " + getPriority() + ", Capability: " + getCapability()
+    return "{AllocationRequestId: " + getAllocationRequestId()
+        + ", Priority: " + getPriority()
+        + ", Capability: " + getCapability()
         + ", # Containers: " + getNumContainers()
         + ", Location: " + getResourceName()
         + ", Relax Locality: " + getRelaxLocality()
-        + ", Execution Spec: " + getExecutionTypeRequest() + "}";
+        + ", Execution Type Request: " + getExecutionTypeRequest()
+        + ", Node Label Expression: " + getNodeLabelExpression() + "}";
   }
 
   @Override

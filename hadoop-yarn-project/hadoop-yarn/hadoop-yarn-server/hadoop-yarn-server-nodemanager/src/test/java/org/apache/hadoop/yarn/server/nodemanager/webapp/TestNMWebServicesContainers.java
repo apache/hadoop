@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -280,7 +281,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       verifyNodeContainerInfo(
           conInfo.getJSONObject(i),
           nmContext.getContainers().get(
-              ConverterUtils.toContainerId(conInfo.getJSONObject(i).getString(
+              ContainerId.fromString(conInfo.getJSONObject(i).getString(
                   "id"))));
     }
   }
@@ -316,7 +317,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject json = response.getEntity(JSONObject.class);
       verifyNodeContainerInfo(json.getJSONObject("container"), nmContext
-          .getContainers().get(ConverterUtils.toContainerId(id)));
+          .getContainers().get(ContainerId.fromString(id)));
     }
   }
 
@@ -449,7 +450,7 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       NodeList nodes = dom.getElementsByTagName("container");
       assertEquals("incorrect number of elements", 1, nodes.getLength());
       verifyContainersInfoXML(nodes,
-          nmContext.getContainers().get(ConverterUtils.toContainerId(id)));
+          nmContext.getContainers().get(ContainerId.fromString(id)));
 
     }
   }

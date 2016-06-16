@@ -985,11 +985,12 @@
                     </goals>
                     <configuration>
                         <executable>${basedir}/../../dev-support/bin/releasedocmaker</executable>
-                        <workingDirectory>src/site/markdown/release/</workingDirectory>
                         <requiresOnline>true</requiresOnline>
                         <arguments>
                             <argument>--index</argument>
                             <argument>--license</argument>
+                            <argument>--outputdir</argument>
+                            <argument>${basedir}/src/site/markdown/release</argument>
                             <argument>--project</argument>
                             <argument>HADOOP</argument>
                             <argument>--project</argument>
