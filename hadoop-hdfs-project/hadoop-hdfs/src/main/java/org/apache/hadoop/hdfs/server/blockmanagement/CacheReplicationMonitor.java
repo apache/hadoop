@@ -502,6 +502,14 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         CachedBlock cblock = it.next();
         BlockInfo blockInfo = blockManager.
             getStoredBlock(new Block(cblock.getBlockId()));
+        if (blockInfo == null) {
+          // Cannot find this block on the NameNode, skip this block from
+          // capacity calculation. Later logic will handle this block.
+          LOG.debug("Block {}: cannot be found in block manager and hence"
+              + " skipped from calculation for node {}.", cblock.getBlockId(),
+              dn.getDatanodeUuid());
+          continue;
+        }
         if (blockInfo.getNumBytes() > remaining) {
           LOG.debug("Block {}: removing from PENDING_CACHED for node {} "
                   + "because it cannot fit in remaining cache size {}.",
