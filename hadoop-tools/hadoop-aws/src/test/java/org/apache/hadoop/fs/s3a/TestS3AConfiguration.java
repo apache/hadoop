@@ -27,6 +27,7 @@ import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -208,12 +209,11 @@ public class TestS3AConfiguration {
 
     provisionAccessKeys(conf);
 
-    S3AFileSystem s3afs = new S3AFileSystem();
     conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
-    S3AFileSystem.AWSAccessKeys creds =
-        s3afs.getAWSAccessKeys(new URI("s3a://foobar"), conf);
-    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getAccessKey());
-    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getAccessSecret());
+    S3xLoginHelper.Login creds =
+        S3AUtils.getAWSAccessKeys(new URI("s3a://foobar"), conf);
+    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getUser());
+    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getPassword());
   }
 
   void provisionAccessKeys(final Configuration conf) throws Exception {
@@ -239,13 +239,12 @@ public class TestS3AConfiguration {
 
     provisionAccessKeys(conf);
 
-    S3AFileSystem s3afs = new S3AFileSystem();
     conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
     URI uriWithUserInfo = new URI("s3a://123:456@foobar");
-    S3AFileSystem.AWSAccessKeys creds =
-        s3afs.getAWSAccessKeys(uriWithUserInfo, conf);
-    assertEquals("AccessKey incorrect.", "123", creds.getAccessKey());
-    assertEquals("SecretKey incorrect.", "456", creds.getAccessSecret());
+    S3xLoginHelper.Login creds =
+        S3AUtils.getAWSAccessKeys(uriWithUserInfo, conf);
+    assertEquals("AccessKey incorrect.", "123", creds.getUser());
+    assertEquals("SecretKey incorrect.", "456", creds.getPassword());
   }
 
   @Test
@@ -261,13 +260,12 @@ public class TestS3AConfiguration {
 
     provisionAccessKeys(conf);
 
-    S3AFileSystem s3afs = new S3AFileSystem();
     conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
     URI uriWithUserInfo = new URI("s3a://123@foobar");
-    S3AFileSystem.AWSAccessKeys creds =
-        s3afs.getAWSAccessKeys(uriWithUserInfo, conf);
-    assertEquals("AccessKey incorrect.", "123", creds.getAccessKey());
-    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getAccessSecret());
+    S3xLoginHelper.Login creds =
+        S3AUtils.getAWSAccessKeys(uriWithUserInfo, conf);
+    assertEquals("AccessKey incorrect.", "123", creds.getUser());
+    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getPassword());
   }
 
   @Test
@@ -287,12 +285,11 @@ public class TestS3AConfiguration {
         EXAMPLE_KEY.toCharArray());
     provider.flush();
 
-    S3AFileSystem s3afs = new S3AFileSystem();
     conf.set(Constants.ACCESS_KEY, EXAMPLE_ID);
-    S3AFileSystem.AWSAccessKeys creds =
-        s3afs.getAWSAccessKeys(new URI("s3a://foobar"), conf);
-    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getAccessKey());
-    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getAccessSecret());
+    S3xLoginHelper.Login creds =
+        S3AUtils.getAWSAccessKeys(new URI("s3a://foobar"), conf);
+    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getUser());
+    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getPassword());
   }
 
   @Test
@@ -312,12 +309,11 @@ public class TestS3AConfiguration {
         EXAMPLE_ID.toCharArray());
     provider.flush();
 
-    S3AFileSystem s3afs = new S3AFileSystem();
     conf.set(Constants.SECRET_KEY, EXAMPLE_KEY);
-    S3AFileSystem.AWSAccessKeys creds =
-        s3afs.getAWSAccessKeys(new URI("s3a://foobar"), conf);
-    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getAccessKey());
-    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getAccessSecret());
+    S3xLoginHelper.Login creds =
+        S3AUtils.getAWSAccessKeys(new URI("s3a://foobar"), conf);
+    assertEquals("AccessKey incorrect.", EXAMPLE_ID, creds.getUser());
+    assertEquals("SecretKey incorrect.", EXAMPLE_KEY, creds.getPassword());
   }
 
   @Test
@@ -343,13 +339,12 @@ public class TestS3AConfiguration {
     // using the original config with the s3a provider in the path.
     provisionAccessKeys(c);
 
-    S3AFileSystem s3afs = new S3AFileSystem();
     conf.set(Constants.ACCESS_KEY, EXAMPLE_ID + "LJM");
     URI uriWithUserInfo = new URI("s3a://123:456@foobar");
-    S3AFileSystem.AWSAccessKeys creds =
-        s3afs.getAWSAccessKeys(uriWithUserInfo, conf);
-    assertEquals("AccessKey incorrect.", "123", creds.getAccessKey());
-    assertEquals("SecretKey incorrect.", "456", creds.getAccessSecret());
+    S3xLoginHelper.Login creds =
+        S3AUtils.getAWSAccessKeys(uriWithUserInfo, conf);
+    assertEquals("AccessKey incorrect.", "123", creds.getUser());
+    assertEquals("SecretKey incorrect.", "456", creds.getPassword());
 
   }
 
