@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -79,7 +80,9 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Private
   @Unstable
-  public abstract long getMemorySize();
+  public long getMemorySize() {
+    throw new NotImplementedException("getVirtualCoresSize is not implemented");
+  }
   
   /**
    * Set <em>memory</em> of the resource.
@@ -106,7 +109,9 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Unstable
-  public abstract long getVirtualCoresSize();
+  public long getVirtualCoresSize() {
+    throw new NotImplementedException("getVirtualCoresSize is not implemented");
+  }
   
   /**
    * Set <em>number of virtual cpu cores</em> of the resource.
@@ -120,7 +125,9 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public abstract void setVirtualCores(long vCores);
+  public void setVirtualCores(long vCores) {
+    throw new NotImplementedException("getVirtualCoresSize is not implemented");
+  }
 
   @Override
   public int hashCode() {
