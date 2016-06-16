@@ -42,10 +42,6 @@ public class FileSystemStorageStatistics extends StorageStatistics {
       "readOps",
       "largeReadOps",
       "writeOps",
-      "bytesReadLocalHost",
-      "bytesReadDistanceOfOneOrTwo",
-      "bytesReadDistanceOfThreeOrFour",
-      "bytesReadDistanceOfFiveOrLarger"
   };
 
   private static class LongStatisticIterator
