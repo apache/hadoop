@@ -669,7 +669,10 @@ Options:
 * -e: if the path exists, return 0.
 * -f: if the path is a file, return 0.
 * -s: if the path is not empty, return 0.
+* -r: if the path exists and read permission is granted, return 0.
+* -w: if the path exists and write permission is granted, return 0.
 * -z: if the file is zero length, return 0.
+
 
 Example:
 
