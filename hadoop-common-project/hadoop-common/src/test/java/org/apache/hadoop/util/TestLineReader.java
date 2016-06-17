@@ -58,7 +58,7 @@ public class TestLineReader {
      * Check Condition
      *  In the second key value pair, the value should contain 
      *  "</"  from currentToken and
-     *  "id>" from next token 
+     *  "id>" from next token
      */  
     
     Delimiter="</entity>"; 
@@ -80,7 +80,7 @@ public class TestLineReader {
     String TestPartOfInput = CurrentBufferTailToken+NextBufferHeadToken;
   
     int BufferSize=64 * 1024;
-    int numberOfCharToFillTheBuffer=BufferSize-CurrentBufferTailToken.length();
+    int numberOfCharToFillTheBuffer = BufferSize - CurrentBufferTailToken.length();
     StringBuilder fillerString=new StringBuilder();
     for (int i=0;i<numberOfCharToFillTheBuffer;i++) {  
       fillerString.append('a'); // char 'a' as a filler for the test string
@@ -92,7 +92,7 @@ public class TestLineReader {
     
     line = new Text();
     
-    lineReader.readLine(line); 
+    lineReader.readLine(line);
     Assert.assertEquals(fillerString.toString(),line.toString());
     
     lineReader.readLine(line);
@@ -118,10 +118,10 @@ public class TestLineReader {
     
     lineReader = new LineReader(
         new ByteArrayInputStream(TestData.getBytes()),Delimiter.getBytes());
-    
-    lineReader.readLine(line); 
+
+    lineReader.readLine(line);
     Assert.assertEquals("",line.toString());
-    lineReader.readLine(line); 
+    lineReader.readLine(line);
     Assert.assertEquals("Kerala ",line.toString());
     
     lineReader.readLine(line); 
@@ -137,5 +137,18 @@ public class TestLineReader {
     
     lineReader.readLine(line); 
     Assert.assertEquals(("ecord"+"recor"+"core"),line.toString());
+
+    // Test 3
+    // The test scenario is such that,
+    // aaaabccc split by aaab
+    TestData = "aaaabccc";
+    Delimiter = "aaab";
+    lineReader = new LineReader(
+        new ByteArrayInputStream(TestData.getBytes()),Delimiter.getBytes());
+
+    lineReader.readLine(line);
+    Assert.assertEquals("a",line.toString());
+    lineReader.readLine(line);
+    Assert.assertEquals("ccc",line.toString());
   }
 }
