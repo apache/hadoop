@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +62,26 @@ public class TestFairCallQueue extends TestCase {
     Configuration conf = new Configuration();
     conf.setInt("ns." + FairCallQueue.IPC_CALLQUEUE_PRIORITY_LEVELS_KEY, 2);
 
-    fcq = new FairCallQueue<Schedulable>(2, 5, "ns", conf);
+    fcq = new FairCallQueue<Schedulable>(2, 10, "ns", conf);
+  }
+
+  // Validate that the total capacity of all subqueues equals
+  // the maxQueueSize for different values of maxQueueSize
+  public void testTotalCapacityOfSubQueues() {
+    Configuration conf = new Configuration();
+    FairCallQueue<Schedulable> fairCallQueue;
+    fairCallQueue = new FairCallQueue<Schedulable>(1, 1000, "ns", conf);
+    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    fairCallQueue = new FairCallQueue<Schedulable>(4, 1000, "ns", conf);
+    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    fairCallQueue = new FairCallQueue<Schedulable>(7, 1000, "ns", conf);
+    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    fairCallQueue = new FairCallQueue<Schedulable>(1, 1025, "ns", conf);
+    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    fairCallQueue = new FairCallQueue<Schedulable>(4, 1025, "ns", conf);
+    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns", conf);
+    assertEquals(fairCallQueue.remainingCapacity(), 1025);
   }
 
   //
