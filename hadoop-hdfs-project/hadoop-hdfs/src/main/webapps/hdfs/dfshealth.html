@@ -300,6 +300,7 @@
   <thead>
     <tr>
       <th>Node</th>
+      <th>Http Address</th>
       <th>Last contact</th>
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
@@ -310,6 +311,13 @@
   {#LiveNodes}
   <tr>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
+    <td ng-value="{state}-{name}">
+    {@select key=secureMode}
+      {@eq value="off"}<a href='//{infoAddr}'>{infoAddr}</a>{/eq}
+      {@eq value="on"}<a href='//{infoSecureAddr}'>{infoSecureAddr}</a>{/eq}
+      {@default}<a href='//{infoAddr}'>{infoAddr}</a>{/default}
+    {/select}
+    </td>
     <td ng-value="{lastContact}">{lastContact}s</td>
     <td ng-value="{usedPercentage}">
       <div>
@@ -328,6 +336,7 @@
   {#DeadNodes}
   <tr class="danger">
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{name} ({xferaddr})</td>
+    <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
     <td></td>
     <td></td>
