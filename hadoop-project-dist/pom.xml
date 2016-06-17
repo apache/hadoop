@@ -325,10 +325,11 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>${project.parent.basedir}/../dev-support/bin/dist-copynativelibs</executable>
+                  <executable>${shell-executable}</executable>
                   <workingDirectory>${project.build.directory}</workingDirectory>
                   <requiresOnline>false</requiresOnline>
                   <arguments>
+                    <argument>${project.parent.basedir}/../dev-support/bin/dist-copynativelibs</argument>
                     <argument>--version=${project.version}</argument>
                     <argument>--builddir=${project.build.directory}</argument>
                     <argument>--artifactid=${project.artifactId}</argument>
