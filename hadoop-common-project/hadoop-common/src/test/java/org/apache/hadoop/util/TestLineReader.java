@@ -80,20 +80,21 @@ public class TestLineReader {
     String TestPartOfInput = CurrentBufferTailToken+NextBufferHeadToken;
   
     int BufferSize=64 * 1024;
-    int numberOfCharToFillTheBuffer = BufferSize - CurrentBufferTailToken.length();
+    int numberOfCharToFillTheBuffer =
+            BufferSize - CurrentBufferTailToken.length();
     StringBuilder fillerString=new StringBuilder();
-    for (int i=0;i<numberOfCharToFillTheBuffer;i++) {  
+    for (int i=0; i<numberOfCharToFillTheBuffer; i++) {
       fillerString.append('a'); // char 'a' as a filler for the test string
     }
 
     TestData = fillerString + TestPartOfInput;
     lineReader = new LineReader(
-        new ByteArrayInputStream(TestData.getBytes()),Delimiter.getBytes());
+        new ByteArrayInputStream(TestData.getBytes()), Delimiter.getBytes());
     
     line = new Text();
     
     lineReader.readLine(line);
-    Assert.assertEquals(fillerString.toString(),line.toString());
+    Assert.assertEquals(fillerString.toString(), line.toString());
     
     lineReader.readLine(line);
     Assert.assertEquals(Expected, line.toString());
@@ -107,36 +108,37 @@ public class TestLineReader {
     Delimiter = "record";
     StringBuilder TestStringBuilder = new StringBuilder();
     
-    TestStringBuilder.append(Delimiter+"Kerala ");
-    TestStringBuilder.append(Delimiter+"Bangalore");
-    TestStringBuilder.append(Delimiter+" North Korea");
-    TestStringBuilder.append(Delimiter+Delimiter+
+    TestStringBuilder.append(Delimiter + "Kerala ");
+    TestStringBuilder.append(Delimiter + "Bangalore");
+    TestStringBuilder.append(Delimiter + " North Korea");
+    TestStringBuilder.append(Delimiter + Delimiter+
                         "Guantanamo");
-    TestStringBuilder.append(Delimiter+"ecord"+"recor"+"core"); //~EOF with 're'
+    TestStringBuilder.append(Delimiter + "ecord"
+            + "recor" + "core"); //~EOF with 're'
     
     TestData=TestStringBuilder.toString();
     
     lineReader = new LineReader(
-        new ByteArrayInputStream(TestData.getBytes()),Delimiter.getBytes());
+        new ByteArrayInputStream(TestData.getBytes()), Delimiter.getBytes());
 
     lineReader.readLine(line);
-    Assert.assertEquals("",line.toString());
+    Assert.assertEquals("", line.toString());
     lineReader.readLine(line);
-    Assert.assertEquals("Kerala ",line.toString());
+    Assert.assertEquals("Kerala ", line.toString());
     
     lineReader.readLine(line); 
-    Assert.assertEquals("Bangalore",line.toString());
+    Assert.assertEquals("Bangalore", line.toString());
     
     lineReader.readLine(line); 
-    Assert.assertEquals(" North Korea",line.toString());
+    Assert.assertEquals(" North Korea", line.toString());
     
     lineReader.readLine(line); 
-    Assert.assertEquals("",line.toString());
+    Assert.assertEquals("", line.toString());
     lineReader.readLine(line); 
-    Assert.assertEquals("Guantanamo",line.toString());
+    Assert.assertEquals("Guantanamo", line.toString());
     
     lineReader.readLine(line); 
-    Assert.assertEquals(("ecord"+"recor"+"core"),line.toString());
+    Assert.assertEquals(("ecord"+"recor"+"core"), line.toString());
 
     // Test 3
     // The test scenario is such that,
@@ -144,11 +146,11 @@ public class TestLineReader {
     TestData = "aaaabccc";
     Delimiter = "aaab";
     lineReader = new LineReader(
-        new ByteArrayInputStream(TestData.getBytes()),Delimiter.getBytes());
+        new ByteArrayInputStream(TestData.getBytes()), Delimiter.getBytes());
 
     lineReader.readLine(line);
-    Assert.assertEquals("a",line.toString());
+    Assert.assertEquals("a", line.toString());
     lineReader.readLine(line);
-    Assert.assertEquals("ccc",line.toString());
+    Assert.assertEquals("ccc", line.toString());
   }
 }
