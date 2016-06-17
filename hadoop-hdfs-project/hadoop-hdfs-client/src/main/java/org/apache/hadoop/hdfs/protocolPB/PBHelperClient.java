@@ -1117,6 +1117,10 @@ public class PBHelperClient {
     if (proto.hasLimit())  {
       info.setLimit(proto.getLimit());
     }
+    if (proto.hasDefaultReplication()) {
+      info.setDefaultReplication(Shorts.checkedCast(
+          proto.getDefaultReplication()));
+    }
     if (proto.hasMaxRelativeExpiry()) {
       info.setMaxRelativeExpiryMs(proto.getMaxRelativeExpiry());
     }
@@ -1147,6 +1151,9 @@ public class PBHelperClient {
     }
     if (info.getLimit() != null) {
       builder.setLimit(info.getLimit());
+    }
+    if (info.getDefaultReplication() != null) {
+      builder.setDefaultReplication(info.getDefaultReplication());
     }
     if (info.getMaxRelativeExpiryMs() != null) {
       builder.setMaxRelativeExpiry(info.getMaxRelativeExpiryMs());

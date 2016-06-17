@@ -54,6 +54,8 @@ public class CachePoolInfo {
   public static final long LIMIT_UNLIMITED = Long.MAX_VALUE;
   public static final long DEFAULT_LIMIT = LIMIT_UNLIMITED;
 
+  public static final short DEFAULT_REPLICATION_NUM = 1;
+
   final String poolName;
 
   @Nullable
@@ -67,6 +69,9 @@ public class CachePoolInfo {
 
   @Nullable
   Long limit;
+
+  @Nullable
+  private Short defaultReplication;
 
   @Nullable
   Long maxRelativeExpiryMs;
@@ -135,6 +140,18 @@ public class CachePoolInfo {
   }
 
   /**
+   * @return The default replication num for CacheDirective in this pool
+     */
+  public Short getDefaultReplication() {
+    return defaultReplication;
+  }
+
+  public CachePoolInfo setDefaultReplication(Short repl) {
+    this.defaultReplication = repl;
+    return this;
+  }
+
+  /**
    * @return The maximum relative expiration of directives of this pool in
    *         milliseconds
    */
@@ -161,6 +178,7 @@ public class CachePoolInfo {
         + ", mode:"
         + ((mode == null) ? "null" : String.format("0%03o", mode.toShort()))
         + ", limit:" + limit
+        + ", defaultReplication:" + defaultReplication
         + ", maxRelativeExpiryMs:" + maxRelativeExpiryMs + "}";
   }
 
@@ -178,6 +196,7 @@ public class CachePoolInfo {
         append(groupName, other.groupName).
         append(mode, other.mode).
         append(limit, other.limit).
+        append(defaultReplication, other.defaultReplication).
         append(maxRelativeExpiryMs, other.maxRelativeExpiryMs).
         isEquals();
   }
@@ -190,6 +209,7 @@ public class CachePoolInfo {
         append(groupName).
         append(mode).
         append(limit).
+        append(defaultReplication).
         append(maxRelativeExpiryMs).
         hashCode();
   }
@@ -201,6 +221,11 @@ public class CachePoolInfo {
     if ((info.getLimit() != null) && (info.getLimit() < 0)) {
       throw new InvalidRequestException("Limit is negative.");
     }
+    if ((info.getDefaultReplication() != null)
+            && (info.getDefaultReplication() < 0)) {
+      throw new InvalidRequestException("Default Replication is negative");
+    }
+
     if (info.getMaxRelativeExpiryMs() != null) {
       long maxRelativeExpiryMs = info.getMaxRelativeExpiryMs();
       if (maxRelativeExpiryMs < 0l) {
