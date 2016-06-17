@@ -23,6 +23,9 @@
         * [OAuth2 Support](#OAuth2_Support)
         * [Read Ahead Buffer Management](Read_Ahead_Buffer_Management)
     * [Configuring Credentials & FileSystem](#Configuring_Credentials)
+        * [Using Refresh Token](#Refresh_Token)
+        * [Using Client Keys](#Client_Credential_Token)
+    * [Enabling ADL Filesystem](#Enabling_ADL)
     * [Accessing adl URLs](#Accessing_adl_URLs)
 * [Testing the hadoop-azure Module](#Testing_the_hadoop-azure_Module)
 
@@ -131,6 +134,9 @@ To configure number of concurrent connection to Azure Data Lake Storage Account.
     </property>
 
 ## <a name="Configuring_Credentials" />Configuring Credentials & FileSystem
+Credentials can be configured using either a refresh token (associated with a user) or a client credential (analogous to a service principal).
+
+### <a name="Refresh_Token" />Using Refresh Token
 
 Update core-site.xml for OAuth2 configuration
 
@@ -172,6 +178,64 @@ Application require to set Client id and OAuth2 refresh token from Azure Active 
             <name>dfs.webhdfs.oauth2.refresh.token</name>
             <value></value>
         </property>
+
+
+### <a name="Client_Credential_Token" />Using Client Keys
+
+#### Generating the Service Principal
+1.  Go to the portal (https://portal.azure.com)
+2.  Under "Browse", look for Active Directory and click on it.
+3.  Create "Web Application". Remember the name you create here - that is what you will add to your ADL account as authorized user.
+4.  Go through the wizard
+5.  Once app is created, Go to app configuration, and find the section on "keys"
+6.  Select a key duration and hit save. Save the generated keys.
+7. Note down the properties you will need to auth:
+    -  The client ID
+    -  The key you just generated above
+    -  The token endpoint (select "View endpoints" at the bottom of the page and copy/paste the OAuth2 .0 Token Endpoint value)
+    -  Resource: Always https://management.core.windows.net/ , for all customers
+
+#### Adding the service principal to your ADL Account
+1.  Go to the portal again, and open your ADL account
+2.  Select Users under Settings
+3.  Add your user name you created in Step 6 above (note that it does not show up in the list, but will be found if you searched for the name)
+4.  Add "Owner" role
+
+#### Configure core-site.xml
+Add the following properties to your core-site.xml
+
+    <property>
+      <name>dfs.webhdfs.oauth2.access.token.provider</name>
+      <value>org.apache.hadoop.hdfs.web.oauth2.AzureADClientCredentialBasedAccesTokenProvider</value>
+    </property>
+
+    <property>
+      <name>dfs.webhdfs.oauth2.refresh.url</name>
+      <value>TOKEN ENDPOINT FROM STEP 7 ABOVE</value>
+    </property>
+
+    <property>
+      <name>dfs.webhdfs.oauth2.client.id</name>
+      <value>CLIENT ID FROM STEP 7 ABOVE</value>
+    </property>
+
+    <property>
+      <name>dfs.webhdfs.oauth2.credential</name>
+      <value>PASSWORD FROM STEP 7 ABOVE</value>
+    </property>
+
+    <property>
+      <name>fs.adls.oauth2.resource</name>
+      <value>https://management.core.windows.net/</value>
+    </property>
+
+    <property>
+      <name>fs.defaultFS</name>
+      <value>YOUR ADL STORE URL (e.g., https://example.azuredatalakestore.net) </value>
+    </property>
+
+
+## <a name="Enabling_ADL" />Enabling ADL Filesystem
 
 For ADL FileSystem to take effect. Update core-site.xml with
 
