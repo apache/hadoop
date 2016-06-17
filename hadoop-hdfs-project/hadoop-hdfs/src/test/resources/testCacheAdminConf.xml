@@ -80,8 +80,8 @@
     <test> <!--Tested -->
       <description>Testing modifying a cache pool</description>
       <test-commands>
-        <cache-admin-command>-addPool poolparty -owner alice -group alicegroup -mode 0000 -limit 50</cache-admin-command>
-        <cache-admin-command>-modifyPool poolparty -owner bob -group bobgroup -mode 0777 -limit 51</cache-admin-command>
+        <cache-admin-command>-addPool poolparty -owner alice -group alicegroup -mode 0000 -limit 50 -defaultReplication 3</cache-admin-command>
+        <cache-admin-command>-modifyPool poolparty -owner bob -group bobgroup -mode 0777 -limit 51 -defaultReplication 2</cache-admin-command>
         <cache-admin-command>-listPools</cache-admin-command>
       </test-commands>
       <cleanup-commands>
@@ -90,10 +90,11 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>poolparty  bob    bobgroup  rwxrwxrwx      51</expected-output>
+          <expected-output>poolparty  bob    bobgroup  rwxrwxrwx      51   never                    2</expected-output>
         </comparator>
       </comparators>
     </test>
+
 
     <test> <!--Tested -->
       <description>Testing deleting a cache pool</description>
@@ -114,7 +115,7 @@
     <test> <!--Tested -->
       <description>Testing listing all cache pools</description>
       <test-commands>
-        <cache-admin-command>-addPool foo -owner bob -group bob -mode 0664</cache-admin-command>
+        <cache-admin-command>-addPool foo -owner bob -group bob -mode 0664 -defaultReplication 2</cache-admin-command>
         <cache-admin-command>-addPool bar -owner alice -group alicegroup -mode 0755</cache-admin-command>
         <cache-admin-command>-listPools</cache-admin-command>
       </test-commands>
@@ -129,11 +130,11 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>bar   alice  alicegroup  rwxr-xr-x   unlimited</expected-output>
+          <expected-output>bar   alice  alicegroup  rwxr-xr-x   unlimited   never                    1</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>foo   bob    bob         rw-rw-r--   unlimited</expected-output>
+          <expected-output>foo   bob    bob         rw-rw-r--   unlimited   never                    2</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -156,7 +157,7 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>foo   bob    bob    rw-rw-r--   unlimited</expected-output>
+          <expected-output>foo   bob    bob    rw-rw-r--   unlimited   never                    1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -417,11 +418,11 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>bar   alice  alicegroup  rwxr-xr-x   unlimited   never             0             0                0             0             0</expected-output>
+          <expected-output>bar   alice  alicegroup  rwxr-xr-x   unlimited   never                    1             0             0                0             0             0</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>foo   bob    bob         rw-rw-r--   unlimited   never             0             0                0             0             0</expected-output>
+          <expected-output>foo   bob    bob         rw-rw-r--   unlimited   never                    1             0             0                0             0             0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -540,6 +541,38 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>30 pool1      1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing overriding cache pool replication</description>
+      <test-commands>
+        <cache-admin-command>-addPool pool1 -defaultReplication 2</cache-admin-command>
+        <cache-admin-command>-addPool pool2 -defaultReplication 3</cache-admin-command>
+        <cache-admin-command>-addDirective -path /foo -pool pool1 -ttl 2d</cache-admin-command>
+        <cache-admin-command>-addDirective -path /bar -pool pool2 -ttl 24h</cache-admin-command>
+        <cache-admin-command>-modifyDirective -id 32 -replication 3</cache-admin-command>
+        <cache-admin-command>-modifyDirective -id 34 -pool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /baz -replication 3 -pool pool1 -ttl 60m</cache-admin-command>
+        <cache-admin-command>-listDirectives -pool pool1</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <cache-admin-command>-removePool pool1</cache-admin-command>
+        <cache-admin-command>-removePool pool2</cache-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Found 2 entries</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>32 pool1      3</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>34 pool1      3</expected-output>
         </comparator>
       </comparators>
     </test>

@@ -534,6 +534,7 @@ message CachePoolInfoProto {
   optional int32 mode = 4;
   optional int64 limit = 5;
   optional int64 maxRelativeExpiry = 6;
+  optional uint32 defaultReplication = 7 [default=1];
 }
 
 message CachePoolStatsProto {

@@ -619,20 +619,24 @@ public class FSImageSerialization {
     final Long limit = info.getLimit();
     final FsPermission mode = info.getMode();
     final Long maxRelativeExpiry = info.getMaxRelativeExpiryMs();
+    final Short defaultReplication = info.getDefaultReplication();
 
-    boolean hasOwner, hasGroup, hasMode, hasLimit, hasMaxRelativeExpiry;
+    boolean hasOwner, hasGroup, hasMode, hasLimit,
+            hasMaxRelativeExpiry, hasDefaultReplication;
     hasOwner = ownerName != null;
     hasGroup = groupName != null;
     hasMode = mode != null;
     hasLimit = limit != null;
     hasMaxRelativeExpiry = maxRelativeExpiry != null;
+    hasDefaultReplication = defaultReplication != null;
 
     int flags =
         (hasOwner ? 0x1 : 0) |
         (hasGroup ? 0x2 : 0) |
         (hasMode  ? 0x4 : 0) |
         (hasLimit ? 0x8 : 0) |
-        (hasMaxRelativeExpiry ? 0x10 : 0);
+        (hasMaxRelativeExpiry ? 0x10 : 0) |
+        (hasDefaultReplication ? 0x20 : 0);
 
     writeInt(flags, out);
 
@@ -650,6 +654,9 @@ public class FSImageSerialization {
     }
     if (hasMaxRelativeExpiry) {
       writeLong(maxRelativeExpiry, out);
+    }
+    if (hasDefaultReplication) {
+      writeShort(defaultReplication, out);
     }
   }
 
@@ -673,7 +680,10 @@ public class FSImageSerialization {
     if ((flags & 0x10) != 0) {
       info.setMaxRelativeExpiryMs(readLong(in));
     }
-    if ((flags & ~0x1F) != 0) {
+    if ((flags & 0x20) != 0) {
+      info.setDefaultReplication(readShort(in));
+    }
+    if ((flags & ~0x2F) != 0) {
       throw new IOException("Unknown flag in CachePoolInfo: " + flags);
     }
     return info;
