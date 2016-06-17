@@ -400,7 +400,7 @@ public class TestLogsCLI {
 
     String logMessage = "Hello container_0_0001_01_000003 in stdout!";
     int fileContentSize = logMessage.getBytes().length;
-    int tailContentSize = "End of LogType:syslog\n\n".getBytes().length;
+    int tailContentSize = "\nEnd of LogType:syslog\n\n".getBytes().length;
 
     // specify how many bytes we should get from logs
     // specify a position number, it would get the first n bytes from
