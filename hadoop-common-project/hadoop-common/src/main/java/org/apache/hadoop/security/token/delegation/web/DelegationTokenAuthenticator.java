@@ -20,6 +20,7 @@ package org.apache.hadoop.security.token.delegation.web;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.Authenticator;
@@ -143,6 +144,8 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   public void authenticate(URL url, AuthenticatedURL.Token token)
       throws IOException, AuthenticationException {
     if (!hasDelegationToken(url, token)) {
+      // check and renew TGT to handle potential expiration
+      UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
       authenticator.authenticate(url, token);
     }
   }
