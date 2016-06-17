@@ -901,9 +901,24 @@ public class DecayRpcScheduler implements RpcScheduler,
   public String getCallVolumeSummary() {
     try {
       ObjectMapper om = new ObjectMapper();
-      return om.writeValueAsString(callCounts);
+      return om.writeValueAsString(getDecayedCallCounts());
     } catch (Exception e) {
       return "Error: " + e.getMessage();
     }
+  }
+
+  private Map<Object, Long> getDecayedCallCounts() {
+    Map<Object, Long> decayedCallCounts = new HashMap<>(callCounts.size());
+    Iterator<Map.Entry<Object, List<AtomicLong>>> it =
+        callCounts.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Object, List<AtomicLong>> entry = it.next();
+      Object user = entry.getKey();
+      Long decayedCount = entry.getValue().get(0).get();
+      if (decayedCount > 0) {
+        decayedCallCounts.put(user, decayedCount);
+      }
+    }
+    return decayedCallCounts;
   }
 }
