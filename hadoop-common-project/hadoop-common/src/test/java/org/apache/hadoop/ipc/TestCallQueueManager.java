@@ -214,9 +214,9 @@ public class TestCallQueueManager {
     assertTrue(queue.getCanonicalName().equals(queueClassName));
 
     manager = new CallQueueManager<FakeCall>(queue, scheduler, false,
-        2, "", conf);
+        8, "", conf);
 
-    // Default FCQ has 4 levels and the max capacity is 2 x 4
+    // Default FCQ has 4 levels and the max capacity is 8
     assertCanPut(manager, 3, 3);
   }
 
