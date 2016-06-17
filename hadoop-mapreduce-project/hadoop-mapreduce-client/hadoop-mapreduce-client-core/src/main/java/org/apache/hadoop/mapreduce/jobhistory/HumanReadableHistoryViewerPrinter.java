@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobStatus;
@@ -32,7 +33,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.Format;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -49,23 +49,22 @@ import java.util.TimeZone;
 class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
 
   private JobHistoryParser.JobInfo job;
-  private final SimpleDateFormat dateFormat;
+  private final FastDateFormat dateFormat;
   private boolean printAll;
   private String scheme;
 
   HumanReadableHistoryViewerPrinter(JobHistoryParser.JobInfo job,
                                     boolean printAll, String scheme) {
-    this.job = job;
-    this.printAll = printAll;
-    this.scheme = scheme;
-    this.dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss");
+    this(job, printAll, scheme, TimeZone.getDefault());
   }
 
   HumanReadableHistoryViewerPrinter(JobHistoryParser.JobInfo job,
                                     boolean printAll, String scheme,
                                     TimeZone tz) {
-    this(job, printAll, scheme);
-    this.dateFormat.setTimeZone(tz);
+    this.job = job;
+    this.printAll = printAll;
+    this.scheme = scheme;
+    this.dateFormat = FastDateFormat.getInstance("d-MMM-yyyy HH:mm:ss", tz);
   }
 
   /**

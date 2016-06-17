@@ -33,11 +33,16 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
-import org.junit.Assume;
 import org.junit.Test;
 
 public class TestStringUtils extends UnitTestcaseTimeLimit {
@@ -51,6 +56,9 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   final private static String STR_WITH_BOTH2 = ",A\\,,B\\\\,";
   final private static String ESCAPED_STR_WITH_BOTH2 = 
     "\\,A\\\\\\,\\,B\\\\\\\\\\,";
+
+  final private static FastDateFormat FAST_DATE_FORMAT =
+      FastDateFormat.getInstance("d-MMM-yyyy HH:mm:ss");
   
   @Test (timeout = 30000)
   public void testEscapeString() throws Exception {
@@ -387,8 +395,6 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
       pattern, replacements));
     assertEquals("___", StringUtils.replaceTokens("$UNDER_SCORES", pattern,
       replacements));
-    assertEquals("//one//two//", StringUtils.replaceTokens("//$FOO/$BAR/$BAZ//",
-      pattern, replacements));
   }
 
   @Test (timeout = 5000)
@@ -436,6 +442,38 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     } finally {
       Locale.setDefault(defaultLocale);
     }
+  }
+
+  @Test
+  //Multithreaded Test GetFormattedTimeWithDiff()
+  public void testGetFormattedTimeWithDiff() throws InterruptedException {
+    ExecutorService executorService = Executors.newFixedThreadPool(16);
+    final CyclicBarrier cyclicBarrier = new CyclicBarrier(10);
+    for (int i = 0; i < 10; i++) {
+
+      executorService.execute(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            cyclicBarrier.await();
+          } catch (InterruptedException | BrokenBarrierException e) {
+            //Ignored
+          }
+          final long end = System.currentTimeMillis();
+          final long start = end - 30000;
+          String formattedTime1 = StringUtils.getFormattedTimeWithDiff(
+              FAST_DATE_FORMAT, start, end);
+          String formattedTime2 = StringUtils.getFormattedTimeWithDiff(
+              FAST_DATE_FORMAT, start, end);
+          assertTrue("Method returned inconsistent results indicative of"
+              + " a race condition", formattedTime1.equals(formattedTime2));
+
+        }
+      });
+    }
+
+    executorService.shutdown();
+    executorService.awaitTermination(50, TimeUnit.SECONDS);
   }
 
   // Benchmark for StringUtils split
