@@ -51,7 +51,8 @@ public class CallQueueManager<E> {
       maxQueueSize, namespace, conf);
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
-    LOG.info("Using callQueue " + backingClass);
+    LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
+        maxQueueSize);
   }
 
   private <T extends BlockingQueue<E>> T createCallQueueInstance(
