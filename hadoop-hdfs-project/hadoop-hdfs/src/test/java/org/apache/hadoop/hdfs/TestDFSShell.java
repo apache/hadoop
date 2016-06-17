@@ -1179,8 +1179,8 @@ public class TestDFSShell {
    * Tests various options of DFSShell.
    */
   @Test (timeout = 120000)
-  public void testDFSShell() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+  public void testDFSShell() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
     /* This tests some properties of ChecksumFileSystem as well.
      * Make sure that we create ChecksumDFS */
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -1532,6 +1532,73 @@ public class TestDFSShell {
         assertEquals(0, val);
       }
 
+      // Verify -test -w/-r
+      {
+        Path permDir = new Path("/test/permDir");
+        Path permFile = new Path("/test/permDir/permFile");
+        mkdir(fs, permDir);
+        writeFile(fs, permFile);
+
+        // Verify -test -w positive case (dir exists and can write)
+        final String[] wargs = new String[3];
+        wargs[0] = "-test";
+        wargs[1] = "-w";
+        wargs[2] = permDir.toString();
+        int val = -1;
+        try {
+          val = shell.run(wargs);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+              e.getLocalizedMessage());
+        }
+        assertEquals(0, val);
+
+        // Verify -test -r positive case (file exists and can read)
+        final String[] rargs = new String[3];
+        rargs[0] = "-test";
+        rargs[1] = "-r";
+        rargs[2] = permFile.toString();
+        try {
+          val = shell.run(rargs);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+              e.getLocalizedMessage());
+        }
+        assertEquals(0, val);
+
+        // Verify -test -r negative case (file exists but cannot read)
+        runCmd(shell, "-chmod", "600", permFile.toString());
+
+        UserGroupInformation smokeUser =
+            UserGroupInformation.createUserForTesting("smokeUser",
+                new String[] {"hadoop"});
+        smokeUser.doAs(new PrivilegedExceptionAction<String>() {
+            @Override
+            public String run() throws Exception {
+              FsShell shell = new FsShell(conf);
+              int exitCode = shell.run(rargs);
+              assertEquals(1, exitCode);
+              return null;
+            }
+          });
+
+        // Verify -test -w negative case (dir exists but cannot write)
+        runCmd(shell, "-chown", "-R", "not_allowed", permDir.toString());
+        runCmd(shell, "-chmod", "-R", "700", permDir.toString());
+
+        smokeUser.doAs(new PrivilegedExceptionAction<String>() {
+          @Override
+          public String run() throws Exception {
+            FsShell shell = new FsShell(conf);
+            int exitCode = shell.run(wargs);
+            assertEquals(1, exitCode);
+            return null;
+          }
+        });
+
+        // cleanup
+        fs.delete(permDir, true);
+      }
     } finally {
       try {
         fileSys.close();
