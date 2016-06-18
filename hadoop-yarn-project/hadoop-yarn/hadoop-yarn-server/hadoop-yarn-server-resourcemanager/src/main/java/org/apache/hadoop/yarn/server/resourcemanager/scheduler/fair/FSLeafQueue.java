@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -482,8 +481,7 @@ public class FSLeafQueue extends FSQueue {
 
   /**
    * Check whether this queue can run this application master under the
-   * maxAMShare limit. For FIFO and FAIR policies, check if the VCore usage
-   * takes up the entire cluster or maxResources for the queue.
+   * maxAMShare limit.
    * @param amResource
    * @return true if this queue can run
    */
@@ -493,24 +491,25 @@ public class FSLeafQueue extends FSQueue {
     if (Math.abs(maxAMShare - -1.0f) < 0.0001) {
       return true;
     }
-    Resource maxAMResource = Resources.multiply(getFairShare(), maxAMShare);
-    Resource ifRunAMResource = Resources.add(amResourceUsage, amResource);
 
-    boolean overMaxAMShareLimit = policy
-            .checkIfAMResourceUsageOverLimit(ifRunAMResource, maxAMResource);
-
-    // For fair policy and fifo policy which doesn't check VCore usages,
-    // additionally check if the AM takes all available VCores or
-    // over maxResource to avoid deadlock.
-    if (!overMaxAMShareLimit && !policy.equals(
-        SchedulingPolicy.getInstance(DominantResourceFairnessPolicy.class))) {
-      overMaxAMShareLimit =
-         isVCoresOverMaxResource(ifRunAMResource.getVirtualCores()) ||
-         ifRunAMResource.getVirtualCores() >=
-         scheduler.getRootQueueMetrics().getAvailableVirtualCores();
+    // If FairShare is zero, use min(maxShare, available resource) to compute
+    // maxAMResource
+    Resource maxResource = Resources.clone(getFairShare());
+    if (maxResource.getMemorySize() == 0) {
+      maxResource.setMemory(
+          Math.min(scheduler.getRootQueueMetrics().getAvailableMB(),
+                   getMaxShare().getMemorySize()));
     }
 
-    return !overMaxAMShareLimit;
+    if (maxResource.getVirtualCoresSize() == 0) {
+      maxResource.setVirtualCores(Math.min(
+          scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
+          getMaxShare().getVirtualCoresSize()));
+    }
+
+    Resource maxAMResource = Resources.multiply(maxResource, maxAMShare);
+    Resource ifRunAMResource = Resources.add(amResourceUsage, amResource);
+    return Resources.fitsIn(ifRunAMResource, maxAMResource);
   }
 
   public void addAMResourceUsage(Resource amResource) {
