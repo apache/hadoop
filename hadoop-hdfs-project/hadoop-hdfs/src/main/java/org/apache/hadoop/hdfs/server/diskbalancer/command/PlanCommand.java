@@ -140,7 +140,7 @@ public class PlanCommand extends Command {
           .getBytes(StandardCharsets.UTF_8));
     }
 
-    if (plan != null) {
+    if (plan != null && plan.getVolumeSetPlans().size() > 0) {
       LOG.info("Writing plan to : {}", getOutputPath());
       try (FSDataOutputStream planStream = create(String.format(
           DiskBalancer.PLAN_TEMPLATE,
