@@ -60,7 +60,7 @@ public class DiskBalancer extends Configured implements Tool {
    * <p>
    * hdfs://namenode.uri or file:///data/myCluster.json
    */
-  public static final String NAMENODEURI = "uri";
+  public static final String NAMENODEURI = "fs";
   /**
    * Computes a plan for a given set of nodes.
    */
