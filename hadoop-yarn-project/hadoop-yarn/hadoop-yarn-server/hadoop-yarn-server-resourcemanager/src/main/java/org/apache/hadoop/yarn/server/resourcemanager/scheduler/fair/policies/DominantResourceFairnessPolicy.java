@@ -94,11 +94,6 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
   }
 
   @Override
-  public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
-    return !Resources.fitsIn(usage, maxAMResource);
-  }
-
-  @Override
   public Resource getHeadroom(Resource queueFairShare, Resource queueUsage,
                               Resource maxAvailable) {
     long queueAvailableMemory =

@@ -114,11 +114,6 @@ public class FifoPolicy extends SchedulingPolicy {
   }
 
   @Override
-  public boolean checkIfAMResourceUsageOverLimit(Resource usage, Resource maxAMResource) {
-    return usage.getMemorySize() > maxAMResource.getMemorySize();
-  }
-
-  @Override
   public Resource getHeadroom(Resource queueFairShare,
                               Resource queueUsage, Resource maxAvailable) {
     long queueAvailableMemory = Math.max(

@@ -1081,6 +1081,84 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         getCurrentReservation().getMemorySize());
   }
 
+  /**
+   * The test verifies that zero-FairShare queues (because of zero/tiny
+   * weight) can get resources for the AM.
+   */
+  @Test
+  public void testRequestAMResourceInZeroFairShareQueue() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<weight>0.0</weight>");
+    out.println("<maxResources>4096mb,10vcores</maxResources>");
+    out.println("<maxAMShare>0.5</maxAMShare>");
+    out.println("</queue>");
+    out.println("<queue name=\"queue2\">");
+    out.println("<weight>2.0</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queue3\">");
+    out.println("<weight>0.000001</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMNode node =
+            MockNodes.newNodeInfo(1, Resources.createResource(8192, 20),
+                    0, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    scheduler.handle(nodeEvent);
+    scheduler.update();
+
+    //create request for non-zero weight queue
+    createSchedulingRequest(1024, "root.queue2", "user2", 1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    // A managed AM which need 3G memory will not get resource,
+    // since it request more than the maxAMShare (4G * 0.5 = 2G).
+    Resource amResource = Resource.newInstance(1024, 1);
+    int amPriority = RMAppAttemptImpl.AM_CONTAINER_PRIORITY.getPriority();
+    ApplicationAttemptId attId1 = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(attId1, "root.queue1", "user1", amResource);
+    createSchedulingRequestExistingApplication(3 * 1024, 1, amPriority, attId1);
+    FSAppAttempt app1 = scheduler.getSchedulerApp(attId1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application 1 should not be running",
+            0, app1.getLiveContainers().size());
+
+    // A managed AM which need 2G memory will get resource,
+    // since it request no more than the maxAMShare (4G * 0.5 = 2G).
+    ApplicationAttemptId attId2 = createAppAttemptId(2, 1);
+    createApplicationWithAMResource(attId2, "root.queue1", "user1", amResource);
+    createSchedulingRequestExistingApplication(2 * 1024, 1, amPriority, attId2);
+    FSAppAttempt app2 = scheduler.getSchedulerApp(attId2);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application 2 should be running",
+            1, app2.getLiveContainers().size());
+
+    // A managed AM which need 1G memory will get resource, even thought its
+    // fair share is 0 because its weight is tiny(0.000001).
+    ApplicationAttemptId attId3 = createAppAttemptId(3, 1);
+    createApplicationWithAMResource(attId3, "root.queue3", "user1", amResource);
+    createSchedulingRequestExistingApplication(1024, 1, amPriority, attId3);
+    FSAppAttempt app3 = scheduler.getSchedulerApp(attId3);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    assertEquals("Application 3 should be running",
+            1, app3.getLiveContainers().size());
+  }
+
     @Test (timeout = 500000)
   public void testContainerReservationNotExceedingQueueMax() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);

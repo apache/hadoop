@@ -311,25 +311,6 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   /**
-   * Helper method to check if requested VCores are over maxResource.
-   * @param requestedVCores the number of VCores requested
-   * @return true if the number of VCores requested is over the maxResource;
-   *         false otherwise
-   */
-  protected boolean isVCoresOverMaxResource(int requestedVCores) {
-    if (requestedVCores >= scheduler.getAllocationConfiguration().
-        getMaxResources(getName()).getVirtualCores()) {
-      return true;
-    }
-
-    if (getParent() == null) {
-      return false;
-    }
-
-    return getParent().isVCoresOverMaxResource(requestedVCores);
-  }
-
-  /**
    * Returns true if queue has at least one app running.
    */
   public boolean isActive() {
