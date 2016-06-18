@@ -256,6 +256,8 @@ public class DiskBalancer {
       }
       ObjectMapper mapper = new ObjectMapper();
       return mapper.writeValueAsString(pathMap);
+    } catch (DiskBalancerException ex) {
+      throw ex;
     } catch (IOException e) {
       throw new DiskBalancerException("Internal error, Unable to " +
           "create JSON string.", e,

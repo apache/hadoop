@@ -171,7 +171,7 @@ public abstract class Command extends Configured {
       diskBalancerLogs = new Path(path);
     }
     if (fs.exists(diskBalancerLogs)) {
-      LOG.error("Another Diskbalancer instance is running ? - Target " +
+      LOG.debug("Another Diskbalancer instance is running ? - Target " +
           "Directory already exists. {}", diskBalancerLogs);
       throw new IOException("Another DiskBalancer files already exist at the " +
           "target location. " + diskBalancerLogs.toString());

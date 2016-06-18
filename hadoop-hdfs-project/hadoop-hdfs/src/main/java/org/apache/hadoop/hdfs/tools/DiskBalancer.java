@@ -36,9 +36,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.PrintStream;
-import java.net.URISyntaxException;
 
 /**
  * DiskBalancer is a tool that can be used to ensure that data is spread evenly
@@ -169,7 +167,7 @@ public class DiskBalancer extends Configured implements Tool {
       res = ToolRunner.run(shell, argv);
     } catch (Exception ex) {
       LOG.error(ex.toString());
-      System.exit(1);
+      res = 1;
     }
     System.exit(res);
   }
@@ -449,51 +447,41 @@ public class DiskBalancer extends Configured implements Tool {
    * @param cmd  - CommandLine
    * @param opts options of command line
    * @param out  the output stream used for printing
-   * @throws IOException
-   * @throws URISyntaxException
    */
   private int dispatch(CommandLine cmd, Options opts, final PrintStream out)
-      throws IOException, URISyntaxException {
+      throws Exception {
     Command currentCommand = null;
+    if (cmd.hasOption(DiskBalancer.PLAN)) {
+      currentCommand = new PlanCommand(getConf());
+    }
 
-    try {
+    if (cmd.hasOption(DiskBalancer.EXECUTE)) {
+      currentCommand = new ExecuteCommand(getConf());
+    }
 
-      if (cmd.hasOption(DiskBalancer.PLAN)) {
-        currentCommand = new PlanCommand(getConf());
-      }
+    if (cmd.hasOption(DiskBalancer.QUERY)) {
+      currentCommand = new QueryCommand(getConf());
+    }
 
-      if (cmd.hasOption(DiskBalancer.EXECUTE)) {
-        currentCommand = new ExecuteCommand(getConf());
-      }
+    if (cmd.hasOption(DiskBalancer.CANCEL)) {
+      currentCommand = new CancelCommand(getConf());
+    }
 
-      if (cmd.hasOption(DiskBalancer.QUERY)) {
-        currentCommand = new QueryCommand(getConf());
-      }
+    if (cmd.hasOption(DiskBalancer.REPORT)) {
+      currentCommand = new ReportCommand(getConf(), out);
+    }
 
-      if (cmd.hasOption(DiskBalancer.CANCEL)) {
-        currentCommand = new CancelCommand(getConf());
-      }
+    if (cmd.hasOption(DiskBalancer.HELP)) {
+      currentCommand = new HelpCommand(getConf());
+    }
 
-      if (cmd.hasOption(DiskBalancer.REPORT)) {
-        currentCommand = new ReportCommand(getConf(), out);
-      }
-
-      if (cmd.hasOption(DiskBalancer.HELP)) {
-        currentCommand = new HelpCommand(getConf());
-      }
-
-      // Invoke Main help here.
-      if (currentCommand == null) {
-        new HelpCommand(getConf()).execute(null);
-        return 1;
-      }
-
-      currentCommand.execute(cmd);
-    } catch (Exception ex) {
-      System.err.printf(ex.getMessage());
+    // Invoke main help here.
+    if (currentCommand == null) {
+      new HelpCommand(getConf()).execute(null);
       return 1;
     }
+
+    currentCommand.execute(cmd);
     return 0;
   }
-
 }
