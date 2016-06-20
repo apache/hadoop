@@ -69,7 +69,7 @@ public class ListPathsServlet extends DfsServlet {
       final XMLOutputter doc) throws IOException {
     final SimpleDateFormat ldf = df.get();
     doc.startTag(i.isDir() ? "directory" : "file");
-    doc.attribute("path", fullpath.toUri().getPath());
+    doc.attribute("path", ServletUtil.encodePath(fullpath.toUri().getPath()));
     doc.attribute("modified", ldf.format(new Date(i.getModificationTime())));
     doc.attribute("accesstime", ldf.format(new Date(i.getAccessTime())));
     if (!i.isDir()) {
