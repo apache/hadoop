@@ -1019,7 +1019,6 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     if (!this.isAuthenticationEnabled()) {
       assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
-      return null;
     }
 
     return response;
@@ -1158,7 +1157,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   }
 
   private boolean isHttpSuccessResponse(ClientResponse response) {
-    return (response.getStatus() / 100) == 2;
+    return (response.getStatusInfo().getStatusCode() / 100) == 2;
   }
 
   private void setupCluster(int nodes) throws Exception {

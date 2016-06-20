@@ -29,15 +29,15 @@ import com.google.inject.servlet.GuiceServletContextListener;
  */
 public class GuiceServletConfig extends GuiceServletContextListener {
 
-  private static Injector injector = null;
+  private static Injector internalInjector = null;
 
   @Override
   protected Injector getInjector() {
-    return injector;
+    return internalInjector;
   }
 
   public static Injector setInjector(Injector in) {
-    injector = in;
-    return injector;
+    internalInjector = in;
+    return internalInjector;
   }
 }
