@@ -18,6 +18,8 @@
 package org.apache.hadoop.util;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Calendar;
 
 import javax.servlet.*;
@@ -110,6 +112,21 @@ public class ServletUtil {
       return URIUtil.encodePath(path, "UTF-8");
     } catch (URIException e) {
       throw new AssertionError("JVM does not support UTF-8"); // should never happen!
+    }
+  }
+
+  /**
+   * Decode a string regarded as the path component of an URI.
+   *
+   * @param path the path component to decode
+   * @return decoded path, null if UTF-8 is not supported
+   * @throws URISyntaxException
+   */
+  public static String decodePath(final String path) {
+    try {
+      return new URI(path).getPath();
+    } catch (URISyntaxException e) {
+      throw new AssertionError("Failed to decode URI: " + path);
     }
   }
 
