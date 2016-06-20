@@ -115,7 +115,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[]{ "a", "b" });
+        new String[] {"a", "b"});
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     config.setCapacity(A, 10.5f);
@@ -127,7 +127,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     // Define 2nd-level queues
     final String A1 = A + ".a1";
     final String A2 = A + ".a2";
-    config.setQueues(A, new String[]{ "a1", "a2" });
+    config.setQueues(A, new String[] {"a1", "a2"});
     config.setCapacity(A1, 30);
     config.setMaximumCapacity(A1, 50);
 
@@ -138,7 +138,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     final String B1 = B + ".b1";
     final String B2 = B + ".b2";
     final String B3 = B + ".b3";
-    config.setQueues(B, new String[]{ "b1", "b2", "b3" });
+    config.setQueues(B, new String[] {"b1", "b2", "b3"});
     config.setCapacity(B1, 60);
     config.setUserLimitFactor(B1, 100.0f);
     config.setCapacity(B2, 39.5f);
