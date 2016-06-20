@@ -115,6 +115,21 @@ public class ServletUtil {
   }
 
   /**
+   * Decode a string regarded as the path component of an URI.
+   *
+   * @param path the path component to decode
+   * @return decoded path, null if UTF-8 is not supported
+   * @throws URISyntaxException
+   */
+  public static String decodePath(final String path) {
+    try {
+      return new URI(path).getPath();
+    } catch (URISyntaxException e) {
+      throw new AssertionError("Failed to decode URI: " + path);
+    }
+  }
+
+  /**
    * Parse and decode the path component from the given request.
    * @param request Http request to parse
    * @param servletName the name of servlet that precedes the path

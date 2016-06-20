@@ -83,7 +83,7 @@ public class TestHftpFileSystem {
 
       // URI percent encodes, Request#getPathInfo decodes
       new Path("/foo bar/foo bar"), new Path("/foo?bar/foo?bar"),
-      new Path("/foo\">bar/foo\">bar"), };
+      new Path("/foo\">bar/foo\">bar"), new Path("/节节高@2X.png"), };
 
   @BeforeClass
   public static void setUp() throws Exception {
