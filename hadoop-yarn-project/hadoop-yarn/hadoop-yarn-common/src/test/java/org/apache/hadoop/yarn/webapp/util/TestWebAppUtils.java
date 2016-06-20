@@ -39,6 +39,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import javax.servlet.http.HttpServletRequest;
 
 public class TestWebAppUtils {
   private static final String RM1_NODE_ID = "rm1";
@@ -174,6 +177,45 @@ public class TestWebAppUtils {
     assertArrayEquals(trustpass, provider.getCredentialEntry(
         WebAppUtils.WEB_APP_TRUSTSTORE_PASSWORD_KEY).getCredential());
     return conf;
+  }
+
+  @Test
+  public void testAppendQueryParams() throws Exception {
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    String targetUri = "/test/path";
+    Mockito.when(request.getCharacterEncoding()).thenReturn(null);
+    Map<String, String> paramResultMap = new HashMap<>();
+    paramResultMap.put("param1=x", targetUri + "?" + "param1=x");
+    paramResultMap
+        .put("param1=x&param2=y", targetUri + "?" + "param1=x&param2=y");
+    paramResultMap.put("param1=x&param2=y&param3=x+y",
+        targetUri + "?" + "param1=x&param2=y&param3=x+y");
+
+    for (Map.Entry<String, String> entry : paramResultMap.entrySet()) {
+      Mockito.when(request.getQueryString()).thenReturn(entry.getKey());
+      String uri = WebAppUtils.appendQueryParams(request, targetUri);
+      Assert.assertEquals(entry.getValue(), uri);
+    }
+  }
+
+  @Test
+  public void testGetHtmlEscapedURIWithQueryString() throws Exception {
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    String targetUri = "/test/path";
+    Mockito.when(request.getCharacterEncoding()).thenReturn(null);
+    Mockito.when(request.getRequestURI()).thenReturn(targetUri);
+    Map<String, String> paramResultMap = new HashMap<>();
+    paramResultMap.put("param1=x", targetUri + "?" + "param1=x");
+    paramResultMap
+        .put("param1=x&param2=y", targetUri + "?" + "param1=x&amp;param2=y");
+    paramResultMap.put("param1=x&param2=y&param3=x+y",
+        targetUri + "?" + "param1=x&amp;param2=y&amp;param3=x+y");
+
+    for (Map.Entry<String, String> entry : paramResultMap.entrySet()) {
+      Mockito.when(request.getQueryString()).thenReturn(entry.getKey());
+      String uri = WebAppUtils.getHtmlEscapedURIWithQueryString(request);
+      Assert.assertEquals(entry.getValue(), uri);
+    }
   }
 
   public class TestBuilder extends HttpServer2.Builder {
