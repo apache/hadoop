@@ -61,7 +61,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 public abstract class ContainerExecutor implements Configurable {
-
+  private static final String WILDCARD = "*";
   private static final Log LOG = LogFactory.getLog(ContainerExecutor.class);
   final public static FsPermission TASK_LAUNCH_SCRIPT_PERMISSION =
     FsPermission.createImmutable((short) 0700);
@@ -281,7 +281,18 @@ public abstract class ContainerExecutor implements Configurable {
     if (resources != null) {
       for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
         for (String linkName : entry.getValue()) {
-          sb.symlink(entry.getKey(), new Path(linkName));
+          if (new Path(linkName).getName().equals(WILDCARD)) {
+            // If this is a wildcarded path, link to everything in the
+            // directory from the working directory
+            File directory = new File(entry.getKey().toString());
+
+            for (File wildLink : directory.listFiles()) {
+              sb.symlink(new Path(wildLink.toString()),
+                  new Path(wildLink.getName()));
+            }
+          } else {
+            sb.symlink(entry.getKey(), new Path(linkName));
+          }
         }
       }
     }
