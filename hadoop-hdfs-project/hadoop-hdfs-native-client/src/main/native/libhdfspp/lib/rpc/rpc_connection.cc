@@ -183,7 +183,7 @@ void RpcConnection::HandshakeComplete(const Status &s) {
   LOG_TRACE(kRPC, << "RpcConnectionImpl::HandshakeComplete called");
 
   if (s.ok()) {
-    if (connected_ == kConnecting) {
+    if (connected_ == kHandshaking) {
       auto shared_this = shared_from_this();
 
       connected_ = kAuthenticating;
@@ -407,7 +407,7 @@ void RpcConnection::SendRpcRequests(const std::vector<std::shared_ptr<Request> >
       else
         auth_requests_.push_back(r);
     }
-    if (connected_ == kConnected || connected_ == kAuthenticating) { // Dont flush if we're waiting or handshaking
+    if (connected_ == kConnected || connected_ == kHandshaking || connected_ == kAuthenticating) { // Dont flush if we're waiting or handshaking
       FlushPendingRequests();
     }
   }
@@ -494,6 +494,7 @@ std::string RpcConnection::ToString(ConnectedState connected) {
   switch(connected) {
     case kNotYetConnected: return "NotYetConnected";
     case kConnecting: return "Connecting";
+    case kHandshaking: return "Handshaking";
     case kAuthenticating: return "Authenticating";
     case kConnected: return "Connected";
     case kDisconnected: return "Disconnected";

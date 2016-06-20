@@ -26,6 +26,8 @@
 #include <mutex>
 #include <memory>
 
+#include <asio/ip/tcp.hpp>
+
 namespace hdfs {
 
 /**
@@ -177,6 +179,7 @@ class LogMessage {
   LogMessage& operator<<(const std::string*);
   LogMessage& operator<<(const std::string&);
 
+  LogMessage& operator<<(const ::asio::ip::tcp::endpoint& endpoint);
 
   //convert to a string "true"/"false"
   LogMessage& operator<<(bool);

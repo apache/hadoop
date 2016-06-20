@@ -136,6 +136,11 @@ LogMessage& LogMessage::operator<<(const std::string& str) {
   return *this;
 }
 
+LogMessage& LogMessage::operator<<(const ::asio::ip::tcp::endpoint& endpoint) {
+  msg_buffer_ << endpoint;
+  return *this;
+}
+
 LogMessage& LogMessage::operator<<(const char *str) {
   if(str)
     msg_buffer_ << str;
@@ -213,4 +218,3 @@ const char * LogMessage::component_string() const {
 }
 
 }
-

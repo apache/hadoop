@@ -207,6 +207,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   enum ConnectedState {
       kNotYetConnected,
       kConnecting,
+      kHandshaking,
       kAuthenticating,
       kConnected,
       kDisconnected

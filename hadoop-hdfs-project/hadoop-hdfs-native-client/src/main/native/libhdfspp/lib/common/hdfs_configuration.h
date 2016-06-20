@@ -39,9 +39,10 @@ class HdfsConfiguration : public Configuration {
     // Keys to look for in the configuration file
     static constexpr const char * kFsDefaultFsKey = "fs.defaultFS";
     static constexpr const char * kDfsClientSocketTimeoutKey = "dfs.client.socket-timeout";
+    static constexpr const char * kIpcClientConnectTimeoutKey = "ipc.client.connect.timeout";
     static constexpr const char * kIpcClientConnectMaxRetriesKey = "ipc.client.connect.max.retries";
     static constexpr const char * kIpcClientConnectRetryIntervalKey = "ipc.client.connect.retry.interval";
-    static constexpr const char * kHadoopSecurityAuthentication = "hadoop.security.authentication";
+    static constexpr const char * kHadoopSecurityAuthenticationKey = "hadoop.security.authentication";
     static constexpr const char * kHadoopSecurityAuthentication_simple = "simple";
     static constexpr const char * kHadoopSecurityAuthentication_kerberos = "kerberos";
 
