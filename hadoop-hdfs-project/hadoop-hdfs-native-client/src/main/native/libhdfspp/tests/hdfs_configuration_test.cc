@@ -41,17 +41,25 @@ TEST(HdfsConfigurationTest, TestSetOptions)
   // Completely empty stream
   {
     std::stringstream stream;
-    simpleConfigStream(stream, HdfsConfiguration::kDfsClientSocketTimeoutKey, 100,
-                               HdfsConfiguration::kIpcClientConnectMaxRetriesKey, 101,
-                               HdfsConfiguration::kIpcClientConnectRetryIntervalKey, 102);
+    simpleConfigStream(stream,
+                       HdfsConfiguration::kFsDefaultFsKey, "/FDFK",
+                       HdfsConfiguration::kDfsClientSocketTimeoutKey, 100,
+                       HdfsConfiguration::kIpcClientConnectMaxRetriesKey, 101,
+                       HdfsConfiguration::kIpcClientConnectRetryIntervalKey, 102,
+                       HdfsConfiguration::kIpcClientConnectTimeoutKey, 103,
+                       HdfsConfiguration::kHadoopSecurityAuthenticationKey, HdfsConfiguration::kHadoopSecurityAuthentication_kerberos
+            );
 
     optional<HdfsConfiguration> config = ConfigurationLoader().Load<HdfsConfiguration>(stream.str());
     EXPECT_TRUE(config && "Read stream");
     Options options = config->GetOptions();
 
+    EXPECT_EQ("/FDFK", options.defaultFS.str());
     EXPECT_EQ(100, options.rpc_timeout);
     EXPECT_EQ(101, options.max_rpc_retries);
     EXPECT_EQ(102, options.rpc_retry_delay_ms);
+    EXPECT_EQ(103, options.rpc_connect_timeout);
+    EXPECT_EQ(Options::kKerberos, options.authentication);
   }
 }
 

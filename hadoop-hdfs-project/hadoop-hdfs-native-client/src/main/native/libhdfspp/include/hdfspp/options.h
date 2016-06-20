@@ -34,6 +34,13 @@ struct Options {
   static const int kDefaultRpcTimeout = 30000;
 
   /**
+   * Time to wait for an RPC connection before failing
+   * Default: 30000
+   **/
+  int rpc_connect_timeout;
+  static const int kDefaultRpcConnectTimeout = 30000;
+
+  /**
    * Maximum number of retries for RPC operations
    **/
   int max_rpc_retries;

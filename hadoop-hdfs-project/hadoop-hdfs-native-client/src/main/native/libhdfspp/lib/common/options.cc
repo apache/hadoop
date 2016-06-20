@@ -27,7 +27,8 @@ const int Options::kDefaultMaxRpcRetries;
 const int Options::kDefaultRpcRetryDelayMs;
 const unsigned int Options::kDefaultHostExclusionDuration;
 
-Options::Options() : rpc_timeout(kDefaultRpcTimeout), max_rpc_retries(kDefaultMaxRpcRetries),
+Options::Options() : rpc_timeout(kDefaultRpcTimeout), rpc_connect_timeout(kDefaultRpcConnectTimeout),
+                     max_rpc_retries(kDefaultMaxRpcRetries),
                      rpc_retry_delay_ms(kDefaultRpcRetryDelayMs),
                      host_exclusion_duration(kDefaultHostExclusionDuration),
                      defaultFS(),

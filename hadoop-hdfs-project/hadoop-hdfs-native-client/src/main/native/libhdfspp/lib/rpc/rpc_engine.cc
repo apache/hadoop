@@ -197,7 +197,7 @@ void RpcEngine::RpcCommsError(
       if (head_action->delayMillis > 0) {
         auto weak_conn = std::weak_ptr<RpcConnection>(conn_);
         retry_timer.expires_from_now(
-            std::chrono::milliseconds(options_.rpc_retry_delay_ms));
+            std::chrono::milliseconds(head_action->delayMillis));
         retry_timer.async_wait([this, weak_conn](asio::error_code ec) {
           auto strong_conn = weak_conn.lock();
           if ( (!ec) && (strong_conn) ) {
