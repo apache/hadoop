@@ -436,7 +436,7 @@ Runs a HDFS dfsadmin client.
 Usage:
 
        hdfs diskbalancer
-         [-plan <datanode> -uri <namenodeURI>]
+         [-plan <datanode> -fs <namenodeURI>]
          [-execute <planfile>]
          [-query <datanode>]
          [-cancel <planfile>]
