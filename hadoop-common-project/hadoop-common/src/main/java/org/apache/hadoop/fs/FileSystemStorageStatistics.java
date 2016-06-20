@@ -87,7 +87,7 @@ public class FileSystemStorageStatistics extends StorageStatistics {
     case "bytesWritten":
       return data.getBytesWritten();
     case "readOps":
-      return Long.valueOf(data.getReadOps());
+      return (long) (data.getReadOps() + data.getLargeReadOps());
     case "largeReadOps":
       return Long.valueOf(data.getLargeReadOps());
     case "writeOps":
