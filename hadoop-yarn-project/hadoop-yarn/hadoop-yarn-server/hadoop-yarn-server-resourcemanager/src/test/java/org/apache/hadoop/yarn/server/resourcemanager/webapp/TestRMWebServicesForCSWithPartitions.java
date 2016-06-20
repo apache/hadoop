@@ -113,7 +113,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   private static void setupQueueConfiguration(
-      CapacitySchedulerConfiguration config, ResourceManager rm) {
+      CapacitySchedulerConfiguration config, ResourceManager resourceManager) {
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
@@ -122,8 +122,10 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         CapacitySchedulerConfiguration.ROOT + "." + QUEUE_C;
     config.setQueues(interMediateQueueC,
         new String[] { LEAF_QUEUE_C1, LEAF_QUEUE_C2 });
-    config.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, LABEL_LX, 100);
-    config.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, LABEL_LY, 100);
+    config.setCapacityByLabel(
+        CapacitySchedulerConfiguration.ROOT, LABEL_LX, 100);
+    config.setCapacityByLabel(
+        CapacitySchedulerConfiguration.ROOT, LABEL_LY, 100);
 
     String leafQueueA = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_A;
     config.setCapacity(leafQueueA, 30);
@@ -145,7 +147,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     config.setMaximumCapacity(leafQueueC2, 70);
 
     // Define label specific configuration
-    config.setAccessibleNodeLabels(leafQueueA, ImmutableSet.of(DEFAULT_PARTITION));
+    config.setAccessibleNodeLabels(
+        leafQueueA, ImmutableSet.of(DEFAULT_PARTITION));
     config.setAccessibleNodeLabels(leafQueueB, ImmutableSet.of(LABEL_LX));
     config.setAccessibleNodeLabels(interMediateQueueC,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
