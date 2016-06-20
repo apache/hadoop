@@ -80,6 +80,8 @@ HttpFS preconfigures the HTTP and Admin ports in Tomcat's `server.xml` to 14000 
 
 Tomcat logs are also preconfigured to go to HttpFS's `logs/` directory.
 
+HttpFS default value for the maxHttpHeaderSize parameter in Tomcat's `server.xml` is set to 65536 by default.
+
 The following environment variables (which can be set in HttpFS's `etc/hadoop/httpfs-env.sh` script) can be used to alter those values:
 
 * HTTPFS\_HTTP\_PORT
@@ -87,6 +89,8 @@ The following environment variables (which can be set in HttpFS's `etc/hadoop/ht
 * HTTPFS\_ADMIN\_PORT
 
 * HADOOP\_LOG\_DIR
+
+* HTTPFS\_MAX\_HTTP\_HEADER\_SIZE
 
 HttpFS Configuration
 --------------------
