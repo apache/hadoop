@@ -139,7 +139,8 @@ public class DFSOpsCountStatistics extends StorageStatistics {
         throw new NoSuchElementException();
       }
       final Entry<OpType, AtomicLong> entry = iterator.next();
-      return new LongStatistic(entry.getKey().name(), entry.getValue().get());
+      return new LongStatistic(entry.getKey().getSymbol(),
+          entry.getValue().get());
     }
 
     @Override
@@ -161,7 +162,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
 
   @Override
   public boolean isTracked(String key) {
-    return OpType.fromSymbol(key) == null;
+    return OpType.fromSymbol(key) != null;
   }
 
 }
