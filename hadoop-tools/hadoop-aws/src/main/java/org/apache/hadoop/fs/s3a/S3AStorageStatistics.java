@@ -76,7 +76,8 @@ public class S3AStorageStatistics extends StorageStatistics {
         throw new NoSuchElementException();
       }
       final Map.Entry<Statistic, AtomicLong> entry = iterator.next();
-      return new LongStatistic(entry.getKey().name(), entry.getValue().get());
+      return new LongStatistic(entry.getKey().getSymbol(),
+          entry.getValue().get());
     }
 
     @Override
@@ -98,7 +99,7 @@ public class S3AStorageStatistics extends StorageStatistics {
 
   @Override
   public boolean isTracked(String key) {
-    return Statistic.fromSymbol(key) == null;
+    return Statistic.fromSymbol(key) != null;
   }
 
 }
