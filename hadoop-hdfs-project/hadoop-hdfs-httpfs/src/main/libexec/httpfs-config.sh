@@ -164,6 +164,13 @@ else
   print "Using   HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
 fi
 
+if [ "${HTTPFS_MAX_HTTP_HEADER_SIZE}" = "" ]; then
+  export HTTPFS_MAX_HTTP_HEADER_SIZE=65536
+  print "Setting HTTPFS_MAX_HTTP_HEADER_SIZE:     ${HTTPFS_MAX_HTTP_HEADER_SIZE}"
+else
+  print "Using   HTTPFS_MAX_HTTP_HEADER_SIZE:     ${HTTPFS_MAX_HTTP_HEADER_SIZE}"
+fi
+
 if [ "${CATALINA_BASE}" = "" ]; then
   export CATALINA_BASE=${HTTPFS_HOME}/share/hadoop/httpfs/tomcat
   print "Setting CATALINA_BASE:       ${CATALINA_BASE}"

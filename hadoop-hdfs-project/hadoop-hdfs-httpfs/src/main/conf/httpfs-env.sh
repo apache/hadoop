@@ -44,6 +44,10 @@
 #
 # export HTTPFS_SSL_ENABLED=false
 
+# The maximum size of Tomcat HTTP header
+#
+# export HTTPFS_MAX_HTTP_HEADER_SIZE=65536
+
 # The location of the SSL keystore if using SSL
 #
 # export HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
