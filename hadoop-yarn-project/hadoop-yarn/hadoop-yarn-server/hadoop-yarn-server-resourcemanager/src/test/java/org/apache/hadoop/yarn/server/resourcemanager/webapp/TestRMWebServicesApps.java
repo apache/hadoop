@@ -94,14 +94,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   }
 
   static {
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesApps() {
@@ -1555,7 +1557,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");

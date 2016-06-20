@@ -102,14 +102,16 @@ public class TestHsWebServicesJobs extends JerseyTest {
   }
 
   static {
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestHsWebServicesJobs() {
@@ -522,7 +524,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
   public void testJobCountersForKilledJob() throws Exception {
     WebResource r = resource();
     appContext = new MockHistoryContext(0, 1, 1, 1, true);
-    GuiceServletConfig.injector = Guice.createInjector(new ServletModule() {
+    GuiceServletConfig.setInjector(Guice.createInjector(new ServletModule() {
       @Override
       protected void configureServlets() {
 
@@ -539,7 +541,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
 
         serve("/*").with(GuiceContainer.class);
       }
-    });
+    }));
     
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {

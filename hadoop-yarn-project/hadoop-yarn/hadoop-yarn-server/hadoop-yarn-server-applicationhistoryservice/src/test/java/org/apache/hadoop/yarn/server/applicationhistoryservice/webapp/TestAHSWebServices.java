@@ -133,7 +133,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     historyClientService.start();
     ahsWebservice = new AHSWebServices(historyClientService, conf);
     fs = FileSystem.get(conf);
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass
@@ -165,7 +166,8 @@ public class TestAHSWebServices extends JerseyTestBase {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Singleton

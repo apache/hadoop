@@ -65,14 +65,16 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   static {
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesFairScheduler() {

@@ -104,7 +104,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesNodeLabels() {

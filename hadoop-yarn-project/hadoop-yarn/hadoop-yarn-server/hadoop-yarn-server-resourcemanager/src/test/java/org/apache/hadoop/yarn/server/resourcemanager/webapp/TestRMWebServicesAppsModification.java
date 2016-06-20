@@ -290,19 +290,19 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     case 0:
     default:
       // No Auth Capacity Scheduler
-      GuiceServletConfig.injector = getNoAuthInjectorCap();
+      GuiceServletConfig.setInjector(getNoAuthInjectorCap());
       break;
     case 1:
       // Simple Auth Capacity Scheduler
-      GuiceServletConfig.injector = getSimpleAuthInjectorCap();
+      GuiceServletConfig.setInjector(getSimpleAuthInjectorCap());
       break;
     case 2:
       // No Auth Fair Scheduler
-      GuiceServletConfig.injector = getNoAuthInjectorFair();
+      GuiceServletConfig.setInjector(getNoAuthInjectorFair());
       break;
     case 3:
       // Simple Auth Fair Scheduler
-      GuiceServletConfig.injector = getSimpleAuthInjectorFair();
+      GuiceServletConfig.setInjector(getSimpleAuthInjectorFair());
       break;
     }
   }

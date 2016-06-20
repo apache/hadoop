@@ -215,10 +215,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     switch (run) {
     case 0:
     default:
-      GuiceServletConfig.injector = getKerberosAuthInjector();
+      GuiceServletConfig.setInjector(getKerberosAuthInjector());
       break;
     case 1:
-      GuiceServletConfig.injector = getSimpleAuthInjector();
+      GuiceServletConfig.setInjector(getSimpleAuthInjector());
       break;
     }
   }

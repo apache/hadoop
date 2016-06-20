@@ -108,7 +108,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   };
 
   static {
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   private static void setupQueueConfiguration(
@@ -172,7 +173,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesForCSWithPartitions() {

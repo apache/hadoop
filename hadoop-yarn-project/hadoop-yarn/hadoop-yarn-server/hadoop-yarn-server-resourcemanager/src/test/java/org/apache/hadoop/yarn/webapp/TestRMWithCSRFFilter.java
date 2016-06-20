@@ -87,7 +87,8 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWithCSRFFilter() {

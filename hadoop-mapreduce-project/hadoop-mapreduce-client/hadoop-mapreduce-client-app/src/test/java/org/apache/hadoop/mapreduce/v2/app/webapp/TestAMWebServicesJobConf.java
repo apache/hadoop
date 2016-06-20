@@ -120,7 +120,8 @@ public class TestAMWebServicesJobConf extends JerseyTest {
   };
 
   static {
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
@@ -128,7 +129,8 @@ public class TestAMWebServicesJobConf extends JerseyTest {
   public void setUp() throws Exception {
     super.setUp();
     testConfDir.mkdir();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass

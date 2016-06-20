@@ -243,27 +243,23 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   }
 
   private Injector initNoAuthInjectorCap() {
-    GuiceServletConfig.injector =
-        Guice.createInjector(new NoAuthServletModule());
-    return GuiceServletConfig.injector;
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new NoAuthServletModule()));
   }
 
   private Injector initSimpleAuthInjectorCap() {
-    GuiceServletConfig.injector =
-        Guice.createInjector(new SimpleAuthServletModule());
-    return GuiceServletConfig.injector;
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new SimpleAuthServletModule()));
   }
 
   private Injector initNoAuthInjectorFair() {
-    GuiceServletConfig.injector =
-        Guice.createInjector(new FairNoAuthServletModule());
-    return GuiceServletConfig.injector;
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new FairNoAuthServletModule()));
   }
 
   private Injector initSimpleAuthInjectorFair() {
-    GuiceServletConfig.injector =
-        Guice.createInjector(new FairSimpleAuthServletModule());
-    return GuiceServletConfig.injector;
+    return GuiceServletConfig.setInjector(
+        Guice.createInjector(new FairSimpleAuthServletModule()));
   }
 
   @Parameters
@@ -968,7 +964,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
         .post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
-      assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.UNAUTHORIZED, response.getStatusInfo());
       return ReservationId.newInstance(clock.getTime(), fallbackReservationId);
     }
 

@@ -151,7 +151,8 @@ public class TestNMWebServices extends JerseyTestBase {
   };
 
   static {
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
@@ -160,7 +161,8 @@ public class TestNMWebServices extends JerseyTestBase {
     super.setUp();
     testRootDir.mkdirs();
     testLogDir.mkdir();
-    GuiceServletConfig.injector = Guice.createInjector(new WebServletModule());
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass
