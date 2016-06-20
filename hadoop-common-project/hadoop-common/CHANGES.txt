@@ -51,6 +51,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-13052. ChecksumFileSystem mishandles crc file permissions.
     (Daryn Sharp via kihwal)
 
+    HADOOP-13192. org.apache.hadoop.util.LineReader cannot handle multibyte
+    delimiters correctly. (binde via aajisaka)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
