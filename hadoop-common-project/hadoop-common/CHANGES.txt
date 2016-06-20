@@ -105,6 +105,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12893. Verify LICENSE.txt and NOTICE.txt.
     (Xiao Chen and Andrew Wang via aajisaka)
 
+    HADOOP-13192. org.apache.hadoop.util.LineReader cannot handle multibyte
+    delimiters correctly. (binde via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
