@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.proto.YarnProtos;
@@ -118,10 +117,19 @@ public class ApplicationImpl implements Application {
       Context context, long recoveredLogInitedTime) {
     this.dispatcher = dispatcher;
     this.user = user;
-    this.flowContext = flowContext;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = context.getApplicationACLsManager();
+    Configuration conf = context.getConf();
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      if (flowContext == null) {
+        throw new IllegalArgumentException("flow context cannot be null");
+      }
+      this.flowContext = flowContext;
+      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+        context.getNMTimelinePublisher().createTimelineClient(appId);
+      }
+    }
     this.context = context;
     this.appStateStore = context.getNMStateStore();
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -136,16 +144,6 @@ public class ApplicationImpl implements Application {
       Credentials credentials, Context context) {
     this(dispatcher, user, flowContext, appId, credentials,
       context, -1);
-    Configuration conf = context.getConf();
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-      if (flowContext == null) {
-        throw new IllegalArgumentException("flow context cannot be null");
-      }
-      this.flowContext = flowContext;
-      if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
-        context.getNMTimelinePublisher().createTimelineClient(appId);
-      }
-    }
   }
 
   /**
