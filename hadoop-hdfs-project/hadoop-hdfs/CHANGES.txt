@@ -189,6 +189,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10474. hftp copy fails when file name with Chinese+special char
     in branch-2 (Brahma Reddy Battula)
 
+    HDFS-9530. ReservedSpace is not cleared for abandoned Blocks
+    (Brahma Reddy Battula)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
