@@ -30,6 +30,8 @@ const char * kPathNotFoundException = "org.apache.hadoop.fs.InvalidPathException
 const char * kPathNotFoundException2 = "java.io.FileNotFoundException";
 const char * kPathIsNotDirectoryException = "org.apache.hadoop.fs.PathIsNotDirectoryException";
 const char * kSnapshotException = "org.apache.hadoop.hdfs.protocol.SnapshotException";
+const char * kFileAlreadyExistsException = "org.apache.hadoop.fs.FileAlreadyExistsException";
+const char * kPathIsNotEmptyDirectoryException = "org.apache.hadoop.fs.PathIsNotEmptyDirectoryException";
 
 Status::Status(int code, const char *msg1) : code_(code) {
   if(msg1) {
@@ -82,6 +84,10 @@ Status Status::Exception(const char *exception_class_name, const char *error_mes
       return Status(kNotADirectory, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kSnapshotException) == 0))
         return Status(kInvalidArgument, error_message);
+  else if (exception_class_name && (strcmp(exception_class_name, kFileAlreadyExistsException) == 0))
+          return Status(kFileAlreadyExists, error_message);
+  else if (exception_class_name && (strcmp(exception_class_name, kPathIsNotEmptyDirectoryException) == 0))
+          return Status(kPathIsNotEmptyDirectory, error_message);
   else
     return Status(kException, exception_class_name, error_message);
 }

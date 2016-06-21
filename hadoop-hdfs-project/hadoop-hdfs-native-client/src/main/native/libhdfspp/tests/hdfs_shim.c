@@ -268,11 +268,11 @@ int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst) {
 }
 
 int hdfsDelete(hdfsFS fs, const char* path, int recursive) {
-  return libhdfs_hdfsDelete(fs->libhdfsRep, path, recursive);
+  return libhdfspp_hdfsDelete(fs->libhdfsppRep, path, recursive);
 }
 
 int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
-  return libhdfs_hdfsRename(fs->libhdfsRep, oldPath, newPath);
+  return libhdfspp_hdfsRename(fs->libhdfsppRep, oldPath, newPath);
 }
 
 char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
@@ -284,7 +284,7 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
 }
 
 int hdfsCreateDirectory(hdfsFS fs, const char* path) {
-  return libhdfs_hdfsCreateDirectory(fs->libhdfsRep, path);
+  return libhdfspp_hdfsCreateDirectory(fs->libhdfsppRep, path);
 }
 
 int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
