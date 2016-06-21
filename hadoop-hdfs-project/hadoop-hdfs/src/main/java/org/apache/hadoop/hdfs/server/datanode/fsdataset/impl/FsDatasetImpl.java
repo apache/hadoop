@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaAlreadyExistsException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
@@ -1954,6 +1955,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Block file " + removing.getBlockFile().getName()
               + " is to be deleted");
+        }
+        if (removing instanceof ReplicaInPipelineInterface) {
+          ((ReplicaInPipelineInterface) removing).releaseAllBytesReserved();
         }
       }
 
