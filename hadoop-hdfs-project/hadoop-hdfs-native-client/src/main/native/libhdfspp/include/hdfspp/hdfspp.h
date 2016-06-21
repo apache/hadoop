@@ -250,6 +250,30 @@ class FileSystem {
       const std::function<void(const Status &)> &handler) = 0;
   virtual Status Rename(const std::string &oldPath, const std::string &newPath) = 0;
 
+  /**
+   * Set permissions for an existing file/directory.
+   *
+   * @param path          the path to the file or directory
+   * @param permissions   the bitmask to set it to (should be between 0 and 01777)
+   */
+  virtual void SetPermission(const std::string & path,
+      short permissions, const std::function<void(const Status &)> &handler) = 0;
+  virtual Status SetPermission(const std::string & path, short permissions) = 0;
+
+  /**
+   * Set Owner of a path (i.e. a file or a directory).
+   * The parameters username and groupname can be empty.
+   * @param path      file path
+   * @param username  If it is empty, the original username remains unchanged.
+   * @param groupname If it is empty, the original groupname remains unchanged.
+   */
+  virtual void SetOwner(const std::string & path, const std::string & username,
+      const std::string & groupname, const std::function<void(const Status &)> &handler) = 0;
+  virtual Status SetOwner(const std::string & path,
+      const std::string & username, const std::string & groupname) = 0;
+
+
+
   /*****************************************************************************
    *                    FILE SYSTEM SNAPSHOT FUNCTIONS
    ****************************************************************************/

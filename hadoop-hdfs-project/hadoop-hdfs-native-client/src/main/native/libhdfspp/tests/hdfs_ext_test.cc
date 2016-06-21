@@ -250,7 +250,52 @@ TEST_F(HdfsExtTest, TestRename) {
   hdfsFreeFileInfo(dirList, 3);
 }
 
+//Testing Chmod and Chown
+TEST_F(HdfsExtTest, TestChmodChown) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Path not found
+  std::string path = "/wrong/dir/";
+  EXPECT_EQ(-1, hdfsChmod(fs, path.c_str(), 0777));
+  EXPECT_EQ((int ) std::errc::no_such_file_or_directory, errno);
+  EXPECT_EQ(-1, hdfsChown(fs, path.c_str(), "foo", "bar"));
+  EXPECT_EQ((int ) std::errc::no_such_file_or_directory, errno);
+
+  //Wrong arguments
+  path = connection.newFile(1024); //1024 byte file
+  EXPECT_EQ(-1, hdfsChmod(fs, nullptr, 0777));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+  EXPECT_EQ(-1, hdfsChmod(fs, path.c_str(), 07777));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+  EXPECT_EQ(-1, hdfsChmod(fs, path.c_str(), -1));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+  EXPECT_EQ(-1, hdfsChown(fs, nullptr, "foo", "bar"));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+
+  //Permission denied
+  HdfsHandle connection2 = cluster.connect_c("OtherGuy");
+  hdfsFS fs2 = connection2.handle();
+  EXPECT_EQ(-1, hdfsChmod(fs2, path.c_str(), 0123));
+  EXPECT_EQ((int ) std::errc::permission_denied, errno);
+  EXPECT_EQ(-1, hdfsChown(fs2, path.c_str(), "cool", "nice"));
+  EXPECT_EQ((int ) std::errc::permission_denied, errno);
+
+  //Verify Chmod and Chown worked
+  EXPECT_EQ(0, hdfsChmod(fs, path.c_str(), 0123));
+  EXPECT_EQ(0, hdfsChown(fs, path.c_str(), "cool", "nice"));
+  hdfsFileInfo *file_info;
+  EXPECT_NE(nullptr, file_info = hdfsGetPathInfo(fs, path.c_str()));
+  EXPECT_EQ(0123, file_info->mPermissions);
+  EXPECT_STREQ("cool", file_info->mOwner);
+  EXPECT_STREQ("nice", file_info->mGroup);
+  hdfsFreeFileInfo(file_info, 1);
 }
+
+
+}
+
 
 
 int main(int argc, char *argv[]) {

@@ -310,21 +310,14 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     //Test case: File does not exist
     EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs, invalid_path), ENOENT);
 
-//  Test case: No permission to access parent directory
-//  Trying to set permissions of the parent directory to 0
-//  by a super user, and then connecting as SomeGuy. Should
-//  receive permission denied, but receives fileInfo.
-//  EXPECT_ZERO(hdfsChmod(fs, paths->prefix, 0));
-//  EXPECT_ZERO(hdfsChmod(fs, paths->file2, 0));
-//  EXPECT_ZERO(hdfsDisconnect(fs));
-//  EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, "SomeGuy"));
-//  EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs, paths->file2), EACCES);
-//  EXPECT_ZERO(hdfsDisconnect(fs));
-//  EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
-//  if (!fs) {
-//      return 1;
-//  }
-  return 0;
+    //Test case: No permission to access parent directory
+    EXPECT_ZERO(hdfsChmod(fs, paths->prefix, 0));
+    //reconnect as user "SomeGuy" and verify that we get permission errors
+    hdfsFS fs2 = NULL;
+    EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs2, "SomeGuy"));
+    EXPECT_NULL_WITH_ERRNO(hdfsGetPathInfo(fs2, paths->file2), EACCES);
+    EXPECT_ZERO(hdfsDisconnect(fs2));
+    return 0;
 }
 
 static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
