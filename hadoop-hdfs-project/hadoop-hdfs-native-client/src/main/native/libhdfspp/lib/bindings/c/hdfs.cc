@@ -284,6 +284,16 @@ hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
   return doHdfsConnect(std::string(nn), port, std::string(user), Options());
 }
 
+hdfsFS hdfsConnectAsUserNewInstance(const char* nn, tPort port, const char *user ) {
+  //libhdfspp always returns a new instance
+  return doHdfsConnect(std::string(nn), port, std::string(user), Options());
+}
+
+hdfsFS hdfsConnectNewInstance(const char* nn, tPort port) {
+  //libhdfspp always returns a new instance
+  return hdfsConnectAsUser(nn, port, "");
+}
+
 int hdfsDisconnect(hdfsFS fs) {
   try
   {
@@ -585,6 +595,56 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
   } catch (...) {
     return ReportCaughtNonException();
   }
+}
+
+int hdfsChmod(hdfsFS fs, const char* path, short mode){
+  try {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        return -1;
+      }
+      if (!path) {
+        return Error(Status::InvalidArgument("hdfsChmod: argument 'path' cannot be NULL"));
+      }
+      Status stat = NameNodeOperations::CheckValidPermissionMask(mode);
+      if (!stat.ok()) {
+        return Error(stat);
+      }
+      stat = fs->get_impl()->SetPermission(path, mode);
+      if (!stat.ok()) {
+        return Error(stat);
+      }
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
+}
+
+int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group){
+  try {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        return -1;
+      }
+      if (!path) {
+        return Error(Status::InvalidArgument("hdfsChown: argument 'path' cannot be NULL"));
+      }
+      std::string own = (owner) ? owner : "";
+      std::string grp = (group) ? group : "";
+
+      Status stat;
+      stat = fs->get_impl()->SetOwner(path, own, grp);
+      if (!stat.ok()) {
+        return Error(stat);
+      }
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
 }
 
 int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
@@ -1009,6 +1069,11 @@ void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
   }
 }
 
+void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld) {
+  //libhdfspp always returns a new instance, so nothing to do
+  (void)bld;
+  errno = 0;
+}
 
 void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {

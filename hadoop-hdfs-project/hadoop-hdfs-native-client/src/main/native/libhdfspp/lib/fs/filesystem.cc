@@ -617,6 +617,79 @@ Status FileSystemImpl::Rename(const std::string &oldPath, const std::string &new
   return stat;
 }
 
+void FileSystemImpl::SetPermission(const std::string & path,
+    short permissions, const std::function<void(const Status &)> &handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::SetPermission(" << FMT_THIS_ADDR << ", path=" << path << ", permissions=" << permissions << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetPermission: argument 'path' cannot be empty"));
+    return;
+  }
+  Status permStatus = NameNodeOperations::CheckValidPermissionMask(permissions);
+  if (!permStatus.ok()) {
+    handler(permStatus);
+    return;
+  }
+
+  nn_.SetPermission(path, permissions, handler);
+}
+
+Status FileSystemImpl::SetPermission(const std::string & path, short permissions) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]SetPermission(" << FMT_THIS_ADDR << ", path=" << path << ", permissions=" << permissions << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::SetPermission with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  SetPermission(path, permissions, h);
+
+  /* block until promise is set */
+  Status stat = future.get();
+
+  return stat;
+}
+
+void FileSystemImpl::SetOwner(const std::string & path, const std::string & username,
+    const std::string & groupname, const std::function<void(const Status &)> &handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::SetOwner(" << FMT_THIS_ADDR << ", path=" << path << ", username=" << username << ", groupname=" << groupname << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetOwner: argument 'path' cannot be empty"));
+    return;
+  }
+
+  nn_.SetOwner(path, username, groupname, handler);
+}
+
+Status FileSystemImpl::SetOwner(const std::string & path,
+    const std::string & username, const std::string & groupname) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]SetOwner(" << FMT_THIS_ADDR << ", path=" << path << ", username=" << username << ", groupname=" << groupname << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::SetOwner with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  SetOwner(path, username, groupname, h);
+
+  /* block until promise is set */
+  Status stat = future.get();
+
+  return stat;
+}
+
+
 void FileSystemImpl::CreateSnapshot(const std::string &path,
     const std::string &name,
     const std::function<void(const Status &)> &handler) {

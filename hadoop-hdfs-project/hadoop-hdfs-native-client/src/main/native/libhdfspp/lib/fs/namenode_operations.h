@@ -47,6 +47,8 @@ public:
   engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
   namenode_(& engine_) {}
 
+  static Status CheckValidPermissionMask(short permissions);
+
   void Connect(const std::string &cluster_name,
                const std::string &server,
                const std::string &service,
@@ -73,6 +75,12 @@ public:
 
   void Rename(const std::string & oldPath, const std::string & newPath,
       std::function<void(const Status &)> handler);
+
+  void SetPermission(const std::string & path, short permissions,
+      std::function<void(const Status &)> handler);
+
+  void SetOwner(const std::string & path, const std::string & username,
+      const std::string & groupname, std::function<void(const Status &)> handler);
 
   void CreateSnapshot(const std::string & path, const std::string & name,
       std::function<void(const Status &)> handler);

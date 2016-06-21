@@ -105,6 +105,15 @@ public:
       const std::function<void(const Status &)> &handler) override;
   virtual Status Rename(const std::string &oldPath, const std::string &newPath) override;
 
+  virtual void SetPermission(const std::string & path,
+      short permissions, const std::function<void(const Status &)> &handler) override;
+  virtual Status SetPermission(const std::string & path, short permissions) override;
+
+  virtual void SetOwner(const std::string & path, const std::string & username,
+      const std::string & groupname, const std::function<void(const Status &)> &handler) override;
+  virtual Status SetOwner(const std::string & path,
+      const std::string & username, const std::string & groupname) override;
+
   /*****************************************************************************
    *                    FILE SYSTEM SNAPSHOT FUNCTIONS
    ****************************************************************************/

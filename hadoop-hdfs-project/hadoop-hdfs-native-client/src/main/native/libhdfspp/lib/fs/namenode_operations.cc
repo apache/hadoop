@@ -38,6 +38,18 @@ namespace hdfs {
  *                    NAMENODE OPERATIONS
  ****************************************************************************/
 
+Status NameNodeOperations::CheckValidPermissionMask(short permissions) {
+  if (permissions < 0 || permissions > 01777) {
+    std::stringstream errormsg;
+    errormsg << "IsValidPermissionMask: argument 'permissions' is " << std::oct
+        << std::showbase << permissions << " (should be between 0 and 01777)";
+    //Avoid copying by binding errormsg.str() to a const reference, which extends its lifetime
+    const std::string& tmp = errormsg.str();
+    return Status::InvalidArgument(tmp.c_str());
+  }
+  return Status::OK();
+}
+
 void NameNodeOperations::Connect(const std::string &cluster_name,
                                  const std::string &server,
                              const std::string &service,
@@ -331,6 +343,69 @@ void NameNodeOperations::Rename(const std::string & oldPath, const std::string &
       handler(stat);
     }
   });
+}
+
+void NameNodeOperations::SetPermission(const std::string & path,
+    short permissions, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::SetPermissionRequestProto;
+  using ::hadoop::hdfs::SetPermissionResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::SetPermission(" << FMT_THIS_ADDR << ", path=" << path << ", permissions=" << permissions << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetPermission: argument 'path' cannot be empty"));
+    return;
+  }
+  Status permStatus = CheckValidPermissionMask(permissions);
+  if (!permStatus.ok()) {
+    handler(permStatus);
+    return;
+  }
+
+  SetPermissionRequestProto req;
+  req.set_src(path);
+
+  hadoop::hdfs::FsPermissionProto *perm = req.mutable_permission();
+  perm->set_perm(permissions);
+
+  auto resp = std::make_shared<SetPermissionResponseProto>();
+
+  namenode_.SetPermission(&req, resp,
+      [handler](const Status &stat) {
+        handler(stat);
+      });
+}
+
+void NameNodeOperations::SetOwner(const std::string & path,
+    const std::string & username, const std::string & groupname, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::SetOwnerRequestProto;
+  using ::hadoop::hdfs::SetOwnerResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::SetOwner(" << FMT_THIS_ADDR << ", path=" << path << ", username=" << username << ", groupname=" << groupname << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetOwner: argument 'path' cannot be empty"));
+    return;
+  }
+
+  SetOwnerRequestProto req;
+  req.set_src(path);
+
+  if(!username.empty()) {
+    req.set_username(username);
+  }
+  if(!groupname.empty()) {
+    req.set_groupname(groupname);
+  }
+
+  auto resp = std::make_shared<SetOwnerResponseProto>();
+
+  namenode_.SetOwner(&req, resp,
+      [handler](const Status &stat) {
+        handler(stat);
+      });
 }
 
 void NameNodeOperations::CreateSnapshot(const std::string & path,
