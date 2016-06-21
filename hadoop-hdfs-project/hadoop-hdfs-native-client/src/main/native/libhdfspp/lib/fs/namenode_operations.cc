@@ -64,6 +64,11 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
   LOG_TRACE(kFileSystem, << "NameNodeOperations::GetBlockLocations("
                            << FMT_THIS_ADDR << ", path=" << path << ", ...) called");
 
+  if (path.empty()) {
+    handler(Status::InvalidArgument("GetBlockLocations: argument 'path' cannot be empty"), nullptr);
+    return;
+  }
+
   GetBlockLocationsRequestProto req;
   req.set_src(path);
   req.set_offset(0);
@@ -105,6 +110,11 @@ void NameNodeOperations::GetFileInfo(const std::string & path,
 
   LOG_TRACE(kFileSystem, << "NameNodeOperations::GetFileInfo("
                            << FMT_THIS_ADDR << ", path=" << path << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("GetFileInfo: argument 'path' cannot be empty"), StatInfo());
+    return;
+  }
 
   GetFileInfoRequestProto req;
   req.set_src(path);
@@ -164,6 +174,12 @@ void NameNodeOperations::GetListing(
       kFileSystem,
       << "NameNodeOperations::GetListing(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
+  if (path.empty()) {
+    std::shared_ptr<std::vector<StatInfo>> stat_infos;
+    handler(Status::InvalidArgument("GetListing: argument 'path' cannot be empty"), stat_infos, false);
+    return;
+  }
+
   GetListingRequestProto req;
   req.set_src(path);
   req.set_startafter(start_after.c_str());
@@ -198,6 +214,125 @@ void NameNodeOperations::GetListing(
       });
 }
 
+void NameNodeOperations::Mkdirs(const std::string & path, long permissions, bool createparent,
+  std::function<void(const Status &)> handler)
+{
+  using ::hadoop::hdfs::MkdirsRequestProto;
+  using ::hadoop::hdfs::MkdirsResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::Mkdirs(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", permissions=" << permissions << ", createparent=" << createparent << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Mkdirs: argument 'path' cannot be empty"));
+    return;
+  }
+
+  MkdirsRequestProto req;
+  req.set_src(path);
+  hadoop::hdfs::FsPermissionProto *perm = req.mutable_masked();
+  if (permissions < 0) {
+    perm->set_perm(0755);
+  } else {
+    perm->set_perm(permissions);
+  }
+  req.set_createparent(createparent);
+
+  auto resp = std::make_shared<MkdirsResponseProto>();
+
+  namenode_.Mkdirs(&req, resp, [resp, handler, path](const Status &stat) {
+    if (stat.ok()) {
+      // Checking resp
+      if(resp -> has_result() && resp ->result() == 1) {
+        handler(stat);
+      } else {
+        //NameNode does not specify why there is no result, in my testing it was happening when the path is not found
+        std::string errormsg = "No such file or directory: " + path;
+        Status statNew = Status::PathNotFound(errormsg.c_str());
+        handler(statNew);
+      }
+    } else {
+      handler(stat);
+    }
+  });
+}
+
+void NameNodeOperations::Delete(const std::string & path, bool recursive, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::DeleteRequestProto;
+  using ::hadoop::hdfs::DeleteResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::Delete(" << FMT_THIS_ADDR << ", path=" << path << ", recursive=" << recursive << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Delete: argument 'path' cannot be empty"));
+    return;
+  }
+
+  DeleteRequestProto req;
+  req.set_src(path);
+  req.set_recursive(recursive);
+
+  auto resp = std::make_shared<DeleteResponseProto>();
+
+  namenode_.Delete(&req, resp, [resp, handler, path](const Status &stat) {
+    if (stat.ok()) {
+      // Checking resp
+      if(resp -> has_result() && resp ->result() == 1) {
+        handler(stat);
+      } else {
+        //NameNode does not specify why there is no result, in my testing it was happening when the path is not found
+        std::string errormsg = "No such file or directory: " + path;
+        Status statNew = Status::PathNotFound(errormsg.c_str());
+        handler(statNew);
+      }
+    } else {
+      handler(stat);
+    }
+  });
+}
+
+void NameNodeOperations::Rename(const std::string & oldPath, const std::string & newPath, std::function<void(const Status &)> handler) {
+  using ::hadoop::hdfs::RenameRequestProto;
+  using ::hadoop::hdfs::RenameResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::Rename(" << FMT_THIS_ADDR << ", oldPath=" << oldPath << ", newPath=" << newPath << ") called");
+
+  if (oldPath.empty()) {
+    handler(Status::InvalidArgument("Rename: argument 'oldPath' cannot be empty"));
+    return;
+  }
+
+  if (newPath.empty()) {
+    handler(Status::InvalidArgument("Rename: argument 'newPath' cannot be empty"));
+    return;
+  }
+
+  RenameRequestProto req;
+  req.set_src(oldPath);
+  req.set_dst(newPath);
+
+  auto resp = std::make_shared<RenameResponseProto>();
+
+  namenode_.Rename(&req, resp, [resp, handler](const Status &stat) {
+    if (stat.ok()) {
+      // Checking resp
+      if(resp -> has_result() && resp ->result() == 1) {
+        handler(stat);
+      } else {
+        //Since NameNode does not specify why the result is not success, we set the general error
+        std::string errormsg = "oldPath and parent directory of newPath must exist. newPath must not exist.";
+        Status statNew = Status::InvalidArgument(errormsg.c_str());
+        handler(statNew);
+      }
+    } else {
+      handler(stat);
+    }
+  });
+}
+
 void NameNodeOperations::CreateSnapshot(const std::string & path,
     const std::string & name, std::function<void(const Status &)> handler) {
   using ::hadoop::hdfs::CreateSnapshotRequestProto;
@@ -207,7 +342,7 @@ void NameNodeOperations::CreateSnapshot(const std::string & path,
       << "NameNodeOperations::CreateSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("CreateSnapshot: argument 'path' cannot be empty"));
     return;
   }
 
@@ -220,7 +355,7 @@ void NameNodeOperations::CreateSnapshot(const std::string & path,
   auto resp = std::make_shared<CreateSnapshotResponseProto>();
 
   namenode_.CreateSnapshot(&req, resp,
-      [resp, handler, path](const Status &stat) {
+      [handler](const Status &stat) {
         handler(stat);
       });
 }
@@ -234,11 +369,11 @@ void NameNodeOperations::DeleteSnapshot(const std::string & path,
       << "NameNodeOperations::DeleteSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("DeleteSnapshot: argument 'path' cannot be empty"));
     return;
   }
   if (name.empty()) {
-    handler(Status::InvalidArgument("Argument 'name' cannot be empty"));
+    handler(Status::InvalidArgument("DeleteSnapshot: argument 'name' cannot be empty"));
     return;
   }
 
@@ -249,7 +384,7 @@ void NameNodeOperations::DeleteSnapshot(const std::string & path,
   auto resp = std::make_shared<DeleteSnapshotResponseProto>();
 
   namenode_.DeleteSnapshot(&req, resp,
-      [resp, handler, path](const Status &stat) {
+      [handler](const Status &stat) {
         handler(stat);
       });
 }
@@ -262,7 +397,7 @@ void NameNodeOperations::AllowSnapshot(const std::string & path, std::function<v
       << "NameNodeOperations::AllowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("AllowSnapshot: argument 'path' cannot be empty"));
     return;
   }
 
@@ -272,7 +407,7 @@ void NameNodeOperations::AllowSnapshot(const std::string & path, std::function<v
   auto resp = std::make_shared<AllowSnapshotResponseProto>();
 
   namenode_.AllowSnapshot(&req, resp,
-      [resp, handler, path](const Status &stat) {
+      [handler](const Status &stat) {
         handler(stat);
       });
 }
@@ -285,7 +420,7 @@ void NameNodeOperations::DisallowSnapshot(const std::string & path, std::functio
       << "NameNodeOperations::DisallowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("DisallowSnapshot: argument 'path' cannot be empty"));
     return;
   }
 
@@ -295,7 +430,7 @@ void NameNodeOperations::DisallowSnapshot(const std::string & path, std::functio
   auto resp = std::make_shared<DisallowSnapshotResponseProto>();
 
   namenode_.DisallowSnapshot(&req, resp,
-      [resp, handler, path](const Status &stat) {
+      [handler](const Status &stat) {
         handler(stat);
       });
 }

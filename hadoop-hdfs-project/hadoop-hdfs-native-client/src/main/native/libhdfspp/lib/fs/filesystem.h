@@ -93,6 +93,17 @@ public:
   virtual Status GetBlockLocations(const std::string & path,
     std::shared_ptr<FileBlockLocation> * locations) override;
 
+  virtual void Mkdirs(const std::string & path, long permissions, bool createparent,
+      std::function<void(const Status &)> handler) override;
+  virtual Status Mkdirs(const std::string & path, long permissions, bool createparent) override;
+
+  virtual void Delete(const std::string &path, bool recursive,
+      const std::function<void(const Status &)> &handler) override;
+  virtual Status Delete(const std::string &path, bool recursive) override;
+
+  virtual void Rename(const std::string &oldPath, const std::string &newPath,
+      const std::function<void(const Status &)> &handler) override;
+  virtual Status Rename(const std::string &oldPath, const std::string &newPath) override;
 
   /*****************************************************************************
    *                    FILE SYSTEM SNAPSHOT FUNCTIONS

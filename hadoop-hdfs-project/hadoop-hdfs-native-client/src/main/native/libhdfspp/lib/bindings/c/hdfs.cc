@@ -165,6 +165,14 @@ static int Error(const Status &stat) {
       errnum = ENOTDIR;
       default_message = "Not a directory";
       break;
+    case Status::Code::kFileAlreadyExists:
+      errnum = EEXIST;
+      default_message = "File already exists";
+      break;
+    case Status::Code::kPathIsNotEmptyDirectory:
+      errnum = ENOTEMPTY;
+      default_message = "Directory is not empty";
+      break;
     default:
       errnum = ENOSYS;
       default_message = "Error: unrecognised code";
@@ -509,6 +517,76 @@ void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
     delete[] hdfsFileInfo;
 }
 
+int hdfsCreateDirectory(hdfsFS fs, const char* path) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (!path) {
+      return Error(Status::InvalidArgument("hdfsCreateDirectory: argument 'path' cannot be NULL"));
+    }
+    Status stat;
+    //-1 for default permissions and true for creating all non-existant parent directories
+    stat = fs->get_impl()->Mkdirs(path, -1, true);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsDelete(hdfsFS fs, const char* path, int recursive) {
+  try {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        return -1;
+      }
+      if (!path) {
+        return Error(Status::InvalidArgument("hdfsDelete: argument 'path' cannot be NULL"));
+      }
+      Status stat;
+      stat = fs->get_impl()->Delete(path, recursive);
+      if (!stat.ok()) {
+        return Error(stat);
+      }
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
+}
+
+int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    if (!oldPath) {
+      return Error(Status::InvalidArgument("hdfsRename: argument 'oldPath' cannot be NULL"));
+    }
+    if (!newPath) {
+      return Error(Status::InvalidArgument("hdfsRename: argument 'newPath' cannot be NULL"));
+    }
+    Status stat;
+    stat = fs->get_impl()->Rename(oldPath, newPath);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
 int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
   try {
     errno = 0;
@@ -516,7 +594,7 @@ int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
       return -1;
     }
     if (!path) {
-      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+      return Error(Status::InvalidArgument("hdfsCreateSnapshot: argument 'path' cannot be NULL"));
     }
     Status stat;
     if(!name){
@@ -542,10 +620,10 @@ int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
       return -1;
     }
     if (!path) {
-      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+      return Error(Status::InvalidArgument("hdfsDeleteSnapshot: argument 'path' cannot be NULL"));
     }
     if (!name) {
-      return Error(Status::InvalidArgument("Argument 'name' cannot be NULL"));
+      return Error(Status::InvalidArgument("hdfsDeleteSnapshot: argument 'name' cannot be NULL"));
     }
     Status stat;
     stat = fs->get_impl()->DeleteSnapshot(path, name);
@@ -567,7 +645,7 @@ int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
       return -1;
     }
     if (!path) {
-      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+      return Error(Status::InvalidArgument("hdfsAllowSnapshot: argument 'path' cannot be NULL"));
     }
     Status stat;
     stat = fs->get_impl()->AllowSnapshot(path);
@@ -589,7 +667,7 @@ int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
       return -1;
     }
     if (!path) {
-      return Error(Status::InvalidArgument("Argument 'path' cannot be NULL"));
+      return Error(Status::InvalidArgument("hdfsDisallowSnapshot: argument 'path' cannot be NULL"));
     }
     Status stat;
     stat = fs->get_impl()->DisallowSnapshot(path);

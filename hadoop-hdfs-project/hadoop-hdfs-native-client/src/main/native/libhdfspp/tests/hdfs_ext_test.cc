@@ -172,6 +172,83 @@ TEST_F(HdfsExtTest, TestSnapshotOperations) {
   hdfsFreeFileInfo(file_infos, 0);
 }
 
+//Testing creating directories
+TEST_F(HdfsExtTest, TestMkdirs) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Correct operation
+  EXPECT_EQ(0, hdfsCreateDirectory(fs, "/myDir123"));
+
+  //TODO Should return error if directory already exists?
+  //EXPECT_EQ(-1, hdfsCreateDirectory(fs, "/myDir123"));
+  //EXPECT_EQ((int) std::errc::file_exists, errno);
+
+  //Creating directory on a path of the existing file
+  std::string path = connection.newFile(1024); //1024 byte file
+  EXPECT_EQ(-1, hdfsCreateDirectory(fs, path.c_str()));
+  EXPECT_EQ((int) std::errc::file_exists, errno);
+}
+
+//Testing deleting files and directories
+TEST_F(HdfsExtTest, TestDelete) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Path not found
+  EXPECT_EQ(-1, hdfsDelete(fs, "/wrong_path", 1));
+  EXPECT_EQ((int) std::errc::no_such_file_or_directory, errno);
+
+  EXPECT_EQ(0, hdfsCreateDirectory(fs, "/myDir"));
+  std::string path = connection.newFile("/myDir", 1024); //1024 byte file
+
+  //Non-recursive delete should fail on a non-empty directory
+  //error ENOTEMPTY(39) for libhdfspp or 255 for libhdfs
+  EXPECT_EQ(-1, hdfsDelete(fs, "/myDir", 0));
+  EXPECT_EQ((int) std::errc::directory_not_empty, errno);
+
+  //Correct operation
+  EXPECT_EQ(0, hdfsDelete(fs, "/myDir", 1));
+}
+
+//Testing renaming files and directories
+TEST_F(HdfsExtTest, TestRename) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Creating directory with two files
+  EXPECT_EQ(0, hdfsCreateDirectory(fs, "/myDir"));
+  std::string file1 = connection.newFile("/myDir", 1024); //1024 byte file
+  std::string file2 = connection.newFile("/myDir", 1024); //1024 byte file
+  std::string file3 = connection.newFile(1024); //1024 byte file
+
+  //Path not found
+  EXPECT_EQ(-1, hdfsRename(fs, "/wrong_path", "/new_name"));
+  EXPECT_EQ((int) std::errc::invalid_argument, errno);
+
+  //No parent directory in new path
+  EXPECT_EQ(-1, hdfsRename(fs, file1.c_str(), "/wrong_parent/new_name"));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+
+  //New name already exists in the folder
+  EXPECT_EQ(-1, hdfsRename(fs, file1.c_str(), file2.c_str()));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+
+  //Correct operation
+  EXPECT_EQ(0, hdfsRename(fs, file1.c_str(), "/myDir/new_awesome_name"));
+  EXPECT_EQ(0, hdfsRename(fs, file3.c_str(), "/myDir/another_file"));
+  EXPECT_EQ(0, hdfsRename(fs, "/myDir", "/new_awesome_dir"));
+
+  //Verification
+  int numEntries;
+  hdfsFileInfo * dirList = hdfsListDirectory(fs, "/new_awesome_dir", &numEntries);
+  EXPECT_NE(nullptr, dirList);
+  EXPECT_EQ(3, numEntries);
+  hdfsFreeFileInfo(dirList, 3);
+}
 
 }
 

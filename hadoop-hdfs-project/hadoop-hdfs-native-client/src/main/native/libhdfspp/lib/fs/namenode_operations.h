@@ -65,6 +65,15 @@ public:
         std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> handler,
         const std::string & start_after = "");
 
+  void Mkdirs(const std::string & path, long permissions, bool createparent,
+    std::function<void(const Status &)> handler);
+
+  void Delete(const std::string & path, bool recursive,
+      std::function<void(const Status &)> handler);
+
+  void Rename(const std::string & oldPath, const std::string & newPath,
+      std::function<void(const Status &)> handler);
+
   void CreateSnapshot(const std::string & path, const std::string & name,
       std::function<void(const Status &)> handler);
 

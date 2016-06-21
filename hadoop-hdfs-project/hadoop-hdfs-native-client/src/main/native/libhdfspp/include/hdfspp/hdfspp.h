@@ -217,6 +217,39 @@ class FileSystem {
   virtual Status GetBlockLocations(const std::string & path,
     std::shared_ptr<FileBlockLocation> * locations) = 0;
 
+  /**
+   * Creates a new directory
+   *
+   *  @param path           Path to the directory to be created (must be non-empty)
+   *  @param permissions    Permissions for the new directory   (negative value for the default permissions)
+   *  @param createparent   Create parent directories if they do not exist (may not be empty)
+   */
+  virtual void Mkdirs(const std::string & path, long permissions, bool createparent,
+      std::function<void(const Status &)> handler) = 0;
+  virtual Status Mkdirs(const std::string & path, long permissions, bool createparent) = 0;
+
+  /**
+   *  Delete the given file or directory from the file system.
+   *  <p>
+   *  same as delete but provides a way to avoid accidentally
+   *  deleting non empty directories programmatically.
+   *  @param path existing name (must be non-empty)
+   *  @param recursive if true deletes a non empty directory recursively
+   */
+  virtual void Delete(const std::string &path, bool recursive,
+      const std::function<void(const Status &)> &handler) = 0;
+  virtual Status Delete(const std::string &path, bool recursive) = 0;
+
+  /**
+   *  Rename - Rename file.
+   *  @param oldPath The path of the source file.       (must be non-empty)
+   *  @param newPath The path of the destination file.  (must be non-empty)
+   *  @return Returns 0 on success, -1 on error.
+   */
+  virtual void Rename(const std::string &oldPath, const std::string &newPath,
+      const std::function<void(const Status &)> &handler) = 0;
+  virtual Status Rename(const std::string &oldPath, const std::string &newPath) = 0;
+
   /*****************************************************************************
    *                    FILE SYSTEM SNAPSHOT FUNCTIONS
    ****************************************************************************/

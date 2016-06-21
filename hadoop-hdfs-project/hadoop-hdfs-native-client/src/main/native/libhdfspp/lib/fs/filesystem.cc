@@ -362,9 +362,7 @@ void FileSystemImpl::GetFileInfo(
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
-  nn_.GetFileInfo(path, [handler](const Status &stat, const StatInfo &stat_info) {
-    handler(stat, stat_info);
-  });
+  nn_.GetFileInfo(path, handler);
 }
 
 Status FileSystemImpl::GetFileInfo(const std::string &path,
@@ -401,9 +399,7 @@ void FileSystemImpl::GetFsStats(
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::GetFsStats(" << FMT_THIS_ADDR << ") called");
 
-  nn_.GetFsStats([handler](const Status &stat, const FsInfo &fs_info) {
-    handler(stat, fs_info);
-  });
+  nn_.GetFsStats(handler);
 }
 
 Status FileSystemImpl::GetFsStats(FsInfo & fs_info) {
@@ -512,6 +508,115 @@ Status FileSystemImpl::GetListing(const std::string &path, std::shared_ptr<std::
   return stat;
 }
 
+void FileSystemImpl::Mkdirs(const std::string & path, long permissions, bool createparent,
+    std::function<void(const Status &)> handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::Mkdirs(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", permissions=" << permissions << ", createparent=" << createparent << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Mkdirs: argument 'path' cannot be empty"));
+    return;
+  }
+
+  nn_.Mkdirs(path, permissions, createparent, handler);
+}
+
+Status FileSystemImpl::Mkdirs(const std::string & path, long permissions, bool createparent) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]Mkdirs(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", permissions=" << permissions << ", createparent=" << createparent << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::Mkdirs with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  Mkdirs(path, permissions, createparent, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = returnstate;
+
+  return stat;
+}
+
+void FileSystemImpl::Delete(const std::string &path, bool recursive,
+    const std::function<void(const Status &)> &handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::Delete(" << FMT_THIS_ADDR << ", path=" << path << ", recursive=" << recursive << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("Delete: argument 'path' cannot be empty"));
+    return;
+  }
+
+  nn_.Delete(path, recursive, handler);
+}
+
+Status FileSystemImpl::Delete(const std::string &path, bool recursive) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]Delete(" << FMT_THIS_ADDR << ", path=" << path << ", recursive=" << recursive << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::Delete with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  Delete(path, recursive, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = returnstate;
+
+  return stat;
+}
+
+void FileSystemImpl::Rename(const std::string &oldPath, const std::string &newPath,
+    const std::function<void(const Status &)> &handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::Rename(" << FMT_THIS_ADDR << ", oldPath=" << oldPath << ", newPath=" << newPath << ") called");
+
+  if (oldPath.empty()) {
+    handler(Status::InvalidArgument("Rename: argument 'oldPath' cannot be empty"));
+    return;
+  }
+
+  if (newPath.empty()) {
+    handler(Status::InvalidArgument("Rename: argument 'newPath' cannot be empty"));
+    return;
+  }
+
+  nn_.Rename(oldPath, newPath, handler);
+}
+
+Status FileSystemImpl::Rename(const std::string &oldPath, const std::string &newPath) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]Rename(" << FMT_THIS_ADDR << ", oldPath=" << oldPath << ", newPath=" << newPath << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::Rename with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  Rename(oldPath, newPath, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = returnstate;
+
+  return stat;
+}
+
 void FileSystemImpl::CreateSnapshot(const std::string &path,
     const std::string &name,
     const std::function<void(const Status &)> &handler) {
@@ -519,13 +624,11 @@ void FileSystemImpl::CreateSnapshot(const std::string &path,
       << "FileSystemImpl::CreateSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("CreateSnapshot: argument 'path' cannot be empty"));
     return;
   }
 
-  nn_.CreateSnapshot(path, name, [handler](const Status &stat) {
-    handler(stat);
-  });
+  nn_.CreateSnapshot(path, name, handler);
 }
 
 Status FileSystemImpl::CreateSnapshot(const std::string &path,
@@ -533,19 +636,19 @@ Status FileSystemImpl::CreateSnapshot(const std::string &path,
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]CreateSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
 
-  auto callstate = std::make_shared<std::promise<std::tuple<Status>>>();
-  std::future<std::tuple<Status>> future(callstate->get_future());
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
 
   /* wrap async FileSystem::CreateSnapshot with promise to make it a blocking call */
   auto h = [callstate](const Status &s) {
-    callstate->set_value(std::make_tuple(s));
+    callstate->set_value(s);
   };
 
   CreateSnapshot(path, name, h);
 
   /* block until promise is set */
   auto returnstate = future.get();
-  Status stat = std::get<0>(returnstate);
+  Status stat = returnstate;
 
   return stat;
 }
@@ -557,17 +660,15 @@ void FileSystemImpl::DeleteSnapshot(const std::string &path,
       << "FileSystemImpl::DeleteSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("DeleteSnapshot: argument 'path' cannot be empty"));
     return;
   }
   if (name.empty()) {
-    handler(Status::InvalidArgument("Argument 'name' cannot be empty"));
+    handler(Status::InvalidArgument("DeleteSnapshot: argument 'name' cannot be empty"));
     return;
   }
 
-  nn_.DeleteSnapshot(path, name, [handler](const Status &stat) {
-    handler(stat);
-  });
+  nn_.DeleteSnapshot(path, name, handler);
 }
 
 Status FileSystemImpl::DeleteSnapshot(const std::string &path,
@@ -575,19 +676,19 @@ Status FileSystemImpl::DeleteSnapshot(const std::string &path,
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]DeleteSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ", name=" << name << ") called");
 
-  auto callstate = std::make_shared<std::promise<std::tuple<Status>>>();
-  std::future<std::tuple<Status>> future(callstate->get_future());
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
 
   /* wrap async FileSystem::DeleteSnapshot with promise to make it a blocking call */
   auto h = [callstate](const Status &s) {
-    callstate->set_value(std::make_tuple(s));
+    callstate->set_value(s);
   };
 
   DeleteSnapshot(path, name, h);
 
   /* block until promise is set */
   auto returnstate = future.get();
-  Status stat = std::get<0>(returnstate);
+  Status stat = returnstate;
 
   return stat;
 }
@@ -598,32 +699,30 @@ void FileSystemImpl::AllowSnapshot(const std::string &path,
       << "FileSystemImpl::AllowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("AllowSnapshot: argument 'path' cannot be empty"));
     return;
   }
 
-  nn_.AllowSnapshot(path, [handler](const Status &stat) {
-    handler(stat);
-  });
+  nn_.AllowSnapshot(path, handler);
 }
 
 Status FileSystemImpl::AllowSnapshot(const std::string &path) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]AllowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
-  auto callstate = std::make_shared<std::promise<std::tuple<Status>>>();
-  std::future<std::tuple<Status>> future(callstate->get_future());
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
 
   /* wrap async FileSystem::AllowSnapshot with promise to make it a blocking call */
   auto h = [callstate](const Status &s) {
-    callstate->set_value(std::make_tuple(s));
+    callstate->set_value(s);
   };
 
   AllowSnapshot(path, h);
 
   /* block until promise is set */
   auto returnstate = future.get();
-  Status stat = std::get<0>(returnstate);
+  Status stat = returnstate;
 
   return stat;
 }
@@ -634,32 +733,30 @@ void FileSystemImpl::DisallowSnapshot(const std::string &path,
       << "FileSystemImpl::DisallowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
   if (path.empty()) {
-    handler(Status::InvalidArgument("Argument 'path' cannot be empty"));
+    handler(Status::InvalidArgument("DisallowSnapshot: argument 'path' cannot be empty"));
     return;
   }
 
-  nn_.DisallowSnapshot(path, [handler](const Status &stat) {
-    handler(stat);
-  });
+  nn_.DisallowSnapshot(path, handler);
 }
 
 Status FileSystemImpl::DisallowSnapshot(const std::string &path) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]DisallowSnapshot(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
-  auto callstate = std::make_shared<std::promise<std::tuple<Status>>>();
-  std::future<std::tuple<Status>> future(callstate->get_future());
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
 
   /* wrap async FileSystem::DisallowSnapshot with promise to make it a blocking call */
   auto h = [callstate](const Status &s) {
-    callstate->set_value(std::make_tuple(s));
+    callstate->set_value(s);
   };
 
   DisallowSnapshot(path, h);
 
   /* block until promise is set */
   auto returnstate = future.get();
-  Status stat = std::get<0>(returnstate);
+  Status stat = returnstate;
 
   return stat;
 }

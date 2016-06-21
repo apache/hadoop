@@ -170,6 +170,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     if (numEntries != 0) {
         fprintf(stderr, "hdfsListDirectory set numEntries to "
                 "%d on empty directory.", numEntries);
+        return EIO;
     }
 
     /* There should not be any file to open for reading. */
@@ -214,21 +215,26 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     hdfsFreeFileInfo(dirList, numEntries);
 
     /* Create many files for ListDirectory to page through */
+    char listDirTest[PATH_MAX];
+    strcpy(listDirTest, paths->prefix);
+    strcat(listDirTest, "/for_list_test/");
+    EXPECT_ZERO(hdfsCreateDirectory(fs, listDirTest));
     int nFile;
     for (nFile = 0; nFile < 10000; nFile++) {
       char filename[PATH_MAX];
-      snprintf(filename, PATH_MAX, "%s/many_files_%d", paths->prefix, nFile);
+      snprintf(filename, PATH_MAX, "%s/many_files_%d", listDirTest, nFile);
       file = hdfsOpenFile(fs, filename, O_WRONLY, 0, 0, 0);
       EXPECT_NONNULL(file);
       EXPECT_ZERO(hdfsCloseFile(fs, file));
     }
-    dirList = hdfsListDirectory(fs, paths->prefix, &numEntries);
+    dirList = hdfsListDirectory(fs, listDirTest, &numEntries);
     EXPECT_NONNULL(dirList);
-    if (numEntries != 10002) {
-        fprintf(stderr, "hdfsListDirectory set numEntries to "
-                "%d on directory containing 10002 files.", numEntries);
-    }
     hdfsFreeFileInfo(dirList, numEntries);
+    if (numEntries != 10000) {
+        fprintf(stderr, "hdfsListDirectory set numEntries to "
+                "%d on directory containing 10000 files.", numEntries);
+        return EIO;
+    }
 
     /* Let's re-open the file for reading */
     file = hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0);
@@ -272,8 +278,8 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_ZERO(memcmp(paths->prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
-    // TODO: Non-recursive delete should fail?
-    //EXPECT_NONZERO(hdfsDelete(fs, prefix, 0));
+    //Non-recursive delete fails
+    EXPECT_NONZERO(hdfsDelete(fs, paths->prefix, 0));
     EXPECT_ZERO(hdfsCopy(fs, paths->file1, fs, paths->file2));
 
     EXPECT_ZERO(hdfsChown(fs, paths->file2, NULL, NULL));

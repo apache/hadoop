@@ -59,6 +59,8 @@ class Status {
     kPermissionDenied = static_cast<unsigned>(std::errc::permission_denied),
     kPathNotFound = static_cast<unsigned>(std::errc::no_such_file_or_directory),
     kNotADirectory = static_cast<unsigned>(std::errc::not_a_directory),
+    kFileAlreadyExists = static_cast<unsigned>(std::errc::file_exists),
+    kPathIsNotEmptyDirectory = static_cast<unsigned>(std::errc::directory_not_empty),
     kException = 256,
     kAuthenticationFailed = 257,
   };
