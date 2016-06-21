@@ -55,16 +55,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 /**
  *  Reads the last error, if any, that happened in this thread
  *  into the user supplied buffer.
  *  @param buf  A chunk of memory with room for the error string.
  *  @param len  Size of the buffer, if the message is longer than
  *              len len-1 bytes of the message will be copied.
+ *  @return     0 on successful read of the last error, -1 otherwise.
  **/
-
 LIBHDFS_EXTERNAL
-void hdfsGetLastError(char *buf, int len);
+int hdfsGetLastError(char *buf, int len);
 
 
 /**
@@ -94,7 +95,7 @@ struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory);
  *                 key isn't found.  You must free this string with
  *                 hdfsConfStrFree.
  *
- * @return         0 on success; nonzero error code otherwise.
+ * @return         0 on success; -1 otherwise.
  *                 Failure to find the key is not an error.
  */
 LIBHDFS_EXTERNAL
@@ -108,28 +109,12 @@ int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
  * @param val      (out param) The value.  This will NOT be changed if the
  *                 key isn't found.
  *
- * @return         0 on success; nonzero error code otherwise.
+ * @return         0 on success; -1 otherwise.
  *                 Failure to find the key is not an error.
  */
 LIBHDFS_EXTERNAL
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val);
 
-
-/**
- * Returns the block information and data nodes associated with a particular file.
- *
- * The hdfsBlockLocations structure will have zero or more hdfsBlockInfo elements,
- * which will have zero or more ip_addr elements indicating which datanodes have
- * each block.
- *
- * @param fs         A connected hdfs instance
- * @param path       Path of the file to query
- * @param locations  The address of an output pointer to contain the block information.
- *                   On success, this pointer must be later freed with hdfsFreeBlockLocations.
- *
- * @return         0 on success; nonzero error code otherwise.
- *                 If the file does not exist, an error will be returned.
- */
 struct hdfsDNInfo {
   const char *    ip_address;
   const char *    hostname;
@@ -157,6 +142,21 @@ struct hdfsBlockLocations
     struct hdfsBlockInfo * blocks;
 };
 
+/**
+ * Returns the block information and data nodes associated with a particular file.
+ *
+ * The hdfsBlockLocations structure will have zero or more hdfsBlockInfo elements,
+ * which will have zero or more ip_addr elements indicating which datanodes have
+ * each block.
+ *
+ * @param fs         A connected hdfs instance
+ * @param path       Path of the file to query
+ * @param locations  The address of an output pointer to contain the block information.
+ *                   On success, this pointer must be later freed with hdfsFreeBlockLocations.
+ *
+ * @return         0 on success; -1 otherwise.
+ *                 If the file does not exist, -1 will be returned and errno will be set.
+ */
 LIBHDFS_EXTERNAL
 int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations ** locations);
 
@@ -164,7 +164,7 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
  * Frees up an hdfsBlockLocations pointer allocated by hdfsGetBlockLocations.
  *
  * @param locations    The previously-populated pointer allocated by hdfsGetBlockLocations
- * @return             0 on success, nonzero on error
+ * @return             0 on success, -1 on error
  */
 LIBHDFS_EXTERNAL
 int hdfsFreeBlockLocations(struct hdfsBlockLocations * locations);
@@ -200,21 +200,21 @@ void hdfsFreeLogData(LogData*);
 
 /**
  * Enable loggind functionality for a component.
- * Return 1 on failure, 0 otherwise.
+ * Return -1 on failure, 0 otherwise.
  **/
 LIBHDFS_EXTERNAL
 int hdfsEnableLoggingForComponent(int component);
 
 /**
  * Disable logging functionality for a component.
- * Return 1 on failure, 0 otherwise.
+ * Return -1 on failure, 0 otherwise.
  **/
 LIBHDFS_EXTERNAL
 int hdfsDisableLoggingForComponent(int component);
 
 /**
  * Set level between trace and error.
- * Return 1 on failure, 0 otherwise.
+ * Return -1 on failure, 0 otherwise.
  **/
 LIBHDFS_EXTERNAL
 int hdfsSetLoggingLevel(int component);
