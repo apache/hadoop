@@ -12,6 +12,9 @@ Release 2.7.4 - UNRELEASED
 
   BUG FIXES
 
+    YARN-5197. RM leaks containers if running container disappears from
+    node update. Contributed by Jason Lowe.
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
