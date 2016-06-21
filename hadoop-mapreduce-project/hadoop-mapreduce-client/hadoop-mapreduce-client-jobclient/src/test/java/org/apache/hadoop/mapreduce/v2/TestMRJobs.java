@@ -911,7 +911,8 @@ public class TestMRJobs {
     }
   }
 
-  public void _testDistributedCache(String jobJarPath) throws Exception {
+  private void testDistributedCache(String jobJarPath, boolean withWildcard)
+      throws Exception {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
            + " not found. Not running test.");
@@ -920,7 +921,7 @@ public class TestMRJobs {
 
     // Create a temporary file of length 1.
     Path first = createTempFile("distributed.first", "x");
-    // Create two jars with a single file inside them.
+    // Create three jars with a single file inside them.
     Path second =
         makeJar(new Path(TEST_ROOT_DIR, "distributed.second.jar"), 2);
     Path third =
@@ -929,16 +930,28 @@ public class TestMRJobs {
         makeJar(new Path(TEST_ROOT_DIR, "distributed.fourth.jar"), 4);
 
     Job job = Job.getInstance(mrCluster.getConfig());
-    
+
     // Set the job jar to a new "dummy" jar so we can check that its extracted 
     // properly
     job.setJar(jobJarPath);
-    // Because the job jar is a "dummy" jar, we need to include the jar with
-    // DistributedCacheChecker or it won't be able to find it
-    Path distributedCacheCheckerJar = new Path(
-            JarFinder.getJar(DistributedCacheChecker.class));
-    job.addFileToClassPath(distributedCacheCheckerJar.makeQualified(
-            localFs.getUri(), distributedCacheCheckerJar.getParent()));
+
+    if (withWildcard) {
+      // If testing with wildcards, upload the DistributedCacheChecker into HDFS
+      // and add the directory as a wildcard.
+      Path libs = new Path("testLibs");
+      Path wildcard = remoteFs.makeQualified(new Path(libs, "*"));
+
+      remoteFs.mkdirs(libs);
+      remoteFs.copyFromLocalFile(third, libs);
+      job.addCacheFile(wildcard.toUri());
+    } else {
+      // Otherwise add the DistributedCacheChecker directly to the classpath.
+      // Because the job jar is a "dummy" jar, we need to include the jar with
+      // DistributedCacheChecker or it won't be able to find it
+      Path distributedCacheCheckerJar = new Path(
+              JarFinder.getJar(DistributedCacheChecker.class));
+      job.addFileToClassPath(localFs.makeQualified(distributedCacheCheckerJar));
+    }
     
     job.setMapperClass(DistributedCacheChecker.class);
     job.setOutputFormatClass(NullOutputFormat.class);
@@ -964,11 +977,10 @@ public class TestMRJobs {
           trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"));
   }
   
-  @Test (timeout = 600000)
-  public void testDistributedCache() throws Exception {
+  private void testDistributedCache(boolean withWildcard) throws Exception {
     // Test with a local (file:///) Job Jar
     Path localJobJarPath = makeJobJarWithLib(TEST_ROOT_DIR.toUri().toString());
-    _testDistributedCache(localJobJarPath.toUri().toString());
+    testDistributedCache(localJobJarPath.toUri().toString(), withWildcard);
     
     // Test with a remote (hdfs://) Job Jar
     Path remoteJobJarPath = new Path(remoteFs.getUri().toString() + "/",
@@ -978,7 +990,17 @@ public class TestMRJobs {
     if (localJobJarFile.exists()) {     // just to make sure
         localJobJarFile.delete();
     }
-    _testDistributedCache(remoteJobJarPath.toUri().toString());
+    testDistributedCache(remoteJobJarPath.toUri().toString(), withWildcard);
+  }
+
+  @Test (timeout = 300000)
+  public void testDistributedCache() throws Exception {
+    testDistributedCache(false);
+  }
+
+  @Test (timeout = 300000)
+  public void testDistributedCacheWithWildcards() throws Exception {
+    testDistributedCache(true);
   }
 
   @Test(timeout = 120000)

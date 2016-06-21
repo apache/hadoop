@@ -41,10 +41,10 @@ public class JobSubmissionFiles {
 
   // job submission directory is private!
   final public static FsPermission JOB_DIR_PERMISSION =
-    FsPermission.createImmutable((short) 0700); // rwx--------
+      FsPermission.createImmutable((short) 0700); // rwx------
   //job files are world-wide readable and owner writable
   final public static FsPermission JOB_FILE_PERMISSION = 
-    FsPermission.createImmutable((short) 0644); // rw-r--r--
+      FsPermission.createImmutable((short) 0644); // rw-r--r--
   
   public static Path getJobSplitFile(Path jobSubmissionDir) {
     return new Path(jobSubmissionDir, "job.split");
