@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.file.AccessDeniedException;
 
@@ -73,7 +72,11 @@ public class TestS3ACredentialsInURL extends Assert {
         accessKey, secretKey);
     if (secretKey.contains("/")) {
       assertTrue("test URI encodes the / symbol", secretsURI.toString().
-          contains("%2F"));
+          contains("%252F"));
+    }
+    if (secretKey.contains("+")) {
+      assertTrue("test URI encodes the + symbol", secretsURI.toString().
+          contains("%252B"));
     }
     assertFalse("Does not contain secrets", original.equals(secretsURI));
 
@@ -132,8 +135,7 @@ public class TestS3ACredentialsInURL extends Assert {
 
   private URI createUriWithEmbeddedSecrets(URI original,
       String accessKey,
-      String secretKey) throws URISyntaxException,
-      UnsupportedEncodingException {
+      String secretKey) throws UnsupportedEncodingException {
     String encodedSecretKey = URLEncoder.encode(secretKey, "UTF-8");
     String formattedString = String.format("%s://%s:%s@%s/%s/",
         original.getScheme(),
@@ -143,10 +145,10 @@ public class TestS3ACredentialsInURL extends Assert {
         original.getPath());
     URI testURI;
     try {
-      testURI = new URI(formattedString);
-    } catch (URISyntaxException e) {
+      testURI = new Path(formattedString).toUri();
+    } catch (IllegalArgumentException e) {
       // inner cause is stripped to keep any secrets out of stack traces
-      throw new URISyntaxException("", "Could not encode URI");
+      throw new IllegalArgumentException("Could not encode Path");
     }
     return testURI;
   }
