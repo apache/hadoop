@@ -388,7 +388,7 @@ void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer) {
  * hdfs_ext functions
  */
 
-void hdfsGetLastError(char *buf, int len) {
+int hdfsGetLastError(char *buf, int len) {
   return libhdfspp_hdfsGetLastError(buf, len);
 }
 

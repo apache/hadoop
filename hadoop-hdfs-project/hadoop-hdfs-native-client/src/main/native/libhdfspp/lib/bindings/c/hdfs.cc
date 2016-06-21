@@ -69,9 +69,15 @@ struct hdfsFile_internal {
 thread_local std::string errstr;
 
 /* Fetch last error that happened in this thread */
-void hdfsGetLastError(char *buf, int len) {
+int hdfsGetLastError(char *buf, int len) {
+  //No error message
+  if(errstr.empty()){
+    return -1;
+  }
+
+  //There is an error, but no room for the error message to be copied to
   if(nullptr == buf || len < 1) {
-    return;
+    return -1;
   }
 
   /* leave space for a trailing null */
@@ -84,6 +90,8 @@ void hdfsGetLastError(char *buf, int len) {
 
   /* stick in null */
   buf[copylen] = 0;
+
+  return 0;
 }
 
 /* Event callbacks for next open calls */
@@ -214,6 +222,7 @@ int hdfsFileIsOpenForRead(hdfsFile file) {
 hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<std::string> user, const Options & options) {
   try
   {
+    errno = 0;
     IoService * io_service = IoService::New();
 
     FileSystem *fs = FileSystem::New(io_service, user.value_or(""), options);
@@ -270,6 +279,7 @@ hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
 int hdfsDisconnect(hdfsFS fs) {
   try
   {
+    errno = 0;
     if (!fs) {
       ReportError(ENODEV, "Cannot disconnect null FS handle.");
       return -1;
@@ -288,6 +298,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
                       short replication, tSize blocksize) {
   try
   {
+    errno = 0;
     (void)flags;
     (void)bufferSize;
     (void)replication;
@@ -315,6 +326,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
 int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   try
   {
+    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -424,6 +436,7 @@ void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
 
 hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
   try {
+    errno = 0;
     if (!CheckSystem(fs)) {
        return nullptr;
     }
@@ -448,6 +461,7 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
 
 hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
   try {
+      errno = 0;
       if (!CheckSystem(fs)) {
         *numEntries = 0;
         return nullptr;
@@ -485,6 +499,7 @@ hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
 
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
 {
+    errno = 0;
     int i;
     for (i = 0; i < numEntries; ++i) {
         delete[] hdfsFileInfo[i].mName;
@@ -593,6 +608,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
                 tSize length) {
   try
   {
+    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -613,9 +629,10 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
 tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
   try
   {
-  if (!CheckSystemAndHandle(fs, file)) {
-    return -1;
-  }
+    errno = 0;
+    if (!CheckSystemAndHandle(fs, file)) {
+      return -1;
+    }
 
     size_t len = length;
     Status stat = file->get_impl()->Read(buffer, &len);
@@ -635,6 +652,7 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
   try
   {
+    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -656,6 +674,7 @@ int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
 tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
   try
   {
+    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -678,6 +697,7 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
 int hdfsCancel(hdfsFS fs, hdfsFile file) {
   try
   {
+    errno = 0;
     if (!CheckSystemAndHandle(fs, file)) {
       return -1;
     }
@@ -695,12 +715,13 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
 {
   try
   {
+    errno = 0;
     if (!CheckSystem(fs)) {
       return -1;
     }
     if (locations_out == nullptr) {
       ReportError(EINVAL, "Null pointer passed to hdfsGetBlockLocations");
-      return -2;
+      return -1;
     }
 
     std::shared_ptr<FileBlockLocation> ppLocations;
@@ -759,6 +780,7 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
 }
 
 int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
+  errno = 0;
   if (blockLocations == nullptr)
     return 0;
 
@@ -861,6 +883,7 @@ HdfsConfiguration LoadDefault(ConfigurationLoader & loader)
 
 hdfsBuilder::hdfsBuilder() : config(loader.New<HdfsConfiguration>())
 {
+  errno = 0;
   loader.SetDefaultSearchPath();
   config = LoadDefault(loader);
 }
@@ -868,6 +891,7 @@ hdfsBuilder::hdfsBuilder() : config(loader.New<HdfsConfiguration>())
 hdfsBuilder::hdfsBuilder(const char * directory) :
       config(loader.New<HdfsConfiguration>())
 {
+  errno = 0;
   loader.SetSearchPath(directory);
   config = LoadDefault(loader);
 }
@@ -876,6 +900,7 @@ struct hdfsBuilder *hdfsNewBuilder(void)
 {
   try
   {
+    errno = 0;
     return new struct hdfsBuilder();
   } catch (const std::exception & e) {
     ReportException(e);
@@ -888,16 +913,19 @@ struct hdfsBuilder *hdfsNewBuilder(void)
 
 void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
 {
+  errno = 0;
   bld->overrideHost = std::string(nn);
 }
 
 void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
 {
+  errno = 0;
   bld->overridePort = port;
 }
 
 void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
 {
+  errno = 0;
   if (userName && *userName) {
     bld->user = std::string(userName);
   }
@@ -908,6 +936,7 @@ void hdfsFreeBuilder(struct hdfsBuilder *bld)
 {
   try
   {
+    errno = 0;
     delete bld;
   } catch (const std::exception & e) {
     ReportException(e);
@@ -921,6 +950,7 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
 {
   try
   {
+    errno = 0;
     optional<HdfsConfiguration> newConfig = bld->loader.OverlayValue(bld->config, key, val);
     if (newConfig)
     {
@@ -930,7 +960,7 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
     else
     {
       ReportError(EINVAL, "Could not change Builder value");
-      return 1;
+      return -1;
     }
   } catch (const std::exception & e) {
     return ReportException(e);
@@ -941,6 +971,7 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
 
 void hdfsConfStrFree(char *val)
 {
+  errno = 0;
   free(val);
 }
 
@@ -952,6 +983,7 @@ int hdfsConfGetStr(const char *key, char **val)
 {
   try
   {
+    errno = 0;
     hdfsBuilder builder;
     return hdfsBuilderConfGetStr(&builder, key, val);
   } catch (const std::exception & e) {
@@ -965,6 +997,7 @@ int hdfsConfGetInt(const char *key, int32_t *val)
 {
   try
   {
+    errno = 0;
     hdfsBuilder builder;
     return hdfsBuilderConfGetInt(&builder, key, val);
   } catch (const std::exception & e) {
@@ -981,6 +1014,7 @@ struct hdfsBuilder *hdfsNewBuilderFromDirectory(const char * configDirectory)
 {
   try
   {
+    errno = 0;
     return new struct hdfsBuilder(configDirectory);
   } catch (const std::exception & e) {
     ReportException(e);
@@ -996,6 +1030,7 @@ int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
 {
   try
   {
+    errno = 0;
     optional<std::string> value = bld->config.Get(key);
     if (value)
     {
@@ -1027,14 +1062,17 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
 {
   try
   {
+    errno = 0;
     // Pull from default configuration
     optional<int64_t> value = bld->config.GetInt(key);
     if (value)
     {
-      if (!isValidInt(*value))
-        return 1;
-
+      if (!isValidInt(*value)){
+        ReportError(EINVAL, "Builder value is not valid");
+        return -1;
+      }
       *val = *value;
+      return 0;
     }
     // If not found, don't change val
     ReportError(EINVAL, "Could not get Builder value");
@@ -1160,22 +1198,25 @@ static bool IsComponentValid(int component) {
 }
 
 int hdfsEnableLoggingForComponent(int component) {
+  errno = 0;
   if(!IsComponentValid(component))
-    return 1;
+    return -1;
   LogManager::EnableLogForComponent(static_cast<LogSourceComponent>(component));
   return 0;
 }
 
 int hdfsDisableLoggingForComponent(int component) {
+  errno = 0;
   if(!IsComponentValid(component))
-    return 1;
+    return -1;
   LogManager::DisableLogForComponent(static_cast<LogSourceComponent>(component));
   return 0;
 }
 
 int hdfsSetLoggingLevel(int level) {
+  errno = 0;
   if(!IsLevelValid(level))
-    return 1;
+    return -1;
   LogManager::SetLogLevel(static_cast<LogLevel>(level));
   return 0;
 }
