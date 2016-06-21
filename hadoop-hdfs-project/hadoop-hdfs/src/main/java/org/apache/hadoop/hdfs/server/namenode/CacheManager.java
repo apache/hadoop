@@ -396,8 +396,7 @@ public final class CacheManager {
     if (pool.getLimit() == CachePoolInfo.LIMIT_UNLIMITED) {
       return;
     }
-    if (pool.getBytesNeeded() + (stats.getBytesNeeded() * replication) > pool
-        .getLimit()) {
+    if (pool.getBytesNeeded() + stats.getBytesNeeded() > pool.getLimit()) {
       throw new InvalidRequestException("Caching path " + path + " of size "
           + stats.getBytesNeeded() / replication + " bytes at replication "
           + replication + " would exceed pool " + pool.getPoolName()
@@ -441,7 +440,7 @@ public final class CacheManager {
       }
     }
     return new CacheDirectiveStats.Builder()
-        .setBytesNeeded(requestedBytes)
+        .setBytesNeeded(requestedBytes * replication)
         .setFilesCached(requestedFiles)
         .build();
   }
