@@ -196,10 +196,14 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @Override
   public void appACLsUpdated(RMApp app, String appViewACLs, long updatedTime) {
     ApplicationEntity entity = createApplicationEntity(app.getApplicationId());
+    TimelineEvent tEvent = new TimelineEvent();
     Map<String, Object> entityInfo = new HashMap<String, Object>();
     entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO,
-        appViewACLs);
+        (appViewACLs == null) ? "" : appViewACLs);
     entity.setInfo(entityInfo);
+    tEvent.setId(ApplicationMetricsConstants.ACLS_UPDATED_EVENT_TYPE);
+    tEvent.setTimestamp(updatedTime);
+    entity.addEvent(tEvent);
 
     getDispatcher().getEventHandler().handle(new TimelineV2PublishEvent(
         SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
@@ -285,6 +289,10 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         app.getFinalApplicationStatus().toString());
     eventInfo.put(AppAttemptMetricsConstants.STATE_EVENT_INFO, RMServerUtils
         .createApplicationAttemptState(appAttemtpState).toString());
+    if (appAttempt.getMasterContainer() != null) {
+      eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
+          appAttempt.getMasterContainer().getId().toString());
+    }
     tEvent.setInfo(eventInfo);
 
     entity.addEvent(tEvent);
@@ -353,6 +361,12 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
           container.getContainerExitStatus());
       eventInfo.put(ContainerMetricsConstants.STATE_EVENT_INFO,
           container.getContainerState().toString());
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
+          container.getAllocatedNode().getHost());
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO,
+          container.getAllocatedNode().getPort());
+      entity.setInfo(entityInfo);
       tEvent.setInfo(eventInfo);
 
       entity.addEvent(tEvent);

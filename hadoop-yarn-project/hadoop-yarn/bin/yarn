@@ -48,11 +48,10 @@ function hadoop_usage
   hadoop_add_subcommand "rmadmin" "admin tools"
   hadoop_add_subcommand "scmadmin" "SharedCacheManager admin tools"
   hadoop_add_subcommand "sharedcachemanager" "run the SharedCacheManager daemon"
-  hadoop_add_subcommand "timelineserver" "run the timeline server"
   hadoop_add_subcommand "timelinereader" "run the timeline reader server"
+  hadoop_add_subcommand "timelineserver" "run the timeline server"
   hadoop_add_subcommand "top" "view cluster information"
   hadoop_add_subcommand "version" "print the version"
-  hadoop_generate_usage "${MYNAME}" true
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" true
 }
 
@@ -173,6 +172,10 @@ function yarncmd_case
       hadoop_debug "Append YARN_SHAREDCACHEMANAGER_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${YARN_SHAREDCACHEMANAGER_OPTS}"
     ;;
+    timelinereader)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
+    ;;
     timelineserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
@@ -183,10 +186,6 @@ function yarncmd_case
         # shellcheck disable=SC2034
         HADOOP_HEAPSIZE_MAX="${YARN_TIMELINESERVER_HEAPSIZE}"
       fi
-    ;;
-    timelinereader)
-      supportdaemonization="true"
-      CLASS='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo

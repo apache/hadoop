@@ -1117,11 +1117,6 @@
         <scope>test</scope>
         <optional>true</optional>
         <exclusions>
-          <!-- exclude jdk.tools (1.7) as we're not managing it -->
-          <exclusion>
-            <groupId>jdk.tools</groupId>
-            <artifactId>jdk.tools</artifactId>
-          </exclusion>
           <exclusion>
             <groupId>org.jruby</groupId>
             <artifactId>jruby-complete</artifactId>
