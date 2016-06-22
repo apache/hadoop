@@ -121,6 +121,7 @@ public class TestDataNodeUGIProvider {
         "With UGI cache, two UGIs for the different token should not be same",
         ugi11, url22);
 
+    ugiProvider2.clearCache();
     awaitCacheEmptyDueToExpiration();
     ugi12 = ugiProvider1.ugi();
     url22 = ugiProvider2.ugi();

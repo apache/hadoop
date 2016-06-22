@@ -21,12 +21,19 @@ package org.apache.hadoop.hdfs.security.token.delegation;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A delegation token identifier that is specific to HDFS.
@@ -36,6 +43,15 @@ public class DelegationTokenIdentifier
     extends AbstractDelegationTokenIdentifier {
   public static final Text HDFS_DELEGATION_KIND =
       new Text("HDFS_DELEGATION_TOKEN");
+
+  @SuppressWarnings("unchecked")
+  private static Map<TokenIdentifier, UserGroupInformation> ugiCache =
+      Collections.synchronizedMap(new LRUMap(64));
+
+  @VisibleForTesting
+  public void clearCache() {
+    ugiCache.clear();
+  }
 
   /**
    * Create an empty delegation token identifier for reading into.
@@ -56,6 +72,16 @@ public class DelegationTokenIdentifier
   @Override
   public Text getKind() {
     return HDFS_DELEGATION_KIND;
+  }
+
+  @Override
+  public UserGroupInformation getUser() {
+    UserGroupInformation ugi = ugiCache.get(this);
+    if (ugi == null) {
+      ugi = super.getUser();
+      ugiCache.put(this, ugi);
+    }
+    return ugi;
   }
 
   @Override
