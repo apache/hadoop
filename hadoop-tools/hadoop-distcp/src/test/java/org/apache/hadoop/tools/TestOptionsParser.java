@@ -716,19 +716,6 @@ public class TestOptionsParser {
     }
 
     try {
-      options = OptionsParser.parse(new String[] {
-          "-diff", "s1", "s2", "-delete",
-          "hdfs://localhost:9820/source/first",
-          "hdfs://localhost:9820/target/" });
-      fail("-diff should fail if -update option is not specified");
-    } catch (IllegalArgumentException e) {
-      assertFalse("-delete should be ignored when -diff is specified",
-          options.shouldDeleteMissing());
-      GenericTestUtils.assertExceptionContains(
-          "Diff is valid only with update options", e);
-    }
-
-    try {
       OptionsParser.parse(new String[] { "-diff", "s1", "s2",
           "-delete", "-overwrite",
           "hdfs://localhost:8020/source/first",
