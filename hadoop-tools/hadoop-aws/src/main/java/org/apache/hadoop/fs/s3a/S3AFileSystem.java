@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
@@ -82,7 +83,6 @@ import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.VersionInfo;
 
-import static org.apache.commons.lang.StringUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -126,6 +126,7 @@ public class S3AFileSystem extends FileSystem {
   private S3AInstrumentation instrumentation;
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
+  private S3AInputPolicy inputPolicy;
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
@@ -227,6 +228,8 @@ public class S3AFileSystem extends FileSystem {
 
       serverSideEncryptionAlgorithm =
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      inputPolicy = S3AInputPolicy.getPolicy(
+          conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -482,6 +485,26 @@ public class S3AFileSystem extends FileSystem {
     return s3;
   }
 
+  /**
+   * Get the input policy for this FS instance.
+   * @return the input policy
+   */
+  @InterfaceStability.Unstable
+  public S3AInputPolicy getInputPolicy() {
+    return inputPolicy;
+  }
+
+  /**
+   * Change the input policy for this FS.
+   * @param inputPolicy new policy
+   */
+  @InterfaceStability.Unstable
+  public void setInputPolicy(S3AInputPolicy inputPolicy) {
+    Objects.requireNonNull(inputPolicy, "Null inputStrategy");
+    LOG.debug("Setting input strategy: {}", inputPolicy);
+    this.inputPolicy = inputPolicy;
+  }
+
   public S3AFileSystem() {
     super();
   }
@@ -537,7 +560,8 @@ public class S3AFileSystem extends FileSystem {
     }
 
     return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f),
-      fileStatus.getLen(), s3, statistics, instrumentation, readAhead));
+      fileStatus.getLen(), s3, statistics, instrumentation, readAhead,
+        inputPolicy));
   }
 
   /**
@@ -1745,6 +1769,7 @@ public class S3AFileSystem extends FileSystem {
         "S3AFileSystem{");
     sb.append("uri=").append(uri);
     sb.append(", workingDir=").append(workingDir);
+    sb.append(", inputPolicy=").append(inputPolicy);
     sb.append(", partSize=").append(partSize);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);

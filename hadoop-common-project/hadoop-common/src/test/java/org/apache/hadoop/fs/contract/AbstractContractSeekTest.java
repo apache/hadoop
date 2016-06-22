@@ -271,7 +271,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   public void testSeekBigFile() throws Throwable {
     describe("Seek round a large file and verify the bytes are what is expected");
     Path testSeekFile = path("bigseekfile.txt");
-    byte[] block = dataset(65536, 0, 255);
+    byte[] block = dataset(100 * 1024, 0, 255);
     createFile(getFileSystem(), testSeekFile, false, block);
     instream = getFileSystem().open(testSeekFile);
     assertEquals(0, instream.getPos());
@@ -291,6 +291,15 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     assertEquals("@8191", block[8191], (byte) instream.read());
     instream.seek(0);
     assertEquals("@0", 0, (byte) instream.read());
+
+    // try read & readFully
+    instream.seek(0);
+    assertEquals(0, instream.getPos());
+    instream.read();
+    assertEquals(1, instream.getPos());
+    byte[] buf = new byte[80 * 1024];
+    instream.readFully(1, buf, 0, buf.length);
+    assertEquals(1, instream.getPos());
   }
 
   @Test
