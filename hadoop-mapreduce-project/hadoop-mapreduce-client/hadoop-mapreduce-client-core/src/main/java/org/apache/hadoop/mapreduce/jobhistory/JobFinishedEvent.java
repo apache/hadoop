@@ -158,12 +158,12 @@ public class JobFinishedEvent  implements HistoryEvent {
 
   @Override
   public Set<TimelineMetric> getTimelineMetrics() {
-    Set<TimelineMetric> jobMetrics = JobHistoryEventUtils
-        .countersToTimelineMetric(getMapCounters(), finishTime);
-    jobMetrics.addAll(JobHistoryEventUtils
-        .countersToTimelineMetric(getReduceCounters(), finishTime));
-    jobMetrics.addAll(JobHistoryEventUtils
-        .countersToTimelineMetric(getTotalCounters(), finishTime));
+    Set<TimelineMetric> jobMetrics = JobHistoryEventUtils.
+        countersToTimelineMetric(getTotalCounters(), finishTime);
+    jobMetrics.addAll(JobHistoryEventUtils.
+        countersToTimelineMetric(getMapCounters(), finishTime, "MAP:"));
+    jobMetrics.addAll(JobHistoryEventUtils.
+        countersToTimelineMetric(getReduceCounters(), finishTime, "REDUCE:"));
     return jobMetrics;
   }
 }

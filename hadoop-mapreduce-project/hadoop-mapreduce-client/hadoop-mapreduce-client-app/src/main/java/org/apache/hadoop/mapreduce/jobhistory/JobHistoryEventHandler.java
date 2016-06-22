@@ -1125,6 +1125,10 @@ public class JobHistoryEventHandler extends AbstractService
     org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
         createBaseEntity(event, timestamp, entityType, setCreatedTime);
     entity.setId(taskId);
+    if (event.getEventType() == EventType.TASK_STARTED) {
+      entity.addInfo("TASK_TYPE",
+          ((TaskStartedEvent)event).getTaskType().toString());
+    }
     entity.addIsRelatedToEntity(relatedJobEntity, jobId.toString());
     return entity;
   }

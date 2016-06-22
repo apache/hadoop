@@ -61,11 +61,16 @@ public final class JobHistoryEventUtils {
 
   public static Set<TimelineMetric> countersToTimelineMetric(Counters counters,
       long timestamp) {
+    return countersToTimelineMetric(counters, timestamp, "");
+  }
+
+  public static Set<TimelineMetric> countersToTimelineMetric(Counters counters,
+      long timestamp, String groupNamePrefix) {
     Set<TimelineMetric> entityMetrics = new HashSet<TimelineMetric>();
     for (CounterGroup g : counters) {
       String groupName = g.getName();
       for (Counter c : g) {
-        String name = groupName + ":" + c.getName();
+        String name = groupNamePrefix + groupName + ":" + c.getName();
         TimelineMetric metric = new TimelineMetric();
         metric.setId(name);
         metric.addValue(timestamp, c.getValue());
