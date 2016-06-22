@@ -77,9 +77,9 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private final long contentLength;
   private final String uri;
   public static final Logger LOG = S3AFileSystem.LOG;
-  public static final long CLOSE_THRESHOLD = 4096;
   private final S3AInstrumentation.InputStreamStatistics streamStatistics;
-  private long readahead;
+  private final S3AInputPolicy inputPolicy;
+  private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
 
   /**
    * This is the actual position within the object, used by
@@ -87,8 +87,16 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private long nextReadPos;
 
-  /* Amount of data desired from the request */
-  private long requestedStreamLen;
+  /**
+   * The end of the content range of the last request.
+   * This is an absolute value of the range, not a length field.
+   */
+  private long contentRangeFinish;
+
+  /**
+   * The start of the content range of the last request.
+   */
+  private long contentRangeStart;
 
   public S3AInputStream(String bucket,
       String key,
@@ -96,7 +104,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       AmazonS3Client client,
       FileSystem.Statistics stats,
       S3AInstrumentation instrumentation,
-      long readahead) {
+      long readahead,
+      S3AInputPolicy inputPolicy) {
     Preconditions.checkArgument(StringUtils.isNotEmpty(bucket), "No Bucket");
     Preconditions.checkArgument(StringUtils.isNotEmpty(key), "No Key");
     Preconditions.checkArgument(contentLength >= 0 , "Negative content length");
@@ -107,6 +116,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     this.stats = stats;
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.streamStatistics = instrumentation.newInputStreamStatistics();
+    this.inputPolicy = inputPolicy;
     setReadahead(readahead);
   }
 
@@ -120,21 +130,23 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private synchronized void reopen(String reason, long targetPos, long length)
       throws IOException {
-    requestedStreamLen = this.contentLength;
 
     if (wrappedStream != null) {
-      closeStream("reopen(" + reason + ")", requestedStreamLen);
+      closeStream("reopen(" + reason + ")", contentRangeFinish);
     }
-    LOG.debug("reopen({}) for {} at targetPos={}, length={}," +
-        " requestedStreamLen={}, streamPosition={}, nextReadPosition={}",
-        uri, reason, targetPos, length, requestedStreamLen, pos, nextReadPos);
+
+    contentRangeFinish = calculateRequestLimit(inputPolicy, targetPos,
+        length, contentLength, readahead);
+    LOG.debug("reopen({}) for {} range[{}-{}], length={}," +
+        " streamPosition={}, nextReadPosition={}",
+        uri, reason, targetPos, contentRangeFinish, length,  pos, nextReadPos);
 
     streamStatistics.streamOpened();
     try {
       GetObjectRequest request = new GetObjectRequest(bucket, key)
-          .withRange(targetPos, requestedStreamLen);
+          .withRange(targetPos, contentRangeFinish);
       wrappedStream = client.getObject(request).getObjectContent();
-
+      contentRangeStart = targetPos;
       if (wrappedStream == null) {
         throw new IOException("Null IO stream from reopen of (" + reason +  ") "
             + uri);
@@ -205,8 +217,13 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       long forwardSeekRange = Math.max(readahead, available);
       // work out how much is actually left in the stream
       // then choose whichever comes first: the range or the EOF
-      long forwardSeekLimit = Math.min(remaining(), forwardSeekRange);
-      if (diff <= forwardSeekLimit) {
+      long remainingInCurrentRequest = remainingInCurrentRequest();
+
+      long forwardSeekLimit = Math.min(remainingInCurrentRequest,
+          forwardSeekRange);
+      boolean skipForward = remainingInCurrentRequest > 0
+          && diff <= forwardSeekLimit;
+      if (skipForward) {
         // the forward seek range is within the limits
         LOG.debug("Forward seek on {}, of {} bytes", uri, diff);
         streamStatistics.seekForwards(diff);
@@ -231,14 +248,16 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       streamStatistics.seekBackwards(diff);
     } else {
       // targetPos == pos
-      // this should never happen as the caller filters it out.
-      // Retained just in case
-      LOG.debug("Ignoring seek {} to {} as target position == current",
-          uri, targetPos);
+      if (remainingInCurrentRequest() > 0) {
+        // if there is data left in the stream, keep going
+        return;
+      }
+
     }
 
+    // if the code reaches here, the stream needs to be reopened.
     // close the stream; if read the object will be opened at the new pos
-    closeStream("seekInStream()", this.requestedStreamLen);
+    closeStream("seekInStream()", this.contentRangeFinish);
     pos = targetPos;
   }
 
@@ -255,9 +274,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private void lazySeek(long targetPos, long len) throws IOException {
     //For lazy seek
-    if (targetPos != this.pos) {
-      seekInStream(targetPos, len);
-    }
+    seekInStream(targetPos, len);
 
     //re-open at specific location if needed
     if (wrappedStream == null) {
@@ -283,7 +300,6 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     if (this.contentLength == 0 || (nextReadPos >= contentLength)) {
       return -1;
     }
-
 
     int byteRead;
     try {
@@ -328,7 +344,6 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * This updates the statistics on read operations started and whether
    * or not the read operation "completed", that is: returned the exact
    * number of bytes requested.
-   * @throws EOFException if there is no more data
    * @throws IOException if there are other problems
    */
   @Override
@@ -357,7 +372,9 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       streamStatistics.readOperationStarted(nextReadPos, len);
       bytesRead = wrappedStream.read(buf, off, len);
     } catch (EOFException e) {
-      throw e;
+      onReadFailure(e, len);
+      // the base implementation swallows EOFs.
+      return -1;
     } catch (IOException e) {
       onReadFailure(e, len);
       bytesRead = wrappedStream.read(buf, off, len);
@@ -397,7 +414,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
       closed = true;
       try {
         // close or abort the stream
-        closeStream("close() operation", this.contentLength);
+        closeStream("close() operation", this.contentRangeFinish);
         // this is actually a no-op
         super.close();
       } finally {
@@ -420,13 +437,17 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    */
   private void closeStream(String reason, long length) {
     if (wrappedStream != null) {
-      boolean shouldAbort = length - pos > CLOSE_THRESHOLD;
+
+      // if the amount of data remaining in the current request is greater
+      // than the readahead value: abort.
+      long remaining = remainingInCurrentRequest();
+      boolean shouldAbort = remaining > readahead;
       if (!shouldAbort) {
         try {
           // clean close. This will read to the end of the stream,
           // so, while cleaner, can be pathological on a multi-GB object
           wrappedStream.close();
-          streamStatistics.streamClose(false);
+          streamStatistics.streamClose(false, remaining);
         } catch (IOException e) {
           // exception escalates to an abort
           LOG.debug("When closing {} stream for {}", uri, reason, e);
@@ -437,11 +458,13 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
         // Abort, rather than just close, the underlying stream.  Otherwise, the
         // remaining object payload is read from S3 while closing the stream.
         wrappedStream.abort();
-        streamStatistics.streamClose(true);
+        streamStatistics.streamClose(true, remaining);
       }
       LOG.debug("Stream {} {}: {}; streamPos={}, nextReadPos={}," +
-          " length={}",
-          uri, (shouldAbort ? "aborted":"closed"), reason, pos, nextReadPos,
+          " request range {}-{} length={}",
+          uri, (shouldAbort ? "aborted" : "closed"), reason,
+          pos, nextReadPos,
+          contentRangeStart, contentRangeFinish,
           length);
       wrappedStream = null;
     }
@@ -451,7 +474,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   public synchronized int available() throws IOException {
     checkNotClosed();
 
-    long remaining = remaining();
+    long remaining = remainingInFile();
     if (remaining > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;
     }
@@ -462,8 +485,33 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * Bytes left in stream.
    * @return how many bytes are left to read
    */
-  protected long remaining() {
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public synchronized long remainingInFile() {
     return this.contentLength - this.pos;
+  }
+
+  /**
+   * Bytes left in the current request.
+   * Only valid if there is an active request.
+   * @return how many bytes are left to read in the current GET.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public synchronized long remainingInCurrentRequest() {
+    return this.contentRangeFinish - this.pos;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public synchronized long getContentRangeFinish() {
+    return contentRangeFinish;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public synchronized long getContentRangeStart() {
+    return contentRangeStart;
   }
 
   @Override
@@ -480,15 +528,25 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   @Override
   @InterfaceStability.Unstable
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "S3AInputStream{");
-    sb.append(uri);
-    sb.append(" pos=").append(pos);
-    sb.append(" nextReadPos=").append(nextReadPos);
-    sb.append(" contentLength=").append(contentLength);
-    sb.append(" ").append(streamStatistics.toString());
-    sb.append('}');
-    return sb.toString();
+    String s = streamStatistics.toString();
+    synchronized (this) {
+      final StringBuilder sb = new StringBuilder(
+          "S3AInputStream{");
+      sb.append(uri);
+      sb.append(" wrappedStream=")
+          .append(wrappedStream != null ? "open" : "closed");
+      sb.append(" read policy=").append(inputPolicy);
+      sb.append(" pos=").append(pos);
+      sb.append(" nextReadPos=").append(nextReadPos);
+      sb.append(" contentLength=").append(contentLength);
+      sb.append(" contentRangeStart=").append(contentRangeStart);
+      sb.append(" contentRangeFinish=").append(contentRangeFinish);
+      sb.append(" remainingInCurrentRequest=")
+          .append(remainingInCurrentRequest());
+      sb.append('\n').append(s);
+      sb.append('}');
+      return sb.toString();
+    }
   }
 
   /**
@@ -542,7 +600,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   }
 
   @Override
-  public void setReadahead(Long readahead) {
+  public synchronized void setReadahead(Long readahead) {
     if (readahead == null) {
       this.readahead = Constants.DEFAULT_READAHEAD_RANGE;
     } else {
@@ -555,7 +613,48 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
    * Get the current readahead value.
    * @return a non-negative readahead value
    */
-  public long getReadahead() {
+  public synchronized long getReadahead() {
     return readahead;
   }
+
+  /**
+   * Calculate the limit for a get request, based on input policy
+   * and state of object.
+   * @param inputPolicy input policy
+   * @param targetPos position of the read
+   * @param length length of bytes requested; if less than zero "unknown"
+   * @param contentLength total length of file
+   * @param readahead current readahead value
+   * @return the absolute value of the limit of the request.
+   */
+  static long calculateRequestLimit(
+      S3AInputPolicy inputPolicy,
+      long targetPos,
+      long length,
+      long contentLength,
+      long readahead) {
+    long rangeLimit;
+    switch (inputPolicy) {
+    case Random:
+      // positioned.
+      // read either this block, or the here + readahead value.
+      rangeLimit = (length < 0) ? contentLength
+          : targetPos + Math.max(readahead, length);
+      break;
+
+    case Sequential:
+      // sequential: plan for reading the entire object.
+      rangeLimit = contentLength;
+      break;
+
+    case Normal:
+    default:
+      rangeLimit = contentLength;
+
+    }
+    // cannot read past the end of the object
+    rangeLimit = Math.min(contentLength, rangeLimit);
+    return rangeLimit;
+  }
+
 }

@@ -105,7 +105,10 @@ public abstract class FSInputStream extends InputStream
     Preconditions.checkArgument(buffer != null, "Null buffer");
     if (buffer.length - offset < length) {
       throw new IndexOutOfBoundsException(
-          FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER);
+          FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER
+              + ": request length=" + length
+              + ", with offset ="+ offset
+              + "; buffer capacity =" + (buffer.length - offset));
     }
   }
 
