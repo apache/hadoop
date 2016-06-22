@@ -447,7 +447,8 @@
   <name>mapreduce.reduce.shuffle.memory.limit.percent</name>
   <value>0.25</value>
   <description>Expert: Maximum percentage of the in-memory limit that a
-  single shuffle can consume</description>
+  single shuffle can consume. Range of valid values is [0.0, 1.0]. If the value
+  is 0.0 map outputs are shuffled directly to disk.</description>
 </property>
 
 <property>
