@@ -53,11 +53,9 @@ The following sections discusses what commands are supported by disk balancer
 
  The plan command can be run against a given datanode by running
 
- `hdfs diskbalancer -uri hdfs://mycluster.com -plan node1.mycluster.com`
+ `hdfs diskbalancer -plan node1.mycluster.com`
 
- uri is the address of the namenode and -plan points to the datanode that we
- need to plan for. By deafult, plan command writes its output to
- **/system/diskbalancer**.
+ The command accepts [Generic Options](../hadoop-common/CommandsManual.html#Generic_Options).
 
  The plan command also has a set of parameters that allows user to control
  the output and execution of the plan.

@@ -52,16 +52,6 @@ import java.io.PrintStream;
  */
 public class DiskBalancer extends Configured implements Tool {
   /**
-   * NameNodeURI can point to either a real namenode, or a json file that
-   * contains the diskBalancer data in json form, that jsonNodeConnector knows
-   * how to deserialize.
-   * <p>
-   * Expected formats are :
-   * <p>
-   * hdfs://namenode.uri or file:///data/myCluster.json
-   */
-  public static final String NAMENODEURI = "fs";
-  /**
    * Computes a plan for a given set of nodes.
    */
   public static final String PLAN = "plan";
@@ -275,13 +265,6 @@ public class DiskBalancer extends Configured implements Tool {
    */
   private void addPlanCommands(Options opt) {
 
-    Option uri = OptionBuilder.withLongOpt(NAMENODEURI)
-        .withDescription("Address of the Namenode. e,g. hdfs://namenode")
-        .hasArg()
-        .create();
-    getPlanOptions().addOption(uri);
-    opt.addOption(uri);
-
     Option plan = OptionBuilder.withLongOpt(PLAN)
         .withDescription("creates a plan for datanode.")
         .hasArg()
@@ -336,7 +319,6 @@ public class DiskBalancer extends Configured implements Tool {
   private void addHelpCommands(Options opt) {
     Option help = OptionBuilder.withLongOpt(HELP)
         .hasOptionalArg()
-        .withArgName(HELP)
         .withDescription("valid commands are plan | execute | query | cancel" +
             " | report")
         .create();

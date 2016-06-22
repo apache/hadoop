@@ -31,6 +31,7 @@ import java.util.Scanner;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -74,8 +75,7 @@ public class TestDiskBalancerCommand {
   /* test basic report */
   @Test(timeout=60000)
   public void testReportSimple() throws Exception {
-    final String cmdLine = String.format("hdfs diskbalancer -fs %s -report",
-        clusterJson.toString());
+    final String cmdLine = "hdfs diskbalancer -report";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
@@ -103,8 +103,7 @@ public class TestDiskBalancerCommand {
   /* test less than 64 DataNode(s) as total, e.g., -report -top 32 */
   @Test(timeout=60000)
   public void testReportLessThanTotal() throws Exception {
-    final String cmdLine = String.format(
-        "hdfs diskbalancer -fs %s -report -top 32", clusterJson.toString());
+    final String cmdLine = "hdfs diskbalancer -report -top 32";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
@@ -127,8 +126,7 @@ public class TestDiskBalancerCommand {
   /* test more than 64 DataNode(s) as total, e.g., -report -top 128 */
   @Test(timeout=60000)
   public void testReportMoreThanTotal() throws Exception {
-    final String cmdLine = String.format(
-        "hdfs diskbalancer -fs %s -report -top 128", clusterJson.toString());
+    final String cmdLine = "hdfs diskbalancer -report -top 128";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
@@ -152,8 +150,7 @@ public class TestDiskBalancerCommand {
   /* test invalid top limit, e.g., -report -top xx */
   @Test(timeout=60000)
   public void testReportInvalidTopLimit() throws Exception {
-    final String cmdLine = String.format(
-        "hdfs diskbalancer -fs %s -report -top xx", clusterJson.toString());
+    final String cmdLine = "hdfs diskbalancer -report -top xx";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
@@ -177,14 +174,11 @@ public class TestDiskBalancerCommand {
             containsString("9 volumes with node data density 1.97"))));
   }
 
-  /* test -report -node DataNodeID */
   @Test(timeout=60000)
   public void testReportNode() throws Exception {
-    final String cmdLine = String
-        .format(
-            "hdfs diskbalancer -fs %s -report -node "
-                + "a87654a9-54c7-4693-8dd9-c9c7021dc340",
-            clusterJson.toString());
+    final String cmdLine =
+            "hdfs diskbalancer -report -node " +
+            "a87654a9-54c7-4693-8dd9-c9c7021dc340";
     final List<String> outputs = runCommand(cmdLine);
 
     assertThat(
@@ -275,6 +269,7 @@ public class TestDiskBalancerCommand {
     org.apache.hadoop.hdfs.tools.DiskBalancer db =
         new org.apache.hadoop.hdfs.tools.DiskBalancer(conf);
 
+    FileSystem.setDefaultUri(conf, clusterJson);
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
     db.run(cmds, out);

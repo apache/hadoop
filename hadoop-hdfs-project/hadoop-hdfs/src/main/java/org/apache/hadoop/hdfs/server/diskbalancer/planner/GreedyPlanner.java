@@ -67,7 +67,8 @@ public class GreedyPlanner implements Planner {
     long startTime = Time.monotonicNow();
     NodePlan plan = new NodePlan(node.getDataNodeName(),
         node.getDataNodePort());
-    LOG.info("Starting plan for Node : " + node.getDataNodeUUID());
+    LOG.info("Starting plan for Node : {}:{}",
+        node.getDataNodeName(), node.getDataNodePort());
     while (node.isBalancingNeeded(this.threshold)) {
       for (DiskBalancerVolumeSet vSet : node.getVolumeSets().values()) {
         balanceVolumeSet(node, vSet, plan);
@@ -76,8 +77,9 @@ public class GreedyPlanner implements Planner {
 
     long endTime = Time.monotonicNow();
     String message = String
-        .format("Compute Plan for Node : %s took %d ms ",
-            node.getDataNodeUUID(), endTime - startTime);
+        .format("Compute Plan for Node : %s:%d took %d ms ",
+            node.getDataNodeName(), node.getDataNodePort(),
+            endTime - startTime);
     LOG.info(message);
     return plan;
   }

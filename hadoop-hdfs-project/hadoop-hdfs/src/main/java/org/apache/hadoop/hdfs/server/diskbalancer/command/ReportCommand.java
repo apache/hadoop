@@ -201,9 +201,9 @@ public class ReportCommand extends Command {
         " datanode, or prints out the list of nodes that will benefit from " +
         "running disk balancer. Top defaults to " + getDefaultTop();
     String footer = ". E.g.:\n"
-        + "hdfs diskbalancer -fs http://namenode.uri -report\n"
-        + "hdfs diskbalancer -fs http://namenode.uri -report -top 5\n"
-        + "hdfs diskbalancer -fs http://namenode.uri -report "
+        + "hdfs diskbalancer -report\n"
+        + "hdfs diskbalancer -report -top 5\n"
+        + "hdfs diskbalancer -report "
         + "-node {DataNodeID | IP | Hostname}";
 
     HelpFormatter helpFormatter = new HelpFormatter();

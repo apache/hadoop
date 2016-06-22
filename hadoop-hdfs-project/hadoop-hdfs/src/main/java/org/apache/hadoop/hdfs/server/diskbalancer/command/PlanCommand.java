@@ -63,10 +63,9 @@ public class PlanCommand extends Command {
     this.thresholdPercentage = 1;
     this.bandwidth = 0;
     this.maxError = 0;
-    addValidCommandParameters(DiskBalancer.NAMENODEURI, "Name Node URI or " +
-        "file URI for cluster");
-
-    addValidCommandParameters(DiskBalancer.OUTFILE, "Output file");
+    addValidCommandParameters(DiskBalancer.OUTFILE, "Output directory in " +
+        "HDFS. The generated plan will be written to a file in this " +
+        "directory.");
     addValidCommandParameters(DiskBalancer.BANDWIDTH, "Maximum Bandwidth to " +
         "be used while copying.");
     addValidCommandParameters(DiskBalancer.THRESHOLD, "Percentage skew that " +
@@ -188,7 +187,7 @@ public class PlanCommand extends Command {
    */
   @Override
   public void printHelp() {
-    String header = "creates a plan that describes how much data should be " +
+    String header = "Creates a plan that describes how much data should be " +
         "moved between disks.\n\n";
 
     String footer = "\nPlan command creates a set of steps that represent a " +
@@ -196,7 +195,7 @@ public class PlanCommand extends Command {
         " will balance the data.";
 
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp("hdfs diskbalancer -uri <namenode> -plan " +
+    helpFormatter.printHelp("hdfs diskbalancer -plan " +
         "<hostname> [options]", header, DiskBalancer.getPlanOptions(), footer);
   }
 
