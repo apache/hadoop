@@ -526,6 +526,38 @@ public class TestMover {
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks,
           dataBlocks + parityBlocks);
 
+      // start 5 more datanodes
+      numOfDatanodes += 5;
+      capacities = new long[5][storagesPerDatanode];
+      for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < storagesPerDatanode; j++) {
+          capacities[i][j] = capacity;
+        }
+      }
+      cluster.startDataNodes(conf, 5,
+          new StorageType[][] { { StorageType.SSD, StorageType.DISK },
+              { StorageType.SSD, StorageType.DISK },
+              { StorageType.SSD, StorageType.DISK },
+              { StorageType.SSD, StorageType.DISK },
+              { StorageType.SSD, StorageType.DISK } },
+          true, null, null, null, capacities, null, false, false, false, null);
+      cluster.triggerHeartbeats();
+
+      // move file blocks to ONE_SSD policy
+      client.setStoragePolicy(barDir, "ONE_SSD");
+
+      // run Mover
+      rc = ToolRunner.run(conf, new Mover.Cli(), new String[] { "-p", barDir });
+
+      // verify storage types and locations
+      // Movements should have been ignored for the unsupported policy on
+      // striped file
+      locatedBlocks = client.getBlockLocations(fooFile, 0, fileLen);
+      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+        for (StorageType type : lb.getStorageTypes()) {
+          Assert.assertEquals(StorageType.ARCHIVE, type);
+        }
+      }
     }finally{
       cluster.shutdown();
     }

@@ -53,6 +53,11 @@ public final class ErasureCodingPolicyManager {
   private static final ErasureCodingPolicy[] SYS_POLICIES =
       new ErasureCodingPolicy[]{SYS_POLICY1, SYS_POLICY2, SYS_POLICY3};
 
+  // Supported storage policies for striped EC files
+  private static final byte[] SUITABLE_STORAGE_POLICIES_FOR_EC_STRIPED_MODE = new byte[] {
+      HdfsConstants.HOT_STORAGE_POLICY_ID, HdfsConstants.COLD_STORAGE_POLICY_ID,
+      HdfsConstants.ALLSSD_STORAGE_POLICY_ID };
+
   /**
    * All active policies maintained in NN memory for fast querying,
    * identified and sorted by its name.
@@ -118,6 +123,21 @@ public final class ErasureCodingPolicyManager {
       }
     }
     return null;
+  }
+
+  /**
+   * @return True if given policy is be suitable for striped EC Files.
+   */
+  public static boolean checkStoragePolicySuitableForECStripedMode(
+      byte storagePolicyID) {
+    boolean isPolicySuitable = false;
+    for (byte suitablePolicy : SUITABLE_STORAGE_POLICIES_FOR_EC_STRIPED_MODE) {
+      if (storagePolicyID == suitablePolicy) {
+        isPolicySuitable = true;
+        break;
+      }
+    }
+    return isPolicySuitable;
   }
 
   /**
