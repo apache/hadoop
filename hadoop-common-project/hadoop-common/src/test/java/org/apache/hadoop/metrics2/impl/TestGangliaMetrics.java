@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
@@ -99,7 +98,9 @@ public class TestGangliaMetrics {
   }
   
   @Test public void testGangliaMetrics2() throws Exception {
-    ConfigBuilder cb = new ConfigBuilder().add("default.period", 10)
+    // Setting long interval to avoid periodic publishing.
+    // We manually publish metrics by MeticsSystem#publishMetricsNow here.
+    ConfigBuilder cb = new ConfigBuilder().add("*.period", 120)
         .add("test.sink.gsink30.context", "test") // filter out only "test"
         .add("test.sink.gsink31.context", "test") // filter out only "test"
         .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
@@ -196,14 +197,14 @@ public class TestGangliaMetrics {
      * @throws SocketException
      */
     public MockDatagramSocket() throws SocketException {
-      capture = new CopyOnWriteArrayList<byte[]>();
+      capture = new ArrayList<byte[]>();
     }
 
     /* (non-Javadoc)
      * @see java.net.DatagramSocket#send(java.net.DatagramPacket)
      */
     @Override
-    public void send(DatagramPacket p) throws IOException {
+    public synchronized void send(DatagramPacket p) throws IOException {
       // capture the byte arrays
       byte[] bytes = new byte[p.getLength()];
       System.arraycopy(p.getData(), p.getOffset(), bytes, 0, p.getLength());
@@ -213,7 +214,7 @@ public class TestGangliaMetrics {
     /**
      * @return the captured byte arrays
      */
-    List<byte[]> getCapturedSend() {
+    synchronized List<byte[]> getCapturedSend() {
       return capture;
     }
   }
