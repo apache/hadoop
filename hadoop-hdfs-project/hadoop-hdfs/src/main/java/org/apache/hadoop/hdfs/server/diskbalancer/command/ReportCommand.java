@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
 import java.io.PrintStream;
 import java.util.Collections;
+import java.util.List;
 import java.util.ListIterator;
 
 import org.apache.commons.cli.CommandLine;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSe
 import org.apache.hadoop.hdfs.tools.DiskBalancer;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * Executes the report command.
@@ -164,9 +166,10 @@ public class ReportCommand extends Command {
             dbdn.getVolumeCount(),
             dbdn.getNodeDataDensity()));
 
+        List<String> volumeList = Lists.newArrayList();
         for (DiskBalancerVolumeSet vset : dbdn.getVolumeSets().values()) {
           for (DiskBalancerVolume vol : vset.getVolumes()) {
-            result.appendln(String.format(volumeFormat,
+            volumeList.add(String.format(volumeFormat,
                 vol.getStorageType(),
                 vol.getPath(),
                 vol.getUsedRatio(),
@@ -181,6 +184,10 @@ public class ReportCommand extends Command {
                 vol.isTransient() ? trueStr : falseStr));
           }
         }
+
+        Collections.sort(volumeList);
+        result.appendln(
+            StringUtils.join(volumeList.toArray(), System.lineSeparator()));
       }
     }
   }
@@ -194,13 +201,13 @@ public class ReportCommand extends Command {
         " datanode, or prints out the list of nodes that will benefit from " +
         "running disk balancer. Top defaults to " + getDefaultTop();
     String footer = ". E.g.:\n"
-        + "hdfs diskbalancer -uri http://namenode.uri -report\n"
-        + "hdfs diskbalancer -uri http://namenode.uri -report -top 5\n"
-        + "hdfs diskbalancer -uri http://namenode.uri -report "
+        + "hdfs diskbalancer -fs http://namenode.uri -report\n"
+        + "hdfs diskbalancer -fs http://namenode.uri -report -top 5\n"
+        + "hdfs diskbalancer -fs http://namenode.uri -report "
         + "-node {DataNodeID | IP | Hostname}";
 
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp("hdfs diskbalancer -uri http://namenode.uri " +
+    helpFormatter.printHelp("hdfs diskbalancer -fs http://namenode.uri " +
         "-report [options]",
         header, DiskBalancer.getReportOptions(), footer);
   }
