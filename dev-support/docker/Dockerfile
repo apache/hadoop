@@ -59,6 +59,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python \
     python2.7 \
     python-pip \
+    rsync \
     snappy \
     zlib1g-dev
 
