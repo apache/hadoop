@@ -22,7 +22,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -208,11 +207,10 @@ public class TestLogsCLI {
     pw.println(" -list_nodes                     Show the list of nodes that successfully");
     pw.println("                                 aggregated logs. This option can only be");
     pw.println("                                 used with finished applications.");
-    pw.println(" -logFiles <Log File Name>       Work with -am/-containerId and specify");
-    pw.println("                                 comma-separated value to get specified");
-    pw.println("                                 container log files. Use \"ALL\" to fetch");
-    pw.println("                                 all the log files for the container. It");
-    pw.println("                                 also supports Java Regex.");
+    pw.println(" -logFiles <Log File Name>       Specify comma-separated value to get");
+    pw.println("                                 specified container log files. Use \"ALL\"");
+    pw.println("                                 to fetch all the log files for the");
+    pw.println("                                 container. It also supports Java Regex.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
     pw.println(" -out <Local Directory>          Local directory for storing individual");
     pw.println("                                 container logs. The container logs will");
@@ -364,7 +362,8 @@ public class TestLogsCLI {
         "-logFiles", "123"});
     assertTrue(exitCode == -1);
     assertTrue(sysErrStream.toString().contains(
-        "Can not find any log file matching the pattern: [123]"));
+        "Can not find any log file matching the pattern: [123] "
+        + "for the application: " + appId.toString()));
     sysErrStream.reset();
 
     // specify the bytes which is larger than the actual file size,
@@ -390,6 +389,15 @@ public class TestLogsCLI {
       "Logs for container " + containerId1.toString()
           + " are not present in this log-file."));
     sysOutStream.reset();
+
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-containerId", containerId3.toString(), "-logFiles", "123" });
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "Can not find any log file matching the pattern: [123] "
+        + "for the container: " + containerId3
+        + " within the application: " + appId.toString()));
+    sysErrStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
         "-containerId", containerId3.toString(), "-logFiles", "stdout" });
@@ -530,7 +538,7 @@ public class TestLogsCLI {
         YarnApplicationState.RUNNING, ugi.getShortUserName(), true,
         attemptReports, containerReports);
     LogsCLI cli = spy(new LogsCLIForTest(mockYarnClient));
-    doNothing().when(cli).printContainerLogsFromRunningApplication(
+    doReturn(0).when(cli).printContainerLogsFromRunningApplication(
         any(Configuration.class), any(ContainerLogsRequest.class),
         any(LogCLIHelpers.class));
 
