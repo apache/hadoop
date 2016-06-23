@@ -87,7 +87,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
       csConf = new CapacitySchedulerConfiguration();
-      setupQueueConfiguration(csConf, rm);
+      setupQueueConfiguration(csConf);
       conf = new YarnConfiguration(csConf);
       conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
           ResourceScheduler.class);
@@ -113,7 +113,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   }
 
   private static void setupQueueConfiguration(
-      CapacitySchedulerConfiguration config, ResourceManager resourceManager) {
+      CapacitySchedulerConfiguration config) {
 
     // Define top-level queues
     config.setQueues(CapacitySchedulerConfiguration.ROOT,
