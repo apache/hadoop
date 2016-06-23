@@ -63,6 +63,10 @@ public class CredentialsSys extends Credentials {
     return mAuxGIDs;
   }
 
+  public int getStamp() {
+    return mStamp;
+  }
+
   public void setGID(int gid) {
     this.mGID = gid;
   }
@@ -93,8 +97,15 @@ public class CredentialsSys extends Credentials {
 
   @Override
   public void write(XDR xdr) {
+    int padding = 0;
+    // we do not need compute padding if the hostname is already a multiple of 4
+    if (mHostName.getBytes(Charsets.UTF_8).length != 0) {
+      padding = 4 - (mHostName.getBytes(Charsets.UTF_8).length % 4);
+    }
     // mStamp + mHostName.length + mHostName + mUID + mGID + mAuxGIDs.count
     mCredentialsLength = 20 + mHostName.getBytes(Charsets.UTF_8).length;
+    // add the extra padding to the credential length where hostname is not a multiple of 4
+    mCredentialsLength = mCredentialsLength + padding;
     // mAuxGIDs
     if (mAuxGIDs != null && mAuxGIDs.length > 0) {
       mCredentialsLength += mAuxGIDs.length * 4;
