@@ -681,7 +681,7 @@ public class FSImageSerialization {
     if ((flags & 0x20) != 0) {
       info.setDefaultReplication(readShort(in));
     }
-    if ((flags & ~0x2F) != 0) {
+    if ((flags & ~0x3F) != 0) {
       throw new IOException("Unknown flag in CachePoolInfo: " + flags);
     }
     return info;
