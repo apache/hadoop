@@ -33,6 +33,7 @@ public class TestCredentialsSys {
     CredentialsSys credential = new CredentialsSys();
     credential.setUID(0);
     credential.setGID(1);
+    credential.setStamp(1234);
     
     XDR xdr = new XDR();
     credential.write(xdr);
@@ -42,5 +43,6 @@ public class TestCredentialsSys {
     
     assertEquals(0, newCredential.getUID());
     assertEquals(1, newCredential.getGID());
+    assertEquals(1234, newCredential.getStamp());
   }
 }
