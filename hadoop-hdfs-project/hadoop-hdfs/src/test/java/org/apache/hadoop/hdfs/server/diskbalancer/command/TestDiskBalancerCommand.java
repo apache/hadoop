@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
@@ -350,5 +351,29 @@ public class TestDiskBalancerCommand {
       outputs.add(scanner.nextLine());
     }
     return outputs;
+  }
+
+  /**
+   * Making sure that we can query the node without having done a submit.
+   * @throws Exception
+   */
+  @Test
+  public void testDiskBalancerQueryWithoutSubmit() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+    final int numDatanodes = 2;
+    MiniDFSCluster miniDFSCluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(numDatanodes).build();
+    try {
+      miniDFSCluster.waitActive();
+      DataNode dataNode = miniDFSCluster.getDataNodes().get(0);
+      final String queryArg = String.format("-query localhost:%d", dataNode
+          .getIpcPort());
+      final String cmdLine = String.format("hdfs diskbalancer %s",
+          queryArg);
+      runCommand(cmdLine);
+    } finally {
+      miniDFSCluster.shutdown();
+    }
   }
 }

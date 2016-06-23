@@ -63,7 +63,7 @@ public class QueryCommand extends Command {
     String nodeAddress = nodeName;
 
     // if the string is not name:port format use the default port.
-    if (!nodeName.matches("^.*:\\d$")) {
+    if (!nodeName.matches("[^\\:]+:[0-9]{2,5}")) {
       int defaultIPC = NetUtils.createSocketAddr(
           getConf().getTrimmed(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY,
               DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_DEFAULT)).getPort();

@@ -104,6 +104,7 @@ public class DiskBalancer {
     scheduler = Executors.newSingleThreadExecutor();
     lock = new ReentrantLock();
     workMap = new ConcurrentHashMap<>();
+    this.planID = "";  // to keep protobuf happy.
     this.isDiskBalancerEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_DISK_BALANCER_ENABLED,
         DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT);
@@ -223,7 +224,9 @@ public class DiskBalancer {
     lock.lock();
     try {
       checkDiskBalancerEnabled();
-      if ((this.planID == null) || (!this.planID.equals(planID))) {
+      if (this.planID == null ||
+          !this.planID.equals(planID) ||
+          this.planID.isEmpty()) {
         LOG.error("Disk Balancer - No such plan. Cancel plan failed. PlanID: " +
             planID);
         throw new DiskBalancerException("No such plan.",
