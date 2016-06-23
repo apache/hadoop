@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import static org.apache.hadoop.test.GenericTestUtils.waitFor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -391,8 +392,8 @@ public class TestTaskAttempt{
     Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
     TaskAttempt attempt = attempts.values().iterator().next();
     app.waitForState(attempt, TaskAttemptState.KILLED);
-    Assert.assertTrue("No Ta Started JH Event", app.getTaStartJHEvent());
-    Assert.assertTrue("No Ta Killed JH Event", app.getTaKilledJHEvent());
+    waitFor(app::getTaStartJHEvent, 100, 800);
+    waitFor(app::getTaKilledJHEvent, 100, 800);
   }
 
   static class FailingAttemptsMRApp extends MRApp {
