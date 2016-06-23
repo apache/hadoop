@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.tools.CopyListing.AclsNotSupportedException;
 import org.apache.hadoop.tools.CopyListing.XAttrsNotSupportedException;
 import org.apache.hadoop.tools.CopyListingFileStatus;
-import org.apache.hadoop.tools.DistCpOptions;
+import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.UniformSizeInputFormat;
 import org.apache.hadoop.util.StringUtils;
@@ -116,13 +116,13 @@ public class DistCpUtils {
    * a particular strategy from distcp-default.xml
    *
    * @param conf - Configuration object
-   * @param options - Handle to input options
+   * @param context - Distcp context with associated input options
    * @return Class implementing the strategy specified in options.
    */
   public static Class<? extends InputFormat> getStrategy(Configuration conf,
-      DistCpOptions options) {
+      DistCpContext context) {
     String confLabel = "distcp."
-        + StringUtils.toLowerCase(options.getCopyStrategy())
+        + StringUtils.toLowerCase(context.getCopyStrategy())
         + ".strategy" + ".impl";
     return conf.getClass(confLabel, UniformSizeInputFormat.class, InputFormat.class);
   }

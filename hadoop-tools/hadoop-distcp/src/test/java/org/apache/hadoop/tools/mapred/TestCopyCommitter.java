@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.tools.CopyListing;
 import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.GlobbedCopyListing;
@@ -146,15 +147,16 @@ public class TestCopyCommitter {
       sourceBase = TestDistCpUtils.createTestSetup(fs, sourcePerm);
       targetBase = TestDistCpUtils.createTestSetup(fs, initialPerm);
 
-      DistCpOptions options = new DistCpOptions(Arrays.asList(new Path(sourceBase)),
-          new Path("/out"));
-      options.preserve(FileAttribute.PERMISSION);
+      final DistCpOptions options = new DistCpOptions.Builder(
+          Collections.singletonList(new Path(sourceBase)), new Path("/out"))
+          .preserve(FileAttribute.PERMISSION).build();
       options.appendToConf(conf);
-      options.setTargetPathExists(false);
-      
+      final DistCpContext context = new DistCpContext(options);
+      context.setTargetPathExists(false);
+
       CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
       Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
-      listing.buildListing(listingFile, options);
+      listing.buildListing(listingFile, context);
 
       conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
 
@@ -197,15 +199,15 @@ public class TestCopyCommitter {
       String targetBaseAdd = TestDistCpUtils.createTestSetup(fs, FsPermission.getDefault());
       fs.rename(new Path(targetBaseAdd), new Path(targetBase));
 
-      DistCpOptions options = new DistCpOptions(Arrays.asList(new Path(sourceBase)),
-          new Path("/out"));
-      options.setSyncFolder(true);
-      options.setDeleteMissing(true);
+      final DistCpOptions options = new DistCpOptions.Builder(
+          Collections.singletonList(new Path(sourceBase)), new Path("/out"))
+          .withSyncFolder(true).withDeleteMissing(true).build();
       options.appendToConf(conf);
+      final DistCpContext context = new DistCpContext(options);
 
       CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
       Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
-      listing.buildListing(listingFile, options);
+      listing.buildListing(listingFile, context);
 
       conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
@@ -266,15 +268,15 @@ public class TestCopyCommitter {
       TestDistCpUtils.createFile(fs, targetBase + "/9");
       TestDistCpUtils.createFile(fs, targetBase + "/A");
 
-      DistCpOptions options = new DistCpOptions(Arrays.asList(new Path(sourceBase)), 
-          new Path("/out"));
-      options.setSyncFolder(true);
-      options.setDeleteMissing(true);
+      final DistCpOptions options = new DistCpOptions.Builder(
+          Collections.singletonList(new Path(sourceBase)), new Path("/out"))
+          .withSyncFolder(true).withDeleteMissing(true).build();
       options.appendToConf(conf);
+      final DistCpContext context = new DistCpContext(options);
 
       CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
       Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
-      listing.buildListing(listingFile, options);
+      listing.buildListing(listingFile, context);
 
       conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);

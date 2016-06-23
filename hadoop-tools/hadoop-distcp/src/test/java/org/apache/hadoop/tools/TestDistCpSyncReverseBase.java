@@ -56,7 +56,8 @@ public abstract class TestDistCpSyncReverseBase {
   private MiniDFSCluster cluster;
   private final Configuration conf = new HdfsConfiguration();
   private DistributedFileSystem dfs;
-  private DistCpOptions options;
+  private DistCpOptions.Builder optionsBuilder;
+  private DistCpContext distCpContext;
   private Path source;
   private boolean isSrcNotSameAsTgt = true;
   private final Path target = new Path("/target");
@@ -139,10 +140,12 @@ public abstract class TestDistCpSyncReverseBase {
     }
     dfs.mkdirs(target);
 
-    options = new DistCpOptions(Arrays.asList(source), target);
-    options.setSyncFolder(true);
-    options.setUseRdiff("s2", "s1");
+    optionsBuilder = new DistCpOptions.Builder(Arrays.asList(source), target)
+        .withSyncFolder(true)
+        .withUseRdiff("s2", "s1");
+    final DistCpOptions options = optionsBuilder.build();
     options.appendToConf(conf);
+    distCpContext = new DistCpContext(options);
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
     conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, target.toString());
@@ -169,33 +172,33 @@ public abstract class TestDistCpSyncReverseBase {
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // reset source path in options
-    options.setSourcePaths(Arrays.asList(source));
+    optionsBuilder.withSourcePaths(Arrays.asList(source));
     // the source/target does not have the given snapshots
     dfs.allowSnapshot(source);
     dfs.allowSnapshot(target);
     Assert.assertFalse(sync());
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // reset source path in options
-    options.setSourcePaths(Arrays.asList(source));
+    optionsBuilder.withSourcePaths(Arrays.asList(source));
     this.enableAndCreateFirstSnapshot();
     dfs.createSnapshot(target, "s2");
     Assert.assertTrue(sync());
 
     // reset source paths in options
-    options.setSourcePaths(Arrays.asList(source));
+    optionsBuilder.withSourcePaths(Arrays.asList(source));
     // changes have been made in target
     final Path subTarget = new Path(target, "sub");
     dfs.mkdirs(subTarget);
     Assert.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // reset source paths in options
-    options.setSourcePaths(Arrays.asList(source));
+    optionsBuilder.withSourcePaths(Arrays.asList(source));
     dfs.delete(subTarget, true);
     Assert.assertTrue(sync());
   }
@@ -215,7 +218,8 @@ public abstract class TestDistCpSyncReverseBase {
   }
 
   private boolean sync() throws Exception {
-    DistCpSync distCpSync = new DistCpSync(options, conf);
+    distCpContext = new DistCpContext(optionsBuilder.build());
+    final DistCpSync distCpSync = new DistCpSync(distCpContext, conf);
     return distCpSync.sync();
   }
 
@@ -328,7 +332,7 @@ public abstract class TestDistCpSyncReverseBase {
     SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
 
-    DistCpSync distCpSync = new DistCpSync(options, conf);
+    final DistCpSync distCpSync = new DistCpSync(distCpContext, conf);
 
     lsr("Before sync target: ", shell, target);
 
@@ -340,13 +344,13 @@ public abstract class TestDistCpSyncReverseBase {
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
     CopyListing listing = new SimpleCopyListing(conf, new Credentials(),
         distCpSync);
-    listing.buildListing(listingPath, options);
+    listing.buildListing(listingPath, distCpContext);
 
     Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
     CopyMapper copyMapper = new CopyMapper();
@@ -425,7 +429,7 @@ public abstract class TestDistCpSyncReverseBase {
    */
   @Test
   public void testSyncWithCurrent() throws Exception {
-    options.setUseRdiff(".", "s1");
+    optionsBuilder.withUseRdiff(".", "s1");
     if (isSrcNotSameAsTgt) {
       initData(source);
     }
@@ -440,7 +444,7 @@ public abstract class TestDistCpSyncReverseBase {
     final Path spath = new Path(source,
         HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
     // make sure the source path is still unchanged
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
   }
 
   private void initData2(Path dir) throws Exception {
@@ -649,7 +653,7 @@ public abstract class TestDistCpSyncReverseBase {
     lsrSource("Before sync source: ", shell, source);
     lsr("Before sync target: ", shell, target);
 
-    DistCpSync distCpSync = new DistCpSync(options, conf);
+    DistCpSync distCpSync = new DistCpSync(distCpContext, conf);
     // do the sync
     distCpSync.sync();
 
@@ -658,12 +662,12 @@ public abstract class TestDistCpSyncReverseBase {
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
             HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
-    Assert.assertEquals(spath, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, distCpContext.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
     CopyListing listing = new SimpleCopyListing(conf, new Credentials(), distCpSync);
-    listing.buildListing(listingPath, options);
+    listing.buildListing(listingPath, distCpContext);
 
     Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
     CopyMapper copyMapper = new CopyMapper();

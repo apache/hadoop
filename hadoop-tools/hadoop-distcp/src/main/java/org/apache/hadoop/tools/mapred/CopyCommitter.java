@@ -36,6 +36,7 @@ import org.apache.hadoop.tools.CopyListing;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
+import org.apache.hadoop.tools.DistCpContext;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.GlobbedCopyListing;
@@ -354,16 +355,18 @@ public class CopyCommitter extends FileOutputCommitter {
     Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
         .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
         ? DistCpConstants.RAW_NONE_PATH : DistCpConstants.NONE_PATH;
-    DistCpOptions options = new DistCpOptions(targets, resultNonePath);
     //
     // Set up options to be the same from the CopyListing.buildListing's perspective,
     // so to collect similar listings as when doing the copy
     //
-    options.setOverwrite(overwrite);
-    options.setSyncFolder(syncFolder);
-    options.setTargetPathExists(targetPathExists);
-    
-    target.buildListing(targetListing, options);
+    DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
+        .withOverwrite(overwrite)
+        .withSyncFolder(syncFolder)
+        .build();
+    DistCpContext distCpContext = new DistCpContext(options);
+    distCpContext.setTargetPathExists(targetPathExists);
+
+    target.buildListing(targetListing, distCpContext);
     Path sortedTargetListing = DistCpUtils.sortListing(clusterFS, conf, targetListing);
     long totalLen = clusterFS.getFileStatus(sortedTargetListing).getLen();
 

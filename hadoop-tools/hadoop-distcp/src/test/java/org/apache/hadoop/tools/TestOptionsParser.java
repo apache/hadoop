@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.tools;
 
-import static org.junit.Assert.assertFalse;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.fail;
 
 import org.junit.Assert;
@@ -28,7 +28,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.DistCpOptions.*;
 import org.apache.hadoop.conf.Configuration;
 
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class TestOptionsParser {
@@ -329,7 +328,7 @@ public class TestOptionsParser {
         "100",
         "hdfs://localhost:9820/source/first",
         "hdfs://localhost:9820/target/"});
-    Assert.assertEquals(DistCpOptions.maxNumListstatusThreads,
+    Assert.assertEquals(DistCpOptions.MAX_NUM_LISTSTATUS_THREADS,
                         options.getNumListstatusThreads());
   }
 
@@ -380,25 +379,6 @@ public class TestOptionsParser {
           "-m", "-f", "hdfs://localhost:9820/source"});
       Assert.fail("Missing map value");
     } catch (IllegalArgumentException ignore) {}
-  }
-
-  @Test
-  public void testToString() {
-    DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
-    String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
-        + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
-        + "append=false, useDiff=false, useRdiff=false, "
-        + "fromSnapshot=null, toSnapshot=null, "
-        + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
-        + "mapBandwidth=0.0, "
-        + "copyStrategy='uniformsize', preserveStatus=[], "
-        + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
-        + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
-        + "targetPathExists=true, filtersFile='null', blocksPerChunk=0}";
-    String optionString = option.toString();
-    Assert.assertEquals(val, optionString);
-    Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
-        DistCpOptionSwitch.ATOMIC_COMMIT.name());
   }
 
   @Test
@@ -529,13 +509,8 @@ public class TestOptionsParser {
         "-f",
         "hdfs://localhost:9820/source/first",
         "hdfs://localhost:9820/target/"});
-    int i = 0;
-    Iterator<FileAttribute> attribIterator = options.preserveAttributes();
-    while (attribIterator.hasNext()) {
-      attribIterator.next();
-      i++;
-    }
-    Assert.assertEquals(i, DistCpOptionSwitch.PRESERVE_STATUS_DEFAULT.length() - 2);
+    Assert.assertEquals(DistCpOptionSwitch.PRESERVE_STATUS_DEFAULT.length() - 2,
+        options.getPreserveAttributes().size());
 
     try {
       OptionsParser.parse(new String[] {
@@ -545,19 +520,18 @@ public class TestOptionsParser {
           "hdfs://localhost:9820/target"});
       Assert.fail("Invalid preserve attribute");
     }
-    catch (IllegalArgumentException ignore) {}
     catch (NoSuchElementException ignore) {}
 
-    options = OptionsParser.parse(new String[] {
-        "-f",
-        "hdfs://localhost:9820/source/first",
-        "hdfs://localhost:9820/target/"});
-    Assert.assertFalse(options.shouldPreserve(FileAttribute.PERMISSION));
-    options.preserve(FileAttribute.PERMISSION);
-    Assert.assertTrue(options.shouldPreserve(FileAttribute.PERMISSION));
+    Builder builder = new DistCpOptions.Builder(
+        new Path("hdfs://localhost:9820/source/first"),
+        new Path("hdfs://localhost:9820/target/"));
+    Assert.assertFalse(
+        builder.build().shouldPreserve(FileAttribute.PERMISSION));
+    builder.preserve(FileAttribute.PERMISSION);
+    Assert.assertTrue(builder.build().shouldPreserve(FileAttribute.PERMISSION));
 
-    options.preserve(FileAttribute.PERMISSION);
-    Assert.assertTrue(options.shouldPreserve(FileAttribute.PERMISSION));
+    builder.preserve(FileAttribute.PERMISSION);
+    Assert.assertTrue(builder.build().shouldPreserve(FileAttribute.PERMISSION));
   }
 
   @Test
@@ -756,28 +730,25 @@ public class TestOptionsParser {
     }
 
     try {
-      options = OptionsParser.parse(new String[] {
-          optionStr, "s1", "s2", "-update", "-delete",
+      OptionsParser.parse(new String[] {
+          "-diff", "s1", "s2", "-update", "-delete",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      assertFalse("-delete should be ignored when "
-          + optionStr + " is specified",
-          options.shouldDeleteMissing());
+      fail("Should fail as -delete and -diff/-rdiff are mutually exclusive");
     } catch (IllegalArgumentException e) {
-      fail("Got unexpected IllegalArgumentException: " + e.getMessage());
+      assertExceptionContains(
+          "-delete and -diff/-rdiff are mutually exclusive", e);
     }
 
     try {
-      options = OptionsParser.parse(new String[] {
-          optionStr, "s1", "s2", "-delete",
+      OptionsParser.parse(new String[] {
+          "-diff", "s1", "s2", "-delete",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail if -update option is not specified");
+      fail("Should fail as -delete and -diff/-rdiff are mutually exclusive");
     } catch (IllegalArgumentException e) {
-      assertFalse("-delete should be ignored when -diff is specified",
-          options.shouldDeleteMissing());
-      GenericTestUtils.assertExceptionContains(
-          "-diff/-rdiff is valid only with -update option", e);
+      assertExceptionContains(
+          "-delete and -diff/-rdiff are mutually exclusive", e);
     }
 
     try {
@@ -785,10 +756,10 @@ public class TestOptionsParser {
           "-delete", "-overwrite",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail if -update option is not specified");
+      fail("Should fail as -delete and -diff are mutually exclusive");
     } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "-diff/-rdiff is valid only with -update option", e);
+      assertExceptionContains(
+          "-delete and -diff/-rdiff are mutually exclusive", e);
     }
 
     final String optionStrOther = isDiff? "-rdiff" : "-diff";
