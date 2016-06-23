@@ -280,7 +280,7 @@ public class TestDiskBalancerCommand {
     final String cmdLine = String
         .format(
             "hdfs diskbalancer %s", planArg);
-    runCommand(cmdLine);
+    runCommand(cmdLine, cluster);
   }
 
   /* Test that illegal arguments are handled correctly*/
@@ -335,12 +335,12 @@ public class TestDiskBalancerCommand {
     runCommand(cmdLine);
   }
 
-  private List<String> runCommand(final String cmdLine) throws Exception {
+  private List<String> runCommandInternal(final String cmdLine) throws
+      Exception {
     String[] cmds = StringUtils.split(cmdLine, ' ');
     org.apache.hadoop.hdfs.tools.DiskBalancer db =
         new org.apache.hadoop.hdfs.tools.DiskBalancer(conf);
 
-    FileSystem.setDefaultUri(conf, clusterJson);
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
     db.run(cmds, out);
@@ -351,6 +351,17 @@ public class TestDiskBalancerCommand {
       outputs.add(scanner.nextLine());
     }
     return outputs;
+  }
+
+  private List<String> runCommand(final String cmdLine) throws Exception {
+    FileSystem.setDefaultUri(conf, clusterJson);
+    return runCommandInternal(cmdLine);
+  }
+
+  private List<String> runCommand(final String cmdLine,
+                                  MiniDFSCluster miniCluster) throws Exception {
+    FileSystem.setDefaultUri(conf, miniCluster.getURI());
+    return runCommandInternal(cmdLine);
   }
 
   /**
