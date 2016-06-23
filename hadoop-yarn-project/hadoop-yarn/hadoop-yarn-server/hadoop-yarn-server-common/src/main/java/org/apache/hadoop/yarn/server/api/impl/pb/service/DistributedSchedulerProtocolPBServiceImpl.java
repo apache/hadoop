@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.protocolrecords
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedRegisterResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
@@ -77,8 +78,10 @@ public class DistributedSchedulerProtocolPBServiceImpl implements
   @Override
   public YarnServerCommonServiceProtos.DistSchedAllocateResponseProto
   allocateForDistributedScheduling(RpcController controller,
-      AllocateRequestProto proto) throws ServiceException {
-    AllocateRequestPBImpl request = new AllocateRequestPBImpl(proto);
+      YarnServerCommonServiceProtos.DistSchedAllocateRequestProto proto)
+      throws ServiceException {
+    DistSchedAllocateRequestPBImpl request =
+        new DistSchedAllocateRequestPBImpl(proto);
     try {
       DistSchedAllocateResponse response = real
           .allocateForDistributedScheduling(request);

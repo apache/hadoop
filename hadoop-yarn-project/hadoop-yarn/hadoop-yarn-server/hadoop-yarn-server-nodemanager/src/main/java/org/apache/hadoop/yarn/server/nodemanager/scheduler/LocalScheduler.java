@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.nodemanager.scheduler;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords
@@ -99,6 +102,9 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   private static final Logger LOG = LoggerFactory
       .getLogger(LocalScheduler.class);
 
+  private final static RecordFactory RECORD_FACTORY =
+      RecordFactoryProvider.getRecordFactory(null);
+
   // Currently just used to keep track of allocated Containers
   // Can be used for reporting stats later
   private Set<ContainerId> containersAllocated = new HashSet<>();
@@ -176,7 +182,10 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   @Override
   public AllocateResponse allocate(AllocateRequest request) throws
       YarnException, IOException {
-    return allocateForDistributedScheduling(request).getAllocateResponse();
+    DistSchedAllocateRequest distRequest =
+        RECORD_FACTORY.newRecordInstance(DistSchedAllocateRequest.class);
+    distRequest.setAllocateRequest(request);
+    return allocateForDistributedScheduling(distRequest).getAllocateResponse();
   }
 
   @Override
@@ -324,9 +333,9 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
 
   @Override
   public DistSchedRegisterResponse
-  registerApplicationMasterForDistributedScheduling
-      (RegisterApplicationMasterRequest request) throws YarnException,
-      IOException {
+      registerApplicationMasterForDistributedScheduling(
+          RegisterApplicationMasterRequest request)
+              throws YarnException, IOException {
     LOG.info("Forwarding registration request to the" +
         "Distributed Scheduler Service on YARN RM");
     DistSchedRegisterResponse dsResp = getNextInterceptor()
@@ -336,17 +345,18 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling
-      (AllocateRequest request) throws YarnException, IOException {
+  public DistSchedAllocateResponse allocateForDistributedScheduling(
+      DistSchedAllocateRequest request) throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Forwarding allocate request to the" +
           "Distributed Scheduler Service on YARN RM");
     }
     // Partition requests into GUARANTEED and OPPORTUNISTIC reqs
-    PartitionedResourceRequests partitionedAsks = partitionAskList(request
-        .getAskList());
+    PartitionedResourceRequests partitionedAsks = partitionAskList(
+        request.getAllocateRequest().getAskList());
 
-    List<ContainerId> releasedContainers = request.getReleaseList();
+    List<ContainerId> releasedContainers =
+        request.getAllocateRequest().getReleaseList();
     int numReleasedContainers = releasedContainers.size();
     if (numReleasedContainers > 0) {
       LOG.info("AttemptID: " + applicationAttemptId + " released: "
@@ -355,7 +365,8 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
     }
 
     // Also, update black list
-    ResourceBlacklistRequest rbr = request.getResourceBlacklistRequest();
+    ResourceBlacklistRequest rbr =
+        request.getAllocateRequest().getResourceBlacklistRequest();
     if (rbr != null) {
       blacklist.removeAll(rbr.getBlacklistRemovals());
       blacklist.addAll(rbr.getBlacklistAdditions());
@@ -381,9 +392,10 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
         allocatedContainers.addAll(e.getValue());
       }
     }
+    request.setAllocatedContainers(allocatedContainers);
 
     // Send all the GUARANTEED Reqs to RM
-    request.setAskList(partitionedAsks.getGuaranteed());
+    request.getAllocateRequest().setAskList(partitionedAsks.getGuaranteed());
     DistSchedAllocateResponse dsResp =
         getNextInterceptor().allocateForDistributedScheduling(request);
 

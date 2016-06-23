@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords
@@ -126,7 +127,7 @@ public class TestLocalScheduler {
 
     Mockito.when(
         finalReqIntcptr.allocateForDistributedScheduling(
-            Mockito.any(AllocateRequest.class)))
+            Mockito.any(DistSchedAllocateRequest.class)))
         .thenAnswer(new Answer<DistSchedAllocateResponse>() {
           @Override
           public DistSchedAllocateResponse answer(InvocationOnMock

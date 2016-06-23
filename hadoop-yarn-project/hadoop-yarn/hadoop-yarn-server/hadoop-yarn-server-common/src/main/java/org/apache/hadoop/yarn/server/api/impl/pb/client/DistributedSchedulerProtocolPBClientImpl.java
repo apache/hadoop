@@ -22,9 +22,11 @@ import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -35,6 +37,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
 
 
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedRegisterResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
@@ -77,9 +80,9 @@ public class DistributedSchedulerProtocolPBClientImpl implements
 
   @Override
   public DistSchedRegisterResponse
-  registerApplicationMasterForDistributedScheduling
-      (RegisterApplicationMasterRequest request) throws YarnException,
-      IOException {
+      registerApplicationMasterForDistributedScheduling(
+          RegisterApplicationMasterRequest request)
+          throws YarnException, IOException {
     YarnServiceProtos.RegisterApplicationMasterRequestProto requestProto =
         ((RegisterApplicationMasterRequestPBImpl) request).getProto();
     try {
@@ -93,10 +96,10 @@ public class DistributedSchedulerProtocolPBClientImpl implements
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling
-      (AllocateRequest request) throws YarnException, IOException {
-    YarnServiceProtos.AllocateRequestProto requestProto =
-        ((AllocateRequestPBImpl) request).getProto();
+  public DistSchedAllocateResponse allocateForDistributedScheduling(
+      DistSchedAllocateRequest request) throws YarnException, IOException {
+    YarnServerCommonServiceProtos.DistSchedAllocateRequestProto requestProto =
+        ((DistSchedAllocateRequestPBImpl) request).getProto();
     try {
       return new DistSchedAllocateResponsePBImpl(
           proxy.allocateForDistributedScheduling(null, requestProto));

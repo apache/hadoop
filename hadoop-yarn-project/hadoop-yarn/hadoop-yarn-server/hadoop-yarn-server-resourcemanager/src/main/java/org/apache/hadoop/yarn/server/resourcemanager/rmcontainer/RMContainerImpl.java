@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -79,6 +80,8 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
         RMContainerEventType.KILL)
     .addTransition(RMContainerState.NEW, RMContainerState.RESERVED,
         RMContainerEventType.RESERVED, new ContainerReservedTransition())
+    .addTransition(RMContainerState.NEW, RMContainerState.RUNNING,
+        RMContainerEventType.LAUNCHED)
     .addTransition(RMContainerState.NEW,
         EnumSet.of(RMContainerState.RUNNING, RMContainerState.COMPLETED),
         RMContainerEventType.RECOVER, new ContainerRecoveredTransition())
@@ -183,11 +186,20 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   private Resource lastConfirmedResource;
   private volatile String queueName;
 
+  private boolean isExternallyAllocated;
+
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext) {
     this(container, appAttemptId, nodeId, user, rmContext, System
         .currentTimeMillis(), "");
+  }
+
+  public RMContainerImpl(Container container,
+      ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
+      RMContext rmContext, boolean isExternallyAllocated) {
+    this(container, appAttemptId, nodeId, user, rmContext, System
+        .currentTimeMillis(), "", isExternallyAllocated);
   }
 
   private boolean saveNonAMContainerMetaInfo;
@@ -202,6 +214,14 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
       RMContext rmContext, long creationTime, String nodeLabelExpression) {
+    this(container, appAttemptId, nodeId, user, rmContext, creationTime,
+        nodeLabelExpression, false);
+  }
+
+  public RMContainerImpl(Container container,
+      ApplicationAttemptId appAttemptId, NodeId nodeId, String user,
+      RMContext rmContext, long creationTime, String nodeLabelExpression,
+      boolean isExternallyAllocated) {
     this.stateMachine = stateMachineFactory.make(this);
     this.containerId = container.getId();
     this.nodeId = nodeId;
@@ -216,6 +236,7 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
     this.resourceRequests = null;
     this.nodeLabelExpression = nodeLabelExpression;
     this.lastConfirmedResource = container.getResource();
+    this.isExternallyAllocated = isExternallyAllocated;
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
@@ -826,5 +847,15 @@ public class RMContainerImpl implements RMContainer, Comparable<RMContainer> {
   @Override
   public String getQueueName() {
     return queueName;
+  }
+
+  @Override
+  public ExecutionType getExecutionType() {
+    return container.getExecutionType();
+  }
+
+  @Override
+  public boolean isRemotelyAllocated() {
+    return isExternallyAllocated;
   }
 }

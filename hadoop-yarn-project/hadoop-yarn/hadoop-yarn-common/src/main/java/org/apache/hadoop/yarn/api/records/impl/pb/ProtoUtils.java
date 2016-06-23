@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
@@ -338,5 +339,18 @@ public class ProtoUtils {
   public static ExecutionTypeRequest convertFromProtoFormat(
       ExecutionTypeRequestProto e) {
     return new ExecutionTypeRequestPBImpl(e);
+  }
+
+  /*
+   * Container
+   */
+  public static YarnProtos.ContainerProto convertToProtoFormat(
+      Container t) {
+    return ((ContainerPBImpl)t).getProto();
+  }
+
+  public static ContainerStatusPBImpl convertFromProtoFormat(
+      YarnProtos.ContainerStatusProto p) {
+    return new ContainerStatusPBImpl(p);
   }
 }
