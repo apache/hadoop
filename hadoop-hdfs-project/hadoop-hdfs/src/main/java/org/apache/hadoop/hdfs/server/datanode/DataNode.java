@@ -1928,7 +1928,10 @@ public class DataNode extends ReconfigurableBase
       } catch (InterruptedException ie) {
       }
     }
-   
+    if (metrics != null) {
+      metrics.setDataNodeActiveXceiversCount(0);
+    }
+
    // IPC server needs to be shutdown late in the process, otherwise
    // shutdown command response won't get sent.
    if (ipcServer != null) {
