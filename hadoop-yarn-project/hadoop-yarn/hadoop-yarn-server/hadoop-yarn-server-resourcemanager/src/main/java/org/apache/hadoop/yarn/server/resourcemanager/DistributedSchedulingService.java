@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
@@ -32,6 +33,7 @@ import org.apache.hadoop.yarn.api.impl.pb.service.ApplicationMasterProtocolPBSer
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -45,6 +47,12 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ApplicationMasterProtocol.ApplicationMasterProtocolService;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.NodeQueueLoadMonitor;
 
@@ -60,6 +68,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -229,9 +238,23 @@ public class DistributedSchedulingService extends ApplicationMasterService
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling
-      (AllocateRequest request) throws YarnException, IOException {
-    AllocateResponse response = allocate(request);
+  public DistSchedAllocateResponse allocateForDistributedScheduling(
+      DistSchedAllocateRequest request) throws YarnException, IOException {
+    List<Container> distAllocContainers = request.getAllocatedContainers();
+    for (Container container : distAllocContainers) {
+      // Create RMContainer
+      SchedulerApplicationAttempt appAttempt =
+          ((AbstractYarnScheduler) rmContext.getScheduler())
+              .getCurrentAttemptForContainer(container.getId());
+      RMContainer rmContainer = new RMContainerImpl(container,
+          appAttempt.getApplicationAttemptId(), container.getNodeId(),
+          appAttempt.getUser(), rmContext, true);
+      appAttempt.addRMContainer(container.getId(), rmContainer);
+      rmContainer.handle(
+          new RMContainerEvent(container.getId(),
+              RMContainerEventType.LAUNCHED));
+    }
+    AllocateResponse response = allocate(request.getAllocateRequest());
     DistSchedAllocateResponse dsResp = recordFactory.newRecordInstance
         (DistSchedAllocateResponse.class);
     dsResp.setAllocateResponse(response);

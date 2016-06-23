@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords
     .DistSchedAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,8 +134,8 @@ public final class DefaultRequestInterceptor extends
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling
-      (AllocateRequest request) throws YarnException, IOException {
+  public DistSchedAllocateResponse allocateForDistributedScheduling(
+      DistSchedAllocateRequest request) throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Forwarding allocateForDistributedScheduling request" +
           "to the real YARN RM");
@@ -212,9 +213,9 @@ public final class DefaultRequestInterceptor extends
         }
 
         @Override
-        public DistSchedAllocateResponse
-        allocateForDistributedScheduling(AllocateRequest request) throws
-            YarnException, IOException {
+        public DistSchedAllocateResponse allocateForDistributedScheduling(
+            DistSchedAllocateRequest request)
+                throws YarnException, IOException {
           throw new IOException("Not Supported !!");
         }
       };

@@ -112,6 +112,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private boolean isAttemptRecovering;
 
   protected ResourceUsage attemptResourceUsage = new ResourceUsage();
+  /** Scheduled by a remote scheduler. */
+  protected ResourceUsage attemptResourceUsageAllocatedRemotely =
+      new ResourceUsage();
   private AtomicLong firstAllocationRequestSentTime = new AtomicLong(0);
   private AtomicLong firstContainerAllocatedTime = new AtomicLong(0);
 
@@ -286,6 +289,23 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   public synchronized RMContainer getRMContainer(ContainerId id) {
     return liveContainers.get(id);
+  }
+
+  public synchronized void addRMContainer(
+      ContainerId id, RMContainer rmContainer) {
+    liveContainers.put(id, rmContainer);
+    if (rmContainer.isRemotelyAllocated()) {
+      this.attemptResourceUsageAllocatedRemotely.incUsed(
+          rmContainer.getAllocatedResource());
+    }
+  }
+
+  public synchronized void removeRMContainer(ContainerId containerId) {
+    RMContainer rmContainer = liveContainers.remove(containerId);
+    if (rmContainer != null && rmContainer.isRemotelyAllocated()) {
+      this.attemptResourceUsageAllocatedRemotely.decUsed(
+          rmContainer.getAllocatedResource());
+    }
   }
 
   protected synchronized void resetReReservations(Priority priority) {

@@ -44,15 +44,17 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateRequestPBImpl;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -175,10 +177,15 @@ public class TestDistributedSchedulingService {
     Assert.assertEquals(2,
         dsRegResp.getIncrAllocatableCapabilty().getVirtualCores());
 
+    DistSchedAllocateRequestPBImpl distAllReq =
+        (DistSchedAllocateRequestPBImpl)factory.newRecordInstance(
+            DistSchedAllocateRequest.class);
+    distAllReq.setAllocateRequest(allReq);
+    distAllReq.setAllocatedContainers(Arrays.asList(c));
     DistSchedAllocateResponse dsAllocResp =
         new DistSchedAllocateResponsePBImpl(
             dsProxy.allocateForDistributedScheduling(null,
-                ((AllocateRequestPBImpl)allReq).getProto()));
+                distAllReq.getProto()));
     Assert.assertEquals(
         "h1", dsAllocResp.getNodesForScheduling().get(0).getHost());
 
@@ -243,8 +250,13 @@ public class TestDistributedSchedulingService {
 
       @Override
       public DistSchedAllocateResponse allocateForDistributedScheduling(
-          AllocateRequest request) throws YarnException, IOException {
-        List<ResourceRequest> askList = request.getAskList();
+          DistSchedAllocateRequest request) throws YarnException, IOException {
+        List<ResourceRequest> askList =
+            request.getAllocateRequest().getAskList();
+        List<Container> allocatedContainers = request.getAllocatedContainers();
+        Assert.assertEquals(1, allocatedContainers.size());
+        Assert.assertEquals(ExecutionType.OPPORTUNISTIC,
+            allocatedContainers.get(0).getExecutionType());
         Assert.assertEquals(1, askList.size());
         Assert.assertTrue(askList.get(0)
             .getExecutionTypeRequest().getEnforceExecutionType());

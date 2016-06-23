@@ -21,10 +21,10 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords
     .RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
 
@@ -118,8 +118,8 @@ public abstract class AbstractRequestInterceptor implements
    * @throws IOException
    */
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling
-      (AllocateRequest request) throws YarnException, IOException {
+  public DistSchedAllocateResponse allocateForDistributedScheduling(
+      DistSchedAllocateRequest request) throws YarnException, IOException {
     return (this.nextInterceptor != null) ?
         this.nextInterceptor.allocateForDistributedScheduling(request) : null;
   }
@@ -135,9 +135,9 @@ public abstract class AbstractRequestInterceptor implements
    */
   @Override
   public DistSchedRegisterResponse
-  registerApplicationMasterForDistributedScheduling
-      (RegisterApplicationMasterRequest request) throws YarnException,
-      IOException {
+      registerApplicationMasterForDistributedScheduling(
+          RegisterApplicationMasterRequest request)
+          throws YarnException, IOException {
     return (this.nextInterceptor != null) ? this.nextInterceptor
         .registerApplicationMasterForDistributedScheduling(request) : null;
   }

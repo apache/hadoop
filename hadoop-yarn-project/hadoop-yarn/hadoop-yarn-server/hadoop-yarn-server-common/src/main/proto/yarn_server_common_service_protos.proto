@@ -41,6 +41,11 @@ message DistSchedAllocateResponseProto {
   repeated NodeIdProto nodes_for_scheduling = 2;
 }
 
+message DistSchedAllocateRequestProto {
+  optional AllocateRequestProto allocate_request = 1;
+  repeated ContainerProto allocated_containers = 2;
+}
+
 message NodeLabelsProto {
   repeated NodeLabelProto nodeLabels = 1;
 }

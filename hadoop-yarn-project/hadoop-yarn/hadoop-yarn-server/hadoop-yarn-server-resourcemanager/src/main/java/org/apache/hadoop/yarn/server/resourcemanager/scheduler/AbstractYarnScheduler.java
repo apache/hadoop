@@ -516,7 +516,23 @@ public abstract class AbstractYarnScheduler
       return;
     }
 
-    completedContainerInternal(rmContainer, containerStatus, event);
+    if (!rmContainer.isRemotelyAllocated()) {
+      completedContainerInternal(rmContainer, containerStatus, event);
+    } else {
+      ContainerId containerId = rmContainer.getContainerId();
+      // Inform the container
+      rmContainer.handle(
+          new RMContainerFinishedEvent(containerId, containerStatus, event));
+      SchedulerApplicationAttempt schedulerAttempt =
+          getCurrentAttemptForContainer(containerId);
+      if (schedulerAttempt != null) {
+        schedulerAttempt.removeRMContainer(containerId);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Completed container: " + rmContainer.getContainerId() +
+            " in state: " + rmContainer.getState() + " event:" + event);
+      }
+    }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
     // for regular containers and RM itself for AM container) will not know what
