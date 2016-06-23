@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MROutputFiles;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.junit.Assert;
 import org.junit.Test;
@@ -288,5 +289,22 @@ public class TestMergeManager {
     final long maxInMemReduce = mgr.getMaxInMemReduceLimit();
     assertTrue("Large in-memory reduce area unusable: " + maxInMemReduce,
         maxInMemReduce > Integer.MAX_VALUE);
+  }
+
+  @Test
+  public void testZeroShuffleMemoryLimitPercent() throws Exception {
+    final JobConf jobConf = new JobConf();
+    jobConf.setFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT, 0.0f);
+    final MergeManager<Text, Text> mgr =
+        new MergeManagerImpl<>(null, jobConf, mock(LocalFileSystem.class),
+            null, null, null, null, null, null, null, null, null, null,
+            new MROutputFiles());
+    final long mapOutputSize = 10;
+    final int fetcher = 1;
+    final MapOutput<Text, Text> mapOutput = mgr.reserve(
+        TaskAttemptID.forName("attempt_0_1_m_1_1"),
+        mapOutputSize, fetcher);
+    assertEquals("Tiny map outputs should be shuffled to disk", "DISK",
+        mapOutput.getDescription());
   }
 }
