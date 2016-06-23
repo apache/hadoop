@@ -399,13 +399,19 @@ public class DiskBalancer extends Configured implements Tool {
     getReportOptions().addOption(report);
     opt.addOption(report);
 
-    Option top = new Option(TOP, true,
-        "specify the number of nodes to be listed which has data imbalance.");
+    Option top = OptionBuilder.withLongOpt(TOP)
+        .hasArg()
+        .withDescription("specify the number of nodes to be listed which has" +
+            " data imbalance.")
+        .create();
     getReportOptions().addOption(top);
     opt.addOption(top);
 
-    Option node = new Option(NODE, true,
-        "Datanode address, it can be DataNodeID, IP or hostname.");
+    Option node =  OptionBuilder.withLongOpt(NODE)
+        .hasArg()
+        .withDescription("Datanode address, " +
+            "it can be DataNodeID, IP or hostname.")
+        .create();
     getReportOptions().addOption(node);
     opt.addOption(node);
   }

@@ -74,6 +74,7 @@ public class PlanCommand extends Command {
         "between 2 disks");
     addValidCommandParameters(DiskBalancer.VERBOSE, "Run plan command in " +
         "verbose mode.");
+    addValidCommandParameters(DiskBalancer.PLAN, "Plan Command");
   }
 
   /**

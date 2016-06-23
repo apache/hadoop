@@ -82,8 +82,6 @@ public abstract class Command extends Configured {
   public Command(Configuration conf) {
     super(conf);
     // These arguments are valid for all commands.
-    addValidCommandParameters(DiskBalancer.HELP, "Help for this command");
-    addValidCommandParameters("arg", "");
     topNodes = 0;
   }
 
@@ -248,12 +246,13 @@ public abstract class Command extends Configured {
     Iterator<Option> iter = cmd.iterator();
     while (iter.hasNext()) {
       Option opt = iter.next();
-      if (!validArgs.containsKey(opt.getArgName())) {
+
+      if (!validArgs.containsKey(opt.getLongOpt())) {
         String errMessage = String
             .format("%nInvalid argument found for command %s : %s%n",
-                commandName, opt.getArgName());
+                commandName, opt.getLongOpt());
         StringBuilder validArguments = new StringBuilder();
-        validArguments.append("Valid arguments are : %n");
+        validArguments.append(String.format("Valid arguments are : %n"));
         for (Map.Entry<String, String> args : validArgs.entrySet()) {
           String key = args.getKey();
           String desc = args.getValue();

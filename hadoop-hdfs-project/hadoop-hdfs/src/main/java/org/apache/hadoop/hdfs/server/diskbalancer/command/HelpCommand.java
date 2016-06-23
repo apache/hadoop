@@ -37,6 +37,7 @@ public class HelpCommand extends Command {
    */
   public HelpCommand(Configuration conf) {
     super(conf);
+    addValidCommandParameters(DiskBalancer.HELP, "Help Command");
   }
 
   /**

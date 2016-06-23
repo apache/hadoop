@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p/>
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -44,16 +44,27 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
+import static org.apache.hadoop.hdfs.tools.DiskBalancer.CANCEL;
+import static org.apache.hadoop.hdfs.tools.DiskBalancer.HELP;
+import static org.apache.hadoop.hdfs.tools.DiskBalancer.NODE;
+import static org.apache.hadoop.hdfs.tools.DiskBalancer.PLAN;
+import static org.apache.hadoop.hdfs.tools.DiskBalancer.QUERY;
+
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
+
 /**
  * Tests various CLI commands of DiskBalancer.
  */
 public class TestDiskBalancerCommand {
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
   private MiniDFSCluster cluster;
   private URI clusterJson;
+  private Configuration conf = new HdfsConfiguration();
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
         .storagesPerDatanode(2).build();
@@ -73,7 +84,7 @@ public class TestDiskBalancerCommand {
   }
 
   /* test basic report */
-  @Test(timeout=60000)
+  @Test(timeout = 60000)
   public void testReportSimple() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report";
     final List<String> outputs = runCommand(cmdLine);
@@ -101,7 +112,7 @@ public class TestDiskBalancerCommand {
   }
 
   /* test less than 64 DataNode(s) as total, e.g., -report -top 32 */
-  @Test(timeout=60000)
+  @Test(timeout = 60000)
   public void testReportLessThanTotal() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top 32";
     final List<String> outputs = runCommand(cmdLine);
@@ -124,7 +135,7 @@ public class TestDiskBalancerCommand {
   }
 
   /* test more than 64 DataNode(s) as total, e.g., -report -top 128 */
-  @Test(timeout=60000)
+  @Test(timeout = 60000)
   public void testReportMoreThanTotal() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top 128";
     final List<String> outputs = runCommand(cmdLine);
@@ -148,7 +159,7 @@ public class TestDiskBalancerCommand {
   }
 
   /* test invalid top limit, e.g., -report -top xx */
-  @Test(timeout=60000)
+  @Test(timeout = 60000)
   public void testReportInvalidTopLimit() throws Exception {
     final String cmdLine = "hdfs diskbalancer -report -top xx";
     final List<String> outputs = runCommand(cmdLine);
@@ -174,10 +185,10 @@ public class TestDiskBalancerCommand {
             containsString("9 volumes with node data density 1.97"))));
   }
 
-  @Test(timeout=60000)
+  @Test(timeout = 60000)
   public void testReportNode() throws Exception {
     final String cmdLine =
-            "hdfs diskbalancer -report -node " +
+        "hdfs diskbalancer -report -node " +
             "a87654a9-54c7-4693-8dd9-c9c7021dc340";
     final List<String> outputs = runCommand(cmdLine);
 
@@ -249,11 +260,8 @@ public class TestDiskBalancerCommand {
             containsString("0.25 free: 490407853993/2000000000000"))));
   }
 
-  @Test(timeout=60000)
+  @Test(timeout = 60000)
   public void testReadClusterFromJson() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
-
     ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
         conf);
     DiskBalancerCluster diskBalancerCluster = new DiskBalancerCluster(
@@ -262,10 +270,72 @@ public class TestDiskBalancerCommand {
     assertEquals(64, diskBalancerCluster.getNodes().size());
   }
 
-  private List<String> runCommand(final String cmdLine) throws Exception {
+  /* test -plan  DataNodeID */
+  @Test(timeout = 60000)
+  public void testPlanNode() throws Exception {
+    final String planArg = String.format("-%s %s", PLAN,
+        cluster.getDataNodes().get(0).getDatanodeUuid());
 
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", planArg);
+    runCommand(cmdLine);
+  }
+
+  /* Test that illegal arguments are handled correctly*/
+  @Test(timeout = 60000)
+  public void testIllegalArgument() throws Exception {
+    final String planArg = String.format("-%s %s", PLAN,
+        "a87654a9-54c7-4693-8dd9-c9c7021dc340");
+
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s -report", planArg);
+    // -plan and -report cannot be used together.
+    // tests the validate command line arguments function.
+    thrown.expect(java.lang.IllegalArgumentException.class);
+    runCommand(cmdLine);
+  }
+
+  @Test(timeout = 60000)
+  public void testCancelCommand() throws Exception {
+    final String cancelArg = String.format("-%s %s", CANCEL, "nosuchplan");
+    final String nodeArg = String.format("-%s %s", NODE,
+        cluster.getDataNodes().get(0).getDatanodeUuid());
+
+    // Port:Host format is expected. So cancel command will throw.
+    thrown.expect(java.lang.IllegalArgumentException.class);
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer  %s %s", cancelArg, nodeArg);
+    runCommand(cmdLine);
+  }
+
+  /*
+   Makes an invalid query attempt to non-existent Datanode.
+   */
+  @Test(timeout = 60000)
+  public void testQueryCommand() throws Exception {
+    final String queryArg = String.format("-%s %s", QUERY,
+        cluster.getDataNodes().get(0).getDatanodeUuid());
+    thrown.expect(java.net.UnknownHostException.class);
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", queryArg);
+    runCommand(cmdLine);
+  }
+
+  @Test(timeout = 60000)
+  public void testHelpCommand() throws Exception {
+    final String helpArg = String.format("-%s", HELP);
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", helpArg);
+    runCommand(cmdLine);
+  }
+
+  private List<String> runCommand(final String cmdLine) throws Exception {
     String[] cmds = StringUtils.split(cmdLine, ' ');
-    Configuration conf = new HdfsConfiguration();
     org.apache.hadoop.hdfs.tools.DiskBalancer db =
         new org.apache.hadoop.hdfs.tools.DiskBalancer(conf);
 

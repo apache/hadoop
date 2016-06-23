@@ -4086,4 +4086,44 @@
     Truststore password for HTTPS SSL configuration
   </description>
 </property>
+
+<!--Disk baalncer properties-->
+  <property>
+    <name>dfs.disk.balancer.max.disk.throughputInMBperSec</name>
+    <value>10</value>
+    <description>Maximum disk bandwidth used by diskbalancer
+      during read from a source disk. The unit is MB/sec.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.disk.balancer.block.tolerance.percent</name>
+    <value>10</value>
+    <description>
+      When a disk balancer copy operation is proceeding, the datanode is still
+      active. So it might not be possible to move the exactly specified
+      amount of data. So tolerance allows us to define a percentage which
+      defines a good enough move.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.disk.balancer.max.disk.errors</name>
+    <value>5</value>
+    <description>
+      During a block move from a source to destination disk, we might
+      encounter various errors. This defines how many errors we can tolerate
+      before we declare a move between 2 disks (or a step) has failed.
+    </description>
+  </property>
+
+
+  <property>
+    <name>dfs.disk.balancer.enabled</name>
+    <value>false</value>
+    <description>
+        This enables the diskbalancer feature on a cluster. By default, disk
+      balancer is disabled.
+    </description>
+  </property>
 </configuration>

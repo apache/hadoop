@@ -47,7 +47,6 @@ public class ExecuteCommand extends Command {
   public ExecuteCommand(Configuration conf) {
     super(conf);
     addValidCommandParameters(DiskBalancer.EXECUTE, "Executes a given plan.");
-    addValidCommandParameters(DiskBalancer.NODE, "Name of the target node.");
   }
 
   /**
