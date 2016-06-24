@@ -207,8 +207,11 @@ public interface DataTransferProtocol {
    *
    * @param stripedBlockInfo a striped block info.
    * @param blockToken security token for accessing the block.
+   * @param requestedNumBytes requested number of bytes in the block group
+   *                          to compute the checksum.
    * @throws IOException
    */
   void blockGroupChecksum(StripedBlockInfo stripedBlockInfo,
-          Token<BlockTokenIdentifier> blockToken) throws IOException;
+          Token<BlockTokenIdentifier> blockToken,
+          long requestedNumBytes) throws IOException;
 }

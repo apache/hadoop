@@ -964,7 +964,7 @@ class DataXceiver extends Receiver implements Runnable {
 
   @Override
   public void blockGroupChecksum(final StripedBlockInfo stripedBlockInfo,
-                                 final Token<BlockTokenIdentifier> blockToken)
+      final Token<BlockTokenIdentifier> blockToken, long requestedNumBytes)
       throws IOException {
     updateCurrentThreadName("Getting checksum for block group" +
         stripedBlockInfo.getBlock());
@@ -973,7 +973,8 @@ class DataXceiver extends Receiver implements Runnable {
         Op.BLOCK_GROUP_CHECKSUM, BlockTokenIdentifier.AccessMode.READ);
 
     AbstractBlockChecksumComputer maker =
-        new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo);
+        new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo,
+            requestedNumBytes);
 
     try {
       maker.compute();

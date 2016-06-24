@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.Path;
@@ -31,6 +29,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 import java.io.IOException;
 
@@ -41,7 +42,8 @@ import java.io.IOException;
  * are the same.
  */
 public class TestFileChecksum {
-  public static final Log LOG = LogFactory.getLog(TestFileChecksum.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestFileChecksum.class);
 
   private int dataBlocks = StripedFileTestUtil.NUM_DATA_BLOCKS;
   private int parityBlocks = StripedFileTestUtil.NUM_PARITY_BLOCKS;
@@ -58,6 +60,7 @@ public class TestFileChecksum {
   private int stripSize = cellSize * dataBlocks;
   private int blockGroupSize = stripesPerBlock * stripSize;
   private int fileSize = numBlockGroups * blockGroupSize;
+  private int bytesPerCRC;
 
   private String ecDir = "/striped";
   private String stripedFile1 = ecDir + "/stripedFileChecksum1";
@@ -79,10 +82,9 @@ public class TestFileChecksum {
     fs = cluster.getFileSystem();
     client = fs.getClient();
 
-    prepareTestFiles();
-
-    getDataNodeToKill(stripedFile1);
-    getDataNodeToKill(replicatedFile);
+    bytesPerCRC = conf.getInt(
+        HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
+        HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT);
   }
 
   @After
@@ -93,49 +95,57 @@ public class TestFileChecksum {
     }
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum1() throws Exception {
     int length = 0;
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, length + 10);
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum2() throws Exception {
     int length = stripSize - 1;
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, length - 10);
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum3() throws Exception {
     int length = stripSize;
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, length - 10);
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum4() throws Exception {
     int length = stripSize + cellSize * 2;
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, length - 10);
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum5() throws Exception {
     int length = blockGroupSize;
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, length - 10);
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum6() throws Exception {
     int length = blockGroupSize + blockSize;
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, length - 10);
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksum7() throws Exception {
     int length = -1; // whole file
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     testStripedFileChecksum(length, fileSize);
   }
 
-  void testStripedFileChecksum(int range1, int range2) throws Exception {
+  private void testStripedFileChecksum(int range1, int range2)
+      throws Exception {
     FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1,
         range1, false);
     FileChecksum stripedFileChecksum2 = getFileChecksum(stripedFile2,
@@ -153,8 +163,9 @@ public class TestFileChecksum {
     }
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedAndReplicatedFileChecksum() throws Exception {
+    prepareTestFiles(fileSize, new String[] {stripedFile1, replicatedFile});
     FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1,
         10, false);
     FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
@@ -163,8 +174,9 @@ public class TestFileChecksum {
     Assert.assertFalse(stripedFileChecksum1.equals(replicatedFileChecksum));
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocks1() throws Exception {
+    prepareTestFiles(fileSize, new String[] {stripedFile1});
     FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1, fileSize,
         false);
     FileChecksum stripedFileChecksumRecon = getFileChecksum(stripedFile1,
@@ -177,8 +189,9 @@ public class TestFileChecksum {
         stripedFileChecksum1.equals(stripedFileChecksumRecon));
   }
 
-  @Test
+  @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocks2() throws Exception {
+    prepareTestFiles(fileSize, new String[] {stripedFile1, stripedFile2});
     FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile1, -1,
         false);
     FileChecksum stripedFileChecksum2 = getFileChecksum(stripedFile2, -1,
@@ -196,6 +209,255 @@ public class TestFileChecksum {
         stripedFileChecksum1.equals(stripedFileChecksum2Recon));
     Assert.assertTrue("Checksum mismatches!",
         stripedFileChecksum2.equals(stripedFileChecksum2Recon));
+  }
+
+  private void testStripedFileChecksumWithMissedDataBlocksRangeQuery(
+      String stripedFile, int requestedLen) throws Exception {
+    LOG.info("Checksum file:{}, requested length:{}", stripedFile,
+        requestedLen);
+    prepareTestFiles(fileSize, new String[] {stripedFile});
+    FileChecksum stripedFileChecksum1 = getFileChecksum(stripedFile,
+        requestedLen, false);
+    FileChecksum stripedFileChecksumRecon = getFileChecksum(stripedFile,
+        requestedLen, true);
+
+    LOG.info("stripedFileChecksum1:" + stripedFileChecksum1);
+    LOG.info("stripedFileChecksumRecon:" + stripedFileChecksumRecon);
+
+    Assert.assertTrue("Checksum mismatches!",
+        stripedFileChecksum1.equals(stripedFileChecksumRecon));
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for a small file less than
+   * bytesPerCRC size.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery1()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1, 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for a small file less than
+   * bytesPerCRC size.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery2()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1, 10);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving bytesPerCRC
+   * length of file range for checksum calculation. 512 is the value of
+   * bytesPerCRC.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery3()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        bytesPerCRC);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving 'cellsize'
+   * length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery4()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        cellSize);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving less than
+   * cellsize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery5()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        cellSize - 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving greater than
+   * cellsize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery6()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        cellSize + 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving two times
+   * cellsize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery7()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        cellSize * 2);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving stripSize
+   * length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery8()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        stripSize);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving less than
+   * stripSize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery9()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        stripSize - 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving greater than
+   * stripSize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery10()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        stripSize + 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving less than
+   * blockGroupSize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery11()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        blockGroupSize - 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving greaterthan
+   * blockGroupSize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery12()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        blockGroupSize + 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving greater than
+   * blockGroupSize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery13()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        blockGroupSize * numBlockGroups / 2);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed by giving lessthan
+   * fileSize length of file range for checksum calculation.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery14()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        fileSize - 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for a length greater than
+   * file size.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery15()
+      throws Exception {
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile1,
+        fileSize * 2);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for a small file less than
+   * bytesPerCRC size.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery16()
+      throws Exception {
+    int fileLength = 100;
+    String stripedFile3 = ecDir + "/stripedFileChecksum3";
+    prepareTestFiles(fileLength, new String[] {stripedFile3});
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
+        fileLength - 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for a small file less than
+   * bytesPerCRC size.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery17()
+      throws Exception {
+    int fileLength = 100;
+    String stripedFile3 = ecDir + "/stripedFileChecksum3";
+    prepareTestFiles(fileLength, new String[] {stripedFile3});
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3, 1);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for a small file less than
+   * bytesPerCRC size.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery18()
+      throws Exception {
+    int fileLength = 100;
+    String stripedFile3 = ecDir + "/stripedFileChecksum3";
+    prepareTestFiles(fileLength, new String[] {stripedFile3});
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3, 10);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed with greater than file
+   * length.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery19()
+      throws Exception {
+    int fileLength = 100;
+    String stripedFile3 = ecDir + "/stripedFileChecksum3";
+    prepareTestFiles(fileLength, new String[] {stripedFile3});
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
+        fileLength * 2);
+  }
+
+  /**
+   * Test to verify that the checksum can be computed for small file with less
+   * than file length.
+   */
+  @Test(timeout = 90000)
+  public void testStripedFileChecksumWithMissedDataBlocksRangeQuery20()
+      throws Exception {
+    int fileLength = bytesPerCRC;
+    String stripedFile3 = ecDir + "/stripedFileChecksum3";
+    prepareTestFiles(fileLength, new String[] {stripedFile3});
+    testStripedFileChecksumWithMissedDataBlocksRangeQuery(stripedFile3,
+        bytesPerCRC - 1);
   }
 
   private FileChecksum getFileChecksum(String filePath, int range,
@@ -223,12 +485,9 @@ public class TestFileChecksum {
     return fc;
   }
 
-  void prepareTestFiles() throws IOException {
-    byte[] fileData = StripedFileTestUtil.generateBytes(fileSize);
-
-    String[] filePaths = new String[] {
-        stripedFile1, stripedFile2, replicatedFile
-    };
+  private void prepareTestFiles(int fileLength, String[] filePaths)
+      throws IOException {
+    byte[] fileData = StripedFileTestUtil.generateBytes(fileLength);
 
     for (String filePath : filePaths) {
       Path testPath = new Path(filePath);

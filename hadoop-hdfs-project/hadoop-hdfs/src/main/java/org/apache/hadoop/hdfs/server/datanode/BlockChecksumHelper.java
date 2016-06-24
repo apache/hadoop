@@ -285,10 +285,8 @@ final class BlockChecksumHelper {
         }
         setOutBytes(md5out.getDigest());
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("block=" + getBlock() + ", bytesPerCRC=" + getBytesPerCRC()
-              + ", crcPerBlock=" + getCrcPerBlock() + ", md5out=" + md5out);
-        }
+        LOG.debug("block={}, bytesPerCRC={}, crcPerBlock={}, md5out={}",
+            getBlock(), getBytesPerCRC(), getCrcPerBlock(), md5out);
       } finally {
         IOUtils.closeStream(getChecksumIn());
         IOUtils.closeStream(getMetadataIn());
@@ -335,11 +333,13 @@ final class BlockChecksumHelper {
     private final DatanodeInfo[] datanodes;
     private final Token<BlockTokenIdentifier>[] blockTokens;
     private final byte[] blockIndices;
+    private final long requestedNumBytes;
 
     private final DataOutputBuffer md5writer = new DataOutputBuffer();
 
     BlockGroupNonStripedChecksumComputer(DataNode datanode,
-                                         StripedBlockInfo stripedBlockInfo)
+                                         StripedBlockInfo stripedBlockInfo,
+                                         long requestedNumBytes)
         throws IOException {
       super(datanode);
       this.blockGroup = stripedBlockInfo.getBlock();
@@ -347,6 +347,7 @@ final class BlockChecksumHelper {
       this.datanodes = stripedBlockInfo.getDatanodes();
       this.blockTokens = stripedBlockInfo.getBlockTokens();
       this.blockIndices = stripedBlockInfo.getBlockIndices();
+      this.requestedNumBytes = requestedNumBytes;
     }
 
     private static class LiveBlockInfo {
@@ -380,23 +381,28 @@ final class BlockChecksumHelper {
         liveDns.put(blockIndices[idx],
             new LiveBlockInfo(datanodes[idx], blockTokens[idx]));
       }
+      long checksumLen = 0;
       for (int idx = 0; idx < numDataUnits && idx < blkIndxLen; idx++) {
         try {
+          ExtendedBlock block = getInternalBlock(numDataUnits, idx);
+
           LiveBlockInfo liveBlkInfo = liveDns.get((byte) idx);
           if (liveBlkInfo == null) {
             // reconstruct block and calculate checksum for missing node
-            recalculateChecksum(idx);
+            recalculateChecksum(idx, block.getNumBytes());
           } else {
             try {
-              ExtendedBlock block = StripedBlockUtil.constructInternalBlock(
-                  blockGroup, ecPolicy.getCellSize(), numDataUnits, idx);
               checksumBlock(block, idx, liveBlkInfo.getToken(),
                   liveBlkInfo.getDn());
             } catch (IOException ioe) {
               LOG.warn("Exception while reading checksum", ioe);
               // reconstruct block and calculate checksum for the failed node
-              recalculateChecksum(idx);
+              recalculateChecksum(idx, block.getNumBytes());
             }
+          }
+          checksumLen += block.getNumBytes();
+          if (checksumLen >= requestedNumBytes) {
+            break; // done with the computation, simply return.
           }
         } catch (IOException e) {
           LOG.warn("Failed to get the checksum", e);
@@ -405,6 +411,20 @@ final class BlockChecksumHelper {
 
       MD5Hash md5out = MD5Hash.digest(md5writer.getData());
       setOutBytes(md5out.getDigest());
+    }
+
+    private ExtendedBlock getInternalBlock(int numDataUnits, int idx) {
+      // Sets requested number of bytes in blockGroup which is required to
+      // construct the internal block for computing checksum.
+      long actualNumBytes = blockGroup.getNumBytes();
+      blockGroup.setNumBytes(requestedNumBytes);
+
+      ExtendedBlock block = StripedBlockUtil.constructInternalBlock(blockGroup,
+          ecPolicy.getCellSize(), numDataUnits, idx);
+
+      // Set back actualNumBytes value in blockGroup.
+      blockGroup.setNumBytes(actualNumBytes);
+      return block;
     }
 
     private void checksumBlock(ExtendedBlock block, int blockIdx,
@@ -446,9 +466,7 @@ final class BlockChecksumHelper {
         //read md5
         final MD5Hash md5 = new MD5Hash(checksumData.getMd5().toByteArray());
         md5.write(md5writer);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("got reply from " + targetDatanode + ": md5=" + md5);
-        }
+        LOG.debug("got reply from datanode:{}, md5={}", targetDatanode, md5);
       }
     }
 
@@ -456,34 +474,35 @@ final class BlockChecksumHelper {
      * Reconstruct this data block and recalculate checksum.
      *
      * @param errBlkIndex
-     *          error index to be reconstrcuted and recalculate checksum.
+     *          error index to be reconstructed and recalculate checksum.
+     * @param blockLength
+     *          number of bytes in the block to compute checksum.
      * @throws IOException
      */
-    private void recalculateChecksum(int errBlkIndex) throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Recalculate checksum for the missing/failed block index "
-            + errBlkIndex);
-      }
+    private void recalculateChecksum(int errBlkIndex, long blockLength)
+        throws IOException {
+      LOG.debug("Recalculate checksum for the missing/failed block index {}",
+          errBlkIndex);
       byte[] errIndices = new byte[1];
       errIndices[0] = (byte) errBlkIndex;
+
       StripedReconstructionInfo stripedReconInfo =
           new StripedReconstructionInfo(
-          blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
+              blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
       final StripedBlockChecksumReconstructor checksumRecon =
           new StripedBlockChecksumReconstructor(
-          getDatanode().getErasureCodingWorker(), stripedReconInfo,
-          md5writer);
+              getDatanode().getErasureCodingWorker(), stripedReconInfo,
+              md5writer, blockLength);
       checksumRecon.reconstruct();
 
       DataChecksum checksum = checksumRecon.getChecksum();
       long crcPerBlock = checksum.getChecksumSize() <= 0 ? 0
           : checksumRecon.getChecksumDataLen() / checksum.getChecksumSize();
-      setOrVerifyChecksumProperties(errBlkIndex, checksum.getBytesPerChecksum(),
-          crcPerBlock, checksum.getChecksumType());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Recalculated checksum for the block index " + errBlkIndex
-            + ": md5=" + checksumRecon.getMD5());
-      }
+      setOrVerifyChecksumProperties(errBlkIndex,
+          checksum.getBytesPerChecksum(), crcPerBlock,
+          checksum.getChecksumType());
+      LOG.debug("Recalculated checksum for the block index:{}, md5={}",
+          errBlkIndex, checksumRecon.getMD5());
     }
 
     private void setOrVerifyChecksumProperties(int blockIdx, int bpc,
@@ -509,11 +528,9 @@ final class BlockChecksumHelper {
         setCrcType(DataChecksum.Type.MIXED);
       }
 
-      if (LOG.isDebugEnabled()) {
-        if (blockIdx == 0) {
-          LOG.debug("set bytesPerCRC=" + getBytesPerCRC()
-              + ", crcPerBlock=" + getCrcPerBlock());
-        }
+      if (blockIdx == 0) {
+        LOG.debug("set bytesPerCRC={}, crcPerBlock={}", getBytesPerCRC(),
+            getCrcPerBlock());
       }
     }
   }
