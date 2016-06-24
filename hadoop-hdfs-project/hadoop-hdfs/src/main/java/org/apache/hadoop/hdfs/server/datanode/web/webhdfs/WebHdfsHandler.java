@@ -29,6 +29,7 @@ import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpMethod.PUT;
 import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
 import static io.netty.handler.codec.http.HttpResponseStatus.CREATED;
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HDFS_URI_SCHEME;
@@ -48,6 +49,7 @@ import io.netty.handler.stream.ChunkedStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
@@ -78,6 +80,7 @@ import com.google.common.base.Preconditions;
 
 public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   static final Log LOG = LogFactory.getLog(WebHdfsHandler.class);
+  static final Log REQLOG = LogFactory.getLog("datanode.webhdfs");
   public static final String WEBHDFS_PREFIX = WebHdfsFileSystem.PATH_PREFIX;
   public static final int WEBHDFS_PREFIX_LENGTH = WEBHDFS_PREFIX.length();
   public static final String APPLICATION_OCTET_STREAM =
@@ -94,6 +97,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   private String path;
   private ParameterParser params;
   private UserGroupInformation ugi;
+  private DefaultHttpResponse resp = null;
 
   public WebHdfsHandler(Configuration conf, Configuration confForCreate)
     throws IOException {
@@ -115,10 +119,28 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        handle(ctx, req);
+        try {
+          handle(ctx, req);
+        } finally {
+          String host = null;
+          try {
+            host = ((InetSocketAddress)ctx.channel().remoteAddress()).
+                getAddress().getHostAddress();
+          } catch (Exception e) {
+            LOG.warn("Error retrieving hostname: ", e);
+            host = "unknown";
+          }
+          REQLOG.info(host + " " + req.method() + " "  + req.uri() + " " +
+              getResponseCode());
+        }
         return null;
       }
     });
+  }
+
+  int getResponseCode() {
+    return (resp == null) ? INTERNAL_SERVER_ERROR.code() :
+        resp.status().code();
   }
 
   public void handle(ChannelHandlerContext ctx, HttpRequest req)
@@ -145,7 +167,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
     LOG.debug("Error ", cause);
-    DefaultHttpResponse resp = ExceptionHandler.exceptionCaught(cause);
+    resp = ExceptionHandler.exceptionCaught(cause);
     resp.headers().set(CONNECTION, CLOSE);
     ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
   }
@@ -177,7 +199,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
         path, permission, flags, createParent, replication, blockSize, null,
         bufferSize, null), null);
 
-    DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1, CREATED);
+    resp = new DefaultHttpResponse(HTTP_1_1, CREATED);
 
     final URI uri = new URI(HDFS_URI_SCHEME, nnId, path, null, null);
     resp.headers().set(LOCATION, uri.toString());
@@ -194,7 +216,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     DFSClient dfsClient = newDfsClient(nnId, conf);
     OutputStream out = dfsClient.append(path, bufferSize,
         EnumSet.of(CreateFlag.APPEND), null, null);
-    DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1, OK);
+    resp = new DefaultHttpResponse(HTTP_1_1, OK);
     resp.headers().set(CONTENT_LENGTH, 0);
     ctx.pipeline().replace(this, HdfsWriter.class.getSimpleName(),
       new HdfsWriter(dfsClient, out, resp));
@@ -206,8 +228,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     final long offset = params.offset();
     final long length = params.length();
 
-    DefaultHttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
-    HttpHeaders headers = response.headers();
+    resp = new DefaultHttpResponse(HTTP_1_1, OK);
+    HttpHeaders headers = resp.headers();
     // Allow the UI to access the file
     headers.set(ACCESS_CONTROL_ALLOW_METHODS, GET);
     headers.set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
@@ -231,7 +253,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
       data = in;
     }
 
-    ctx.write(response);
+    ctx.write(resp);
     ctx.writeAndFlush(new ChunkedStream(data) {
       @Override
       public void close() throws Exception {
@@ -253,7 +275,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
       IOUtils.cleanup(LOG, dfsclient);
     }
     final byte[] js = JsonUtil.toJsonString(checksum).getBytes(Charsets.UTF_8);
-    DefaultFullHttpResponse resp =
+    resp =
       new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(js));
 
     resp.headers().set(CONTENT_TYPE, APPLICATION_JSON_UTF8);
