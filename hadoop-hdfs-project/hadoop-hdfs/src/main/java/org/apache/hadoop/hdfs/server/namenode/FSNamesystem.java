@@ -66,8 +66,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CAC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_METRICS_NODE_USAGE_PERCENTILE;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_METRICS_NODE_USAGE_PERCENTILE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
@@ -530,8 +528,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private INodeAttributeProvider inodeAttributeProvider;
 
-  private final double percentileFactor;
-
   /**
    * If the NN is in safemode, and not due to manual / low resources, we
    * assume it must be because of startup. If the NN had low resources during
@@ -828,15 +824,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       alwaysUseDelegationTokensForTests = conf.getBoolean(
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
-
-      this.percentileFactor = conf.getDouble(
-          DFS_NAMENODE_METRICS_NODE_USAGE_PERCENTILE,
-          DFS_NAMENODE_METRICS_NODE_USAGE_PERCENTILE_DEFAULT);
-
-      Preconditions.checkArgument(0.0 < this.percentileFactor
-          && this.percentileFactor <= 1.0, "Node usage percentile " +
-          "factor must be between 0 and 1.");
-
+      
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(dir);
@@ -5626,7 +5614,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     float max = 0;
     float min = 0;
     float dev = 0;
-    float percentile = 0;
 
     final Map<String, Map<String,Object>> info =
         new HashMap<String, Map<String,Object>>();
@@ -5652,7 +5639,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       median = usages[usages.length / 2];
       max = usages[usages.length - 1];
       min = usages[0];
-      percentile = usages[(int)((usages.length - 1) * percentileFactor)];
 
       for (i = 0; i < usages.length; i++) {
         dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
@@ -5665,11 +5651,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     innerInfo.put("median", StringUtils.format("%.2f%%", median));
     innerInfo.put("max", StringUtils.format("%.2f%%", max));
     innerInfo.put("stdDev", StringUtils.format("%.2f%%", dev));
-    final Map<String, Object> percentileInfo = new HashMap<String, Object>();
-    percentileInfo.put("name", StringUtils.format("%dth percentile",
-        (int)(percentileFactor * 100)));
-    percentileInfo.put("value", StringUtils.format("%.2f%%", percentile));
-    innerInfo.put("percentile", percentileInfo);
     info.put("nodeUsage", innerInfo);
 
     return JSON.toString(info);
