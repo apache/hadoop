@@ -451,6 +451,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.metrics.logger.period.seconds";
   public static final int     DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT =
       600;
+  public static final String DFS_NAMENODE_METRICS_NODE_USAGE_PERCENTILE =
+      "dfs.namenode.metrics.node-usage.percentile";
+  public static final double DFS_NAMENODE_METRICS_NODE_USAGE_PERCENTILE_DEFAULT
+      = 0.95;
+
   public static final String DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY =
       "dfs.datanode.metrics.logger.period.seconds";
   public static final int DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT =

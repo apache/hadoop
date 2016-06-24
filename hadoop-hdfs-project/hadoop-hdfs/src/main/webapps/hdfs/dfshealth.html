@@ -166,8 +166,8 @@
   <tr><th> Non DFS Used:</th><td>{NonDfsUsedSpace|fmt_bytes}</td></tr>
   <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes} ({PercentRemaining|fmt_percentage})</td></tr>
   <tr><th> Block Pool Used:</th><td>{BlockPoolUsedSpace|fmt_bytes} ({PercentBlockPoolUsed|fmt_percentage})</td></tr>
-  <tr><th> DataNodes usages% (Min/Median/Max/stdDev): </th>
-	<td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td></tr>
+  <tr><th> {#NodeUsage.nodeUsage}DataNodes usages% (Min/Median/Max/stdDev/{percentile.name}):{/NodeUsage.nodeUsage} </th>
+    <td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev} / {percentile.value}{/NodeUsage.nodeUsage}</td></tr>
 {/nn}
 
 {#fs}

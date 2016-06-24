@@ -173,6 +173,16 @@ public class TestNameNodeMXBean {
       String nodeUsage = (String) (mbs.getAttribute(mxbeanName,
           "NodeUsage"));
       assertEquals("Bad value for NodeUsage", fsn.getNodeUsage(), nodeUsage);
+      Map<String, Map<String, Object>> usage
+          = (Map<String, Map<String, Object>>)JSON.parse(nodeUsage);
+      assertTrue(usage.get("nodeUsage").containsKey("min"));
+      assertTrue(usage.get("nodeUsage").containsKey("median"));
+      assertTrue(usage.get("nodeUsage").containsKey("max"));
+      assertTrue(usage.get("nodeUsage").containsKey("percentile"));
+      Map<String, Object> percentileInfo
+          = (Map<String, Object>)usage.get("nodeUsage").get("percentile");
+      assertTrue(percentileInfo.containsKey("name"));
+      assertTrue(percentileInfo.containsKey("value"));
       // get attribute NameJournalStatus
       String nameJournalStatus = (String) (mbs.getAttribute(mxbeanName,
           "NameJournalStatus"));

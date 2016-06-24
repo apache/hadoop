@@ -1897,6 +1897,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.metrics.node-usage.percentile</name>
+  <value>0.95</value>
+  <description>
+    This setting specifies the percentile level to report node usage metrics.
+    For example 0.95 means reporting the node usage for the 95th percentile
+    of all DataNodes. If this setting is at 0.95 and the reported node usage
+    is 70%, it means 95% of DataNodes have a usage below 70%.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.metrics.logger.period.seconds</name>
   <value>600</value>
   <description>
