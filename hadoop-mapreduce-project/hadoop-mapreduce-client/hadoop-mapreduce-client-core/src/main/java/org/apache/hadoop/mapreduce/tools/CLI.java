@@ -513,7 +513,9 @@ public class CLI extends Configured implements Tool {
   
   /**
    * List the events for the given job
-   * @param jobId the job id for the job's events to list
+   * @param job the job to list
+   * @param fromEventId event id for the job's events to list from
+   * @param numEvents number of events we want to list
    * @throws IOException
    */
   private void listEvents(Job job, int fromEventId, int numEvents)
