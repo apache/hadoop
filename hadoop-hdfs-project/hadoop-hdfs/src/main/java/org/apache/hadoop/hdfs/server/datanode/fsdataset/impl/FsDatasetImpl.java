@@ -947,29 +947,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       volumeRef = volumes.getNextVolume(targetStorageType, block.getNumBytes());
     }
     try {
-      File oldBlockFile = replicaInfo.getBlockFile();
-      File oldMetaFile = replicaInfo.getMetaFile();
-      FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
-      // Copy files to temp dir first
-      File[] blockFiles = copyBlockFiles(block.getBlockId(),
-          block.getGenerationStamp(), oldMetaFile, oldBlockFile,
-          targetVolume.getTmpDir(block.getBlockPoolId()),
-          replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
-
-      ReplicaInfo newReplicaInfo = new ReplicaInPipeline(
-          replicaInfo.getBlockId(), replicaInfo.getGenerationStamp(),
-          targetVolume, blockFiles[0].getParentFile(), 0);
-      newReplicaInfo.setNumBytes(blockFiles[1].length());
-      // Finalize the copied files
-      newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo);
-      synchronized (this) {
-        // Increment numBlocks here as this block moved without knowing to BPS
-        FsVolumeImpl volume = (FsVolumeImpl) newReplicaInfo.getVolume();
-        volume.getBlockPoolSlice(block.getBlockPoolId()).incrNumBlocks();
-      }
-
-      removeOldReplica(replicaInfo, newReplicaInfo, oldBlockFile, oldMetaFile,
-          oldBlockFile.length(), oldMetaFile.length(), block.getBlockPoolId());
+      moveBlock(block, replicaInfo, volumeRef);
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -977,6 +955,77 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     // Replace the old block if any to reschedule the scanning.
+    return replicaInfo;
+  }
+
+  /**
+   * Moves a block from a given volume to another.
+   *
+   * @param block       - Extended Block
+   * @param replicaInfo - ReplicaInfo
+   * @param volumeRef   - Volume Ref - Closed by caller.
+   * @return newReplicaInfo
+   * @throws IOException
+   */
+  private ReplicaInfo moveBlock(ExtendedBlock block, ReplicaInfo replicaInfo,
+                                FsVolumeReference volumeRef) throws
+      IOException {
+    File oldBlockFile = replicaInfo.getBlockFile();
+    File oldMetaFile = replicaInfo.getMetaFile();
+    FsVolumeImpl targetVolume = (FsVolumeImpl) volumeRef.getVolume();
+    // Copy files to temp dir first
+    File[] blockFiles = copyBlockFiles(block.getBlockId(),
+        block.getGenerationStamp(), oldMetaFile, oldBlockFile,
+        targetVolume.getTmpDir(block.getBlockPoolId()),
+        replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
+
+    ReplicaInfo newReplicaInfo = new ReplicaInPipeline(
+        replicaInfo.getBlockId(), replicaInfo.getGenerationStamp(),
+        targetVolume, blockFiles[0].getParentFile(), 0);
+    newReplicaInfo.setNumBytes(blockFiles[1].length());
+    // Finalize the copied files
+    newReplicaInfo = finalizeReplica(block.getBlockPoolId(), newReplicaInfo);
+    synchronized (this) {
+      // Increment numBlocks here as this block moved without knowing to BPS
+      FsVolumeImpl volume = (FsVolumeImpl) newReplicaInfo.getVolume();
+      volume.getBlockPoolSlice(block.getBlockPoolId()).incrNumBlocks();
+    }
+
+    removeOldReplica(replicaInfo, newReplicaInfo, oldBlockFile, oldMetaFile,
+        oldBlockFile.length(), oldMetaFile.length(), block.getBlockPoolId());
+    return newReplicaInfo;
+  }
+
+  /**
+   * Moves a given block from one volume to another volume. This is used by disk
+   * balancer.
+   *
+   * @param block       - ExtendedBlock
+   * @param destination - Destination volume
+   * @return Old replica info
+   */
+  @Override
+  public ReplicaInfo moveBlockAcrossVolumes(ExtendedBlock block, FsVolumeSpi
+      destination) throws IOException {
+    ReplicaInfo replicaInfo = getReplicaInfo(block);
+    if (replicaInfo.getState() != ReplicaState.FINALIZED) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNFINALIZED_REPLICA + block);
+    }
+
+    FsVolumeReference volumeRef = null;
+
+    synchronized (this) {
+      volumeRef = destination.obtainReference();
+    }
+
+    try {
+      moveBlock(block, replicaInfo, volumeRef);
+    } finally {
+      if (volumeRef != null) {
+        volumeRef.close();
+      }
+    }
     return replicaInfo;
   }
 
