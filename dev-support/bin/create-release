@@ -280,7 +280,7 @@ function stopgpgagent
 function usage
 {
   echo "--artifactsdir=[path]   Path to use to store release bits"
-  echo "--asfrelease             Make an ASF release"
+  echo "--asfrelease            Make an ASF release"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
   echo "--logdir=[path]         Path to store logs"
