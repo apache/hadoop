@@ -67,6 +67,7 @@ public interface RetryPolicy {
     }
     
     public enum RetryDecision {
+      // Ordering: FAIL < RETRY < FAILOVER_AND_RETRY.
       FAIL,
       RETRY,
       FAILOVER_AND_RETRY

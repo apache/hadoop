@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.retry;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -27,17 +28,21 @@ import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InterruptedIOException;
 import java.lang.reflect.Method;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Handle async calls. */
 @InterfaceAudience.Private
 public class AsyncCallHandler {
-  static final Logger LOG = LoggerFactory.getLogger(AsyncCallHandler.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      AsyncCallHandler.class);
 
   private static final ThreadLocal<AsyncGet<?, Exception>>
       LOWER_LAYER_ASYNC_RETURN = new ThreadLocal<>();
@@ -73,35 +78,34 @@ public class AsyncCallHandler {
 
   /** A simple concurrent queue which keeping track the empty start time. */
   static class ConcurrentQueue<T> {
-    private final Queue<T> queue = new LinkedList<>();
-    private long emptyStartTime = Time.monotonicNow();
+    private final Queue<T> queue = new ConcurrentLinkedQueue<>();
+    private final AtomicLong emptyStartTime
+        = new AtomicLong(Time.monotonicNow());
 
-    synchronized int size() {
-      return queue.size();
+    Iterator<T> iterator() {
+      return queue.iterator();
     }
 
     /** Is the queue empty for more than the given time in millisecond? */
-    synchronized boolean isEmpty(long time) {
-      return queue.isEmpty() && Time.monotonicNow() - emptyStartTime > time;
+    boolean isEmpty(long time) {
+      return Time.monotonicNow() - emptyStartTime.get() > time
+          && queue.isEmpty();
     }
 
-    synchronized void offer(T c) {
+    void offer(T c) {
       final boolean added = queue.offer(c);
       Preconditions.checkState(added);
     }
 
-    synchronized T poll() {
-      Preconditions.checkState(!queue.isEmpty());
-      final T t = queue.poll();
+    void checkEmpty() {
       if (queue.isEmpty()) {
-        emptyStartTime = Time.monotonicNow();
+        emptyStartTime.set(Time.monotonicNow());
       }
-      return t;
     }
   }
 
   /** A queue for handling async calls. */
-  static class AsyncCallQueue {
+  class AsyncCallQueue {
     private final ConcurrentQueue<AsyncCall> queue = new ConcurrentQueue<>();
     private final Processor processor = new Processor();
 
@@ -113,20 +117,29 @@ public class AsyncCallHandler {
       processor.tryStart();
     }
 
-    void checkCalls() {
-      final int size = queue.size();
-      for (int i = 0; i < size; i++) {
-        final AsyncCall c = queue.poll();
-        if (!c.isDone()) {
-          queue.offer(c); // the call is not done yet, add it back.
+    long checkCalls() {
+      final long startTime = Time.monotonicNow();
+      long minWaitTime = Processor.MAX_WAIT_PERIOD;
+
+      for (final Iterator<AsyncCall> i = queue.iterator(); i.hasNext();) {
+        final AsyncCall c = i.next();
+        if (c.isDone()) {
+          i.remove(); // the call is done, remove it from the queue.
+          queue.checkEmpty();
+        } else {
+          final Long waitTime = c.getWaitTime(startTime);
+          if (waitTime != null && waitTime > 0 && waitTime < minWaitTime) {
+            minWaitTime = waitTime;
+          }
         }
       }
+      return minWaitTime;
     }
 
     /** Process the async calls in the queue. */
     private class Processor {
-      static final long GRACE_PERIOD = 10*1000L;
-      static final long SLEEP_PERIOD = 100L;
+      static final long GRACE_PERIOD = 3*1000L;
+      static final long MAX_WAIT_PERIOD = 100L;
 
       private final AtomicReference<Thread> running = new AtomicReference<>();
 
@@ -141,15 +154,16 @@ public class AsyncCallHandler {
             @Override
             public void run() {
               for (; isRunning(this);) {
+                final long waitTime = checkCalls();
+                tryStop(this);
+
                 try {
-                  Thread.sleep(SLEEP_PERIOD);
+                  synchronized (AsyncCallHandler.this) {
+                    AsyncCallHandler.this.wait(waitTime);
+                  }
                 } catch (InterruptedException e) {
                   kill(this);
-                  return;
                 }
-
-                checkCalls();
-                tryStop(this);
               }
             }
           };
@@ -215,10 +229,9 @@ public class AsyncCallHandler {
     private AsyncGet<?, Exception> lowerLayerAsyncGet;
 
     AsyncCall(Method method, Object[] args, boolean isRpc, int callId,
-              RetryInvocationHandler.Counters counters,
               RetryInvocationHandler<?> retryInvocationHandler,
               AsyncCallHandler asyncCallHandler) {
-      super(method, args, isRpc, callId, counters, retryInvocationHandler);
+      super(method, args, isRpc, callId, retryInvocationHandler);
 
       this.asyncCallHandler = asyncCallHandler;
     }
@@ -226,6 +239,7 @@ public class AsyncCallHandler {
     /** @return true if the call is done; otherwise, return false. */
     boolean isDone() {
       final CallReturn r = invokeOnce();
+      LOG.debug("#{}: {}", getCallId(), r.getState());
       switch (r.getState()) {
         case RETURNED:
         case EXCEPTION:
@@ -234,6 +248,7 @@ public class AsyncCallHandler {
         case RETRY:
           invokeOnce();
           break;
+        case WAIT_RETRY:
         case ASYNC_CALL_IN_PROGRESS:
         case ASYNC_INVOKED:
           // nothing to do
@@ -245,12 +260,24 @@ public class AsyncCallHandler {
     }
 
     @Override
+    CallReturn processWaitTimeAndRetryInfo() {
+      final Long waitTime = getWaitTime(Time.monotonicNow());
+      LOG.trace("#{} processRetryInfo: waitTime={}", getCallId(), waitTime);
+      if (waitTime != null && waitTime > 0) {
+        return CallReturn.WAIT_RETRY;
+      }
+      processRetryInfo();
+      return CallReturn.RETRY;
+    }
+
+    @Override
     CallReturn invoke() throws Throwable {
       LOG.debug("{}.invoke {}", getClass().getSimpleName(), this);
       if (lowerLayerAsyncGet != null) {
         // async call was submitted early, check the lower level async call
         final boolean isDone = lowerLayerAsyncGet.isDone();
-        LOG.trace("invoke: lowerLayerAsyncGet.isDone()? {}", isDone);
+        LOG.trace("#{} invoke: lowerLayerAsyncGet.isDone()? {}",
+            getCallId(), isDone);
         if (!isDone) {
           return CallReturn.ASYNC_CALL_IN_PROGRESS;
         }
@@ -262,7 +289,7 @@ public class AsyncCallHandler {
       }
 
       // submit a new async call
-      LOG.trace("invoke: ASYNC_INVOKED");
+      LOG.trace("#{} invoke: ASYNC_INVOKED", getCallId());
       final boolean mode = Client.isAsynchronousMode();
       try {
         Client.setAsynchronousMode(true);
@@ -271,9 +298,9 @@ public class AsyncCallHandler {
         Preconditions.checkState(r == null);
         lowerLayerAsyncGet = getLowerLayerAsyncReturn();
 
-        if (counters.isZeros()) {
+        if (getCounters().isZeros()) {
           // first async attempt, initialize
-          LOG.trace("invoke: initAsyncCall");
+          LOG.trace("#{} invoke: initAsyncCall", getCallId());
           asyncCallHandler.initAsyncCall(this, asyncCallReturn);
         }
         return CallReturn.ASYNC_INVOKED;
@@ -287,9 +314,9 @@ public class AsyncCallHandler {
   private volatile boolean hasSuccessfulCall = false;
 
   AsyncCall newAsyncCall(Method method, Object[] args, boolean isRpc,
-                         int callId, RetryInvocationHandler.Counters counters,
+                         int callId,
                          RetryInvocationHandler<?> retryInvocationHandler) {
-    return new AsyncCall(method, args, isRpc, callId, counters,
+    return new AsyncCall(method, args, isRpc, callId,
         retryInvocationHandler, this);
   }
 
@@ -317,5 +344,10 @@ public class AsyncCallHandler {
       }
     };
     ASYNC_RETURN.set(asyncGet);
+  }
+
+  @VisibleForTesting
+  public static long getGracePeriod() {
+    return AsyncCallQueue.Processor.GRACE_PERIOD;
   }
 }
