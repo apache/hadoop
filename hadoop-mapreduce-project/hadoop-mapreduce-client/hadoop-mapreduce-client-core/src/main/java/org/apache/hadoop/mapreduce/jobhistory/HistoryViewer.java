@@ -21,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.Format;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -30,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -59,8 +59,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 @InterfaceStability.Unstable
 public class HistoryViewer {
   private static final Log LOG = LogFactory.getLog(HistoryViewer.class);
-  private static final SimpleDateFormat dateFormat =
-    new SimpleDateFormat("d-MMM-yyyy HH:mm:ss");
+  private final FastDateFormat dateFormat =
+      FastDateFormat.getInstance("d-MMM-yyyy HH:mm:ss");
   private FileSystem fs;
   private JobInfo job;
   private String jobId;
