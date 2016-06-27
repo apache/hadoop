@@ -26,9 +26,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
@@ -36,6 +41,10 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -72,6 +81,17 @@ public class Groups {
   private final long warningDeltaMs;
   private final Timer timer;
   private Set<String> negativeCache;
+  private final boolean reloadGroupsInBackground;
+  private final int reloadGroupsThreadCount;
+
+  private final AtomicLong backgroundRefreshSuccess =
+      new AtomicLong(0);
+  private final AtomicLong backgroundRefreshException =
+      new AtomicLong(0);
+  private final AtomicLong backgroundRefreshQueued =
+      new AtomicLong(0);
+  private final AtomicLong backgroundRefreshRunning =
+      new AtomicLong(0);
 
   public Groups(Configuration conf) {
     this(conf, new Timer());
@@ -94,6 +114,18 @@ public class Groups {
     warningDeltaMs =
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS,
         CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT);
+    reloadGroupsInBackground =
+      conf.getBoolean(
+          CommonConfigurationKeys.
+              HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD,
+          CommonConfigurationKeys.
+              HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_DEFAULT);
+    reloadGroupsThreadCount  =
+      conf.getInt(
+          CommonConfigurationKeys.
+              HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS,
+          CommonConfigurationKeys.
+              HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS_DEFAULT);
     parseStaticMapping(conf);
 
     this.timer = timer;
@@ -195,6 +227,22 @@ public class Groups {
     }
   }
 
+  public long getBackgroundRefreshSuccess() {
+    return backgroundRefreshSuccess.get();
+  }
+
+  public long getBackgroundRefreshException() {
+    return backgroundRefreshException.get();
+  }
+
+  public long getBackgroundRefreshQueued() {
+    return backgroundRefreshQueued.get();
+  }
+
+  public long getBackgroundRefreshRunning() {
+    return backgroundRefreshRunning.get();
+  }
+
   /**
    * Convert millisecond times from hadoop's timer to guava's nanosecond ticker.
    */
@@ -216,11 +264,41 @@ public class Groups {
    * Deals with loading data into the cache.
    */
   private class GroupCacheLoader extends CacheLoader<String, List<String>> {
+
+    private ListeningExecutorService executorService;
+
+    GroupCacheLoader() {
+      if (reloadGroupsInBackground) {
+        ThreadFactory threadFactory = new ThreadFactoryBuilder()
+            .setNameFormat("Group-Cache-Reload")
+            .setDaemon(true)
+            .build();
+        // With coreThreadCount == maxThreadCount we effectively
+        // create a fixed size thread pool. As allowCoreThreadTimeOut
+        // has been set, all threads will die after 60 seconds of non use
+        ThreadPoolExecutor parentExecutor =  new ThreadPoolExecutor(
+            reloadGroupsThreadCount,
+            reloadGroupsThreadCount,
+            60,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<Runnable>(),
+            threadFactory);
+        parentExecutor.allowCoreThreadTimeOut(true);
+        executorService = MoreExecutors.listeningDecorator(parentExecutor);
+      }
+    }
+
     /**
      * This method will block if a cache entry doesn't exist, and
      * any subsequent requests for the same user will wait on this
      * request to return. If a user already exists in the cache,
-     * this will be run in the background.
+     * and when the key expires, the first call to reload the key
+     * will block, but subsequent requests will return the old
+     * value until the blocking thread returns.
+     * If reloadGroupsInBackground is true, then the thread that
+     * needs to refresh an expired key will not block either. Instead
+     * it will return the old cache value and schedule a background
+     * refresh
      * @param user key of cache
      * @return List of groups belonging to user
      * @throws IOException to prevent caching negative entries
@@ -241,6 +319,44 @@ public class Groups {
       // return immutable de-duped list
       return Collections.unmodifiableList(
           new ArrayList<>(new LinkedHashSet<>(groups)));
+    }
+
+    /**
+     * Override the reload method to provide an asynchronous implementation. If
+     * reloadGroupsInBackground is false, then this method defers to the super
+     * implementation, otherwise is arranges for the cache to be updated later
+     */
+    @Override
+    public ListenableFuture<List<String>> reload(final String key,
+                                                 List<String> oldValue)
+        throws Exception {
+      if (!reloadGroupsInBackground) {
+        return super.reload(key, oldValue);
+      }
+
+      backgroundRefreshQueued.incrementAndGet();
+      ListenableFuture<List<String>> listenableFuture =
+          executorService.submit(new Callable<List<String>>() {
+            @Override
+            public List<String> call() throws Exception {
+              boolean success = false;
+              try {
+                backgroundRefreshQueued.decrementAndGet();
+                backgroundRefreshRunning.incrementAndGet();
+                List<String> results = load(key);
+                success = true;
+                return results;
+              } finally {
+                backgroundRefreshRunning.decrementAndGet();
+                if (success) {
+                  backgroundRefreshSuccess.incrementAndGet();
+                } else {
+                  backgroundRefreshException.incrementAndGet();
+                }
+              }
+            }
+          });
+      return listenableFuture;
     }
 
     /**

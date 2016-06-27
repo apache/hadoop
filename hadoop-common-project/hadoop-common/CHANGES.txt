@@ -15,6 +15,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-15177. Update the release year to 2018.
     (Bharat Viswanadham via aajisaka)
 
+    HADOOP-13263. Reload cached groups in background after expiry.
+    (Stephen O'Donnell via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

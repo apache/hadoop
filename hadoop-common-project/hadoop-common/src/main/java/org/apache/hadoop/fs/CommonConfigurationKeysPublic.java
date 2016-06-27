@@ -271,6 +271,19 @@ public class CommonConfigurationKeysPublic {
   public static final long HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT =
     5000;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD =
+      "hadoop.security.groups.cache.background.reload";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final boolean
+      HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_DEFAULT = false;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final String
+      HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS =
+          "hadoop.security.groups.cache.background.reload.threads";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>. */
+  public static final int
+      HADOOP_SECURITY_GROUPS_CACHE_BACKGROUND_RELOAD_THREADS_DEFAULT = 3;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a>.*/
   public static final String  HADOOP_SECURITY_AUTHENTICATION =
     "hadoop.security.authentication";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */

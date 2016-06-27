@@ -224,6 +224,28 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.security.groups.cache.background.reload</name>
+  <value>false</value>
+  <description>
+    Whether to reload expired user->group mappings using a background thread
+    pool. If set to true, a pool of
+    hadoop.security.groups.cache.background.reload.threads is created to
+    update the cache in the background.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.groups.cache.background.reload.threads</name>
+  <value>3</value>
+  <description>
+    Only relevant if hadoop.security.groups.cache.background.reload is true.
+    Controls the number of concurrent background user->group cache entry
+    refreshes. Pending refresh requests beyond this value are queued and
+    processed when a thread is free.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.url</name>
   <value></value>
   <description>
