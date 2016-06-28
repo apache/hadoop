@@ -25,12 +25,13 @@ import org.apache.hadoop.security.authentication.server.AuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.HttpExceptionUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import javax.servlet.ServletException;
@@ -86,6 +87,9 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
   }
 
   private DelegationTokenAuthenticationHandler handler;
+
+  @Rule
+  public Timeout testTimeout = new Timeout(120000);
 
   @Before
   public void setUp() throws Exception {
@@ -358,4 +362,100 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Assert.assertTrue(writer.toString().contains("AuthenticationException"));
   }
 
+  private String getToken() throws Exception {
+    DelegationTokenAuthenticator.DelegationTokenOperation op =
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            GETDELEGATIONTOKEN;
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString());
+    Mockito.when(request.getMethod()).thenReturn(op.getHttpMethod());
+
+    AuthenticationToken token = Mockito.mock(AuthenticationToken.class);
+    Mockito.when(token.getUserName()).thenReturn("user");
+    Mockito.when(response.getWriter()).thenReturn(new PrintWriter(
+        new StringWriter()));
+    Assert.assertFalse(handler.managementOperation(token, request, response));
+
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
+            "&" + DelegationTokenAuthenticator.RENEWER_PARAM + "=" + null);
+
+    Mockito.reset(response);
+    Mockito.reset(token);
+    Mockito.when(token.getUserName()).thenReturn("user");
+    StringWriter writer = new StringWriter();
+    PrintWriter pwriter = new PrintWriter(writer);
+    Mockito.when(response.getWriter()).thenReturn(pwriter);
+    Assert.assertFalse(handler.managementOperation(token, request, response));
+    Mockito.verify(token).getUserName();
+    Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
+    Mockito.verify(response).setContentType(MediaType.APPLICATION_JSON);
+    pwriter.close();
+    String responseOutput = writer.toString();
+    String tokenLabel = DelegationTokenAuthenticator.
+        DELEGATION_TOKEN_JSON;
+    Assert.assertTrue(responseOutput.contains(tokenLabel));
+    Assert.assertTrue(responseOutput.contains(
+        DelegationTokenAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON));
+    ObjectMapper jsonMapper = new ObjectMapper();
+    Map json = jsonMapper.readValue(responseOutput, Map.class);
+    json = (Map) json.get(tokenLabel);
+    String tokenStr;
+    tokenStr = (String) json.get(DelegationTokenAuthenticator.
+        DELEGATION_TOKEN_URL_STRING_JSON);
+    Token<DelegationTokenIdentifier> dt = new Token<DelegationTokenIdentifier>();
+    dt.decodeFromUrlString(tokenStr);
+    handler.getTokenManager().verifyToken(dt);
+    return tokenStr;
+  }
+
+  @Test
+  public void testCannotGetTokenUsingToken() throws Exception {
+    DelegationTokenAuthenticator.DelegationTokenOperation op =
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            GETDELEGATIONTOKEN;
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getMethod()).thenReturn(op.getHttpMethod());
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(response.getWriter()).thenReturn(new PrintWriter(
+        new StringWriter()));
+    String tokenStr = getToken();
+    // Try get a new token using the fetched token, should get 401.
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
+            "&" + DelegationTokenAuthenticator.RENEWER_PARAM + "=" + null +
+        "&" + DelegationTokenAuthenticator.DELEGATION_PARAM + "=" + tokenStr);
+    Mockito.reset(response);
+    StringWriter writer = new StringWriter();
+    PrintWriter pwriter = new PrintWriter(writer);
+    Mockito.when(response.getWriter()).thenReturn(pwriter);
+    Assert.assertFalse(handler.managementOperation(null, request, response));
+    Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+  }
+
+  @Test
+  public void testCannotRenewTokenUsingToken() throws Exception {
+    DelegationTokenAuthenticator.DelegationTokenOperation op =
+        DelegationTokenAuthenticator.DelegationTokenOperation.
+            RENEWDELEGATIONTOKEN;
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getMethod()).thenReturn(op.getHttpMethod());
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(response.getWriter()).thenReturn(new PrintWriter(
+        new StringWriter()));
+    String tokenStr = getToken();
+    // Try renew a token using itself, should get 401.
+    Mockito.when(request.getQueryString()).
+        thenReturn(DelegationTokenAuthenticator.OP_PARAM + "=" + op.toString() +
+            "&" + DelegationTokenAuthenticator.TOKEN_PARAM + "=" + tokenStr +
+            "&" + DelegationTokenAuthenticator.DELEGATION_PARAM + "=" + tokenStr);
+    Mockito.reset(response);
+    StringWriter writer = new StringWriter();
+    PrintWriter pwriter = new PrintWriter(writer);
+    Mockito.when(response.getWriter()).thenReturn(pwriter);
+    Assert.assertFalse(handler.managementOperation(null, request, response));
+    Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+  }
 }
