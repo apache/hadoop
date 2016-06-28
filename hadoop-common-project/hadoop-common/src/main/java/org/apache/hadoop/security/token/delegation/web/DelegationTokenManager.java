@@ -30,6 +30,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -41,6 +43,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DelegationTokenManager {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DelegationTokenManager.class);
 
   public static final String ENABLE_ZK_KEY = "zk-dt-secret-manager.enable";
 
@@ -156,6 +160,7 @@ public class DelegationTokenManager {
   @SuppressWarnings("unchecked")
   public Token<? extends AbstractDelegationTokenIdentifier> createToken(
       UserGroupInformation ugi, String renewer) {
+    LOG.debug("Creating token with ugi:{}, renewer:{}.", ugi, renewer);
     renewer = (renewer == null) ? ugi.getShortUserName() : renewer;
     String user = ugi.getUserName();
     Text owner = new Text(user);
@@ -175,6 +180,7 @@ public class DelegationTokenManager {
   public long renewToken(
       Token<? extends AbstractDelegationTokenIdentifier> token, String renewer)
           throws IOException {
+    LOG.debug("Renewing token:{} with renewer:{}.", token, renewer);
     return secretManager.renewToken(token, renewer);
   }
 
@@ -182,6 +188,7 @@ public class DelegationTokenManager {
   public void cancelToken(
       Token<? extends AbstractDelegationTokenIdentifier> token,
       String canceler) throws IOException {
+    LOG.debug("Cancelling token:{} with canceler:{}.", token, canceler);
     canceler = (canceler != null) ? canceler :
                verifyToken(token).getShortUserName();
     secretManager.cancelToken(token, canceler);
