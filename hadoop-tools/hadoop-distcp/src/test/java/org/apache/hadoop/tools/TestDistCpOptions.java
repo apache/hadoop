@@ -305,6 +305,7 @@ public class TestDistCpOptions {
     DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
     final String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
         + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
+        + "append=false, useDiff=false, fromSnapshot=null, toSnapshot=null, "
         + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
         + "mapBandwidth=100, sslConfigurationFile='null', "
         + "copyStrategy='uniformsize', preserveStatus=[], "

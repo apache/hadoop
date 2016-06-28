@@ -680,6 +680,10 @@ public class DistCpOptions {
         ", deleteMissing=" + deleteMissing +
         ", ignoreFailures=" + ignoreFailures +
         ", overwrite=" + overwrite +
+        ", append=" + append +
+        ", useDiff=" + useDiff +
+        ", fromSnapshot=" + fromSnapshot +
+        ", toSnapshot=" + toSnapshot +
         ", skipCRC=" + skipCRC +
         ", blocking=" + blocking +
         ", numListstatusThreads=" + numListstatusThreads +
