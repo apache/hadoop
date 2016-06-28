@@ -85,11 +85,11 @@ A MapReduce *job* usually splits the input data-set into independent chunks whic
 
 Typically the compute nodes and the storage nodes are the same, that is, the MapReduce framework and the Hadoop Distributed File System (see [HDFS Architecture Guide](../../hadoop-project-dist/hadoop-hdfs/HdfsDesign.html)) are running on the same set of nodes. This configuration allows the framework to effectively schedule tasks on the nodes where data is already present, resulting in very high aggregate bandwidth across the cluster.
 
-The MapReduce framework consists of a single master `ResourceManager`, one slave `NodeManager` per cluster-node, and `MRAppMaster` per application (see [YARN Architecture Guide](../../hadoop-yarn/hadoop-yarn-site/YARN.html)).
+The MapReduce framework consists of a single master `ResourceManager`, one worker `NodeManager` per cluster-node, and `MRAppMaster` per application (see [YARN Architecture Guide](../../hadoop-yarn/hadoop-yarn-site/YARN.html)).
 
 Minimally, applications specify the input/output locations and supply *map* and *reduce* functions via implementations of appropriate interfaces and/or abstract-classes. These, and other job parameters, comprise the *job configuration*.
 
-The Hadoop *job client* then submits the job (jar/executable etc.) and configuration to the `ResourceManager` which then assumes the responsibility of distributing the software/configuration to the slaves, scheduling tasks and monitoring them, providing status and diagnostic information to the job-client.
+The Hadoop *job client* then submits the job (jar/executable etc.) and configuration to the `ResourceManager` which then assumes the responsibility of distributing the software/configuration to the workers, scheduling tasks and monitoring them, providing status and diagnostic information to the job-client.
 
 Although the Hadoop framework is implemented in Java™, MapReduce applications need not be written in Java.
 
@@ -213,10 +213,10 @@ Sample text-files as input:
     $ bin/hadoop fs -ls /user/joe/wordcount/input/
     /user/joe/wordcount/input/file01
     /user/joe/wordcount/input/file02
-    
+
     $ bin/hadoop fs -cat /user/joe/wordcount/input/file01
     Hello World Bye World
-    
+
     $ bin/hadoop fs -cat /user/joe/wordcount/input/file02
     Hello Hadoop Goodbye Hadoop
 
@@ -787,11 +787,11 @@ or Counters.incrCounter(String, String, long) in the `map` and/or `reduce` metho
 
 Applications specify the files to be cached via urls (hdfs://) in the `Job`. The `DistributedCache` assumes that the files specified via hdfs:// urls are already present on the `FileSystem`.
 
-The framework will copy the necessary files to the slave node before any tasks for the job are executed on that node. Its efficiency stems from the fact that the files are only copied once per job and the ability to cache archives which are un-archived on the slaves.
+The framework will copy the necessary files to the worker node before any tasks for the job are executed on that node. Its efficiency stems from the fact that the files are only copied once per job and the ability to cache archives which are un-archived on the workers.
 
 `DistributedCache` tracks the modification timestamps of the cached files. Clearly the cache files should not be modified by the application or externally while the job is executing.
 
-`DistributedCache` can be used to distribute simple, read-only data/text files and more complex types such as archives and jars. Archives (zip, tar, tgz and tar.gz files) are *un-archived* at the slave nodes. Files have *execution permissions* set.
+`DistributedCache` can be used to distribute simple, read-only data/text files and more complex types such as archives and jars. Archives (zip, tar, tgz and tar.gz files) are *un-archived* at the worker nodes. Files have *execution permissions* set.
 
 The files/archives can be distributed by setting the property `mapreduce.job.cache.{files |archives}`. If more than one file/archive has to be distributed, they can be added as comma separated paths. The properties can also be set by APIs
 [Job.addCacheFile(URI)](../../api/org/apache/hadoop/mapreduce/Job.html)/
@@ -808,12 +808,12 @@ api can be used to cache files/jars and also add them to the *classpath* of chil
 
 ##### Private and Public DistributedCache Files
 
-DistributedCache files can be private or public, that determines how they can be shared on the slave nodes.
+DistributedCache files can be private or public, that determines how they can be shared on the worker nodes.
 
 * "Private" DistributedCache files are cached in a localdirectory private to
   the user whose jobs need these files. These files are shared by all tasks
   and jobs of the specific user only and cannot be accessed by jobs of
-  other users on the slaves. A DistributedCache file becomes private by
+  other users on the workers. A DistributedCache file becomes private by
   virtue of its permissions on the file system where the files are
   uploaded, typically HDFS. If the file has no world readable access, or if
   the directory path leading to the file has no world executable access for
@@ -821,7 +821,7 @@ DistributedCache files can be private or public, that determines how they can be
 
 * "Public" DistributedCache files are cached in a global directory and the
   file access is setup such that they are publicly visible to all users.
-  These files can be shared by tasks and jobs of all users on the slaves. A
+  These files can be shared by tasks and jobs of all users on the workers. A
   DistributedCache file becomes public by virtue of its permissions on the
   file system where the files are uploaded, typically HDFS. If the file has
   world readable access, AND if the directory path leading to the file has
@@ -1076,10 +1076,10 @@ Sample text-files as input:
     $ bin/hadoop fs -ls /user/joe/wordcount/input/
     /user/joe/wordcount/input/file01
     /user/joe/wordcount/input/file02
-    
+
     $ bin/hadoop fs -cat /user/joe/wordcount/input/file01
     Hello World, Bye World!
-    
+
     $ bin/hadoop fs -cat /user/joe/wordcount/input/file02
     Hello Hadoop, Goodbye to hadoop.
 

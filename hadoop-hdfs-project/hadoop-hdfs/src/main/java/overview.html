@@ -23,33 +23,33 @@
 
 Hadoop is a distributed computing platform.
 
-<p>Hadoop primarily consists of the <a 
-href="http://hadoop.apache.org/hdfs/">Hadoop Distributed FileSystem 
-(HDFS)</a> and an 
+<p>Hadoop primarily consists of the <a
+href="http://hadoop.apache.org/hdfs/">Hadoop Distributed FileSystem
+(HDFS)</a> and an
 implementation of the <a href="http://hadoop.apache.org/mapreduce/">
 Map-Reduce</a> programming paradigm.</p>
 
 
-<p>Hadoop is a software framework that lets one easily write and run applications 
+<p>Hadoop is a software framework that lets one easily write and run applications
 that process vast amounts of data. Here's what makes Hadoop especially useful:</p>
 <ul>
   <li>
     <b>Scalable</b>: Hadoop can reliably store and process petabytes.
   </li>
   <li>
-    <b>Economical</b>: It distributes the data and processing across clusters 
-    of commonly available computers. These clusters can number into the thousands 
+    <b>Economical</b>: It distributes the data and processing across clusters
+    of commonly available computers. These clusters can number into the thousands
     of nodes.
   </li>
   <li>
-    <b>Efficient</b>: By distributing the data, Hadoop can process it in parallel 
+    <b>Efficient</b>: By distributing the data, Hadoop can process it in parallel
     on the nodes where the data is located. This makes it extremely rapid.
   </li>
   <li>
-    <b>Reliable</b>: Hadoop automatically maintains multiple copies of data and 
+    <b>Reliable</b>: Hadoop automatically maintains multiple copies of data and
     automatically redeploys computing tasks based on failures.
   </li>
-</ul>  
+</ul>
 
 <h2>Requirements</h2>
 
@@ -61,15 +61,15 @@ that process vast amounts of data. Here's what makes Hadoop especially useful:</
   </li>
   <li>
     Windows is also a supported platform.
-  </li>  
+  </li>
 </ul>
-  
+
 <h3>Requisite Software</h3>
 
 <ol>
   <li>
-    Java 1.6.x, preferably from 
-    <a href="http://java.sun.com/javase/downloads/">Sun</a>. 
+    Java 1.6.x, preferably from
+    <a href="http://java.sun.com/javase/downloads/">Sun</a>.
     Set <tt>JAVA_HOME</tt> to the root of your Java installation.
   </li>
   <li>
@@ -141,8 +141,8 @@ host and port.  This is specified with the configuration property
 href="../mapred-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>.
 </li>
 
-<li>A <em>slaves</em> file that lists the names of all the hosts in
-the cluster.  The default slaves file is <tt>conf/slaves</tt>.
+<li>A <em>workers</em> file that lists the names of all the hosts in
+the cluster.  The default workers file is <tt>conf/workers</tt>.
 
 </ol>
 
@@ -242,31 +242,31 @@ as <tt><em>master.example.com</em>:<em>port</em></tt> in <tt>conf/mapred-site.xm
 
 <li>Directories for <tt><a
 href="../hdfs-default.html#dfs.name.dir">dfs.name.dir</a></tt> and
-<tt><a href="../hdfs-default.html#dfs.data.dir">dfs.data.dir</a> 
+<tt><a href="../hdfs-default.html#dfs.data.dir">dfs.data.dir</a>
 in <tt>conf/hdfs-site.xml</tt>.
 </tt>These are local directories used to hold distributed filesystem
-data on the master node and slave nodes respectively.  Note
+data on the master node and worker nodes respectively.  Note
 that <tt>dfs.data.dir</tt> may contain a space- or comma-separated
 list of directory names, so that data may be stored on multiple local
 devices.</li>
 
 <li><tt><a href="../mapred-default.html#mapred.local.dir">mapred.local.dir</a></tt>
-  in <tt>conf/mapred-site.xml</tt>, the local directory where temporary 
+  in <tt>conf/mapred-site.xml</tt>, the local directory where temporary
   MapReduce data is stored.  It also may be a list of directories.</li>
 
 <li><tt><a
 href="../mapred-default.html#mapred.map.tasks">mapred.map.tasks</a></tt>
 and <tt><a
-href="../mapred-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt> 
+href="../mapred-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt>
 in <tt>conf/mapred-site.xml</tt>.
 As a rule of thumb, use 10x the
-number of slave processors for <tt>mapred.map.tasks</tt>, and 2x the
-number of slave processors for <tt>mapred.reduce.tasks</tt>.</li>
+number of worker processors for <tt>mapred.map.tasks</tt>, and 2x the
+number of worker processors for <tt>mapred.reduce.tasks</tt>.</li>
 
 </ol>
 
-<p>Finally, list all slave hostnames or IP addresses in your
-<tt>conf/slaves</tt> file, one per line.  Then format your filesystem
+<p>Finally, list all worker hostnames or IP addresses in your
+<tt>conf/workers</tt> file, one per line.  Then format your filesystem
 and start your cluster on your master node, as above.
 
 </body>

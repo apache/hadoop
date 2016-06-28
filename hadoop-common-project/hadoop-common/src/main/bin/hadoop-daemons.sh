@@ -57,13 +57,13 @@ else
 fi
 
 hadoop_error "WARNING: Use of this script to ${daemonmode} HDFS daemons is deprecated."
-hadoop_error "WARNING: Attempting to execute replacement \"hdfs --slaves --daemon ${daemonmode}\" instead."
+hadoop_error "WARNING: Attempting to execute replacement \"hdfs --workers --daemon ${daemonmode}\" instead."
 
 #
 # Original input was usually:
 #  hadoop-daemons.sh (shell options) (start|stop) (datanode|...) (daemon options)
 # we're going to turn this into
-#  hdfs --slaves --daemon (start|stop) (rest of options)
+#  hdfs --workers --daemon (start|stop) (rest of options)
 #
 for (( i = 0; i < ${#HADOOP_USER_PARAMS[@]}; i++ ))
 do
@@ -74,4 +74,4 @@ do
   fi
 done
 
-${hdfsscript} --slaves --daemon "${daemonmode}" "${HADOOP_USER_PARAMS[@]}"
+${hdfsscript} --workers --daemon "${daemonmode}" "${HADOOP_USER_PARAMS[@]}"

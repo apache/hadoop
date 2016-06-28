@@ -28,7 +28,7 @@ function hadoop_usage
   hadoop_add_option "hostnames list[,of,host,names]" "hosts to use in slave mode"
   hadoop_add_option "loglevel level" "set the log4j level for this command"
   hadoop_add_option "hosts filename" "list of hosts to use in slave mode"
-  hadoop_add_option "slaves" "turn on slave mode"
+  hadoop_add_option "workers" "turn on worker mode"
 
   hadoop_add_subcommand "checknative" "check native Hadoop and compression libraries availability"
   hadoop_add_subcommand "classpath" "prints the class path needed to get the Hadoop jar and the required libraries"
@@ -205,8 +205,8 @@ fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
 
-if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
-  hadoop_common_slave_mode_execute "${HADOOP_COMMON_HOME}/bin/hadoop" "${HADOOP_USER_PARAMS[@]}"
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_COMMON_HOME}/bin/hadoop" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 

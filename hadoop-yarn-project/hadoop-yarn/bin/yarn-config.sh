@@ -15,7 +15,7 @@
 
 function hadoop_subproject_init
 {
-  
+
   # at some point in time, someone thought it would be a good idea to
   # create separate vars for every subproject.  *sigh*
   # let's perform some overrides and setup some defaults for bw compat
@@ -23,7 +23,7 @@ function hadoop_subproject_init
   # used interchangeable from here on out
   # ...
   # this should get deprecated at some point.
-  
+
   if [[ -z "${HADOOP_YARN_ENV_PROCESSED}" ]]; then
     if [[ -e "${YARN_CONF_DIR}/yarn-env.sh" ]]; then
       . "${YARN_CONF_DIR}/yarn-env.sh"
@@ -32,29 +32,29 @@ function hadoop_subproject_init
     fi
     export HADOOP_YARN_ENV_PROCESSED=true
   fi
-  
+
   hadoop_deprecate_envvar YARN_CONF_DIR HADOOP_CONF_DIR
 
   hadoop_deprecate_envvar YARN_LOG_DIR HADOOP_LOG_DIR
 
   hadoop_deprecate_envvar YARN_LOGFILE HADOOP_LOGFILE
-  
+
   hadoop_deprecate_envvar YARN_NICENESS HADOOP_NICENESS
-  
+
   hadoop_deprecate_envvar YARN_STOP_TIMEOUT HADOOP_STOP_TIMEOUT
-  
+
   hadoop_deprecate_envvar YARN_PID_DIR HADOOP_PID_DIR
-  
+
   hadoop_deprecate_envvar YARN_ROOT_LOGGER HADOOP_ROOT_LOGGER
 
   hadoop_deprecate_envvar YARN_IDENT_STRING HADOOP_IDENT_STRING
 
   hadoop_deprecate_envvar YARN_OPTS HADOOP_OPTS
 
-  hadoop_deprecate_envvar YARN_SLAVES HADOOP_SLAVES
-  
+  hadoop_deprecate_envvar YARN_SLAVES HADOOP_WORKERS
+
   HADOOP_YARN_HOME="${HADOOP_YARN_HOME:-$HADOOP_HOME}"
-  
+
   # YARN-1429 added the completely superfluous YARN_USER_CLASSPATH
   # env var.  We're going to override HADOOP_USER_CLASSPATH to keep
   # consistency with the rest of the duplicate/useless env vars

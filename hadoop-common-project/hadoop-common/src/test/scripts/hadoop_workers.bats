@@ -15,23 +15,23 @@
 
 load hadoop-functions_test_helper
 
-@test "hadoop_populate_slaves_file (specific file)" {
+@test "hadoop_populate_workers_file (specific file)" {
   touch "${TMP}/file"
-  hadoop_populate_slaves_file "${TMP}/file"
-  [ "${HADOOP_SLAVES}" = "${TMP}/file" ]
+  hadoop_populate_workers_file "${TMP}/file"
+  [ "${HADOOP_WORKERS}" = "${TMP}/file" ]
 }
 
-@test "hadoop_populate_slaves_file (specific conf dir file)" {
+@test "hadoop_populate_workers_file (specific conf dir file)" {
   HADOOP_CONF_DIR=${TMP}/1
   mkdir -p "${HADOOP_CONF_DIR}"
   touch "${HADOOP_CONF_DIR}/file"
-  hadoop_populate_slaves_file "file"
-  echo "${HADOOP_SLAVES}"
-  [ "${HADOOP_SLAVES}" = "${HADOOP_CONF_DIR}/file" ]
+  hadoop_populate_workers_file "file"
+  echo "${HADOOP_WORKERS}"
+  [ "${HADOOP_WORKERS}" = "${HADOOP_CONF_DIR}/file" ]
 }
 
-@test "hadoop_populate_slaves_file (no file)" {
+@test "hadoop_populate_workers_file (no file)" {
   HADOOP_CONF_DIR=${TMP}
-  run hadoop_populate_slaves_file "foo"
+  run hadoop_populate_workers_file "foo"
   [ "${status}" -eq 1 ]
 }

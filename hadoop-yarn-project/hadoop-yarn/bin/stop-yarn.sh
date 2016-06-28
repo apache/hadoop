@@ -62,7 +62,7 @@ else
   "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
       --daemon stop \
-      --slaves \
+      --workers \
       --hostnames "${RMHOSTS}" \
       resourcemanager
 fi
@@ -71,7 +71,7 @@ fi
 echo "Stopping nodemanagers"
 "${HADOOP_YARN_HOME}/bin/yarn" \
     --config "${HADOOP_CONF_DIR}" \
-    --slaves \
+    --workers \
     --daemon stop \
     nodemanager
 
@@ -81,7 +81,7 @@ if [[ -n ${PROXYSERVER} ]]; then
   echo "Stopping proxy server [${PROXYSERVER}]"
   "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
-      --slaves \
+      --workers \
       --hostnames "${PROXYSERVER}" \
       --daemon stop \
       proxyserver

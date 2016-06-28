@@ -43,10 +43,10 @@ All of the shell commands will accept a common set of options. For some commands
 | `--daemon mode` | If the command supports daemonization (e.g., `hdfs namenode`), execute in the appropriate mode. Supported modes are `start` to start the process in daemon mode, `stop` to stop the process, and `status` to determine the active status of the process. `status` will return an [LSB-compliant](http://refspecs.linuxbase.org/LSB_3.0.0/LSB-generic/LSB-generic/iniscrptact.html) result code. If no option is provided, commands that support daemonization will run in the foreground. For commands that do not support daemonization, this option is ignored. |
 | `--debug` | Enables shell level configuration debugging information |
 | `--help` | Shell script usage information. |
-| `--hostnames` | When `--slaves` is used, override the slaves file with a space delimited list of hostnames where to execute a multi-host subcommand. If `--slaves` is not used, this option is ignored. |
-| `--hosts` | When `--slaves` is used, override the slaves file with another file that contains a list of hostnames where to execute a multi-host subcommand.  If `--slaves` is not used, this option is ignored. |
+| `--hostnames` | When `--workers` is used, override the workers file with a space delimited list of hostnames where to execute a multi-host subcommand. If `--workers` is not used, this option is ignored. |
+| `--hosts` | When `--workers` is used, override the workers file with another file that contains a list of hostnames where to execute a multi-host subcommand.  If `--workers` is not used, this option is ignored. |
 | `--loglevel loglevel` | Overrides the log level. Valid log levels are FATAL, ERROR, WARN, INFO, DEBUG, and TRACE. Default is INFO. |
-| `--slaves` | If possible, execute this command on all hosts in the `slaves` file. |
+| `--workers` | If possible, execute this command on all hosts in the `workers` file. |
 
 ### Generic Options
 

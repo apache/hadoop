@@ -56,14 +56,14 @@ fi
 echo "Stopping namenodes on [${NAMENODES}]"
 
   "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
     --daemon stop \
     namenode
 
 #---------------------------------------------------------
-# datanodes (using default slaves file)
+# datanodes (using default workers file)
 
 if [[ -n "${HADOOP_SECURE_DN_USER}" ]] &&
 [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
@@ -75,7 +75,7 @@ else
   echo "Stopping datanodes"
 
   "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --daemon stop \
     datanode
@@ -94,7 +94,7 @@ if [[ -n "${SECONDARY_NAMENODES}" ]]; then
   echo "Stopping secondary namenodes [${SECONDARY_NAMENODES}]"
 
   "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${SECONDARY_NAMENODES}" \
     --daemon stop \
@@ -112,7 +112,7 @@ case "${SHARED_EDITS_DIR}" in
     echo "Stopping journal nodes [${JOURNAL_NODES}]"
 
     "${HADOOP_HDFS_HOME}/bin/hdfs" \
-      --slaves \
+      --workers \
       --config "${HADOOP_CONF_DIR}" \
       --hostnames "${JOURNAL_NODES}" \
       --daemon stop \
@@ -127,7 +127,7 @@ if [[ "${AUTOHA_ENABLED}" = "true" ]]; then
   echo "Stopping ZK Failover Controllers on NN hosts [${NAMENODES}]"
 
   "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
     --daemon stop \

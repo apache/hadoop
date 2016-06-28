@@ -79,14 +79,14 @@ fi
 echo "Starting namenodes on [${NAMENODES}]"
 
 "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
     --daemon start \
     namenode ${nameStartOpt}
 
 #---------------------------------------------------------
-# datanodes (using default slaves file)
+# datanodes (using default workers file)
 
 if [[ -n "${HADOOP_SECURE_DN_USER}" ]] &&
    [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
@@ -98,7 +98,7 @@ else
   echo "Starting datanodes"
 
   "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --daemon start \
     datanode ${dataStartOpt}
@@ -125,7 +125,7 @@ if [[ -n "${SECONDARY_NAMENODES}" ]]; then
     echo "Starting secondary namenodes [${SECONDARY_NAMENODES}]"
 
     "${HADOOP_HDFS_HOME}/bin/hdfs" \
-      --slaves \
+      --workers \
       --config "${HADOOP_CONF_DIR}" \
       --hostnames "${SECONDARY_NAMENODES}" \
       --daemon start \
@@ -144,7 +144,7 @@ case "${SHARED_EDITS_DIR}" in
     echo "Starting journal nodes [${JOURNAL_NODES}]"
 
     "${HADOOP_HDFS_HOME}/bin/hdfs" \
-      --slaves \
+      --workers \
       --config "${HADOOP_CONF_DIR}" \
       --hostnames "${JOURNAL_NODES}" \
       --daemon start \
@@ -159,7 +159,7 @@ if [[ "${AUTOHA_ENABLED}" = "true" ]]; then
   echo "Starting ZK Failover Controllers on NN hosts [${NAMENODES}]"
 
   "${HADOOP_HDFS_HOME}/bin/hdfs" \
-    --slaves \
+    --workers \
     --config "${HADOOP_CONF_DIR}" \
     --hostnames "${NAMENODES}" \
     --daemon start \

@@ -169,8 +169,8 @@ esac
 # export HADOOP_SSH_PARALLEL=10
 
 # Filename which contains all of the hosts for any remote execution
-# helper scripts # such as slaves.sh, start-dfs.sh, etc.
-# export HADOOP_SLAVES="${HADOOP_CONF_DIR}/slaves"
+# helper scripts # such as workers.sh, start-dfs.sh, etc.
+# export HADOOP_WORKERS="${HADOOP_CONF_DIR}/workers"
 
 ###
 # Options for all daemons

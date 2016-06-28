@@ -54,7 +54,7 @@
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
-            <exclude>conf/slaves</exclude>
+            <exclude>conf/workers</exclude>
             <exclude>conf/container-executor.cfg</exclude>
             <exclude>dev-support/jdiff/**</exclude>
           </excludes>

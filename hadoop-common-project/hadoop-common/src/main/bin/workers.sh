@@ -16,20 +16,20 @@
 # limitations under the License.
 
 
-# Run a shell command on all slave hosts.
+# Run a shell command on all worker hosts.
 #
 # Environment Variables
 #
-#   HADOOP_SLAVES    File naming remote hosts.
-#     Default is ${HADOOP_CONF_DIR}/slaves.
+#   HADOOP_WORKERS    File naming remote hosts.
+#     Default is ${HADOOP_CONF_DIR}/workers.
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
-#   HADOOP_SLAVE_SLEEP Seconds to sleep between spawning remote commands.
+#   HADOOP_WORKER_SLEEP Seconds to sleep between spawning remote commands.
 #   HADOOP_SSH_OPTS Options passed to ssh when running remote commands.
 ##
 
 function hadoop_usage
 {
-  echo "Usage: slaves.sh [--config confdir] command..."
+  echo "Usage: workers.sh [--config confdir] command..."
 }
 
 # let's locate libexec...

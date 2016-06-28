@@ -87,7 +87,7 @@
 #}
 
 #
-# Example:  efficient command execution for the slaves
+# Example:  efficient command execution for the workers
 #
 # To improve performance, you can use xargs -P
 # instead of the for loop, if supported.
@@ -108,7 +108,7 @@
 #  # list with each hostname read from stdin/pipe. But it consider one
 #  # line as one argument while reading from stdin/pipe. So place each
 #  # hostname in different lines while passing via pipe.
-#  tmpslvnames=$(echo "${HADOOP_SLAVE_NAMES}" | tr ' ' '\n' )
+#  tmpslvnames=$(echo "${HADOOP_WORKER_NAMES}" | tr ' ' '\n' )
 #    echo "${tmpslvnames}" | \
 #    xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
 #    -I {} bash -c --  "hadoop_actual_ssh {} ${params}"

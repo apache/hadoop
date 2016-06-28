@@ -44,11 +44,11 @@ import static org.junit.Assert.assertTrue;
  * 0 byte files
  */
 public class TestLazyOutput {
-  private static final int NUM_HADOOP_SLAVES = 3;
+  private static final int NUM_HADOOP_WORKERS = 3;
   private static final int NUM_MAPS_PER_NODE = 2;
-  private static final Path INPUT = new Path("/testlazy/input");
+  private static final Path INPUTPATH = new Path("/testlazy/input");
 
-  private static final List<String> input = 
+  private static final List<String> INPUTLIST =
     Arrays.asList("All","Roads","Lead","To","Hadoop");
 
 
@@ -70,7 +70,7 @@ public class TestLazyOutput {
     }
   }
 
-  static class TestReducer  extends MapReduceBase 
+  static class TestReducer  extends MapReduceBase
   implements Reducer<LongWritable, Text, LongWritable, Text> {
     private String id;
 
@@ -93,12 +93,12 @@ public class TestLazyOutput {
   }
 
   private static void runTestLazyOutput(JobConf job, Path output,
-      int numReducers, boolean createLazily) 
+      int numReducers, boolean createLazily)
   throws Exception {
 
     job.setJobName("test-lazy-output");
 
-    FileInputFormat.setInputPaths(job, INPUT);
+    FileInputFormat.setInputPaths(job, INPUTPATH);
     FileOutputFormat.setOutputPath(job, output);
     job.setInputFormat(TextInputFormat.class);
     job.setMapOutputKeyClass(LongWritable.class);
@@ -106,7 +106,7 @@ public class TestLazyOutput {
     job.setOutputKeyClass(LongWritable.class);
     job.setOutputValueClass(Text.class);
 
-    job.setMapperClass(TestMapper.class);        
+    job.setMapperClass(TestMapper.class);
     job.setReducerClass(TestReducer.class);
 
     JobClient client = new JobClient(job);
@@ -123,10 +123,10 @@ public class TestLazyOutput {
 
   public void createInput(FileSystem fs, int numMappers) throws Exception {
     for (int i =0; i < numMappers; i++) {
-      OutputStream os = fs.create(new Path(INPUT, 
+      OutputStream os = fs.create(new Path(INPUTPATH,
         "text" + i + ".txt"));
       Writer wr = new OutputStreamWriter(os);
-      for(String inp : input) {
+      for(String inp : INPUTLIST) {
         wr.write(inp+"\n");
       }
       wr.close();
@@ -142,22 +142,23 @@ public class TestLazyOutput {
       Configuration conf = new Configuration();
 
       // Start the mini-MR and mini-DFS clusters
-      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_HADOOP_SLAVES)
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_HADOOP_WORKERS)
           .build();
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(NUM_HADOOP_SLAVES, fileSys.getUri().toString(), 1);
+      mr = new MiniMRCluster(NUM_HADOOP_WORKERS,
+            fileSys.getUri().toString(), 1);
 
       int numReducers = 2;
-      int numMappers = NUM_HADOOP_SLAVES * NUM_MAPS_PER_NODE;
+      int numMappers = NUM_HADOOP_WORKERS * NUM_MAPS_PER_NODE;
 
       createInput(fileSys, numMappers);
       Path output1 = new Path("/testlazy/output1");
 
-      // Test 1. 
-      runTestLazyOutput(mr.createJobConf(), output1, 
+      // Test 1.
+      runTestLazyOutput(mr.createJobConf(), output1,
           numReducers, true);
 
-      Path[] fileList = 
+      Path[] fileList =
         FileUtil.stat2Paths(fileSys.listStatus(output1,
             new Utils.OutputFileUtils.OutputFilesFilter()));
       for(int i=0; i < fileList.length; ++i) {

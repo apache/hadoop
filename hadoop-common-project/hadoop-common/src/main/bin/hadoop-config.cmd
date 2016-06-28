@@ -80,12 +80,12 @@ if "%1" == "--config" (
 )
 
 @rem
-@rem check to see it is specified whether to use the slaves or the
+@rem check to see it is specified whether to use the workers or the
 @rem masters file
 @rem
 
 if "%1" == "--hosts" (
-  set HADOOP_SLAVES=%HADOOP_CONF_DIR%\%2
+  set HADOOP_WORKERS=%HADOOP_CONF_DIR%\%2
   shift
   shift
 )

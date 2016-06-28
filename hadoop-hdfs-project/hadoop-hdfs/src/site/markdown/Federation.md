@@ -202,7 +202,7 @@ To stop the cluster run the following command:
 
     [hdfs]$ $HADOOP_HOME/sbin/stop-dfs.sh
 
-These commands can be run from any node where the HDFS configuration is available. The command uses the configuration to determine the Namenodes in the cluster and then starts the Namenode process on those nodes. The Datanodes are started on the nodes specified in the `slaves` file. The script can be used as a reference for building your own scripts to start and stop the cluster.
+These commands can be run from any node where the HDFS configuration is available. The command uses the configuration to determine the Namenodes in the cluster and then starts the Namenode process on those nodes. The Datanodes are started on the nodes specified in the `workers` file. The script can be used as a reference for building your own scripts to start and stop the cluster.
 
 ### Balancer
 

@@ -45,7 +45,7 @@ fi
 if [[ "${EUID}" -eq 0 ]] && [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
   exec "${HADOOP_HDFS_HOME}/bin/hdfs" \
      --config "${HADOOP_CONF_DIR}" \
-     --slaves \
+     --workers \
      --daemon start \
      datanode
 else

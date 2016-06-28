@@ -43,11 +43,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
- * BlockTokenSecretManager can be instantiated in 2 modes, master mode and slave
- * mode. Master can generate new block keys and export block keys to slaves,
- * while slaves can only import and use block keys received from master. Both
- * master and slave can generate and verify block tokens. Typically, master mode
- * is used by NN and slave mode is used by DN.
+ * BlockTokenSecretManager can be instantiated in 2 modes, master mode
+ * and worker mode. Master can generate new block keys and export block
+ * keys to workers, while workers can only import and use block keys
+ * received from master. Both master and worker can generate and verify
+ * block tokens. Typically, master mode is used by NN and worker mode
+ * is used by DN.
  */
 @InterfaceAudience.Private
 public class BlockTokenSecretManager extends
@@ -57,7 +58,7 @@ public class BlockTokenSecretManager extends
   public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 
   private final boolean isMaster;
-  
+
   /**
    * keyUpdateInterval is the interval that NN updates its block keys. It should
    * be set long enough so that all live DN's and Balancer should have sync'ed
@@ -78,7 +79,7 @@ public class BlockTokenSecretManager extends
   private final SecureRandom nonceGenerator = new SecureRandom();
 
   /**
-   * Constructor for slaves.
+   * Constructor for workers.
    *
    * @param keyUpdateInterval how often a new key will be generated
    * @param tokenLifetime how long an individual token is valid
@@ -88,10 +89,10 @@ public class BlockTokenSecretManager extends
     this(false, keyUpdateInterval, tokenLifetime, blockPoolId,
         encryptionAlgorithm, 0, 1);
   }
-  
+
   /**
    * Constructor for masters.
-   * 
+   *
    * @param keyUpdateInterval how often a new key will be generated
    * @param tokenLifetime how long an individual token is valid
    * @param nnIndex namenode index of the namenode for which we are creating the manager
@@ -108,7 +109,7 @@ public class BlockTokenSecretManager extends
     setSerialNo(new SecureRandom().nextInt());
     generateKeys();
   }
-  
+
   private BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
       long tokenLifetime, String blockPoolId, String encryptionAlgorithm, int nnIndex, int numNNs) {
     this.intRange = Integer.MAX_VALUE / numNNs;
@@ -121,13 +122,13 @@ public class BlockTokenSecretManager extends
     this.encryptionAlgorithm = encryptionAlgorithm;
     generateKeys();
   }
-  
+
   @VisibleForTesting
   public synchronized void setSerialNo(int serialNo) {
     // we mod the serial number by the range and then add that times the index
     this.serialNo = (serialNo % intRange) + (nnRangeStart);
   }
-  
+
   public void setBlockPoolId(String blockPoolId) {
     this.blockPoolId = blockPoolId;
   }
@@ -180,7 +181,7 @@ public class BlockTokenSecretManager extends
   }
 
   /**
-   * Set block keys, only to be used in slave mode
+   * Set block keys, only to be used in worker mode
    */
   public synchronized void addKeys(ExportedBlockKeys exportedKeys)
       throws IOException {
@@ -324,7 +325,7 @@ public class BlockTokenSecretManager extends
 
   /**
    * Create an empty block token identifier
-   * 
+   *
    * @return a newly created empty block token identifier
    */
   @Override
@@ -334,7 +335,7 @@ public class BlockTokenSecretManager extends
 
   /**
    * Create a new password/secret for the given block token identifier.
-   * 
+   *
    * @param identifier
    *          the block token identifier
    * @return token password/secret
@@ -357,7 +358,7 @@ public class BlockTokenSecretManager extends
 
   /**
    * Look up the token password/secret for the given block token identifier.
-   * 
+   *
    * @param identifier
    *          the block token identifier to look up
    * @return token password/secret as byte[]
@@ -381,11 +382,11 @@ public class BlockTokenSecretManager extends
     }
     return createPassword(identifier.getBytes(), key.getKey());
   }
-  
+
   /**
    * Generate a data encryption key for this block pool, using the current
    * BlockKey.
-   * 
+   *
    * @return a data encryption key which may be used to encrypt traffic
    *         over the DataTransferProtocol
    */
@@ -401,10 +402,10 @@ public class BlockTokenSecretManager extends
         encryptionKey, Time.now() + tokenLifetime,
         encryptionAlgorithm);
   }
-  
+
   /**
    * Recreate an encryption key based on the given key id and nonce.
-   * 
+   *
    * @param keyId identifier of the secret key used to generate the encryption key.
    * @param nonce random value used to create the encryption key
    * @return the encryption key which corresponds to this (keyId, blockPoolId, nonce)
@@ -423,7 +424,7 @@ public class BlockTokenSecretManager extends
     }
     return createPassword(nonce, key.getKey());
   }
-  
+
   @VisibleForTesting
   public synchronized void setKeyUpdateIntervalForTesting(long millis) {
     this.keyUpdateInterval = millis;
@@ -433,10 +434,10 @@ public class BlockTokenSecretManager extends
   public void clearAllKeysForTesting() {
     allKeys.clear();
   }
-  
+
   @VisibleForTesting
   public synchronized int getSerialNoForTesting() {
     return serialNo;
   }
-  
+
 }

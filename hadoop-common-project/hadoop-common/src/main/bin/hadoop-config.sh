@@ -113,6 +113,10 @@ hadoop_exec_userfuncs
 hadoop_exec_user_hadoopenv
 hadoop_verify_confdir
 
+hadoop_deprecate_envvar HADOOP_SLAVES HADOOP_WORKERS
+hadoop_deprecate_envvar HADOOP_SLAVE_NAMES HADOOP_WORKER_NAMES
+hadoop_deprecate_envvar HADOOP_SLAVE_SLEEP HADOOP_WORKER_SLEEP
+
 # do all the OS-specific startup bits here
 # this allows us to get a decent JAVA_HOME,
 # call crle for LD_LIBRARY_PATH, etc.
