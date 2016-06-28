@@ -104,7 +104,8 @@ class ParameterParser {
   }
 
   FsPermission permission() {
-    return new PermissionParam(param(PermissionParam.NAME)).getFsPermission();
+    return new PermissionParam(param(PermissionParam.NAME)).
+        getFileFsPermission();
   }
 
   boolean overwrite() {
