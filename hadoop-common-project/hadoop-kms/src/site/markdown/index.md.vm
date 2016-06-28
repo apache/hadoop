@@ -585,7 +585,7 @@ $H3 KMS Delegation Token Configuration
 
 KMS supports delegation tokens to authenticate to the key providers from processes without Kerberos credentials.
 
-KMS delegation token authentication extends the default Hadoop authentication. See [Hadoop Auth](../hadoop-auth/index.html) page for more details.
+KMS delegation token authentication extends the default Hadoop authentication. Same as Hadoop authentication, KMS delegation tokens must not be fetched or renewed using delegation token authentication. See [Hadoop Auth](../hadoop-auth/index.html) page for more details.
 
 Additionally, KMS delegation token secret manager can be configured with the following properties:
 
