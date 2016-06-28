@@ -18,8 +18,9 @@
 
 
 #uripaser lib likes to use always_inline and gcc complains
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-attributes")
+#also frees const qualified malloced buffers
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
 
 add_library(uriparser2_obj OBJECT uriparser2/uriparser2.c uriparser2/uriparser/UriParse.c uriparser2/uriparser/UriParseBase.c 
     uriparser2/uriparser/UriCommon.c uriparser2/uriparser/UriIp4Base.c uriparser2/uriparser/UriIp4.c uriparser2/uriparser/UriEscape.c uriparser2/uriparser/UriQuery.c)
