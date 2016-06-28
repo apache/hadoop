@@ -78,6 +78,10 @@ public class TestDataNodeMXBean {
       int xceiverCount = (Integer)mbs.getAttribute(mxbeanName,
           "XceiverCount");
       Assert.assertEquals(datanode.getXceiverCount(), xceiverCount);
+
+      String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
+          "BPServiceActorInfo");
+      Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
