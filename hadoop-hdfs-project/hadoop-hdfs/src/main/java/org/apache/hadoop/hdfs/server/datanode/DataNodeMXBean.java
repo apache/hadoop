@@ -57,14 +57,28 @@ public interface DataNodeMXBean {
    * @return the http port
    */
   public String getHttpPort();
-  
+
   /**
-   * Gets the namenode IP addresses
+   * Gets the data port.
+   *
+   * @return the data port
+   */
+  String getDataPort();
+
+  /**
+   * Gets the namenode IP addresses.
    * 
    * @return the namenode IP addresses that the datanode is talking to
    */
   public String getNamenodeAddresses();
-  
+
+  /**
+   * Gets information of the block pool service actors.
+   *
+   * @return block pool service actors info
+   */
+  String getBPServiceActorInfo();
+
   /**
    * Gets the information of each volume on the Datanode. Please
    * see the implementation for the format of returned information.
