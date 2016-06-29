@@ -57,8 +57,7 @@ public class MockNodes {
         if (j == (nodesPerRack - 1)) {
           // One unhealthy node per rack.
           list.add(nodeInfo(i, perNode, NodeState.UNHEALTHY));
-        }
-        if (j == 0) {
+        } else if (j == 0) {
           // One node with label
           list.add(nodeInfo(i, perNode, NodeState.RUNNING, ImmutableSet.of("x")));
         } else {
