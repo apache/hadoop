@@ -76,6 +76,7 @@ public class DNConf {
   final int socketKeepaliveTimeout;
   private final int transferSocketSendBufferSize;
   private final int transferSocketRecvBufferSize;
+  private final boolean tcpNoDelay;
 
   final boolean transferToAllowed;
   final boolean dropCacheBehindWrites;
@@ -132,6 +133,9 @@ public class DNConf {
     this.transferSocketRecvBufferSize = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_KEY,
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT);
+    this.tcpNoDelay = conf.getBoolean(
+        DFSConfigKeys.DFS_DATA_TRANSFER_SERVER_TCPNODELAY,
+        DFSConfigKeys.DFS_DATA_TRANSFER_SERVER_TCPNODELAY_DEFAULT);
 
     /* Based on results on different platforms, we might need set the default
      * to false on some of them. */
@@ -359,6 +363,10 @@ public class DNConf {
 
   public int getTransferSocketSendBufferSize() {
     return transferSocketSendBufferSize;
+  }
+
+  public boolean getDataTransferServerTcpNoDelay() {
+    return tcpNoDelay;
   }
 
   public long getBpReadyTimeout() {

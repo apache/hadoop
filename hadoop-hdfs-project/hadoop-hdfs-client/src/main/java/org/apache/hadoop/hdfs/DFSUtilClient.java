@@ -82,6 +82,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 
@@ -735,6 +737,7 @@ public class DFSUtilClient {
       String dnAddr = dn.getXferAddr(connectToDnViaHostname);
       LOG.debug("Connecting to datanode {}", dnAddr);
       NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
+      sock.setTcpNoDelay(getClientDataTransferTcpNoDelay(conf));
       sock.setSoTimeout(timeout);
 
       OutputStream unbufOut = NetUtils.getOutputStream(sock);
@@ -755,5 +758,11 @@ public class DFSUtilClient {
         IOUtils.closeSocket(sock);
       }
     }
+  }
+
+  private static boolean getClientDataTransferTcpNoDelay(Configuration conf) {
+    return conf.getBoolean(
+        DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY,
+        DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT);
   }
 }

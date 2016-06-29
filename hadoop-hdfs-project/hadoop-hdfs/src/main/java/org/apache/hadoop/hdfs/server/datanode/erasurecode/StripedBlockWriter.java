@@ -102,6 +102,8 @@ class StripedBlockWriter {
       socket = datanode.newSocket();
       NetUtils.connect(socket, targetAddr,
           datanode.getDnConf().getSocketTimeout());
+      socket.setTcpNoDelay(
+          datanode.getDnConf().getDataTransferServerTcpNoDelay());
       socket.setSoTimeout(datanode.getDnConf().getSocketTimeout());
 
       Token<BlockTokenIdentifier> blockToken =

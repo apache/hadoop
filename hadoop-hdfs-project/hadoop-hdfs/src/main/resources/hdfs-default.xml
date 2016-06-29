@@ -3431,6 +3431,14 @@
 </property>
 
 <property>
+  <name>dfs.data.transfer.server.tcpnodelay</name>
+  <value>true</value>
+  <description>
+    If true, set TCP_NODELAY to sockets for transferring data between Datanodes.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.balance.max.concurrent.moves</name>
   <value>50</value>
   <description>

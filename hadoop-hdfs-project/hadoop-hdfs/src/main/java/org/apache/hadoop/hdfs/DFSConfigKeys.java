@@ -930,6 +930,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT =
       HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
 
+  public static final String
+      DFS_DATA_TRANSFER_SERVER_TCPNODELAY =
+      "dfs.data.transfer.server.tcpnodelay";
+  public static final boolean
+      DFS_DATA_TRANSFER_SERVER_TCPNODELAY_DEFAULT = true;
+
   // Disk Balancer Keys
   public static final String DFS_DISK_BALANCER_ENABLED =
       "dfs.disk.balancer.enabled";
