@@ -16,23 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.s3native;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
-import org.apache.hadoop.conf.Configuration;
-import org.junit.Before;
+import java.io.IOException;
 
-public class TestS3_LocalFileContextURI extends FileContextURIBase {
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-  @Override
-  @Before
-  public void setUp() throws Exception {
+/**
+ * Thrown if there is a problem communicating with Amazon S3.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public class S3Exception extends IOException {
 
-    Configuration localConf = new Configuration();
-    fc2 = FileContext.getFileContext(localConf);
+  private static final long serialVersionUID = 1L;
 
-    Configuration s3conf = new Configuration();
-    s3conf.set(FS_DEFAULT_NAME_DEFAULT, s3conf.get("test.fs.s3.name"));
-    fc1 = FileContext.getFileContext(s3conf);
+  public S3Exception(Throwable t) {
+    super(t);
   }
+
 }

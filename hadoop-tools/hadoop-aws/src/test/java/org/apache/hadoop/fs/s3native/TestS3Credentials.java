@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs.s3;
+package org.apache.hadoop.fs.s3native;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,9 +33,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
+
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_AWS_ACCESS_KEY_ID;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_AWS_SECRET_ACCESS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+/**
+ * This is to test the {@link S3Credentials} class for extracting AWS
+ * credentials.
+ */
 public class TestS3Credentials {
   public static final Log LOG = LogFactory.getLog(TestS3Credentials.class);
 
@@ -55,10 +62,10 @@ public class TestS3Credentials {
   public void testInvalidHostnameWithUnderscores() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     try {
-      s3Credentials.initialize(new URI("s3://a:b@c_d"), new Configuration());
+      s3Credentials.initialize(new URI("s3n://a:b@c_d"), new Configuration());
       fail("Should throw IllegalArgumentException");
     } catch (IllegalArgumentException e) {
-      assertEquals("Invalid hostname in URI s3://a:b@c_d", e.getMessage());
+      assertEquals("Invalid hostname in URI s3n://a:b@c_d", e.getMessage());
     }
   }
 
@@ -66,9 +73,9 @@ public class TestS3Credentials {
   public void testPlaintextConfigPassword() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     Configuration conf = new Configuration();
-    conf.set("fs.s3.awsAccessKeyId", EXAMPLE_ID);
-    conf.set("fs.s3.awsSecretAccessKey", EXAMPLE_KEY);
-    s3Credentials.initialize(new URI("s3://foobar"), conf);
+    conf.set(S3_NATIVE_AWS_ACCESS_KEY_ID, EXAMPLE_ID);
+    conf.set(S3_NATIVE_AWS_SECRET_ACCESS_KEY, EXAMPLE_KEY);
+    s3Credentials.initialize(new URI("s3n://foobar"), conf);
     assertEquals("Could not retrieve proper access key", EXAMPLE_ID,
         s3Credentials.getAccessKey());
     assertEquals("Could not retrieve proper secret", EXAMPLE_KEY,
@@ -79,11 +86,11 @@ public class TestS3Credentials {
   public void testPlaintextConfigPasswordWithWhitespace() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     Configuration conf = new Configuration();
-    conf.set("fs.s3.awsAccessKeyId", "\r\n " + EXAMPLE_ID +
+    conf.set(S3_NATIVE_AWS_ACCESS_KEY_ID, "\r\n " + EXAMPLE_ID +
         " \r\n");
-    conf.set("fs.s3.awsSecretAccessKey", "\r\n " + EXAMPLE_KEY +
+    conf.set(S3_NATIVE_AWS_SECRET_ACCESS_KEY, "\r\n " + EXAMPLE_KEY +
         " \r\n");
-    s3Credentials.initialize(new URI("s3://foobar"), conf);
+    s3Credentials.initialize(new URI("s3n://foobar"), conf);
     assertEquals("Could not retrieve proper access key", EXAMPLE_ID,
         s3Credentials.getAccessKey());
     assertEquals("Could not retrieve proper secret", EXAMPLE_KEY,
@@ -106,14 +113,14 @@ public class TestS3Credentials {
     // add our creds to the provider
     final CredentialProvider provider =
         CredentialProviderFactory.getProviders(conf).get(0);
-    provider.createCredentialEntry("fs.s3.awsSecretAccessKey",
+    provider.createCredentialEntry(S3_NATIVE_AWS_SECRET_ACCESS_KEY,
         EXAMPLE_KEY.toCharArray());
     provider.flush();
 
     // make sure S3Creds can retrieve things.
     S3Credentials s3Credentials = new S3Credentials();
-    conf.set("fs.s3.awsAccessKeyId", EXAMPLE_ID);
-    s3Credentials.initialize(new URI("s3://foobar"), conf);
+    conf.set(S3_NATIVE_AWS_ACCESS_KEY_ID, EXAMPLE_ID);
+    s3Credentials.initialize(new URI("s3n://foobar"), conf);
     assertEquals("Could not retrieve proper access key", EXAMPLE_ID,
         s3Credentials.getAccessKey());
     assertEquals("Could not retrieve proper secret", EXAMPLE_KEY,
@@ -125,8 +132,8 @@ public class TestS3Credentials {
   public void noSecretShouldThrow() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     Configuration conf = new Configuration();
-    conf.set("fs.s3.awsAccessKeyId", EXAMPLE_ID);
-    s3Credentials.initialize(new URI("s3://foobar"), conf);
+    conf.set(S3_NATIVE_AWS_ACCESS_KEY_ID, EXAMPLE_ID);
+    s3Credentials.initialize(new URI("s3n://foobar"), conf);
   }
 
   @Test(expected=IllegalArgumentException.class)
@@ -134,7 +141,7 @@ public class TestS3Credentials {
   public void noAccessIdShouldThrow() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     Configuration conf = new Configuration();
-    conf.set("fs.s3.awsSecretAccessKey", EXAMPLE_KEY);
-    s3Credentials.initialize(new URI("s3://foobar"), conf);
+    conf.set(S3_NATIVE_AWS_SECRET_ACCESS_KEY, EXAMPLE_KEY);
+    s3Credentials.initialize(new URI("s3n://foobar"), conf);
   }
 }

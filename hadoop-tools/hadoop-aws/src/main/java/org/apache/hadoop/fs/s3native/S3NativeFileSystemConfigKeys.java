@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3native;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.DeprecationDelta;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /** 
@@ -43,5 +45,22 @@ public class S3NativeFileSystemConfigKeys extends CommonConfigurationKeys {
   public static final String  S3_NATIVE_CLIENT_WRITE_PACKET_SIZE_KEY =
                                                     "s3native.client-write-packet-size";
   public static final int     S3_NATIVE_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  static final String  S3_NATIVE_BUFFER_DIR_KEY = "fs.s3n.buffer.dir";
+  static final String  S3_NATIVE_BUFFER_DIR_DEFAULT = "${hadoop.tmp.dir}/s3n";
+  static final String  S3_NATIVE_MAX_RETRIES_KEY = "fs.s3n.maxRetries";
+  static final int     S3_NATIVE_MAX_RETRIES_DEFAUL = 4;
+  static final String  S3_NATIVE_SLEEP_TIME_KEY = "fs.s3n.sleepTimeSeconds";
+  static final int     S3_NATIVE_SLEEP_TIME_DEFAULT = 10;
+  static final String  S3_NATIVE_AWS_ACCESS_KEY_ID = "fs.s3n.awsAccessKeyId";
+  static final String  S3_NATIVE_AWS_SECRET_ACCESS_KEY =
+      "fs.s3n.awsSecretAccessKey";
+
+  static void addDeprecatedConfigKeys() {
+    Configuration.addDeprecations(new DeprecationDelta[]{
+        new DeprecationDelta("fs.s3.buffer.dir", S3_NATIVE_BUFFER_DIR_KEY),
+        new DeprecationDelta("fs.s3.maxRetries", S3_NATIVE_MAX_RETRIES_KEY),
+        new DeprecationDelta("fs.s3.sleepTimeSeconds", S3_NATIVE_SLEEP_TIME_KEY)
+    });
+  }
+
 }
-  

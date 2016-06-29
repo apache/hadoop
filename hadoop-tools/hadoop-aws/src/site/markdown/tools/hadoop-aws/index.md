@@ -28,8 +28,8 @@ HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-aws' in the list.
 
 ### Features
 
-1. The "classic" `s3:` filesystem for storing objects in Amazon S3 Storage.
 **NOTE: `s3:` is being phased out. Use `s3n:` or `s3a:` instead.**
+
 1. The second-generation, `s3n:` filesystem, making it easy to share
 data between hadoop and other applications via the S3 object store.
 1. The third generation, `s3a:` filesystem. Designed to be a switch in
@@ -972,7 +972,6 @@ each filesystem for its testing.
 
 1. `test.fs.s3n.name` : the URL of the bucket for S3n tests
 1. `test.fs.s3a.name` : the URL of the bucket for S3a tests
-2. `test.fs.s3.name` : the URL of the bucket for "S3"  tests
 
 The contents of each bucket will be destroyed during the test process:
 do not use the bucket for any purpose other than testing. Furthermore, for
@@ -992,21 +991,6 @@ Example:
       <property>
         <name>test.fs.s3a.name</name>
         <value>s3a://test-aws-s3a/</value>
-      </property>
-    
-      <property>
-        <name>test.fs.s3.name</name>
-        <value>s3://test-aws-s3/</value>
-      </property>
-  
-      <property>
-        <name>fs.s3.awsAccessKeyId</name>
-        <value>DONOTPCOMMITTHISKEYTOSCM</value>
-      </property>
-
-      <property>
-        <name>fs.s3.awsSecretAccessKey</name>
-        <value>DONOTEVERSHARETHISSECRETKEY!</value>
       </property>
 
       <property>
@@ -1050,18 +1034,6 @@ any of the filesystems, those tests will be skipped.
 The standard S3 authentication details must also be provided. This can be
 through copy-and-paste of the `auth-keys.xml` credentials, or it can be
 through direct XInclude inclusion.
-
-### s3://
-
-The filesystem name must be defined in the property `fs.contract.test.fs.s3`. 
-
-
-Example:
-
-      <property>
-        <name>fs.contract.test.fs.s3</name>
-        <value>s3://test-aws-s3/</value>
-      </property>
 
 ### s3n://
 
@@ -1122,12 +1094,6 @@ Example:
       <include xmlns="http://www.w3.org/2001/XInclude"
         href="/home/testuser/.ssh/auth-keys.xml"/>
     
-      <property>
-        <name>fs.contract.test.fs.s3</name>
-        <value>s3://test-aws-s3/</value>
-      </property>
-
-
       <property>
         <name>fs.contract.test.fs.s3a</name>
         <value>s3a://test-aws-s3a/</value>

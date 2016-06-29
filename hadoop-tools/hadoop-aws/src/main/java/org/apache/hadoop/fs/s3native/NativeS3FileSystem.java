@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.s3.S3Exception;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -62,12 +61,19 @@ import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_BUFFER_DIR_DEFAULT;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_BUFFER_DIR_KEY;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_MAX_RETRIES_DEFAUL;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_MAX_RETRIES_KEY;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_SLEEP_TIME_DEFAULT;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_SLEEP_TIME_KEY;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.addDeprecatedConfigKeys;
+
 /**
  * A {@link FileSystem} for reading and writing files stored on
  * <a href="http://aws.amazon.com/s3">Amazon S3</a>.
- * Unlike {@link org.apache.hadoop.fs.s3.S3FileSystem} this implementation
- * stores files on S3 in their
- * native form so they can be read by other S3 tools.
+ * This implementation stores files on S3 in their native form so they can be
+ * read by other S3 tools.
  * <p>
  * A note about directories. S3 of course has no "native" support for them.
  * The idiom we choose then is: for any directory created by this class,
@@ -85,8 +91,6 @@ import org.slf4j.LoggerFactory;
  *     is never returned.
  *   </li>
  * </ul>
- *
- * @see org.apache.hadoop.fs.s3.S3FileSystem
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -98,7 +102,12 @@ public class NativeS3FileSystem extends FileSystem {
   private static final String FOLDER_SUFFIX = "_$folder$";
   static final String PATH_DELIMITER = Path.SEPARATOR;
   private static final int S3_MAX_LISTING_LENGTH = 1000;
-  
+
+  static {
+    // Add the deprecated config keys
+    addDeprecatedConfigKeys();
+  }
+
   static class NativeS3FsInputStream extends FSInputStream {
     
     private NativeFileSystemStore store;
@@ -257,8 +266,10 @@ public class NativeS3FileSystem extends FileSystem {
     }
 
     private File newBackupFile() throws IOException {
-      if (lDirAlloc == null) {
-        lDirAlloc = new LocalDirAllocator("fs.s3.buffer.dir");
+      if (conf.get(S3_NATIVE_BUFFER_DIR_KEY, null) != null) {
+        lDirAlloc = new LocalDirAllocator(S3_NATIVE_BUFFER_DIR_KEY);
+      } else {
+        lDirAlloc = new LocalDirAllocator(S3_NATIVE_BUFFER_DIR_DEFAULT);
       }
       File result = lDirAlloc.createTmpFileForWrite("output-", LocalDirAllocator.SIZE_UNKNOWN, conf);
       result.deleteOnExit();
@@ -342,8 +353,9 @@ public class NativeS3FileSystem extends FileSystem {
     NativeFileSystemStore store = new Jets3tNativeFileSystemStore();
     
     RetryPolicy basePolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-        conf.getInt("fs.s3.maxRetries", 4),
-        conf.getLong("fs.s3.sleepTimeSeconds", 10), TimeUnit.SECONDS);
+        conf.getInt(S3_NATIVE_MAX_RETRIES_KEY, S3_NATIVE_MAX_RETRIES_DEFAUL),
+        conf.getLong(S3_NATIVE_SLEEP_TIME_KEY, S3_NATIVE_SLEEP_TIME_DEFAULT),
+        TimeUnit.SECONDS);
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
       new HashMap<Class<? extends Exception>, RetryPolicy>();
     exceptionToPolicyMap.put(IOException.class, basePolicy);

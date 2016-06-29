@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3native;
 
 import static org.apache.hadoop.fs.s3native.NativeS3FileSystem.PATH_DELIMITER;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.S3_NATIVE_BUFFER_DIR_KEY;
+import static org.apache.hadoop.fs.s3native.S3NativeFileSystemConfigKeys.addDeprecatedConfigKeys;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -48,7 +50,12 @@ import org.apache.hadoop.util.Time;
  * </p>
  */
 public class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
-  
+
+  static {
+    // Add the deprecated config keys
+    addDeprecatedConfigKeys();
+  }
+
   private Configuration conf;
   
   private SortedMap<String, FileMetadata> metadataMap =
@@ -114,7 +121,7 @@ public class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
   }
   
   private File createTempFile() throws IOException {
-    File dir = new File(conf.get("fs.s3.buffer.dir"));
+    File dir = new File(conf.get(S3_NATIVE_BUFFER_DIR_KEY));
     if (!dir.exists() && !dir.mkdirs()) {
       throw new IOException("Cannot create S3 buffer directory: " + dir);
     }
