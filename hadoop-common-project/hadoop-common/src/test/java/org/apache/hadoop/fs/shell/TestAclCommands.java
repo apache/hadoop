@@ -64,6 +64,10 @@ public class TestAclCommands {
 
   @Test
   public void testSetfaclValidations() throws Exception {
+    assertFalse("setfacl should fail without options",
+        0 == runCommand(new String[] { "-setfacl", "/" }));
+    assertFalse("setfacl should fail without options -b, -k, -m, -x or --set",
+        0 == runCommand(new String[] { "-setfacl", "-R", "/" }));
     assertFalse("setfacl should fail without path",
         0 == runCommand(new String[] { "-setfacl" }));
     assertFalse("setfacl should fail without aclSpec",
