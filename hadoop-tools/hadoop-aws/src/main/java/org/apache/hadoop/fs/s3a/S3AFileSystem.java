@@ -48,12 +48,16 @@ import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.Copy;
@@ -126,6 +130,7 @@ public class S3AFileSystem extends FileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
+  private String serverSideEncryptionKey;
   private S3AInstrumentation instrumentation;
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
@@ -290,6 +295,8 @@ public class S3AFileSystem extends FileSystem {
 
       serverSideEncryptionAlgorithm =
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      serverSideEncryptionKey = conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY);
+
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
     } catch (AmazonClientException e) {
@@ -621,9 +628,19 @@ public class S3AFileSystem extends FileSystem {
           + " because it is a directory");
     }
 
-    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f),
-      fileStatus.getLen(), s3, statistics, instrumentation, readAhead,
-        inputPolicy));
+    return new FSDataInputStream(
+        new S3AInputStream(
+            new S3ObjectAttributes(
+                bucket,
+                pathToKey(f),
+                serverSideEncryptionAlgorithm,
+                serverSideEncryptionKey),
+            fileStatus.getLen(),
+            s3,
+            statistics,
+            instrumentation,
+            readAhead,
+            inputPolicy));
   }
 
   /**
@@ -894,7 +911,10 @@ public class S3AFileSystem extends FileSystem {
    */
   protected ObjectMetadata getObjectMetadata(String key) {
     incrementStatistic(OBJECT_METADATA_REQUESTS);
-    ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
+    GetObjectMetadataRequest request =
+        new GetObjectMetadataRequest(bucket, key);
+    setSSECIfRequired(request);
+    ObjectMetadata meta = s3.getObjectMetadata(request);
     incrementReadOperations();
     return meta;
   }
@@ -974,6 +994,7 @@ public class S3AFileSystem extends FileSystem {
       ObjectMetadata metadata, File srcfile) {
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         srcfile);
+    setSSEKMSOrCIfRequired(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     putObjectRequest.setMetadata(metadata);
     return putObjectRequest;
@@ -992,6 +1013,7 @@ public class S3AFileSystem extends FileSystem {
       ObjectMetadata metadata, InputStream inputStream) {
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         inputStream, metadata);
+    setSSEKMSOrCIfRequired(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
     return putObjectRequest;
   }
@@ -1004,9 +1026,7 @@ public class S3AFileSystem extends FileSystem {
    */
   public ObjectMetadata newObjectMetadata() {
     final ObjectMetadata om = new ObjectMetadata();
-    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-      om.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-    }
+    setSSES3IfRequired(om);
     return om;
   }
 
@@ -1638,11 +1658,10 @@ public class S3AFileSystem extends FileSystem {
     try {
       ObjectMetadata srcom = getObjectMetadata(srcKey);
       ObjectMetadata dstom = cloneObjectMetadata(srcom);
-      if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
-        dstom.setSSEAlgorithm(serverSideEncryptionAlgorithm);
-      }
+      setSSES3IfRequired(dstom);
       CopyObjectRequest copyObjectRequest =
           new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
+      setSSEKMSOrCIfRequired(copyObjectRequest);
       copyObjectRequest.setCannedAccessControlList(cannedACL);
       copyObjectRequest.setNewObjectMetadata(dstom);
 
@@ -1671,6 +1690,111 @@ public class S3AFileSystem extends FileSystem {
     } catch (AmazonClientException e) {
       throw translateException("copyFile("+ srcKey+ ", " + dstKey + ")",
           srcKey, e);
+    }
+  }
+
+  protected void setSSEKMSOrCIfRequired(InitiateMultipartUploadRequest req) {
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)){
+      if(S3AEncryptionMethods.SSE_KMS.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          //Use specified key
+          req.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams(serverSideEncryptionKey)
+          );
+        }else{
+          //Use default key
+          req.setSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams());
+        }
+      }else if(S3AEncryptionMethods.SSE_C.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          //at the moment, only supports copy using the same key
+          req.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
+        }
+      }
+    }
+  }
+
+
+  protected void setSSEKMSOrCIfRequired(CopyObjectRequest copyObjectRequest) {
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)){
+      if(S3AEncryptionMethods.SSE_KMS.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          //Use specified key
+          copyObjectRequest.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams(serverSideEncryptionKey)
+          );
+        }else{
+          //Use default key
+          copyObjectRequest.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams()
+          );
+        }
+      }else if(S3AEncryptionMethods.SSE_C.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          //at the moment, only supports copy using the same key
+          copyObjectRequest.setSourceSSECustomerKey(
+              new SSECustomerKey(serverSideEncryptionKey)
+          );
+          copyObjectRequest.setDestinationSSECustomerKey(
+              new SSECustomerKey(serverSideEncryptionKey)
+          );
+        }
+      }
+    }
+  }
+
+  protected void setSSECIfRequired(GetObjectMetadataRequest request) {
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)){
+      if(S3AEncryptionMethods.SSE_C.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          //at the moment, only supports copy using the same key
+          request.setSSECustomerKey(
+              new SSECustomerKey(serverSideEncryptionKey)
+          );
+        }
+      }
+    }
+  }
+
+  protected void setSSEKMSOrCIfRequired(PutObjectRequest request) {
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)){
+      if(S3AEncryptionMethods.SSE_KMS.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          request.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams(serverSideEncryptionKey)
+          );
+        }else{
+          request.setSSEAwsKeyManagementParams(
+              new SSEAwsKeyManagementParams()
+          );
+        }
+      }else if(S3AEncryptionMethods.SSE_C.getMethod()
+          .equals(serverSideEncryptionAlgorithm)) {
+        if (StringUtils.isNotBlank(serverSideEncryptionKey)) {
+          request.setSSECustomerKey(
+              new SSECustomerKey(serverSideEncryptionKey)
+          );
+        }
+      }
+    }
+  }
+
+  private void setSSES3IfRequired(ObjectMetadata metadata) {
+    if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)){
+      if(S3AEncryptionMethods.SSE_S3.getMethod()
+          .equals(serverSideEncryptionAlgorithm) ||
+              (!S3AEncryptionMethods.SSE_KMS.getMethod()
+                  .equals(serverSideEncryptionAlgorithm) &&
+              !S3AEncryptionMethods.SSE_C.getMethod()
+                  .equals(serverSideEncryptionAlgorithm))) {
+        metadata.setSSEAlgorithm(serverSideEncryptionAlgorithm);
+      }
     }
   }
 
@@ -1845,6 +1969,11 @@ public class S3AFileSystem extends FileSystem {
       sb.append(", serverSideEncryptionAlgorithm='")
           .append(serverSideEncryptionAlgorithm)
           .append('\'');
+    }
+    if (serverSideEncryptionKey != null) {
+      sb.append(", serverSideEncryptionKey='")
+              .append(serverSideEncryptionKey)
+              .append('\'');
     }
     sb.append(", statistics {")
         .append(statistics)

@@ -276,6 +276,7 @@ public class S3AFastOutputStream extends OutputStream {
         new InitiateMultipartUploadRequest(bucket,
             key,
             createDefaultMetadata());
+    fs.setSSEKMSOrCIfRequired(initiateMPURequest);
     initiateMPURequest.setCannedACL(cannedACL);
     try {
       return new MultiPartUpload(
@@ -295,6 +296,7 @@ public class S3AFastOutputStream extends OutputStream {
         fs.newPutObjectRequest(key,
             om,
             new ByteArrayInputStream(buffer.toByteArray()));
+    fs.setSSEKMSOrCIfRequired(putObjectRequest);
     putObjectRequest.setGeneralProgressListener(progressListener);
     ListenableFuture<PutObjectResult> putObjectResult =
         executorService.submit(new Callable<PutObjectResult>() {

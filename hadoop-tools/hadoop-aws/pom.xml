@@ -135,6 +135,7 @@
                     <exclude>**/TestS3AFastOutputStream.java</exclude>
                     <exclude>**/TestS3AFileSystemContract.java</exclude>
                     <exclude>**/TestS3AMiniYarnCluster.java</exclude>
+                    <exclude>**/TestS3AEncryptionSSEC.java</exclude>
                     <exclude>**/Test*Root*.java</exclude>
                   </excludes>
                 </configuration>
@@ -154,6 +155,7 @@
                     <include>**/TestS3AFastOutputStream.java</include>
                     <include>**/TestS3AFileSystemContract.java</include>
                     <include>**/TestS3AMiniYarnCluster.java</include>
+                    <include>**/TestS3AEncryptionSSEC.java</include>
                     <include>**/Test*Root*.java</include>
                   </includes>
                 </configuration>
