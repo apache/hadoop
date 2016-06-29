@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 /**
  * The contract of S3: only enabled if the test bucket is provided.
  */
+@Deprecated
 public class S3Contract extends AbstractBondedFSContract {
 
   public static final String CONTRACT_XML = "contract/s3.xml";

@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated
 public class VersionMismatchException extends S3FileSystemException {
   private static final long serialVersionUID = 1L;
 

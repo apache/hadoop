@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 
+@Deprecated
 public class TestS3InMemoryFileSystem extends TestCase {
 
   private static final String TEST_PATH = "s3://test/data.txt";

@@ -35,6 +35,7 @@ import org.apache.hadoop.io.IOUtils;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public class INode {
 	
   enum FileType {

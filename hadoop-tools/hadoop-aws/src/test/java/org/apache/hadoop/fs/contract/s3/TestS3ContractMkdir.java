@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+@Deprecated
 public class TestS3ContractMkdir extends AbstractContractMkdirTest {
 
   @Override

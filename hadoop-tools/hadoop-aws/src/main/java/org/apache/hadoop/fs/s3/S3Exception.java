@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated
 public class S3Exception extends IOException {
 
   private static final long serialVersionUID = 1L;

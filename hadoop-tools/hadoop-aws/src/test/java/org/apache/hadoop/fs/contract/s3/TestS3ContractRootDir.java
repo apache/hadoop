@@ -28,6 +28,7 @@ import org.junit.Test;
 /**
  * root dir operations against an S3 bucket
  */
+@Deprecated
 public class TestS3ContractRootDir extends AbstractContractRootDirectoryTest {
 
   @Override

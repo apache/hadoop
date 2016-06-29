@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.s3native.S3xLoginHelper;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public class S3Credentials {
   
   private String accessKey;

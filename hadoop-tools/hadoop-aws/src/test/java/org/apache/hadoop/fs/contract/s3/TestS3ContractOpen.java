@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.contract.AbstractContractOpenTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+@Deprecated
 public class TestS3ContractOpen extends AbstractContractOpenTest {
 
   @Override

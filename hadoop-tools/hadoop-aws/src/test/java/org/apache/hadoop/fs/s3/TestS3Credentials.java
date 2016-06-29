@@ -36,6 +36,7 @@ import org.junit.rules.TestName;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+@Deprecated
 public class TestS3Credentials {
   public static final Log LOG = LogFactory.getLog(TestS3Credentials.class);
 

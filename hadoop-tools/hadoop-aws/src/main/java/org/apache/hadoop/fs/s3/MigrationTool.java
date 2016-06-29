@@ -52,6 +52,7 @@ import org.jets3t.service.security.AWSCredentials;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@Deprecated
 public class MigrationTool extends Configured implements Tool {
   
   private S3Service s3Service;

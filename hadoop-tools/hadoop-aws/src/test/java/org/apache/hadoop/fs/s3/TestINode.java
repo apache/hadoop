@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.s3.INode.FileType;
 
+@Deprecated
 public class TestINode extends TestCase {
 
   public void testSerializeFileWithSingleBlock() throws IOException {
