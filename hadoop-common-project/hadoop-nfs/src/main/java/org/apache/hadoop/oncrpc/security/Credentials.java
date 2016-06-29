@@ -66,4 +66,8 @@ public abstract class Credentials extends RpcAuthInfo {
   protected Credentials(AuthFlavor flavor) {
     super(flavor);
   }
+
+  public int getCredentialLength() {
+    return mCredentialsLength;
+  }
 }
