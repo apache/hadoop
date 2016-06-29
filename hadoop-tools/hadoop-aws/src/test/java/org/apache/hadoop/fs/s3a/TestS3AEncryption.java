@@ -27,23 +27,24 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 
 /**
  * Test whether or not encryption works by turning it on. Some checks
  * are made for different file sizes as there have been reports that the
  * file length may be rounded up to match word boundaries.
  */
-public class TestS3AEncryption extends AbstractS3ATestBase {
-  private static final String AES256 = Constants.SERVER_SIDE_ENCRYPTION_AES256;
+public abstract class TestS3AEncryption extends AbstractS3ATestBase {
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        AES256);
+            getSSEAlgorithm());
     return conf;
   }
 
@@ -98,7 +99,19 @@ public class TestS3AEncryption extends AbstractS3ATestBase {
    */
   private void assertEncrypted(Path path) throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
-    assertEquals(AES256, md.getSSEAlgorithm());
+    if(S3AEncryptionMethods.SSE_C.getMethod().equals(getSSEAlgorithm())){
+      assertEquals("AES256", md.getSSECustomerAlgorithm());
+    }else if(S3AEncryptionMethods.SSE_KMS.getMethod()
+        .equals(getSSEAlgorithm())){
+      assertEquals("aws:kms", md.getSSEAlgorithm());
+      assertTrue(md.getSSEAwsKmsKeyId().contains(
+              this.getConfiguration().getTrimmed(
+                  Constants.SERVER_SIDE_ENCRYPTION_KEY)));
+    }else{
+      assertEquals("AES256", md.getSSEAlgorithm());
+    }
   }
+
+  protected abstract String getSSEAlgorithm();
 
 }

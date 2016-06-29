@@ -257,7 +257,7 @@ monitoring and other features.
 schemes.
 * Supports authentication via: environment variables, Hadoop configuration
 properties, the Hadoop key management store and IAM roles.
-* Supports S3 "Server Side Encryption" for both reading and writing.
+* Supports Server Side Encryption (SSE-S3, SSE-KMS, SSE-C) for both reading and writing.
 * Supports proxies
 * Test suites includes distcp and suites in downstream projects.
 * Available since Hadoop 2.6; considered production ready in Hadoop 2.7.
@@ -569,8 +569,18 @@ this capability.
     <property>
       <name>fs.s3a.server-side-encryption-algorithm</name>
       <description>Specify a server-side encryption algorithm for s3a: file system.
-        Unset by default, and the only other currently allowable value is AES256.
+        Unset by default. It supports the following values: 'AES256' (for SSE-S3), 'SSE-KMS'
+         and 'SSE-C'
       </description>
+    </property>
+
+    <property>
+        <name>fs.s3a.server-side-encryption-key</name>
+        <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
+        has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
+        should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
+        you'll be using your default's S3 KMS key, otherwise you should set this property to
+        the specific KMS key id.</description>
     </property>
 
     <property>
@@ -936,6 +946,10 @@ the DNS TTL of a JVM is "infinity".
 
 To work with AWS better, set the DNS time-to-live of an application which
 works with S3 to something lower. See [AWS documentation](http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/java-dg-jvm-ttl.html).
+
+*internal.S3V4AuthErrorRetryStrategy (S3V4AuthErrorRetryStrategy.java:buildRetryParams(117)) - Attempting to re-send the request to...*
+
+To avoid this warning, you should set the specific S3 endpoint by setting `fs.s3a.endpoint`
 
 
 ## Testing the S3 filesystem clients
