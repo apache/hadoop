@@ -64,7 +64,8 @@ public class CredentialsSys extends Credentials {
     return mAuxGIDs;
   }
 
-  public int getStamp() {
+  @VisibleForTesting
+  int getStamp() {
     return mStamp;
   }
 
