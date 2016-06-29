@@ -36,13 +36,13 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 
 /**
- * Test creating files, overwrite options &c
+ * Test creating files, overwrite options etc.
  */
 public abstract class AbstractContractCreateTest extends
                                                  AbstractFSContractTestBase {
 
   /**
-   * How long to wait for a path to become visible
+   * How long to wait for a path to become visible.
    */
   public static final int CREATE_TIMEOUT = 15000;
 
@@ -204,18 +204,17 @@ public abstract class AbstractContractCreateTest extends
         if (isSupported(IS_BLOBSTORE)) {
           // object store: downgrade to a skip so that the failure is visible
           // in test results
-          skip(
-              "Filesystem is an object store and newly created files are not immediately visible");
+          skip( "Filesystem is an object store and newly created files are not immediately visible");
         }
-        assertPathExists("expected path to be visible before anything written",
+        assertPathExists("expected path to be visible before file closed",
             path);
       }
     }
   }
-  
+
   @Test
   public void testCreatedFileIsEventuallyVisible() throws Throwable {
-    describe("verify that a newly created file exists as soon as open returns");
+    describe("verify a written to file is visible after the stream is closed");
     Path path = path("testCreatedFileIsEventuallyVisible");
     FileSystem fs = getFileSystem();
     try( 
@@ -245,32 +244,30 @@ public abstract class AbstractContractCreateTest extends
 
     writeDataset(fs, path, data, data.length, 1024 * 1024, false);
 
-    FileStatus status =
-        getFileStatusEventually(fs, path, CREATE_TIMEOUT);
-    String statusDetails = status.toString();
-    assertTrue("File status block size too low:  " + statusDetails,
-        status.getBlockSize() > 0);
-    
-    long defaultBlockSize = fs.getDefaultBlockSize(path);
-    assertTrue("fs.getDefaultBlockSize(path) size is invalid " + defaultBlockSize,
-        defaultBlockSize > 0);
+    validateBlockSize(fs, path, 1);
   }
-  
+
   @Test
   public void testFileStatusBlocksizeEmptyFile() throws Throwable {
     describe("check that an empty file may return a 0-byte blocksize");
     FileSystem fs = getFileSystem();
     Path path = path("testFileStatusBlocksizeEmptyFile");
     ContractTestUtils.touch(fs, path);
+    validateBlockSize(fs, path, 0);
+  }
 
+  private void validateBlockSize(FileSystem fs, Path path, int minValue)
+      throws IOException, InterruptedException {
     FileStatus status =
         getFileStatusEventually(fs, path, CREATE_TIMEOUT);
     String statusDetails = status.toString();
-    assertTrue("File status block size too low:  " + statusDetails,
-        status.getBlockSize() >= 0);
+    assertTrue("File status block size too low:  " + statusDetails
+            + " min value: " + minValue,
+        status.getBlockSize() >= minValue);
     long defaultBlockSize = fs.getDefaultBlockSize(path);
-    assertTrue("fs.getDefaultBlockSize(path) size is invalid "+ defaultBlockSize,
-        defaultBlockSize >= 0);
+    assertTrue("fs.getDefaultBlockSize(" + path + ") size " +
+            defaultBlockSize + " is below the minimum of " + minValue,
+        defaultBlockSize >= minValue);
   }
-  
+
 }

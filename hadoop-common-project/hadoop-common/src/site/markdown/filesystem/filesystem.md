@@ -456,7 +456,9 @@ split calculations to divide work optimally across a set of worker processes.
 
 Although there is no defined minimum value for this result, as it
 is used to partition work during job submission, a block size
-that is too small will result in badly partitioned workload.
+that is too small will result in badly partitioned workload,
+or even the `JobSubmissionClient` and equivalent
+running out of memory as it calculates the partitions.
 
 Any FileSystem that does not actually break files into blocks SHOULD
 return a number for this that results in efficient processing.

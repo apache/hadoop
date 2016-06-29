@@ -1109,7 +1109,7 @@ public class ContractTestUtils extends Assert {
    *    <i>other than file not found</i>
    */
   public static FileStatus getFileStatusEventually(FileSystem fs, Path path,
-      int timeout) throws IOException {
+      int timeout) throws IOException, InterruptedException {
     long endTime = System.currentTimeMillis() + timeout;
     FileStatus stat = null;
     do {
@@ -1119,6 +1119,8 @@ public class ContractTestUtils extends Assert {
         if (System.currentTimeMillis() > endTime) {
           // timeout, raise an assert with more diagnostics
           assertPathExists(fs, "Path not found after " + timeout + " mS", path);
+        } else {
+          Thread.sleep(50);
         }
       }
     } while (stat == null);
