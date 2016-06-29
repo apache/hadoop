@@ -38,8 +38,8 @@ class DiffInfo {
   static final Comparator<DiffInfo> targetComparator = new Comparator<DiffInfo>() {
     @Override
     public int compare(DiffInfo d1, DiffInfo d2) {
-      return d1.target == null ? -1 :
-          (d2.target ==  null ? 1 : d1.target.compareTo(d2.target));
+      return d1.target == null ? ((d2.target == null)? 0 : -1) :
+        (d2.target ==  null ? 1 : d1.target.compareTo(d2.target));
     }
   };
 
