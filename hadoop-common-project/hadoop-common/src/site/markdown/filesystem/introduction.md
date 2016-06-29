@@ -14,6 +14,8 @@
 
 # Introduction
 
+<!-- MACRO{toc|fromDepth=1|toDepth=2} -->
+
 This document defines the required behaviors of a Hadoop-compatible filesystem
 for implementors and maintainers of the Hadoop filesystem, and for users of
 the Hadoop FileSystem APIs
@@ -57,7 +59,7 @@ By making each aspect of the contract tests configurable, it is possible to
 declare how a filesystem diverges from parts of the standard contract.
 This is information which can be conveyed to users of the filesystem.
 
-### Naming
+## Naming
 
 This document follows RFC 2119 rules regarding the use of MUST, MUST NOT, MAY,
 and SHALL. MUST NOT is treated as normative.

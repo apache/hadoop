@@ -14,6 +14,8 @@
 
 # Testing the Filesystem Contract
 
+<!-- MACRO{toc|fromDepth=1|toDepth=3} -->
+
 ## Running the tests
 
 A normal Hadoop test run will test those FileSystems that can be tested locally
