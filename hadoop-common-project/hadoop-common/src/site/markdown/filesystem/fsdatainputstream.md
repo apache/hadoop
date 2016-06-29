@@ -16,8 +16,11 @@
 <!--  CLASS: FSDataInputStream -->
 <!--  ============================================================= -->
 
+# class `org.apache.hadoop.fs.FSDataInputStream`
 
-# Class `FSDataInputStream extends DataInputStream`
+<!-- MACRO{toc|fromDepth=1|toDepth=2} -->
+
+## Class `FSDataInputStream extends DataInputStream`
 
 The core behavior of `FSDataInputStream` is defined by `java.io.DataInputStream`,
 with extensions that add key assumptions to the system.
@@ -303,7 +306,7 @@ on the underlying stream:
 Note that implementations are not required to be atomic; the intermediate state
 of the operation (the change in the value of `getPos()`) may be visible.
 
-#### Implementation preconditions
+### Implementation preconditions
 
 Not all `FSDataInputStream` implementations support these operations. Those that do
 not implement `Seekable.seek()` do not implement the `PositionedReadable`
@@ -322,7 +325,7 @@ of `pos` is unchanged at the end of the operation
     pos(FSDIS') == pos(FSDIS)
 
 
-#### Failure states
+### Failure states
 
 For any operations that fail, the contents of the destination
 `buffer` are undefined. Implementations may overwrite part

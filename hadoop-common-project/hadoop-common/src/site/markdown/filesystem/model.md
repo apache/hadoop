@@ -14,19 +14,7 @@
 
 # A Model of a Hadoop Filesystem
 
-* [Paths and Path Elements](#Paths_and_Path_Elements)
-    * [Predicates and Functions](#Predicates_and_Functions)
-    * [Notes for relative paths](#Notes_for_relative_paths)
-* [Defining the Filesystem](#Defining_the_Filesystem)
-    * [Directory references](#Directory_references)
-    * [File references](#File_references)
-    * [Symbolic references](#Symbolic_references)
-    * [File Length](#File_Length)
-    * [User home](#User_home)
-    * [Exclusivity](#Exclusivity)
-    * [Encryption Zone](#Encryption_Zone)
-* [Notes](#Notes)
-
+<!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
 ## Paths and Path Elements
 

@@ -15,6 +15,8 @@
 
 # Notation
 
+<!-- MACRO{toc|fromDepth=1|toDepth=3} -->
+
 A formal notation such as [The Z Notation](http://www.open-std.org/jtc1/sc22/open/n3187.pdf)
 would be the strictest way to define Hadoop FileSystem behavior, and could even
 be used to prove some axioms.
