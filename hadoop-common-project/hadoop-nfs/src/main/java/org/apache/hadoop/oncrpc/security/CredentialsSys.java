@@ -20,6 +20,7 @@ package org.apache.hadoop.oncrpc.security;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.oncrpc.XDR;
 
@@ -79,7 +80,8 @@ public class CredentialsSys extends Credentials {
     this.mStamp = stamp;
   }
 
-  public void setHostName(String hostname) {
+  @VisibleForTesting
+  void setHostName(String hostname) {
     this.mHostName = hostname;
   }
 
@@ -102,8 +104,9 @@ public class CredentialsSys extends Credentials {
   @Override
   public void write(XDR xdr) {
     int padding = 0;
-    // we do not need to compute padding if the hostname is already a multiple of 4
+    // Ensure there are padding bytes if hostname is not a multiple of 4.
     padding = 4 - (mHostName.getBytes(Charsets.UTF_8).length % 4);
+    // padding bytes is zero if hostname is already a multiple of 4.
     padding = padding % 4;
     // mStamp + mHostName.length + mHostName + mUID + mGID + mAuxGIDs.count
     mCredentialsLength = 20 + mHostName.getBytes(Charsets.UTF_8).length;
