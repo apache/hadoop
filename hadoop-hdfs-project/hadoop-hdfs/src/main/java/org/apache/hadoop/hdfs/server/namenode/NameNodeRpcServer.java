@@ -590,7 +590,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
   }
-  
+
+  @Override
+  public LocatedBlock getBlockLocation(ExtendedBlock block) throws IOException {
+    checkNNStartup();
+    metrics.incrGetBlockLocations();
+    return namesystem.getBlockLocation(getClientMachine(), block);
+  }
+
   @Override // ClientProtocol
   public FsServerDefaults getServerDefaults() throws IOException {
     checkNNStartup();
@@ -1986,7 +1993,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
             break;
           }
 
-          EventBatch eventBatch = InotifyFSEditLogOpTranslator.translate(op);
+          EventBatch eventBatch = InotifyFSEditLogOpTranslator.translate(op, namesystem.getBlockPoolId());
           if (eventBatch != null) {
             batches.add(eventBatch);
             totalEvents += eventBatch.getEvents().length;

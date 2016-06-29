@@ -1760,6 +1760,40 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return blocks;
   }
 
+  LocatedBlock getBlockLocation(ExtendedBlock  block) throws IOException {
+    checkOperation(OperationCategory.READ);
+    LocatedBlock res = null;
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      res = FSDirStatAndListingOp.getBlockLocation(this, getCacheManager(), block);
+      if (res != null) {
+        if (isInSafeMode()) {
+          // if safemode & no block locations yet then throw safemodeException
+          if ((res.getLocations() == null) || (res.getLocations().length == 0)) {
+            SafeModeException se = newSafemodeException(
+                "Zero blocklocations for " + block);
+            if (haEnabled && haContext != null &&
+                haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
+              throw new RetriableException(se);
+            } else {
+              throw se;
+            }
+          }
+        }
+      }
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "open", block.toString());
+      throw e;
+    } finally {
+      readUnlock();
+    }
+
+    // TODO rg: sort by distance to datanodes do we care, we can do that when she
+    // get the stream from the dfs client for that block
+    return res;
+  }
+
   /**
    * Moves all the blocks from {@code srcs} and appends them to {@code target}
    * To avoid rollbacks we will verify validity of ALL of the args

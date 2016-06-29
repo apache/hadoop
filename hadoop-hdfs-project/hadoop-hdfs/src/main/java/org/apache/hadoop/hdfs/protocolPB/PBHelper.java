@@ -2692,6 +2692,14 @@ public class PBHelper {
             events.add(new Event.TruncateEvent(truncate.getPath(),
                 truncate.getFileSize(), truncate.getTimestamp()));
             break;
+        case EVENT_ADDBLOCK:
+            InotifyProtos.AddBlockEventProto addBlock =
+                InotifyProtos.AddBlockEventProto.parseFrom(p.getContents());
+            events.add(new Event.AddBlockEvent.Builder().setPath(addBlock.getSrcPath())
+                .setBlockPoolId(addBlock.getBlockPoolId())
+                .setPenultimateBlock(convert(addBlock.getPenultimateBlock()))
+                .setLastBlock(convert(addBlock.getLastblock())).build());
+            break;
           default:
             throw new RuntimeException("Unexpected inotify event type: " +
                 p.getType());
@@ -2809,6 +2817,24 @@ public class PBHelper {
                         .setTimestamp(te.getTimestamp()).build().toByteString()
                 ).build());
             break;
+          case ADD_BLOCK:
+            Event.AddBlockEvent abe = (Event.AddBlockEvent) e;
+            InotifyProtos.AddBlockEventProto.Builder addBlockBuilder =
+                InotifyProtos.AddBlockEventProto.newBuilder().setSrcPath(abe.getPath())
+                    .setBlockPoolId(abe.getBlockPoolId());
+            if (abe.getPenultimateBlock() != null) {
+              addBlockBuilder.setPenultimateBlock(convert(abe.getPenultimateBlock()));
+            }
+            if (abe.getLastBlock() != null) {
+              addBlockBuilder.setLastblock(convert(abe.getLastBlock())).build().toByteString();
+            }
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_ADDBLOCK)
+                .setContents(
+                     addBlockBuilder.build().toByteString()
+                    ).build());
+            break;
+
           default:
             throw new RuntimeException("Unexpected inotify event: " + e);
         }

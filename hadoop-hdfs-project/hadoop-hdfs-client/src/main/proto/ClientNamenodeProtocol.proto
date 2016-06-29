@@ -54,6 +54,14 @@ message GetBlockLocationsResponseProto {
   optional LocatedBlocksProto locations = 1;
 }
 
+message GetBlockLocationRequestProto {
+  required ExtendedBlockProto block = 1;
+}
+
+message GetBlockLocationResponseProto {
+  optional LocatedBlockProto block = 1;
+}
+
 message GetServerDefaultsRequestProto { // No parameters
 }
 
@@ -722,6 +730,8 @@ message GetEditsFromTxidResponseProto {
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
+  rpc getBlockLocation(GetBlockLocationRequestProto)
+      returns(GetBlockLocationResponseProto);
   rpc getServerDefaults(GetServerDefaultsRequestProto)
       returns(GetServerDefaultsResponseProto);
   rpc create(CreateRequestProto)returns(CreateResponseProto);

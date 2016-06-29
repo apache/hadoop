@@ -23,6 +23,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.inotify.Event;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 
 import java.util.List;
 
@@ -40,7 +43,7 @@ public class InotifyFSEditLogOpTranslator {
     return size;
   }
 
-  public static EventBatch translate(FSEditLogOp op) {
+  public static EventBatch translate(FSEditLogOp op, String blockPoolId) {
     switch(op.opCode) {
     case OP_ADD:
       FSEditLogOp.AddOp addOp = (FSEditLogOp.AddOp) op;
@@ -180,6 +183,16 @@ public class InotifyFSEditLogOpTranslator {
       FSEditLogOp.TruncateOp tOp = (FSEditLogOp.TruncateOp) op;
       return new EventBatch(op.txid, new Event[] {
           new Event.TruncateEvent(tOp.src, tOp.newLength, tOp.timestamp) });
+    case OP_ADD_BLOCK:
+      FSEditLogOp.AddBlockOp addBlockOp = (FSEditLogOp.AddBlockOp) op;
+      Block penultimateBlock = addBlockOp.getPenultimateBlock();
+      Block lastBlock = addBlockOp.getLastBlock();
+        return new EventBatch(op.txid,
+            new Event[] { new Event.AddBlockEvent.Builder()
+                .setBlockPoolId(blockPoolId)
+                .setPath(addBlockOp.getPath())
+                .setPenultimateBlock(penultimateBlock)
+                .setLastBlock(lastBlock).build() });
     default:
       return null;
     }

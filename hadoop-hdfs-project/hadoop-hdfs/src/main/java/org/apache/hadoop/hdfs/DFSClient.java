@@ -31,7 +31,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Proxy;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -47,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeSet;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -157,6 +157,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -167,7 +168,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -3222,5 +3222,91 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
     }
     return scope;
+  }
+
+  void copyBlock(LocatedBlock lblock, OutputStream fos) throws Exception {
+    int failures = 0;
+    InetSocketAddress targetAddr = null;
+    TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
+    BlockReader blockReader = null;
+    ExtendedBlock block = lblock.getBlock();
+
+    while (blockReader == null) {
+      DatanodeInfo chosenNode;
+
+      try {
+        chosenNode = bestNode(lblock.getLocations(), deadNodes);
+        targetAddr = NetUtils.createSocketAddr(chosenNode.getXferAddr());
+      }  catch (IOException ie) {
+        if (failures >= DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT) {
+          throw new IOException("Could not obtain block " + lblock, ie);
+        }
+        LOG.info("Could not obtain block from any node:  " + ie);
+        try {
+          Thread.sleep(10000);
+        }  catch (InterruptedException iex) {
+        }
+        deadNodes.clear();
+        failures++;
+        continue;
+      }
+      try {
+        String file = BlockReaderFactory.getFileName(targetAddr,
+            block.getBlockPoolId(), block.getBlockId());
+        blockReader = new BlockReaderFactory(dfsClientConf).
+            setFileName(file).
+            setBlock(block).
+            setBlockToken(lblock.getBlockToken()).
+            setStartOffset(0).
+            setLength(-1).
+            setVerifyChecksum(true).
+            setClientName("fsck").
+            setDatanodeInfo(chosenNode).
+            setInetSocketAddress(targetAddr).
+            setCachingStrategy(CachingStrategy.newDropBehind()).
+            setClientCacheContext(getClientContext()).
+            setConfiguration(conf).
+            setRemotePeerFactory(this).
+            build();
+      }  catch (IOException ex) {
+        // Put chosen node into dead list, continue
+        LOG.info("Failed to connect to " + targetAddr + ":" + ex);
+        deadNodes.add(chosenNode);
+      }
+    }
+    byte[] buf = new byte[1024];
+    int cnt = 0;
+    boolean success = true;
+    long bytesRead = 0;
+    try {
+      while ((cnt = blockReader.read(buf, 0, buf.length)) > 0) {
+        fos.write(buf, 0, cnt);
+        bytesRead += cnt;
+      }
+      if ( bytesRead != block.getNumBytes() ) {
+        throw new IOException("Recorded block size is " + block.getNumBytes() +
+            ", but datanode returned " +bytesRead+" bytes");
+      }
+    } catch (Exception e) {
+      LOG.error("Error reading block", e);
+      success = false;
+    } finally {
+      blockReader.close();
+    }
+    if (!success) {
+      throw new Exception("Could not copy block data for " + lblock.getBlock());
+    }
+  }
+
+  private static DatanodeInfo bestNode(DatanodeInfo[] nodes, TreeSet<DatanodeInfo> deadNodes)
+      throws IOException {
+    if ((nodes == null) || (nodes.length - deadNodes.size() < 1)) {
+      throw new IOException("No live nodes contain current block");
+    }
+    DatanodeInfo chosenNode;
+    do {
+      chosenNode = nodes[ThreadLocalRandom.current().nextInt(nodes.length)];
+    } while (deadNodes.contains(chosenNode));
+    return chosenNode;
   }
 }

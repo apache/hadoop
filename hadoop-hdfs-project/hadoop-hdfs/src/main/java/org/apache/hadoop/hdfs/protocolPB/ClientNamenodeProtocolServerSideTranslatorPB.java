@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclRequestPr
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -227,6 +228,8 @@ import org.apache.hadoop.security.token.Token;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+import static org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.*;
+
 /**
  * This class is used on the server side. Calls come across the wire for the
  * for protocol {@link ClientNamenodeProtocolPB}.
@@ -371,6 +374,22 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           .newBuilder();
       if (b != null) {
         builder.setLocations(PBHelper.convert(b)).build();
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetBlockLocationResponseProto getBlockLocation(
+      RpcController controller, GetBlockLocationRequestProto request)
+      throws ServiceException {
+    try {
+      LocatedBlock block = server.getBlockLocation(PBHelper.convert(request.getBlock()));
+      GetBlockLocationResponseProto.Builder builder = GetBlockLocationResponseProto.newBuilder();
+      if (block != null) {
+        builder.setBlock(PBHelper.convert(block)).build();
       }
       return builder.build();
     } catch (IOException e) {
