@@ -19,9 +19,7 @@
 
 # class `org.apache.hadoop.fs.FileSystem`
 
-* [Invariants](#Invariants)
-* [Predicates and other state access operations](#Predicates_and_other_state_access_operations)
-* [State Changing Operations](#State_Changing_Operations)
+<!-- MACRO{toc|fromDepth=1|toDepth=2} -->
 
 The abstract `FileSystem` class is the original class to access Hadoop filesystems;
 non-abstract subclasses exist for all Hadoop-supported filesystems.
