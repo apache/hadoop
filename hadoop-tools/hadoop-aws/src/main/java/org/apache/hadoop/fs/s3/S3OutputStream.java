@@ -37,6 +37,7 @@ import org.apache.hadoop.util.Progressable;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 class S3OutputStream extends OutputStream {
 
   private Configuration conf;

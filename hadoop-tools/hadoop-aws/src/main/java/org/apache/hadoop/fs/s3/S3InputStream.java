@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 class S3InputStream extends FSInputStream {
 
   private FileSystemStore store;

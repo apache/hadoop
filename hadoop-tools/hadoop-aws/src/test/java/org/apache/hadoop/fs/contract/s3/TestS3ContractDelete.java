@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+@Deprecated
 public class TestS3ContractDelete extends AbstractContractDeleteTest {
 
   @Override

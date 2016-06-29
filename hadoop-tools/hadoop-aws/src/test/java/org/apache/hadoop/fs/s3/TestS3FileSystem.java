@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 
+@Deprecated
 public class TestS3FileSystem extends TestCase {
 
   public static final URI EXPECTED = URI.create("s3://c");

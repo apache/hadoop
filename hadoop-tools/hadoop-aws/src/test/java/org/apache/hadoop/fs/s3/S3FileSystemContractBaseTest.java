@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.junit.internal.AssumptionViolatedException;
 
+@Deprecated
 public abstract class S3FileSystemContractBaseTest
   extends FileSystemContractBaseTest {
 

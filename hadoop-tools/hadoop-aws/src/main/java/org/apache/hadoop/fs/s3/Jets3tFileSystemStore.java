@@ -50,6 +50,7 @@ import org.jets3t.service.security.AWSCredentials;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 class Jets3tFileSystemStore implements FileSystemStore {
   
   private static final String FILE_SYSTEM_NAME = "fs";

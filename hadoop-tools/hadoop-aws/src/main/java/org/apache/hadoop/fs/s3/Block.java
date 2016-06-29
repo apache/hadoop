@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public class Block {
   private long id;
 

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
@@ -50,10 +51,14 @@ import org.apache.hadoop.util.Progressable;
  * <a href="http://aws.amazon.com/s3">Amazon S3</a>.
  *
  * @see NativeS3FileSystem
+ * @deprecated Use {@link NativeS3FileSystem} and {@link S3AFileSystem} instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated
 public class S3FileSystem extends FileSystem {
+
+  private static boolean hasWarnedDeprecation = false;
 
   private URI uri;
 
@@ -62,11 +67,24 @@ public class S3FileSystem extends FileSystem {
   private Path workingDir;
 
   public S3FileSystem() {
+    warnDeprecation();
     // set store in initialize()
   }
 
   public S3FileSystem(FileSystemStore store) {
+    warnDeprecation();
     this.store = store;
+  }
+
+  /**
+   * This is to warn the first time in a JVM that an S3FileSystem is created.
+   */
+  private static synchronized void warnDeprecation() {
+    if (!hasWarnedDeprecation) {
+      System.err.println("S3FileSystem is deprecated and will be removed in " +
+          "future releases. Use NativeS3FileSystem or S3AFileSystem instead.");
+      hasWarnedDeprecation = true;
+    }
   }
 
   /**

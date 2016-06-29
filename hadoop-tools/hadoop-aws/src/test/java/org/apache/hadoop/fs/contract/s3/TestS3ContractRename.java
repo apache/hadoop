@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+@Deprecated
 public class TestS3ContractRename extends AbstractContractRenameTest {
 
   @Override

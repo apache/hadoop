@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
+@Deprecated
 public class TestS3ContractSeek extends AbstractContractSeekTest {
 
   @Override

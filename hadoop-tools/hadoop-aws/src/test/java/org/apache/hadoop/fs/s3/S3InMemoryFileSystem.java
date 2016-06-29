@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.s3.InMemoryFileSystemStore;
  * A helper implementation of {@link S3FileSystem}
  * without actually connecting to S3 for unit testing.
  */
+@Deprecated
 public class S3InMemoryFileSystem extends S3FileSystem {
     public S3InMemoryFileSystem() {
         super(new InMemoryFileSystemStore());

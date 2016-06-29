@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public class S3FileSystemConfigKeys extends CommonConfigurationKeys {
   public static final String  S3_BLOCK_SIZE_KEY = "s3.blocksize";
   public static final long    S3_BLOCK_SIZE_DEFAULT = 64*1024*1024;

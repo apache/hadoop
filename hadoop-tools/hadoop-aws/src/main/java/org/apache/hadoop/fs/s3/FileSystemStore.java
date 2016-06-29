@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public interface FileSystemStore {
   
   void initialize(URI uri, Configuration conf) throws IOException;
