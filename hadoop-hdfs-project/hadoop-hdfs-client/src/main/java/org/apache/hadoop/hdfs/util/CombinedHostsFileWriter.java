@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 public final class CombinedHostsFileWriter {
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private CombinedHostsFileWriter() {
   }
 
@@ -60,8 +61,7 @@ public final class CombinedHostsFileWriter {
     try (Writer output =
        new OutputStreamWriter(new FileOutputStream(hostsFile), "UTF-8")) {
       for (DatanodeAdminProperties datanodeAdminProperties: allDNs) {
-        ObjectMapper mapper = new ObjectMapper();
-        configs.append(mapper.writeValueAsString(datanodeAdminProperties));
+        configs.append(MAPPER.writeValueAsString(datanodeAdminProperties));
       }
       output.write(configs.toString());
     }
