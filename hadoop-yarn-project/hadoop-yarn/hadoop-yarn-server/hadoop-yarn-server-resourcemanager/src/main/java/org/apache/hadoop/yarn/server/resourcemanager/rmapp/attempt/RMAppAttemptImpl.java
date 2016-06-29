@@ -826,9 +826,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           }
         }
 
-        finishedContainersSentToAM.putIfAbsent(nodeId, new ArrayList
-              <ContainerStatus>());
-        finishedContainersSentToAM.get(nodeId).addAll(finishedContainers);
+        if (!finishedContainers.isEmpty()) {
+          finishedContainersSentToAM.putIfAbsent(nodeId,
+              new ArrayList<ContainerStatus>());
+          finishedContainersSentToAM.get(nodeId).addAll(finishedContainers);
+        }
       }
 
       return returnList;
@@ -1871,6 +1873,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       eventHandler.handle(new RMNodeFinishedContainersPulledByAMEvent(nodeId,
         containerIdList));
     }
+    this.finishedContainersSentToAM.clear();
   }
 
   // Add am container to the list so that am container instance will be
