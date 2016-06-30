@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.oncrpc.security;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.XDR;
@@ -65,5 +66,10 @@ public abstract class Credentials extends RpcAuthInfo {
   
   protected Credentials(AuthFlavor flavor) {
     super(flavor);
+  }
+
+  @VisibleForTesting
+  int getCredentialLength() {
+    return mCredentialsLength;
   }
 }
