@@ -33,6 +33,7 @@ public class TestCredentialsSys {
     CredentialsSys credential = new CredentialsSys();
     credential.setUID(0);
     credential.setGID(1);
+    credential.setStamp(1234);
     
     XDR xdr = new XDR();
     credential.write(xdr);
@@ -42,5 +43,46 @@ public class TestCredentialsSys {
     
     assertEquals(0, newCredential.getUID());
     assertEquals(1, newCredential.getGID());
+    assertEquals(1234, newCredential.getStamp());
+  }
+
+  @Test
+  public void testHostNameNotMultipleOf4() {
+    CredentialsSys credential = new CredentialsSys();
+    credential.setUID(0);
+    credential.setGID(1);
+    credential.setStamp(1234);
+    credential.setHostName("hadoop-nfs");
+
+    XDR xdr = new XDR();
+    credential.write(xdr);
+
+    CredentialsSys newCredential = new CredentialsSys();
+    newCredential.read(xdr.asReadOnlyWrap());
+
+    assertEquals(0, newCredential.getUID());
+    assertEquals(1, newCredential.getGID());
+    assertEquals(1234, newCredential.getStamp());
+    assertEquals(32, newCredential.getCredentialLength());
+  }
+
+  @Test
+  public void testHostNameMultipleOf4() {
+    CredentialsSys credential = new CredentialsSys();
+    credential.setUID(0);
+    credential.setGID(1);
+    credential.setStamp(1234);
+    credential.setHostName("apachehadoop");
+
+    XDR xdr = new XDR();
+    credential.write(xdr);
+
+    CredentialsSys newCredential = new CredentialsSys();
+    newCredential.read(xdr.asReadOnlyWrap());
+
+    assertEquals(0, newCredential.getUID());
+    assertEquals(1, newCredential.getGID());
+    assertEquals(1234, newCredential.getStamp());
+    assertEquals(32, newCredential.getCredentialLength());
   }
 }
