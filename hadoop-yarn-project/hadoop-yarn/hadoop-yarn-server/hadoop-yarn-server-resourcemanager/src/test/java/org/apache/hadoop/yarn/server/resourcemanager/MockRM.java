@@ -937,6 +937,10 @@ public class MockRM extends ResourceManager {
         rm.getResourceScheduler()).getApplicationAttempt(attemptId));
   }
 
+  /**
+   * NOTE: nm.nodeHeartbeat is explicitly invoked,
+   * don't invoke it before calling launchAM
+   */
   public static MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
     RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
