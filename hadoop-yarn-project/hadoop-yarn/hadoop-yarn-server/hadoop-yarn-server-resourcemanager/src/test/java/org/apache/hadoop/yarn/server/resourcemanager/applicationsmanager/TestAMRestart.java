@@ -627,7 +627,6 @@ public class TestAMRestart {
       appState.getAttempt(am4.getApplicationAttemptId())
         .getAMContainerExitStatus());
     // launch next AM in nm2
-    nm2.nodeHeartbeat(true);
     MockAM am5 =
         rm1.waitForNewAMToLaunchAndRegister(app1.getApplicationId(), 5, nm2);
     RMAppAttempt attempt5 = app1.getCurrentAppAttempt();

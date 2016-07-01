@@ -212,8 +212,6 @@ public class TestRM extends ParameterizedSchedulerTestBase {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     cs.getApplicationAttempt(attempt.getAppAttemptId()).getNewContainerId();
 
-    // kick the scheduling
-    nm1.nodeHeartbeat(true);
     MockAM am = MockRM.launchAM(app, rm, nm1);
     // am container Id not equal to 1.
     Assert.assertTrue(
