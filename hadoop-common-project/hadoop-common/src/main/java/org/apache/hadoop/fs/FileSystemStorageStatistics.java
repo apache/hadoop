@@ -119,6 +119,11 @@ public class FileSystemStorageStatistics extends StorageStatistics {
   }
 
   @Override
+  public String getScheme() {
+    return stats.getScheme();
+  }
+
+  @Override
   public Iterator<LongStatistic> getLongStatistics() {
     return new LongStatisticIterator(stats.getData());
   }

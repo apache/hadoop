@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.fs.StorageStatistics.CommonStatisticNames;
+
 /**
  * Statistic which are collected in S3A.
  * These statistics are available at a low level in {@link S3AStorageStatistics}
@@ -38,27 +40,27 @@ public enum Statistic {
   FILES_DELETED("files_deleted",
       "Total number of files deleted from the object store."),
   IGNORED_ERRORS("ignored_errors", "Errors caught and ignored"),
-  INVOCATION_COPY_FROM_LOCAL_FILE("invocations_copyfromlocalfile",
+  INVOCATION_COPY_FROM_LOCAL_FILE(CommonStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()"),
-  INVOCATION_EXISTS("invocations_exists",
+  INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
       "Calls of exists()"),
-  INVOCATION_GET_FILE_STATUS("invocations_getfilestatus",
+  INVOCATION_GET_FILE_STATUS(CommonStatisticNames.OP_GET_FILE_STATUS,
       "Calls of getFileStatus()"),
-  INVOCATION_GLOB_STATUS("invocations_globstatus",
+  INVOCATION_GLOB_STATUS(CommonStatisticNames.OP_GLOB_STATUS,
       "Calls of globStatus()"),
-  INVOCATION_IS_DIRECTORY("invocations_is_directory",
+  INVOCATION_IS_DIRECTORY(CommonStatisticNames.OP_IS_DIRECTORY,
       "Calls of isDirectory()"),
-  INVOCATION_IS_FILE("invocations_is_file",
+  INVOCATION_IS_FILE(CommonStatisticNames.OP_IS_FILE,
       "Calls of isFile()"),
-  INVOCATION_LIST_FILES("invocations_listfiles",
+  INVOCATION_LIST_FILES(CommonStatisticNames.OP_LIST_FILES,
       "Calls of listFiles()"),
-  INVOCATION_LIST_LOCATED_STATUS("invocations_listlocatedstatus",
+  INVOCATION_LIST_LOCATED_STATUS(CommonStatisticNames.OP_LIST_LOCATED_STATUS,
       "Calls of listLocatedStatus()"),
-  INVOCATION_LIST_STATUS("invocations_liststatus",
+  INVOCATION_LIST_STATUS(CommonStatisticNames.OP_LIST_STATUS,
       "Calls of listStatus()"),
-  INVOCATION_MKDIRS("invocations_mdkirs",
+  INVOCATION_MKDIRS(CommonStatisticNames.OP_MKDIRS,
       "Calls of mkdirs()"),
-  INVOCATION_RENAME("invocations_rename",
+  INVOCATION_RENAME(CommonStatisticNames.OP_RENAME,
       "Calls of rename()"),
   OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests"),
   OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests"),

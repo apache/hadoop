@@ -31,8 +31,10 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -64,6 +66,19 @@ public class TestDFSOpsCountStatistics {
         STORAGE_STATISTICS.incrementOpCounter(opType);
       }
     }
+  }
+
+  /**
+   * This is to test the the {@link OpType} symbols are unique.
+   */
+  @Test
+  public void testOpTypeSymbolsAreUnique() {
+    final Set<String> opTypeSymbols = new HashSet<>();
+    for (OpType opType : OpType.values()) {
+      assertFalse(opTypeSymbols.contains(opType.getSymbol()));
+      opTypeSymbols.add(opType.getSymbol());
+    }
+    assertEquals(OpType.values().length, opTypeSymbols.size());
   }
 
   @Test
