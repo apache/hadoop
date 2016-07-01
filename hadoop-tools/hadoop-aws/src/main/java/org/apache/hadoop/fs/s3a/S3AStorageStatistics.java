@@ -87,6 +87,11 @@ public class S3AStorageStatistics extends StorageStatistics {
   }
 
   @Override
+  public String getScheme() {
+    return "s3a";
+  }
+
+  @Override
   public Iterator<LongStatistic> getLongStatistics() {
     return new LongIterator();
   }
