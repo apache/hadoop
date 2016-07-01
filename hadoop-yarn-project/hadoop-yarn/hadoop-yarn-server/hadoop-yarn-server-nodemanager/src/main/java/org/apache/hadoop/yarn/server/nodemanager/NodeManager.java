@@ -287,7 +287,14 @@ public class NodeManager extends CompositeService
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
 
-    initAndStartRecoveryStore(conf);
+    try {
+      initAndStartRecoveryStore(conf);
+    } catch (IOException e) {
+      String recoveryDirName = conf.get(YarnConfiguration.NM_RECOVERY_DIR);
+      throw new
+          YarnRuntimeException("Unable to initialize recovery directory at "
+              + recoveryDirName, e);
+    }
 
     NMContainerTokenSecretManager containerTokenSecretManager =
         new NMContainerTokenSecretManager(conf, nmStore);
