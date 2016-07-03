@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
-import org.apache.hadoop.hdfs.client.impl.BlockReaderRemote2;
+import org.apache.hadoop.hdfs.client.impl.BlockReaderRemote;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -112,7 +112,7 @@ class StripedBlockReader {
          *
          * TODO: add proper tracer
          */
-      return BlockReaderRemote2.newBlockReader(
+      return BlockReaderRemote.newBlockReader(
           "dummy", block, blockToken, offsetInBlock,
           block.getNumBytes() - offsetInBlock, true,
           "", newConnectedPeer(block, dnAddr, blockToken, source), source,
