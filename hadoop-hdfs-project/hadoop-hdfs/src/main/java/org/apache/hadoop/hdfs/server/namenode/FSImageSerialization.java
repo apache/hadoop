@@ -696,6 +696,7 @@ public class FSImageSerialization {
     final Long limit = info.getLimit();
     final FsPermission mode = info.getMode();
     final Long maxRelativeExpiry = info.getMaxRelativeExpiryMs();
+    final Short defaultReplication = info.getDefaultReplication();
 
     if (ownerName != null) {
       XMLUtils.addSaxString(contentHandler, "OWNERNAME", ownerName);
@@ -713,6 +714,10 @@ public class FSImageSerialization {
     if (maxRelativeExpiry != null) {
       XMLUtils.addSaxString(contentHandler, "MAXRELATIVEEXPIRY",
           Long.toString(maxRelativeExpiry));
+    }
+    if (defaultReplication != null) {
+      XMLUtils.addSaxString(contentHandler, "DEFAULTREPLICATION",
+          Short.toString(defaultReplication));
     }
   }
 
@@ -735,6 +740,10 @@ public class FSImageSerialization {
     if (st.hasChildren("MAXRELATIVEEXPIRY")) {
       info.setMaxRelativeExpiryMs(
           Long.parseLong(st.getValue("MAXRELATIVEEXPIRY")));
+    }
+    if (st.hasChildren("DEFAULTREPLICATION")) {
+      info.setDefaultReplication(Short.parseShort(st
+          .getValue("DEFAULTREPLICATION")));
     }
     return info;
   }
