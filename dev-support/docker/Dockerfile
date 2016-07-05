@@ -63,14 +63,6 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     snappy \
     zlib1g-dev
 
-######
-# Install ISA-L library
-######
-RUN curl -s -S -L \
-         http://http.us.debian.org/debian/pool/main/libi/libisal/libisal2_2.15.0-2_amd64.deb \
-         -o /opt/libisal2_2.15.0-2_amd64.deb && \
-    dpkg -i /opt/libisal2_2.15.0-2_amd64.deb
-
 #######
 # Oracle Java
 #######
