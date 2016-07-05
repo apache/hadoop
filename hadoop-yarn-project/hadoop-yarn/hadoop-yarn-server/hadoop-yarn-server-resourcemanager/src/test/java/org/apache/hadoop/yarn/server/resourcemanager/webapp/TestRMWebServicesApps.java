@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -1316,7 +1317,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlString(element, "logAggregationStatus"),
           WebServicesTestUtils.getXmlBoolean(element, "unmanagedApplication"),
           WebServicesTestUtils.getXmlString(element, "appNodeLabelExpression"),
-          WebServicesTestUtils.getXmlString(element, "amNodeLabelExpression"));
+          WebServicesTestUtils.getXmlString(element, "amNodeLabelExpression"),
+          WebServicesTestUtils.getXmlString(element, "amRPCAddress"));
     }
   }
 
@@ -1334,6 +1336,12 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     if (app.getAMResourceRequest().getNodeLabelExpression() != null) {
       expectedNumberOfElements++;
       amNodeLabelExpression = info.getString("amNodeLabelExpression");
+    }
+    String amRPCAddress = null;
+    if (AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt())
+        != null) {
+      expectedNumberOfElements++;
+      amRPCAddress = info.getString("amRPCAddress");
     }
     assertEquals("incorrect number of elements", expectedNumberOfElements,
         info.length());
@@ -1357,7 +1365,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         info.getString("logAggregationStatus"),
         info.getBoolean("unmanagedApplication"),
         appNodeLabelExpression,
-        amNodeLabelExpression);
+        amNodeLabelExpression,
+        amRPCAddress);
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
@@ -1370,9 +1379,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       int preemptedResourceMB, int preemptedResourceVCores,
       int numNonAMContainerPreempted, int numAMContainerPreempted,
       String logAggregationStatus, boolean unmanagedApplication,
-      String appNodeLabelExpression, String amNodeLabelExpression)
-      throws JSONException,
-      Exception {
+      String appNodeLabelExpression, String amNodeLabelExpression,
+      String amRPCAddress) throws JSONException, Exception {
 
     WebServicesTestUtils.checkStringMatch("id", app.getApplicationId()
         .toString(), id);
@@ -1433,6 +1441,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("unmanagedApplication doesn't match",
         app.getAMResourceRequest().getNodeLabelExpression(),
         amNodeLabelExpression);
+    assertEquals("amRPCAddress",
+        AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()),
+        amRPCAddress);
   }
 
   @Test
