@@ -250,6 +250,8 @@ public class ContainerMetrics implements MetricsSource {
         timer = null;
       }
       scheduleTimerTaskForUnregistration();
+      this.pMemMBQuantiles.stop();
+      this.cpuCoreUsagePercentQuantiles.stop();
     }
   }
 
