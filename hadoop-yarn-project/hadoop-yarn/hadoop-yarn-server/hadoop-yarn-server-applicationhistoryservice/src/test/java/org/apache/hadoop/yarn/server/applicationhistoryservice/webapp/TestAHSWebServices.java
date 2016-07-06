@@ -711,8 +711,9 @@ public class TestAHSWebServices extends JerseyTestBase {
     String redirectURL = getRedirectURL(requestURI.toString());
     assertTrue(redirectURL != null);
     assertTrue(redirectURL.contains("test:1234"));
-    assertTrue(redirectURL.contains("ws/v1/node/containerlogs"));
+    assertTrue(redirectURL.contains("ws/v1/node/containers"));
     assertTrue(redirectURL.contains(containerId1.toString()));
+    assertTrue(redirectURL.contains("/logs/" + fileName));
     assertTrue(redirectURL.contains("user.name=" + user));
   }
 

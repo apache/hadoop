@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,9 +28,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import javax.ws.rs.core.MediaType;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -71,9 +67,6 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
 @Public
 @Evolving
@@ -353,23 +346,19 @@ public class LogsCLI extends Configured implements Tool {
           .resource(WebAppUtils.getHttpSchemePrefix(conf) + nodeHttpAddress);
       ClientResponse response =
           webResource.path("ws").path("v1").path("node").path("containers")
-              .path(containerIdStr).accept(MediaType.APPLICATION_XML)
+              .path(containerIdStr).path("logs")
+              .accept(MediaType.APPLICATION_JSON)
               .get(ClientResponse.class);
       if (response.getStatusInfo().getStatusCode() ==
           ClientResponse.Status.OK.getStatusCode()) {
         try {
-          String xml = response.getEntity(String.class);
-          DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-          DocumentBuilder db = dbf.newDocumentBuilder();
-          InputSource is = new InputSource();
-          is.setCharacterStream(new StringReader(xml));
-          Document dom = db.parse(is);
-          NodeList elements = dom.getElementsByTagName("containerLogFiles");
-          for (int i = 0; i < elements.getLength(); i++) {
-            logFiles.add(elements.item(i).getTextContent());
+          JSONObject json = response.getEntity(JSONObject.class);
+          JSONArray array = json.getJSONArray("containerLogInfo");
+          for (int i = 0; i < array.length(); i++) {
+            logFiles.add(array.getJSONObject(i).getString("fileName"));
           }
         } catch (Exception e) {
-          System.err.println("Unable to parse xml from webservice. Error:");
+          System.err.println("Unable to parse json from webservice. Error:");
           System.err.println(e.getMessage());
           throw new IOException(e);
         }
@@ -425,7 +414,8 @@ public class LogsCLI extends Configured implements Tool {
                   + nodeHttpAddress);
           ClientResponse response =
               webResource.path("ws").path("v1").path("node")
-                .path("containerlogs").path(containerIdStr).path(logFile)
+                .path("containers").path(containerIdStr).path("logs")
+                .path(logFile)
                 .queryParam("size", Long.toString(request.getBytes()))
                 .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
           out.println(response.getEntity(String.class));

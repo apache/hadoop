@@ -76,7 +76,7 @@ import com.google.inject.Singleton;
 public class AHSWebServices extends WebServices {
 
   private static final String NM_DOWNLOAD_URI_STR =
-      "/ws/v1/node/containerlogs";
+      "/ws/v1/node/containers";
   private static final Joiner JOINER = Joiner.on("");
   private static final Joiner DOT_JOINER = Joiner.on(". ");
   private final Configuration conf;
@@ -256,7 +256,7 @@ public class AHSWebServices extends WebServices {
     String nodeId = containerInfo.getNodeId();
     if (isRunningState(appInfo.getAppState())) {
       String nodeHttpAddress = containerInfo.getNodeHttpAddress();
-      String uri = "/" + containerId.toString() + "/" + filename;
+      String uri = "/" + containerId.toString() + "/logs/" + filename;
       String resURI = JOINER.join(nodeHttpAddress, NM_DOWNLOAD_URI_STR, uri);
       String query = req.getQueryString();
       if (query != null && !query.isEmpty()) {
