@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -48,7 +49,6 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -58,7 +58,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.MalformedURLException;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -217,25 +222,47 @@ public class EntityGroupFSTimelineStore extends CompositeService
       throws RuntimeException {
     Collection<String> pluginNames = conf.getTrimmedStringCollection(
         YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES);
+
+    String pluginClasspath = conf.getTrimmed(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSPATH);
+    String[] systemClasses = conf.getTrimmedStrings(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_SYSTEM_CLASSES);
+
     List<TimelineEntityGroupPlugin> pluginList
         = new LinkedList<TimelineEntityGroupPlugin>();
     Exception caught = null;
+    ClassLoader customClassLoader = null;
+    if (pluginClasspath != null && pluginClasspath.length() > 0) {
+      try {
+        customClassLoader = createPluginClassLoader(pluginClasspath,
+            systemClasses);
+      } catch (IOException ioe) {
+        LOG.warn("Error loading classloader", ioe);
+      }
+    }
     for (final String name : pluginNames) {
       LOG.debug("Trying to load plugin class {}", name);
       TimelineEntityGroupPlugin cacheIdPlugin = null;
+
       try {
-        Class<?> clazz = conf.getClassByName(name);
-        cacheIdPlugin =
-            (TimelineEntityGroupPlugin) ReflectionUtils.newInstance(
-                clazz, conf);
+        if (customClassLoader != null) {
+          LOG.debug("Load plugin {} with classpath: {}", name, pluginClasspath);
+          Class<?> clazz = Class.forName(name, true, customClassLoader);
+          Class<? extends TimelineEntityGroupPlugin> sClass = clazz.asSubclass(
+              TimelineEntityGroupPlugin.class);
+          cacheIdPlugin = ReflectionUtils.newInstance(sClass, conf);
+        } else {
+          LOG.debug("Load plugin class with system classpath");
+          Class<?> clazz = conf.getClassByName(name);
+          cacheIdPlugin =
+              (TimelineEntityGroupPlugin) ReflectionUtils.newInstance(
+                  clazz, conf);
+        }
       } catch (Exception e) {
         LOG.warn("Error loading plugin " + name, e);
-        caught = e;
+        throw new RuntimeException("No class defined for " + name, e);
       }
 
-      if (cacheIdPlugin == null) {
-        throw new RuntimeException("No class defined for " + name, caught);
-      }
       LOG.info("Load plugin class {}", cacheIdPlugin.getClass().getName());
       pluginList.add(cacheIdPlugin);
     }
@@ -489,6 +516,29 @@ public class EntityGroupFSTimelineStore extends CompositeService
     return appId;
   }
 
+  private static ClassLoader createPluginClassLoader(
+      final String appClasspath, final String[] systemClasses)
+      throws IOException {
+    try {
+      return AccessController.doPrivileged(
+        new PrivilegedExceptionAction<ClassLoader>() {
+          @Override
+          public ClassLoader run() throws MalformedURLException {
+            return new ApplicationClassLoader(appClasspath,
+                EntityGroupFSTimelineStore.class.getClassLoader(),
+                Arrays.asList(systemClasses));
+          }
+        }
+      );
+    } catch (PrivilegedActionException e) {
+      Throwable t = e.getCause();
+      if (t instanceof MalformedURLException) {
+        throw (MalformedURLException) t;
+      }
+      throw new IOException(e);
+    }
+  }
+
   private Path getActiveAppPath(ApplicationId appId) {
     return new Path(activeRootPath, appId.toString());
   }
@@ -529,6 +579,15 @@ public class EntityGroupFSTimelineStore extends CompositeService
   @VisibleForTesting
   protected AppState getAppState(ApplicationId appId) throws IOException {
     return getAppState(appId, yarnClient);
+  }
+
+  /**
+   * Get all plugins for tests.
+   * @return all plugins
+   */
+  @VisibleForTesting
+  List<TimelineEntityGroupPlugin> getPlugins() {
+    return cacheIdPlugins;
   }
 
   /**

@@ -2084,6 +2084,15 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.timeline-service.entity-group-fs-store.group-id-plugin-classpath</name>
+    <value></value>
+    <description>
+      Classpath for all plugins defined in
+      yarn.timeline-service.entity-group-fs-store.group-id-plugin-classes.
+    </description>
+  </property>
+
    <property>
      <name>yarn.timeline-service.entity-group-fs-store.summary-store</name>
      <description>Summary storage for ATS v1.5</description>
