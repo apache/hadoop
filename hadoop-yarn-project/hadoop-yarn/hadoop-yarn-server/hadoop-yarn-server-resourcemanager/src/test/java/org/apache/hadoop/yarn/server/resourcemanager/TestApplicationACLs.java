@@ -112,7 +112,8 @@ public class TestApplicationACLs {
           Configuration conf) {
         QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
         when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
-            any(QueueACL.class), any(RMApp.class))).thenAnswer(new Answer() {
+            any(QueueACL.class), any(RMApp.class), any(String.class),
+            any())).thenAnswer(new Answer() {
           public Object answer(InvocationOnMock invocation) {
             return isQueueUser;
           }
