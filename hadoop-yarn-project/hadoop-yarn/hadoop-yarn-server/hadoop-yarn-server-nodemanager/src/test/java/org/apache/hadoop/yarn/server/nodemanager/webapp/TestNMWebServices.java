@@ -312,13 +312,29 @@ public class TestNMWebServices extends JerseyTestBase {
     verifyNodesXML(nodes);
   }
 
-  @Test
-  public void testContainerLogs() throws IOException {
-    WebResource r = resource();
+  @Test (timeout = 5000)
+  public void testContainerLogsWithNewAPI() throws IOException, JSONException{
     final ContainerId containerId = BuilderUtils.newContainerId(0, 0, 0, 0);
-    final String containerIdStr = BuilderUtils.newContainerId(0, 0, 0, 0)
-        .toString();
-    final ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
+    WebResource r = resource();
+    r = r.path("ws").path("v1").path("node").path("containers")
+        .path(containerId.toString()).path("logs");
+    testContainerLogs(r, containerId);
+  }
+
+  @Test (timeout = 5000)
+  public void testContainerLogsWithOldAPI() throws IOException, JSONException{
+    final ContainerId containerId = BuilderUtils.newContainerId(1, 1, 0, 1);
+    WebResource r = resource();
+    r = r.path("ws").path("v1").path("node").path("containerlogs")
+        .path(containerId.toString());
+    testContainerLogs(r, containerId);
+  }
+
+  private void testContainerLogs(WebResource r, ContainerId containerId)
+      throws IOException, JSONException {
+    final String containerIdStr = containerId.toString();
+    final ApplicationAttemptId appAttemptId = containerId
+        .getApplicationAttemptId();
     final ApplicationId appId = appAttemptId.getApplicationId();
     final String appIdStr = appId.toString();
     final String filename = "logfile1";
@@ -344,8 +360,7 @@ public class TestNMWebServices extends JerseyTestBase {
     pw.close();
 
     // ask for it
-    ClientResponse response = r.path("ws").path("v1").path("node")
-        .path("containerlogs").path(containerIdStr).path(filename)
+    ClientResponse response = r.path(filename)
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertEquals(logMessage, responseText);
@@ -354,8 +369,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // specify how many bytes we should get from logs
     // specify a position number, it would get the first n bytes from
     // container log
-    response = r.path("ws").path("v1").path("node")
-        .path("containerlogs").path(containerIdStr).path(filename)
+    response = r.path(filename)
         .queryParam("size", "5")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
@@ -365,8 +379,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
     // specify the bytes which is larger than the actual file size,
     // we would get the full logs
-    response = r.path("ws").path("v1").path("node")
-        .path("containerlogs").path(containerIdStr).path(filename)
+    response = r.path(filename)
         .queryParam("size", "10000")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
@@ -375,8 +388,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
     // specify a negative number, it would get the last n bytes from
     // container log
-    response = r.path("ws").path("v1").path("node")
-        .path("containerlogs").path(containerIdStr).path(filename)
+    response = r.path(filename)
         .queryParam("size", "-5")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
@@ -385,8 +397,7 @@ public class TestNMWebServices extends JerseyTestBase {
         logMessage.getBytes().length - 5, 5), responseText);
     assertTrue(fullTextSize >= responseText.getBytes().length);
 
-    response = r.path("ws").path("v1").path("node")
-        .path("containerlogs").path(containerIdStr).path(filename)
+    response = r.path(filename)
         .queryParam("size", "-10000")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
@@ -395,8 +406,7 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(logMessage, responseText);
 
     // ask and download it
-    response = r.path("ws").path("v1").path("node").path("containerlogs")
-        .path(containerIdStr).path(filename)
+    response = r.path(filename)
         .queryParam("format", "octet-stream")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
@@ -405,8 +415,7 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals("application/octet-stream", response.getType().toString());
 
     // specify a invalid format value
-    response = r.path("ws").path("v1").path("node").path("containerlogs")
-        .path(containerIdStr).path(filename)
+    response = r.path(filename)
         .queryParam("format", "123")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
@@ -415,20 +424,28 @@ public class TestNMWebServices extends JerseyTestBase {
     assertEquals(400, response.getStatus());
 
     // ask for file that doesn't exist
-    response = r.path("ws").path("v1").path("node")
-        .path("containerlogs").path(containerIdStr).path("uhhh")
+    response = r.path("uhhh")
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Cannot find this log on the local disk."));
-    
+
+    // Get container log files' name
+    WebResource r1 = resource();
+    response = r1.path("ws").path("v1").path("node")
+        .path("containers").path(containerIdStr)
+        .path("logs").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(200, response.getStatus());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals(json.getJSONObject("containerLogInfo")
+        .getString("fileName"), filename);
+
     // After container is completed, it is removed from nmContext
     nmContext.getContainers().remove(containerId);
     Assert.assertNull(nmContext.getContainers().get(containerId));
-    response =
-        r.path("ws").path("v1").path("node").path("containerlogs")
-            .path(containerIdStr).path(filename).accept(MediaType.TEXT_PLAIN)
-            .get(ClientResponse.class);
+    response = r.path(filename).accept(MediaType.TEXT_PLAIN)
+        .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertEquals(logMessage, responseText);
   }
