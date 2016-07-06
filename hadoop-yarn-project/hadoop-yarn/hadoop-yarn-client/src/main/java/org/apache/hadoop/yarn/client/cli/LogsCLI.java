@@ -145,18 +145,38 @@ public class LogsCLI extends Configured implements Tool {
       return -1;
     }
 
-    if (appIdStr == null) {
-      System.err.println("ApplicationId cannot be null!");
+    if (appIdStr == null && containerIdStr == null) {
+      System.err.println("Both applicationId and containerId are missing, "
+          + " one of them must be specified.");
       printHelpMessage(printOpts);
       return -1;
     }
 
     ApplicationId appId = null;
-    try {
-      appId = ApplicationId.fromString(appIdStr);
-    } catch (Exception e) {
-      System.err.println("Invalid ApplicationId specified");
-      return -1;
+    if (appIdStr != null) {
+      try {
+        appId = ApplicationId.fromString(appIdStr);
+      } catch (Exception e) {
+        System.err.println("Invalid ApplicationId specified");
+        return -1;
+      }
+    }
+
+    if (containerIdStr != null) {
+      try {
+        ContainerId containerId = ContainerId.fromString(containerIdStr);
+        if (appId == null) {
+          appId = containerId.getApplicationAttemptId().getApplicationId();
+        } else if (!containerId.getApplicationAttemptId().getApplicationId()
+            .equals(appId)) {
+          System.err.println("The Application:" + appId
+              + " does not have the container:" + containerId);
+          return -1;
+        }
+      } catch (Exception e) {
+        System.err.println("Invalid ContainerId specified");
+        return -1;
+      }
     }
 
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
@@ -218,13 +238,6 @@ public class LogsCLI extends Configured implements Tool {
 
     int resultCode = 0;
     if (containerIdStr != null) {
-      ContainerId containerId = ContainerId.fromString(containerIdStr);
-      if (!containerId.getApplicationAttemptId().getApplicationId()
-          .equals(appId)) {
-        System.err.println("The Application:" + appId
-            + " does not have the container:" + containerId);
-        return -1;
-      }
       return fetchContainerLogs(request, logCliHelper);
     } else {
       if (nodeAddress == null) {
@@ -629,11 +642,11 @@ public class LogsCLI extends Configured implements Tool {
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
     Option appIdOpt =
         new Option(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
-    appIdOpt.setRequired(true);
     opts.addOption(appIdOpt);
     opts.addOption(CONTAINER_ID_OPTION, true, "ContainerId. "
-        + "By default, it will only print syslog if the application is runing."
-        + " Work with -logFiles to get other logs.");
+        + "By default, it will only print syslog if the application is running."
+        + " Work with -logFiles to get other logs. If specified, the"
+        + " applicationId can be omitted");
     opts.addOption(NODE_ADDRESS_OPTION, true, "NodeAddress in the format "
         + "nodename:port");
     opts.addOption(APP_OWNER_OPTION, true,

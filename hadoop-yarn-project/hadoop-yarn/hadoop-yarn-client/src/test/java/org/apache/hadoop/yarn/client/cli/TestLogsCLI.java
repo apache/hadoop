@@ -201,8 +201,9 @@ public class TestLogsCLI {
     pw.println("                                 not specified)");
     pw.println(" -containerId <Container ID>     ContainerId. By default, it will only");
     pw.println("                                 print syslog if the application is");
-    pw.println("                                 runing. Work with -logFiles to get other");
-    pw.println("                                 logs.");
+    pw.println("                                 running. Work with -logFiles to get other");
+    pw.println("                                 logs. If specified, the applicationId can");
+    pw.println("                                 be omitted");
     pw.println(" -help                           Displays help for all commands.");
     pw.println(" -list_nodes                     Show the list of nodes that successfully");
     pw.println("                                 aggregated logs. This option can only be");
@@ -497,6 +498,24 @@ public class TestLogsCLI {
     assertTrue(sysOutStream.toString().contains(
         containerId3 + " on " + LogAggregationUtils.getNodeString(nodeId)));
     sysOutStream.reset();
+
+    // The same should also work without the applicationId
+    exitCode =
+        cli.run(new String[] { "-containerId", containerId3.toString() });
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in stdout!"));
+    assertTrue(sysOutStream.toString().contains(
+        containerId3 + " on " + LogAggregationUtils.getNodeString(nodeId)));
+    sysOutStream.reset();
+
+    exitCode = cli.run(new String[] { "-containerId", "invalid_container" });
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "Invalid ContainerId specified"));
+    sysErrStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
@@ -863,8 +882,7 @@ public class TestLogsCLI {
         "-show_meta_info", "-nodeAddress", "localhost", "-containerId",
         "container_1234" });
     assertTrue(sysErrStream.toString().contains(
-        "The container container_1234 couldn't be found on the node "
-        + "specified: localhost"));
+        "Invalid ContainerId specified"));
     sysErrStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);
