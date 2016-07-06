@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -370,11 +371,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           && !authorizer.checkPermission(
               new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
                   SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
-                  applicationId.toString(), appName))
+                  applicationId.toString(), appName, Server.getRemoteAddress(),
+                  null))
           && !authorizer.checkPermission(
               new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
                   SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
-                  applicationId.toString(), appName))) {
+                  applicationId.toString(), appName, Server.getRemoteAddress(),
+                  null))) {
         throw new AccessControlException(
             "User " + user + " does not have permission to submit "
                 + applicationId + " to queue " + submissionContext.getQueue());

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -26,14 +27,13 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AccessRequest;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+
+import java.util.List;
 
 public class QueueACLsManager {
 
@@ -56,7 +56,7 @@ public class QueueACLsManager {
   }
 
   public boolean checkAccess(UserGroupInformation callerUGI, QueueACL acl,
-      RMApp app) {
+      RMApp app, String remoteAddress, List<String> forwardedAddresses) {
     if (!isACLsEnable) {
       return true;
     }
@@ -71,11 +71,11 @@ public class QueueACLsManager {
             .getApplicationId());
         return true;
       }
-
       return authorizer.checkPermission(
           new AccessRequest(queue.getPrivilegedEntity(), callerUGI,
               SchedulerUtils.toAccessType(acl),
-              app.getApplicationId().toString(), app.getName()));
+              app.getApplicationId().toString(), app.getName(),
+              remoteAddress, forwardedAddresses));
     } else {
       return scheduler.checkAccess(callerUGI, acl, app.getQueue());
     }

@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.security;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import java.util.List;
 
 /**
  * This request object contains all the context information to determine whether
@@ -30,7 +34,14 @@ import org.apache.hadoop.security.UserGroupInformation;
  *              if no app is associated.
  * appName    : the associated app name for current access. This could be null if
  *              no app is associated.
+ * remoteAddress : The caller's remote ip address.
+ * forwardedAddresses : In case this is an http request, this contains the
+ *                    originating IP address of a client connecting to a web
+ *                    server through an HTTP proxy or load balancer. This
+ *                    parameter is null, if it's a RPC request.
  */
+@Public
+@Unstable
 public class AccessRequest {
 
   private PrivilegedEntity entity;
@@ -38,14 +49,19 @@ public class AccessRequest {
   private AccessType accessType;
   private String appId;
   private String appName;
+  private String remoteAddress;
+  private List<String> forwardedAddresses;
 
   public AccessRequest(PrivilegedEntity entity, UserGroupInformation user,
-      AccessType accessType, String appId, String appName) {
+      AccessType accessType, String appId, String appName, String remoteAddress,
+      List<String> forwardedAddresses) {
     this.entity = entity;
     this.user = user;
     this.accessType = accessType;
     this.appId = appId;
     this.appName = appName;
+    this.remoteAddress = remoteAddress;
+    this.forwardedAddresses = forwardedAddresses;
   }
 
   public UserGroupInformation getUser() {
@@ -66,5 +82,14 @@ public class AccessRequest {
 
   public PrivilegedEntity getEntity() {
     return entity;
+  }
+
+
+  public List<String> getForwardedAddresses() {
+    return forwardedAddresses;
+  }
+
+  public String getRemoteAddress() {
+    return remoteAddress;
   }
 }
