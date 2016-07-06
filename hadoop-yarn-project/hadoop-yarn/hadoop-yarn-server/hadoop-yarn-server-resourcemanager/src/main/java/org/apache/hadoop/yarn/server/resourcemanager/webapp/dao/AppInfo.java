@@ -82,6 +82,7 @@ public class AppInfo {
   protected long elapsedTime;
   protected String amContainerLogs;
   protected String amHostHttpAddress;
+  private String amRPCAddress;
   protected long allocatedMB;
   protected long allocatedVCores;
   protected int runningContainers;
@@ -168,7 +169,9 @@ public class AppInfo {
                 masterContainer.getId().toString(), app.getUser());
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
           }
-          
+
+          this.amRPCAddress = getAmRPCAddressFromRMAppAttempt(attempt);
+
           ApplicationResourceUsageReport resourceReport = attempt
               .getApplicationResourceUsageReport();
           if (resourceReport != null) {
@@ -279,6 +282,22 @@ public class AppInfo {
 
   public String getAMHostHttpAddress() {
     return this.amHostHttpAddress;
+  }
+
+  public String getAmRPCAddress() {
+    return amRPCAddress;
+  }
+
+  static public String getAmRPCAddressFromRMAppAttempt(RMAppAttempt attempt) {
+    String amRPCAddress = null;
+    if (attempt != null) {
+      String amHost = attempt.getHost();
+      int amRpcPort = attempt.getRpcPort();
+      if (!"N/A".equals(amHost) && amRpcPort != -1) {
+        amRPCAddress = amHost + ":" + amRpcPort;
+      }
+    }
+    return amRPCAddress;
   }
 
   public boolean amContainerLogsExist() {

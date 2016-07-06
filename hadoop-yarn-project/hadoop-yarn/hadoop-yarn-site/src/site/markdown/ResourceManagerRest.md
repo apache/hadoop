@@ -1381,6 +1381,7 @@ Response Body:
           "clusterId" : 1326815542473,
           "finalStatus" : "SUCCEEDED",
           "amHostHttpAddress" : "host.domain.com:8042",
+          "amRPCAddress" : "host.domain.com:4201",
           "progress" : 100,
           "name" : "word count",
           "startedTime" : 1326815573334,
@@ -1410,6 +1411,7 @@ Response Body:
           "clusterId" : 1326815542473,
           "finalStatus" : "SUCCEEDED",
           "amHostHttpAddress" : "host.domain.com:8042",
+          "amRPCAddress" : "host.domain.com:4202",
           "progress" : 100,
           "name" : "Sleep job",
           "startedTime" : 1326815641380,
@@ -1472,6 +1474,7 @@ Response Body:
     <elapsedTime>25196</elapsedTime>
     <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001_01_000001</amContainerLogs>
     <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+    <amRPCAddress>host.domain.com:4201</amRPCAddress>
     <allocatedMB>0</allocatedMB>
     <allocatedVCores>0</allocatedVCores>
     <runningContainers>0</runningContainers>
@@ -1501,6 +1504,7 @@ Response Body:
     <elapsedTime>148166</elapsedTime>
     <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
     <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+    <amRPCAddress>host.domain.com:4202</amRPCAddress>
     <allocatedMB>0</allocatedMB>
     <allocatedVCores>0</allocatedVCores>
     <runningContainers>0</runningContainers>
@@ -1664,6 +1668,7 @@ Note that depending on security settings a user might not be able to see all the
 | elapsedTime | long | The elapsed time since the application started (in ms) |
 | amContainerLogs | string | The URL of the application master container logs |
 | amHostHttpAddress | string | The nodes http address of the application master |
+| amRPCAddress | string | The RPC address of the application master |
 | allocatedMB | int | The sum of memory in MB allocated to the application's running containers |
 | allocatedVCores | int | The sum of virtual cores allocated to the application's running containers |
 | runningContainers | int | The number of containers currently running for the application |
@@ -1703,6 +1708,7 @@ Response Body:
       "clusterId" : 1326821518301,
       "finalStatus" : "SUCCEEDED",
       "amHostHttpAddress" : "host.domain.com:8042",
+      "amRPCAddress" : "host.domain.com:4201",
       "progress" : 100,
       "name" : "Sleep job",
       "applicationType" : "Yarn",
@@ -1756,6 +1762,7 @@ Response Body:
   <elapsedTime>446748</elapsedTime>
   <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
   <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
+  <amRPCAddress>host.domain.com:4201</amRPCAddress>
   <memorySeconds>151730</memorySeconds>
   <vcoreSeconds>103</vcoreSeconds>
   <unmanagedApplication>false</unmanagedApplication>
