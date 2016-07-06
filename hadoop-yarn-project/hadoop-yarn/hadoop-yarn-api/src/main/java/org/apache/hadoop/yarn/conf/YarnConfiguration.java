@@ -1824,6 +1824,14 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES =
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "group-id-plugin-classes";
 
+  public static final String TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSPATH =
+      TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX
+          + "group-id-plugin-classpath";
+
+  public static final String TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_SYSTEM_CLASSES
+      = TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX
+          + "group-id-plugin-system-classes";
+
   public static final String
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_SUMMARY_STORE =
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "summary-store";
