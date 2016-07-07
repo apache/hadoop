@@ -56,10 +56,10 @@ function hadoop_subproject_init
   HADOOP_YARN_HOME="${HADOOP_YARN_HOME:-$HADOOP_HOME}"
 
   # YARN-1429 added the completely superfluous YARN_USER_CLASSPATH
-  # env var.  We're going to override HADOOP_USER_CLASSPATH to keep
+  # env var.  We're going to override HADOOP_CLASSPATH to keep
   # consistency with the rest of the duplicate/useless env vars
 
-  hadoop_deprecate_envvar YARN_USER_CLASSPATH HADOOP_USER_CLASSPATH
+  hadoop_deprecate_envvar YARN_USER_CLASSPATH HADOOP_CLASSPATH
 
   hadoop_deprecate_envvar YARN_USER_CLASSPATH_FIRST HADOOP_USER_CLASSPATH_FIRST
 }
