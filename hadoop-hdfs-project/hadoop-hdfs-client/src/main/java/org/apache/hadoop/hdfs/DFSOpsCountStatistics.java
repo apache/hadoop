@@ -171,4 +171,11 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     return OpType.fromSymbol(key) != null;
   }
 
+  @Override
+  public void reset() {
+    for (AtomicLong count : opsCount.values()) {
+      count.set(0);
+    }
+  }
+
 }

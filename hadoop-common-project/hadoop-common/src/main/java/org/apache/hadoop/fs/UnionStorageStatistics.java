@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -77,6 +78,16 @@ public class UnionStorageStatistics extends StorageStatistics {
 
   public UnionStorageStatistics(String name, StorageStatistics[] stats) {
     super(name);
+
+    Preconditions.checkArgument(name != null,
+        "The name of union storage statistics can not be null!");
+    Preconditions.checkArgument(stats != null,
+        "The stats of union storage statistics can not be null!");
+    for (StorageStatistics stat : stats) {
+      Preconditions.checkArgument(stat != null,
+          "The stats of union storage statistics can not have null element!");
+    }
+
     this.stats = stats;
   }
 
@@ -87,8 +98,8 @@ public class UnionStorageStatistics extends StorageStatistics {
 
   @Override
   public Long getLong(String key) {
-    for (int i = 0; i < stats.length; i++) {
-      Long val = stats[i].getLong(key);
+    for (StorageStatistics stat : stats) {
+      Long val = stat.getLong(key);
       if (val != null) {
         return val;
       }
@@ -103,11 +114,18 @@ public class UnionStorageStatistics extends StorageStatistics {
    */
   @Override
   public boolean isTracked(String key) {
-    for (int i = 0; i < stats.length; i++) {
-      if (stats[i].isTracked(key)) {
+    for (StorageStatistics stat : stats) {
+      if (stat.isTracked(key)) {
         return true;
       }
     }
     return false;
+  }
+
+  @Override
+  public void reset() {
+    for (StorageStatistics stat : stats) {
+      stat.reset();
+    }
   }
 }
