@@ -1246,8 +1246,34 @@
             <configuration>
               <rules>
                 <DependencyConvergence>
-                  <uniqueVersions>true</uniqueVersions> 
+                  <uniqueVersions>true</uniqueVersions>
                 </DependencyConvergence>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>cglib:cglib:</exclude>
+                    <exclude>com.sun.jersey:*</exclude>
+                    <exclude>com.sun.jersey.contribs:*</exclude>
+                    <exclude>com.sun.jersey.jersey-test-framework:*</exclude>
+                    <exclude>com.google.inject:guice</exclude>
+                    <exclude>org.ow2.asm:asm</exclude>
+                  </excludes>
+                  <includes>
+                    <!-- for JDK 8 support -->
+                    <include>cglib:cglib:3.2.0</include>
+                    <include>com.google.inject:guice:4.0</include>
+                    <include>com.sun.jersey:jersey-core:1.19</include>
+                    <include>com.sun.jersey:jersey-servlet:1.19</include>
+                    <include>com.sun.jersey:jersey-json:1.19</include>
+                    <include>com.sun.jersey:jersey-server:1.19</include>
+                    <include>com.sun.jersey:jersey-client:1.19</include>
+                    <include>com.sun.jersey:jersey-grizzly2:1.19</include>
+                    <include>com.sun.jersey:jersey-grizzly2-servlet:1.19</include>
+                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-core:1.19</include>
+                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-grizzly2:1.19</include>
+                    <include>com.sun.jersey.contribs:jersey-guice:1.19</include>
+                    <include>org.ow2.asm:asm:5.0.0</include>
+                  </includes>
+                </bannedDependencies>
               </rules>
             </configuration>
             <goals>
