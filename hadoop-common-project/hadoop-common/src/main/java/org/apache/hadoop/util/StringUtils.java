@@ -22,7 +22,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -320,26 +319,6 @@ public class StringUtils {
     buf.append(String.format("%02d", seconds));
     buf.append("sec");
     return buf.toString();
-  }
-
-  /**
-   * @param dateFormat date format to use
-   * @param finishTime finish time
-   * @param startTime  start time
-   * @return formatted value.
-   * Formats time in ms and appends difference (finishTime - startTime)
-   * as returned by formatTimeDiff().
-   * If finish time is 0, empty string is returned, if start time is 0
-   * then difference is not appended to return value.
-   * @deprecated Use
-   * {@link StringUtils#getFormattedTimeWithDiff(FastDateFormat, long, long)} or
-   * {@link StringUtils#getFormattedTimeWithDiff(String, long, long)} instead.
-   */
-  @Deprecated
-  public static String getFormattedTimeWithDiff(DateFormat dateFormat,
-      long finishTime, long startTime){
-    String formattedFinishTime = dateFormat.format(finishTime);
-    return getFormattedTimeWithDiff(formattedFinishTime, finishTime, startTime);
   }
 
   /**
