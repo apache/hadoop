@@ -97,9 +97,10 @@ public class TestNameNodeResourceChecker {
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1).build();
 
-      NameNodeResourceChecker mockResourceChecker = Mockito.mock(NameNodeResourceChecker.class);
-      Mockito.when(mockResourceChecker.hasAvailableDiskSpace()).thenReturn(true);
-      cluster.getNameNode().getNamesystem().nnResourceChecker = mockResourceChecker;
+      MockNameNodeResourceChecker mockResourceChecker =
+          new MockNameNodeResourceChecker(conf);
+      cluster.getNameNode()
+          .getNamesystem().nnResourceChecker = mockResourceChecker;
 
       cluster.waitActive();
 
@@ -117,8 +118,8 @@ public class TestNameNodeResourceChecker {
           isNameNodeMonitorRunning);
       assertFalse("NN should not presently be in safe mode",
           cluster.getNameNode().isInSafeMode());
-      
-      Mockito.when(mockResourceChecker.hasAvailableDiskSpace()).thenReturn(false);
+
+      mockResourceChecker.setResourcesAvailable(false);
 
       // Make sure the NNRM thread has a chance to run.
       long startMillis = Time.now();
