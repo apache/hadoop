@@ -437,7 +437,44 @@ public class TestDistributedFileSystem {
       if (cluster != null) {cluster.shutdown();}
     }
   }
-  
+
+  /**
+   * This is to test that the {@link FileSystem#clearStatistics()} resets all
+   * the global storage statistics.
+   */
+  @Test
+  public void testClearStatistics() throws Exception {
+    final Configuration conf = getTestConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      FileSystem dfs = cluster.getFileSystem();
+
+      final Path dir = new Path("/testClearStatistics");
+      final long mkdirCount = getOpStatistics(OpType.MKDIRS);
+      long writeCount = DFSTestUtil.getStatistics(dfs).getWriteOps();
+      dfs.mkdirs(dir);
+      checkOpStatistics(OpType.MKDIRS, mkdirCount + 1);
+      assertEquals(++writeCount,
+          DFSTestUtil.getStatistics(dfs).getWriteOps());
+
+      final long createCount = getOpStatistics(OpType.CREATE);
+      FSDataOutputStream out = dfs.create(new Path(dir, "tmpFile"), (short)1);
+      out.write(40);
+      out.close();
+      checkOpStatistics(OpType.CREATE, createCount + 1);
+      assertEquals(++writeCount,
+          DFSTestUtil.getStatistics(dfs).getWriteOps());
+
+      FileSystem.clearStatistics();
+      checkOpStatistics(OpType.MKDIRS, 0);
+      checkOpStatistics(OpType.CREATE, 0);
+      checkStatistics(dfs, 0, 0, 0);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testStatistics() throws IOException {
     FileSystem.getStatistics(HdfsConstants.HDFS_URI_SCHEME,

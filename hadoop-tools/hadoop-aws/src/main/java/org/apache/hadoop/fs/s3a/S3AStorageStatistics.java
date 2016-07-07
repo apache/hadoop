@@ -107,4 +107,11 @@ public class S3AStorageStatistics extends StorageStatistics {
     return Statistic.fromSymbol(key) != null;
   }
 
+  @Override
+  public void reset() {
+    for (AtomicLong value : opsCount.values()) {
+      value.set(0);
+    }
+  }
+
 }

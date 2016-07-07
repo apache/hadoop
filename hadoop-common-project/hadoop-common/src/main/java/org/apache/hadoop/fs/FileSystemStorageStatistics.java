@@ -126,6 +126,7 @@ public class FileSystemStorageStatistics extends StorageStatistics {
    *
    * @return         True only if the statistic is being tracked.
    */
+  @Override
   public boolean isTracked(String key) {
     for (String k: KEYS) {
       if (k.equals(key)) {
@@ -133,5 +134,10 @@ public class FileSystemStorageStatistics extends StorageStatistics {
       }
     }
     return false;
+  }
+
+  @Override
+  public void reset() {
+    stats.reset();
   }
 }
