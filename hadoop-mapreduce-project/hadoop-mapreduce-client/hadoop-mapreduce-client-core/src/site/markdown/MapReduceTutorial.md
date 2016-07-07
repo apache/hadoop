@@ -1040,7 +1040,7 @@ public class WordCount2 {
     Configuration conf = new Configuration();
     GenericOptionsParser optionParser = new GenericOptionsParser(conf, args);
     String[] remainingArgs = optionParser.getRemainingArgs();
-    if (!(remainingArgs.length != 2 | | remainingArgs.length != 4)) {
+    if ((remainingArgs.length != 2) && (remainingArgs.length != 4)) {
       System.err.println("Usage: wordcount <in> <out> [-skip skipPatternFile]");
       System.exit(2);
     }
