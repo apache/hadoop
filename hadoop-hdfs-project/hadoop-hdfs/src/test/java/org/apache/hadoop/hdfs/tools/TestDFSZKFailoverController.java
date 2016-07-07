@@ -36,9 +36,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
-import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeResourceChecker;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
@@ -47,7 +47,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
-import org.mockito.Mockito;
 
 public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   private Configuration conf;
@@ -135,9 +134,9 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
    */
   @Test(timeout=60000)
   public void testThreadDumpCaptureAfterNNStateChange() throws Exception {
-    NameNodeResourceChecker mockResourceChecker = Mockito.mock(
-        NameNodeResourceChecker.class);
-    Mockito.doReturn(false).when(mockResourceChecker).hasAvailableDiskSpace();
+    MockNameNodeResourceChecker mockResourceChecker =
+        new MockNameNodeResourceChecker(conf);
+    mockResourceChecker.setResourcesAvailable(false);
     cluster.getNameNode(0).getNamesystem()
         .setNNResourceChecker(mockResourceChecker);
     waitForHAState(0, HAServiceState.STANDBY);
