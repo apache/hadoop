@@ -77,7 +77,7 @@ public class TestFileSystemStorageStatistics {
   }
 
   @Test
-  public void testgetLongStatistics() {
+  public void testGetLongStatistics() {
     Iterator<LongStatistic> iter = storageStatistics.getLongStatistics();
     while (iter.hasNext()) {
       final LongStatistic longStat = iter.next();

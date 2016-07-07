@@ -132,8 +132,7 @@ public abstract class StorageStatistics {
    * Get the value of a statistic.
    *
    * @return         null if the statistic is not being tracked or is not a
-   *                     long statistic.
-   *                 The value of the statistic, otherwise.
+   *                 long statistic. The value of the statistic, otherwise.
    */
   public abstract Long getLong(String key);
 
@@ -143,4 +142,9 @@ public abstract class StorageStatistics {
    * @return         True only if the statistic is being tracked.
    */
   public abstract boolean isTracked(String key);
+
+  /**
+   * Reset all the statistic data.
+   */
+  public abstract void reset();
 }

@@ -29,15 +29,22 @@ class EmptyStorageStatistics extends StorageStatistics {
     super(name);
   }
 
+  @Override
   public Iterator<LongStatistic> getLongStatistics() {
     return Collections.emptyIterator();
   }
 
+  @Override
   public Long getLong(String key) {
     return null;
   }
 
+  @Override
   public boolean isTracked(String key) {
     return false;
+  }
+
+  @Override
+  public void reset() {
   }
 }
