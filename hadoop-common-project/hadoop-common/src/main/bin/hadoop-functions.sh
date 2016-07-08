@@ -1974,6 +1974,68 @@ function hadoop_verify_user
   fi
 }
 
+## @description  Add custom (program)_(command)_OPTS to HADOOP_OPTS.
+## @description  Also handles the deprecated cases from pre-3.x.
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        program
+## @param        subcommand
+## @return       will exit on failure conditions
+function hadoop_subcommand_opts
+{
+  declare program=$1
+  declare command=$2
+  declare var
+  declare uvar
+  declare uprogram
+  declare ucommand
+
+  if [[ -z "${program}" || -z "${command}" ]]; then
+    return 1
+  fi
+
+  # bash 4 and up have built-in ways to upper and lower
+  # case the contents of vars.  This is faster than
+  # calling tr.
+
+  if [[ -z "${BASH_VERSINFO[0]}" ]] \
+     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
+    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
+  else
+    uprogram=${program^^}
+    ucommand=${command^^}
+  fi
+
+  # HDFS_namenode_OPTS
+  # HADOOP_distcp_OPTS
+  # MAPRED_distcp_OPTS
+  # YARN_sharedcachemanger_OPTS
+  # ...
+  var="${uprogram}_${command}_OPTS"
+
+  # Let's handle all of the deprecation cases early
+  # HADOOP_NAMENODE_OPTS -> HDFS_namenode_OPTS
+  # YARN_RESOURCEMANAGER_OPTS -> YARN_resourcemanager_OPTS
+
+  uvar="${uprogram}_${ucommand}_OPTS"
+  if [[ -n ${!uvar} ]]; then
+    hadoop_deprecate_envvar "${uvar}" "${var}"
+  fi
+
+  uvar="HADOOP_${ucommand}_OPTS"
+  if [[ -n ${!uvar} ]]; then
+    hadoop_deprecate_envvar "${uvar}" "${var}"
+  fi
+
+  if [[ -n ${!var} ]]; then
+    hadoop_debug "Appending ${!var} onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${!var}"
+    return 0
+  fi
+}
+
 ## @description  Perform the 'hadoop classpath', etc subcommand with the given
 ## @description  parameters
 ## @audience     private
