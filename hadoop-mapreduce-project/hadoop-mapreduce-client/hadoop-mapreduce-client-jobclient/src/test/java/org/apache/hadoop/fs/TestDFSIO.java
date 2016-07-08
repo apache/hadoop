@@ -423,7 +423,7 @@ public class TestDFSIO implements Tool {
     long tStart = System.currentTimeMillis();
     runIOTest(WriteMapper.class, writeDir);
     long execTime = System.currentTimeMillis() - tStart;
-    return execTime; 
+    return execTime;
   }
   
   private void runIOTest(
