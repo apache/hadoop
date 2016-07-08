@@ -74,6 +74,7 @@ public class RMServerUtils {
     ArrayList<RMNode> results = new ArrayList<RMNode>();
     if (acceptedStates.contains(NodeState.NEW) ||
         acceptedStates.contains(NodeState.RUNNING) ||
+        acceptedStates.contains(NodeState.DECOMMISSIONING) ||
         acceptedStates.contains(NodeState.UNHEALTHY)) {
       for (RMNode rmNode : context.getRMNodes().values()) {
         if (acceptedStates.contains(rmNode.getState())) {
