@@ -308,7 +308,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
         AppState.COMPLETED);
     EntityCacheItem cacheItem = new EntityCacheItem(
         EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
-        config, fs);
+        config);
     cacheItem.setAppLogs(appLogs);
     store.setCachedLogs(
         EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
@@ -360,7 +360,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
             AppState.COMPLETED);
     final EntityCacheItem cacheItem = new EntityCacheItem(
         EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
-        config, fs);
+        config);
 
     cacheItem.setAppLogs(appLogs);
     store.setCachedLogs(
@@ -396,7 +396,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
               AppState.COMPLETED);
       EntityCacheItem item = new EntityCacheItem(
           EntityGroupPlugInForTest.getStandardTimelineGroupId(appId),
-          config, fs);
+          config);
       item.setAppLogs(currAppLog);
       store.setCachedLogs(
           EntityGroupPlugInForTest.getStandardTimelineGroupId(appId),
