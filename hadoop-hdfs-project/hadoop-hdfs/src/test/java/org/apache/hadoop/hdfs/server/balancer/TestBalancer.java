@@ -1870,6 +1870,7 @@ public class TestBalancer {
       });
     } finally {
       // Reset UGI so that other tests are not affected.
+      UserGroupInformation.reset();
       UserGroupInformation.setConfiguration(new Configuration());
     }
   }
