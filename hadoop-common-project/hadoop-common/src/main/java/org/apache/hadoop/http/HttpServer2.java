@@ -136,6 +136,11 @@ public final class HttpServer2 implements FilterContainer {
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
   private final SignerSecretProvider secretProvider;
+  private XFrameOption xFrameOption;
+  private boolean xFrameOptionIsEnabled;
+  private static final String X_FRAME_VALUE = "xFrameOption";
+  private static final String X_FRAME_ENABLED = "X_FRAME_ENABLED";
+
 
   /**
    * Class to construct instances of HTTP server with specific options.
@@ -167,6 +172,9 @@ public final class HttpServer2 implements FilterContainer {
     private boolean disallowFallbackToRandomSignerSecretProvider;
     private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
     private String excludeCiphers;
+
+    private boolean xFrameEnabled;
+    private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
 
     public Builder setName(String name){
       this.name = name;
@@ -276,6 +284,30 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    /**
+     * Adds the ability to control X_FRAME_OPTIONS on HttpServer2.
+     * @param xFrameEnabled - True enables X_FRAME_OPTIONS false disables it.
+     * @return Builder.
+     */
+    public Builder configureXFrame(boolean xFrameEnabled) {
+      this.xFrameEnabled = xFrameEnabled;
+      return this;
+    }
+
+    /**
+     * Sets a valid X-Frame-option that can be used by HttpServer2.
+     * @param option - String DENY, SAMEORIGIN or ALLOW-FROM are the only valid
+     *               options. Any other value will throw IllegalArgument
+     *               Exception.
+     * @return  Builder.
+     */
+    public Builder setXFrameOption(String option) {
+      this.xFrameOption = XFrameOption.getEnum(option);
+      return this;
+    }
+
+
+
     public HttpServer2 build() throws IOException {
       Preconditions.checkNotNull(name, "name is not set");
       Preconditions.checkState(!endpoints.isEmpty(), "No endpoints specified");
@@ -342,6 +374,9 @@ public final class HttpServer2 implements FilterContainer {
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
+    this.xFrameOptionIsEnabled = b.xFrameEnabled;
+    this.xFrameOption = b.xFrameOption;
+
     try {
       this.secretProvider =
           constructSecretProvider(b, webAppContext.getServletContext());
@@ -398,7 +433,11 @@ public final class HttpServer2 implements FilterContainer {
 
     addDefaultApps(contexts, appDir, conf);
 
-    addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
+    Map<String, String> xFrameParams = new HashMap<>();
+    xFrameParams.put(X_FRAME_ENABLED,
+        String.valueOf(this.xFrameOptionIsEnabled));
+    xFrameParams.put(X_FRAME_VALUE,  this.xFrameOption.toString());
+    addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);
     final FilterInitializer[] initializers = getFilterInitializers(conf);
     if (initializers != null) {
       conf = new Configuration(conf);
@@ -1119,7 +1158,7 @@ public final class HttpServer2 implements FilterContainer {
    * sets X-FRAME-OPTIONS in the header to mitigate clickjacking attacks.
    */
   public static class QuotingInputFilter implements Filter {
-    private static final XFrameOption X_FRAME_OPTION = XFrameOption.SAMEORIGIN;
+
     private FilterConfig config;
 
     public static class RequestQuoter extends HttpServletRequestWrapper {
@@ -1239,7 +1278,11 @@ public final class HttpServer2 implements FilterContainer {
       } else if (mime.startsWith("application/xml")) {
         httpResponse.setContentType("text/xml; charset=utf-8");
       }
-      httpResponse.addHeader("X-FRAME-OPTIONS", X_FRAME_OPTION.toString());
+
+      if(Boolean.valueOf(this.config.getInitParameter(X_FRAME_ENABLED))) {
+        httpResponse.addHeader("X-FRAME-OPTIONS",
+            this.config.getInitParameter(X_FRAME_VALUE));
+      }
       chain.doFilter(quoted, httpResponse);
     }
 
@@ -1273,6 +1316,24 @@ public final class HttpServer2 implements FilterContainer {
     @Override
     public String toString() {
       return this.name;
+    }
+
+    /**
+     * We cannot use valueOf since the AllowFrom enum differs from its value
+     * Allow-From. This is a helper method that does exactly what valueof does,
+     * but allows us to handle the AllowFrom issue gracefully.
+     *
+     * @param value - String must be DENY, SAMEORIGIN or ALLOW-FROM.
+     * @return XFrameOption or throws IllegalException.
+     */
+    private static XFrameOption getEnum(String value) {
+      Preconditions.checkState(value != null && !value.isEmpty());
+      for (XFrameOption xoption : values()) {
+        if (value.equals(xoption.toString())) {
+          return xoption;
+        }
+      }
+      throw new IllegalArgumentException("Unexpected value in xFrameOption.");
     }
   }
 }
