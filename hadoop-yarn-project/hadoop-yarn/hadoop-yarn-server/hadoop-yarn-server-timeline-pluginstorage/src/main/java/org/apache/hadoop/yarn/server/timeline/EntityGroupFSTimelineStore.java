@@ -230,7 +230,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
 
     List<TimelineEntityGroupPlugin> pluginList
         = new LinkedList<TimelineEntityGroupPlugin>();
-    Exception caught = null;
     ClassLoader customClassLoader = null;
     if (pluginClasspath != null && pluginClasspath.length() > 0) {
       try {
@@ -775,8 +774,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
       summaryLogs.add(log);
     }
 
-    private void addDetailLog(String attemptDirName, String filename,
-        String owner) {
+    private synchronized void addDetailLog(String attemptDirName,
+        String filename, String owner) {
       for (LogInfo log : detailLogs) {
         if (log.getFilename().equals(filename)
             && log.getAttemptDirName().equals(attemptDirName)) {
@@ -784,6 +783,30 @@ public class EntityGroupFSTimelineStore extends CompositeService
         }
       }
       detailLogs.add(new EntityLogInfo(attemptDirName, filename, owner));
+    }
+
+    synchronized void loadDetailLog(TimelineDataManager tdm,
+        TimelineEntityGroupId groupId) throws IOException {
+      List<LogInfo> removeList = new ArrayList<>();
+      for (LogInfo log : detailLogs) {
+        LOG.debug("Try refresh logs for {}", log.getFilename());
+        // Only refresh the log that matches the cache id
+        if (log.matchesGroupId(groupId)) {
+          Path dirPath = getAppDirPath();
+          if (fs.exists(log.getPath(dirPath))) {
+            LOG.debug("Refresh logs for cache id {}", groupId);
+            log.parseForStore(tdm, dirPath, isDone(),
+                jsonFactory, objMapper, fs);
+          } else {
+            // The log may have been removed, remove the log
+            removeList.add(log);
+            LOG.info(
+                "File {} no longer exists, removing it from log list",
+                log.getPath(dirPath));
+          }
+        }
+      }
+      detailLogs.removeAll(removeList);
     }
 
     public synchronized void moveToDone() throws IOException {
@@ -974,7 +997,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
       cacheItem = this.cachedLogs.get(groupId);
       if (cacheItem == null) {
         LOG.debug("Set up new cache item for id {}", groupId);
-        cacheItem = new EntityCacheItem(groupId, getConfig(), fs);
+        cacheItem = new EntityCacheItem(groupId, getConfig());
         AppLogs appLogs = getAndSetAppLogs(groupId.getApplicationId());
         if (appLogs != null) {
           LOG.debug("Set applogs {} for group id {}", appLogs, groupId);
@@ -994,8 +1017,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
       // Add the reference by the store
       cacheItem.incrRefs();
       cacheItems.add(cacheItem);
-      store = cacheItem.refreshCache(aclManager, jsonFactory, objMapper,
-          metrics);
+      store = cacheItem.refreshCache(aclManager, metrics);
     } else {
       LOG.warn("AppLogs for group id {} is null", groupId);
     }
