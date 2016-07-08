@@ -151,7 +151,10 @@ public class ApplicationMasterService extends AbstractService implements
         SaslRpcServer.AuthMethod.TOKEN.toString());
     this.server = getServer(rpc, serverConf, masterServiceAddress,
         this.rmContext.getAMRMTokenSecretManager());
-    
+    // TODO more exceptions could be added later.
+    this.server.addTerseExceptions(
+        ApplicationMasterNotRegisteredException.class);
+
     // Enable service authorization?
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
@@ -411,11 +414,6 @@ public class ApplicationMasterService extends AbstractService implements
         String message =
             "AM is not registered for known application attempt: " + appAttemptId
                 + " or RM had restarted after AM registered . AM should re-register.";
-        LOG.info(message);
-        RMAuditLogger.logFailure(
-          this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
-            .getUser(), AuditConstants.AM_ALLOCATE, "",
-          "ApplicationMasterService", message, applicationId, appAttemptId);
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
