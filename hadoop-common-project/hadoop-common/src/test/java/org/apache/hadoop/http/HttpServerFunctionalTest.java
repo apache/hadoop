@@ -169,6 +169,25 @@ public class HttpServerFunctionalTest extends Assert {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).build();
   }
 
+  /**
+   * Create a test server with xFrame options enabled.
+   * @param xFrameEnabled - true to enable xFrameSupport
+   * @param xFrameOptionValue - Option Value
+   * @param conf the configuration to use for the server
+   * @return
+   * @throws IOException
+   */
+  public static HttpServer2 createServer(boolean xFrameEnabled,
+                                         String xFrameOptionValue,
+                                         Configuration conf)
+      throws IOException {
+    return localServerBuilder(TEST).setFindPort(true)
+        .configureXFrame(xFrameEnabled)
+        .setXFrameOption(xFrameOptionValue)
+        .setConf(conf)
+        .build();
+  }
+
   public static HttpServer2 createServer(String webapp, Configuration conf, AccessControlList adminsAcl)
       throws IOException {
     return localServerBuilder(webapp).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
