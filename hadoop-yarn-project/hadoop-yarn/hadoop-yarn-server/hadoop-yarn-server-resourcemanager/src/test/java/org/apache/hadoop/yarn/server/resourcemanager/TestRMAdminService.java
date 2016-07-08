@@ -232,6 +232,7 @@ public class TestRMAdminService {
 
     rm.adminService.refreshNodesResources(
         RefreshNodesResourcesRequest.newInstance());
+    rm.drainEvents();
 
     RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
     Resource resourceAfter = niAfter.getTotalCapability();
