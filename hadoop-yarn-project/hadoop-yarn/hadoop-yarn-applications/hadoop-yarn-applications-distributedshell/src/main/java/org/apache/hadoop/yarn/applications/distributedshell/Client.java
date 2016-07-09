@@ -127,7 +127,7 @@ public class Client {
   // Queue for App master
   private String amQueue = "";
   // Amt. of memory resource to request for to run the App Master
-  private long amMemory = 10;
+  private long amMemory = 100;
   // Amt. of virtual core resource to request for to run the App Master
   private int amVCores = 1;
 
@@ -344,7 +344,7 @@ public class Client {
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
-    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "10"));		
+    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
 
     if (amMemory < 0) {
