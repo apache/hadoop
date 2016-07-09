@@ -990,8 +990,25 @@ public class DataNode extends ReconfigurableBase
    * Report a bad block which is hosted on the local DN.
    */
   public void reportBadBlocks(ExtendedBlock block) throws IOException{
-    BPOfferService bpos = getBPOSForBlock(block);
     FsVolumeSpi volume = getFSDataset().getVolume(block);
+    if (volume == null) {
+      LOG.warn("Cannot find FsVolumeSpi to report bad block: " + block);
+      return;
+    }
+    reportBadBlocks(block, volume);
+  }
+
+  /**
+   * Report a bad block which is hosted on the local DN.
+   *
+   * @param block the bad block which is hosted on the local DN
+   * @param volume the volume that block is stored in and the volume
+   *        must not be null
+   * @throws IOException
+   */
+  public void reportBadBlocks(ExtendedBlock block, FsVolumeSpi volume)
+      throws IOException {
+    BPOfferService bpos = getBPOSForBlock(block);
     bpos.reportBadBlocks(
         block, volume.getStorageID(), volume.getStorageType());
   }
@@ -1860,6 +1877,10 @@ public class DataNode extends ReconfigurableBase
   private void reportBadBlock(final BPOfferService bpos,
       final ExtendedBlock block, final String msg) {
     FsVolumeSpi volume = getFSDataset().getVolume(block);
+    if (volume == null) {
+      LOG.warn("Cannot find FsVolumeSpi to report bad block: " + block);
+      return;
+    }
     bpos.reportBadBlocks(
         block, volume.getStorageID(), volume.getStorageType());
     LOG.warn(msg);
