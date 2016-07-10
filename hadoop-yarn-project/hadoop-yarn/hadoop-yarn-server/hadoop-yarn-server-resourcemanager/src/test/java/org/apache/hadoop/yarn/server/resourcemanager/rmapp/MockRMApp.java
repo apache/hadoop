@@ -301,4 +301,18 @@ public class MockRMApp implements RMApp {
   public CallerContext getCallerContext() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
+
+  public String getCollectorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void removeCollectorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void setCollectorAddr(String collectorAddr) {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }

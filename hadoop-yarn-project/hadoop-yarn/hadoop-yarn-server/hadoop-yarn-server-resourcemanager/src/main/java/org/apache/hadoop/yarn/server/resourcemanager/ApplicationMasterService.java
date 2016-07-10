@@ -311,6 +311,11 @@ public class ApplicationMasterService extends AbstractService implements
 
     RMApp rmApp =
         rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
+
+    // Remove collector address when app get finished.
+    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+      rmApp.removeCollectorAddr();
+    }
     // checking whether the app exits in RMStateStore at first not to throw
     // ApplicationDoesNotExistInCacheException before and after
     // RM work-preserving restart.
@@ -571,6 +576,12 @@ public class ApplicationMasterService extends AbstractService implements
       allocateResponse.setDecreasedContainers(allocation.getDecreasedContainers());
 
       allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
+
+      // add collector address for this application
+      if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+        allocateResponse.setCollectorAddr(
+            this.rmContext.getRMApps().get(applicationId).getCollectorAddr());
+      }
 
       // add preemption to the allocateResponse message (if any)
       allocateResponse

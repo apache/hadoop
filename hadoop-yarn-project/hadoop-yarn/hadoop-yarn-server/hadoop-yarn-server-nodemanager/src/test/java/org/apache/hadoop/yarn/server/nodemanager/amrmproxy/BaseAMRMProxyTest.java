@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
@@ -618,6 +619,11 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
+    public Map<ApplicationId, String> getRegisteredCollectors() {
+      return null;
+    }
+
+    @Override
     public ConcurrentMap<ContainerId, Container> getContainers() {
       return null;
     }
@@ -668,6 +674,11 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
+    public Configuration getConf() {
+      return null;
+    }
+
+    @Override
     public void setDecommissioned(boolean isDecommissioned) {
     }
 
@@ -697,6 +708,14 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public OpportunisticContainerAllocator getContainerAllocator() {
+      return null;
+    }
+
+    public void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher) {
+    }
+
+    @Override
+    public NMTimelinePublisher getNMTimelinePublisher() {
       return null;
     }
   }

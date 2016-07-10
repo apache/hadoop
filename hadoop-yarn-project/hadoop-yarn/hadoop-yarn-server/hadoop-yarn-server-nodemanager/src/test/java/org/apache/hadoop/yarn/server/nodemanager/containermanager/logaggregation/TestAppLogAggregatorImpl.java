@@ -393,7 +393,7 @@ public class TestAppLogAggregatorImpl {
         new NMTokenSecretManagerInNM(),
         null,
         new ApplicationACLsManager(conf),
-        new NMNullStateStoreService(), false);
+        new NMNullStateStoreService(), false, conf);
   }
 
   private static final class AppLogAggregatorInTest extends

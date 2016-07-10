@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.DataOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,8 +31,10 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,20 +44,24 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 
-import org.apache.commons.logging.Log;
+import com.google.common.base.Supplier;
 
 /** 
  * Utilities used in unit test.
@@ -148,6 +154,14 @@ public class UtilsForTests {
       buf.append(ch[c]);
     }
     return buf.toString();
+  }
+
+  public static String createConfigValue(int msgSize) {
+    StringBuilder sb = new StringBuilder(msgSize);
+    for (int i=0; i<msgSize; i++) {
+      sb.append('a');
+    }
+    return sb.toString();
   }
 
   public static String safeGetCanonicalPath(File f) {
@@ -605,6 +619,29 @@ public class UtilsForTests {
     RunningJob job = jobClient.submitJob(conf);
 
     return job;
+  }
+
+  public static void waitForAppFinished(RunningJob job,
+      MiniMRYarnCluster cluster) throws IOException {
+    ApplicationId appId = ApplicationId.newInstance(
+        Long.parseLong(job.getID().getJtIdentifier()), job.getID().getId());
+    ConcurrentMap<ApplicationId, RMApp> rmApps =
+        cluster.getResourceManager().getRMContext().getRMApps();
+    if (!rmApps.containsKey(appId)) {
+      throw new IOException("Job not found");
+    }
+    final RMApp rmApp = rmApps.get(appId);
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return RMAppImpl.isAppInFinalState(rmApp);
+        }
+      }, 1000, 1000 * 180);
+    } catch (TimeoutException | InterruptedException e1) {
+      throw new IOException("Yarn application with " + appId + " didn't finish "
+          + "did not reach finale State", e1);
+    }
   }
 
   // Run a job that will be succeeded and wait until it completes
