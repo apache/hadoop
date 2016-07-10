@@ -69,7 +69,7 @@ public class NodeHeartbeatResponsePBImpl extends
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
   private Resource resource = null;
-  Map<ApplicationId, String> appCollectorsMap = null;
+  private Map<ApplicationId, String> appCollectorsMap = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -148,8 +148,8 @@ public class NodeHeartbeatResponsePBImpl extends
     builder.clearAppCollectorsMap();
     for (Map.Entry<ApplicationId, String> entry : appCollectorsMap.entrySet()) {
       builder.addAppCollectorsMap(AppCollectorsMapProto.newBuilder()
-        .setAppId(convertToProtoFormat(entry.getKey()))
-        .setAppCollectorAddr(entry.getValue()));
+          .setAppId(convertToProtoFormat(entry.getKey()))
+          .setAppCollectorAddr(entry.getValue()));
     }
   }
 

@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.UserEntity;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
@@ -180,7 +179,7 @@ public class TimelineCollectorWebService {
   private static ApplicationId parseApplicationId(String appId) {
     try {
       if (appId != null) {
-        return ConverterUtils.toApplicationId(appId.trim());
+        return ApplicationId.fromString(appId.trim());
       } else {
         return null;
       }

@@ -304,7 +304,7 @@ extends AbstractService {
 
   /**
    * Get registered timeline client.
-   * @return
+   * @return the registered timeline client
    */
   public TimelineClient getRegisteredTimeineClient() {
     return client.getRegisteredTimeineClient();
@@ -325,7 +325,7 @@ extends AbstractService {
    * Wait for <code>check</code> to return true for each 1000 ms.
    * See also {@link #waitFor(com.google.common.base.Supplier, int)}
    * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
-   * @param check
+   * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
     waitFor(check, 1000);

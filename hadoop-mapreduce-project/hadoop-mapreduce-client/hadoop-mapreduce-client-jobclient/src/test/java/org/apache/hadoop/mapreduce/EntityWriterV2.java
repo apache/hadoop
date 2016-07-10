@@ -33,7 +33,8 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
  * to the timeline service.
  */
 abstract class EntityWriterV2
-    extends org.apache.hadoop.mapreduce.Mapper<IntWritable,IntWritable,Writable,Writable> {
+    extends org.apache.hadoop.mapreduce.Mapper
+        <IntWritable, IntWritable, Writable, Writable> {
   @Override
   public void map(IntWritable key, IntWritable val, Context context)
       throws IOException {

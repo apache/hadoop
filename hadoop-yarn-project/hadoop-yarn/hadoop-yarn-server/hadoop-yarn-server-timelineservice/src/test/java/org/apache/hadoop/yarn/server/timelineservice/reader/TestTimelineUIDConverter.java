@@ -60,7 +60,7 @@ public class TestTimelineUIDConverter {
         + "YARN_CONTAINER!container_1111111111_1111_01_000001", uid);
     assertEquals(
         context, TimelineUIDConverter.GENERIC_ENTITY_UID.decodeUID(uid));
-    context = new TimelineReaderContext("yarn_cluster",null, null, null,
+    context = new TimelineReaderContext("yarn_cluster", null, null, null,
         "application_1111111111_1111", "YARN_CONTAINER",
         "container_1111111111_1111_01_000001");
     uid = TimelineUIDConverter.GENERIC_ENTITY_UID.encodeUID(context);

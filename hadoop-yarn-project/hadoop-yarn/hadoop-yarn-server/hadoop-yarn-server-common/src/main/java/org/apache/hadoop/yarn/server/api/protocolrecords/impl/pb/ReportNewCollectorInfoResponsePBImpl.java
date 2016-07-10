@@ -29,18 +29,19 @@ import com.google.protobuf.TextFormat;
 public class ReportNewCollectorInfoResponsePBImpl extends
     ReportNewCollectorInfoResponse {
 
-  ReportNewCollectorInfoResponseProto proto =
+  private ReportNewCollectorInfoResponseProto proto =
       ReportNewCollectorInfoResponseProto.getDefaultInstance();
 
-  ReportNewCollectorInfoResponseProto.Builder builder = null;
+  private ReportNewCollectorInfoResponseProto.Builder builder = null;
 
-  boolean viaProto = false;
+  private boolean viaProto = false;
 
   public ReportNewCollectorInfoResponsePBImpl() {
     builder = ReportNewCollectorInfoResponseProto.newBuilder();
   }
 
-  public ReportNewCollectorInfoResponsePBImpl(ReportNewCollectorInfoResponseProto proto) {
+  public ReportNewCollectorInfoResponsePBImpl(
+      ReportNewCollectorInfoResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -58,8 +59,9 @@ public class ReportNewCollectorInfoResponsePBImpl extends
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }

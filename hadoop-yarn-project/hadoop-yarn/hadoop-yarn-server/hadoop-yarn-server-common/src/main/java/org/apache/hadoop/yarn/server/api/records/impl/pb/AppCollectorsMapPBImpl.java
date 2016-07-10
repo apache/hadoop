@@ -33,11 +33,11 @@ import com.google.protobuf.TextFormat;
 @Unstable
 public class AppCollectorsMapPBImpl extends AppCollectorsMap {
 
-  AppCollectorsMapProto proto =
+  private AppCollectorsMapProto proto =
       AppCollectorsMapProto.getDefaultInstance();
 
-  AppCollectorsMapProto.Builder builder = null;
-  boolean viaProto = false;
+  private AppCollectorsMapProto.Builder builder = null;
+  private boolean viaProto = false;
 
   private ApplicationId appId = null;
   private String collectorAddr = null;
@@ -52,7 +52,7 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
   }
 
   public AppCollectorsMapProto getProto() {
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -65,8 +65,9 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -98,12 +99,12 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
   }
 
   @Override
-  public void setApplicationId(ApplicationId appId) {
+  public void setApplicationId(ApplicationId id) {
     maybeInitBuilder();
-    if (appId == null) {
+    if (id == null) {
       builder.clearAppId();
     }
-    this.appId = appId;
+    this.appId = id;
   }
 
   @Override

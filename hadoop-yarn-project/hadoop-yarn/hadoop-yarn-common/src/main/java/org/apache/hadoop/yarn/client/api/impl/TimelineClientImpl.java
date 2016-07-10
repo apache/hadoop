@@ -391,8 +391,8 @@ public class TimelineClientImpl extends TimelineClient {
 
   @Override
   public void putEntities(
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity... entities)
-          throws IOException, YarnException {
+      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity...
+          entities) throws IOException, YarnException {
     if (!timelineServiceV2) {
       throw new YarnException("v.2 method is invoked on a v.1.x client");
     }
@@ -401,8 +401,8 @@ public class TimelineClientImpl extends TimelineClient {
 
   @Override
   public void putEntitiesAsync(
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity... entities)
-      throws IOException, YarnException {
+      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity...
+          entities) throws IOException, YarnException {
     if (!timelineServiceV2) {
       throw new YarnException("v.2 method is invoked on a v.1.x client");
     }
@@ -494,7 +494,8 @@ public class TimelineClientImpl extends TimelineClient {
       throw new IOException(re);
     }
     if (resp == null ||
-        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
+        resp.getStatusInfo().getStatusCode() !=
+            ClientResponse.Status.OK.getStatusCode()) {
       String msg = "Response from the timeline server is " +
           ((resp == null) ? "null":
           "not successful," + " HTTP error code: " + resp.getStatus()
@@ -530,7 +531,8 @@ public class TimelineClientImpl extends TimelineClient {
             // TODO we should add retry logic here if timelineServiceAddress is
             // not available immediately.
             return (Token) authUrl.getDelegationToken(
-                constructResURI(getConfig(), getTimelineServiceAddress(), false).toURL(),
+                constructResURI(getConfig(),
+                    getTimelineServiceAddress(), false).toURL(),
                 token, renewer, doAsUser);
           }
         };
@@ -911,17 +913,21 @@ public class TimelineClientImpl extends TimelineClient {
   }
 
   private final class EntitiesHolder extends FutureTask<Void> {
-    private final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities entities;
+    private final
+        org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities
+            entities;
     private final boolean isSync;
 
     EntitiesHolder(
-        final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities entities,
+        final
+            org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities
+                entities,
         final boolean isSync) {
       super(new Callable<Void>() {
         // publishEntities()
         public Void call() throws Exception {
           MultivaluedMap<String, String> params = new MultivaluedMapImpl();
-          params.add("appid", contextAppId.toString());
+          params.add("appid", getContextAppId().toString());
           params.add("async", Boolean.toString(!isSync));
           putObjects("entities", params, entities);
           return null;
@@ -935,7 +941,8 @@ public class TimelineClientImpl extends TimelineClient {
       return isSync;
     }
 
-    public org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities getEntities() {
+    public org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities
+        getEntities() {
       return entities;
     }
   }
@@ -947,7 +954,7 @@ public class TimelineClientImpl extends TimelineClient {
   private class TimelineEntityDispatcher {
     /**
      * Time period for which the timelineclient will wait for draining after
-     * stop
+     * stop.
      */
     private static final long DRAIN_TIME_PERIOD = 2000L;
 
@@ -1063,17 +1070,20 @@ public class TimelineClientImpl extends TimelineClient {
     }
 
     public void dispatchEntities(boolean sync,
-        org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity[] entitiesTobePublished)
-            throws YarnException {
+        org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity[]
+            entitiesTobePublished) throws YarnException {
       if (executor.isShutdown()) {
         throw new YarnException("Timeline client is in the process of stopping,"
             + " not accepting any more TimelineEntities");
       }
 
       // wrap all TimelineEntity into TimelineEntities object
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities entities =
-          new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities();
-      for (org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity : entitiesTobePublished) {
+      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities
+          entities =
+              new org.apache.hadoop.yarn.api.records.timelineservice.
+                  TimelineEntities();
+      for (org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+               entity : entitiesTobePublished) {
         entities.addEntity(entity);
       }
 

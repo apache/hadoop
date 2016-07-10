@@ -69,7 +69,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Tests the FlowRun and FlowActivity Tables
+ * Tests the FlowRun and FlowActivity Tables.
  */
 public class TestHBaseStorageFlowRun {
 
@@ -356,18 +356,20 @@ public class TestHBaseStorageFlowRun {
   /*
    * checks the batch limits on a scan
    */
-   void checkFlowRunTableBatchLimit(String cluster, String user,
+  void checkFlowRunTableBatchLimit(String cluster, String user,
       String flow, long runid, Configuration c1) throws IOException {
 
     Scan s = new Scan();
     s.addFamily(FlowRunColumnFamily.INFO.getBytes());
-    byte[] startRow =  new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
+    byte[] startRow =
+        new FlowRunRowKey(cluster, user, flow, runid).getRowKey();
     s.setStartRow(startRow);
     // set a batch limit
     int batchLimit = 2;
     s.setBatch(batchLimit);
     String clusterStop = cluster + "1";
-    byte[] stopRow = new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
+    byte[] stopRow =
+        new FlowRunRowKey(clusterStop, user, flow, runid).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn

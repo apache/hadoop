@@ -26,10 +26,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 public class GetTimelineCollectorContextResponsePBImpl extends
     GetTimelineCollectorContextResponse {
 
-  GetTimelineCollectorContextResponseProto proto =
+  private GetTimelineCollectorContextResponseProto proto =
       GetTimelineCollectorContextResponseProto.getDefaultInstance();
-  GetTimelineCollectorContextResponseProto.Builder builder = null;
-  boolean viaProto = false;
+  private GetTimelineCollectorContextResponseProto.Builder builder = null;
+  private boolean viaProto = false;
 
   public GetTimelineCollectorContextResponsePBImpl() {
     builder = GetTimelineCollectorContextResponseProto.newBuilder();
@@ -55,8 +55,9 @@ public class GetTimelineCollectorContextResponsePBImpl extends
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -69,8 +70,9 @@ public class GetTimelineCollectorContextResponsePBImpl extends
   }
 
   private void mergeLocalToProto() {
-    if (viaProto)
+    if (viaProto) {
       maybeInitBuilder();
+    }
     proto = builder.build();
     viaProto = true;
   }
@@ -84,7 +86,8 @@ public class GetTimelineCollectorContextResponsePBImpl extends
 
   @Override
   public String getUserId() {
-    GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
+    GetTimelineCollectorContextResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (!p.hasUserId()) {
       return null;
     }
@@ -103,7 +106,8 @@ public class GetTimelineCollectorContextResponsePBImpl extends
 
   @Override
   public String getFlowName() {
-    GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
+    GetTimelineCollectorContextResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (!p.hasFlowName()) {
       return null;
     }
@@ -122,7 +126,8 @@ public class GetTimelineCollectorContextResponsePBImpl extends
 
   @Override
   public String getFlowVersion() {
-    GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
+    GetTimelineCollectorContextResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (!p.hasFlowVersion()) {
       return null;
     }
@@ -141,7 +146,8 @@ public class GetTimelineCollectorContextResponsePBImpl extends
 
   @Override
   public long getFlowRunId() {
-    GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
+    GetTimelineCollectorContextResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
     return p.getFlowRunId();
   }
 

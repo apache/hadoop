@@ -153,7 +153,8 @@ public class TestDistributedShell {
         ProcfsBasedProcessTree.class.getName());
     conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
     conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+    conf.setBoolean(
+        YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
         true);
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
           true);
@@ -180,11 +181,13 @@ public class TestDistributedShell {
       // disable v1 timeline server since we no longer have a server here
       // enable aux-service based timeline aggregators
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
-      conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
-        + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
+      conf.set(YarnConfiguration.NM_AUX_SERVICES + "." +
+          TIMELINE_AUX_SERVICE_NAME + ".class",
+          PerNodeTimelineCollectorsAuxService.class.getName());
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
           FileSystemTimelineWriterImpl.class,
-          org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter.class);
+          org.apache.hadoop.yarn.server.timelineservice.storage.
+              TimelineWriter.class);
     } else {
       Assert.fail("Wrong timeline version number: " + timelineVersion);
     }
@@ -395,7 +398,8 @@ public class TestDistributedShell {
       }
 
       if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
-          && appReport.getFinalApplicationStatus() != FinalApplicationStatus.UNDEFINED) {
+          && appReport.getFinalApplicationStatus() !=
+              FinalApplicationStatus.UNDEFINED) {
         break;
       }
     }
@@ -431,7 +435,7 @@ public class TestDistributedShell {
   }
 
   private void checkTimelineV1(boolean haveDomain) throws Exception {
-        TimelineDomain domain = null;
+    TimelineDomain domain = null;
     if (haveDomain) {
       domain = yarnCluster.getApplicationHistoryServer()
           .getTimelineStore().getDomain("TEST_DOMAIN");
@@ -545,7 +549,7 @@ public class TestDistributedShell {
         if (numOfContainerFinishedOccurences > 0) {
           break;
         } else {
-          Thread.sleep(500l);
+          Thread.sleep(500L);
         }
       }
       Assert.assertEquals(
@@ -577,7 +581,7 @@ public class TestDistributedShell {
         if (numOfStringOccurences > 0) {
           break;
         } else {
-          Thread.sleep(500l);
+          Thread.sleep(500L);
         }
       }
       Assert.assertEquals(
@@ -631,8 +635,9 @@ public class TestDistributedShell {
     try {
       reader = new BufferedReader(new FileReader(entityFile));
       while ((strLine = reader.readLine()) != null) {
-        if (strLine.trim().contains(searchString))
+        if (strLine.trim().contains(searchString)) {
           actualCount++;
+        }
       }
     } finally {
       reader.close();

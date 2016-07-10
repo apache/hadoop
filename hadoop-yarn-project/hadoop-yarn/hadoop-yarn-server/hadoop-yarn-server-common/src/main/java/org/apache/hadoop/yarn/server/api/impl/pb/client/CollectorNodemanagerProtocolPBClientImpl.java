@@ -53,7 +53,7 @@ public class CollectorNodemanagerProtocolPBClientImpl implements
       + "rpc.nm-command-timeout";
 
   /**
-   * Maximum of 1 minute timeout for a Node to react to the command
+   * Maximum of 1 minute timeout for a Node to react to the command.
    */
   static final int DEFAULT_COMMAND_TIMEOUT = 60000;
 
@@ -63,7 +63,7 @@ public class CollectorNodemanagerProtocolPBClientImpl implements
   public CollectorNodemanagerProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, CollectorNodemanagerProtocolPB.class,
-      ProtobufRpcEngine.class);
+        ProtobufRpcEngine.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);

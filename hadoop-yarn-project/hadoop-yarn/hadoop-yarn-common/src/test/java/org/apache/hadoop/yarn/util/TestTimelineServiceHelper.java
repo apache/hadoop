@@ -37,18 +37,21 @@ public class TestTimelineServiceHelper {
 
     // Test empty hashmap be casted to a empty hashmap
     Map<String, String> emptyHashMap = new HashMap<String, String>();
-    Assert.assertEquals(TimelineServiceHelper.mapCastToHashMap(emptyHashMap).size(), 0);
+    Assert.assertEquals(
+        TimelineServiceHelper.mapCastToHashMap(emptyHashMap).size(), 0);
 
     // Test empty non-hashmap be casted to a empty hashmap
     Map<String, String> emptyTreeMap = new TreeMap<String, String>();
-    Assert.assertEquals(TimelineServiceHelper.mapCastToHashMap(emptyTreeMap).size(), 0);
+    Assert.assertEquals(
+        TimelineServiceHelper.mapCastToHashMap(emptyTreeMap).size(), 0);
 
     // Test non-empty hashmap be casted to hashmap correctly
     Map<String, String> firstHashMap = new HashMap<String, String>();
     String key = "KEY";
     String value = "VALUE";
     firstHashMap.put(key, value);
-    Assert.assertEquals(TimelineServiceHelper.mapCastToHashMap(firstHashMap), firstHashMap);
+    Assert.assertEquals(
+        TimelineServiceHelper.mapCastToHashMap(firstHashMap), firstHashMap);
 
     // Test non-empty non-hashmap is casted correctly.
     Map<String, String> firstTreeMap = new TreeMap<String, String>();
@@ -59,17 +62,21 @@ public class TestTimelineServiceHelper {
     Assert.assertEquals(alternateHashMap.get(key), value);
 
     // Test complicated hashmap be casted correctly
-    Map<String, Set<String>> complicatedHashMap = new HashMap<String, Set<String>>();
+    Map<String, Set<String>> complicatedHashMap =
+        new HashMap<String, Set<String>>();
     Set<String> hashSet = new HashSet<String>();
     hashSet.add(value);
     complicatedHashMap.put(key, hashSet);
-    Assert.assertEquals(TimelineServiceHelper.mapCastToHashMap(complicatedHashMap),
+    Assert.assertEquals(
+        TimelineServiceHelper.mapCastToHashMap(complicatedHashMap),
         complicatedHashMap);
 
     // Test complicated non-hashmap get casted correctly
-    Map<String, Set<String>> complicatedTreeMap = new TreeMap<String, Set<String>>();
+    Map<String, Set<String>> complicatedTreeMap =
+        new TreeMap<String, Set<String>>();
     complicatedTreeMap.put(key, hashSet);
-    Assert.assertEquals(TimelineServiceHelper.mapCastToHashMap(complicatedTreeMap).get(key),
+    Assert.assertEquals(
+        TimelineServiceHelper.mapCastToHashMap(complicatedTreeMap).get(key),
         hashSet);
   }
 

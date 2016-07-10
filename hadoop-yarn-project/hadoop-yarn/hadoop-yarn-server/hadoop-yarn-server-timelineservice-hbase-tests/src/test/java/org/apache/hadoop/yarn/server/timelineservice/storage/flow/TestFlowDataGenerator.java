@@ -31,12 +31,14 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Generates the data/entities for the FlowRun and FlowActivity Tables
+ * Generates the data/entities for the FlowRun and FlowActivity Tables.
  */
-class TestFlowDataGenerator {
+final class TestFlowDataGenerator {
+  private TestFlowDataGenerator() {
+  }
 
-  private static final String metric1 = "MAP_SLOT_MILLIS";
-  private static final String metric2 = "HDFS_BYTES_READ";
+  private static final String METRIC_1 = "MAP_SLOT_MILLIS";
+  private static final String METRIC_2 = "HDFS_BYTES_READ";
   public static final long END_TS_INCR = 10000L;
 
   static TimelineEntity getEntityMetricsApp1(long insertTs, Configuration c1) {
@@ -51,7 +53,7 @@ class TestFlowDataGenerator {
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
-    m1.setId(metric1);
+    m1.setId(METRIC_1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = insertTs;
 
@@ -64,10 +66,10 @@ class TestFlowDataGenerator {
     metrics.add(m1);
 
     TimelineMetric m2 = new TimelineMetric();
-    m2.setId(metric2);
+    m2.setId(METRIC_2);
     metricValues = new HashMap<Long, Number>();
     ts = System.currentTimeMillis();
-    for (int k=1; k< 100 ; k++) {
+    for (int k = 1; k < 100; k++) {
       metricValues.put(ts - k*100000L, 31L);
     }
 
@@ -81,7 +83,8 @@ class TestFlowDataGenerator {
   }
 
 
-  static TimelineEntity getEntityMetricsApp1Complete(long insertTs, Configuration c1) {
+  static TimelineEntity getEntityMetricsApp1Complete(long insertTs,
+      Configuration c1) {
     TimelineEntity entity = new TimelineEntity();
     String id = "flowRunMetrics_test";
     String type = TimelineEntityType.YARN_APPLICATION.toString();
@@ -93,7 +96,7 @@ class TestFlowDataGenerator {
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
-    m1.setId(metric1);
+    m1.setId(METRIC_1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = insertTs;
 
@@ -103,7 +106,7 @@ class TestFlowDataGenerator {
     metrics.add(m1);
 
     TimelineMetric m2 = new TimelineMetric();
-    m2.setId(metric2);
+    m2.setId(METRIC_2);
     metricValues = new HashMap<Long, Number>();
     ts = insertTs;
     metricValues.put(ts - 80000, 57L);
@@ -134,7 +137,7 @@ class TestFlowDataGenerator {
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
-    m1.setId(metric1);
+    m1.setId(METRIC_1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = insertTs;
     metricValues.put(ts - 100000, 2L);
@@ -144,7 +147,7 @@ class TestFlowDataGenerator {
     metrics.add(m1);
 
     TimelineMetric m2 = new TimelineMetric();
-    m2.setId(metric2);
+    m2.setId(METRIC_2);
     metricValues = new HashMap<Long, Number>();
     ts = insertTs;
     metricValues.put(ts - 100000, 31L);
@@ -177,7 +180,7 @@ class TestFlowDataGenerator {
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
-    m1.setId(metric1);
+    m1.setId(METRIC_1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = insertTs;
     metricValues.put(ts - 100000, 5L);
@@ -208,7 +211,7 @@ class TestFlowDataGenerator {
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
-    m1.setId(metric1);
+    m1.setId(METRIC_1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     long ts = System.currentTimeMillis();
     metricValues.put(ts - 120000, 100000000L);
@@ -232,7 +235,7 @@ class TestFlowDataGenerator {
 
     event = new TimelineEvent();
     event.setId(ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
-    long expTs = cTime + 21600000;// start time + 6hrs
+    long expTs = cTime + 21600000; // start time + 6hrs
     event.setTimestamp(expTs);
     event.addInfo(expKey, expVal);
     entity.addEvent(event);
@@ -250,7 +253,7 @@ class TestFlowDataGenerator {
     // add metrics
     Set<TimelineMetric> metrics = new HashSet<>();
     TimelineMetric m1 = new TimelineMetric();
-    m1.setId(metric1);
+    m1.setId(METRIC_1);
     Map<Long, Number> metricValues = new HashMap<Long, Number>();
     metricValues.put(ts - 120000, 100000000L);
     metricValues.put(ts - 100000, 200000000L);
@@ -262,7 +265,7 @@ class TestFlowDataGenerator {
     m1.setValues(metricValues);
     metrics.add(m1);
     TimelineMetric m2 = new TimelineMetric();
-    m2.setId(metric2);
+    m2.setId(METRIC_2);
     metricValues = new HashMap<Long, Number>();
     metricValues.put(ts - 900000, 31L);
     metricValues.put(ts - 30000, 57L);
@@ -281,7 +284,7 @@ class TestFlowDataGenerator {
 
     event = new TimelineEvent();
     event.setId(ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
-    long expTs = ts + 21600000;// start time + 6hrs
+    long expTs = ts + 21600000; // start time + 6hrs
     event.setTimestamp(expTs);
     event.addInfo(expKey, expVal);
     entity.addEvent(event);

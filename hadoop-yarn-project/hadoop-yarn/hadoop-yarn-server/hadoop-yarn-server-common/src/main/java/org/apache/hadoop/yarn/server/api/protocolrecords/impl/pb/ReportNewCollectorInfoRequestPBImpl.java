@@ -30,11 +30,11 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.AppCollectorsMapPBImpl;
 public class ReportNewCollectorInfoRequestPBImpl extends
     ReportNewCollectorInfoRequest {
 
-  ReportNewCollectorInfoRequestProto proto =
+  private ReportNewCollectorInfoRequestProto proto =
       ReportNewCollectorInfoRequestProto.getDefaultInstance();
 
-  ReportNewCollectorInfoRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private ReportNewCollectorInfoRequestProto.Builder builder = null;
+  private boolean viaProto = false;
 
   private List<AppCollectorsMap> collectorsList = null;
 
@@ -62,8 +62,9 @@ public class ReportNewCollectorInfoRequestPBImpl extends
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -71,8 +72,9 @@ public class ReportNewCollectorInfoRequestPBImpl extends
   }
 
   private void mergeLocalToProto() {
-    if (viaProto)
+    if (viaProto) {
       maybeInitBuilder();
+    }
     mergeLocalToBuilder();
     proto = builder.build();
     viaProto = true;
@@ -104,10 +106,10 @@ public class ReportNewCollectorInfoRequestPBImpl extends
 
   private void initLocalCollectorsList() {
     ReportNewCollectorInfoRequestProtoOrBuilder p = viaProto ? proto : builder;
-    List<AppCollectorsMapProto> collectorsList =
+    List<AppCollectorsMapProto> list =
         p.getAppCollectorsList();
     this.collectorsList = new ArrayList<AppCollectorsMap>();
-    for (AppCollectorsMapProto m : collectorsList) {
+    for (AppCollectorsMapProto m : list) {
       this.collectorsList.add(convertFromProtoFormat(m));
     }
   }

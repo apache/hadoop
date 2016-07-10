@@ -25,7 +25,8 @@ import org.apache.hadoop.yarn.proto.CollectorNodemanagerProtocol.CollectorNodema
 @Private
 @Unstable
 @ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocolPB",
+    protocolName =
+        "org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocolPB",
     protocolVersion = 1)
 public interface CollectorNodemanagerProtocolPB extends
     CollectorNodemanagerProtocolService.BlockingInterface {

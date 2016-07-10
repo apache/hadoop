@@ -100,7 +100,8 @@ public class TestTimelineServiceRecords {
     }
     entity.addMetric(metric2);
 
-    TimelineMetric metric3 = new TimelineMetric(TimelineMetric.Type.SINGLE_VALUE);
+    TimelineMetric metric3 =
+        new TimelineMetric(TimelineMetric.Type.SINGLE_VALUE);
     metric3.setId("test metric id 1");
     metric3.addValue(4L, (short) 4);
     Assert.assertEquals("metric3 should equal to metric2! ", metric3, metric2);
@@ -212,18 +213,22 @@ public class TestTimelineServiceRecords {
         ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1).toString());
 
-    cluster.addChild(TimelineEntityType.YARN_FLOW_RUN.toString(), flow1.getId());
+    cluster.addChild(TimelineEntityType.YARN_FLOW_RUN.toString(),
+        flow1.getId());
     flow1
         .setParent(TimelineEntityType.YARN_CLUSTER.toString(), cluster.getId());
     flow1.addChild(TimelineEntityType.YARN_FLOW_RUN.toString(), flow2.getId());
     flow2.setParent(TimelineEntityType.YARN_FLOW_RUN.toString(), flow1.getId());
-    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app1.getId());
-    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(), app2.getId());
+    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(),
+        app1.getId());
+    flow2.addChild(TimelineEntityType.YARN_APPLICATION.toString(),
+        app2.getId());
     app1.setParent(TimelineEntityType.YARN_FLOW_RUN.toString(), flow2.getId());
     app1.addChild(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString(),
         appAttempt.getId());
     appAttempt
-        .setParent(TimelineEntityType.YARN_APPLICATION.toString(), app1.getId());
+        .setParent(TimelineEntityType.YARN_APPLICATION.toString(),
+            app1.getId());
     app2.setParent(TimelineEntityType.YARN_FLOW_RUN.toString(), flow2.getId());
     appAttempt.addChild(TimelineEntityType.YARN_CONTAINER.toString(),
         container.getId());

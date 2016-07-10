@@ -33,12 +33,12 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.timelineservice.ContainerEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -55,6 +55,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl.ContainerMetric;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Metrics publisher service that publishes data to the timeline service v.2. It
@@ -73,7 +75,7 @@ public class NMTimelinePublisher extends CompositeService {
 
   private String httpAddress;
 
-  protected final Map<ApplicationId, TimelineClient> appToClientMap;
+  private final Map<ApplicationId, TimelineClient> appToClientMap;
 
   public NMTimelinePublisher(Context context) {
     super(NMTimelinePublisher.class.getName());
@@ -97,6 +99,11 @@ public class NMTimelinePublisher extends CompositeService {
     // hence NMMetricsPublisher is added subservice of containerManagerImpl
     this.nodeId = context.getNodeId();
     this.httpAddress = nodeId.getHost() + ":" + context.getHttpPort();
+  }
+
+  @VisibleForTesting
+  Map<ApplicationId, TimelineClient> getAppToClientMap() {
+    return appToClientMap;
   }
 
   protected void handleNMTimelineEvent(NMTimelineEvent event) {

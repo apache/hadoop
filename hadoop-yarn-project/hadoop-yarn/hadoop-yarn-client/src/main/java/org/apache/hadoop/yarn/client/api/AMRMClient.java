@@ -463,15 +463,15 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
 
   /**
    * Register TimelineClient to AMRMClient.
-   * @param timelineClient
+   * @param client the timeline client to register
    */
-  public void registerTimelineClient(TimelineClient timelineClient) {
-    this.timelineClient = timelineClient;
+  public void registerTimelineClient(TimelineClient client) {
+    this.timelineClient = client;
   }
 
   /**
    * Get registered timeline client.
-   * @return
+   * @return the registered timeline client
    */
   public TimelineClient getRegisteredTimeineClient() {
     return this.timelineClient;
@@ -481,7 +481,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * Wait for <code>check</code> to return true for each 1000 ms.
    * See also {@link #waitFor(com.google.common.base.Supplier, int)}
    * and {@link #waitFor(com.google.common.base.Supplier, int, int)}
-   * @param check
+   * @param check the condition for which it should wait
    */
   public void waitFor(Supplier<Boolean> check) throws InterruptedException {
     waitFor(check, 1000);

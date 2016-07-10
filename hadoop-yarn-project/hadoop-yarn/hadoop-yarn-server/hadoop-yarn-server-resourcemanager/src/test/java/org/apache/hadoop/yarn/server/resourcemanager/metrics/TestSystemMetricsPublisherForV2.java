@@ -76,9 +76,9 @@ import org.junit.Test;
 public class TestSystemMetricsPublisherForV2 {
 
   /**
-   * is the folder where the FileSystemTimelineWriterImpl writes the entities
+   * The folder where the FileSystemTimelineWriterImpl writes the entities.
    */
-  protected static File testRootDir = new File("target",
+  private static File testRootDir = new File("target",
       TestSystemMetricsPublisherForV2.class.getName() + "-localDir")
       .getAbsoluteFile();
 
@@ -151,7 +151,8 @@ public class TestSystemMetricsPublisherForV2 {
     } catch (IOException e) {
       e.printStackTrace();
       Assert
-          .fail("Exception while setting the TIMELINE_SERVICE_STORAGE_DIR_ROOT ");
+          .fail("Exception while setting the " +
+              "TIMELINE_SERVICE_STORAGE_DIR_ROOT ");
     }
     return conf;
   }
@@ -159,30 +160,30 @@ public class TestSystemMetricsPublisherForV2 {
   @Test
   public void testSystemMetricPublisherInitialization() {
     @SuppressWarnings("resource")
-    TimelineServiceV2Publisher metricsPublisher =
+    TimelineServiceV2Publisher publisher =
         new TimelineServiceV2Publisher(mock(RMContext.class));
     try {
       Configuration conf = getTimelineV2Conf();
       conf.setBoolean(YarnConfiguration.RM_PUBLISH_CONTAINER_EVENTS_ENABLED,
           YarnConfiguration.DEFAULT_RM_PUBLISH_CONTAINER_EVENTS_ENABLED);
-      metricsPublisher.init(conf);
+      publisher.init(conf);
       assertFalse(
           "Default configuration should not publish container events from RM",
-          metricsPublisher.isPublishContainerEvents());
+          publisher.isPublishContainerEvents());
 
-      metricsPublisher.stop();
+      publisher.stop();
 
-      metricsPublisher = new TimelineServiceV2Publisher(mock(RMContext.class));
+      publisher = new TimelineServiceV2Publisher(mock(RMContext.class));
       conf = getTimelineV2Conf();
-      metricsPublisher.init(conf);
+      publisher.init(conf);
       assertTrue("Expected to have registered event handlers and set ready to "
           + "publish events after init",
-          metricsPublisher.isPublishContainerEvents());
-      metricsPublisher.start();
+          publisher.isPublishContainerEvents());
+      publisher.start();
       assertTrue("Expected to publish container events from RM",
-          metricsPublisher.isPublishContainerEvents());
+          publisher.isPublishContainerEvents());
     } finally {
-      metricsPublisher.stop();
+      publisher.stop();
     }
   }
 
@@ -243,7 +244,7 @@ public class TestSystemMetricsPublisherForV2 {
             + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
     File appFile = new File(outputDirApp, timelineServiceFileName);
     Assert.assertTrue(appFile.exists());
-    verifyEntity(appFile,2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE);
+    verifyEntity(appFile, 2, AppAttemptMetricsConstants.REGISTERED_EVENT_TYPE);
   }
 
   @Test(timeout = 10000)

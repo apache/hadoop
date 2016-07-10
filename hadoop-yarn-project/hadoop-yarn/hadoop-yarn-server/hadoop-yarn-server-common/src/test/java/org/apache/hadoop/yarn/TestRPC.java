@@ -77,7 +77,8 @@ public class TestRPC {
 
   private static final String EXCEPTION_MSG = "test error";
   private static final String EXCEPTION_CAUSE = "exception cause";
-  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private static final RecordFactory RECORD_FACTORY =
+      RecordFactoryProvider.getRecordFactory(null);
 
   public static final String ILLEGAL_NUMBER_MESSAGE =
       "collectors' number in ReportNewCollectorInfoRequest is not ONE.";
@@ -101,7 +102,8 @@ public class TestRPC {
 
     // Any unrelated protocol would do
     ApplicationClientProtocol proxy = (ApplicationClientProtocol) rpc.getProxy(
-        ApplicationClientProtocol.class, NetUtils.getConnectAddress(server), conf);
+        ApplicationClientProtocol.class, NetUtils.getConnectAddress(server),
+        conf);
 
     try {
       proxy.getNewApplication(Records
@@ -111,7 +113,8 @@ public class TestRPC {
       Assert.assertTrue(e.getMessage().matches(
           "Unknown method getNewApplication called on.*"
               + "org.apache.hadoop.yarn.proto.ApplicationClientProtocol"
-              + "\\$ApplicationClientProtocolService\\$BlockingInterface protocol."));
+              + "\\$ApplicationClientProtocolService\\$BlockingInterface "
+              + "protocol."));
     } catch (Exception e) {
       e.printStackTrace();
     } finally {
@@ -132,8 +135,10 @@ public class TestRPC {
     server.start();
 
     // Test unrelated protocol wouldn't get response
-    ApplicationClientProtocol unknownProxy = (ApplicationClientProtocol) rpc.getProxy(
-        ApplicationClientProtocol.class, NetUtils.getConnectAddress(server), conf);
+    ApplicationClientProtocol unknownProxy =
+        (ApplicationClientProtocol) rpc.getProxy(
+        ApplicationClientProtocol.class, NetUtils.getConnectAddress(server),
+        conf);
 
     try {
       unknownProxy.getNewApplication(Records
@@ -143,14 +148,17 @@ public class TestRPC {
       Assert.assertTrue(e.getMessage().matches(
           "Unknown method getNewApplication called on.*"
               + "org.apache.hadoop.yarn.proto.ApplicationClientProtocol"
-              + "\\$ApplicationClientProtocolService\\$BlockingInterface protocol."));
+              + "\\$ApplicationClientProtocolService\\$BlockingInterface "
+              + "protocol."));
     } catch (Exception e) {
       e.printStackTrace();
     }
 
     // Test CollectorNodemanagerProtocol get proper response
-    CollectorNodemanagerProtocol proxy = (CollectorNodemanagerProtocol)rpc.getProxy(
-        CollectorNodemanagerProtocol.class, NetUtils.getConnectAddress(server), conf);
+    CollectorNodemanagerProtocol proxy =
+        (CollectorNodemanagerProtocol)rpc.getProxy(
+        CollectorNodemanagerProtocol.class, NetUtils.getConnectAddress(server),
+        conf);
     // Verify request with DEFAULT_APP_ID and DEFAULT_COLLECTOR_ADDR get
     // normally response.
     try {
@@ -196,7 +204,8 @@ public class TestRPC {
       Assert.fail("RPC call failured is expected here.");
     } catch (YarnException | IOException e) {
       Assert.assertTrue(e instanceof  YarnException);
-      Assert.assertTrue(e.getMessage().contains("The application is not found."));
+      Assert.assertTrue(e.getMessage().contains(
+          "The application is not found."));
     }
     server.stop();
   }
@@ -215,12 +224,13 @@ public class TestRPC {
     Server server = rpc.getServer(ContainerManagementProtocol.class,
             new DummyContainerManager(), addr, conf, null, 1);
     server.start();
-    RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class,
+        ProtobufRpcEngine.class);
     ContainerManagementProtocol proxy = (ContainerManagementProtocol)
         rpc.getProxy(ContainerManagementProtocol.class,
             NetUtils.getConnectAddress(server), conf);
     ContainerLaunchContext containerLaunchContext =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+        RECORD_FACTORY.newRecordInstance(ContainerLaunchContext.class);
 
     ApplicationId applicationId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId applicationAttemptId =
@@ -257,10 +267,10 @@ public class TestRPC {
     boolean exception = false;
     try {
       StopContainersRequest stopRequest =
-          recordFactory.newRecordInstance(StopContainersRequest.class);
+          RECORD_FACTORY.newRecordInstance(StopContainersRequest.class);
       stopRequest.setContainerIds(containerIds);
       proxy.stopContainers(stopRequest);
-      } catch (YarnException e) {
+    } catch (YarnException e) {
       exception = true;
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_MSG));
       Assert.assertTrue(e.getMessage().contains(EXCEPTION_CAUSE));
@@ -284,7 +294,7 @@ public class TestRPC {
         GetContainerStatusesRequest request)
     throws YarnException {
       GetContainerStatusesResponse response =
-          recordFactory.newRecordInstance(GetContainerStatusesResponse.class);
+          RECORD_FACTORY.newRecordInstance(GetContainerStatusesResponse.class);
       response.setContainerStatuses(statuses);
       return response;
     }
@@ -293,8 +303,9 @@ public class TestRPC {
     public StartContainersResponse startContainers(
         StartContainersRequest requests) throws YarnException {
       StartContainersResponse response =
-          recordFactory.newRecordInstance(StartContainersResponse.class);
-      for (StartContainerRequest request : requests.getStartContainerRequests()) {
+          RECORD_FACTORY.newRecordInstance(StartContainersResponse.class);
+      for (StartContainerRequest request :
+          requests.getStartContainerRequests()) {
         Token containerToken = request.getContainerToken();
         ContainerTokenIdentifier tokenId = null;
 
@@ -304,7 +315,7 @@ public class TestRPC {
           throw RPCUtil.getRemoteException(e);
         }
         ContainerStatus status =
-            recordFactory.newRecordInstance(ContainerStatus.class);
+            RECORD_FACTORY.newRecordInstance(ContainerStatus.class);
         status.setState(ContainerState.RUNNING);
         status.setContainerId(tokenId.getContainerID());
         status.setExitStatus(0);
@@ -324,7 +335,8 @@ public class TestRPC {
 
     @Override
     public IncreaseContainersResourceResponse increaseContainersResource(
-        IncreaseContainersResourceRequest request) throws YarnException, IOException {
+        IncreaseContainersResourceRequest request)
+            throws YarnException, IOException {
       return null;
     }
 
@@ -383,7 +395,8 @@ public class TestRPC {
       }
 
       ReportNewCollectorInfoResponse response =
-          recordFactory.newRecordInstance(ReportNewCollectorInfoResponse.class);
+          RECORD_FACTORY.newRecordInstance(
+              ReportNewCollectorInfoResponse.class);
       return response;
     }
 
@@ -392,8 +405,8 @@ public class TestRPC {
         GetTimelineCollectorContextRequest request)
         throws  YarnException, IOException {
       if (request.getApplicationId().getId() == 1) {
-         return GetTimelineCollectorContextResponse.newInstance(
-                "test_user_id", "test_flow_name", "test_flow_version", 12345678L);
+        return GetTimelineCollectorContextResponse.newInstance(
+            "test_user_id", "test_flow_name", "test_flow_version", 12345678L);
       } else {
         throw new YarnException("The application is not found.");
       }

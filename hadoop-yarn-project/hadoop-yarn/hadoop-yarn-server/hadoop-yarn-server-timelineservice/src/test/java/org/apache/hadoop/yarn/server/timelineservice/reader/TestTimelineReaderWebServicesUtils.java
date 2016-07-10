@@ -779,8 +779,8 @@ public class TestTimelineReaderWebServicesUtils {
                 ),
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type4", Sets.newHashSet((Object)"entity43","entity44",
-                            "entity47","entity49")),
+                        "type4", Sets.newHashSet((Object)"entity43", "entity44",
+                            "entity47", "entity49")),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
                         "type7", Sets.newHashSet((Object)"entity71"))
                 )

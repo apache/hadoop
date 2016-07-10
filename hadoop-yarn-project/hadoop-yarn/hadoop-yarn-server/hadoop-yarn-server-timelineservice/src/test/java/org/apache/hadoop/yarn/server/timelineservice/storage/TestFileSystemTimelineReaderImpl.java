@@ -58,9 +58,9 @@ import org.junit.Test;
 
 public class TestFileSystemTimelineReaderImpl {
 
-  private static final String rootDir =
+  private static final String ROOT_DIR =
       FileSystemTimelineReaderImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
-  FileSystemTimelineReaderImpl reader;
+  private FileSystemTimelineReaderImpl reader;
 
   @BeforeClass
   public static void setup() throws Exception {
@@ -68,22 +68,22 @@ public class TestFileSystemTimelineReaderImpl {
     // Create app flow mapping file.
     CSVFormat format =
         CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
-    String appFlowMappingFile = rootDir + "/entities/cluster1/" +
+    String appFlowMappingFile = ROOT_DIR + "/entities/cluster1/" +
         FileSystemTimelineReaderImpl.APP_FLOW_MAPPING_FILE;
     try (PrintWriter out =
         new PrintWriter(new BufferedWriter(
             new FileWriter(appFlowMappingFile, true)));
         CSVPrinter printer = new CSVPrinter(out, format)){
       printer.printRecord("app1", "user1", "flow1", 1);
-      printer.printRecord("app2","user1","flow1,flow",1);
+      printer.printRecord("app2", "user1", "flow1,flow", 1);
       printer.close();
     }
-    (new File(rootDir)).deleteOnExit();
+    (new File(ROOT_DIR)).deleteOnExit();
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    FileUtils.deleteDirectory(new File(rootDir));
+    FileUtils.deleteDirectory(new File(ROOT_DIR));
   }
 
   @Before
@@ -91,7 +91,7 @@ public class TestFileSystemTimelineReaderImpl {
     reader = new FileSystemTimelineReaderImpl();
     Configuration conf = new YarnConfiguration();
     conf.set(FileSystemTimelineReaderImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
-        rootDir);
+        ROOT_DIR);
     reader.init(conf);
   }
 
@@ -112,7 +112,7 @@ public class TestFileSystemTimelineReaderImpl {
   }
 
   private static void loadEntityData() throws Exception {
-    File appDir = new File(rootDir +
+    File appDir = new File(ROOT_DIR +
         "/entities/cluster1/user1/flow1/1/app1/app/");
     TimelineEntity entity11 = new TimelineEntity();
     entity11.setId("id_1");
@@ -138,7 +138,7 @@ public class TestFileSystemTimelineReaderImpl {
     metric2.addValue(1425016502016L, 34);
     metrics.add(metric2);
     entity11.setMetrics(metrics);
-    Map<String,String> configs = new HashMap<String, String>();
+    Map<String, String> configs = new HashMap<String, String>();
     configs.put("config_1", "127");
     entity11.setConfigs(configs);
     entity11.addRelatesToEntity("flow", "flow1");
@@ -179,7 +179,7 @@ public class TestFileSystemTimelineReaderImpl {
     Map<String, Object> info2 = new HashMap<String, Object>();
     info1.put("info2", 4);
     entity2.addInfo(info2);
-    Map<String,String> configs2 = new HashMap<String, String>();
+    Map<String, String> configs2 = new HashMap<String, String>();
     configs2.put("config_1", "129");
     configs2.put("config_3", "def");
     entity2.setConfigs(configs2);
@@ -216,7 +216,7 @@ public class TestFileSystemTimelineReaderImpl {
     info3.put("info2", 3.5);
     info3.put("info4", 20);
     entity3.addInfo(info3);
-    Map<String,String> configs3 = new HashMap<String, String>();
+    Map<String, String> configs3 = new HashMap<String, String>();
     configs3.put("config_1", "123");
     configs3.put("config_3", "abc");
     entity3.setConfigs(configs3);
@@ -254,7 +254,7 @@ public class TestFileSystemTimelineReaderImpl {
     entity4.addEvent(event44);
     writeEntityFile(entity4, appDir);
 
-    File appDir2 = new File(rootDir +
+    File appDir2 = new File(ROOT_DIR +
             "/entities/cluster1/user1/flow1,flow/1/app2/app/");
     TimelineEntity entity5 = new TimelineEntity();
     entity5.setId("id_5");
@@ -298,7 +298,7 @@ public class TestFileSystemTimelineReaderImpl {
     Assert.assertEquals(0, result.getMetrics().size());
   }
 
-  /** This test checks whether we can handle commas in app flow mapping csv */
+  /** This test checks whether we can handle commas in app flow mapping csv. */
   @Test
   public void testAppFlowMappingCsv() throws Exception {
     // Test getting an entity by cluster and app where flow entry
@@ -317,7 +317,7 @@ public class TestFileSystemTimelineReaderImpl {
   public void testGetEntityCustomFields() throws Exception {
     // Specified fields in addition to default view will be returned.
     TimelineEntity result = reader.getEntity(
-        new TimelineReaderContext("cluster1","user1", "flow1", 1L, "app1",
+        new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", "id_1"),
         new TimelineDataToRetrieve(null, null,
         EnumSet.of(Field.INFO, Field.CONFIGS, Field.METRICS), null));
@@ -336,7 +336,7 @@ public class TestFileSystemTimelineReaderImpl {
   public void testGetEntityAllFields() throws Exception {
     // All fields of TimelineEntity will be returned.
     TimelineEntity result = reader.getEntity(
-        new TimelineReaderContext("cluster1","user1", "flow1", 1L, "app1",
+        new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", "id_1"),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null));
     Assert.assertEquals(
@@ -381,9 +381,9 @@ public class TestFileSystemTimelineReaderImpl {
         "app", null),
         new TimelineEntityFilters(3L, null, null, null, null, null, null,
         null, null), new TimelineDataToRetrieve());
-     // Even though 2 entities out of 4 have same created time, one entity
-     // is left out due to limit
-     Assert.assertEquals(3, result.size());
+    // Even though 2 entities out of 4 have same created time, one entity
+    // is left out due to limit
+    Assert.assertEquals(3, result.size());
   }
 
   @Test
@@ -474,9 +474,9 @@ public class TestFileSystemTimelineReaderImpl {
     // Get entities based on event filters.
     TimelineFilterList eventFilters = new TimelineFilterList();
     eventFilters.addFilter(
-        new TimelineExistsFilter(TimelineCompareOp.EQUAL,"event_2"));
+        new TimelineExistsFilter(TimelineCompareOp.EQUAL, "event_2"));
     eventFilters.addFilter(
-        new TimelineExistsFilter(TimelineCompareOp.EQUAL,"event_4"));
+        new TimelineExistsFilter(TimelineCompareOp.EQUAL, "event_4"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
         "app", null),
@@ -642,7 +642,7 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineEntityFilters(null, null, null, null, null, null, null,
         metricFilterList2, null),
         new TimelineDataToRetrieve());
-   Assert.assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1")) {
         Assert.fail("Incorrect filtering based on metric filters");
@@ -757,7 +757,7 @@ public class TestFileSystemTimelineReaderImpl {
         Assert.fail("Incorrect filtering based on info filters");
       }
     }
-   }
+  }
 
   @Test
   public void testGetEntitiesByRelations() throws Exception {

@@ -500,7 +500,8 @@ public class YarnConfiguration extends Configuration {
 
   /**
    *  The setting that controls whether yarn system metrics is published on the
-   *  timeline server or not by RM and NM. This configuration setting is for ATS V2
+   *  timeline server or not by RM and NM. This configuration setting is for
+   *  ATS v2.
    */
   public static final String SYSTEM_METRICS_PUBLISHER_ENABLED = YARN_PREFIX
       + "system-metrics-publisher.enabled";
@@ -840,7 +841,7 @@ public class YarnConfiguration extends Configuration {
   
   /** Number of threads container manager uses.*/
   public static final String NM_COLLECTOR_SERVICE_THREAD_COUNT =
-    NM_PREFIX + "collector-service.thread-count";
+      NM_PREFIX + "collector-service.thread-count";
   public static final int DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT = 5;
 
   /** Number of threads used in cleanup.*/
@@ -872,7 +873,7 @@ public class YarnConfiguration extends Configuration {
   
   /** Address where the collector service IPC is.*/
   public static final String NM_COLLECTOR_SERVICE_ADDRESS =
-    NM_PREFIX + "collector-service.address";
+      NM_PREFIX + "collector-service.address";
   public static final int DEFAULT_NM_COLLECTOR_SERVICE_PORT = 8048;
   public static final String DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS =
       "0.0.0.0:" + DEFAULT_NM_LOCALIZER_PORT;

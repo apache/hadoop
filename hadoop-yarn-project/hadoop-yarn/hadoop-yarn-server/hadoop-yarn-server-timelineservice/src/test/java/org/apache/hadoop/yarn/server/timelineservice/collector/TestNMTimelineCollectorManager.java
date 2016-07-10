@@ -88,9 +88,9 @@ public class TestNMTimelineCollectorManager {
 
   @Test(timeout=60000)
   public void testMultithreadedAdd() throws Exception {
-    final int NUM_APPS = 5;
+    final int numApps = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
-    for (int i = 0; i < NUM_APPS; i++) {
+    for (int i = 0; i < numApps; i++) {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
@@ -101,7 +101,7 @@ public class TestNMTimelineCollectorManager {
       };
       tasks.add(task);
     }
-    ExecutorService executor = Executors.newFixedThreadPool(NUM_APPS);
+    ExecutorService executor = Executors.newFixedThreadPool(numApps);
     try {
       List<Future<Boolean>> futures = executor.invokeAll(tasks);
       for (Future<Boolean> future: futures) {
@@ -111,7 +111,7 @@ public class TestNMTimelineCollectorManager {
       executor.shutdownNow();
     }
     // check the keys
-    for (int i = 0; i < NUM_APPS; i++) {
+    for (int i = 0; i < numApps; i++) {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
       assertTrue(collectorManager.containsTimelineCollector(appId));
     }
@@ -119,9 +119,9 @@ public class TestNMTimelineCollectorManager {
 
   @Test
   public void testMultithreadedAddAndRemove() throws Exception {
-    final int NUM_APPS = 5;
+    final int numApps = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
-    for (int i = 0; i < NUM_APPS; i++) {
+    for (int i = 0; i < numApps; i++) {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
@@ -134,7 +134,7 @@ public class TestNMTimelineCollectorManager {
       };
       tasks.add(task);
     }
-    ExecutorService executor = Executors.newFixedThreadPool(NUM_APPS);
+    ExecutorService executor = Executors.newFixedThreadPool(numApps);
     try {
       List<Future<Boolean>> futures = executor.invokeAll(tasks);
       for (Future<Boolean> future: futures) {
@@ -144,16 +144,16 @@ public class TestNMTimelineCollectorManager {
       executor.shutdownNow();
     }
     // check the keys
-    for (int i = 0; i < NUM_APPS; i++) {
+    for (int i = 0; i < numApps; i++) {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
       assertFalse(collectorManager.containsTimelineCollector(appId));
     }
   }
 
   private NodeTimelineCollectorManager createCollectorManager() {
-    final NodeTimelineCollectorManager collectorManager =
+    final NodeTimelineCollectorManager cm =
         spy(new NodeTimelineCollectorManager());
-    doReturn(new Configuration()).when(collectorManager).getConfig();
+    doReturn(new Configuration()).when(cm).getConfig();
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
     GetTimelineCollectorContextResponse response =
@@ -164,7 +164,7 @@ public class TestNMTimelineCollectorManager {
     } catch (YarnException | IOException e) {
       fail();
     }
-    doReturn(nmCollectorService).when(collectorManager).getNMCollectorService();
-    return collectorManager;
+    doReturn(nmCollectorService).when(cm).getNMCollectorService();
+    return cm;
   }
 }

@@ -621,8 +621,8 @@ public class UtilsForTests {
     return job;
   }
 
-  public static void waitForAppFinished(RunningJob job, MiniMRYarnCluster cluster)
- throws IOException {
+  public static void waitForAppFinished(RunningJob job,
+      MiniMRYarnCluster cluster) throws IOException {
     ApplicationId appId = ApplicationId.newInstance(
         Long.parseLong(job.getID().getJtIdentifier()), job.getID().getId());
     ConcurrentMap<ApplicationId, RMApp> rmApps =

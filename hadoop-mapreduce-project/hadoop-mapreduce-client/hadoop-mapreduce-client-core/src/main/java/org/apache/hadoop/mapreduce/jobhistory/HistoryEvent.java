@@ -42,9 +42,17 @@ public interface HistoryEvent {
   /** Set the Avro datum wrapped by this. */
   void setDatum(Object datum);
 
-  /** Map HistoryEvent to TimelineEvent */
+  /**
+   * Map HistoryEvent to TimelineEvent.
+   *
+   * @return the timeline event
+   */
   TimelineEvent toTimelineEvent();
 
-  /** Counters or Metrics if any else return null. */
+  /**
+   * Counters or Metrics if any else return null.
+   *
+   * @return the set of timeline metrics
+   */
   Set<TimelineMetric> getTimelineMetrics();
 }

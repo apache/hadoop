@@ -60,7 +60,8 @@ public class TestRowKeys {
     if (sepByteLen <= byteArr.length) {
       for (int i = 0; i < sepByteLen; i++) {
         byteArr[byteArr.length - sepByteLen + i] =
-            (byte) (longMaxByteArr[byteArr.length - sepByteLen + i] - QUALIFIER_SEP_BYTES[i]);
+            (byte) (longMaxByteArr[byteArr.length - sepByteLen + i] -
+                QUALIFIER_SEP_BYTES[i]);
       }
     }
     clusterTs = Bytes.toLong(byteArr);
@@ -73,7 +74,8 @@ public class TestRowKeys {
     for (int i = 0; i < sepLen; i++) {
       assertTrue(
           "Row key prefix not encoded properly.",
-          byteRowKeyPrefix[byteRowKeyPrefix.length - sepLen + i] == QUALIFIER_SEP_BYTES[i]);
+          byteRowKeyPrefix[byteRowKeyPrefix.length - sepLen + i] ==
+              QUALIFIER_SEP_BYTES[i]);
     }
   }
 
@@ -94,9 +96,9 @@ public class TestRowKeys {
             .getRowKeyPrefix();
     byte[][] splits =
         Separator.QUALIFIERS.split(byteRowKeyPrefix,
-            new int[] { Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
+            new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
-                Separator.VARIABLE_SIZE });
+                Separator.VARIABLE_SIZE});
     assertEquals(5, splits.length);
     assertEquals(0, splits[4].length);
     assertEquals(FLOW_NAME,
@@ -153,10 +155,10 @@ public class TestRowKeys {
     byte[][] splits =
         Separator.QUALIFIERS.split(
             byteRowKeyPrefix,
-            new int[] { Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
+            new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE,
-                Separator.VARIABLE_SIZE });
+                Separator.VARIABLE_SIZE});
     assertEquals(7, splits.length);
     assertEquals(0, splits[6].length);
     assertEquals(APPLICATION_ID, new AppIdKeyConverter().decode(splits[4]));
@@ -170,9 +172,9 @@ public class TestRowKeys {
     splits =
         Separator.QUALIFIERS.split(
             byteRowKeyPrefix,
-            new int[] { Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
+            new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
-                AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE });
+                AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE});
     assertEquals(6, splits.length);
     assertEquals(0, splits[5].length);
     AppIdKeyConverter appIdKeyConverter = new AppIdKeyConverter();
@@ -207,8 +209,8 @@ public class TestRowKeys {
         new FlowActivityRowKeyPrefix(CLUSTER, ts).getRowKeyPrefix();
     splits =
         Separator.QUALIFIERS.split(byteRowKeyPrefix,
-            new int[] { Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
-                Separator.VARIABLE_SIZE });
+            new int[] {Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
+                Separator.VARIABLE_SIZE});
     assertEquals(3, splits.length);
     assertEquals(0, splits[2].length);
     assertEquals(CLUSTER,

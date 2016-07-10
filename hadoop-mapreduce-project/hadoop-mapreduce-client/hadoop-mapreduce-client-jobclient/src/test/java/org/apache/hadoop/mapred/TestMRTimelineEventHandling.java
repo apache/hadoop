@@ -64,7 +64,7 @@ public class TestMRTimelineEventHandling {
 
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
   private static final Log LOG =
-    LogFactory.getLog(TestMRTimelineEventHandling.class);
+      LogFactory.getLog(TestMRTimelineEventHandling.class);
 
   @Test
   public void testTimelineServiceStartInMiniCluster() throws Exception {
@@ -169,6 +169,7 @@ public class TestMRTimelineEventHandling {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testMRNewTimelineServiceEventHandling() throws Exception {
     LOG.info("testMRNewTimelineServiceEventHandling start.");
@@ -183,7 +184,7 @@ public class TestMRTimelineEventHandling {
     // enable aux-service based timeline collectors
     conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
     conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
-      + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
+        + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
 
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
 
@@ -245,7 +246,8 @@ public class TestMRTimelineEventHandling {
       }
       // Cleanup test file
       String testRoot =
-          FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
+          FileSystemTimelineWriterImpl.
+              DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
       File testRootFolder = new File(testRoot);
       if(testRootFolder.isDirectory()) {
         FileUtils.deleteDirectory(testRootFolder);
@@ -320,8 +322,10 @@ public class TestMRTimelineEventHandling {
         " does not exist.",
         taskFolder.isDirectory());
 
-    String taskEventFileName = appId.toString().replaceAll("application", "task")
-        + "_m_000000" + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+    String taskEventFileName =
+        appId.toString().replaceAll("application", "task") +
+        "_m_000000" +
+        FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
 
     String taskEventFilePath = outputDirTask + taskEventFileName;
     File taskEventFile = new File(taskEventFilePath);
@@ -372,10 +376,12 @@ public class TestMRTimelineEventHandling {
       reader = new BufferedReader(new FileReader(entityFile));
       while ((strLine = reader.readLine()) != null) {
         if (strLine.trim().length() > 0) {
-          org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity =
-              FileSystemTimelineReaderImpl.getTimelineRecordFromJSON(
-                  strLine.trim(),
-                  org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.class);
+          org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity
+              entity =
+                  FileSystemTimelineReaderImpl.getTimelineRecordFromJSON(
+                      strLine.trim(),
+                      org.apache.hadoop.yarn.api.records.timelineservice.
+                          TimelineEntity.class);
           if (eventId == null) {
             // Job metrics are published without any events for
             // ApplicationEntity. There is also possibility that some other

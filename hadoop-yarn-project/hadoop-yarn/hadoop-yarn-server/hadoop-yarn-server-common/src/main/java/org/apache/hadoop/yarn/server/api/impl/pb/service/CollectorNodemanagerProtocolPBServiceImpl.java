@@ -41,7 +41,8 @@ public class CollectorNodemanagerProtocolPBServiceImpl implements
 
   private CollectorNodemanagerProtocol real;
 
-  public CollectorNodemanagerProtocolPBServiceImpl(CollectorNodemanagerProtocol impl) {
+  public CollectorNodemanagerProtocolPBServiceImpl(
+      CollectorNodemanagerProtocol impl) {
     this.real = impl;
   }
 
@@ -52,7 +53,8 @@ public class CollectorNodemanagerProtocolPBServiceImpl implements
     ReportNewCollectorInfoRequestPBImpl request =
         new ReportNewCollectorInfoRequestPBImpl(proto);
     try {
-      ReportNewCollectorInfoResponse response = real.reportNewCollectorInfo(request);
+      ReportNewCollectorInfoResponse response =
+          real.reportNewCollectorInfo(request);
       return ((ReportNewCollectorInfoResponsePBImpl)response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);

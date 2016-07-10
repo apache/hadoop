@@ -58,7 +58,7 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private Set<NodeLabel> labels = null;
   private List<LogAggregationReport> logAggregationReportsForApps = null;
 
-  Map<ApplicationId, String> registeredCollectors = null;
+  private Map<ApplicationId, String> registeredCollectors = null;
 
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -161,10 +161,11 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private void addRegisteredCollectorsToProto() {
     maybeInitBuilder();
     builder.clearRegisteredCollectors();
-    for (Map.Entry<ApplicationId, String> entry : registeredCollectors.entrySet()) {
+    for (Map.Entry<ApplicationId, String> entry :
+        registeredCollectors.entrySet()) {
       builder.addRegisteredCollectors(AppCollectorsMapProto.newBuilder()
-        .setAppId(convertToProtoFormat(entry.getKey()))
-        .setAppCollectorAddr(entry.getValue()));
+          .setAppId(convertToProtoFormat(entry.getKey()))
+          .setAppCollectorAddr(entry.getValue()));
     }
   }
 

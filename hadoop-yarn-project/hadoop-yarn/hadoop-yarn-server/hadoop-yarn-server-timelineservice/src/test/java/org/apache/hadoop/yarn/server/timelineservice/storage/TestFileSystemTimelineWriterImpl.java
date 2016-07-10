@@ -41,7 +41,8 @@ import org.junit.Test;
 public class TestFileSystemTimelineWriterImpl {
 
   /**
-   * Unit test for PoC YARN 3264
+   * Unit test for PoC YARN 3264.
+   *
    * @throws Exception
    */
   @Test
@@ -84,8 +85,8 @@ public class TestFileSystemTimelineWriterImpl {
           "app_id", te);
 
       String fileName = fsi.getOutputRoot() +
-          "/entities/cluster_id/user_id/flow_name/flow_version/12345678/app_id/" +
-          type + "/" + id +
+          "/entities/cluster_id/user_id/flow_name/flow_version/12345678/" +
+          "app_id/" + type + "/" + id +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = Paths.get(fileName);
       File f = new File(fileName);

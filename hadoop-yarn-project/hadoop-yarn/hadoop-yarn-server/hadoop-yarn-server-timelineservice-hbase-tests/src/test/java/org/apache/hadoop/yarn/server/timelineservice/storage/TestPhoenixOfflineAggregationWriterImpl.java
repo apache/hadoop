@@ -74,8 +74,8 @@ public class TestPhoenixOfflineAggregationWriterImpl extends BaseTest {
   }
 
   private static PhoenixOfflineAggregationWriterImpl
-    setupPhoenixClusterAndWriterForTest(YarnConfiguration conf)
-      throws Exception{
+      setupPhoenixClusterAndWriterForTest(YarnConfiguration conf)
+      throws Exception {
     Map<String, String> props = new HashMap<>();
     // Must update config before starting server
     props.put(QueryServices.STATS_USE_CURRENT_TIME_ATTRIB,

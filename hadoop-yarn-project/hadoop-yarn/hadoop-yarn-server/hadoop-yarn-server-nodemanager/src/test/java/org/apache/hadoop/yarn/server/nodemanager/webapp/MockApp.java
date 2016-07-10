@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -40,10 +39,9 @@ public class MockApp implements Application {
   Map<ContainerId, Container> containers = new HashMap<ContainerId, Container>();
   ApplicationState appState;
   Application app;
-  String flowName;
-  String flowVersion;
-  long flowRunId;
-  TimelineClient timelineClient = null;
+  private String flowName;
+  private String flowVersion;
+  private long flowRunId;
 
   public MockApp(int uniqId) {
     this("mockUser", 1234, uniqId);

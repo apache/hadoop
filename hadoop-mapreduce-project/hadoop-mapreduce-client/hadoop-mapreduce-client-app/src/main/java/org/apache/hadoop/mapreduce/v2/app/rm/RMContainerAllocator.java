@@ -829,7 +829,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     if (collectorAddr != null && !collectorAddr.isEmpty()
         && appContext.getTimelineClient() != null) {
       appContext.getTimelineClient().setTimelineServiceAddress(
-        response.getCollectorAddr());
+          response.getCollectorAddr());
     }
 
     for (ContainerStatus cont : finishedContainers) {

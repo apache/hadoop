@@ -29,10 +29,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 public class GetTimelineCollectorContextRequestPBImpl extends
     GetTimelineCollectorContextRequest {
 
-  GetTimelineCollectorContextRequestProto
+  private GetTimelineCollectorContextRequestProto
       proto = GetTimelineCollectorContextRequestProto.getDefaultInstance();
-  GetTimelineCollectorContextRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private GetTimelineCollectorContextRequestProto.Builder builder = null;
+  private boolean viaProto = false;
 
   private ApplicationId appId = null;
 
@@ -60,8 +60,9 @@ public class GetTimelineCollectorContextRequestPBImpl extends
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -80,8 +81,9 @@ public class GetTimelineCollectorContextRequestPBImpl extends
   }
 
   private void mergeLocalToProto() {
-    if (viaProto)
+    if (viaProto) {
       maybeInitBuilder();
+    }
     mergeLocalToBuilder();
     proto = builder.build();
     viaProto = true;
@@ -100,7 +102,8 @@ public class GetTimelineCollectorContextRequestPBImpl extends
       return this.appId;
     }
 
-    GetTimelineCollectorContextRequestProtoOrBuilder p = viaProto ? proto : builder;
+    GetTimelineCollectorContextRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (!p.hasAppId()) {
       return null;
     }
@@ -110,14 +113,16 @@ public class GetTimelineCollectorContextRequestPBImpl extends
   }
 
   @Override
-  public void setApplicationId(ApplicationId appId) {
+  public void setApplicationId(ApplicationId id) {
     maybeInitBuilder();
-    if (appId == null)
+    if (id == null) {
       builder.clearAppId();
-    this.appId = appId;
+    }
+    this.appId = id;
   }
 
-  private ApplicationIdPBImpl convertFromProtoFormat(YarnProtos.ApplicationIdProto p) {
+  private ApplicationIdPBImpl convertFromProtoFormat(
+      YarnProtos.ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
 

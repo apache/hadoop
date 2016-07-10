@@ -48,9 +48,9 @@ public interface CollectorNodemanagerProtocol {
    *
    * @param request the request of registering a new collector or a list of
    *                collectors
-   * @return
-   * @throws YarnException
-   * @throws IOException
+   * @return the response for registering the new collector
+   * @throws YarnException if the request is invalid
+   * @throws IOException if there are I/O errors
    */
   ReportNewCollectorInfoResponse reportNewCollectorInfo(
       ReportNewCollectorInfoRequest request)
@@ -63,9 +63,9 @@ public interface CollectorNodemanagerProtocol {
    * </p>
    * @param request the request of getting the aggregator context information of
    *                the given application
-   * @return
-   * @throws YarnException
-   * @throws IOException
+   * @return the response for registering the new collector
+   * @throws YarnException if the request is invalid
+   * @throws IOException if there are I/O errors
    */
   GetTimelineCollectorContextResponse getTimelineCollectorContext(
       GetTimelineCollectorContextRequest request)

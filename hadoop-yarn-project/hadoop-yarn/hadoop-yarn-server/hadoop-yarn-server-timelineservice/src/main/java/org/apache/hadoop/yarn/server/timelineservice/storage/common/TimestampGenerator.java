@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Utility class that allows HBase coprocessors to interact with unique
@@ -99,7 +98,7 @@ public class TimestampGenerator {
     if (appIdStr == null) {
       return 0L;
     }
-    ApplicationId appId = ConverterUtils.toApplicationId(appIdStr);
+    ApplicationId appId = ApplicationId.fromString(appIdStr);
     long id = appId.getId() % TS_MULTIPLIER;
     return id;
   }

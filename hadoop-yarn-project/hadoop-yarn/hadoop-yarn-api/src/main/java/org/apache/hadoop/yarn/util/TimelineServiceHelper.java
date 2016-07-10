@@ -36,6 +36,8 @@ public final class TimelineServiceHelper {
   /**
    * Cast map to HashMap for generic type.
    * @param originalMap the map need to be casted
+   * @param <E> key type
+   * @param <V> value type
    * @return casted HashMap object
    */
   public static <E, V> HashMap<E, V> mapCastToHashMap(

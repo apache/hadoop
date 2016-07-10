@@ -134,7 +134,8 @@ public class TestTimelineServiceClientIntegration {
       ApplicationEntity app = new ApplicationEntity();
       app.setId(appId.toString());
       flow.addChild(app.getType(), app.getId());
-      ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
+      ApplicationAttemptId attemptId =
+          ApplicationAttemptId.newInstance(appId, 1);
       ApplicationAttemptEntity appAttempt = new ApplicationAttemptEntity();
       appAttempt.setId(attemptId.toString());
       ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
@@ -144,8 +145,10 @@ public class TestTimelineServiceClientIntegration {
       user.setId(UserGroupInformation.getCurrentUser().getShortUserName());
       QueueEntity queue = new QueueEntity();
       queue.setId("default_queue");
-      client.putEntities(cluster, flow, app, appAttempt, container, user, queue);
-      client.putEntitiesAsync(cluster, flow, app, appAttempt, container, user, queue);
+      client.putEntities(cluster, flow, app, appAttempt, container, user,
+          queue);
+      client.putEntitiesAsync(cluster, flow, app, appAttempt, container, user,
+          queue);
     } finally {
       client.stop();
     }

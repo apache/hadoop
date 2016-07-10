@@ -181,10 +181,11 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     }
     if (enableTimelineAuxService) {
       conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
-          new String[] { ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID, TIMELINE_AUX_SERVICE_NAME });
+          new String[] {ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
+              TIMELINE_AUX_SERVICE_NAME});
     } else {
       conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
-          new String[] { ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID });
+          new String[] {ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID});
     }
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT,
         ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID), ShuffleHandler.class,

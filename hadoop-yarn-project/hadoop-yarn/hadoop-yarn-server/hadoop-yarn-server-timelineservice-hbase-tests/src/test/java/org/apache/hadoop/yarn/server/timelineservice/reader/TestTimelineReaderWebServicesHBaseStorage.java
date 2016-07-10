@@ -256,17 +256,17 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     entity5.addEvent(event54);
     Map<String, Set<String>> isRelatedTo1 = new HashMap<String, Set<String>>();
     isRelatedTo1.put("type2",
-        Sets.newHashSet("entity21","entity22","entity23","entity24"));
-    isRelatedTo1.put("type4", Sets.newHashSet("entity41","entity42"));
-    isRelatedTo1.put("type1", Sets.newHashSet("entity14","entity15"));
+        Sets.newHashSet("entity21", "entity22", "entity23", "entity24"));
+    isRelatedTo1.put("type4", Sets.newHashSet("entity41", "entity42"));
+    isRelatedTo1.put("type1", Sets.newHashSet("entity14", "entity15"));
     isRelatedTo1.put("type3",
         Sets.newHashSet("entity31", "entity35", "entity32", "entity33"));
     entity5.addIsRelatedToEntities(isRelatedTo1);
     Map<String, Set<String>> relatesTo1 = new HashMap<String, Set<String>>();
     relatesTo1.put("type2",
-        Sets.newHashSet("entity21","entity22","entity23","entity24"));
-    relatesTo1.put("type4", Sets.newHashSet("entity41","entity42"));
-    relatesTo1.put("type1", Sets.newHashSet("entity14","entity15"));
+        Sets.newHashSet("entity21", "entity22", "entity23", "entity24"));
+    relatesTo1.put("type4", Sets.newHashSet("entity41", "entity42"));
+    relatesTo1.put("type1", Sets.newHashSet("entity14", "entity15"));
     relatesTo1.put("type3",
         Sets.newHashSet("entity31", "entity35", "entity32", "entity33"));
     entity5.addRelatesToEntities(relatesTo1);
@@ -317,16 +317,16 @@ public class TestTimelineReaderWebServicesHBaseStorage {
     entity6.addEvent(event64);
     Map<String, Set<String>> isRelatedTo2 = new HashMap<String, Set<String>>();
     isRelatedTo2.put("type2",
-        Sets.newHashSet("entity21","entity22","entity23","entity24"));
-    isRelatedTo2.put("type5", Sets.newHashSet("entity51","entity52"));
-    isRelatedTo2.put("type6", Sets.newHashSet("entity61","entity66"));
+        Sets.newHashSet("entity21", "entity22", "entity23", "entity24"));
+    isRelatedTo2.put("type5", Sets.newHashSet("entity51", "entity52"));
+    isRelatedTo2.put("type6", Sets.newHashSet("entity61", "entity66"));
     isRelatedTo2.put("type3", Sets.newHashSet("entity31"));
     entity6.addIsRelatedToEntities(isRelatedTo2);
     Map<String, Set<String>> relatesTo2 = new HashMap<String, Set<String>>();
     relatesTo2.put("type2",
-        Sets.newHashSet("entity21","entity22","entity23","entity24"));
-    relatesTo2.put("type5", Sets.newHashSet("entity51","entity52"));
-    relatesTo2.put("type6", Sets.newHashSet("entity61","entity66"));
+        Sets.newHashSet("entity21", "entity22", "entity23", "entity24"));
+    relatesTo2.put("type5", Sets.newHashSet("entity51", "entity52"));
+    relatesTo2.put("type6", Sets.newHashSet("entity61", "entity66"));
     relatesTo2.put("type3", Sets.newHashSet("entity31"));
     entity6.addRelatesToEntities(relatesTo2);
     te5.addEntity(entity6);
@@ -391,10 +391,11 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         client.resource(uri).accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     if (resp == null ||
-        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
+        resp.getStatusInfo().getStatusCode() !=
+            ClientResponse.Status.OK.getStatusCode()) {
       String msg = "";
       if (resp != null) {
-        msg = resp.getClientResponseStatus().toString();
+        msg = String.valueOf(resp.getStatusInfo().getStatusCode());
       }
       throw new IOException("Incorrect response from timeline reader. " +
           "Status=" + msg);
@@ -406,7 +407,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       implements HttpURLConnectionFactory {
 
     @Override
-    public HttpURLConnection getHttpURLConnection(final URL url) throws IOException {
+    public HttpURLConnection getHttpURLConnection(final URL url)
+        throws IOException {
       try {
         return (HttpURLConnection)url.openConnection();
       } catch (UndeclaredThrowableException e) {
@@ -422,10 +424,10 @@ public class TestTimelineReaderWebServicesHBaseStorage {
   }
 
   private static TimelineMetric newMetric(TimelineMetric.Type type,
-      String id, long ts, Number value) {
+      String id, long t, Number value) {
     TimelineMetric metric = new TimelineMetric(type);
     metric.setId(id);
-    metric.addValue(ts, value);
+    metric.addValue(t, value);
     return metric;
   }
 
@@ -463,7 +465,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
         .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
     assertTrue("Response from server should have been " + status,
-        resp.getClientResponseStatus().equals(status));
+        resp.getStatusInfo().getStatusCode() == status.getStatusCode());
     System.out.println("Response is: " + resp.getEntity(String.class));
   }
 
@@ -866,7 +868,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       String appUIDWithoutFlowInfo = "cluster1!application_1111111111_1111";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
           "app-uid/" + appUIDWithoutFlowInfo);
-      resp = getResponse(client, uri);;
+      resp = getResponse(client, uri);
       TimelineEntity appEntity2 = resp.getEntity(TimelineEntity.class);
       assertNotNull(appEntity2);
       assertEquals(
@@ -893,7 +895,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       String entityUIDWithFlowInfo = appUIDWithFlowInfo + "!type1!entity1";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
           "entity-uid/" + entityUIDWithFlowInfo);
-      resp = getResponse(client, uri);;
+      resp = getResponse(client, uri);
       TimelineEntity singleEntity1 = resp.getEntity(TimelineEntity.class);
       assertNotNull(singleEntity1);
       assertEquals("type1", singleEntity1.getType());
@@ -903,7 +905,7 @@ public class TestTimelineReaderWebServicesHBaseStorage {
           appUIDWithoutFlowInfo + "!type1!entity1";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/timeline/"+
           "entity-uid/" + entityUIDWithoutFlowInfo);
-      resp = getResponse(client, uri);;
+      resp = getResponse(client, uri);
       TimelineEntity singleEntity2 = resp.getEntity(TimelineEntity.class);
       assertNotNull(singleEntity2);
       assertEquals("type1", singleEntity2.getType());
@@ -1054,12 +1056,12 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       assertEquals("application_1111111111_2222", entity.getId());
       assertEquals(1, entity.getMetrics().size());
       TimelineMetric m4 = newMetric(TimelineMetric.Type.SINGLE_VALUE,
-         "MAP_SLOT_MILLIS", ts - 80000, 101L);
+          "MAP_SLOT_MILLIS", ts - 80000, 101L);
       for (TimelineMetric metric : entity.getMetrics()) {
         assertTrue(verifyMetrics(metric, m4));
       }
     } finally {
-        client.destroy();
+      client.destroy();
     }
   }
 
@@ -1425,7 +1427,8 @@ public class TestTimelineReaderWebServicesHBaseStorage {
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
           "timeline/clusters/cluster1/apps/application_1111111111_1111/" +
           "entities/type1?infofilters=(info1%20eq%20cluster1%20AND%20info4%20" +
-          "eq%2035000)%20OR%20(info1%20eq%20cluster2%20AND%20info2%20eq%202.0)");
+          "eq%2035000)%20OR%20(info1%20eq%20cluster2%20AND%20info2%20eq%202.0" +
+          ")");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
       assertNotNull(entities);

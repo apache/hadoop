@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Encodes and decodes {@link ApplicationId} for row keys.
@@ -50,7 +49,7 @@ public final class AppIdKeyConverter implements KeyConverter<String> {
    */
   @Override
   public byte[] encode(String appIdStr) {
-    ApplicationId appId = ConverterUtils.toApplicationId(appIdStr);
+    ApplicationId appId = ApplicationId.fromString(appIdStr);
     byte[] appIdBytes = new byte[getKeySize()];
     byte[] clusterTs = Bytes.toBytes(
         LongConverter.invertLong(appId.getClusterTimestamp()));

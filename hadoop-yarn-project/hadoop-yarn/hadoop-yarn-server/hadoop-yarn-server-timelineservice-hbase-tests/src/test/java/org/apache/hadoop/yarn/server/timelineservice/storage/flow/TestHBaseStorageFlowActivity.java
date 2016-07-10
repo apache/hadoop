@@ -58,7 +58,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Tests the FlowRun and FlowActivity Tables
+ * Tests the FlowRun and FlowActivity Tables.
  */
 public class TestHBaseStorageFlowActivity {
 
@@ -114,7 +114,7 @@ public class TestHBaseStorageFlowActivity {
     String appName = "application_100000000000_1111";
     long minStartTs = 1424995200300L;
     long greaterStartTs = 1424995200300L + 864000L;
-    long endTs = 1424995200300L + 86000000L;;
+    long endTs = 1424995200300L + 86000000L;
     TimelineEntity entityMinStartTime = TestFlowDataGenerator
         .getEntityMinStartTime(minStartTs);
 
@@ -209,7 +209,7 @@ public class TestHBaseStorageFlowActivity {
 
   /**
    * Write 1 application entity and checks the record for today in the flow
-   * activity table
+   * activity table.
    */
   @Test
   public void testWriteFlowActivityOneFlow() throws Exception {
@@ -313,10 +313,10 @@ public class TestHBaseStorageFlowActivity {
 
   /**
    * Writes 3 applications each with a different run id and version for the same
-   * {cluster, user, flow}
+   * {cluster, user, flow}.
    *
    * They should be getting inserted into one record in the flow activity table
-   * with 3 columns, one per run id
+   * with 3 columns, one per run id.
    */
   @Test
   public void testFlowActivityTableOneFlowMultipleRunIds() throws IOException {
@@ -425,7 +425,8 @@ public class TestHBaseStorageFlowActivity {
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
     byte[] stopRow =
-        new FlowActivityRowKey(clusterStop, appCreatedTime, user, flow).getRowKey();
+        new FlowActivityRowKey(clusterStop, appCreatedTime, user, flow)
+        .getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
     Table table1 = conn.getTable(TableName

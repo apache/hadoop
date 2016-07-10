@@ -187,8 +187,8 @@ public class NodeManager extends CompositeService
     }
   }
 
-  protected NMCollectorService createNMCollectorService(Context context) {
-    return new NMCollectorService(context);
+  protected NMCollectorService createNMCollectorService(Context ctxt) {
+    return new NMCollectorService(ctxt);
   }
 
   protected WebServer createWebServer(Context nmContext,

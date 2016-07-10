@@ -55,8 +55,8 @@ public class TestNMTimelinePublisher {
     when(context.getHttpPort()).thenReturn(0);
     NMTimelinePublisher publisher = new NMTimelinePublisher(context) {
       public void createTimelineClient(ApplicationId appId) {
-        if (!appToClientMap.containsKey(appId)) {
-          appToClientMap.put(appId, timelineClient);
+        if (!getAppToClientMap().containsKey(appId)) {
+          getAppToClientMap().put(appId, timelineClient);
         }
       }
     };

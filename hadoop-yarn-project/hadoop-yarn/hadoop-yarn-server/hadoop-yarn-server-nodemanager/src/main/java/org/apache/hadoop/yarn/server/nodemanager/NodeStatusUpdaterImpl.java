@@ -816,7 +816,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     NodeStatusUpdaterImpl.this.context
                         .getNMTokenSecretManager().getCurrentKey(),
                     nodeLabelsForHeartbeat,
-                    NodeStatusUpdaterImpl.this.context.getRegisteredCollectors());
+                    NodeStatusUpdaterImpl.this.context
+                        .getRegisteredCollectors());
 
             if (logAggregationEnabled) {
               // pull log aggregation status for application running in this NM
@@ -937,23 +938,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
           }
         }
-      }
-
-      /**
-       * Caller should take care of sending non null nodelabels for both
-       * arguments
-       *
-       * @param nodeLabelsNew
-       * @param nodeLabelsOld
-       * @return if the New node labels are diff from the older one.
-       */
-      private boolean areNodeLabelsUpdated(Set<NodeLabel> nodeLabelsNew,
-          Set<NodeLabel> nodeLabelsOld) {
-        if (nodeLabelsNew.size() != nodeLabelsOld.size()
-            || !nodeLabelsOld.containsAll(nodeLabelsNew)) {
-          return true;
-        }
-        return false;
       }
 
       private void updateTimelineClientsAddress(

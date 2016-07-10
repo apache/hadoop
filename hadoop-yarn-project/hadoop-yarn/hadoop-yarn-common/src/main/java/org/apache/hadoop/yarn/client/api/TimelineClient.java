@@ -30,8 +30,6 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
@@ -55,10 +53,12 @@ public abstract class TimelineClient extends AbstractService implements
    * construct and initialize a timeline client if the following operations are
    * supposed to be conducted by that user.
    */
-  protected ApplicationId contextAppId;
+  private ApplicationId contextAppId;
 
   /**
    * Creates an instance of the timeline v.1.x client.
+   *
+   * @return the created timeline client instance
    */
   @Public
   public static TimelineClient createTimelineClient() {
@@ -68,6 +68,10 @@ public abstract class TimelineClient extends AbstractService implements
 
   /**
    * Creates an instance of the timeline v.2 client.
+   *
+   * @param appId the application id with which the timeline client is
+   * associated
+   * @return the created timeline client instance
    */
   @Public
   public static TimelineClient createTimelineClient(ApplicationId appId) {
@@ -91,8 +95,8 @@ public abstract class TimelineClient extends AbstractService implements
    * @param entities
    *          the collection of {@link TimelineEntity}
    * @return the error information if the sent entities are not correctly stored
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException if there are I/O errors
+   * @throws YarnException if entities are incomplete/invalid
    */
   @Public
   public abstract TimelinePutResponse putEntities(
@@ -112,8 +116,8 @@ public abstract class TimelineClient extends AbstractService implements
    * @param entities
    *          the collection of {@link TimelineEntity}
    * @return the error information if the sent entities are not correctly stored
-   * @throws IOException
-   * @throws YarnException
+   * @throws IOException if there are I/O errors
+   * @throws YarnException if entities are incomplete/invalid
    */
   @Public
   public abstract TimelinePutResponse putEntities(
@@ -212,15 +216,15 @@ public abstract class TimelineClient extends AbstractService implements
    * for a non-v.2 timeline client instance, a YarnException is thrown.
    * </p>
    *
-   * @param entities
-   *          the collection of {@link org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
+   * @param entities the collection of {@link
+   * org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
    * @throws IOException
    * @throws YarnException
    */
   @Public
   public abstract void putEntities(
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity... entities)
-      throws IOException, YarnException;
+      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity...
+          entities) throws IOException, YarnException;
 
   /**
    * <p>
@@ -230,15 +234,15 @@ public abstract class TimelineClient extends AbstractService implements
    * non-v.2 timeline client instance, a YarnException is thrown.
    * </p>
    *
-   * @param entities
-   *          the collection of {@link org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
+   * @param entities the collection of {@link
+   * org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity}
    * @throws IOException
    * @throws YarnException
    */
   @Public
   public abstract void putEntitiesAsync(
-      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity... entities)
-      throws IOException, YarnException;
+      org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity...
+          entities) throws IOException, YarnException;
 
   /**
    * <p>

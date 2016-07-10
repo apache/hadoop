@@ -230,8 +230,7 @@ public class ContainerManagerImpl extends CompositeService implements
       nmMetricsPublisher = createNMTimelinePublisher(context);
       context.setNMTimelinePublisher(nmMetricsPublisher);
     }
-    this.containersMonitor =
-        new ContainersMonitorImpl(exec, dispatcher, this.context);
+    this.containersMonitor = createContainersMonitor(exec);
     addService(this.containersMonitor);
 
     dispatcher.register(ContainerEventType.class,
@@ -447,8 +446,9 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @VisibleForTesting
-  protected NMTimelinePublisher createNMTimelinePublisher(Context context) {
-    NMTimelinePublisher nmTimelinePublisherLocal = new NMTimelinePublisher(context);
+  protected NMTimelinePublisher createNMTimelinePublisher(Context ctxt) {
+    NMTimelinePublisher nmTimelinePublisherLocal =
+        new NMTimelinePublisher(ctxt);
     addIfService(nmTimelinePublisherLocal);
     return nmTimelinePublisherLocal;
   }

@@ -39,11 +39,13 @@ import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
    * configuration.
    */
 class SimpleEntityWriterV1
-    extends org.apache.hadoop.mapreduce.Mapper<IntWritable,IntWritable,Writable,Writable>
+    extends org.apache.hadoop.mapreduce.Mapper
+        <IntWritable, IntWritable, Writable, Writable>
     implements SimpleEntityWriterConstants {
   private static final Log LOG = LogFactory.getLog(SimpleEntityWriterV1.class);
 
-  public void map(IntWritable key, IntWritable val, Context context) throws IOException {
+  public void map(IntWritable key, IntWritable val, Context context)
+      throws IOException {
     TimelineClient tlc = new TimelineClientImpl();
     Configuration conf = context.getConfiguration();
 

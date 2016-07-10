@@ -111,7 +111,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
     // a configured period
     assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
     for (int i = 0; i < 4; i++) {
-      Thread.sleep(500l);
+      Thread.sleep(500L);
       if (!auxService.hasApplication(appAttemptId.getApplicationId())) {
         break;
       }
@@ -154,7 +154,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
 
   private PerNodeTimelineCollectorsAuxService
       createCollectorAndAddApplication() {
-    PerNodeTimelineCollectorsAuxService auxService = createCollector();
+    PerNodeTimelineCollectorsAuxService service = createCollector();
     // create an AM container
     ContainerId containerId = getAMContainerId();
     ContainerInitializationContext context =
@@ -162,17 +162,17 @@ public class TestPerNodeTimelineCollectorsAuxService {
     when(context.getContainerId()).thenReturn(containerId);
     when(context.getContainerType()).thenReturn(
         ContainerType.APPLICATION_MASTER);
-    auxService.initializeContainer(context);
-    return auxService;
+    service.initializeContainer(context);
+    return service;
   }
 
   private PerNodeTimelineCollectorsAuxService createCollector() {
     NodeTimelineCollectorManager collectorManager = createCollectorManager();
-    PerNodeTimelineCollectorsAuxService auxService =
+    PerNodeTimelineCollectorsAuxService service =
         spy(new PerNodeTimelineCollectorsAuxService(collectorManager));
-    auxService.init(conf);
-    auxService.start();
-    return auxService;
+    service.init(conf);
+    service.start();
+    return service;
   }
 
   private NodeTimelineCollectorManager createCollectorManager() {

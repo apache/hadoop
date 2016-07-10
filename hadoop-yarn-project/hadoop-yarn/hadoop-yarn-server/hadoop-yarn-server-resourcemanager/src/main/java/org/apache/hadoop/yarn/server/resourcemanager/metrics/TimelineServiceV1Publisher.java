@@ -311,7 +311,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
         container.getAllocatedNode().getHost());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO,
-       container.getAllocatedNode().getPort());
+        container.getAllocatedNode().getPort());
     entity.setOtherInfo(entityInfo);
     tEvent.setEventInfo(eventInfo);
 

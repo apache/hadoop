@@ -63,14 +63,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
- * Tests the FlowRun and FlowActivity Tables
+ * Tests the FlowRun and FlowActivity Tables.
  */
 public class TestHBaseStorageFlowRunCompaction {
 
   private static HBaseTestingUtility util;
 
-  private static final String metric1 = "MAP_SLOT_MILLIS";
-  private static final String metric2 = "HDFS_BYTES_READ";
+  private static final String METRIC_1 = "MAP_SLOT_MILLIS";
+  private static final String METRIC_2 = "HDFS_BYTES_READ";
 
   private final byte[] aRowKey = Bytes.toBytes("a");
   private final byte[] aFamily = Bytes.toBytes("family");
@@ -89,8 +89,8 @@ public class TestHBaseStorageFlowRunCompaction {
     TimelineSchemaCreator.createAllTables(util.getConfiguration(), false);
   }
 
-  /** writes non numeric data into flow run table
-   * reads it back
+  /** Writes non numeric data into flow run table
+   * reads it back.
    *
    * @throws Exception
    */
@@ -262,7 +262,7 @@ public class TestHBaseStorageFlowRunCompaction {
           .getFamilyMap(FlowRunColumnFamily.INFO.getBytes());
       // we expect all back in one next call
       assertEquals(4, values.size());
-      System.out.println(" values size " + values.size() +  " " + batchLimit );
+      System.out.println(" values size " + values.size() +  " " + batchLimit);
       rowCount++;
     }
     // should get back 1 row with each invocation
@@ -325,11 +325,12 @@ public class TestHBaseStorageFlowRunCompaction {
         .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
     List<Region> regions = server.getOnlineRegions(TableName
         .valueOf(FlowRunTable.DEFAULT_TABLE_NAME));
-    assertTrue("Didn't find any regions for primary table!", regions.size() > 0);
+    assertTrue("Didn't find any regions for primary table!",
+        regions.size() > 0);
     // flush and compact all the regions of the primary table
     for (Region region : regions) {
-       region.flush(true);
-       region.compact(true);
+      region.flush(true);
+      region.compact(true);
     }
 
     // check flow run for one flow many apps
@@ -363,13 +364,13 @@ public class TestHBaseStorageFlowRunCompaction {
       rowCount++;
       // check metric1
       byte[] q = ColumnHelper.getColumnQualifier(
-          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), metric1);
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC_1);
       assertTrue(values.containsKey(q));
       assertEquals(141, Bytes.toLong(values.get(q)));
 
       // check metric2
       q = ColumnHelper.getColumnQualifier(
-          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), metric2);
+          FlowRunColumnPrefix.METRIC.getColumnPrefixBytes(), METRIC_2);
       assertTrue(values.containsKey(q));
       assertEquals(57, Bytes.toLong(values.get(q)));
     }
@@ -385,7 +386,7 @@ public class TestHBaseStorageFlowRunCompaction {
     // okay to pass in nulls for the constructor arguments
     // because all we want to do is invoke the process summation
     FlowScanner fs = new FlowScanner(null, null,
-        (request.isMajor() == true ? FlowScannerOperation.MAJOR_COMPACTION
+        (request.isMajor() ? FlowScannerOperation.MAJOR_COMPACTION
             : FlowScannerOperation.MINOR_COMPACTION));
     assertNotNull(fs);
     return fs;
@@ -404,7 +405,7 @@ public class TestHBaseStorageFlowRunCompaction {
     long currentTimestamp = System.currentTimeMillis();
     long cell1Ts = 1200120L;
     long cell2Ts = TimestampGenerator.getSupplementedTimestamp(
-        System.currentTimeMillis(),"application_123746661110_11202");
+        System.currentTimeMillis(), "application_123746661110_11202");
     long cell3Ts = 1277719L;
     long cell4Ts = currentTimestamp - 10;
 
@@ -571,7 +572,8 @@ public class TestHBaseStorageFlowRunCompaction {
   // of type SUM and SUM_FINAL
   // NOT cells of SUM_FINAL will expire
   @Test
-  public void checkProcessSummationMoreCellsSumFinalVariedTags() throws IOException {
+  public void checkProcessSummationMoreCellsSumFinalVariedTags()
+      throws IOException {
     FlowScanner fs = getFlowScannerForTestingCompaction();
     int countFinal = 20100;
     int countNotFinal = 1000;
@@ -585,7 +587,8 @@ public class TestHBaseStorageFlowRunCompaction {
     long cellTsFinalStart = 10001120L;
     long cellTsFinal = cellTsFinalStart;
 
-    long cellTsFinalStartNotExpire = TimestampGenerator.getSupplementedTimestamp(
+    long cellTsFinalStartNotExpire =
+        TimestampGenerator.getSupplementedTimestamp(
         System.currentTimeMillis(), "application_10266666661166_118821");
     long cellTsFinalNotExpire = cellTsFinalStartNotExpire;
 

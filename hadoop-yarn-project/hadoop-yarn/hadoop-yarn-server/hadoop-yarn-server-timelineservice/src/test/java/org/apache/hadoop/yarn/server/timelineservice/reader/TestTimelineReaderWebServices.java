@@ -110,7 +110,8 @@ public class TestTimelineReaderWebServices {
         client.resource(uri).accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
-    assertEquals(resp.getClientResponseStatus(), expectedStatus);
+    assertEquals(resp.getStatusInfo().getStatusCode(),
+        expectedStatus.getStatusCode());
   }
 
   private static Client createClient() {
@@ -126,10 +127,11 @@ public class TestTimelineReaderWebServices {
         client.resource(uri).accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     if (resp == null ||
-        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
+        resp.getStatusInfo().getStatusCode() !=
+            ClientResponse.Status.OK.getStatusCode()) {
       String msg = new String();
       if (resp != null) {
-        msg = resp.getClientResponseStatus().toString();
+        msg = String.valueOf(resp.getStatusInfo().getStatusCode());
       }
       throw new IOException("Incorrect response from timeline reader. " +
           "Status=" + msg);
@@ -141,7 +143,8 @@ public class TestTimelineReaderWebServices {
       implements HttpURLConnectionFactory {
 
     @Override
-    public HttpURLConnection getHttpURLConnection(final URL url) throws IOException {
+    public HttpURLConnection getHttpURLConnection(final URL url)
+        throws IOException {
       try {
         return (HttpURLConnection)url.openConnection();
       } catch (UndeclaredThrowableException e) {

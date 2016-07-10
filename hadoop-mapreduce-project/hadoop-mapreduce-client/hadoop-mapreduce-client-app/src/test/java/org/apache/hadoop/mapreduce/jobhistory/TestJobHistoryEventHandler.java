@@ -786,7 +786,8 @@ public class TestJobHistoryEventHandler {
     public TestParams(boolean isLastAMRetry) {
       this(AppContext.class, isLastAMRetry);
     }
-    public TestParams(Class<? extends AppContext> contextClass, boolean isLastAMRetry) {
+    public TestParams(Class<? extends AppContext> contextClass,
+        boolean isLastAMRetry) {
       this.isLastAMRetry = isLastAMRetry;
       mockAppContext = mockAppContext(contextClass, appId, this.isLastAMRetry);
     }

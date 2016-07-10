@@ -137,7 +137,8 @@ public class TimelineServicePerformance extends Configured implements Tool {
     default:
       // use the current timestamp as the "run id" of the test: this will
       // be used as simulating the cluster timestamp for apps
-      conf.setLong(SimpleEntityWriterConstants.TIMELINE_SERVICE_PERFORMANCE_RUN_ID,
+      conf.setLong(
+          SimpleEntityWriterConstants.TIMELINE_SERVICE_PERFORMANCE_RUN_ID,
           System.currentTimeMillis());
       switch (timeline_service_version) {
       case TIMELINE_SERVICE_VERSION_2:

@@ -27,11 +27,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.CounterGroup;
-import org.apache.hadoop.mapreduce.Counters;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
@@ -109,7 +104,7 @@ class TimelineEntityConverterV2 {
   }
 
   private void addConfiguration(TimelineEntity job, Configuration conf) {
-    for (Map.Entry<String,String> e: conf) {
+    for (Map.Entry<String, String> e: conf) {
       job.addConfig(e.getKey(), e.getValue());
     }
   }
@@ -130,7 +125,7 @@ class TimelineEntityConverterV2 {
   private List<TimelineEntity> createTaskAndTaskAttemptEntities(
       JobInfo jobInfo) {
     List<TimelineEntity> entities = new ArrayList<>();
-    Map<TaskID,TaskInfo> taskInfoMap = jobInfo.getAllTasks();
+    Map<TaskID, TaskInfo> taskInfoMap = jobInfo.getAllTasks();
     LOG.info("job " + jobInfo.getJobId()+ " has " + taskInfoMap.size() +
         " tasks");
     for (TaskInfo taskInfo: taskInfoMap.values()) {
@@ -167,7 +162,7 @@ class TimelineEntityConverterV2 {
 
   private Set<TimelineEntity> createTaskAttemptEntities(TaskInfo taskInfo) {
     Set<TimelineEntity> taskAttempts = new HashSet<TimelineEntity>();
-    Map<TaskAttemptID,TaskAttemptInfo> taskAttemptInfoMap =
+    Map<TaskAttemptID, TaskAttemptInfo> taskAttemptInfoMap =
         taskInfo.getAllTaskAttempts();
     LOG.info("task " + taskInfo.getTaskId() + " has " +
         taskAttemptInfoMap.size() + " task attempts");

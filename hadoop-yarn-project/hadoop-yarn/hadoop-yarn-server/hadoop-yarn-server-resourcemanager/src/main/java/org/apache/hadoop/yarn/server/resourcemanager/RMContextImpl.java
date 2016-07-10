@@ -373,7 +373,8 @@ public class RMContextImpl implements RMContext {
   @Override
   public void setRMTimelineCollectorManager(
       RMTimelineCollectorManager timelineCollectorManager) {
-    activeServiceContext.setRMTimelineCollectorManager(timelineCollectorManager);
+    activeServiceContext.setRMTimelineCollectorManager(
+        timelineCollectorManager);
   }
 
   @Override

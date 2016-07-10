@@ -645,8 +645,9 @@ public class TestApplication {
     when(c.getLaunchContext()).thenReturn(launchContext);
     when(launchContext.getApplicationACLs()).thenReturn(
         new HashMap<ApplicationAccessType, String>());
-    when(c.cloneAndGetContainerStatus()).thenReturn(BuilderUtils.newContainerStatus(cId,
-        ContainerState.NEW, "", 0, Resource.newInstance(1024, 1)));
+    when(c.cloneAndGetContainerStatus()).thenReturn(
+        BuilderUtils.newContainerStatus(cId,
+            ContainerState.NEW, "", 0, Resource.newInstance(1024, 1)));
     return c;
   }
 }

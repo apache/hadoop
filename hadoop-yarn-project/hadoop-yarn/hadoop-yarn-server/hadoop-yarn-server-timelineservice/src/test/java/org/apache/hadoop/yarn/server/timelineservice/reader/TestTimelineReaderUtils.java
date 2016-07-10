@@ -45,11 +45,11 @@ public class TestTimelineReaderUtils {
   public void testJoinAndEscapeStrings() throws Exception {
     assertEquals("*!cluster!*!b**o***!xer!oozie**",
         TimelineReaderUtils.joinAndEscapeStrings(
-            new String[] { "!cluster", "!b*o*!xer", "oozie*"}, '!', '*'));
+            new String[] {"!cluster", "!b*o*!xer", "oozie*"}, '!', '*'));
     assertEquals("*!cluster!*!b**o***!xer!!",
         TimelineReaderUtils.joinAndEscapeStrings(
-            new String[] { "!cluster", "!b*o*!xer", "", ""}, '!', '*'));
+            new String[] {"!cluster", "!b*o*!xer", "", ""}, '!', '*'));
     assertNull(TimelineReaderUtils.joinAndEscapeStrings(
-        new String[] { "!cluster", "!b*o*!xer", null, ""}, '!', '*'));
+        new String[] {"!cluster", "!b*o*!xer", null, ""}, '!', '*'));
   }
 }

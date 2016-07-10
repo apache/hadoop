@@ -89,8 +89,8 @@ class JobHistoryFileReplayMapperV2 extends EntityWriterV2 {
             parser.parseHistoryFile(job.getJobHistoryFilePath());
         Configuration jobConf =
             parser.parseConfiguration(job.getJobConfFilePath());
-        LOG.info("parsed the job history file and the configuration file for job"
-            + jobIdStr);
+        LOG.info("parsed the job history file and the configuration file " +
+            "for job " + jobIdStr);
 
         // set the context
         // flow id: job name, flow run id: timestamp, user id
