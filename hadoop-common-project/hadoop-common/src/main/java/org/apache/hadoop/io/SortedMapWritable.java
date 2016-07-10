@@ -36,15 +36,15 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class SortedMapWritable<K extends WritableComparable<? super K>> extends AbstractMapWritable
-  implements SortedMap<K, Writable> {
+public class SortedMapWritable extends AbstractMapWritable
+  implements SortedMap<WritableComparable, Writable> {
   
-  private SortedMap<K, Writable> instance;
+  private SortedMap<WritableComparable, Writable> instance;
   
   /** default constructor. */
   public SortedMapWritable() {
     super();
-    this.instance = new TreeMap<K, Writable>();
+    this.instance = new TreeMap<WritableComparable, Writable>();
   }
   
   /**
@@ -52,39 +52,45 @@ public class SortedMapWritable<K extends WritableComparable<? super K>> extends 
    * 
    * @param other the map to copy from
    */
-  public SortedMapWritable(SortedMapWritable<K> other) {
+  public SortedMapWritable(SortedMapWritable other) {
     this();
     copy(other);
   }
 
   @Override
-  public Comparator<? super K> comparator() {
+  public Comparator<? super WritableComparable> comparator() {
     // Returning null means we use the natural ordering of the keys
     return null;
   }
 
   @Override
-  public K firstKey() {
+  public WritableComparable firstKey() {
     return instance.firstKey();
   }
 
   @Override
-  public SortedMap<K, Writable> headMap(K toKey) {
+  public SortedMap<WritableComparable, Writable>
+  headMap(WritableComparable toKey) {
+    
     return instance.headMap(toKey);
   }
 
   @Override
-  public K lastKey() {
+  public WritableComparable lastKey() {
     return instance.lastKey();
   }
 
   @Override
-  public SortedMap<K, Writable> subMap(K fromKey, K toKey) {
+  public SortedMap<WritableComparable, Writable>
+  subMap(WritableComparable fromKey, WritableComparable toKey) {
+    
     return instance.subMap(fromKey, toKey);
   }
 
   @Override
-  public SortedMap<K, Writable> tailMap(K fromKey) {
+  public SortedMap<WritableComparable, Writable>
+  tailMap(WritableComparable fromKey) {
+    
     return instance.tailMap(fromKey);
   }
 
@@ -104,7 +110,7 @@ public class SortedMapWritable<K extends WritableComparable<? super K>> extends 
   }
 
   @Override
-  public Set<Map.Entry<K, Writable>> entrySet() {
+  public Set<java.util.Map.Entry<WritableComparable, Writable>> entrySet() {
     return instance.entrySet();
   }
 
@@ -119,21 +125,22 @@ public class SortedMapWritable<K extends WritableComparable<? super K>> extends 
   }
 
   @Override
-  public Set<K> keySet() {
+  public Set<WritableComparable> keySet() {
     return instance.keySet();
   }
 
   @Override
-  public Writable put(K key, Writable value) {
+  public Writable put(WritableComparable key, Writable value) {
     addToMap(key.getClass());
     addToMap(value.getClass());
     return instance.put(key, value);
   }
 
   @Override
-  public void putAll(Map<? extends K, ? extends Writable> t) {
-    for (Map.Entry<? extends K, ? extends Writable> e:
+  public void putAll(Map<? extends WritableComparable, ? extends Writable> t) {
+    for (Map.Entry<? extends WritableComparable, ? extends Writable> e:
       t.entrySet()) {
+      
       put(e.getKey(), e.getValue());
     }
   }
@@ -165,8 +172,8 @@ public class SortedMapWritable<K extends WritableComparable<? super K>> extends 
     // Then read each key/value pair
     
     for (int i = 0; i < entries; i++) {
-      K key =
-        (K) ReflectionUtils.newInstance(getClass(
+      WritableComparable key =
+        (WritableComparable) ReflectionUtils.newInstance(getClass(
             in.readByte()), getConf());
       
       key.readFields(in);
@@ -189,7 +196,7 @@ public class SortedMapWritable<K extends WritableComparable<? super K>> extends 
     
     // Then write out each key/value pair
     
-    for (Map.Entry<K, Writable> e: instance.entrySet()) {
+    for (Map.Entry<WritableComparable, Writable> e: instance.entrySet()) {
       out.writeByte(getId(e.getKey().getClass()));
       e.getKey().write(out);
       out.writeByte(getId(e.getValue().getClass()));
@@ -204,7 +211,7 @@ public class SortedMapWritable<K extends WritableComparable<? super K>> extends 
     }
 
     if (obj instanceof SortedMapWritable) {
-      Map<?,?> map = (Map<?,?>) obj;
+      Map map = (Map) obj;
       if (size() != map.size()) {
         return false;
       }
