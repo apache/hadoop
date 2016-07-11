@@ -49,7 +49,7 @@ import java.util.List;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -110,7 +110,7 @@ public class S3AFastOutputStream extends OutputStream {
       CannedAccessControlList cannedACL,
       long partSize,
       long multiPartThreshold,
-      ThreadPoolExecutor threadPoolExecutor)
+      ExecutorService threadPoolExecutor)
       throws IOException {
     this.bucket = bucket;
     this.key = key;

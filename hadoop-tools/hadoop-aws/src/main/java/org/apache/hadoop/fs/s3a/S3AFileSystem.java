@@ -29,11 +29,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.AmazonClientException;
@@ -121,7 +119,7 @@ public class S3AFileSystem extends FileSystem {
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
-  private ThreadPoolExecutor threadPoolExecutor;
+  private ExecutorService threadPoolExecutor;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private CannedAccessControlList cannedACL;
@@ -130,61 +128,11 @@ public class S3AFileSystem extends FileSystem {
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
   private S3AInputPolicy inputPolicy;
+  private static final AtomicBoolean warnedOfCoreThreadDeprecation =
+      new AtomicBoolean(false);
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
-
-  private static final AtomicInteger poolNumber = new AtomicInteger(1);
-
-  /**
-   * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
-   * with a common prefix.
-   * @param prefix The prefix of every created Thread's name
-   * @return a {@link java.util.concurrent.ThreadFactory} that names threads
-   */
-  public static ThreadFactory getNamedThreadFactory(final String prefix) {
-    SecurityManager s = System.getSecurityManager();
-    final ThreadGroup threadGroup = (s != null)
-        ? s.getThreadGroup()
-        : Thread.currentThread().getThreadGroup();
-
-    return new ThreadFactory() {
-      private final AtomicInteger threadNumber = new AtomicInteger(1);
-      private final int poolNum = poolNumber.getAndIncrement();
-      private final ThreadGroup group = threadGroup;
-
-      @Override
-      public Thread newThread(Runnable r) {
-        final String name = String.format("%s-pool%03d-t%04d",
-            prefix, poolNum, threadNumber.getAndIncrement());
-        return new Thread(group, r, name);
-      }
-    };
-  }
-
-  /**
-   * Get a named {@link ThreadFactory} that just builds daemon threads.
-   * @param prefix name prefix for all threads created from the factory
-   * @return a thread factory that creates named, daemon threads with
-   *         the supplied exception handler and normal priority
-   */
-  private static ThreadFactory newDaemonThreadFactory(final String prefix) {
-    final ThreadFactory namedFactory = getNamedThreadFactory(prefix);
-    return new ThreadFactory() {
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread t = namedFactory.newThread(r);
-        if (!t.isDaemon()) {
-          t.setDaemon(true);
-        }
-        if (t.getPriority() != Thread.NORM_PRIORITY) {
-          t.setPriority(Thread.NORM_PRIORITY);
-        }
-        return t;
-      }
-
-    };
-  }
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
@@ -258,27 +206,27 @@ public class S3AFileSystem extends FileSystem {
                     }
                   });
 
-      int maxThreads = intOption(conf, MAX_THREADS, DEFAULT_MAX_THREADS, 0);
-      int coreThreads = intOption(conf, CORE_THREADS, DEFAULT_CORE_THREADS, 0);
-      if (maxThreads == 0) {
-        maxThreads = Runtime.getRuntime().availableProcessors() * 8;
+      if (conf.get("fs.s3a.threads.core") != null &&
+          warnedOfCoreThreadDeprecation.compareAndSet(false, true)) {
+        LoggerFactory.getLogger(
+            "org.apache.hadoop.conf.Configuration.deprecation")
+            .warn("Unsupported option \"fs.s3a.threads.core\"" +
+                " will be ignored {}", conf.get("fs.s3a.threads.core"));
       }
-      if (coreThreads == 0) {
-        coreThreads = Runtime.getRuntime().availableProcessors() * 8;
+      int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
+      if (maxThreads < 2) {
+        LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
+        maxThreads = 2;
       }
-      long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
-          DEFAULT_KEEPALIVE_TIME, 0);
-      LinkedBlockingQueue<Runnable> workQueue =
-          new LinkedBlockingQueue<>(maxThreads *
-              intOption(conf, MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1));
-      threadPoolExecutor = new ThreadPoolExecutor(
-          coreThreads,
-          maxThreads,
-          keepAliveTime,
-          TimeUnit.SECONDS,
-          workQueue,
-          newDaemonThreadFactory("s3a-transfer-shared-"));
-      threadPoolExecutor.allowCoreThreadTimeOut(true);
+      int totalTasks = conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS);
+      if (totalTasks < 1) {
+        LOG.warn(MAX_TOTAL_TASKS + "must be at least 1: forcing to 1.");
+        totalTasks = 1;
+      }
+      long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
+      threadPoolExecutor = new BlockingThreadPoolExecutorService(maxThreads,
+          maxThreads + totalTasks, keepAliveTime, TimeUnit.SECONDS,
+          "s3a-transfer-shared");
 
       initTransferManager();
 
