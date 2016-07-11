@@ -157,3 +157,14 @@ table.dataTable thead .sorting_desc_disabled {
   stroke: #ccc;  
   stroke-width: 2px;
 }
+
+.hadoop-brand-image {
+  margin-top: -10px;
+  width: auto;
+  height: 45px;
+}
+
+li a.navigation-link.ember-view {
+  color: #2196f3;
+  font-weight: bold;
+}
