@@ -20,35 +20,37 @@
   <div class="container-fluid">
     <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
+      <a class="navbar-brand" href="#">
+        <img class="hadoop-brand-image" alt="Apache Hadoop" src="assets/images/hadoop_logo.png"  />
+      </a>
       <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
         <span class="sr-only">Toggle navigation</span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">Apache Hadoop YARN</a>
     </div>
 
     <!-- Collect the nav links, forms, and other content for toggling -->
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
         {{#link-to 'yarn-queue' 'root' tagName="li"}}
-          {{#link-to 'yarn-queue' 'root'}}Queues
+          {{#link-to 'yarn-queue' 'root' class="navigation-link"}}Queues
             <span class="sr-only">(current)</span>
           {{/link-to}}
         {{/link-to}}
         {{#link-to 'yarn-apps' tagName="li"}}
-          {{#link-to 'yarn-apps'}}Applications
+          {{#link-to 'yarn-apps' class="navigation-link"}}Applications
             <span class="sr-only">(current)</span>
           {{/link-to}}
         {{/link-to}}
         {{#link-to 'cluster-overview' tagName="li"}}
-          {{#link-to 'cluster-overview'}}Cluster Overview
+          {{#link-to 'cluster-overview' class="navigation-link"}}Cluster Overview
             <span class="sr-only">(current)</span>
           {{/link-to}}
         {{/link-to}}
         {{#link-to 'yarn-nodes' tagName="li"}}
-          {{#link-to 'yarn-nodes'}}Nodes
+          {{#link-to 'yarn-nodes' class="navigation-link"}}Nodes
             <span class="sr-only">(current)</span>
           {{/link-to}}
         {{/link-to}}
