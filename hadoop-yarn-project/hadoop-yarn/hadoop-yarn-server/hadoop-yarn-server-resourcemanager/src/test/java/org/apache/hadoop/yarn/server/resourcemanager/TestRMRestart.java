@@ -1843,6 +1843,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     // finish the AMs
     finishApplicationMaster(loadedApp1, rm2, nm1, am1);
+    // now AppAttempt and App becomes FINISHED,
+    // we should also grant APP_ATTEMPT_REMOVE/APP_REMOVE event
+    // had processed by scheduler
+    rm2.waitForAppRemovedFromScheduler(loadedApp1.getApplicationId());
     assertQueueMetrics(qm2, 1, 0, 0, 1);
   }
 
@@ -1864,14 +1868,14 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
   private void assertQueueMetrics(QueueMetrics qm, int appsSubmitted,
       int appsPending, int appsRunning, int appsCompleted) {
-    Assert.assertEquals(qm.getAppsSubmitted(),
-        appsSubmitted + appsSubmittedCarryOn);
-    Assert.assertEquals(qm.getAppsPending(),
-        appsPending + appsPendingCarryOn);
-    Assert.assertEquals(qm.getAppsRunning(),
-        appsRunning + appsRunningCarryOn);
-    Assert.assertEquals(qm.getAppsCompleted(),
-        appsCompleted + appsCompletedCarryOn);
+    Assert.assertEquals(appsSubmitted + appsSubmittedCarryOn,
+        qm.getAppsSubmitted());
+    Assert.assertEquals(appsPending + appsPendingCarryOn,
+        qm.getAppsPending());
+    Assert.assertEquals(appsRunning + appsRunningCarryOn,
+        qm.getAppsRunning());
+    Assert.assertEquals(appsCompleted + appsCompletedCarryOn,
+        qm.getAppsCompleted());
   }
 
   @Test (timeout = 60000)

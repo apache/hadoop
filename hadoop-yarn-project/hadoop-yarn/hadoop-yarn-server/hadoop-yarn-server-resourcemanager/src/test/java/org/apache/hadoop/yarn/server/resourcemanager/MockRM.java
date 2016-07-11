@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
@@ -106,6 +107,7 @@ public class MockRM extends ResourceManager {
   static final Logger LOG = Logger.getLogger(MockRM.class);
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
   private static final int SECOND = 1000;
+  private static final int TIMEOUT_MS_FOR_APP_REMOVED = 40 * SECOND;
   private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 10 * SECOND;
   private static final int WAIT_MS_PER_LOOP = 10;
 
@@ -942,5 +944,45 @@ public class MockRM extends ResourceManager {
     SignalContainerRequest req =
         SignalContainerRequest.newInstance(containerId, command);
     client.signalToContainer(req);
+  }
+
+
+  /**
+   * Wait until an app removed from scheduler.
+   * The timeout is 40 seconds.
+   * @param appId the id of an app
+   * @throws InterruptedException
+   *         if interrupted while waiting for app removed
+   */
+  public void waitForAppRemovedFromScheduler(ApplicationId appId)
+      throws InterruptedException {
+    waitForAppRemovedFromScheduler(appId, TIMEOUT_MS_FOR_APP_REMOVED);
+  }
+
+  /**
+   * Wait until an app is removed from scheduler.
+   * @param appId the id of an app
+   * @param timeoutMsecs the length of timeout in milliseconds
+   * @throws InterruptedException
+   *         if interrupted while waiting for app removed
+   */
+  public void waitForAppRemovedFromScheduler(ApplicationId appId,
+      long timeoutMsecs) throws InterruptedException {
+    int timeWaiting = 0;
+
+    Map<ApplicationId, SchedulerApplication> apps  =
+        ((AbstractYarnScheduler) getResourceScheduler())
+            .getSchedulerApplications();
+    while (apps.containsKey(appId)) {
+      if (timeWaiting >= timeoutMsecs) {
+        break;
+      }
+      LOG.info("wait for app removed, " + appId);
+      Thread.sleep(WAIT_MS_PER_LOOP);
+      timeWaiting += WAIT_MS_PER_LOOP;
+    }
+    Assert.assertTrue("app is not removed from scheduler (timeout).",
+        !apps.containsKey(appId));
+    LOG.info("app is removed from scheduler, " + appId);
   }
 }
