@@ -2931,6 +2931,30 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.xframe.enabled</name>
+    <value>true</value>
+    <description>
+      If true, then enables protection against clickjacking by returning
+      X_FRAME_OPTIONS header value set to SAMEORIGIN.
+      Clickjacking protection prevents an attacker from using transparent or
+      opaque layers to trick a user into clicking on a button
+      or link on another page.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.xframe.value</name>
+    <value>SAMEORIGIN</value>
+    <description>
+      This configration value allows user to specify the value for the
+      X-FRAME-OPTIONS. The possible values for this field are
+      DENY, SAMEORIGIN and ALLOW-FROM. Any other value will throw an
+      exception when namenode and datanodes are starting up.
+    </description>
+  </property>
+
+
 <property>
   <name>dfs.http.client.retry.policy.enabled</name>
   <value>false</value>

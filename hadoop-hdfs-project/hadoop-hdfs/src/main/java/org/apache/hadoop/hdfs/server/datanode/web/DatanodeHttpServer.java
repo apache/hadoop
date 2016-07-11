@@ -107,6 +107,16 @@ public class DatanodeHttpServer implements Closeable {
         .addEndpoint(URI.create("http://localhost:0"))
         .setFindPort(true);
 
+    final boolean xFrameEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED,
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED_DEFAULT);
+
+    final String xFrameOptionValue = conf.getTrimmed(
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE,
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE_DEFAULT);
+
+    builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
+
     this.infoServer = builder.build();
 
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
