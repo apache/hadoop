@@ -255,6 +255,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     if (namedCallbacks.containsKey(name)) {
       namedCallbacks.remove(name);
     }
+    DefaultMetricsSystem.removeSourceName(name);
   }
 
   synchronized

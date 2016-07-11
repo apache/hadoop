@@ -12,6 +12,9 @@ Release 2.7.4 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-13362. DefaultMetricsSystem leaks the source name when a source
+    unregisters (Junping Du via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

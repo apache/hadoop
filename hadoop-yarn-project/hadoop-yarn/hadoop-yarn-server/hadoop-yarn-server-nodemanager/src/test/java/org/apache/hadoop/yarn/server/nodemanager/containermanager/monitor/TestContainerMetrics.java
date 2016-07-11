@@ -136,7 +136,6 @@ public class TestContainerMetrics {
     system.sampleMetrics();
     system.sampleMetrics();
     Thread.sleep(100);
-    system.stop();
     // verify metrics1 is unregistered
     assertTrue(metrics1 != ContainerMetrics.forContainer(
         system, containerId1, 1, 0));
@@ -146,6 +145,9 @@ public class TestContainerMetrics {
     // verify metrics3 is still registered
     assertTrue(metrics3 == ContainerMetrics.forContainer(
         system, containerId3, 1, 0));
+    // move stop() to the end to verify registering containerId1 and
+    // containerId2 won't get MetricsException thrown.
+    system.stop();
     system.shutdown();
   }
 }
