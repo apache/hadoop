@@ -693,6 +693,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Security-related configs
   public static final String DFS_ENCRYPT_DATA_TRANSFER_KEY = "dfs.encrypt.data.transfer";
   public static final boolean DFS_ENCRYPT_DATA_TRANSFER_DEFAULT = false;
+  public static final String DFS_XFRAME_OPTION_ENABLED = "dfs.xframe.enabled";
+  public static final boolean DFS_XFRAME_OPTION_ENABLED_DEFAULT = true;
+
+  public static final String DFS_XFRAME_OPTION_VALUE = "dfs.xframe.value";
+  public static final String DFS_XFRAME_OPTION_VALUE_DEFAULT = "SAMEORIGIN";
+
   @Deprecated
   public static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY =
       HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY;
