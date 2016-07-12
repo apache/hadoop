@@ -741,7 +741,12 @@ public class MockRM extends ResourceManager {
     return client.failApplicationAttempt(req);
   }
 
-  // from AMLauncher
+  /**
+   * recommend to use launchAM, or use sendAMLaunched like:
+   * 1, wait RMAppAttempt scheduled
+   * 2, send node heartbeat
+   * 3, sendAMLaunched
+   */
   public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId)
       throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);

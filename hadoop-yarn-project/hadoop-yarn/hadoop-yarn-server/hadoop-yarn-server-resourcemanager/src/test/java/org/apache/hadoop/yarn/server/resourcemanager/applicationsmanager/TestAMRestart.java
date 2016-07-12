@@ -149,11 +149,10 @@ public class TestAMRestart {
     Assert.assertFalse(newAttemptId.equals(am1.getApplicationAttemptId()));
 
     // launch the new AM
-    RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
-    nm1.nodeHeartbeat(true);
-    MockAM am2 = rm1.sendAMLaunched(attempt2.getAppAttemptId());
+    MockAM am2 = rm1.launchAM(app1, rm1, nm1);
     RegisterApplicationMasterResponse registerResponse =
         am2.registerAppAttempt();
+
 
     // Assert two containers are running: container2 and container3;
     Assert.assertEquals(2, registerResponse.getContainersFromPreviousAttempts()
@@ -837,10 +836,7 @@ public class TestAMRestart {
 
     // launch the new AM
     RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
-    nm1.nodeHeartbeat(true);
-    MockAM am2 = rm1.sendAMLaunched(attempt2.getAppAttemptId());
-    am2.registerAppAttempt();
-    rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+    MockAM am2 = rm1.launchAndRegisterAM(app1, rm1, nm1);
 
     // whether new AM could get container complete msg
     AllocateResponse allocateResponse = am2.allocate(
