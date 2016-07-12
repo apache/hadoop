@@ -87,6 +87,12 @@ Release 2.7.3 - UNRELEASED
     MAPREDUCE-6558. multibyte delimiters with compressed input files generate
     duplicate records (Wilfred Spiegelenburg via jlowe)
 
+    MAPREDUCE-6514. Job hangs as ask is not updated after ramping down of all
+    reducers. (Varun Saxena and Wangda Tan via vinodkv)
+
+    MAPREDUCE-6680. JHS UserLogDir scan algorithm sometime could skip directory
+    with update in CloudFS (Azure FileSystem, S3, etc.) (Junping Du via jianhe)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

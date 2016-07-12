@@ -166,6 +166,16 @@ Release 2.7.3 - UNRELEASED
     YARN-3362. Add node label usage in RM CapacityScheduler web UI.
     (Eric Payne via naganarasimha_gr)
 
+    YARN-4556. TestFifoScheduler.testResourceOverCommit fails.
+    (Akihiro Suda via epayne)
+
+    YARN-4794. Deadlock in NMClientImpl. (Jian He via rohithsharmaks)
+
+    YARN-4850. test-fair-scheduler.xml isn't valid xml. (Yufei Gu via aw)
+
+    YARN-4686. MiniYARNCluster.start() returns before cluster is completely
+    started. (Eric Badger via epayne)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES

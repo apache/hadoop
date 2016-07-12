@@ -49,6 +49,20 @@ Release 2.7.3 - UNRELEASED
     HDFS-8772. Fix TestStandbyIsHot#testDatanodeRestarts which occasionally fails.
     (Walter Su via wang).
 
+    HDFS-9906. Remove spammy log spew when a datanode is restarted.
+    (Brahma Reddy Battula via arp)
+
+    HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
+
+    HDFS-10264. Logging improvements in FSImageFormatProtobuf.Saver.
+    (Xiaobing Zhou via arp)
+
+    HDFS-10186. DirectoryScanner: Improve logs by adding full path of both
+    actual and expected block directories. (Rakesh R via szetszwo)
+
+    HDFS-10488. Updated WebHDFS documentation regarding CREATE and MKDIR default
+    permissions. (Wellington Chevreuil via wang)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
@@ -191,6 +205,32 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-9530. ReservedSpace is not cleared for abandoned Blocks
     (Brahma Reddy Battula)
+
+    HDFS-10458. getFileEncryptionInfo should return quickly for non-encrypted
+    cluster. (zhz)
+
+    HDFS-9365. Balaner does not work with the HDFS-6376 HA setup. (szetszwo)
+
+    HDFS-10335. Mover$Processor#chooseTarget() always chooses the first
+    matching target storage group. (Mingliang Liu via szetszwo)
+
+    HDFS-10319. Balancer should not try to pair storages with different types.
+    (szetszwo)
+
+    HDFS-10275. TestDataNodeMetrics failing intermittently due to
+    TotalWriteTime counted incorrectly. (Yiqun Lin via waltersu4549)
+
+    HDFS-9772. TestBlockReplacement#testThrottler doesn't work as expected.
+    (Yiqun Lin via waltersu4549)
+
+    HDFS-10261. TestBookKeeperHACheckpoints doesn't handle ephemeral HTTP
+    ports. (Eric Badger via kihwal)
+
+    HDFS-9478. Reason for failing ipc.FairCallQueue contruction should be
+    thrown. (Ajith S via arp)
+
+    HDFS-10182. Hedged read might overwrite user's buf.
+    (zhouyingchao via waltersu4549)
 
 Release 2.7.2 - 2016-01-25
 
