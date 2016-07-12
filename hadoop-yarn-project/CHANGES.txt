@@ -39,6 +39,9 @@ Release 2.6.5 - UNRELEASED
     YARN-5197. RM leaks containers if running container disappears from 
     node update. Contributed by Jason Lowe.
 
+    YARN-4393. Fix intermittent test failure for TestResourceLocalizationService
+    #testFailedDirsResourceRelease (Varun Saxana via rohithsharmaks)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
