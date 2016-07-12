@@ -83,7 +83,6 @@ import org.apache.hadoop.yarn.server.timeline.TimelineVersionWatcher;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
@@ -92,6 +91,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 
 public class TestDistributedShell {
@@ -104,6 +104,8 @@ public class TestDistributedShell {
   private FileSystem fs = null;
   private TimelineWriter spyTimelineWriter;
   protected YarnConfiguration conf = null;
+  // location of the filesystem timeline writer for timeline service v.2
+  private String timelineV2StorageDir = null;
   private static final int NUM_NMS = 1;
   private static final float DEFAULT_TIMELINE_VERSION = 1.0f;
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
@@ -116,6 +118,8 @@ public class TestDistributedShell {
       = new TimelineVersionWatcher();
   @Rule
   public Timeout globalTimeout = new Timeout(90000);
+  @Rule
+  public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Before
   public void setup() throws Exception {
@@ -188,6 +192,10 @@ public class TestDistributedShell {
           FileSystemTimelineWriterImpl.class,
           org.apache.hadoop.yarn.server.timelineservice.storage.
               TimelineWriter.class);
+      timelineV2StorageDir = tmpFolder.newFolder().getAbsolutePath();
+      // set the file system timeline writer storage directory
+      conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          timelineV2StorageDir);
     } else {
       Assert.fail("Wrong timeline version number: " + timelineVersion);
     }
@@ -258,7 +266,7 @@ public class TestDistributedShell {
             new Path(conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH)),
             true);
   }
-  
+
   @Test
   public void testDSShellWithDomain() throws Exception {
     testDSShell(true);
@@ -488,22 +496,23 @@ public class TestDistributedShell {
   private void checkTimelineV2(boolean haveDomain, ApplicationId appId,
       boolean defaultFlow, ApplicationReport appReport) throws Exception {
     LOG.info("Started checkTimelineV2 ");
-    // For PoC check in /tmp/timeline_service_data YARN-3264
-    String tmpRoot =
-        FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
-            + "/entities/";
+    // For PoC check using the file-based timeline writer (YARN-3264)
+    String tmpRoot = timelineV2StorageDir + File.separator + "entities" +
+        File.separator;
 
     File tmpRootFolder = new File(tmpRoot);
     try {
       Assert.assertTrue(tmpRootFolder.isDirectory());
       String basePath = tmpRoot +
-          YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
+          YarnConfiguration.DEFAULT_RM_CLUSTER_ID + File.separator +
           UserGroupInformation.getCurrentUser().getShortUserName() +
           (defaultFlow ?
-              "/" + appReport.getName() + "/" +
-                  TimelineUtils.DEFAULT_FLOW_VERSION +"/" +
-                  appReport.getStartTime() +"/" :
-              "/test_flow_name/test_flow_version/12345678/") +
+              File.separator + appReport.getName() + File.separator +
+                  TimelineUtils.DEFAULT_FLOW_VERSION + File.separator +
+                  appReport.getStartTime() + File.separator :
+              File.separator + "test_flow_name" + File.separator +
+                  "test_flow_version" + File.separator + "12345678" +
+                  File.separator) +
           appId.toString();
       LOG.info("basePath: " + basePath);
       // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
@@ -615,7 +624,8 @@ public class TestDistributedShell {
 
   private File verifyEntityTypeFileExists(String basePath, String entityType,
       String entityfileName) {
-    String outputDirPathForEntity = basePath + "/" + entityType + "/";
+    String outputDirPathForEntity =
+        basePath + File.separator + entityType + File.separator;
     File outputDirForEntity = new File(outputDirPathForEntity);
     Assert.assertTrue(outputDirForEntity.isDirectory());
 
