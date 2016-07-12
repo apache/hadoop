@@ -220,7 +220,7 @@ public class MockAM {
     pri.setPriority(priority);
     req.setPriority(pri);
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(memory);
+    capability.setMemorySize(memory);
     req.setCapability(capability);
     if (labelExpression != null) {
      req.setNodeLabelExpression(labelExpression); 

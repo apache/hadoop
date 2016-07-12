@@ -67,24 +67,25 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
-  public void setMemory(long memory) {
+  @SuppressWarnings("deprecation")
+  public void setMemory(int memory) {
+    setMemorySize(memory);
+  }
+
+  @Override
+  public void setMemorySize(long memory) {
     maybeInitBuilder();
     builder.setMemory(memory);
   }
 
   @Override
   public int getVirtualCores() {
-    return (int) getVirtualCoresSize();
-  }
-
-  @Override
-  public long getVirtualCoresSize() {
     ResourceProtoOrBuilder p = viaProto ? proto : builder;
     return p.getVirtualCores();
   }
 
   @Override
-  public void setVirtualCores(long vCores) {
+  public void setVirtualCores(int vCores) {
     maybeInitBuilder();
     builder.setVirtualCores(vCores);
   }

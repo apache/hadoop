@@ -42,7 +42,13 @@ public class Resources {
     }
 
     @Override
-    public void setMemory(long memory) {
+    public void setMemorySize(long memory) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void setMemory(int memory) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -52,12 +58,7 @@ public class Resources {
     }
 
     @Override
-    public long getVirtualCoresSize() {
-      return 0;
-    }
-
-    @Override
-    public void setVirtualCores(long cores) {
+    public void setVirtualCores(int cores) {
       throw new RuntimeException("NONE cannot be modified!");
     }
 
@@ -86,7 +87,13 @@ public class Resources {
     }
 
     @Override
-    public void setMemory(long memory) {
+    @SuppressWarnings("deprecation")
+    public void setMemory(int memory) {
+      throw new RuntimeException("UNBOUNDED cannot be modified!");
+    }
+
+    @Override
+    public void setMemorySize(long memory) {
       throw new RuntimeException("UNBOUNDED cannot be modified!");
     }
 
@@ -96,12 +103,7 @@ public class Resources {
     }
 
     @Override
-    public long getVirtualCoresSize() {
-      return Long.MAX_VALUE;
-    }
-
-    @Override
-    public void setVirtualCores(long cores) {
+    public void setVirtualCores(int cores) {
       throw new RuntimeException("UNBOUNDED cannot be modified!");
     }
 
@@ -109,20 +111,31 @@ public class Resources {
     public int compareTo(Resource o) {
       long diff = Long.MAX_VALUE - o.getMemorySize();
       if (diff == 0) {
-        diff = Long.MAX_VALUE - o.getVirtualCoresSize();
+        diff = Integer.MAX_VALUE - o.getVirtualCores();
       }
       return Long.signum(diff);
     }
     
   };
 
+  public static Resource createResource(int memory) {
+    return createResource(memory, (memory > 0) ? 1 : 0);
+  }
+
+  public static Resource createResource(int memory, int cores) {
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemorySize(memory);
+    resource.setVirtualCores(cores);
+    return resource;
+  }
+
   public static Resource createResource(long memory) {
     return createResource(memory, (memory > 0) ? 1 : 0);
   }
 
-  public static Resource createResource(long memory, long cores) {
+  public static Resource createResource(long memory, int cores) {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
+    resource.setMemorySize(memory);
     resource.setVirtualCores(cores);
     return resource;
   }
@@ -140,7 +153,7 @@ public class Resources {
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
-    lhs.setMemory(lhs.getMemorySize() + rhs.getMemorySize());
+    lhs.setMemorySize(lhs.getMemorySize() + rhs.getMemorySize());
     lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
     return lhs;
   }
@@ -150,7 +163,7 @@ public class Resources {
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
-    lhs.setMemory(lhs.getMemorySize() - rhs.getMemorySize());
+    lhs.setMemorySize(lhs.getMemorySize() - rhs.getMemorySize());
     lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
     return lhs;
   }
@@ -164,7 +177,7 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    lhs.setMemory((int)(lhs.getMemorySize() * by));
+    lhs.setMemorySize((long)(lhs.getMemorySize() * by));
     lhs.setVirtualCores((int)(lhs.getVirtualCores() * by));
     return lhs;
   }
@@ -179,7 +192,7 @@ public class Resources {
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {
-    lhs.setMemory(lhs.getMemorySize() + (int)(rhs.getMemorySize() * by));
+    lhs.setMemorySize(lhs.getMemorySize() + (long)(rhs.getMemorySize() * by));
     lhs.setVirtualCores(lhs.getVirtualCores()
         + (int)(rhs.getVirtualCores() * by));
     return lhs;
@@ -197,7 +210,7 @@ public class Resources {
   
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
     Resource out = clone(lhs);
-    out.setMemory((int)(lhs.getMemorySize() * by));
+    out.setMemorySize((long)(lhs.getMemorySize() * by));
     out.setVirtualCores((int)(lhs.getVirtualCores() * by));
     return out;
   }

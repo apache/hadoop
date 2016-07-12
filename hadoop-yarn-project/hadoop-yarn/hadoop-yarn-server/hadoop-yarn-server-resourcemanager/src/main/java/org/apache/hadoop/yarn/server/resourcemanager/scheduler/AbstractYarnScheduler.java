@@ -706,7 +706,7 @@ public abstract class AbstractYarnScheduler
         int nodeMemory = (int)totalResource.getMemorySize();
         if (nodeMemory > maxNodeMemory) {
           maxNodeMemory = nodeMemory;
-          maximumAllocation.setMemory(Math.min(
+          maximumAllocation.setMemorySize(Math.min(
               configuredMaximumAllocation.getMemorySize(), maxNodeMemory));
         }
         int nodeVCores = totalResource.getVirtualCores();
@@ -738,9 +738,9 @@ public abstract class AbstractYarnScheduler
             }
           }
           if (maxNodeMemory == -1) {  // no nodes
-            maximumAllocation.setMemory(configuredMaximumAllocation.getMemorySize());
+            maximumAllocation.setMemorySize(configuredMaximumAllocation.getMemorySize());
           } else {
-            maximumAllocation.setMemory(
+            maximumAllocation.setMemorySize(
                 Math.min(configuredMaximumAllocation.getMemorySize(), maxNodeMemory));
           }
           if (maxNodeVCores == -1) {  // no nodes

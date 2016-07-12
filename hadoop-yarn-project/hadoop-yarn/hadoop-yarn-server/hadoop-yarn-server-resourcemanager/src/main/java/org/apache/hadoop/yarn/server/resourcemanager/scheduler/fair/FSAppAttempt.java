@@ -429,7 +429,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   public void clearPreemptedResources() {
-    preemptedResources.setMemory(0);
+    preemptedResources.setMemorySize(0);
     preemptedResources.setVirtualCores(0);
   }
 

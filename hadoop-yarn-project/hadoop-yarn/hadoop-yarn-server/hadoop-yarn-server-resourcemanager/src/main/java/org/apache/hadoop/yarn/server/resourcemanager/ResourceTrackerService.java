@@ -331,7 +331,7 @@ public class ResourceTrackerService extends AbstractService implements
     String nid = nodeId.toString();
 
     if (nodes != null && Arrays.asList(nodes).contains(nid)) {
-      capability.setMemory(this.drConf.getMemoryPerNode(nid));
+      capability.setMemorySize(this.drConf.getMemoryPerNode(nid));
       capability.setVirtualCores(this.drConf.getVcoresPerNode(nid));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Resource for node: " + nid + " is adjusted to " +

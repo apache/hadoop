@@ -63,7 +63,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -425,9 +424,9 @@ public class BuilderUtils {
     return report;
   }
 
-  public static Resource newResource(long memory, long vCores) {
+  public static Resource newResource(long memory, int vCores) {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
-    resource.setMemory(memory);
+    resource.setMemorySize(memory);
     resource.setVirtualCores(vCores);
     return resource;
   }

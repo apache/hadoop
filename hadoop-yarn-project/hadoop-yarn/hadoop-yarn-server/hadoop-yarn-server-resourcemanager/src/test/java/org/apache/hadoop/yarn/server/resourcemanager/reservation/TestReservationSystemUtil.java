@@ -127,7 +127,7 @@ public class TestReservationSystemUtil {
 
   public Resource createResource(int memory, int vCores) {
     Resource resource = new ResourcePBImpl();
-    resource.setMemory(memory);
+    resource.setMemorySize(memory);
     resource.setVirtualCores(vCores);
     return resource;
   }

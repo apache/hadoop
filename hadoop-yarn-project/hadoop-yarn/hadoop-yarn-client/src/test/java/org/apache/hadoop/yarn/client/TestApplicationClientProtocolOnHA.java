@@ -171,7 +171,7 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
         Records.newRecord(ContainerLaunchContext.class);
     appContext.setAMContainerSpec(amContainer);
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(10);
+    capability.setMemorySize(10);
     capability.setVirtualCores(1);
     appContext.setResource(capability);
     ApplicationId appId = client.submitApplication(appContext);

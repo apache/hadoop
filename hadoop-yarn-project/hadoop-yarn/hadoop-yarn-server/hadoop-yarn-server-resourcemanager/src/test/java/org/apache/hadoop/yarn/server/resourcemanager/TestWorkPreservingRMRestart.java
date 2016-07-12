@@ -1318,7 +1318,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
 
     // submit app with keepContainersAcrossApplicationAttempts true
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(200);
+    resource.setMemorySize(200);
     RMApp app0 = rm1.submitApp(resource, "", UserGroupInformation
         .getCurrentUser().getShortUserName(), null, false, null,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS, null, null, true, true,
