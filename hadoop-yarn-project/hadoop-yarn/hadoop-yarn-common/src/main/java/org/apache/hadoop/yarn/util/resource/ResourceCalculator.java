@@ -30,6 +30,13 @@ public abstract class ResourceCalculator {
 
   public abstract int 
   compare(Resource clusterResource, Resource lhs, Resource rhs);
+
+  public static int divideAndCeil(int a, int b) {
+    if (b == 0) {
+      return 0;
+    }
+    return (a + (b - 1)) / b;
+  }
   
   public static long divideAndCeil(long a, long b) {
     if (b == 0) {
@@ -38,11 +45,19 @@ public abstract class ResourceCalculator {
     return (a + (b - 1)) / b;
   }
 
+  public static int roundUp(int a, int b) {
+    return divideAndCeil(a, b) * b;
+  }
+
   public static long roundUp(long a, long b) {
     return divideAndCeil(a, b) * b;
   }
 
   public static long roundDown(long a, long b) {
+    return (a / b) * b;
+  }
+
+  public static int roundDown(int a, int b) {
     return (a / b) * b;
   }
 
@@ -169,7 +184,7 @@ public abstract class ResourceCalculator {
    * @param denominator denominator
    * @return resultant resource
    */
-  public abstract Resource divideAndCeil(Resource numerator, long denominator);
+  public abstract Resource divideAndCeil(Resource numerator, int denominator);
   
   /**
    * Check if a smaller resource can be contained by bigger resource.

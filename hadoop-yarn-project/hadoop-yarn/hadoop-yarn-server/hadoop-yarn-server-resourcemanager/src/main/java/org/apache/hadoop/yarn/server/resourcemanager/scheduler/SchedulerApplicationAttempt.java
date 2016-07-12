@@ -465,7 +465,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public synchronized Resource getHeadroom() {
     // Corner case to deal with applications being slightly over-limit
     if (resourceLimit.getMemorySize() < 0) {
-      resourceLimit.setMemory(0);
+      resourceLimit.setMemorySize(0);
     }
     
     return resourceLimit;

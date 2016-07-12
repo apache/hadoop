@@ -309,7 +309,7 @@ public class SLSRunner {
             if (jsonTask.containsKey("container.memory")) {
               int containerMemory = Integer.parseInt(
                   jsonTask.get("container.memory").toString());
-              res.setMemory(containerMemory);
+              res.setMemorySize(containerMemory);
             }
 
             if (jsonTask.containsKey("container.vcores")) {

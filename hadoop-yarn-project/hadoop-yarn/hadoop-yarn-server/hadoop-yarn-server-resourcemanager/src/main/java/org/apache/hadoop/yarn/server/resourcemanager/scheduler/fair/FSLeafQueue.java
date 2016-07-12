@@ -496,15 +496,15 @@ public class FSLeafQueue extends FSQueue {
     // maxAMResource
     Resource maxResource = Resources.clone(getFairShare());
     if (maxResource.getMemorySize() == 0) {
-      maxResource.setMemory(
+      maxResource.setMemorySize(
           Math.min(scheduler.getRootQueueMetrics().getAvailableMB(),
                    getMaxShare().getMemorySize()));
     }
 
-    if (maxResource.getVirtualCoresSize() == 0) {
+    if (maxResource.getVirtualCores() == 0) {
       maxResource.setVirtualCores(Math.min(
           scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
-          getMaxShare().getVirtualCoresSize()));
+          getMaxShare().getVirtualCores()));
     }
 
     Resource maxAMResource = Resources.multiply(maxResource, maxAMShare);

@@ -135,7 +135,6 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -664,7 +663,7 @@ public abstract class TaskAttemptImpl implements
 
     //TODO:create the resource reqt for this Task attempt
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
-    this.resourceCapability.setMemory(
+    this.resourceCapability.setMemorySize(
         getMemoryRequired(conf, taskId.getTaskType()));
     this.resourceCapability.setVirtualCores(
         getCpuRequired(conf, taskId.getTaskType()));

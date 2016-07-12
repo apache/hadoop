@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
 
 public class MockAM {
 
@@ -207,7 +206,7 @@ public class MockAM {
     pri.setPriority(priority);
     req.setPriority(pri);
     Resource capability = Records.newRecord(Resource.class);
-    capability.setMemory(memory);
+    capability.setMemorySize(memory);
     req.setCapability(capability);
     if (labelExpression != null) {
      req.setNodeLabelExpression(labelExpression); 

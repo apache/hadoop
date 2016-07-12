@@ -142,7 +142,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public Resource divideAndCeil(Resource numerator, long denominator) {
+  public Resource divideAndCeil(Resource numerator, int denominator) {
     return Resources.createResource(
         divideAndCeil(numerator.getMemorySize(), denominator),
         divideAndCeil(numerator.getVirtualCores(), denominator)
@@ -157,7 +157,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         Math.max(r.getMemorySize(), minimumResource.getMemorySize()),
         stepFactor.getMemorySize()),
       maximumResource.getMemorySize());
-    long normalizedCores = Math.min(
+    int normalizedCores = Math.min(
       roundUp(
         Math.max(r.getVirtualCores(), minimumResource.getVirtualCores()),
         stepFactor.getVirtualCores()),
@@ -189,7 +189,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundUp(
             (int)Math.ceil(r.getMemorySize() * by), stepFactor.getMemorySize()),
         roundUp(
-            (int)Math.ceil(r.getVirtualCores() * by), 
+            (int)Math.ceil(r.getVirtualCores() * by),
             stepFactor.getVirtualCores())
         );
   }
@@ -203,7 +203,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
             stepFactor.getMemorySize()
             ),
         roundDown(
-            (int)(r.getVirtualCores() * by), 
+            (int)(r.getVirtualCores() * by),
             stepFactor.getVirtualCores()
             )
         );
