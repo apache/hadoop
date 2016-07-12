@@ -59,16 +59,11 @@ public class RpcFactoryProvider {
   private static Object getFactoryClassInstance(String factoryClassName) {
     try {
       Class<?> clazz = Class.forName(factoryClassName);
-      Method method = clazz.getMethod("get", null);
+      Method method = clazz.getMethod("get");
       method.setAccessible(true);
-      return method.invoke(null, null);
-    } catch (ClassNotFoundException e) {
-      throw new YarnRuntimeException(e);
-    } catch (NoSuchMethodException e) {
-      throw new YarnRuntimeException(e);
-    } catch (InvocationTargetException e) {
-      throw new YarnRuntimeException(e);
-    } catch (IllegalAccessException e) {
+      return method.invoke(null);
+    } catch (ClassNotFoundException | NoSuchMethodException |
+        InvocationTargetException | IllegalAccessException e) {
       throw new YarnRuntimeException(e);
     }
   }
