@@ -36,6 +36,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-12893. Verify LICENSE.txt and NOTICE.txt.
     (Xiao Chen and Andrew Wang via aajisaka)
 
+    HADOOP-13297. Add missing dependency in setting
+    maven-remote-resource-plugin to fix builds. (Sean Busbey via aajisaka)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
