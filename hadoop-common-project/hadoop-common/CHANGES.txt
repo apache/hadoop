@@ -108,6 +108,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-13192. org.apache.hadoop.util.LineReader cannot handle multibyte
     delimiters correctly. (binde via aajisaka)
 
+    HADOOP-13297. Add missing dependency in setting
+    maven-remote-resource-plugin to fix builds. (Sean Busbey via aajisaka)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
