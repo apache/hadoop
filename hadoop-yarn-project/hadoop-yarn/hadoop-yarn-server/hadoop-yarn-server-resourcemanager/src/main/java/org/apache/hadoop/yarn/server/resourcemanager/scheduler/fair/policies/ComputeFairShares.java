@@ -266,10 +266,10 @@ public class ComputeFairShares {
   private static void setResourceValue(long val, Resource resource, ResourceType type) {
     switch (type) {
     case MEMORY:
-      resource.setMemory(val);
+      resource.setMemorySize(val);
       break;
     case CPU:
-      resource.setVirtualCores(val);
+      resource.setVirtualCores((int)val);
       break;
     default:
       throw new IllegalArgumentException("Invalid resource");

@@ -826,21 +826,21 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         resourceTrackerService.registerNodeManager(req);
     Assert.assertEquals(NodeAction.SHUTDOWN,response1.getNodeAction());
     
-    capability.setMemory(2048);
+    capability.setMemorySize(2048);
     capability.setVirtualCores(1);
     req.setResource(capability);
     RegisterNodeManagerResponse response2 =
         resourceTrackerService.registerNodeManager(req);
     Assert.assertEquals(NodeAction.SHUTDOWN,response2.getNodeAction());
     
-    capability.setMemory(1024);
+    capability.setMemorySize(1024);
     capability.setVirtualCores(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response3 =
         resourceTrackerService.registerNodeManager(req);
     Assert.assertEquals(NodeAction.SHUTDOWN,response3.getNodeAction());
     
-    capability.setMemory(2048);
+    capability.setMemorySize(2048);
     capability.setVirtualCores(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response4 =

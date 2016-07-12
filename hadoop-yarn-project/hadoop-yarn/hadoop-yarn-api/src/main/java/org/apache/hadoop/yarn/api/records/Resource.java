@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
+
 
 /**
  * <p><code>Resource</code> models a set of computer resources in the 
@@ -55,9 +55,18 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(long memory, long vCores) {
+  public static Resource newInstance(int memory, int vCores) {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
+    resource.setMemorySize(memory);
+    resource.setVirtualCores(vCores);
+    return resource;
+  }
+
+  @Public
+  @Stable
+  public static Resource newInstance(long memory, int vCores) {
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemorySize(memory);
     resource.setVirtualCores(vCores);
     return resource;
   }
@@ -77,17 +86,31 @@ public abstract class Resource implements Comparable<Resource> {
    * Get <em>memory</em> of the resource.
    * @return <em>memory</em> of the resource
    */
-  @Private
-  @Unstable
-  public abstract long getMemorySize();
-  
+  @Public
+  @Stable
+  public long getMemorySize() {
+    throw new NotImplementedException(
+        "This method is implemented by ResourcePBImpl");
+  }
+
+  /**
+   * Set <em>memory</em> of the resource.
+   * @param memory <em>memory</em> of the resource
+   */
+  @Public
+  @Deprecated
+  public abstract void setMemory(int memory);
+
   /**
    * Set <em>memory</em> of the resource.
    * @param memory <em>memory</em> of the resource
    */
   @Public
   @Stable
-  public abstract void setMemory(long memory);
+  public void setMemorySize(long memory) {
+    throw new NotImplementedException(
+        "This method is implemented by ResourcePBImpl");
+  }
 
 
   /**
@@ -103,10 +126,6 @@ public abstract class Resource implements Comparable<Resource> {
   @Public
   @Evolving
   public abstract int getVirtualCores();
-
-  @Public
-  @Unstable
-  public abstract long getVirtualCoresSize();
   
   /**
    * Set <em>number of virtual cpu cores</em> of the resource.
@@ -120,7 +139,7 @@ public abstract class Resource implements Comparable<Resource> {
    */
   @Public
   @Evolving
-  public abstract void setVirtualCores(long vCores);
+  public abstract void setVirtualCores(int vCores);
 
   @Override
   public int hashCode() {

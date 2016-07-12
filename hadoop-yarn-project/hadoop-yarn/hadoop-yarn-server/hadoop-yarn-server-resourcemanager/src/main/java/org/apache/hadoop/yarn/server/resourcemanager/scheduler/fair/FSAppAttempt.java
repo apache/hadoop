@@ -194,7 +194,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           node.getUnallocatedResource());
     }
     if (availableResources.getMemorySize() < 0) {
-      availableResources.setMemory(0);
+      availableResources.setMemorySize(0);
     }
     if (availableResources.getVirtualCores() < 0) {
       availableResources.setVirtualCores(0);
@@ -460,7 +460,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   public void clearPreemptedResources() {
-    preemptedResources.setMemory(0);
+    preemptedResources.setMemorySize(0);
     preemptedResources.setVirtualCores(0);
   }
 

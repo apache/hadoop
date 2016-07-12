@@ -542,11 +542,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.allocated.vcores",
-      new Gauge<Long>() {
+      new Gauge<Integer>() {
         @Override
-        public Long getValue() {
+        public Integer getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0L;
+            return 0;
           } else {
             return scheduler.getRootQueueMetrics().getAllocatedVirtualCores();
           }
@@ -566,11 +566,11 @@ final public class ResourceSchedulerWrapper
       }
     );
     metrics.register("variable.cluster.available.vcores",
-      new Gauge<Long>() {
+      new Gauge<Integer>() {
         @Override
-        public Long getValue() {
+        public Integer getValue() {
           if(scheduler == null || scheduler.getRootQueueMetrics() == null) {
-            return 0L;
+            return 0;
           } else {
             return scheduler.getRootQueueMetrics().getAvailableVirtualCores();
           }

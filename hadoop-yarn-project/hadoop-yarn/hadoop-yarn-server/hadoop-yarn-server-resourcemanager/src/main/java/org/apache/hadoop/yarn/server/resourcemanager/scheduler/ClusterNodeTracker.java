@@ -57,7 +57,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
 
   // Max allocation
   private long maxNodeMemory = -1;
-  private long maxNodeVCores = -1;
+  private int maxNodeVCores = -1;
   private Resource configuredMaxAllocation;
   private boolean forceConfiguredMaxAllocation = true;
   private long configuredMaxAllocationWaitTime;
