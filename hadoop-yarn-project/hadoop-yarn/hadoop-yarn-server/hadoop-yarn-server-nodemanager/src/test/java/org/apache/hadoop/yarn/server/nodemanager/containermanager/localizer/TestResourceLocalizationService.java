@@ -2607,6 +2607,8 @@ public class TestResourceLocalizationService {
           new ApplicationLocalizationEvent(
             LocalizationEventType.DESTROY_APPLICATION_RESOURCES, app);
       spyService.handle(destroyApp);
+      // Waits for APPLICATION_RESOURCES_CLEANEDUP event to be handled.
+      dispatcher.await();
       verify(applicationBus).handle(argThat(matchesAppDestroy));
 
       // verify we got the right delete calls
