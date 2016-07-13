@@ -303,6 +303,8 @@ public class TestReconstructStripedBlocks {
 
       // check if NN can detect the missing internal block and finish the
       // reconstruction
+      StripedFileTestUtil.waitForReconstructionFinished(filePath, fs,
+          GROUP_SIZE);
       boolean reconstructed = false;
       for (int i = 0; i < 5; i++) {
         NumberReplicas num = null;

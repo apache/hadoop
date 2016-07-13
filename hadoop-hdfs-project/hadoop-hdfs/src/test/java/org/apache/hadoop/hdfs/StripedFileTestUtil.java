@@ -514,6 +514,8 @@ public class StripedFileTestUtil {
   public static LocatedBlocks waitForReconstructionFinished(Path file,
                                   DistributedFileSystem fs, int groupSize)
       throws Exception {
+    LOG.info("Waiting for reconstruction to be finished for the file:" + file
+        + ", groupSize:" + groupSize);
     final int attempts = 60;
     for (int i = 0; i < attempts; i++) {
       LocatedBlocks locatedBlocks = getLocatedBlocks(file, fs);
