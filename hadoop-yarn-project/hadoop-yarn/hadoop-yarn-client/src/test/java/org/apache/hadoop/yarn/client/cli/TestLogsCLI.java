@@ -711,6 +711,64 @@ public class TestLogsCLI {
     }
   }
 
+  @Test (timeout = 5000)
+  public void testLogsCLIWithInvalidArgs() throws Exception {
+    String localDir = "target/SaveLogs";
+    Path localPath = new Path(localDir);
+    Configuration configuration = new Configuration();
+    FileSystem fs = FileSystem.get(configuration);
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    YarnClient mockYarnClient =
+        createMockYarnClient(YarnApplicationState.FINISHED,
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
+    cli.setConf(configuration);
+
+    // Specify an invalid applicationId
+    int exitCode = cli.run(new String[] {"-applicationId",
+        "123"});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "Invalid ApplicationId specified"));
+    sysErrStream.reset();
+
+    // Specify an invalid containerId
+    exitCode = cli.run(new String[] {"-containerId",
+        "123"});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "Invalid ContainerId specified"));
+    sysErrStream.reset();
+
+    // Specify show_container_log_info and show_application_log_info
+    // at the same time
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_container_log_info", "-show_application_log_info"});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains("Invalid options. "
+        + "Can only accept one of show_application_log_info/"
+        + "show_container_log_info."));
+    sysErrStream.reset();
+
+    // Specify a file name to the option -out
+    try {
+      fs.mkdirs(localPath);
+      Path tmpFilePath = new Path(localPath, "tmpFile");
+      if (!fs.exists(tmpFilePath)) {
+        fs.createNewFile(tmpFilePath);
+      }
+      exitCode = cli.run(new String[] {"-applicationId",
+          appId.toString(),
+          "-out" , tmpFilePath.toString()});
+      assertTrue(exitCode == -1);
+      assertTrue(sysErrStream.toString().contains(
+          "Invalid value for -out option. Please provide a directory."));
+    } finally {
+      fs.delete(localPath, true);
+    }
+  }
+
+
   @Test (timeout = 15000)
   public void testSaveContainerLogsLocally() throws Exception {
     String remoteLogRootDir = "target/logs/";
@@ -844,13 +902,6 @@ public class TestLogsCLI {
         UserGroupInformation.getCurrentUser().getShortUserName());
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(configuration);
-
-    int result = cli.run(new String[] {"-applicationId", appId.toString(),
-        "-show_container_log_info", "-show_application_log_info"});
-    assertTrue(result == -1);
-    assertTrue(sysErrStream.toString().contains("Invalid options. "
-        + "Can only accept one of show_application_log_info/"
-        + "show_container_log_info."));
 
     cli.run(new String[] {"-applicationId", appId.toString(),
         "-show_container_log_info"});

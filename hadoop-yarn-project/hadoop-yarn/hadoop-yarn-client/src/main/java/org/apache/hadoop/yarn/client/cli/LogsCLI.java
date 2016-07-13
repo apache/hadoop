@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -195,6 +196,15 @@ public class LogsCLI extends Configured implements Tool {
       System.err.println("Invalid options. Can only accept one of "
           + "show_application_log_info/show_container_log_info.");
       return -1;
+    }
+
+    if (localDir != null) {
+      File file = new File(localDir);
+      if (file.exists() && file.isFile()) {
+        System.err.println("Invalid value for -out option. "
+            + "Please provide a directory.");
+        return -1;
+      }
     }
 
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
