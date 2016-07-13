@@ -15,6 +15,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13362. DefaultMetricsSystem leaks the source name when a source
     unregisters (Junping Du via jlowe)
 
+    HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
+    (Vinayakumar B, Yongjun Zhang, and Brahma Reddy Battula via ozawa)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
