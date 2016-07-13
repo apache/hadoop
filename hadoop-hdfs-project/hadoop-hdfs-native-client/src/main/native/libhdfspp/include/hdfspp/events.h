@@ -48,10 +48,8 @@ public:
 enum event_response_type {
   kOk = 0,
 
-#ifndef NDEBUG
   // Responses to be used in testing only
   kTest_Error = 100
-#endif
 };
 
 
@@ -70,10 +68,9 @@ private:
 //
 //   Testing support
 //
-// If running a debug build, the consumer can stimulate errors
+// The consumer can stimulate errors
 // within libhdfdspp by returning a Status from the callback.
 ///////////////////////////////////////////////
-#ifndef NDEBUG
 public:
   static event_response test_err(const Status &status) {
     return event_response(status);
@@ -86,7 +83,6 @@ private:
     response_(event_response_type::kTest_Error), error_status_(status) {}
 
   Status error_status_; // To be used with kTest_Error
-#endif
 };
 
 
