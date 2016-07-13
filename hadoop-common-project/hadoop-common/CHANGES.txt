@@ -21,6 +21,8 @@ Release 2.7.3 - UNRELEASED
     ipc.maximum.data.length for controlling maximum RPC message size.
     (Mingliang Liu via arp)
 
+    HADOOP-12570. HDFS Secure Mode Documentation updates. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-12810. FileSystem#listLocatedStatus causes unnecessary RPC calls
