@@ -29,16 +29,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestFileSystemTimelineWriterImpl {
+  @Rule
+  public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   /**
    * Unit test for PoC YARN 3264.
@@ -79,14 +83,20 @@ public class TestFileSystemTimelineWriterImpl {
     FileSystemTimelineWriterImpl fsi = null;
     try {
       fsi = new FileSystemTimelineWriterImpl();
-      fsi.init(new YarnConfiguration());
+      Configuration conf = new YarnConfiguration();
+      String outputRoot = tmpFolder.newFolder().getAbsolutePath();
+      conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          outputRoot);
+      fsi.init(conf);
       fsi.start();
       fsi.write("cluster_id", "user_id", "flow_name", "flow_version", 12345678L,
           "app_id", te);
 
-      String fileName = fsi.getOutputRoot() +
-          "/entities/cluster_id/user_id/flow_name/flow_version/12345678/" +
-          "app_id/" + type + "/" + id +
+      String fileName = fsi.getOutputRoot() + File.separator + "entities" +
+          File.separator + "cluster_id" + File.separator + "user_id" +
+          File.separator + "flow_name" + File.separator + "flow_version" +
+          File.separator + "12345678" + File.separator + "app_id" +
+          File.separator + type + File.separator + id +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = Paths.get(fileName);
       File f = new File(fileName);
@@ -99,9 +109,11 @@ public class TestFileSystemTimelineWriterImpl {
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
 
       // verify aggregated metrics
-      String fileName2 = fsi.getOutputRoot() +
-          "/entities/cluster_id/user_id/flow_name/flow_version/12345678/app_id/"
-          + type2 + "/" + id2 +
+      String fileName2 = fsi.getOutputRoot() + File.separator + "entities" +
+          File.separator + "cluster_id" + File.separator + "user_id" +
+          File.separator + "flow_name" + File.separator + "flow_version" +
+          File.separator + "12345678" + File.separator + "app_id" +
+          File.separator + type2 + File.separator + id2 +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path2 = Paths.get(fileName2);
       File file = new File(fileName2);
@@ -113,15 +125,9 @@ public class TestFileSystemTimelineWriterImpl {
       // confirm the contents same as what was written
       assertEquals(metricToString,
           TimelineUtils.dumpTimelineRecordtoJSON(entity2));
-
-      // delete the directory
-      File outputDir = new File(fsi.getOutputRoot());
-      FileUtils.deleteDirectory(outputDir);
-      assertTrue(!(f.exists()));
     } finally {
       if (fsi != null) {
         fsi.close();
-        FileUtils.deleteDirectory(new File(fsi.getOutputRoot()));
       }
     }
   }

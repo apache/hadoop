@@ -43,11 +43,11 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilter
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareOp;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
-import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineExistsFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList.Operator;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValueFilter;
+import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.AfterClass;
@@ -58,17 +58,22 @@ import org.junit.Test;
 
 public class TestFileSystemTimelineReaderImpl {
 
-  private static final String ROOT_DIR =
-      FileSystemTimelineReaderImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
+  private static final String ROOT_DIR = new File("target",
+      TestFileSystemTimelineReaderImpl.class.getSimpleName()).getAbsolutePath();
   private FileSystemTimelineReaderImpl reader;
 
   @BeforeClass
   public static void setup() throws Exception {
-    loadEntityData();
+    initializeDataDirectory(ROOT_DIR);
+  }
+
+  public static void initializeDataDirectory(String rootDir) throws Exception {
+    loadEntityData(rootDir);
     // Create app flow mapping file.
     CSVFormat format =
         CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
-    String appFlowMappingFile = ROOT_DIR + "/entities/cluster1/" +
+    String appFlowMappingFile = rootDir + File.separator + "entities" +
+        File.separator + "cluster1" + File.separator +
         FileSystemTimelineReaderImpl.APP_FLOW_MAPPING_FILE;
     try (PrintWriter out =
         new PrintWriter(new BufferedWriter(
@@ -78,7 +83,7 @@ public class TestFileSystemTimelineReaderImpl {
       printer.printRecord("app2", "user1", "flow1,flow", 1);
       printer.close();
     }
-    (new File(ROOT_DIR)).deleteOnExit();
+    (new File(rootDir)).deleteOnExit();
   }
 
   @AfterClass
@@ -102,7 +107,8 @@ public class TestFileSystemTimelineReaderImpl {
         throw new IOException("Could not create directories for " + dir);
       }
     }
-    String fileName = dir.getAbsolutePath() + "/" + entity.getId() + ".thist";
+    String fileName = dir.getAbsolutePath() + File.separator + entity.getId() +
+        ".thist";
     try (PrintWriter out =
         new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)))){
       out.println(TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -111,9 +117,8 @@ public class TestFileSystemTimelineReaderImpl {
     }
   }
 
-  private static void loadEntityData() throws Exception {
-    File appDir = new File(ROOT_DIR +
-        "/entities/cluster1/user1/flow1/1/app1/app/");
+  private static void loadEntityData(String rootDir) throws Exception {
+    File appDir = getAppDir(rootDir, "cluster1", "user1", "flow1", "1", "app1");
     TimelineEntity entity11 = new TimelineEntity();
     entity11.setId("id_1");
     entity11.setType("app");
@@ -254,8 +259,8 @@ public class TestFileSystemTimelineReaderImpl {
     entity4.addEvent(event44);
     writeEntityFile(entity4, appDir);
 
-    File appDir2 = new File(ROOT_DIR +
-            "/entities/cluster1/user1/flow1,flow/1/app2/app/");
+    File appDir2 =
+        getAppDir(rootDir, "cluster1", "user1", "flow1,flow", "1", "app2");
     TimelineEntity entity5 = new TimelineEntity();
     entity5.setId("id_5");
     entity5.setType("app");
@@ -263,8 +268,12 @@ public class TestFileSystemTimelineReaderImpl {
     writeEntityFile(entity5, appDir2);
   }
 
-  public TimelineReader getTimelineReader() {
-    return reader;
+  private static File getAppDir(String rootDir, String cluster, String user,
+      String flowName, String flowRunId, String appId) {
+    return new File(rootDir + File.separator + "entities" + File.separator +
+        cluster + File.separator + user + File.separator + flowName +
+        File.separator + flowRunId + File.separator + appId + File.separator +
+        "app" + File.separator);
   }
 
   @Test

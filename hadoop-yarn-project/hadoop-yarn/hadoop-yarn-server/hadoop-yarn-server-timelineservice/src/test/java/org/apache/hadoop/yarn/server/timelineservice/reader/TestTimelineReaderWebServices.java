@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
@@ -32,6 +33,7 @@ import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
@@ -57,17 +59,21 @@ import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
 public class TestTimelineReaderWebServices {
+
+  private static final String ROOT_DIR = new File("target",
+      TestTimelineReaderWebServices.class.getSimpleName()).getAbsolutePath();
+
   private int serverPort;
   private TimelineReaderServer server;
 
   @BeforeClass
   public static void setup() throws Exception {
-    TestFileSystemTimelineReaderImpl.setup();
+    TestFileSystemTimelineReaderImpl.initializeDataDirectory(ROOT_DIR);
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    TestFileSystemTimelineReaderImpl.tearDown();
+    FileUtils.deleteDirectory(new File(ROOT_DIR));
   }
 
   @Before
@@ -81,6 +87,8 @@ public class TestTimelineReaderWebServices {
       config.set(YarnConfiguration.RM_CLUSTER_ID, "cluster1");
       config.setClass(YarnConfiguration.TIMELINE_SERVICE_READER_CLASS,
           FileSystemTimelineReaderImpl.class, TimelineReader.class);
+      config.set(FileSystemTimelineReaderImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          ROOT_DIR);
       server = new TimelineReaderServer();
       server.init(config);
       server.start();
