@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -529,7 +530,11 @@ public class TestDFSUtil {
     // Ditto for nameservice IDs, if multiple are defined
     assertEquals(null, DFSUtil.getNamenodeNameServiceId(conf));
     assertEquals(null, DFSUtil.getSecondaryNameServiceId(conf));
-    
+
+    String proxyProviderKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX +
+        ".ns2";
+    conf.set(proxyProviderKey, "org.apache.hadoop.hdfs.server.namenode.ha."
+        + "ConfiguredFailoverProxyProvider");
     Collection<URI> uris = getInternalNameServiceUris(conf, DFS_NAMENODE_RPC_ADDRESS_KEY);
     assertEquals(2, uris.size());
     assertTrue(uris.contains(new URI("hdfs://ns1")));
@@ -623,7 +628,8 @@ public class TestDFSUtil {
   @Test
   public void testGetNNUris() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
-    
+
+    final String NS1_NN_ADDR   = "ns1-nn.example.com:8020";
     final String NS1_NN1_ADDR   = "ns1-nn1.example.com:8020";
     final String NS1_NN2_ADDR   = "ns1-nn2.example.com:8020";
     final String NS2_NN_ADDR    = "ns2-nn.example.com:8020";
@@ -637,22 +643,62 @@ public class TestDFSUtil {
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_ADDR);
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_ADDR);
-    
+
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1"),
+        NS1_NN_ADDR);
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns2"),
         NS2_NN_ADDR);
     
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "hdfs://" + NN1_ADDR);
     
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN2_ADDR);
-    
+
+    /**
+     * {@link DFSUtil#getInternalNsRpcUris} decides whether to resolve a logical
+     * URI based on whether the failover proxy provider supports logical URIs.
+     * We will test both cases.
+     *
+     * First configure ns1 to use {@link IPFailoverProxyProvider} which doesn't
+     * support logical Uris. So {@link DFSUtil#getInternalNsRpcUris} will
+     * resolve the logical URI of ns1 based on the configured value at
+     * dfs.namenode.servicerpc-address.ns1, which is {@link NS1_NN_ADDR}
+     */
+    String proxyProviderKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX +
+        ".ns1";
+    conf.set(proxyProviderKey, "org.apache.hadoop.hdfs.server.namenode.ha."
+        + "IPFailoverProxyProvider");
     Collection<URI> uris = DFSUtil.getInternalNsRpcUris(conf);
     
-    assertEquals(4, uris.size());
-    assertTrue(uris.contains(new URI("hdfs://ns1")));
-    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN2_ADDR)));
-    
+    assertEquals("Incorrect number of URIs returned", 4, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://" + NS1_NN_ADDR)));
+    assertTrue("Missing URI for name service ns2",
+        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue("Missing URI for RPC address",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+    assertTrue("Missing FS default URI",
+        uris.contains(new URI("hdfs://" + NN2_ADDR)));
+
+    /**
+     * Second, test ns1 with {@link ConfiguredFailoverProxyProvider} which does
+     * support logical URIs. So instead of {@link NS1_NN_ADDR}, the logical URI
+     * of ns1, hdfs://ns1, will be returned.
+     */
+    conf.set(proxyProviderKey, "org.apache.hadoop.hdfs.server.namenode.ha."
+        + "ConfiguredFailoverProxyProvider");
+
+    uris = DFSUtil.getInternalNsRpcUris(conf);
+
+    assertEquals("Incorrect number of URIs returned", 4, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://ns1")));
+    assertTrue("Missing URI for name service ns2",
+        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue("Missing URI for RPC address",
+        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+    assertTrue("Missing FS default URI",
+        uris.contains(new URI("hdfs://" + NN2_ADDR)));
+
     // Make sure that non-HDFS URIs in fs.defaultFS don't get included.
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
         "viewfs://vfs-name.example.com");
