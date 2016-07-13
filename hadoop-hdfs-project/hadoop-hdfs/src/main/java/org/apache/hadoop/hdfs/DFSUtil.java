@@ -955,11 +955,12 @@ public class DFSUtil {
   }
   
   /**
-   * Get a URI for each configured nameservice. If a nameservice is
-   * HA-enabled, then the logical URI of the nameservice is returned. If the
-   * nameservice is not HA-enabled, then a URI corresponding to an RPC address
-   * of the single NN for that nameservice is returned, preferring the service
-   * RPC address over the client RPC address.
+   * Get a URI for each internal nameservice. If a nameservice is
+   * HA-enabled, and the configured failover proxy provider supports logical
+   * URIs, then the logical URI of the nameservice is returned.
+   * Otherwise, a URI corresponding to an RPC address of the single NN for that
+   * nameservice is returned, preferring the service RPC address over the
+   * client RPC address.
    * 
    * @param conf configuration
    * @return a collection of all configured NN URIs, preferring service
@@ -973,9 +974,10 @@ public class DFSUtil {
 
   /**
    * Get a URI for each configured nameservice. If a nameservice is
-   * HA-enabled, then the logical URI of the nameservice is returned. If the
-   * nameservice is not HA-enabled, then a URI corresponding to the address of
-   * the single NN for that nameservice is returned.
+   * HA-enabled, and the configured failover proxy provider supports logical
+   * URIs, then the logical URI of the nameservice is returned.
+   * Otherwise, a URI corresponding to the address of the single NN for that
+   * nameservice is returned.
    * 
    * @param conf configuration
    * @param keys configuration keys to try in order to get the URI for non-HA
@@ -992,15 +994,29 @@ public class DFSUtil {
     // URI for a config key for which we've already found a preferred entry, we
     // keep track of non-preferred keys here.
     Set<URI> nonPreferredUris = new HashSet<URI>();
-    
+
     for (String nsId : getNameServiceIds(conf)) {
-      if (HAUtil.isHAEnabled(conf, nsId)) {
+      URI nsUri;
+      try {
+        nsUri = new URI(HdfsConstants.HDFS_URI_SCHEME + "://" + nsId);
+      } catch (URISyntaxException ue) {
+        throw new IllegalArgumentException(ue);
+      }
+      /**
+       * Determine whether the logical URI of the name service can be resolved
+       * by the configured failover proxy provider. If not, we should try to
+       * resolve the URI here
+       */
+      boolean useLogicalUri = false;
+      try {
+        useLogicalUri = HAUtil.useLogicalUri(conf, nsUri);
+      } catch (IOException e){
+        LOG.warn("Getting exception  while trying to determine if nameservice "
+            + nsId + " can use logical URI: " + e);
+      }
+      if (HAUtil.isHAEnabled(conf, nsId) && useLogicalUri) {
         // Add the logical URI of the nameservice.
-        try {
-          ret.add(new URI(HdfsConstants.HDFS_URI_SCHEME + "://" + nsId));
-        } catch (URISyntaxException ue) {
-          throw new IllegalArgumentException(ue);
-        }
+        ret.add(nsUri);
       } else {
         // Add the URI corresponding to the address of the NN.
         boolean uriFound = false;
