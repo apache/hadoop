@@ -49,6 +49,7 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.io.output.WriterOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -959,25 +960,21 @@ public class AggregatedLogFormat {
     }
 
     @Private
-    public static String readContainerMetaDataAndSkipData(
+    public static Pair<String, String> readContainerMetaDataAndSkipData(
         DataInputStream valueStream, PrintStream out) throws IOException {
 
       String fileType = valueStream.readUTF();
       String fileLengthStr = valueStream.readUTF();
       long fileLength = Long.parseLong(fileLengthStr);
-      if (out != null) {
-        out.print("LogType:");
-        out.println(fileType);
-        out.print("LogLength:");
-        out.println(fileLengthStr);
-      }
+      Pair<String, String> logMeta = new Pair<String, String>(
+          fileType, fileLengthStr);
       long totalSkipped = 0;
       long currSkipped = 0;
       while (currSkipped != -1 && totalSkipped < fileLength) {
         currSkipped = valueStream.skip(fileLength - totalSkipped);
         totalSkipped += currSkipped;
       }
-      return fileType;
+      return logMeta;
     }
 
     public void close() {

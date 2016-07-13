@@ -182,7 +182,7 @@ public class TestLogsCLI {
     assertTrue(exitCode == -1);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
-    pw.println("Retrieve logs for completed YARN applications.");
+    pw.println("Retrieve logs for YARN applications.");
     pw.println("usage: yarn logs -applicationId <application ID> [OPTIONS]");
     pw.println();
     pw.println("general options are:");
@@ -217,14 +217,18 @@ public class TestLogsCLI {
     pw.println("                                 container logs. The container logs will");
     pw.println("                                 be stored based on the node the container");
     pw.println("                                 ran on.");
-    pw.println(" -show_meta_info                 Show the log metadata, including log-file");
-    pw.println("                                 names, the size of the log files. You can");
-    pw.println("                                 combine this with --containerId to get");
-    pw.println("                                 log metadata for the specific container,");
-    pw.println("                                 or with --nodeAddress to get log metadata");
-    pw.println("                                 for all the containers on the specific");
-    pw.println("                                 NodeManager. Currently, this option can");
-    pw.println("                                 only be used for finished applications.");
+    pw.println(" -show_application_log_info      Show the containerIds which belong to the");
+    pw.println("                                 specific Application. You can combine");
+    pw.println("                                 this with --nodeAddress to get");
+    pw.println("                                 containerIds for all the containers on");
+    pw.println("                                 the specific NodeManager.");
+    pw.println(" -show_container_log_info        Show the container log metadata,");
+    pw.println("                                 including log-file names, the size of the");
+    pw.println("                                 log files. You can combine this with");
+    pw.println("                                 --containerId to get log metadata for the");
+    pw.println("                                 specific container, or with --nodeAddress");
+    pw.println("                                 to get log metadata for all the");
+    pw.println("                                 containers on the specific NodeManager.");
     pw.println(" -size <size>                    Prints the log file's first 'n' bytes or");
     pw.println("                                 the last 'n' bytes. Use negative values");
     pw.println("                                 as bytes to read from the end and");
@@ -698,9 +702,8 @@ public class TestLogsCLI {
           "-applicationId", appTest.toString()});
       assertTrue(exitCode == -1);
       assertTrue(sysErrStream.toString().contains(
-        "Guessed logs' owner is " + priorityUser + " and current user "
-            + UserGroupInformation.getCurrentUser().getUserName()
-            + " does not have permission to access"));
+          "Can not find the logs for the application: "
+          + appTest.toString()));
       sysErrStream.reset();
     } finally {
       fs.delete(new Path(remoteLogRootDir), true);
@@ -842,48 +845,76 @@ public class TestLogsCLI {
     LogsCLI cli = new LogsCLIForTest(mockYarnClient);
     cli.setConf(configuration);
 
-    cli.run(new String[] { "-applicationId", appId.toString(),
-        "-show_meta_info" });
+    int result = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_container_log_info", "-show_application_log_info"});
+    assertTrue(result == -1);
+    assertTrue(sysErrStream.toString().contains("Invalid options. "
+        + "Can only accept one of show_application_log_info/"
+        + "show_container_log_info."));
+
+    cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_container_log_info"});
     assertTrue(sysOutStream.toString().contains(
         "Container: container_0_0001_01_000001 on localhost_"));
     assertTrue(sysOutStream.toString().contains(
         "Container: container_0_0001_01_000002 on localhost_"));
     assertTrue(sysOutStream.toString().contains(
-        "LogType:syslog"));
+        "syslog"));
     assertTrue(sysOutStream.toString().contains(
-        "LogLength:43"));
+        "43"));
     sysOutStream.reset();
 
-    cli.run(new String[] { "-applicationId", appId.toString(),
-        "-show_meta_info", "-containerId", "container_0_0001_01_000001" });
+    cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_container_log_info", "-containerId",
+        "container_0_0001_01_000001"});
     assertTrue(sysOutStream.toString().contains(
         "Container: container_0_0001_01_000001 on localhost_"));
     assertFalse(sysOutStream.toString().contains(
         "Container: container_0_0001_01_000002 on localhost_"));
     assertTrue(sysOutStream.toString().contains(
-        "LogType:syslog"));
+        "syslog"));
     assertTrue(sysOutStream.toString().contains(
-        "LogLength:43"));
+        "43"));
     sysOutStream.reset();
 
-    cli.run(new String[] { "-applicationId", appId.toString(),
-        "-show_meta_info", "-nodeAddress", "localhost" });
+    cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_container_log_info", "-nodeAddress", "localhost"});
     assertTrue(sysOutStream.toString().contains(
         "Container: container_0_0001_01_000001 on localhost_"));
     assertTrue(sysOutStream.toString().contains(
         "Container: container_0_0001_01_000002 on localhost_"));
     assertTrue(sysOutStream.toString().contains(
-        "LogType:syslog"));
+        "syslog"));
     assertTrue(sysOutStream.toString().contains(
-        "LogLength:43"));
+        "43"));
     sysOutStream.reset();
 
-    cli.run(new String[] { "-applicationId", appId.toString(),
-        "-show_meta_info", "-nodeAddress", "localhost", "-containerId",
-        "container_1234" });
+    cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_container_log_info", "-nodeAddress", "localhost",
+        "-containerId", "container_1234"});
     assertTrue(sysErrStream.toString().contains(
         "Invalid ContainerId specified"));
     sysErrStream.reset();
+
+    cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_application_log_info"});
+    assertTrue(sysOutStream.toString().contains(
+        "Application State: Completed."));
+    assertTrue(sysOutStream.toString().contains(
+        "container_0_0001_01_000001 on localhost"));
+    assertTrue(sysOutStream.toString().contains(
+        "container_0_0001_01_000002 on localhost"));
+    sysOutStream.reset();
+
+    cli.run(new String[] {"-applicationId", appId.toString(),
+        "-show_application_log_info", "-nodeAddress", "localhost"});
+    assertTrue(sysOutStream.toString().contains(
+        "Application State: Completed."));
+    assertTrue(sysOutStream.toString().contains(
+        "container_0_0001_01_000001 on localhost"));
+    assertTrue(sysOutStream.toString().contains(
+        "container_0_0001_01_000002 on localhost"));
+    sysOutStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
