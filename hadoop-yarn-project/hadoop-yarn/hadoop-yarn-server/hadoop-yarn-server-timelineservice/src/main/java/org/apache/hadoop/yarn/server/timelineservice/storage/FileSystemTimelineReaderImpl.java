@@ -77,15 +77,12 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   /** Default extension for output files. */
   static final String APP_FLOW_MAPPING_FILE = "app_flow_mapping.csv";
 
-  @VisibleForTesting
   /** Config param for timeline service file system storage root. */
-  static final String TIMELINE_SERVICE_STORAGE_DIR_ROOT =
+  public static final String TIMELINE_SERVICE_STORAGE_DIR_ROOT =
       YarnConfiguration.TIMELINE_SERVICE_PREFIX + "fs-writer.root-dir";
 
-  @VisibleForTesting
   /** Default value for storage location on local disk. */
-  static final String DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT =
-      "/tmp/timeline_service_data";
+  private static final String STORAGE_DIR_ROOT = "timeline_service_data";
 
   private final CSVFormat csvFormat =
       CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
@@ -159,13 +156,13 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private String getFlowRunPath(String userId, String clusterId,
       String flowName, Long flowRunId, String appId) throws IOException {
     if (userId != null && flowName != null && flowRunId != null) {
-      return userId + "/" + flowName + "/" + flowRunId;
+      return userId + File.separator + flowName + File.separator + flowRunId;
     }
     if (clusterId == null || appId == null) {
       throw new IOException("Unable to get flow info");
     }
-    String appFlowMappingFile = rootPath + "/" +  ENTITIES_DIR + "/" +
-        clusterId + "/" + APP_FLOW_MAPPING_FILE;
+    String appFlowMappingFile = rootPath + File.separator +  ENTITIES_DIR +
+        File.separator + clusterId + File.separator + APP_FLOW_MAPPING_FILE;
     try (BufferedReader reader =
              new BufferedReader(new InputStreamReader(
                  new FileInputStream(
@@ -180,8 +177,8 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             !applicationId.trim().equals(appId)) {
           continue;
         }
-        return record.get(1).trim() + "/" + record.get(2).trim() + "/" +
-            record.get(3).trim();
+        return record.get(1).trim() + File.separator + record.get(2).trim() +
+            File.separator + record.get(3).trim();
       }
       parser.close();
     }
@@ -364,7 +361,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     rootPath = conf.get(TIMELINE_SERVICE_STORAGE_DIR_ROOT,
-        DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT);
+        conf.get("hadoop.tmp.dir") + File.separator + STORAGE_DIR_ROOT);
     super.serviceInit(conf);
   }
 
@@ -375,8 +372,8 @@ public class FileSystemTimelineReaderImpl extends AbstractService
         context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
         context.getAppId());
     File dir = new File(new File(rootPath, ENTITIES_DIR),
-        context.getClusterId() + "/" + flowRunPath + "/" + context.getAppId() +
-        "/" + context.getEntityType());
+        context.getClusterId() + File.separator + flowRunPath + File.separator +
+        context.getAppId() + File.separator + context.getEntityType());
     File entityFile = new File(
         dir, context.getEntityId() + TIMELINE_SERVICE_STORAGE_EXTENSION);
     try (BufferedReader reader =
@@ -401,8 +398,9 @@ public class FileSystemTimelineReaderImpl extends AbstractService
         context.getAppId());
     File dir =
         new File(new File(rootPath, ENTITIES_DIR),
-            context.getClusterId() + "/" + flowRunPath + "/" +
-            context.getAppId() + "/" + context.getEntityType());
+            context.getClusterId() + File.separator + flowRunPath +
+            File.separator + context.getAppId() + File.separator +
+            context.getEntityType());
     return getEntities(dir, context.getEntityType(), filters, dataToRetrieve);
   }
 }

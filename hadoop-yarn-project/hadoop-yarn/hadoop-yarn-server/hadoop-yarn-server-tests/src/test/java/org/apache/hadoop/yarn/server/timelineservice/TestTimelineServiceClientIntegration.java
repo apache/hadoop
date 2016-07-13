@@ -24,8 +24,10 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ExitUtil;
@@ -56,6 +58,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestTimelineServiceClientIntegration {
+  private static final String ROOT_DIR = new File("target",
+      TestTimelineServiceClientIntegration.class.getSimpleName()).
+          getAbsolutePath();
   private static NodeTimelineCollectorManager collectorManager;
   private static PerNodeTimelineCollectorsAuxService auxService;
   private static Configuration conf;
@@ -70,6 +75,8 @@ public class TestTimelineServiceClientIntegration {
       conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
           FileSystemTimelineWriterImpl.class, TimelineWriter.class);
+      conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
+          ROOT_DIR);
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
               collectorManager, conf);
@@ -84,6 +91,7 @@ public class TestTimelineServiceClientIntegration {
     if (auxService != null) {
       auxService.stop();
     }
+    FileUtils.deleteDirectory(new File(ROOT_DIR));
   }
 
   @Test
