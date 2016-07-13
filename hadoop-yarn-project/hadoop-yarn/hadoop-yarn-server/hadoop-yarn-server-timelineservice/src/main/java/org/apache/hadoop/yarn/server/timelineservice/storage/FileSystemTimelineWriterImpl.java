@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse.
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This implements a local file based backend for storing application timeline
  * information. This implementation may not provide a complete implementation of
@@ -53,14 +55,13 @@ public class FileSystemTimelineWriterImpl extends AbstractService
   public static final String TIMELINE_SERVICE_STORAGE_DIR_ROOT
       = YarnConfiguration.TIMELINE_SERVICE_PREFIX + "fs-writer.root-dir";
 
-  /** default value for storage location on local disk. */
-  public static final String DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
-      = "/tmp/timeline_service_data";
-
   public static final String ENTITIES_DIR = "entities";
 
   /** Default extension for output files. */
   public static final String TIMELINE_SERVICE_STORAGE_EXTENSION = ".thist";
+
+  /** default value for storage location on local disk. */
+  private static final String STORAGE_DIR_ROOT = "timeline_service_data";
 
   FileSystemTimelineWriterImpl() {
     super((FileSystemTimelineWriterImpl.class.getName()));
@@ -117,14 +118,15 @@ public class FileSystemTimelineWriterImpl extends AbstractService
 
   }
 
-  public String getOutputRoot() {
+  @VisibleForTesting
+  String getOutputRoot() {
     return outputRoot;
   }
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     outputRoot = conf.get(TIMELINE_SERVICE_STORAGE_DIR_ROOT,
-        DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT);
+        conf.get("hadoop.tmp.dir") + File.separator + STORAGE_DIR_ROOT);
   }
 
   @Override
@@ -140,7 +142,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
   private static String mkdirs(String... dirStrs) throws IOException {
     StringBuilder path = new StringBuilder();
     for (String dirStr : dirStrs) {
-      path.append(dirStr).append('/');
+      path.append(dirStr).append(File.separatorChar);
       File dir = new File(path.toString());
       if (!dir.exists()) {
         if (!dir.mkdirs()) {
