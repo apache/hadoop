@@ -1106,5 +1106,8 @@ public class TestDelegationTokenRenewer {
     Assert.assertTrue(dttr.referringAppIds.isEmpty());
     Assert.assertTrue(dttr.isTimerCancelled());
     Assert.assertTrue(Renewer.cancelled);
+
+    // make sure the token also has been removed from appTokens
+    Assert.assertFalse(renewer.getDelegationTokens().contains(token1));
   }
 }
