@@ -1336,13 +1336,137 @@
 </property>
 
 <property>
+  <name>dfs.namenode.kerberos.principal</name>
+  <value></value>
+  <description>
+    The NameNode service principal. This is typically set to
+    nn/_HOST@REALM.TLD. Each NameNode will subsitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on both NameNodes
+    in an HA setup.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by each NameNode daemon to login as its
+    service principal. The principal name is configured with
+    dfs.namenode.kerberos.principal.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.kerberos.principal</name>
+  <value></value>
+  <description>
+    The DataNode service principal. This is typically set to
+    dn/_HOST@REALM.TLD. Each DataNode will subsitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on all DataNodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by each DataNode daemon to login as its
+    service principal. The principal name is configured with
+    dfs.datanode.kerberos.principal.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.kerberos.principal</name>
+  <value></value>
+  <description>
+    The JournalNode service principal. This is typically set to
+    jn/_HOST@REALM.TLD. Each JournalNode will subsitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on all JournalNodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by each JournalNode daemon to login as its
+    service principal. The principal name is configured with
+    dfs.journalnode.kerberos.principal.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.kerberos.internal.spnego.principal</name>
   <value>${dfs.web.authentication.kerberos.principal}</value>
+  <description>
+    The server principal used by the NameNode for web UI SPNEGO
+    authentication when Kerberos security is enabled. This is
+    typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+    begins with the prefix HTTP/ by convention.
+
+    If the value is '*', the web server will attempt to login with
+    every principal specified in the keytab file
+    dfs.web.authentication.kerberos.keytab.
+</description>
+</property>
+
+<property>
+  <name>dfs.journalnode.kerberos.internal.spnego.principal</name>
+  <value></value>
+  <description>
+    The server principal used by the JournalNode HTTP Server for
+    SPNEGO authentication when Kerberos security is enabled. This is
+    typically set to HTTP/_HOST@REALM.TLD. The SPNEGO server principal
+    begins with the prefix HTTP/ by convention.
+
+    If the value is '*', the web server will attempt to login with
+    every principal specified in the keytab file
+    dfs.web.authentication.kerberos.keytab.
+
+    For most deployments this can be set to ${dfs.web.authentication.kerberos.principal}
+    i.e use the value of dfs.web.authentication.kerberos.principal.
+  </description>
 </property>
 
 <property>
   <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
   <value>${dfs.web.authentication.kerberos.principal}</value>
+  <description>
+    The server principal used by the Secondary NameNode for web UI SPNEGO
+    authentication when Kerberos security is enabled. Like all other
+    Secondary NameNode settings, it is ignored in an HA setup.
+
+    If the value is '*', the web server will attempt to login with
+    every principal specified in the keytab file
+    dfs.web.authentication.kerberos.keytab.
+  </description>
+</property>
+
+<property>
+  <name>dfs.web.authentication.kerberos.principal</name>
+  <value></value>
+  <description>
+    The server principal used by the NameNode for WebHDFS SPNEGO
+    authentication.
+
+    Required when WebHDFS and security are enabled. In most secure clusters this
+    setting is also used to specify the values for
+    dfs.namenode.kerberos.internal.spnego.principal and
+    dfs.journalnode.kerberos.internal.spnego.principal.
+  </description>
+</property>
+
+<property>
+  <name>dfs.web.authentication.kerberos.keytab</name>
+  <value></value>
+  <description>
+    The keytab file for the principal corresponding to
+    dfs.web.authentication.kerberos.principal.
+  </description>
 </property>
 
 <property>
