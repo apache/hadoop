@@ -30,6 +30,8 @@
 #include <asio/read.hpp>
 #include <asio/write.hpp>
 
+#include <system_error>
+
 namespace hdfs {
 
 template <class NextLayer>
@@ -72,8 +74,9 @@ RpcConnectionImpl<NextLayer>::RpcConnectionImpl(RpcEngine *engine)
     : RpcConnection(engine),
       options_(engine->options()),
       next_layer_(engine->io_service()),
-      connect_timer_(engine->io_service()) {
-    LOG_TRACE(kRPC, << "RpcConnectionImpl::RpcConnectionImpl called");
+      connect_timer_(engine->io_service())
+{
+      LOG_TRACE(kRPC, << "RpcConnectionImpl::RpcConnectionImpl called &" << (void*)this);
 }
 
 template <class NextLayer>
@@ -86,7 +89,6 @@ RpcConnectionImpl<NextLayer>::~RpcConnectionImpl() {
   if (requests_on_fly_.size() > 0)
     LOG_WARN(kRPC, << "RpcConnectionImpl::~RpcConnectionImpl called with items in the requests_on_fly queue");
 }
-
 
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::Connect(
@@ -171,8 +173,8 @@ void RpcConnectionImpl<NextLayer>::ConnectComplete(const ::asio::error_code &ec,
 
   Status status = ToStatus(ec);
   if(event_handlers_) {
-    auto event_resp = event_handlers_->call(FS_NN_CONNECT_EVENT, cluster_name_.c_str(), 0);
-#ifndef NDEBUG
+    event_response event_resp = event_handlers_->call(FS_NN_CONNECT_EVENT, cluster_name_.c_str(), 0);
+#ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
     if (event_resp.response() == event_response::kTest_Error) {
       status = event_resp.status();
     }
@@ -349,27 +351,28 @@ void RpcConnectionImpl<NextLayer>::FlushPendingRequests() {
 
 
 template <class NextLayer>
-void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &asio_ec,
+void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &original_ec,
                                                    size_t) {
   using std::placeholders::_1;
   using std::placeholders::_2;
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
+  ::asio::error_code my_ec(original_ec);
+
   LOG_TRACE(kRPC, << "RpcConnectionImpl::OnRecvCompleted called");
 
   std::shared_ptr<RpcConnection> shared_this = shared_from_this();
 
-  ::asio::error_code ec = asio_ec;
   if(event_handlers_) {
-    auto event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
-#ifndef NDEBUG
+    event_response event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
+#ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
     if (event_resp.response() == event_response::kTest_Error) {
-        ec = std::make_error_code(std::errc::network_down);
+      my_ec = std::make_error_code(std::errc::network_down);
     }
 #endif
   }
 
-  switch (ec.value()) {
+  switch (my_ec.value()) {
     case 0:
       // No errors
       break;
@@ -377,8 +380,8 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &asi
       // The event loop has been shut down. Ignore the error.
       return;
     default:
-      LOG_WARN(kRPC, << "Network error during RPC read: " << ec.message());
-      CommsError(ToStatus(ec));
+      LOG_WARN(kRPC, << "Network error during RPC read: " << my_ec.message());
+      CommsError(ToStatus(my_ec));
       return;
   }
 

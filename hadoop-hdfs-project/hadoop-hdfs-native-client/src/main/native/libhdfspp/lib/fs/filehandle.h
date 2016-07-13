@@ -119,7 +119,8 @@ public:
 
 protected:
   virtual std::shared_ptr<BlockReader> CreateBlockReader(const BlockReaderOptions &options,
-                                                 std::shared_ptr<DataNodeConnection> dn);
+                                                         std::shared_ptr<DataNodeConnection> dn,
+                                                         std::shared_ptr<hdfs::LibhdfsEvents> event_handlers);
   virtual std::shared_ptr<DataNodeConnection> CreateDataNodeConnection(
       ::asio::io_service *io_service,
       const ::hadoop::hdfs::DatanodeInfoProto & dn,

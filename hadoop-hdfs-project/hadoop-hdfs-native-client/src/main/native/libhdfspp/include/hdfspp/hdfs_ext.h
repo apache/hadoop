@@ -235,9 +235,7 @@ extern const char * FILE_DN_WRITE_EVENT;
 
 
 #define LIBHDFSPP_EVENT_OK (0)
-#ifndef NDEBUG
-  #define DEBUG_SIMULATE_ERROR (-1)
-#endif
+#define DEBUG_SIMULATE_ERROR (-1)
 
 typedef int (*libhdfspp_fs_event_callback)(const char * event, const char * cluster,
                                            int64_t value, int64_t cookie);

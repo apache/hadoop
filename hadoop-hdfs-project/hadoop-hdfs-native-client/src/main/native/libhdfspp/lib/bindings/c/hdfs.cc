@@ -331,6 +331,9 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
       Error(stat);
       return nullptr;
     }
+    if (f && fileEventCallback) {
+      f->SetFileEventCallback(fileEventCallback.value());
+    }
     return new hdfsFile_internal(f);
   } catch (const std::exception & e) {
     ReportException(e);
@@ -959,7 +962,7 @@ event_response fs_callback_glue(libhdfspp_fs_event_callback handler,
   if (result == LIBHDFSPP_EVENT_OK) {
     return event_response::ok();
   }
-#ifndef NDEBUG
+#ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
   if (result == DEBUG_SIMULATE_ERROR) {
     return event_response::test_err(Status::Error("Simulated error"));
   }
@@ -978,7 +981,7 @@ event_response file_callback_glue(libhdfspp_file_event_callback handler,
   if (result == LIBHDFSPP_EVENT_OK) {
     return event_response::ok();
   }
-#ifndef NDEBUG
+#ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
   if (result == DEBUG_SIMULATE_ERROR) {
     return event_response::test_err(Status::Error("Simulated error"));
   }

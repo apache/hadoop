@@ -93,9 +93,9 @@ class BlockReaderImpl
     : public BlockReader, public std::enable_shared_from_this<BlockReaderImpl> {
 public:
   explicit BlockReaderImpl(const BlockReaderOptions &options, std::shared_ptr<DataNodeConnection> dn,
-                           CancelHandle cancel_state)
+                           CancelHandle cancel_state, std::shared_ptr<LibhdfsEvents> event_handlers=nullptr)
       : dn_(dn), state_(kOpen), options_(options),
-        chunk_padding_bytes_(0), cancel_state_(cancel_state) {}
+        chunk_padding_bytes_(0), cancel_state_(cancel_state), event_handlers_(event_handlers.get()) {}
 
   virtual void AsyncReadPacket(
     const MutableBuffers &buffers,
@@ -152,6 +152,7 @@ private:
   long long bytes_to_read_;
   std::vector<char> checksum_;
   CancelHandle cancel_state_;
+  LibhdfsEvents* event_handlers_;
 };
 }
 
