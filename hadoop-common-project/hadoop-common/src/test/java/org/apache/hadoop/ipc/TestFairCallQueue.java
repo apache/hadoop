@@ -23,6 +23,9 @@ import static org.mockito.Mockito.when;
 
 import junit.framework.TestCase;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.BlockingQueue;
@@ -391,5 +394,21 @@ public class TestFairCallQueue extends TestCase {
     // Take from q1 even though mux said q0, since q0 empty
     assertEquals(call, fcq.take());
     assertEquals(0, fcq.size());
+  }
+
+  public void testFairCallQueueMXBean() throws Exception {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName = new ObjectName(
+        "Hadoop:service=ns,name=FairCallQueue");
+
+    Schedulable call = mockCall("c");
+    fcq.put(call);
+    int[] queueSizes = (int[]) mbs.getAttribute(mxbeanName, "QueueSizes");
+    assertEquals(1, queueSizes[0]);
+    assertEquals(0, queueSizes[1]);
+    fcq.take();
+    queueSizes = (int[]) mbs.getAttribute(mxbeanName, "QueueSizes");
+    assertEquals(0, queueSizes[0]);
+    assertEquals(0, queueSizes[1]);
   }
 }
