@@ -313,7 +313,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @Override
   public int size() {
     int size = 0;
-    for (BlockingQueue q : this.queues) {
+    for (BlockingQueue<E> q : this.queues) {
       size += q.size();
     }
     return size;
@@ -359,7 +359,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @Override
   public int remainingCapacity() {
     int sum = 0;
-    for (BlockingQueue q : this.queues) {
+    for (BlockingQueue<E> q : this.queues) {
       sum += q.remainingCapacity();
     }
     return sum;
@@ -375,7 +375,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       new HashMap<String, MetricsProxy>();
 
     // Weakref for delegate, so we don't retain it forever if it can be GC'd
-    private WeakReference<FairCallQueue> delegate;
+    private WeakReference<FairCallQueue<? extends Schedulable>> delegate;
 
     // Keep track of how many objects we registered
     private int revisionNumber = 0;
@@ -394,14 +394,15 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       return mp;
     }
 
-    public void setDelegate(FairCallQueue obj) {
-      this.delegate = new WeakReference<FairCallQueue>(obj);
+    public void setDelegate(FairCallQueue<? extends Schedulable> obj) {
+      this.delegate
+          = new WeakReference<FairCallQueue<? extends Schedulable>>(obj);
       this.revisionNumber++;
     }
 
     @Override
     public int[] getQueueSizes() {
-      FairCallQueue obj = this.delegate.get();
+      FairCallQueue<? extends Schedulable> obj = this.delegate.get();
       if (obj == null) {
         return new int[]{};
       }
@@ -411,7 +412,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
     @Override
     public long[] getOverflowedCalls() {
-      FairCallQueue obj = this.delegate.get();
+      FairCallQueue<? extends Schedulable> obj = this.delegate.get();
       if (obj == null) {
         return new long[]{};
       }
