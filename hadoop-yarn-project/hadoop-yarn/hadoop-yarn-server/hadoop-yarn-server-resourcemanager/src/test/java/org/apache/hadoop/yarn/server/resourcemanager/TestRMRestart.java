@@ -1648,6 +1648,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     RMApp app1 = rm2.submitApp(200);
     MockAM am1 = launchAM(app1, rm2, nm1);
     finishApplicationMaster(app1, rm2, nm1, am1);
+    rm2.drainEvents();
 
     // the first app0 get kicked out from both rmContext and state store
     Assert.assertNull(rm2.getRMContext().getRMApps()
