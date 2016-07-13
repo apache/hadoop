@@ -18,6 +18,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4393. Fix intermittent test failure for TestResourceLocalizationService
     #testFailedDirsResourceRelease (Varun Saxana via rohithsharmaks)
 
+    YARN-5353. ResourceManager can leak delegation tokens when they are shared across
+    apps. (Jason Lowe via Varun Saxena)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

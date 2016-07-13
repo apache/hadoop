@@ -738,7 +738,7 @@ public class DelegationTokenRenewer extends AbstractService {
 
   private void removeApplicationFromRenewal(ApplicationId applicationId) {
     rmContext.getSystemCredentialsForApps().remove(applicationId);
-    Set<DelegationTokenToRenew> tokens = appTokens.get(applicationId);
+    Set<DelegationTokenToRenew> tokens = appTokens.remove(applicationId);
 
     if (tokens != null && !tokens.isEmpty()) {
       synchronized (tokens) {
@@ -763,14 +763,9 @@ public class DelegationTokenRenewer extends AbstractService {
           // cancel the token
           cancelToken(dttr);
 
-          it.remove();
           allTokens.remove(dttr.token);
         }
       }
-    }
-
-    if(tokens != null && tokens.isEmpty()) {
-      appTokens.remove(applicationId);
     }
   }
 
