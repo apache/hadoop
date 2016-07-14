@@ -82,7 +82,6 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -835,7 +834,7 @@ public class ContainerLaunch implements Callable<Integer> {
         throws IOException;
 
     /**
-     * Method to dump debug information to the a target file. This method will
+     * Method to dump debug information to a target file. This method will
      * be called by ContainerExecutor when setting up the container launch
      * script.
      * @param output the file to which debug information is to be written
