@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -42,6 +44,22 @@ public abstract class NodeHeartbeatRequest {
     return nodeHeartbeatRequest;
   }
 
+  public static NodeHeartbeatRequest newInstance(NodeStatus nodeStatus,
+      MasterKey lastKnownContainerTokenMasterKey,
+      MasterKey lastKnownNMTokenMasterKey, Set<NodeLabel> nodeLabels,
+      Map<ApplicationId, String> registeredCollectors) {
+    NodeHeartbeatRequest nodeHeartbeatRequest =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    nodeHeartbeatRequest.setNodeStatus(nodeStatus);
+    nodeHeartbeatRequest
+        .setLastKnownContainerTokenMasterKey(lastKnownContainerTokenMasterKey);
+    nodeHeartbeatRequest
+        .setLastKnownNMTokenMasterKey(lastKnownNMTokenMasterKey);
+    nodeHeartbeatRequest.setNodeLabels(nodeLabels);
+    nodeHeartbeatRequest.setRegisteredCollectors(registeredCollectors);
+    return nodeHeartbeatRequest;
+  }
+
   public abstract NodeStatus getNodeStatus();
   public abstract void setNodeStatus(NodeStatus status);
 
@@ -59,4 +77,9 @@ public abstract class NodeHeartbeatRequest {
 
   public abstract void setLogAggregationReportsForApps(
       List<LogAggregationReport> logAggregationReportsForApps);
+
+  // This tells RM registered collectors' address info on this node
+  public abstract Map<ApplicationId, String> getRegisteredCollectors();
+  public abstract void setRegisteredCollectors(Map<ApplicationId,
+      String> appCollectorsMap);
 }
