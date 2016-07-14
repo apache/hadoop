@@ -45,6 +45,8 @@ public final class ContainerStartContext {
   private final Path containerWorkDir;
   private final List<String> localDirs;
   private final List<String> logDirs;
+  private final List<String> filecacheDirs;
+  private final List<String> userLocalDirs;
   private final List<String> containerLocalDirs;
   private final List<String> containerLogDirs;
 
@@ -58,6 +60,8 @@ public final class ContainerStartContext {
     private Path containerWorkDir;
     private List<String> localDirs;
     private List<String> logDirs;
+    private List<String> filecacheDirs;
+    private List<String> userLocalDirs;
     private List<String> containerLocalDirs;
     private List<String> containerLogDirs;
 
@@ -111,6 +115,16 @@ public final class ContainerStartContext {
       return this;
     }
 
+    public Builder setFilecacheDirs(List<String> filecacheDirs) {
+      this.filecacheDirs = filecacheDirs;
+      return this;
+    }
+
+    public Builder setUserLocalDirs(List<String> userLocalDirs) {
+      this.userLocalDirs = userLocalDirs;
+      return this;
+    }
+
     public Builder setContainerLocalDirs(List<String> containerLocalDirs) {
       this.containerLocalDirs = containerLocalDirs;
       return this;
@@ -136,6 +150,8 @@ public final class ContainerStartContext {
     this.containerWorkDir = builder.containerWorkDir;
     this.localDirs = builder.localDirs;
     this.logDirs = builder.logDirs;
+    this.filecacheDirs = builder.filecacheDirs;
+    this.userLocalDirs = builder.userLocalDirs;
     this.containerLocalDirs = builder.containerLocalDirs;
     this.containerLogDirs = builder.containerLogDirs;
   }
@@ -180,11 +196,20 @@ public final class ContainerStartContext {
     return Collections.unmodifiableList(this.logDirs);
   }
 
+  public List<String> getFilecacheDirs() {
+    return Collections.unmodifiableList(this.filecacheDirs);
+  }
+
+  public List<String> getUserLocalDirs() {
+    return Collections.unmodifiableList(this.userLocalDirs);
+  }
+
   public List<String> getContainerLocalDirs() {
-    return this.containerLocalDirs;
+    return Collections.unmodifiableList(this.containerLocalDirs);
   }
 
   public List<String> getContainerLogDirs() {
-    return this.containerLogDirs;
+    return Collections.unmodifiableList(this
+        .containerLogDirs);
   }
 }

@@ -241,6 +241,12 @@ public interface ApplicationConstants {
     LOCAL_DIRS("LOCAL_DIRS"),
 
     /**
+     * $LOCAL_USER_DIRS
+     * Final, exported by NodeManager and non-modifiable by users.
+     */
+    LOCAL_USER_DIRS("LOCAL_USER_DIRS"),
+
+    /**
      * $LOG_DIRS
      * Final, exported by NodeManager and non-modifiable by users.
      * Comma separate list of directories that the container should use for
