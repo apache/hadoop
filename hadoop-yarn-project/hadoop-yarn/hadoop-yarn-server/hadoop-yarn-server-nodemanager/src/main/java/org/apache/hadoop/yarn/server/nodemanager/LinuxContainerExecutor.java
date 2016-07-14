@@ -324,8 +324,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     resourcesHandler.preExecute(containerId,
             container.getResource());
-    String resourcesOptions = resourcesHandler.getResourcesOption(
-            containerId);
+    String resourcesOptions = resourcesHandler.getResourcesOption(containerId);
     String tcCommandFile = null;
 
     try {

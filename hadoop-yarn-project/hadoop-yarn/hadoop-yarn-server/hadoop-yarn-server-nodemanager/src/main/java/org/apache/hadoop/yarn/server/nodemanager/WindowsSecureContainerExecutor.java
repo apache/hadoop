@@ -628,16 +628,16 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
   }
 
   @Override
-  public Path localizeClasspathJar(Path classPathJar, Path pwd, String owner) 
+  public Path localizeClasspathJar(Path jarPath, Path target, String owner) 
       throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(String.format("localizeClasspathJar: %s %s o:%s", 
-          classPathJar, pwd, owner));
+          jarPath, target, owner));
     }
-    createDir(pwd,  new FsPermission(DIR_PERM), true, owner);
-    String fileName = classPathJar.getName();
-    Path dst = new Path(pwd, fileName);
-    Native.Elevated.move(classPathJar, dst, true);
+    createDir(target,  new FsPermission(DIR_PERM), true, owner);
+    String fileName = jarPath.getName();
+    Path dst = new Path(target, fileName);
+    Native.Elevated.move(jarPath, dst, true);
     Native.Elevated.chown(dst, owner, nodeManagerGroup);
     return dst;
   }
