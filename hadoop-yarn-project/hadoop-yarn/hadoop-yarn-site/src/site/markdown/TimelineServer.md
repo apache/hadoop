@@ -74,7 +74,7 @@ Current status
 Future Plans
 
 1. Future releases will introduce a next generation timeline service
-which is scalable and reliable, "Timeline Server v2".
+which is scalable and reliable, ["Timeline Service v2"](./TimelineServiceV2.html).
 1. The expanded features of this service *may not* be available to
 applications using the Timeline Server v1 REST API. That includes extended
 data structures as well as the ability of the client to failover between Timeline Server instances.

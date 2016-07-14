@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Interface for event wrapper classes.  Implementations each wrap an
@@ -37,4 +41,18 @@ public interface HistoryEvent {
 
   /** Set the Avro datum wrapped by this. */
   void setDatum(Object datum);
+
+  /**
+   * Map HistoryEvent to TimelineEvent.
+   *
+   * @return the timeline event
+   */
+  TimelineEvent toTimelineEvent();
+
+  /**
+   * Counters or Metrics if any else return null.
+   *
+   * @return the set of timeline metrics
+   */
+  Set<TimelineMetric> getTimelineMetrics();
 }

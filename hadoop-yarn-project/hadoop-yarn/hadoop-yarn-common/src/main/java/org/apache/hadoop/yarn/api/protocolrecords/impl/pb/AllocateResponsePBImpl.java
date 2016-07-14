@@ -408,6 +408,23 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     this.amrmToken = amRMToken;
   }
 
+
+  @Override
+  public synchronized String getCollectorAddr() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getCollectorAddr();
+  }
+
+  @Override
+  public synchronized void setCollectorAddr(String collectorAddr) {
+    maybeInitBuilder();
+    if (collectorAddr == null) {
+      builder.clearCollectorAddr();
+      return;
+    }
+    builder.setCollectorAddr(collectorAddr);
+  }
+
   @Override
   public synchronized Priority getApplicationPriority() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;

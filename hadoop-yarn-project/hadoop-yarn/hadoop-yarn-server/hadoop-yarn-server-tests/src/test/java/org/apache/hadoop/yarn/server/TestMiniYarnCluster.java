@@ -71,8 +71,6 @@ public class TestMiniYarnCluster {
       String hostname = MiniYARNCluster.getHostname();
       Assert.assertEquals(hostname + ":0",
         conf.get(YarnConfiguration.TIMELINE_SERVICE_ADDRESS));
-      Assert.assertEquals(hostname + ":0",
-        conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS));
 
       cluster.start();
 

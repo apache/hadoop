@@ -28,6 +28,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 
+/**
+ * Used to parse job history and configuration files.
+ */
 class JobHistoryFileParser {
   private static final Log LOG = LogFactory.getLog(JobHistoryFileParser.class);
 
