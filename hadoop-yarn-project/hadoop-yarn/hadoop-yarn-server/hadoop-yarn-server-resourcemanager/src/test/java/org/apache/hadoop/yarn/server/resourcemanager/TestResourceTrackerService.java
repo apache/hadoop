@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
@@ -87,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -987,6 +989,87 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals("Too far behind rm response id:0 nm response id:-100",
       nodeHeartbeat.getDiagnosticsMessage());
     checkRebootedNMCount(rm, ++initialMetricCount);
+  }
+
+  @Test
+  public void testNodeHeartbeatForAppCollectorsMap() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    // set version to 2
+    conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
+    // enable aux-service based timeline collectors
+    conf.set(YarnConfiguration.NM_AUX_SERVICES, "timeline_collector");
+    conf.set(YarnConfiguration.NM_AUX_SERVICES + "."
+        + "timeline_collector" + ".class",
+        PerNodeTimelineCollectorsAuxService.class.getName());
+
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:1234", 2048);
+
+    NodeHeartbeatResponse nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
+
+    RMNodeImpl node1 =
+        (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    RMNodeImpl node2 =
+        (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    RMApp app1 = rm.submitApp(1024);
+    String collectorAddr1 = "1.2.3.4:5";
+    app1.setCollectorAddr(collectorAddr1);
+
+    String collectorAddr2 = "5.4.3.2:1";
+    RMApp app2 = rm.submitApp(1024);
+    app2.setCollectorAddr(collectorAddr2);
+
+    // Create a running container for app1 running on nm1
+    ContainerId runningContainerId1 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+        app1.getApplicationId(), 0), 0);
+
+    ContainerStatus status1 = ContainerStatus.newInstance(runningContainerId1,
+        ContainerState.RUNNING, "", 0);
+    List<ContainerStatus> statusList = new ArrayList<ContainerStatus>();
+    statusList.add(status1);
+    NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(true,
+        "", System.currentTimeMillis());
+    NodeStatus nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
+        statusList, null, nodeHealth, null, null, null);
+    node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus,
+        nodeHeartbeat1));
+
+    Assert.assertEquals(1, node1.getRunningApps().size());
+    Assert.assertEquals(app1.getApplicationId(), node1.getRunningApps().get(0));
+
+    // Create a running container for app2 running on nm2
+    ContainerId runningContainerId2 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+        app2.getApplicationId(), 0), 0);
+
+    ContainerStatus status2 = ContainerStatus.newInstance(runningContainerId2,
+        ContainerState.RUNNING, "", 0);
+    statusList = new ArrayList<ContainerStatus>();
+    statusList.add(status2);
+    nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
+        statusList, null, nodeHealth, null, null, null);
+    node2.handle(new RMNodeStatusEvent(nm2.getNodeId(), nodeStatus,
+        nodeHeartbeat2));
+    Assert.assertEquals(1, node2.getRunningApps().size());
+    Assert.assertEquals(app2.getApplicationId(), node2.getRunningApps().get(0));
+
+    nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    Map<ApplicationId, String> map1 = nodeHeartbeat1.getAppCollectorsMap();
+    Assert.assertEquals(1, map1.size());
+    Assert.assertEquals(collectorAddr1, map1.get(app1.getApplicationId()));
+
+    nodeHeartbeat2 = nm2.nodeHeartbeat(true);
+    Map<ApplicationId, String> map2 = nodeHeartbeat2.getAppCollectorsMap();
+    Assert.assertEquals(1, map2.size());
+    Assert.assertEquals(collectorAddr2, map2.get(app2.getApplicationId()));
   }
 
   private void checkRebootedNMCount(MockRM rm2, int count)

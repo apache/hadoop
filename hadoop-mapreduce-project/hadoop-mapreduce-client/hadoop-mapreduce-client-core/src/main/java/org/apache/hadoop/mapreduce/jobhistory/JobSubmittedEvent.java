@@ -21,14 +21,18 @@ package org.apache.hadoop.mapreduce.jobhistory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.security.authorize.AccessControlList;
-
-import org.apache.avro.util.Utf8;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
  * Event to record the submission of a job
@@ -38,6 +42,7 @@ import org.apache.avro.util.Utf8;
 @InterfaceStability.Unstable
 public class JobSubmittedEvent implements HistoryEvent {
   private JobSubmitted datum = new JobSubmitted();
+  private JobConf jobConf = null;
 
   /**
    * Create an event to record job submission
@@ -80,6 +85,31 @@ public class JobSubmittedEvent implements HistoryEvent {
         workflowAdjacencies, "");
   }
 
+  /**
+   * Create an event to record job submission.
+   * @param id The job Id of the job
+   * @param jobName Name of the job
+   * @param userName Name of the user who submitted the job
+   * @param submitTime Time of submission
+   * @param jobConfPath Path of the Job Configuration file
+   * @param jobACLs The configured acls for the job.
+   * @param jobQueueName The job-queue to which this job was submitted to
+   * @param workflowId The Id of the workflow
+   * @param workflowName The name of the workflow
+   * @param workflowNodeName The node name of the workflow
+   * @param workflowAdjacencies The adjacencies of the workflow
+   * @param workflowTags Comma-separated tags for the workflow
+   */
+  public JobSubmittedEvent(JobID id, String jobName, String userName,
+      long submitTime, String jobConfPath,
+      Map<JobACL, AccessControlList> jobACLs, String jobQueueName,
+      String workflowId, String workflowName, String workflowNodeName,
+      String workflowAdjacencies, String workflowTags) {
+    this(id, jobName, userName, submitTime, jobConfPath, jobACLs,
+        jobQueueName, workflowId, workflowName, workflowNodeName,
+        workflowAdjacencies, workflowTags, null);
+  }
+
     /**
      * Create an event to record job submission
      * @param id The job Id of the job
@@ -94,12 +124,13 @@ public class JobSubmittedEvent implements HistoryEvent {
      * @param workflowNodeName The node name of the workflow
      * @param workflowAdjacencies The adjacencies of the workflow
      * @param workflowTags Comma-separated tags for the workflow
+     * @param conf Job configuration
      */
     public JobSubmittedEvent(JobID id, String jobName, String userName,
         long submitTime, String jobConfPath,
         Map<JobACL, AccessControlList> jobACLs, String jobQueueName,
         String workflowId, String workflowName, String workflowNodeName,
-        String workflowAdjacencies, String workflowTags) {
+        String workflowAdjacencies, String workflowTags, JobConf conf) {
     datum.setJobid(new Utf8(id.toString()));
     datum.setJobName(new Utf8(jobName));
     datum.setUserName(new Utf8(userName));
@@ -129,6 +160,7 @@ public class JobSubmittedEvent implements HistoryEvent {
     if (workflowTags != null) {
       datum.setWorkflowTags(new Utf8(workflowTags));
     }
+    jobConf = conf;
   }
 
   JobSubmittedEvent() {}
@@ -206,4 +238,33 @@ public class JobSubmittedEvent implements HistoryEvent {
   /** Get the event type */
   public EventType getEventType() { return EventType.JOB_SUBMITTED; }
 
+  public JobConf getJobConf() {
+    return jobConf;
+  }
+
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("SUBMIT_TIME", getSubmitTime());
+    tEvent.addInfo("QUEUE_NAME", getJobQueueName());
+    tEvent.addInfo("JOB_NAME", getJobName());
+    tEvent.addInfo("USER_NAME", getUserName());
+    tEvent.addInfo("JOB_CONF_PATH", getJobConfPath());
+    tEvent.addInfo("ACLS", getJobAcls());
+    tEvent.addInfo("JOB_QUEUE_NAME", getJobQueueName());
+    tEvent.addInfo("WORKLFOW_ID", getWorkflowId());
+    tEvent.addInfo("WORKFLOW_NAME", getWorkflowName());
+    tEvent.addInfo("WORKFLOW_NODE_NAME", getWorkflowNodeName());
+    tEvent.addInfo("WORKFLOW_ADJACENCIES",
+        getWorkflowAdjacencies());
+    tEvent.addInfo("WORKFLOW_TAGS", getWorkflowTags());
+
+    return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
+  }
 }

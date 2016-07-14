@@ -118,6 +118,23 @@
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 
+  <!-- Object cast is based on the event type -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher" />
+    <Method name="publishApplicationEvent" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher" />
+    <Method name="publishLocalizationEvent" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher$TimelineV2EventHandler" />
+     <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
 
   <!-- Ignore intentional switch fallthroughs -->
   <Match>
@@ -516,6 +533,16 @@
       <Field name="activitiesManager" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <!-- Ignore SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING warnings for Timeline Phoenix storage. -->
+  <!-- Since we're using dynamic columns, we have to generate SQL statements dynamically -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.storage.PhoenixOfflineAggregationWriterImpl" />
+    <Or>
+      <Method name="storeEntityVariableLengthFields" />
+      <Method name="writeAggregatedEntity" />
+    </Or>
+    <Bug pattern="SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING" />
   </Match>
   
   <!-- Following fields are used in ErrorsAndWarningsBlock, which is not a part of analysis of findbugs -->

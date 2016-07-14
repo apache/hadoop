@@ -41,6 +41,10 @@ public interface NodeHeartbeatResponse {
 
   List<ApplicationId> getApplicationsToCleanup();
 
+  // This tells NM the collectors' address info of related apps
+  Map<ApplicationId, String> getAppCollectorsMap();
+  void setAppCollectorsMap(Map<ApplicationId, String> appCollectorsMap);
+
   void setResponseId(int responseId);
   void setNodeAction(NodeAction action);
 

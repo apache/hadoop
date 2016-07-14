@@ -567,4 +567,18 @@ public abstract class AllocateResponse {
    */
   @Deprecated
   public abstract List<ContainerResourceDecrease> getDecreasedContainers();
+
+  /**
+   * The address of collector that belong to this app
+   *
+   * @return The address of collector that belong to this attempt
+   */
+  @Public
+  @Unstable
+  public abstract String getCollectorAddr();
+
+  @Private
+  @Unstable
+  public abstract void setCollectorAddr(String collectorAddr);
+
 }

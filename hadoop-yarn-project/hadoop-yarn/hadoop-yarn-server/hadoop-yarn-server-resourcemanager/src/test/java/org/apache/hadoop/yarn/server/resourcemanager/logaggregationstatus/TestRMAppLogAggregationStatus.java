@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -90,8 +91,11 @@ public class TestRMAppLogAggregationStatus {
     rmContext =
         new RMContextImpl(rmDispatcher, null, null, null,
           null, null, null, null, null);
-    rmContext.setSystemMetricsPublisher(new SystemMetricsPublisher());
+    rmContext.setSystemMetricsPublisher(mock(SystemMetricsPublisher.class));
     rmContext.setRMApplicationHistoryWriter(mock(RMApplicationHistoryWriter.class));
+
+    rmContext
+        .setRMTimelineCollectorManager(mock(RMTimelineCollectorManager.class));
 
     scheduler = mock(YarnScheduler.class);
     doAnswer(

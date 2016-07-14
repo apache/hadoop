@@ -190,6 +190,7 @@
                   <include>yarn_server_federation_protos.proto</include>
                   <include>ResourceTracker.proto</include>
                   <include>SCMUploader.proto</include>
+                  <include>collectornodemanager_protocol.proto</include>
                 </includes>
               </source>
             </configuration>

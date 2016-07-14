@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ContainerQueui
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
@@ -68,6 +69,7 @@ public class NodeHeartbeatResponsePBImpl extends
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
   private Resource resource = null;
+  private Map<ApplicationId, String> appCollectorsMap = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -130,6 +132,9 @@ public class NodeHeartbeatResponsePBImpl extends
     if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
+    if (this.appCollectorsMap != null) {
+      addAppCollectorsMapToProto();
+    }
   }
 
   private void addSystemCredentialsToProto() {
@@ -140,6 +145,16 @@ public class NodeHeartbeatResponsePBImpl extends
         .setAppId(convertToProtoFormat(entry.getKey()))
         .setCredentialsForApp(ProtoUtils.convertToProtoFormat(
             entry.getValue().duplicate())));
+    }
+  }
+
+  private void addAppCollectorsMapToProto() {
+    maybeInitBuilder();
+    builder.clearAppCollectorsMap();
+    for (Map.Entry<ApplicationId, String> entry : appCollectorsMap.entrySet()) {
+      builder.addAppCollectorsMap(AppCollectorsMapProto.newBuilder()
+          .setAppId(convertToProtoFormat(entry.getKey()))
+          .setAppCollectorAddr(entry.getValue()));
     }
   }
 
@@ -616,6 +631,15 @@ public class NodeHeartbeatResponsePBImpl extends
     return systemCredentials;
   }
 
+  @Override
+  public Map<ApplicationId, String> getAppCollectorsMap() {
+    if (this.appCollectorsMap != null) {
+      return this.appCollectorsMap;
+    }
+    initAppCollectorsMap();
+    return appCollectorsMap;
+  }
+
   private void initSystemCredentials() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
     List<SystemCredentialsForAppsProto> list = p.getSystemCredentialsForAppsList();
@@ -624,6 +648,18 @@ public class NodeHeartbeatResponsePBImpl extends
       ApplicationId appId = convertFromProtoFormat(c.getAppId());
       ByteBuffer byteBuffer = ProtoUtils.convertFromProtoFormat(c.getCredentialsForApp());
       this.systemCredentials.put(appId, byteBuffer);
+    }
+  }
+
+  private void initAppCollectorsMap() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<AppCollectorsMapProto> list = p.getAppCollectorsMapList();
+    if (!list.isEmpty()) {
+      this.appCollectorsMap = new HashMap<>();
+      for (AppCollectorsMapProto c : list) {
+        ApplicationId appId = convertFromProtoFormat(c.getAppId());
+        this.appCollectorsMap.put(appId, c.getAppCollectorAddr());
+      }
     }
   }
 
@@ -636,6 +672,17 @@ public class NodeHeartbeatResponsePBImpl extends
     maybeInitBuilder();
     this.systemCredentials = new HashMap<ApplicationId, ByteBuffer>();
     this.systemCredentials.putAll(systemCredentials);
+  }
+
+  @Override
+  public void setAppCollectorsMap(
+      Map<ApplicationId, String> appCollectorsMap) {
+    if (appCollectorsMap == null || appCollectorsMap.isEmpty()) {
+      return;
+    }
+    maybeInitBuilder();
+    this.appCollectorsMap = new HashMap<ApplicationId, String>();
+    this.appCollectorsMap.putAll(appCollectorsMap);
   }
 
   @Override
