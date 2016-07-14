@@ -613,8 +613,8 @@ public class TestHBaseTimelineStorage {
     TimelineMetric aggMetric = new TimelineMetric();
     aggMetric.setId("MEM_USAGE");
     Map<Long, Number> aggMetricValues = new HashMap<Long, Number>();
-    ts = System.currentTimeMillis();
-    aggMetricValues.put(ts - 120000, 102400000L);
+    long aggTs = ts;
+    aggMetricValues.put(aggTs - 120000, 102400000L);
     aggMetric.setType(Type.SINGLE_VALUE);
     aggMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
     aggMetric.setValues(aggMetricValues);
@@ -819,9 +819,9 @@ public class TestHBaseTimelineStorage {
               metric.getValues().get(ts - 20000));
         }
         if (metric.getId().equals("MEM_USAGE")) {
-          assertTrue(metric.getValues().containsKey(ts - 120000));
-          assertEquals(aggMetricValues.get(ts - 120000),
-              metric.getValues().get(ts - 120000));
+          assertTrue(metric.getValues().containsKey(aggTs - 120000));
+          assertEquals(aggMetricValues.get(aggTs - 120000),
+              metric.getValues().get(aggTs - 120000));
         }
       }
     } finally {
