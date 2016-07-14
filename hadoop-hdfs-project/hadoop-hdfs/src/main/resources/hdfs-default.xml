@@ -4158,4 +4158,13 @@
       balancer is disabled.
     </description>
   </property>
+
+  <property>
+    <name>dfs.disk.balancer.plan.threshold.percent</name>
+    <value>10</value>
+    <description>
+        The percentage that disk tolerance that we are ok with in
+      a plan.
+    </description>
+  </property>
 </configuration>

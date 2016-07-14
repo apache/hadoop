@@ -214,8 +214,8 @@ public class PlanCommand extends Command {
 
     if ((value <= 0.0) || (value > 100.0)) {
       value = getConf().getDouble(
-          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT,
-          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT_DEFAULT);
+          DFSConfigKeys.DFS_DISK_BALANCER_PLAN_THRESHOLD,
+          DFSConfigKeys.DFS_DISK_BALANCER_PLAN_THRESHOLD_DEFAULT);
     }
     return value;
   }

@@ -109,8 +109,8 @@ public class DiskBalancer {
         DFSConfigKeys.DFS_DISK_BALANCER_ENABLED,
         DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT);
     this.bandwidth = conf.getInt(
-        DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT,
-        DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT_DEFAULT);
+        DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT,
+        DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT_DEFAULT);
   }
 
   /**
@@ -656,8 +656,8 @@ public class DiskBalancer {
       shouldRun = new AtomicBoolean(false);
 
       this.diskBandwidth = conf.getLong(
-          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT,
-          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT_DEFAULT);
+          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT,
+          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT_DEFAULT);
 
       this.blockTolerance = conf.getLong(
           DFSConfigKeys.DFS_DISK_BALANCER_BLOCK_TOLERANCE,
@@ -673,7 +673,7 @@ public class DiskBalancer {
         LOG.debug("Found 0 or less as max disk throughput, ignoring config " +
             "value. value : " + diskBandwidth);
         diskBandwidth =
-            DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THRUPUT_DEFAULT;
+            DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT_DEFAULT;
       }
 
       if (this.blockTolerance <= 0) {
