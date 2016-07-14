@@ -99,6 +99,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -164,6 +165,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private long storedFinishTime = 0;
   private int firstAttemptIdInStateStore = 1;
   private int nextAttemptId = 1;
+  private String collectorAddr;
   // This field isn't protected by readlock now.
   private volatile RMAppAttempt currentAttempt;
   private String queue;
@@ -215,6 +217,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from NEW state
     .addTransition(RMAppState.NEW, RMAppState.NEW,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.NEW, RMAppState.NEW,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,
         RMAppEventType.START, new RMAppNewlySavingTransition())
     .addTransition(RMAppState.NEW, EnumSet.of(RMAppState.SUBMITTED,
@@ -231,6 +235,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     // Transitions from NEW_SAVING state
     .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.NEW_SAVING, RMAppState.SUBMITTED,
         RMAppEventType.APP_NEW_SAVED, new AddApplicationToSchedulerTransition())
     .addTransition(RMAppState.NEW_SAVING, RMAppState.FINAL_SAVING,
@@ -247,6 +253,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.SUBMITTED, RMAppState.FINAL_SAVING,
         RMAppEventType.APP_REJECTED,
         new FinalSavingTransition(
@@ -261,6 +269,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
         RMAppEventType.ATTEMPT_REGISTERED, new RMAppStateUpdateTransition(
             YarnApplicationState.RUNNING))
@@ -286,6 +296,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.RUNNING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_UNREGISTERED,
         new FinalSavingTransition(
@@ -315,6 +327,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
         EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL,
@@ -326,6 +340,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
       EnumSet.of(RMAppEventType.NODE_UPDATE,
@@ -337,6 +353,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.KILLING, RMAppState.KILLING, 
         RMAppEventType.APP_RUNNING_ON_NODE,
         new AppRunningOnNodeTransition())
+    .addTransition(RMAppState.KILLING, RMAppState.KILLING,
+        RMAppEventType.COLLECTOR_UPDATE, new RMAppCollectorUpdateTransition())
     .addTransition(RMAppState.KILLING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_KILLED,
         new FinalSavingTransition(
@@ -409,6 +427,17 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationMasterService masterService, long submitTime,
       String applicationType, Set<String> applicationTags,
       List<ResourceRequest> amReqs) {
+    this(applicationId, rmContext, config, name, user, queue, submissionContext,
+      scheduler, masterService, submitTime, applicationType, applicationTags,
+      amReqs, -1);
+  }
+
+  public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
+      Configuration config, String name, String user, String queue,
+      ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime,
+      String applicationType, Set<String> applicationTags,
+      List<ResourceRequest> amReqs, long startTime) {
 
     this.systemClock = SystemClock.getInstance();
 
@@ -424,7 +453,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.submitTime = submitTime;
-    this.startTime = this.systemClock.getTime();
+    if (startTime <= 0) {
+      this.startTime = this.systemClock.getTime();
+    } else {
+      this.startTime = startTime;
+    }
     this.applicationType = applicationType;
     this.applicationTags = applicationTags;
     this.amReqs = amReqs;
@@ -506,6 +539,25 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
   }
 
+  /**
+   * Starts the application level timeline collector for this app. This should
+   * be used only if the timeline service v.2 is enabled.
+   */
+  public void startTimelineCollector() {
+    AppLevelTimelineCollector collector =
+        new AppLevelTimelineCollector(applicationId);
+    rmContext.getRMTimelineCollectorManager().putIfAbsent(
+        applicationId, collector);
+  }
+
+  /**
+   * Stops the application level timeline collector for this app. This should be
+   * used only if the timeline service v.2 is enabled.
+   */
+  public void stopTimelineCollector() {
+    rmContext.getRMTimelineCollectorManager().remove(applicationId);
+  }
+
   @Override
   public ApplicationId getApplicationId() {
     return this.applicationId;
@@ -572,6 +624,21 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public void setQueue(String queue) {
     this.queue = queue;
+  }
+
+  @Override
+  public String getCollectorAddr() {
+    return this.collectorAddr;
+  }
+
+  @Override
+  public void setCollectorAddr(String collectorAddress) {
+    this.collectorAddr = collectorAddress;
+  }
+
+  @Override
+  public void removeCollectorAddr() {
+    this.collectorAddr = null;
   }
 
   @Override
@@ -883,11 +950,12 @@ public class RMAppImpl implements RMApp, Recoverable {
       this.firstAttemptIdInStateStore = appState.getFirstAttemptId();
       this.nextAttemptId = firstAttemptIdInStateStore;
     }
+    //TODO recover collector address.
+    //this.collectorAddr = appState.getCollectorAddr();
 
     // send the ATS create Event during RM recovery.
     // NOTE: it could be duplicated with events sent before RM get restarted.
     sendATSCreateEvent();
-
     RMAppAttemptImpl preAttempt = null;
     for (ApplicationAttemptId attemptId :
         new TreeSet<>(appState.attempts.keySet())) {
@@ -953,7 +1021,24 @@ public class RMAppImpl implements RMApp, Recoverable {
       SingleArcTransition<RMAppImpl, RMAppEvent> {
     public void transition(RMAppImpl app, RMAppEvent event) {
     };
+  }
 
+  private static final class RMAppCollectorUpdateTransition
+      extends RMAppTransition {
+
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      if (YarnConfiguration.timelineServiceV2Enabled(app.conf)) {
+        LOG.info("Updating collector info for app: " + app.getApplicationId());
+
+        RMAppCollectorUpdateEvent appCollectorUpdateEvent =
+            (RMAppCollectorUpdateEvent) event;
+        // Update collector address
+        app.setCollectorAddr(appCollectorUpdateEvent.getAppCollectorAddr());
+
+        // TODO persistent to RMStateStore for recover
+        // Save to RMStateStore
+      }
+    };
   }
 
   private static final class RMAppNodeUpdateTransition extends RMAppTransition {
@@ -1896,7 +1981,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
     return amNodeLabelExpression;
   }
-  
+
   @Override
   public CallerContext getCallerContext() {
     return callerContext;

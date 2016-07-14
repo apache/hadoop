@@ -39,6 +39,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.Shell;
@@ -557,6 +558,8 @@ public class MiniYARNCluster extends CompositeService {
           MiniYARNCluster.getHostname() + ":0");
       config.set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
           MiniYARNCluster.getHostname() + ":0");
+      config.set(YarnConfiguration.NM_COLLECTOR_SERVICE_ADDRESS,
+          MiniYARNCluster.getHostname() + ":0");
       WebAppUtils
           .setNMWebAppHostNameAndPort(config,
               MiniYARNCluster.getHostname(), 0);
@@ -799,8 +802,8 @@ public class MiniYARNCluster extends CompositeService {
       if (!useFixedPorts) {
         String hostname = MiniYARNCluster.getHostname();
         conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, hostname
-            + ":0");
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+            hostname + ":" + ServerSocketUtil.getPort(9188, 10));
       }
       appHistoryServer.init(conf);
       super.serviceInit(conf);

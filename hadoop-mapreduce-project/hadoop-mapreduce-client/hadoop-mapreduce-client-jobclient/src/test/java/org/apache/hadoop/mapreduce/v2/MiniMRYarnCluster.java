@@ -68,6 +68,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   private static final Log LOG = LogFactory.getLog(MiniMRYarnCluster.class);
   private JobHistoryServer historyServer;
   private JobHistoryServerWrapper historyServerWrapper;
+  private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
 
   public MiniMRYarnCluster(String testName) {
     this(testName, 1);
@@ -169,8 +170,25 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     conf.set(MRConfig.MASTER_ADDRESS, "test"); // The default is local because of
                                              // which shuffle doesn't happen
     //configure the shuffle service in NM
-    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
-        new String[] { ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID });
+    String[] nmAuxServices = conf.getStrings(YarnConfiguration.NM_AUX_SERVICES);
+    // if need to enable TIMELINE_AUX_SERVICE_NAME
+    boolean enableTimelineAuxService = false;
+    if (nmAuxServices != null) {
+      for (String nmAuxService: nmAuxServices) {
+        if (nmAuxService.equals(TIMELINE_AUX_SERVICE_NAME)) {
+          enableTimelineAuxService = true;
+          break;
+        }
+      }
+    }
+    if (enableTimelineAuxService) {
+      conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
+          new String[] {ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
+              TIMELINE_AUX_SERVICE_NAME});
+    } else {
+      conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
+          new String[] {ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID});
+    }
     conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT,
         ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID), ShuffleHandler.class,
         Service.class);

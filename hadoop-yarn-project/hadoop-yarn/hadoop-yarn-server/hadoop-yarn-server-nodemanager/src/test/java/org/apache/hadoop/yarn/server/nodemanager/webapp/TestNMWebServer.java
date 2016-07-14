@@ -86,8 +86,9 @@ public class TestNMWebServer {
   }
 
   private int startNMWebAppServer(String webAddr) {
+    Configuration conf = new Configuration();
     Context nmContext = new NodeManager.NMContext(null, null, null, null,
-        null, false, null);
+        null, false, conf);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -110,7 +111,6 @@ public class TestNMWebServer {
         return true;
       }
     };
-    Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
     NodeHealthCheckerService healthChecker = createNodeHealthCheckerService(conf);
@@ -149,8 +149,9 @@ public class TestNMWebServer {
 
   @Test
   public void testNMWebApp() throws IOException, YarnException {
+    Configuration conf = new Configuration();
     Context nmContext = new NodeManager.NMContext(null, null, null, null,
-        null, false, null);
+        null, false, conf);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -173,7 +174,6 @@ public class TestNMWebServer {
         return true;
       }
     };
-    Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
     NodeHealthCheckerService healthChecker = createNodeHealthCheckerService(conf);

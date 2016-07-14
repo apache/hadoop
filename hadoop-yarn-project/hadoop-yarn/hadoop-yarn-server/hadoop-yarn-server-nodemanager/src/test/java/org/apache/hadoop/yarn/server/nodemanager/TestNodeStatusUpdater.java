@@ -1097,6 +1097,7 @@ public class TestNodeStatusUpdater {
         BuilderUtils.newContainerToken(containerId, 0, "host", 1234, "user",
             BuilderUtils.newResource(1024, 1), 0, 123,
             "password".getBytes(), 0);
+
     Container completedContainer = new ContainerImpl(conf, null,
         null, null, null,
         BuilderUtils.newContainerTokenIdentifier(containerToken),

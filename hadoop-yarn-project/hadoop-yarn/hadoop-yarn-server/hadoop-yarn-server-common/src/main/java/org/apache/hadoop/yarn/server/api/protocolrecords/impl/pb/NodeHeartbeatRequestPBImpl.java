@@ -19,17 +19,23 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeLabelsProto;
@@ -51,6 +57,8 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private MasterKey lastKnownNMTokenMasterKey = null;
   private Set<NodeLabel> labels = null;
   private List<LogAggregationReport> logAggregationReportsForApps = null;
+
+  private Map<ApplicationId, String> registeredCollectors = null;
 
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -106,6 +114,9 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     if (this.logAggregationReportsForApps != null) {
       addLogAggregationStatusForAppsToProto();
     }
+    if (this.registeredCollectors != null) {
+      addRegisteredCollectorsToProto();
+    }
   }
 
   private void addLogAggregationStatusForAppsToProto() {
@@ -145,6 +156,17 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private LogAggregationReportProto convertToProtoFormat(
       LogAggregationReport value) {
     return ((LogAggregationReportPBImpl) value).getProto();
+  }
+
+  private void addRegisteredCollectorsToProto() {
+    maybeInitBuilder();
+    builder.clearRegisteredCollectors();
+    for (Map.Entry<ApplicationId, String> entry :
+        registeredCollectors.entrySet()) {
+      builder.addRegisteredCollectors(AppCollectorsMapProto.newBuilder()
+          .setAppId(convertToProtoFormat(entry.getKey()))
+          .setAppCollectorAddr(entry.getValue()));
+    }
   }
 
   private void mergeLocalToProto() {
@@ -228,12 +250,52 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     this.lastKnownNMTokenMasterKey = masterKey;
   }
 
+  @Override
+  public Map<ApplicationId, String> getRegisteredCollectors() {
+    if (this.registeredCollectors != null) {
+      return this.registeredCollectors;
+    }
+    initRegisteredCollectors();
+    return registeredCollectors;
+  }
+
+  private void initRegisteredCollectors() {
+    NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<AppCollectorsMapProto> list = p.getRegisteredCollectorsList();
+    if (!list.isEmpty()) {
+      this.registeredCollectors = new HashMap<>();
+      for (AppCollectorsMapProto c : list) {
+        ApplicationId appId = convertFromProtoFormat(c.getAppId());
+        this.registeredCollectors.put(appId, c.getAppCollectorAddr());
+      }
+    }
+  }
+
+  @Override
+  public void setRegisteredCollectors(
+      Map<ApplicationId, String> registeredCollectors) {
+    if (registeredCollectors == null || registeredCollectors.isEmpty()) {
+      return;
+    }
+    maybeInitBuilder();
+    this.registeredCollectors = new HashMap<ApplicationId, String>();
+    this.registeredCollectors.putAll(registeredCollectors);
+  }
+
   private NodeStatusPBImpl convertFromProtoFormat(NodeStatusProto p) {
     return new NodeStatusPBImpl(p);
   }
 
   private NodeStatusProto convertToProtoFormat(NodeStatus t) {
     return ((NodeStatusPBImpl)t).getProto();
+  }
+
+  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
+    return new ApplicationIdPBImpl(p);
+  }
+
+  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl) t).getProto();
   }
 
   private MasterKeyPBImpl convertFromProtoFormat(MasterKeyProto p) {

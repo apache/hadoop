@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -68,6 +69,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppCollectorUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -534,6 +536,16 @@ public class ResourceTrackerService extends AbstractService implements
           NodeAction.SHUTDOWN, message);
     }
 
+    boolean timelineV2Enabled =
+        YarnConfiguration.timelineServiceV2Enabled(getConfig());
+    if (timelineV2Enabled) {
+      // Check & update collectors info from request.
+      // TODO make sure it won't have race condition issue for AM failed over
+      // case that the older registration could possible override the newer
+      // one.
+      updateAppCollectorsMap(request);
+    }
+
     // Heartbeat response
     NodeHeartbeatResponse nodeHeartBeatResponse = YarnServerBuilderUtils
         .newNodeHeartbeatResponse(lastNodeHeartbeatResponse.
@@ -549,6 +561,12 @@ public class ResourceTrackerService extends AbstractService implements
         rmContext.getSystemCredentialsForApps();
     if (!systemCredentials.isEmpty()) {
       nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
+    }
+
+    if (timelineV2Enabled) {
+      // Return collectors' map that NM needs to know
+      setAppCollectorsMapToResponse(rmNode.getRunningApps(),
+          nodeHeartBeatResponse);
     }
 
     // 4. Send status to RMNode, saving the latest response.
@@ -592,6 +610,56 @@ public class ResourceTrackerService extends AbstractService implements
               .createContainerQueuingLimit());
     }
     return nodeHeartBeatResponse;
+  }
+
+  private void setAppCollectorsMapToResponse(
+      List<ApplicationId> runningApps, NodeHeartbeatResponse response) {
+    Map<ApplicationId, String> liveAppCollectorsMap = new
+        HashMap<ApplicationId, String>();
+    Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
+    // Set collectors for all running apps on this node.
+    for (ApplicationId appId : runningApps) {
+      String appCollectorAddr = rmApps.get(appId).getCollectorAddr();
+      if (appCollectorAddr != null) {
+        liveAppCollectorsMap.put(appId, appCollectorAddr);
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Collector for applicaton: " + appId +
+              " hasn't registered yet!");
+        }
+      }
+    }
+    response.setAppCollectorsMap(liveAppCollectorsMap);
+  }
+
+  private void updateAppCollectorsMap(NodeHeartbeatRequest request) {
+    Map<ApplicationId, String> registeredCollectorsMap =
+        request.getRegisteredCollectors();
+    if (registeredCollectorsMap != null
+        && !registeredCollectorsMap.isEmpty()) {
+      Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
+      for (Map.Entry<ApplicationId, String> entry:
+          registeredCollectorsMap.entrySet()) {
+        ApplicationId appId = entry.getKey();
+        String collectorAddr = entry.getValue();
+        if (collectorAddr != null && !collectorAddr.isEmpty()) {
+          RMApp rmApp = rmApps.get(appId);
+          if (rmApp == null) {
+            LOG.warn("Cannot update collector info because application ID: " +
+                appId + " is not found in RMContext!");
+          } else {
+            String previousCollectorAddr = rmApp.getCollectorAddr();
+            if (previousCollectorAddr == null
+                || !previousCollectorAddr.equals(collectorAddr)) {
+              // sending collector update event.
+              RMAppCollectorUpdateEvent event =
+                  new RMAppCollectorUpdateEvent(appId, collectorAddr);
+              rmContext.getDispatcher().getEventHandler().handle(event);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**

@@ -34,7 +34,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
@@ -539,7 +541,8 @@ public class TestApplication {
         new ApplicationACLsManager(conf));
       when(context.getNMTokenSecretManager()).thenReturn(nmTokenSecretMgr);
       when(context.getNMStateStore()).thenReturn(stateStoreService);
-      
+      when(context.getConf()).thenReturn(conf);
+
       // Setting master key
       MasterKey masterKey = new MasterKeyPBImpl();
       masterKey.setKeyId(123);
@@ -550,7 +553,8 @@ public class TestApplication {
       this.user = user;
       this.appId = BuilderUtils.newApplicationId(timestamp, id);
 
-      app = new ApplicationImpl(dispatcher, this.user, appId, null, context);
+      app = new ApplicationImpl(
+          dispatcher, this.user, appId, null, context);
       containers = new ArrayList<Container>();
       for (int i = 0; i < numContainers; i++) {
         Container container = createMockedContainer(this.appId, i);
@@ -597,7 +601,7 @@ public class TestApplication {
 
     public void containerFinished(int containerNum) {
       app.handle(new ApplicationContainerFinishedEvent(containers.get(
-          containerNum).getContainerId()));
+          containerNum).cloneAndGetContainerStatus()));
       drainDispatcherEvents();
     }
 
@@ -641,6 +645,9 @@ public class TestApplication {
     when(c.getLaunchContext()).thenReturn(launchContext);
     when(launchContext.getApplicationACLs()).thenReturn(
         new HashMap<ApplicationAccessType, String>());
+    when(c.cloneAndGetContainerStatus()).thenReturn(
+        BuilderUtils.newContainerStatus(cId,
+            ContainerState.NEW, "", 0, Resource.newInstance(1024, 1)));
     return c;
   }
 }
