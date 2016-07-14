@@ -29,6 +29,10 @@ import java.util.*;
 
 import junit.framework.*;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertThat;
+
 /**
  * This class tests the local file system via the FileSystem abstraction.
  */
@@ -67,9 +71,9 @@ public class TestLocalFileSystemPermission extends TestCase {
       System.out.println("Cannot run test for Windows");
       return;
     }
-    Configuration conf = new Configuration();
+    LocalFileSystem localfs = FileSystem.getLocal(new Configuration());
+    Configuration conf = localfs.getConf();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "044");
-    LocalFileSystem localfs = FileSystem.getLocal(conf);
     Path dir = new Path(TEST_PATH_PREFIX + "dir");
     localfs.mkdirs(dir);
     try {
@@ -235,6 +239,54 @@ public class TestLocalFileSystemPermission extends TestCase {
       }
     } 
     finally {cleanup(localfs, f);}
+  }
+
+  /**
+   * Steps:
+   * 1. Create a directory with default permissions: 777 with umask 022
+   * 2. Check the directory has good permissions: 755
+   * 3. Set the umask to 062.
+   * 4. Create a new directory with default permissions.
+   * 5. For this directory we expect 715 as permission not 755
+   * @throws Exception we can throw away all the exception.
+   */
+  public void testSetUmaskInRealTime() throws Exception {
+    if (Path.WINDOWS) {
+      System.out.println("Cannot run test for Windows");
+      return;
+    }
+
+    LocalFileSystem localfs = FileSystem.getLocal(new Configuration());
+    Configuration conf = localfs.getConf();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "022");
+    System.out.println(
+        conf.get(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY));
+    Path dir = new Path(TEST_PATH_PREFIX + "dir");
+    Path dir2 = new Path(TEST_PATH_PREFIX + "dir2");
+    try {
+      assertTrue(localfs.mkdirs(dir));
+      FsPermission initialPermission = getPermission(localfs, dir);
+      assertEquals(
+          "With umask 022 permission should be 755 since the default " +
+              "permission is 777", new FsPermission("755"), initialPermission);
+
+      // Modify umask and create a new directory
+      // and check if new umask is applied
+      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "062");
+      assertTrue(localfs.mkdirs(dir2));
+      FsPermission finalPermission = localfs.getFileStatus(dir2)
+          .getPermission();
+      assertThat("With umask 062 permission should not be 755 since the " +
+          "default permission is 777", new FsPermission("755"),
+          is(not(finalPermission)));
+      assertEquals(
+          "With umask 062 we expect 715 since the default permission is 777",
+          new FsPermission("715"), finalPermission);
+    } finally {
+      conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "022");
+      cleanup(localfs, dir);
+      cleanup(localfs, dir2);
+    }
   }
 
   static List<String> getGroups() throws IOException {

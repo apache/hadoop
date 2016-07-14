@@ -64,8 +64,6 @@ public class RawLocalFileSystem extends FileSystem {
   // Temporary workaround for HADOOP-9652.
   private static boolean useDeprecatedFileStatus = true;
 
-  private FsPermission umask;
-
   @VisibleForTesting
   public static void useStatIfAvailable() {
     useDeprecatedFileStatus = !Stat.isAvailable();
@@ -99,7 +97,6 @@ public class RawLocalFileSystem extends FileSystem {
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
-    umask = FsPermission.getUMask(conf);
   }
   
   /*******************************************************
@@ -233,7 +230,7 @@ public class RawLocalFileSystem extends FileSystem {
       if (permission == null) {
         this.fos = new FileOutputStream(file, append);
       } else {
-        permission = permission.applyUMask(umask);
+        permission = permission.applyUMask(FsPermission.getUMask(getConf()));
         if (Shell.WINDOWS && NativeIO.isAvailable()) {
           this.fos = NativeIO.Windows.createFileOutputStreamWithMode(file,
               append, permission.toShort());
@@ -510,7 +507,7 @@ public class RawLocalFileSystem extends FileSystem {
     if (permission == null) {
       permission = FsPermission.getDirDefault();
     }
-    permission = permission.applyUMask(umask);
+    permission = permission.applyUMask(FsPermission.getUMask(getConf()));
     if (Shell.WINDOWS && NativeIO.isAvailable()) {
       try {
         NativeIO.Windows.createDirectoryWithMode(p2f, permission.toShort());
