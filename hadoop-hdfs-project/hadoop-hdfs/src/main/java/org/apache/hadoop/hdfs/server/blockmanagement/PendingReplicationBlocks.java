@@ -134,7 +134,9 @@ class PendingReplicationBlocks {
    * The total number of blocks that are undergoing replication
    */
   int size() {
-    return pendingReplications.size();
+    synchronized(pendingReplications) {
+      return pendingReplications.size();
+    }
   } 
 
   /**
