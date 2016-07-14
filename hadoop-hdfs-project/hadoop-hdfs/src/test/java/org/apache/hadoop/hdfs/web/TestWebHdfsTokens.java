@@ -36,7 +36,6 @@ import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
-import org.apache.commons.httpclient.HttpConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
