@@ -137,6 +137,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -1057,6 +1058,7 @@ public class MRAppMaster extends CompositeService {
     private final ClusterInfo clusterInfo = new ClusterInfo();
     private final ClientToAMTokenSecretManager clientToAMTokenSecretManager;
     private String historyUrl = null;
+    private TimelineClient timelineClient = null;
 
     private final TaskAttemptFinishingMonitor taskAttemptFinishingMonitor;
 
@@ -1066,6 +1068,18 @@ public class MRAppMaster extends CompositeService {
       this.clientToAMTokenSecretManager =
           new ClientToAMTokenSecretManager(appAttemptID, null);
       this.taskAttemptFinishingMonitor = taskAttemptFinishingMonitor;
+      if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA,
+              MRJobConfig.DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA)
+            && YarnConfiguration.timelineServiceEnabled(conf)) {
+
+        if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+          // create new version TimelineClient
+          timelineClient = TimelineClient.createTimelineClient(
+              appAttemptID.getApplicationId());
+        } else {
+          timelineClient = TimelineClient.createTimelineClient();
+        }
+      }
     }
 
     @Override
@@ -1164,6 +1178,11 @@ public class MRAppMaster extends CompositeService {
     @Override
     public void setHistoryUrl(String historyUrl) {
       this.historyUrl = historyUrl;
+    }
+
+    // Get Timeline Collector's address (get sync from RM)
+    public TimelineClient getTimelineClient() {
+      return timelineClient;
     }
   }
 

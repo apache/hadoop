@@ -69,6 +69,7 @@ function print_usage(){
   echo "                                        Use -remove-application-from-state-store <appId> for "
   echo "                                            removing application from RMStateStore."
   echo "  nodemanager                           run a nodemanager on each slave"
+  echo "  timelinereader                        run the timeline reader server"
   echo "  timelineserver                        run the timeline server"
   echo "  rmadmin                               admin tools"
   echo "  router                                run the Router daemon"
@@ -260,6 +261,8 @@ elif [ "$COMMAND" = "historyserver" ] ; then
   if [ "$YARN_HISTORYSERVER_HEAPSIZE" != "" ]; then
     JAVA_HEAP_MAX="-Xmx""$YARN_HISTORYSERVER_HEAPSIZE""m"
   fi
+elif [ "$COMMAND" = "timelinereader" ] ; then
+  CLASS='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
 elif [ "$COMMAND" = "timelineserver" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/timelineserver-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'

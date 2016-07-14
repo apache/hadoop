@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
@@ -244,6 +245,9 @@ public class TestRMAppTransitions {
     doReturn(null).when(resourceScheduler)
               .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any());
     doReturn(resourceScheduler).when(rmContext).getScheduler();
+
+    doReturn(mock(RMTimelineCollectorManager.class)).when(rmContext)
+        .getRMTimelineCollectorManager();
 
     rmDispatcher.register(RMAppAttemptEventType.class,
         new TestApplicationAttemptEventDispatcher(this.rmContext));

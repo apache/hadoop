@@ -1465,7 +1465,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             job.conf.get(MRJobConfig.WORKFLOW_NAME, ""),
             job.conf.get(MRJobConfig.WORKFLOW_NODE_NAME, ""),
             getWorkflowAdjacencies(job.conf),
-            job.conf.get(MRJobConfig.WORKFLOW_TAGS, ""));
+            job.conf.get(MRJobConfig.WORKFLOW_TAGS, ""), job.conf);
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
         //TODO JH Verify jobACLs, UserName via UGI?
 

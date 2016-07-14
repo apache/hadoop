@@ -34,8 +34,8 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -51,16 +51,19 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.NMProxy;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -188,6 +191,8 @@ public class AMLauncher implements Runnable {
 
     // Finalize the container
     setupTokens(container, containerID);
+    // set the flow context optionally for timeline service v.2
+    setFlowContext(container);
 
     return container;
   }
@@ -230,6 +235,58 @@ public class AMLauncher implements Runnable {
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+  }
+
+  private void setFlowContext(ContainerLaunchContext container) {
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      Map<String, String> environment = container.getEnvironment();
+      ApplicationId applicationId =
+          application.getAppAttemptId().getApplicationId();
+      RMApp app = rmContext.getRMApps().get(applicationId);
+
+      // initialize the flow in the environment with default values for those
+      // that do not specify the flow tags
+      // flow name: app name (or app id if app name is missing),
+      // flow version: "1", flow run id: start time
+      setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX,
+          TimelineUtils.generateDefaultFlowName(app.getName(), applicationId));
+      setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX,
+          TimelineUtils.DEFAULT_FLOW_VERSION);
+      setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX,
+          String.valueOf(app.getStartTime()));
+
+      // Set flow context info: the flow context is received via the application
+      // tags
+      for (String tag : app.getApplicationTags()) {
+        String[] parts = tag.split(":", 2);
+        if (parts.length != 2 || parts[1].isEmpty()) {
+          continue;
+        }
+        switch (parts[0].toUpperCase()) {
+        case TimelineUtils.FLOW_NAME_TAG_PREFIX:
+          setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX,
+              parts[1]);
+          break;
+        case TimelineUtils.FLOW_VERSION_TAG_PREFIX:
+          setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX,
+              parts[1]);
+          break;
+        case TimelineUtils.FLOW_RUN_ID_TAG_PREFIX:
+          setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX,
+              parts[1]);
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
+
+  private static void setFlowTags(
+      Map<String, String> environment, String tagPrefix, String value) {
+    if (!value.isEmpty()) {
+      environment.put(tagPrefix, value);
+    }
   }
 
   @VisibleForTesting

@@ -114,6 +114,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl.FlowContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
@@ -150,8 +151,11 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -172,8 +176,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import static org.apache.hadoop.service.Service.STATE.STARTED;
-
-import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerManagerImpl extends CompositeService implements
     ContainerManager {
@@ -216,6 +218,9 @@ public class ContainerManagerImpl extends CompositeService implements
 
   private long waitForContainersOnShutdownMillis;
 
+  // NM metrics publisher is set only if the timeline service v.2 is enabled
+  private NMTimelinePublisher nmMetricsPublisher;
+
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
@@ -245,6 +250,15 @@ public class ContainerManagerImpl extends CompositeService implements
     auxiliaryServices.registerServiceListener(this);
     addService(auxiliaryServices);
 
+    // initialize the metrics publisher if the timeline service v.2 is enabled
+    // and the system publisher is enabled
+    Configuration conf = context.getConf();
+    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+      LOG.info("YARN system metrics publishing service is enabled");
+      nmMetricsPublisher = createNMTimelinePublisher(context);
+      context.setNMTimelinePublisher(nmMetricsPublisher);
+    }
     this.containersMonitor = createContainersMonitor(exec);
     addService(this.containersMonitor);
 
@@ -252,7 +266,9 @@ public class ContainerManagerImpl extends CompositeService implements
         new ContainerEventDispatcher());
     dispatcher.register(ApplicationEventType.class,
         createApplicationEventDispatcher());
-    dispatcher.register(LocalizationEventType.class, rsrcLocalizationSrvc);
+    dispatcher.register(LocalizationEventType.class,
+        new LocalizationEventHandlerWrapper(rsrcLocalizationSrvc,
+            nmMetricsPublisher));
     dispatcher.register(AuxServicesEventType.class, auxiliaryServices);
     dispatcher.register(ContainersMonitorEventType.class, containersMonitor);
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
@@ -376,6 +392,7 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     LOG.info("Recovering application " + appId);
+    //TODO: Recover flow and flow run ID
     ApplicationImpl app = new ApplicationImpl(dispatcher, p.getUser(), appId,
         creds, context, p.getAppLogAggregationInitedTime());
     context.getApplications().put(appId, app);
@@ -501,6 +518,14 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected SharedCacheUploadService createSharedCacheUploaderService() {
     return new SharedCacheUploadService();
+  }
+
+  @VisibleForTesting
+  protected NMTimelinePublisher createNMTimelinePublisher(Context ctxt) {
+    NMTimelinePublisher nmTimelinePublisherLocal =
+        new NMTimelinePublisher(ctxt);
+    addIfService(nmTimelinePublisherLocal);
+    return nmTimelinePublisherLocal;
   }
 
   protected ContainersLauncher createContainersLauncher(Context context,
@@ -1032,22 +1057,41 @@ public class ContainerManagerImpl extends CompositeService implements
     try {
       if (!isServiceStopped()) {
         // Create the application
-        Application application = new ApplicationImpl(dispatcher, user,
-            applicationID, credentials, context);
-        if (null == context.getApplications().putIfAbsent(applicationID,
-          application)) {
-          LOG.info("Creating a new application reference for app "
-              + applicationID);
-          LogAggregationContext logAggregationContext =
-              containerTokenIdentifier.getLogAggregationContext();
-          Map<ApplicationAccessType, String> appAcls =
-              container.getLaunchContext().getApplicationACLs();
-          context.getNMStateStore().storeApplication(applicationID,
-              buildAppProto(applicationID, user, credentials, appAcls,
-                logAggregationContext));
-          dispatcher.getEventHandler().handle(
-            new ApplicationInitEvent(applicationID, appAcls,
-              logAggregationContext));
+        // populate the flow context from the launch context if the timeline
+        // service v.2 is enabled
+        FlowContext flowContext = null;
+        if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+          String flowName = launchContext.getEnvironment().get(
+              TimelineUtils.FLOW_NAME_TAG_PREFIX);
+          String flowVersion = launchContext.getEnvironment().get(
+              TimelineUtils.FLOW_VERSION_TAG_PREFIX);
+          String flowRunIdStr = launchContext.getEnvironment().get(
+              TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
+          long flowRunId = 0L;
+          if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
+            flowRunId = Long.parseLong(flowRunIdStr);
+          }
+          flowContext =
+              new FlowContext(flowName, flowVersion, flowRunId);
+        }
+        if (!context.getApplications().containsKey(applicationID)) {
+          Application application =
+              new ApplicationImpl(dispatcher, user, flowContext,
+                  applicationID, credentials, context);
+          if (context.getApplications().putIfAbsent(applicationID,
+              application) == null) {
+            LOG.info("Creating a new application reference for app "
+                + applicationID);
+            LogAggregationContext logAggregationContext =
+                containerTokenIdentifier.getLogAggregationContext();
+            Map<ApplicationAccessType, String> appAcls =
+                container.getLaunchContext().getApplicationACLs();
+            context.getNMStateStore().storeApplication(applicationID,
+                buildAppProto(applicationID, user, credentials, appAcls,
+                    logAggregationContext));
+            dispatcher.getEventHandler().handle(new ApplicationInitEvent(
+                applicationID, appAcls, logAggregationContext));
+          }
         }
 
         this.context.getNMStateStore().storeContainer(containerId,
@@ -1392,6 +1436,9 @@ public class ContainerManagerImpl extends CompositeService implements
       Container c = containers.get(event.getContainerID());
       if (c != null) {
         c.handle(event);
+        if (nmMetricsPublisher != null) {
+          nmMetricsPublisher.publishContainerEvent(event);
+        }
       } else {
         LOG.warn("Event " + event + " sent to absent container " +
             event.getContainerID());
@@ -1400,7 +1447,6 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   class ApplicationEventDispatcher implements EventHandler<ApplicationEvent> {
-
     @Override
     public void handle(ApplicationEvent event) {
       Application app =
@@ -1408,9 +1454,33 @@ public class ContainerManagerImpl extends CompositeService implements
               event.getApplicationID());
       if (app != null) {
         app.handle(event);
+        if (nmMetricsPublisher != null) {
+          nmMetricsPublisher.publishApplicationEvent(event);
+        }
       } else {
         LOG.warn("Event " + event + " sent to absent application "
             + event.getApplicationID());
+      }
+    }
+  }
+
+  private static final class LocalizationEventHandlerWrapper implements
+      EventHandler<LocalizationEvent> {
+
+    private EventHandler<LocalizationEvent> origLocalizationEventHandler;
+    private NMTimelinePublisher timelinePublisher;
+
+    LocalizationEventHandlerWrapper(EventHandler<LocalizationEvent> handler,
+        NMTimelinePublisher publisher) {
+      this.origLocalizationEventHandler = handler;
+      this.timelinePublisher = publisher;
+    }
+
+    @Override
+    public void handle(LocalizationEvent event) {
+      origLocalizationEventHandler.handle(event);
+      if (timelinePublisher != null) {
+        timelinePublisher.publishLocalizationEvent(event);
       }
     }
   }

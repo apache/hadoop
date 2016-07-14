@@ -41,7 +41,7 @@ public class TestDistributedShellWithNodeLabels {
   
   static final int NUM_NMS = 2;
   TestDistributedShell distShellTest;
- 
+
   @Before
   public void setup() throws Exception {
     distShellTest = new TestDistributedShell();

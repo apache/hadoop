@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
@@ -62,6 +63,13 @@ public interface Context {
   ConcurrentMap<ApplicationId, Application> getApplications();
 
   Map<ApplicationId, Credentials> getSystemCredentialsForApps();
+
+  /**
+   * Get the registered collectors that located on this NM.
+   * @return registered collectors, or null if the timeline service v.2 is not
+   * enabled
+   */
+  Map<ApplicationId, String> getRegisteredCollectors();
 
   ConcurrentMap<ContainerId, Container> getContainers();
 
@@ -102,4 +110,8 @@ public interface Context {
   ContainerExecutor getContainerExecutor();
 
   ContainerStateTransitionListener getContainerStateTransitionListener();
+
+  void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher);
+
+  NMTimelinePublisher getNMTimelinePublisher();
 }

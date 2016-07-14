@@ -319,4 +319,18 @@ public class MockRMApp implements RMApp {
   public boolean isAppInCompletedStates() {
     return false;
   }
+
+  public String getCollectorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void removeCollectorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void setCollectorAddr(String collectorAddr) {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }
