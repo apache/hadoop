@@ -283,7 +283,14 @@ static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
  * Write the exit code of the container into the exit code file
  * exit_code_file: Path to exit code file where exit code needs to be written
  */
-static int write_exit_code_file(const char* exit_code_file, int exit_code) {
+static int write_exit_code_file_as_nm(const char* exit_code_file, int exit_code) {
+  uid_t user = geteuid();
+  gid_t group = getegid();
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    fprintf(ERRORFILE, "Could not change to effective users %d, %d\n", nm_uid, nm_gid);
+    fflush(ERRORFILE);
+    return -1;
+  }
   char *tmp_ecode_file = concatenate("%s.tmp", "exit_code_path", 1,
       exit_code_file);
   if (tmp_ecode_file == NULL) {
@@ -320,6 +327,13 @@ static int write_exit_code_file(const char* exit_code_file, int exit_code) {
     return -1;
   }
 
+  // always change back
+  if (change_effective_user(user, group) != 0) {
+    fprintf(ERRORFILE,
+       "Could not change to effective users %d, %d\n", user, group);
+    fflush(ERRORFILE);
+    return -1;
+  }
   free(tmp_ecode_file);
   return 0;
 }
@@ -357,11 +371,8 @@ static int wait_and_get_exit_code(pid_t pid) {
 static int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
   int exit_code = -1;
 
-  if (change_effective_user(nm_uid, nm_gid) != 0) {
-    return -1;
-  }
   exit_code = wait_and_get_exit_code(pid);
-  if (write_exit_code_file(exit_code_file, exit_code) < 0) {
+  if (write_exit_code_file_as_nm(exit_code_file, exit_code) < 0) {
     return -1;
   }
 
@@ -1240,6 +1251,9 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   int BUFFER_SIZE = 4096;
   char buffer[BUFFER_SIZE];
 
+  gid_t user_gid = getegid();
+  uid_t prev_uid = geteuid();
+
   char *docker_command = parse_docker_command_file(command_file);
   char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
   if (docker_binary == NULL) {
@@ -1255,7 +1269,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fflush(ERRORFILE);
     goto cleanup;
   }
-  gid_t user_gid = getegid();
 
   fprintf(LOGFILE, "Creating local dirs...\n");
   exit_code = create_local_dirs(user, app_id, container_id,
@@ -1400,11 +1413,19 @@ cleanup:
   //clean up docker command file
   unlink(command_file);
 
-  if (exit_code_file != NULL && write_exit_code_file(exit_code_file, exit_code) < 0) {
+  if (exit_code_file != NULL && write_exit_code_file_as_nm(exit_code_file, exit_code) < 0) {
     fprintf (ERRORFILE,
       "Could not write exit code to file %s.\n", exit_code_file);
     fflush(ERRORFILE);
   }
+
+  // Drop root privileges
+  if (change_effective_user(prev_uid, user_gid) != 0) {
+    fprintf(ERRORFILE,
+      "Could not change to effective users %d, %d\n", prev_uid, user_gid);
+    fflush(ERRORFILE);
+  }
+
 #if HAVE_FCLOSEALL
   fcloseall();
 #else
