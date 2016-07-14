@@ -455,6 +455,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         "target/test-dir");
     Path pwd = new Path(testDir);
     List<Path> appDirs = new ArrayList<Path>();
+    List<String> userLocalDirs = new ArrayList<>();
     List<String> containerLogs = new ArrayList<String>();
 
     Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
@@ -465,8 +466,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     Path nmp = new Path(testDir);
 
-    launch.sanitizeEnv(
-      userSetEnv, pwd, appDirs, containerLogs, resources, nmp);
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp);
 
     List<String> result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -484,8 +485,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     launch = new ContainerLaunch(distContext, conf,
         dispatcher, exec, null, container, dirsHandler, containerManager);
 
-    launch.sanitizeEnv(
-      userSetEnv, pwd, appDirs, containerLogs, resources, nmp);
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp);
 
     result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));

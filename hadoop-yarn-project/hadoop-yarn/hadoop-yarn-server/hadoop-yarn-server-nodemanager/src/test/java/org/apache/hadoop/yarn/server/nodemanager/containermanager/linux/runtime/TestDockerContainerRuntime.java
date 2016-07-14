@@ -82,6 +82,8 @@ public class TestDockerContainerRuntime {
   private Path pidFilePath;
   private List<String> localDirs;
   private List<String> logDirs;
+  private List<String> filecacheDirs;
+  private List<String> userLocalDirs;
   private List<String> containerLocalDirs;
   private List<String> containerLogDirs;
   private Map<Path, List<String>> localizedResources;
@@ -126,13 +128,17 @@ public class TestDockerContainerRuntime {
     pidFilePath = new Path("/test_pid_file_path");
     localDirs = new ArrayList<>();
     logDirs = new ArrayList<>();
+    filecacheDirs = new ArrayList<>();
     resourcesOptions = "cgroups=none";
+    userLocalDirs = new ArrayList<>();
     containerLocalDirs = new ArrayList<>();
     containerLogDirs = new ArrayList<>();
     localizedResources = new HashMap<>();
 
     localDirs.add("/test_local_dir");
     logDirs.add("/test_log_dir");
+    filecacheDirs.add("/test_filecache_dir");
+    userLocalDirs.add("/test_user_local_dir");
     containerLocalDirs.add("/test_container_local_dir");
     containerLogDirs.add("/test_container_log_dir");
     localizedResources.put(new Path("/test_local_dir/test_resource_file"),
@@ -156,6 +162,8 @@ public class TestDockerContainerRuntime {
         .setExecutionAttribute(PID_FILE_PATH, pidFilePath)
         .setExecutionAttribute(LOCAL_DIRS, localDirs)
         .setExecutionAttribute(LOG_DIRS, logDirs)
+        .setExecutionAttribute(FILECACHE_DIRS, filecacheDirs)
+        .setExecutionAttribute(USER_LOCAL_DIRS, userLocalDirs)
         .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
         .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)
         .setExecutionAttribute(LOCALIZED_RESOURCES, localizedResources)
@@ -262,12 +270,15 @@ public class TestDockerContainerRuntime {
         .append("-v %4$s:%4$s ")
         .append("-v %5$s:%5$s ")
         .append("-v %6$s:%6$s ")
-        .append("%7$s ")
-        .append("bash %8$s/launch_container.sh");
+        .append("-v %7$s:%7$s ")
+        .append("-v %8$s:%8$s ").append("%9$s ")
+        .append("bash %10$s/launch_container.sh");
 
-    String expectedCommand = String.format(expectedCommandTemplate.toString(),
-        containerId, runAsUser, containerWorkDir, containerLocalDirs.get(0),
-        containerWorkDir, containerLogDirs.get(0), image, containerWorkDir);
+    String expectedCommand = String
+        .format(expectedCommandTemplate.toString(), containerId, runAsUser,
+            containerWorkDir, containerLocalDirs.get(0), filecacheDirs.get(0),
+            containerWorkDir, containerLogDirs.get(0), userLocalDirs.get(0),
+            image, containerWorkDir);
 
     List<String> dockerCommands = Files.readAllLines(Paths.get
             (dockerCommandFile), Charset.forName("UTF-8"));
@@ -363,13 +374,15 @@ public class TestDockerContainerRuntime {
             .append(getExpectedTestCapabilitiesArgumentString())
             .append("-v /etc/passwd:/etc/password:ro ")
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
-            .append("-v %6$s:%6$s ").append("%7$s ")
-            .append("bash %8$s/launch_container.sh");
+            .append("-v %6$s:%6$s ").append("-v %7$s:%7$s ")
+            .append("-v %8$s:%8$s ").append("%9$s ")
+            .append("bash %10$s/launch_container.sh");
 
     String expectedCommand = String
         .format(expectedCommandTemplate.toString(), containerId, runAsUser,
-            containerWorkDir, containerLocalDirs.get(0), containerWorkDir,
-            containerLogDirs.get(0), image, containerWorkDir);
+            containerWorkDir, containerLocalDirs.get(0), filecacheDirs.get(0),
+            containerWorkDir, containerLogDirs.get(0), userLocalDirs.get(0),
+            image, containerWorkDir);
 
     List<String> dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
@@ -416,13 +429,15 @@ public class TestDockerContainerRuntime {
             .append(getExpectedTestCapabilitiesArgumentString())
             .append("-v /etc/passwd:/etc/password:ro ")
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
-            .append("-v %6$s:%6$s ").append("%7$s ")
-            .append("bash %8$s/launch_container.sh");
+            .append("-v %6$s:%6$s ").append("-v %7$s:%7$s ")
+            .append("-v %8$s:%8$s ").append("%9$s ")
+            .append("bash %10$s/launch_container.sh");
 
     String expectedCommand = String
         .format(expectedCommandTemplate.toString(), containerId, runAsUser,
-            containerWorkDir, containerLocalDirs.get(0), containerWorkDir,
-            containerLogDirs.get(0), image, containerWorkDir);
+            containerWorkDir, containerLocalDirs.get(0), filecacheDirs.get(0),
+            containerWorkDir, containerLogDirs.get(0), userLocalDirs.get(0),
+            image, containerWorkDir);
 
     List<String> dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
@@ -451,14 +466,15 @@ public class TestDockerContainerRuntime {
             .append(getExpectedTestCapabilitiesArgumentString())
             .append("-v /etc/passwd:/etc/password:ro ")
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
-            .append("-v %6$s:%6$s ").append("%7$s ")
-            .append("bash %8$s/launch_container.sh");
+            .append("-v %6$s:%6$s ").append("-v %7$s:%7$s ")
+            .append("-v %8$s:%8$s ").append("%9$s ")
+            .append("bash %10$s/launch_container.sh");
 
     expectedCommand = String
         .format(expectedCommandTemplate.toString(), containerId, runAsUser,
-            containerWorkDir, containerLocalDirs.get(0), containerWorkDir,
-            containerLogDirs.get(0), image, containerWorkDir);
-
+            containerWorkDir, containerLocalDirs.get(0), filecacheDirs.get(0),
+            containerWorkDir, containerLogDirs.get(0), userLocalDirs.get(0),
+            image, containerWorkDir);
     dockerCommands = Files
         .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
 

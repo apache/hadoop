@@ -55,6 +55,10 @@ public final class LinuxContainerRuntimeConstants {
       List.class, "local_dirs");
   public static final Attribute<List> LOG_DIRS = Attribute.attribute(
       List.class, "log_dirs");
+  public static final Attribute<List> FILECACHE_DIRS = Attribute.attribute(
+      List.class, "filecache_dirs");
+  public static final Attribute<List> USER_LOCAL_DIRS = Attribute.attribute(
+      List.class, "user_local_dirs");
   public static final Attribute<List> CONTAINER_LOCAL_DIRS = Attribute
       .attribute(List.class, "container_local_dirs");
   public static final Attribute<List> CONTAINER_LOG_DIRS = Attribute.attribute(

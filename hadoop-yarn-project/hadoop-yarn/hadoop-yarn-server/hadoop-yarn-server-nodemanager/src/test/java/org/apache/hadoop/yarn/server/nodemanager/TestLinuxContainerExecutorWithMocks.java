@@ -180,6 +180,10 @@ public class TestLinuxContainerExecutorWithMocks {
         .setContainerWorkDir(workDir)
         .setLocalDirs(dirsHandler.getLocalDirs())
         .setLogDirs(dirsHandler.getLogDirs())
+        .setFilecacheDirs(new ArrayList<>())
+        .setUserLocalDirs(new ArrayList<>())
+        .setContainerLocalDirs(new ArrayList<>())
+        .setContainerLogDirs(new ArrayList<>())
         .build());
     assertEquals(0, ret);
     assertEquals(Arrays.asList(YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER,
@@ -345,6 +349,10 @@ public class TestLinuxContainerExecutorWithMocks {
         .setContainerWorkDir(workDir)
         .setLocalDirs(dirsHandler.getLocalDirs())
         .setLogDirs(dirsHandler.getLogDirs())
+        .setFilecacheDirs(new ArrayList<>())
+        .setUserLocalDirs(new ArrayList<>())
+        .setContainerLocalDirs(new ArrayList<>())
+        .setContainerLogDirs(new ArrayList<>())
         .build());
 
     Assert.assertNotSame(0, ret);
