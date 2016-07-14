@@ -28,7 +28,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 import javax.ws.rs.core.MediaType;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -53,9 +55,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -78,7 +79,7 @@ public class LogsCLI extends Configured implements Tool {
   private static final String NODE_ADDRESS_OPTION = "nodeAddress";
   private static final String APP_OWNER_OPTION = "appOwner";
   private static final String AM_CONTAINER_OPTION = "am";
-  private static final String CONTAINER_LOG_FILES = "logFiles";
+  private static final String PER_CONTAINER_LOG_FILES_OPTION = "log_files";
   private static final String LIST_NODES_OPTION = "list_nodes";
   private static final String SHOW_APPLICATION_LOG_INFO
       = "show_application_log_info";
@@ -146,8 +147,8 @@ public class LogsCLI extends Configured implements Tool {
           return -1;
         }
       }
-      if (commandLine.hasOption(CONTAINER_LOG_FILES)) {
-        logFiles = commandLine.getOptionValues(CONTAINER_LOG_FILES);
+      if (commandLine.hasOption(PER_CONTAINER_LOG_FILES_OPTION)) {
+        logFiles = commandLine.getOptionValues(PER_CONTAINER_LOG_FILES_OPTION);
       }
       if (commandLine.hasOption(SIZE_OPTION)) {
         bytes = Long.parseLong(commandLine.getOptionValue(SIZE_OPTION));
@@ -359,12 +360,18 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   private boolean fetchAllLogFiles(String[] logFiles) {
-    if(logFiles != null) {
-      List<String> logs = Arrays.asList(logFiles);
-      if(logs.contains("ALL") || logs.contains(".*")) {
-        return true;
-      }
+
+    // If no value is specified for the PER_CONTAINER_LOG_FILES_OPTION option,
+    // we will assume all logs.
+    if (logFiles == null || logFiles.length == 0) {
+      return true;
     }
+
+    List<String> logs = Arrays.asList(logFiles);
+    if (logs.contains("ALL") || logs.contains(".*")) {
+      return true;
+    }
+
     return false;
   }
 
@@ -424,7 +431,7 @@ public class LogsCLI extends Configured implements Tool {
         containerIdStr);
     try {
       // fetch all the log files for the container
-      // filter the log files based on the given --logFiles pattern
+      // filter the log files based on the given -log_files pattern
       List<PerLogFileInfo> allLogFileInfos=
           getContainerLogFiles(getConf(), containerIdStr, nodeHttpAddress);
       List<String> fileNames = new ArrayList<String>();
@@ -700,8 +707,8 @@ public class LogsCLI extends Configured implements Tool {
         new Option(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
     opts.addOption(appIdOpt);
     opts.addOption(CONTAINER_ID_OPTION, true, "ContainerId. "
-        + "By default, it will only print syslog if the application is running."
-        + " Work with -logFiles to get other logs. If specified, the"
+        + "By default, it will print all available logs."
+        + " Work with -log_files to get only specific logs. If specified, the"
         + " applicationId can be omitted");
     opts.addOption(NODE_ADDRESS_OPTION, true, "NodeAddress in the format "
         + "nodename:port");
@@ -714,13 +721,13 @@ public class LogsCLI extends Configured implements Tool {
         + "the logs for the first AM Container as well as the second "
         + "AM Container. To get logs for all AM Containers, use -am ALL. "
         + "To get logs for the latest AM Container, use -am -1. "
-        + "By default, it will only print out syslog. Work with -logFiles "
-        + "to get other logs");
+        + "By default, it will print all available logs. Work with -log_files "
+        + "to get only specific logs.");
     amOption.setValueSeparator(',');
     amOption.setArgs(Option.UNLIMITED_VALUES);
     amOption.setArgName("AM Containers");
     opts.addOption(amOption);
-    Option logFileOpt = new Option(CONTAINER_LOG_FILES, true,
+    Option logFileOpt = new Option(PER_CONTAINER_LOG_FILES_OPTION, true,
         "Specify comma-separated value "
         + "to get specified container log files. Use \"ALL\" to fetch all the "
         + "log files for the container. It also supports Java Regex.");
@@ -764,7 +771,7 @@ public class LogsCLI extends Configured implements Tool {
     printOpts.addOption(commandOpts.getOption(NODE_ADDRESS_OPTION));
     printOpts.addOption(commandOpts.getOption(APP_OWNER_OPTION));
     printOpts.addOption(commandOpts.getOption(AM_CONTAINER_OPTION));
-    printOpts.addOption(commandOpts.getOption(CONTAINER_LOG_FILES));
+    printOpts.addOption(commandOpts.getOption(PER_CONTAINER_LOG_FILES_OPTION));
     printOpts.addOption(commandOpts.getOption(LIST_NODES_OPTION));
     printOpts.addOption(commandOpts.getOption(SHOW_APPLICATION_LOG_INFO));
     printOpts.addOption(commandOpts.getOption(SHOW_CONTAINER_LOG_INFO));
@@ -807,13 +814,7 @@ public class LogsCLI extends Configured implements Tool {
   private int fetchAMContainerLogs(ContainerLogsRequest request,
       List<String> amContainersList, LogCLIHelpers logCliHelper)
       throws Exception {
-    List<String> logFiles = request.getLogTypes();
-    // if we do not specify the value for CONTAINER_LOG_FILES option,
-    // we will only output syslog
-    if (logFiles == null || logFiles.isEmpty()) {
-      logFiles = Arrays.asList("syslog");
-    }
-    request.setLogTypes(logFiles);
+
     // If the application is running, we will call the RM WebService
     // to get the AppAttempts which includes the nodeHttpAddress
     // and containerId for all the AM Containers.
@@ -856,7 +857,6 @@ public class LogsCLI extends Configured implements Tool {
     String nodeAddress = request.getNodeId();
     String appOwner = request.getAppOwner();
     boolean isAppFinished = request.isAppFinished();
-    List<String> logFiles = request.getLogTypes();
     // if we provide the node address and the application is in the final
     // state, we could directly get logs from HDFS.
     if (nodeAddress != null && isAppFinished) {
@@ -899,12 +899,6 @@ public class LogsCLI extends Configured implements Tool {
     // we will provide the NodeHttpAddress and get the container logs
     // by calling NodeManager webservice.
     if (!isAppFinished) {
-      // if we do not specify the value for CONTAINER_LOG_FILES option,
-      // we will only output syslog
-      if (logFiles == null || logFiles.isEmpty()) {
-        logFiles = Arrays.asList("syslog");
-      }
-      request.setLogTypes(logFiles);
       resultCode = printContainerLogsFromRunningApplication(getConf(), request,
           logCliHelper);
     } else {
@@ -1025,13 +1019,6 @@ public class LogsCLI extends Configured implements Tool {
       if (httpAddress != null && !httpAddress.isEmpty()) {
         newOptions.setNodeHttpAddress(httpAddress
             .replaceFirst(WebAppUtils.getHttpSchemePrefix(getConf()), ""));
-      }
-      // if we do not specify the value for CONTAINER_LOG_FILES option,
-      // we will only output syslog
-      List<String> logFiles = newOptions.getLogTypes();
-      if (logFiles == null || logFiles.isEmpty()) {
-        logFiles = Arrays.asList("syslog");
-        newOptions.setLogTypes(logFiles);
       }
       newOptionsList.add(newOptions);
     }
