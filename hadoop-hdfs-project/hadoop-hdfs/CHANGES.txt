@@ -232,6 +232,9 @@ Release 2.7.3 - UNRELEASED
     HDFS-10182. Hedged read might overwrite user's buf.
     (zhouyingchao via waltersu4549)
 
+    HDFS-10623. Remove unused import of httpclient.HttpConnection from
+    TestWebHdfsTokens. (Hanish Koneru via Arpit Agarwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
