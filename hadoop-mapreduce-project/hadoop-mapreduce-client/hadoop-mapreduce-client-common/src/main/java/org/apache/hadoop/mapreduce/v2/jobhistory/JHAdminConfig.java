@@ -253,4 +253,11 @@ public class JHAdminConfig {
       MR_HISTORY_PREFIX + "jhist.format";
   public static final String DEFAULT_MR_HS_JHIST_FORMAT =
       "binary";
+
+  /**
+   * The maximum number of tasks for a job to be loaded in Job History Server.
+   */
+  public static final String MR_HS_LOADED_JOBS_TASKS_MAX =
+      MR_HISTORY_PREFIX + "loadedjob.tasks.max";
+  public static final int DEFAULT_MR_HS_LOADED_JOBS_TASKS_MAX = -1;
 }
