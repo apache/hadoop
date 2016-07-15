@@ -41,6 +41,9 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-12570. HDFS Secure Mode Documentation updates. (Arpit Agarwal)
 
+    HADOOP-13298. Fix the leftover L&N files in
+    hadoop-build-tools/src/main/resources/META-INF/. (ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-12810. FileSystem#listLocatedStatus causes unnecessary RPC calls
