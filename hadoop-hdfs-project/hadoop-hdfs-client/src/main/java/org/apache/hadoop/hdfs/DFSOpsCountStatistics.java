@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -88,6 +89,14 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     TRUNCATE(CommonStatisticNames.OP_TRUNCATE),
     UNSET_STORAGE_POLICY("op_unset_storage_policy");
 
+    private static final Map<String, OpType> SYMBOL_MAP =
+        new HashMap<>(OpType.values().length);
+    static {
+      for (OpType opType : values()) {
+        SYMBOL_MAP.put(opType.getSymbol(), opType);
+      }
+    }
+
     private final String symbol;
 
     OpType(String symbol) {
@@ -99,14 +108,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     }
 
     public static OpType fromSymbol(String symbol) {
-      if (symbol != null) {
-        for (OpType opType : values()) {
-          if (opType.getSymbol().equals(symbol)) {
-            return opType;
-          }
-        }
-      }
-      return null;
+      return SYMBOL_MAP.get(symbol);
     }
   }
 
