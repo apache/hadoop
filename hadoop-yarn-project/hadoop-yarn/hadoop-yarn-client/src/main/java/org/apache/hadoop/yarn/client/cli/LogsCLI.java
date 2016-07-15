@@ -26,7 +26,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import javax.ws.rs.core.MediaType;
@@ -51,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -249,7 +252,7 @@ public class LogsCLI extends Configured implements Tool {
 
     ContainerLogsRequest request = new ContainerLogsRequest(appId,
         isApplicationFinished(appState), appOwner, nodeAddress, null,
-        containerIdStr, localDir, logs, bytes);
+        containerIdStr, localDir, logs, bytes, null);
 
     if (showContainerLogInfo) {
       return showContainerLogInfo(request, logCliHelper);
@@ -470,9 +473,14 @@ public class LogsCLI extends Configured implements Tool {
                 .queryParam("size", Long.toString(request.getBytes()))
                 .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
           out.println(response.getEntity(String.class));
-          out.println("End of LogType:" + logFile + ". This log file belongs"
-              + " to a running container (" + containerIdStr + ") and so may"
-              + " not be complete.");
+          StringBuilder sb = new StringBuilder();
+          sb.append("End of LogType:" + logFile + ".");
+          if (request.getContainerState() == ContainerState.RUNNING) {
+            sb.append(" This log file belongs"
+                + " to a running container (" + containerIdStr + ") and so may"
+                + " not be complete.");
+          }
+          out.println(sb.toString());
           out.flush();
           foundAnyLogs = true;
         } catch (ClientHandlerException | UniformInterfaceException ex) {
@@ -645,6 +653,9 @@ public class LogsCLI extends Configured implements Tool {
     } else {
       if (nodeHttpAddress != null && containerId != null
           && !nodeHttpAddress.isEmpty() && !containerId.isEmpty()) {
+        ContainerState containerState = getContainerReport(containerId)
+            .getContainerState();
+        request.setContainerState(containerState);
         printContainerLogsFromRunningApplication(conf,
             request, logCliHelper);
       }
@@ -880,6 +891,7 @@ public class LogsCLI extends Configured implements Tool {
       }
       nodeId = report.getAssignedNode().toString();
       request.setNodeId(nodeId);
+      request.setContainerState(report.getContainerState());
     } catch (IOException | YarnException ex) {
       if (isAppFinished) {
         return printContainerLogsForFinishedApplicationWithoutNodeId(
@@ -1020,6 +1032,7 @@ public class LogsCLI extends Configured implements Tool {
         newOptions.setNodeHttpAddress(httpAddress
             .replaceFirst(WebAppUtils.getHttpSchemePrefix(getConf()), ""));
       }
+      newOptions.setContainerState(container.getContainerState());
       newOptionsList.add(newOptions);
     }
     return newOptionsList;
@@ -1030,11 +1043,18 @@ public class LogsCLI extends Configured implements Tool {
     List<ContainerReport> reports = new ArrayList<ContainerReport>();
     List<ApplicationAttemptReport> attempts =
         yarnClient.getApplicationAttempts(options.getAppId());
+    Map<ContainerId, ContainerReport> containerMap = new TreeMap<
+        ContainerId, ContainerReport>();
     for (ApplicationAttemptReport attempt : attempts) {
       List<ContainerReport> containers = yarnClient.getContainers(
           attempt.getApplicationAttemptId());
-      reports.addAll(containers);
+      for (ContainerReport container : containers) {
+        if (!containerMap.containsKey(container.getContainerId())) {
+          containerMap.put(container.getContainerId(), container);
+        }
+      }
     }
+    reports.addAll(containerMap.values());
     return reports;
   }
 
