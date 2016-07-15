@@ -32,7 +32,6 @@ import java.util.concurrent.BlockingQueue;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
-import org.mockito.Matchers;
 
 public class TestFairCallQueue extends TestCase {
   private FairCallQueue<Schedulable> fcq;
@@ -50,14 +49,6 @@ public class TestFairCallQueue extends TestCase {
 
   private Schedulable mockCall(String id) {
     return mockCall(id, 0);
-  }
-
-  // A scheduler which always schedules into priority zero
-  private RpcScheduler alwaysZeroScheduler;
-  {
-    RpcScheduler sched = mock(RpcScheduler.class);
-    when(sched.getPriorityLevel(Matchers.<Schedulable>any())).thenReturn(0); // always queue 0
-    alwaysZeroScheduler = sched;
   }
 
   @SuppressWarnings("deprecation")
@@ -124,7 +115,6 @@ public class TestFairCallQueue extends TestCase {
 
   public void testOfferSucceedsWhenScheduledLowPriority() {
     // Scheduler will schedule into queue 0 x 5, then queue 1
-    RpcScheduler sched = mock(RpcScheduler.class);
     int mockedPriorities[] = {0, 0, 0, 0, 0, 1, 0};
     for (int i = 0; i < 5; i++) { assertTrue(fcq.offer(mockCall("c", mockedPriorities[i]))); }
 
