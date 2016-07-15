@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.StorageStatistics.CommonStatisticNames;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Statistic which are collected in S3A.
  * These statistics are available at a low level in {@link S3AStorageStatistics}
@@ -105,6 +108,14 @@ public enum Statistic {
   STREAM_ABORT_BYTES_DISCARDED("stream_bytes_discarded_in_abort",
       "Count of bytes discarded by aborting the stream");
 
+  private static final Map<String, Statistic> SYMBOL_MAP =
+      new HashMap<>(Statistic.values().length);
+  static {
+    for (Statistic stat : values()) {
+      SYMBOL_MAP.put(stat.getSymbol(), stat);
+    }
+  }
+
   Statistic(String symbol, String description) {
     this.symbol = symbol;
     this.description = description;
@@ -123,14 +134,7 @@ public enum Statistic {
    * @return the value or null.
    */
   public static Statistic fromSymbol(String symbol) {
-    if (symbol != null) {
-      for (Statistic opType : values()) {
-        if (opType.getSymbol().equals(symbol)) {
-          return opType;
-        }
-      }
-    }
-    return null;
+    return SYMBOL_MAP.get(symbol);
   }
 
   public String getDescription() {
