@@ -39,6 +39,7 @@ export default DS.JSONAPISerializer.extend({
           finishedTime: Converter.timeStampToDate(payload.finishedTime),
           finalStatus: payload.finalStatus,
           progress: payload.progress,
+          applicationType: payload.applicationType,
           diagnostics: payload.diagnostics,
           amContainerLogs: payload.amContainerLogs,
           amHostHttpAddress: payload.amHostHttpAddress,
@@ -54,7 +55,10 @@ export default DS.JSONAPISerializer.extend({
           preemptedResourceMB: payload.preemptedResourceMB,
           preemptedResourceVCores: payload.preemptedResourceVCores,
           numNonAMContainerPreempted: payload.numNonAMContainerPreempted,
-          numAMContainerPreempted: payload.numAMContainerPreempted
+          numAMContainerPreempted: payload.numAMContainerPreempted,
+          clusterUsagePercentage: payload.clusterUsagePercentage,
+          queueUsagePercentage: payload.queueUsagePercentage,
+          currentAppAttemptId: payload.currentAppAttemptId
         }
       };
 
@@ -75,7 +79,7 @@ export default DS.JSONAPISerializer.extend({
 
       // payload has apps : { app: [ {},{},{} ]  }
       // need some error handling for ex apps or app may not be defined.
-      if(payload.apps) {
+      if(payload.apps && payload.apps.app) {
         normalizedArrayResponse.data = payload.apps.app.map(singleApp => {
           return this.internalNormalizeSingleResponse(store, primaryModelClass,
           singleApp, singleApp.id, requestType);

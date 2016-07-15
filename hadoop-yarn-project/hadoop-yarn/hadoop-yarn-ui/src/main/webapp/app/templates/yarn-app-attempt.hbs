@@ -16,10 +16,21 @@
  * limitations under the License.
 }}
 
+<div class="col-md-12 container-fluid">
+  {{em-breadcrumbs items=breadcrumbs}}
+</div>
+<br/><br/><br/>
 <div class="container-fluid">
   <div class="row">
     {{#if model.attempt}}
-    {{app-attempt-table attempt=model.attempt}}
+      <div class="container-fluid">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            Application attempt Information
+          </div>
+          {{app-attempt-table attempt=model.attempt}}
+        </div>
+      </div>
     {{/if}}
   </div>
 

@@ -17,6 +17,10 @@
 --}}
 
 <div class="col-md-12 container-fluid">
+  {{em-breadcrumbs items=breadcrumbs}}
+</div>
+
+<div class="col-md-12 container-fluid">
   <div class="row">
     {{node-menu-panel path="yarn-node-apps" nodeAddr=model.nodeInfo.addr nodeId=model.nodeInfo.id}}
     {{#if model.apps}}

@@ -20,7 +20,9 @@ import Ember from 'ember';
 
 export default Ember.Route.extend({
   model() {
-    var apps = this.store.findAll('yarn-app');
-    return apps;
+    return Ember.RSVP.hash({
+      apps: this.store.findAll('yarn-app'),
+      clusterMetrics: this.store.findAll('ClusterMetric'),
+    });
   }
 });

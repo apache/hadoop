@@ -20,6 +20,7 @@
   <thead>
     <tr>
           <th>Application ID</th>
+          <th>Application Type</th>
           <th>Name</th>
           <th>User</th>
           <th>Queue</th>
@@ -30,13 +31,15 @@
           <th>Finished Time</th>
           <th>Priority</th>
           <th>Progress</th>
-        </tr>
+          <th>%Cluster</th>
+    </tr>
   </thead>
   <tbody>
     {{#if arr}}
       {{#each arr as |app|}}
         <tr>
           <td><a href="#/yarn-app/{{app.id}}">{{app.id}}</a></td>
+          <td>{{app.applicationType}}</td>
           <td>{{app.appName}}</td>
           <td>{{app.user}}</td>
           <td>{{app.queue}}</td>
@@ -53,11 +56,13 @@
               </div>
             </div>
           </td>
+          <td>{{app.clusterUsagePercentage}}</td>
         </tr>
       {{/each}}
     {{else}}
       <tr>
           <td><a href="#/yarn-app/{{app.id}}">{{app.id}}</a></td>
+          <td>{{app.applicationType}}</td>
           <td>{{app.appName}}</td>
           <td>{{app.user}}</td>
           <td>{{app.queue}}</td>
@@ -74,7 +79,8 @@
               </div>
             </div>
           </td>
-       </tr>
+          <td>{{app.clusterUsagePercentage}}</td>
+      </tr>
     {{/if}}
   </tbody>
 </table>

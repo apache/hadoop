@@ -19,4 +19,13 @@
 import Ember from 'ember';
 
 export default Ember.Controller.extend({
+
+  breadcrumbs: [{
+    text: "Home",
+    routeName: 'application'
+  }, {
+    text: "Applications",
+    routeName: 'yarn-apps',
+  }]
+
 });

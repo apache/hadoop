@@ -22,7 +22,22 @@ export default Ember.Route.extend({
   model(param) {
     return Ember.RSVP.hash({
       app: this.store.find('yarn-app', param.app_id),
-      attempts: this.store.query('yarn-app-attempt', { appId: param.app_id})
+
+      rmContainers: this.store.find('yarn-app', param.app_id).then(function(app) {
+        return this.store.query('yarn-app-attempt', {appId: param.app_id}).then(function (attempts) {
+          if (attempts && attempts.get('firstObject')) {
+            var appAttemptId = attempts.get('firstObject').get('appAttemptId');
+            var rmContainers = this.store.query('yarn-container',
+              {
+                app_attempt_id: appAttemptId,
+                is_rm: true
+              });
+            return rmContainers;
+          }
+        }.bind(this));
+      }.bind(this)),
+
+      nodes: this.store.findAll('yarn-rm-node'),
     });
   }
 });

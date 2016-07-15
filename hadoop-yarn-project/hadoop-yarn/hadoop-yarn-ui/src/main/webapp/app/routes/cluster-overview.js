@@ -20,7 +20,14 @@ import Ember from 'ember';
 
 export default Ember.Route.extend({
   model() {
-    return this.store.findAll('ClusterMetric');
+    return Ember.RSVP.hash({
+      clusterMetrics: this.store.findAll('ClusterMetric'),
+      apps: this.store.query('yarn-app',
+        {
+          state: "RUNNING"
+        }),
+      queues: this.store.findAll('yarn-queue'),
+    });
   },
 
   afterModel() {

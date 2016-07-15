@@ -36,6 +36,7 @@ export default DS.Model.extend({
   unmanagedApplication: DS.attr('string'),
   amNodeLabelExpression: DS.attr('string'),
   applicationTags: DS.attr('string'),
+  applicationType: DS.attr('string'),
   priority: DS.attr('number'),
   allocatedMB: DS.attr('number'),
   allocatedVCores: DS.attr('number'),
@@ -46,6 +47,9 @@ export default DS.Model.extend({
   preemptedResourceVCores: DS.attr('number'),
   numNonAMContainerPreempted: DS.attr('number'),
   numAMContainerPreempted: DS.attr('number'),
+  clusterUsagePercentage: DS.attr('number'),
+  queueUsagePercentage: DS.attr('number'),
+  currentAppAttemptId: DS.attr('string'),
 
   isFailed: function() {
     return this.get('finalStatus') == "FAILED"

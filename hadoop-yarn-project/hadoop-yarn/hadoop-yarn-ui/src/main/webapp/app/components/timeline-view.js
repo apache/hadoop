@@ -105,7 +105,7 @@ export default Ember.Component.extend({
     var border = 30;
     var singleBarHeight = this.getPerItemHeight();
     var gap = this.getPerItemGap();
-    var textWidth = 50;
+    var textWidth = 200;
     /*
      start-time                              end-time
       |--------------------------------------|

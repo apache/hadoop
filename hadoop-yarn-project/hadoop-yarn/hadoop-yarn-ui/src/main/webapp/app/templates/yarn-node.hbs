@@ -17,78 +17,104 @@
 --}}
 
 <div class="col-md-12 container-fluid">
+  {{em-breadcrumbs items=breadcrumbs}}
+</div>
+
+<div class="col-md-12 container-fluid">
   <div class="row">
+
     {{node-menu-panel path="yarn-node" nodeId=model.rmNode.id nodeAddr=model.node.id}}
+
     <div class="col-md-10 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">Node Information</div>
+
+      <div class="row">
+        <div class="col-md-12 container-fluid">
+          <div class="panel panel-default">
+          <div class="panel-heading">Node Information</div>
           <table class="table">
             <tbody>
-              <tr>
-                <td>Total Vmem allocated for Containers</td>
-                <td>{{divide num=model.node.totalVmemAllocatedContainersMB den=1024}} GB</td>
-              </tr>
-              <tr>
-                <td>Vmem enforcement enabled</td>
-                <td>{{model.node.vmemCheckEnabled}}</td>
-              </tr>
-              <tr>
-                <td>Total Pmem allocated for Containers</td>
-                <td>{{divide num=model.node.totalPmemAllocatedContainersMB den=1024}} GB</td>
-              </tr>
-              <tr>
-                <td>Pmem enforcement enabled</td>
-                <td>{{model.node.pmemCheckEnabled}}</td>
-              </tr>
-              <tr>
-                <td>Total VCores allocated for Containers</td>
-                <td>{{model.node.totalVCoresAllocatedContainers}}</td>
-              </tr>
-              <tr>
-                <td>Node Healthy Status</td>
-                <td>{{model.node.nodeHealthy}}</td>
-              </tr>
-              <tr>
-                <td>Last Node Health Report Time</td>
-                <td>{{model.node.lastNodeUpdateTime}}</td>
-              </tr>
-              <tr>
-                <td>Node Health Report</td>
-                <td>{{model.node.healthReport}}</td>
-              </tr>
-              <tr>
-                <td>Node Manager Start Time</td>
-                <td>{{model.node.nmStartupTime}}</td>
-              </tr>
-              <tr>
-                <td>Node Manager Version</td>
-                <td>{{model.node.nodeManagerBuildVersion}}</td>
-              </tr>
-              <tr>
-                <td>Hadoop Version</td>
-                <td>{{model.node.hadoopBuildVersion}}</td>
-              </tr>
+            <tr>
+              <td>Total Vmem allocated for Containers</td>
+              <td>{{divide num=model.node.totalVmemAllocatedContainersMB den=1024}} GB</td>
+            </tr>
+            <tr>
+              <td>Vmem enforcement enabled</td>
+              <td>{{model.node.vmemCheckEnabled}}</td>
+            </tr>
+            <tr>
+              <td>Total Pmem allocated for Containers</td>
+              <td>{{divide num=model.node.totalPmemAllocatedContainersMB den=1024}} GB</td>
+            </tr>
+            <tr>
+              <td>Pmem enforcement enabled</td>
+              <td>{{model.node.pmemCheckEnabled}}</td>
+            </tr>
+            <tr>
+              <td>Total VCores allocated for Containers</td>
+              <td>{{model.node.totalVCoresAllocatedContainers}}</td>
+            </tr>
+            <tr>
+              <td>Node Healthy Status</td>
+              <td>{{model.node.nodeHealthy}}</td>
+            </tr>
+            <tr>
+              <td>Last Node Health Report Time</td>
+              <td>{{model.node.lastNodeUpdateTime}}</td>
+            </tr>
+            <tr>
+              <td>Node Health Report</td>
+              <td>{{model.node.healthReport}}</td>
+            </tr>
+            <tr>
+              <td>Node Manager Start Time</td>
+              <td>{{model.node.nmStartupTime}}</td>
+            </tr>
+            <tr>
+              <td>Node Manager Version</td>
+              <td>{{model.node.nodeManagerBuildVersion}}</td>
+            </tr>
+            <tr>
+              <td>Hadoop Version</td>
+              <td>{{model.node.hadoopBuildVersion}}</td>
+            </tr>
             </tbody>
           </table>
         </div>
-      <div class="col-lg-4 container-fluid" id="mem-donut-chart">
-        {{donut-chart data=model.rmNode.getMemoryDataForDonutChart
-          title="Resource - Memory (in MB)"
-          showLabels=true
-          parentId="mem-donut-chart"
-          ratio=0.55
-          maxHeight=350}}
+        </div>
       </div>
 
-      <div class="col-lg-4 container-fluid" id="vcore-donut-chart">
-        {{donut-chart data=model.rmNode.getVCoreDataForDonutChart
-          title="Resource - VCores"
-          showLabels=true
-          parentId="vcore-donut-chart"
-          ratio=0.55
-          maxHeight=350}}
-      </div>
+      <div class="row">
+        <div class="col-lg-4 container-fluid">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Resource - Memory (in MB)
+            </div>
+            <div class="container-fluid" id="mem-donut-chart">
+              {{donut-chart data=model.rmNode.getMemoryDataForDonutChart
+              showLabels=true
+              parentId="mem-donut-chart"
+              ratio=0.6
+              maxHeight=350}}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4 container-fluid">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Resource - VCores
+            </div>
+            <div class="container-fluid" id="vcore-donut-chart">
+              {{donut-chart data=model.rmNode.getVCoreDataForDonutChart
+              showLabels=true
+              parentId="vcore-donut-chart"
+              ratio=0.6
+              maxHeight=350}}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
+  </div>
 </div>
 {{outlet}}

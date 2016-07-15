@@ -16,48 +16,57 @@
   limitations under the License.
 --}}
 
-{{#if model}}
-<table id="nodes-table" class="display table table-striped table-bordered" cellspacing="0" width="100%">
-  <thead>
-    <tr>
-          <th>Node Labels</th>
-          <th>Rack</th>
-          <th>Node State</th>
-          <th>Node Address</th>
-          <th>Node HTTP Address</th>
-          <th>Last Health Update</th>
-          <th>Health-Report</th>
-          <th>Containers</th>
-          <th>Mem Used</th>
-          <th>Mem Avail</th>
-          <th>VCores Used</th>
-          <th>VCores Avail</th>
-          <th>Version</th>
-    </tr>
-  </thead>
-  <tbody>
-      {{#each model as |node|}}
-          <tr>
-            <td>{{node.nodeLabelsAsString}}</td>
-            <td>{{node.rack}}</td>
-            <td><span class={{node.nodeStateStyle}}>{{node.state}}</span></td>
-            <td>{{node.id}}</td>
-            {{node-link nodeId=node.id nodeHTTPAddress=node.nodeHTTPAddress nodeState=node.state}}
-            <td>{{node.lastHealthUpdate}}</td>
-            <td>{{node.healthReport}}</td>
-            <td>{{node.numContainers}}</td>
-            <td>{{divide num=node.usedMemoryMB den=1024}} GB</td>
-            <td>{{divide num=node.availMemoryMB den=1024}} GB</td>
-            <td>{{node.usedVirtualCores}}</td>
-            <td>{{node.availableVirtualCores}}</td>
-            <td>{{node.version}}</td>
-          </tr>
-      {{/each}}
-  </tbody>
-</table>
+<div class="col-md-12 container-fluid">
+  {{em-breadcrumbs items=breadcrumbs}}
+</div>
 
-{{simple-table table-id="nodes-table" bFilter=true}}
-{{else}}
-  <h4 align = "center">No nodes found on this cluster</h4>
-{{/if}}
-{{outlet}}
+<div class="row">
+  <div class="col-md-2 container-fluid">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4>Nodes</h4>
+      </div>
+      <div class="panel-body">
+        <ul class="nav nav-pills nav-stacked" id="stacked-menu">
+          <ul class="nav nav-pills nav-stacked collapse in">
+
+            {{#link-to "yarn-nodes.table" tagName="li"}}
+              {{#link-to 'yarn-nodes.table'}}Nodes Table
+              {{/link-to}}
+            {{/link-to}}
+
+            {{#link-to 'yarn-nodes.heatmap' tagName="li"}}
+              {{#link-to 'yarn-nodes.heatmap'}}Nodes Heatmap Chart
+              {{/link-to}}
+            {{/link-to}}
+
+          </ul>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-10 container-fluid">
+    {{#if model.clusterMetrics}}
+      <div class="row">
+        <div class="col-lg-4 container-fluid">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              Node Managers
+            </div>
+            <div class="container-fluid" id="nodes-donut-chart">
+              {{donut-chart data=model.clusterMetrics.firstObject.getNodesDataForDonutChart
+              showLabels=true
+              parentId="nodes-donut-chart"
+              ratio=0.6
+              maxHeight=350
+              colorTargets="good error warn"}}
+            </div>
+          </div>
+        </div>
+      </div>
+    {{/if}}
+
+    {{outlet}}
+  </div>
+</div>

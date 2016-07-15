@@ -20,6 +20,9 @@ import Ember from 'ember';
 
 export default Ember.Route.extend({
   model() {
-    return this.store.findAll('yarn-rm-node');
+    return Ember.RSVP.hash({
+      nodes: this.store.findAll('yarn-rm-node'),
+      clusterMetrics: this.store.findAll('ClusterMetric'),
+    });
   }
 });

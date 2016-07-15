@@ -16,11 +16,20 @@
  * limitations under the License.
  */
 
+body, html, body > .ember-view {
+  height: 100%;
+  overflow: visible;
+  color: @text-color;
+}
+body, html {
+  min-width: 1024px;
+}
+
 /*
  Over all style
  */
 text {
-  font: 12px sans-serif;
+  font: 16px sans-serif;
 }
 
 text.small {
@@ -35,6 +44,7 @@ html, body
     width: 100%;
 }
 
+
 /*
  queue's style (left banner of queues)
  */
@@ -45,14 +55,30 @@ text.queue {
   fill : gray;
 }
 
-path.queue {
-  stroke: gray;
-  fill: none;
+text.heatmap-cell {
+  font: 14px sans-serif;
+  font-weight: bold;
+  text-anchor: middle;
+  fill: Azure;
+  text-align: center;
 }
 
-circle.queue {
-  r: 10;
-  fill: Steelblue;
+text.heatmap-cell-notselected {
+  font: 14px sans-serif;
+  font-weight: bold;
+  text-anchor: middle;
+  fill: Silver;
+  text-align: center;
+}
+
+text.heatmap-rack {
+  font: 20px sans-serif;
+  fill: DimGray;
+}
+
+path.queue {
+  stroke: "red";
+  fill: none;
 }
 
 /*
@@ -76,24 +102,21 @@ text.chart-title {
   fill: Gray;
 }
 
-text.donut-highlight-text {
-  font-size: 20px;
+text.donut-highlight-text, text.donut-highlight-sub {
+  font-size: 15px;
   font-family: sans-serif;
   text-anchor: middle;
   fill: Gray;
   vertical-align: middle;
 }
 
-rect.chart-frame {
-  fill: none;
-  stroke: gray;
-  stroke-dasharray: 10,10;
+text.donut-highlight-sub {
+  font-size: 23px;
+  margin-top: 10px;
 }
 
-line.chart-leftbanner {
-  stroke-width: 2;
-  stroke: gray;
-  stroke-dasharray: 10,10;
+rect.chart-frame {
+  fill: none;
 }
 
 text.bar-chart-text {
@@ -106,9 +129,8 @@ text.bar-chart-text {
 div.tooltip {   
   position: absolute;           
   text-align: center;
-  /*height: 28px;*/
-  padding: 2px;             
-  font: 12px sans-serif;        
+  padding: 2px;
+  font: 24px sans-serif;
   background: lightsteelblue;   
   border: 0px;      
   border-radius: 8px;
@@ -135,6 +157,19 @@ table.dataTable thead .sorting_desc_disabled {
   background-image: url("/assets/images/datatables/sort_desc_disabled.png");
 }
 
+.add-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumb {
+  padding-bottom: 3px;
+}
+
+.navbar-default .navbar-nav > li > a {
+  color: #337ab7;
+}
+
 /*
  * Queue selector
  */
@@ -156,6 +191,70 @@ table.dataTable thead .sorting_desc_disabled {
   fill: none;
   stroke: #ccc;  
   stroke-width: 2px;
+}
+
+.lr-margin {
+  margin: 0px 30px;
+}
+
+.footer {
+  background-color: @white;
+  color: @text-color;
+
+  padding: 10px 0px;
+  margin: 0px;
+
+  border-top: 1px lightgrey solid;
+
+  font-size: .9em;
+}
+
+.table {
+  margin-bottom: 0px;
+  border: none;
+
+  overflow: hidden;
+}
+
+.table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th, .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
+  border: none !important;
+}
+
+.dataTables_wrapper .table {
+  border: 1px solid lightgrey;
+  border-bottom: 1px solid lightgrey !important;
+  border-radious: 5px;
+}
+
+.dataTables_wrapper .table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th, .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
+  border: 1px solid lightgrey;
+}
+
+td {
+ padding: 8px 15px 8px 15px !important;
+}
+
+.footer-frame {
+  height: 60px;
+}
+.footer {
+  height: 40px;
+}
+
+.footer-pusher {
+  min-height: 100%;
+  height: auto !important;
+  height: 100%;
+  margin: 0 auto -40px; // Must be same as footer & footer-frame
+}
+
+.panel-default .container-fluid {
+  margin-top: -45px !important;
+  margin-bottom: -10px !important;
+}
+
+.panel-heading {
+  font-weight: bold;
 }
 
 .hadoop-brand-image {

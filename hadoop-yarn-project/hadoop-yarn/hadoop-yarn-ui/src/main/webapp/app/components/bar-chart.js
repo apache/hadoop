@@ -116,6 +116,11 @@ export default BaseChartComponent.extend({
     this.renderBarChart(this.get("data"), this.get("title"), this.get("textWidth"));
   },
 
+  _dataChange: Ember.observer("data", function() {
+    this.chart.g.selectAll("*").remove();
+    this.renderBarChart(this.get("data"), this.get("title"), this.get("textWidth"));
+  }),
+
   didInsertElement: function() {
     this.draw();
   },

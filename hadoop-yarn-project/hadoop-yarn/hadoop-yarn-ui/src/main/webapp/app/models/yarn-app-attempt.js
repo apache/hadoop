@@ -30,6 +30,17 @@ export default DS.Model.extend({
   hosts: DS.attr('string'),
   logsLink: DS.attr('string'),
   state: DS.attr('string'),
+  appAttemptId: DS.attr('string'),
+
+  appId: Ember.computed("id",function () {
+    var id = this.get("id");
+    id = id.split("_");
+
+    id[0] = "application";
+    id.pop();
+
+    return id.join("_");
+  }),
 
   attemptStartedTime: function() {
     var startTime = this.get("startTime");

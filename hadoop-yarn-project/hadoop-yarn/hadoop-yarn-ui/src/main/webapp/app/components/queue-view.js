@@ -90,7 +90,6 @@ export default Ember.Component.extend(ChartUtilsMixin, {
       .attr("class", "queue");
 
     circle.on('mouseover', function () {
-      circle.style("fill", this.queueColors[1]);
     }.bind(this));
     circle.on('mouseout', function () {
       if (circle != this.queues.selectedQueueCircle) {
@@ -206,7 +205,7 @@ export default Ember.Component.extend(ChartUtilsMixin, {
 
   renderQueueCapacities: function (queue, layout) {
     // Render bar chart
-    this.renderBarChart(this.charts.g, [{
+    this.renderCells(this.charts.g, [{
       label: "Cap",
       value: queue.get("capacity")
     }, {

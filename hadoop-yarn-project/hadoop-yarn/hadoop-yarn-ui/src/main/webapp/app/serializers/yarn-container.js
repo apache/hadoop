@@ -57,13 +57,19 @@ export default DS.JSONAPISerializer.extend({
       var normalizedArrayResponse = {};
 
       if (payload && payload.container) {
-        // payload has apps : { app: [ {},{},{} ]  }
-        // need some error handling for ex apps or app may not be defined.
-        normalizedArrayResponse.data = payload.container.map(singleContainer => {
-          return this.internalNormalizeSingleResponse(store, primaryModelClass,
-            singleContainer, singleContainer.id, requestType);
-        }, this);
-        return normalizedArrayResponse;  
+        if (Array.isArray(payload.container)) {
+          // payload has apps : { app: [ {},{},{} ]  }
+          // need some error handling for ex apps or app may not be defined.
+          normalizedArrayResponse.data = payload.container.map(singleContainer => {
+            return this.internalNormalizeSingleResponse(store, primaryModelClass,
+              singleContainer, singleContainer.id, requestType);
+          }, this);
+        } else {
+          normalizedArrayResponse.data = [this.internalNormalizeSingleResponse(
+            store, primaryModelClass, payload.container, payload.container.id,
+            requestType)];
+        }
+        return normalizedArrayResponse;
       } else {
         normalizedArrayResponse.data = [];
       }
