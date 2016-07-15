@@ -17,23 +17,26 @@
  */
 
 import Ember from 'ember';
+import Converter from 'yarn-ui/utils/converter';
 
 export default Ember.Component.extend({
-  chart: undefined,
   tooltip : undefined,
   colors: d3.scale.category10().range(),
 
-  initChart: function() {
-    this.chart = {
+  init: function () {
+    this._super();
+    this.set("chart", {
       svg: undefined,
       g: undefined,
       h: 0,
       w: 0,
       tooltip: undefined
-    };
+    });
+  },
 
+  initChart: function(removeLast = false) {
     // Init tooltip if it is not initialized
-    this.tooltip = d3.select("#chart-tooltip");
+    // this.tooltip = d3.select("#chart-tooltip");
     if (!this.tooltip) {
       this.tooltip = d3.select("body")
         .append("div")
@@ -42,13 +45,16 @@ export default Ember.Component.extend({
         .style("opacity", 0);
     }
 
-    // Init svg
-    var svg = this.chart.svg;
-    if (svg) {
-      svg.remove();
+    var parentId = this.get("parentId");
+
+    if (removeLast) {
+      // Init svg
+      var svg = d3.select("#" + parentId + "-svg");
+      if (svg) {
+        svg.remove();
+      }
     }
 
-    var parentId = this.get("parentId");
     var parent = d3.select("#" + parentId);
     var bbox = parent.node().getBoundingClientRect();
     this.chart.w = bbox.width - 30;
@@ -65,12 +71,13 @@ export default Ember.Component.extend({
 
     this.chart.svg = parent.append("svg")
       .attr("width", this.chart.w)
-      .attr("height", this.chart.h);
+      .attr("height", this.chart.h)
+      .attr("id", parentId + "-svg");
 
     this.chart.g = this.chart.svg.append("g");
   },
 
-  renderTitleAndBG: function(g, title, layout) {
+  renderTitleAndBG: function(g, title, layout, background=true) {
     var bg = g.append("g");
     bg.append("text")
       .text(title)
@@ -78,12 +85,14 @@ export default Ember.Component.extend({
       .attr("y", layout.y1 + layout.margin + 20)
       .attr("class", "chart-title");
 
-    bg.append("rect")
-      .attr("x", layout.x1)
-      .attr("y", layout.y1)
-      .attr("width", layout.x2 - layout.x1)
-      .attr("height", layout.y2 - layout.y1)
-      .attr("class", "chart-frame");
+    if (background) {
+      bg.append("rect")
+        .attr("x", layout.x1)
+        .attr("y", layout.y1)
+        .attr("width", layout.x2 - layout.x1)
+        .attr("height", layout.y2 - layout.y1)
+        .attr("class", "chart-frame");
+    }
   },
 
   bindTooltip: function(d) {
@@ -100,13 +109,21 @@ export default Ember.Component.extend({
         }
 
         this.tooltip.style("opacity", .9);
-        this.tooltip.html(data.label + " = " + data.value)
+        var value = data.value;
+        if (this.get("type") == "memory") {
+          value = Converter.memoryToSimpliedUnit(value);
+        }
+        this.tooltip.html(data.label + " = " + value)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - 28) + "px");
       }.bind(this))
       .on("mouseout", function(d) {
         this.tooltip.style("opacity", 0);
       }.bind(this));
+  },
+
+  adjustMaxHeight: function(h) {
+    this.chart.svg.attr("height", h);
   },
 
   getLayout: function() {

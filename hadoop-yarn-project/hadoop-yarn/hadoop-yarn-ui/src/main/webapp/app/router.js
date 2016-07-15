@@ -24,8 +24,15 @@ var Router = Ember.Router.extend({
 });
 
 Router.map(function() {
-  this.route('yarn-apps');
-  this.route('yarn-nodes');
+  this.route('yarn-apps', function () {
+    this.route('apps');
+    this.route('services');
+  });
+  this.route('yarn-nodes', function(){
+    this.route('table');
+    this.route('heatmap');
+  });
+  this.route('yarn-nodes-heatmap');
   this.route('yarn-node', { path: '/yarn-node/:node_id/:node_addr' });
   this.route('yarn-node-apps', { path: '/yarn-node-apps/:node_id/:node_addr' });
   this.route('yarn-node-app',
@@ -37,11 +44,15 @@ Router.map(function() {
   this.route('yarn-container-log', { path:
       '/yarn-container-log/:node_id/:node_addr/:container_id/:filename' });
   this.route('yarn-queue', { path: '/yarn-queue/:queue_name' });
+
   this.route('cluster-overview');
   this.route('yarn-app', { path: '/yarn-app/:app_id' });
   this.route('yarn-app-attempt', { path: '/yarn-app-attempt/:app_attempt_id'});
   this.route('error');
   this.route('notfound', { path: '*:' });
+  this.route('yarn-app-attempts', { path: '/yarn-app-attempts/:app_id' });
+  this.route('yarn-queues', { path: '/yarn-queues/:queue_name' });
+  this.route('yarn-queue-apps', { path: '/yarn-queue-apps/:queue_name' });
 });
 
 export default Router;

@@ -18,6 +18,7 @@
     "datatables": "~1.10.8",
     "spin.js": "~2.3.2",
     "momentjs": "~2.10.6",
-    "select2": "4.0.0"
+    "select2": "4.0.0",
+    "snippet-ss": "~1.11.0"
   }
 }

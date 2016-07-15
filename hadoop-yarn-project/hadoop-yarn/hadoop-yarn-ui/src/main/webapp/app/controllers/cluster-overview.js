@@ -20,4 +20,13 @@ import Ember from 'ember';
 
 export default Ember.Controller.extend({
   loading: true,
+
+  breadcrumbs: [{
+    text: "Home",
+    routeName: 'application'
+  }, {
+    text: "Cluster Overview",
+    routeName: 'cluster-overview',
+  }]
+
 });

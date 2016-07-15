@@ -21,4 +21,24 @@ import Ember from 'ember';
 export default Ember.Controller.extend({
   needReload: true,
   selectedQueue: undefined,
+
+  breadcrumbs: Ember.computed("model.selected", function () {
+    var queueName = this.get("model.selected");
+
+    return [{
+      text: "Home",
+      routeName: 'application'
+    }, {
+      text: "Queues",
+      routeName: 'yarn-queues',
+      model: 'root'
+    }, {
+      text: `Queue [ ${queueName} ]`,
+      routeName: 'yarn-queue',
+      model: queueName
+    }];
+
+  }),
+
+
 });

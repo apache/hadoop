@@ -18,6 +18,8 @@
 
 import Ember from 'ember';
 
+const INBETWEEN_HEIGHT = 130;
+
 export default Ember.Component.extend({
   // Map: <queue-name, queue>
   map : undefined,
@@ -124,12 +126,25 @@ export default Ember.Component.extend({
     var nodeEnter = node.enter().append("g")
       .attr("class", "node")
       .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-      .on("click", function(d,i){
+      .on("mouseover", function(d,i){
         if (d.queueData.get("name") != this.get("selected")) {
-            document.location.href = "#/yarn-queue/" + d.queueData.get("name");
+            document.location.href = "#/yarn-queues/" + d.queueData.get("name");
         }
-      }.bind(this));
-      // .on("click", click);
+
+        Ember.run.later(this, function () {
+          var treeWidth = this.maxDepth * 200;
+          var treeHeight = this.numOfLeafQueue * INBETWEEN_HEIGHT;
+          var tree = d3.layout.tree().size([treeHeight, treeWidth]);
+          var diagonal = d3.svg.diagonal()
+            .projection(function(d) { return [d.y, d.x]; });
+
+          this.update(this.treeData, this.treeData, tree, diagonal);
+        }, 100);
+
+      }.bind(this))
+    .on("click", function (d) {
+      document.location.href = "#/yarn-queue/" + d.queueData.get("name");
+    });
 
     nodeEnter.append("circle")
       .attr("r", 1e-6)
@@ -148,6 +163,7 @@ export default Ember.Component.extend({
     nodeEnter.append("text")
       .attr("x", function(d) { return 0; })
       .attr("dy", ".35em")
+      .attr("fill", "white")
       .attr("text-anchor", function(d) { return "middle"; })
       .text(function(d) {
         var usedCap = d.queueData.get("usedCapacity");
@@ -161,9 +177,9 @@ export default Ember.Component.extend({
 
     // append queue name
     nodeEnter.append("text")
-      .attr("x", function(d) { return 40; })
-      .attr("dy", ".35em")
-      .attr("text-anchor", function(d) { return "start"; })
+      .attr("x", "0px")
+      .attr("dy", "45px")
+      .attr("text-anchor", "middle")
       .text(function(d) { return d.name; })
       .style("fill-opacity", 1e-6);
 
@@ -173,14 +189,21 @@ export default Ember.Component.extend({
       .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
 
     nodeUpdate.select("circle")
-      .attr("r", 20)
+      .attr("r", 30)
       .attr("href", 
         function(d) {
           return "#/yarn-queues/" + d.queueData.get("name");
         })
+      .style("stroke-width", function(d) {
+        if (d.queueData.get("name") == this.get("selected")) {
+          return 7;
+        } else {
+          return 2;
+        }
+      }.bind(this))
       .style("stroke", function(d) {
         if (d.queueData.get("name") == this.get("selected")) {
-          return "red";
+          return "gray";
         } else {
           return "gray";
         }
@@ -239,7 +262,7 @@ export default Ember.Component.extend({
 
     var margin = {top: 20, right: 120, bottom: 20, left: 120};
     var treeWidth = this.maxDepth * 200;
-    var treeHeight = this.numOfLeafQueue * 80;
+    var treeHeight = this.numOfLeafQueue * INBETWEEN_HEIGHT;
     var width = treeWidth + margin.left + margin.right;
     var height = treeHeight + margin.top + margin.bottom;
     var layout = { };
