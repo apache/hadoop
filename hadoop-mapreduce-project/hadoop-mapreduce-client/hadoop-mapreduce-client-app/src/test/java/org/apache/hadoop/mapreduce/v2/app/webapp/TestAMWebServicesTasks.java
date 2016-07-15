@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -61,7 +62,6 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
@@ -72,7 +72,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  * /ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}
  * /ws/v1/mapreduce/jobs/{jobid}/tasks/{taskid}/counters
  */
-public class TestAMWebServicesTasks extends JerseyTest {
+public class TestAMWebServicesTasks extends JerseyTestBase {
 
   private static Configuration conf = new Configuration();
   private static AppContext appContext;

@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
@@ -55,7 +56,6 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
@@ -64,7 +64,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  *  /ws/v1/history
  *  /ws/v1/history/info
  */
-public class TestHsWebServices extends JerseyTest {
+public class TestHsWebServices extends JerseyTestBase {
 
   private static Configuration conf = new Configuration();
   private static HistoryContext appContext;
