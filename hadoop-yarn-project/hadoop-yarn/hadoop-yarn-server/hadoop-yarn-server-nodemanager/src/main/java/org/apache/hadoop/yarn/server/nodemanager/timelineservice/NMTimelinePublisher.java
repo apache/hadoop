@@ -168,7 +168,7 @@ public class NMTimelinePublisher extends CompositeService {
 
     Map<String, Object> entityInfo = new HashMap<String, Object>();
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO,
-        resource.getMemory());
+        resource.getMemorySize());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO,
         resource.getVirtualCores());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
