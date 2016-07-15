@@ -125,7 +125,7 @@ export default DS.Model.extend({
     });
     arr.push({
       label: "Available",
-      value: this.get("available" + type)
+      value: Math.max(this.get("available" + type), 0)
     });
 
     return arr;

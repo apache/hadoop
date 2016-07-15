@@ -18,13 +18,15 @@
 
 import Ember from 'ember';
 import BaseChartComponent from 'yarn-ui/components/base-chart-component';
+import ColorUtils from 'yarn-ui/utils/color-utils';
+import Converter from 'yarn-ui/utils/converter';
 
 export default BaseChartComponent.extend({
   /*
    * data = [{label="xx", value=},{...}]
    */
   renderDonutChart: function(data, title, showLabels = false, 
-    middleLabel = "Total", middleValue = undefined) {
+    middleLabel = "Total", middleValue = undefined, suffix = "") {
     var g = this.chart.g;
     var layout = this.getLayout();
     this.renderTitleAndBG(g, title, layout);
@@ -39,7 +41,11 @@ export default BaseChartComponent.extend({
     }
 
     if (!middleValue) {
-      middleValue = total;
+      if (this.get("type") == "memory") {
+        middleValue = Converter.memoryToSimpliedUnit(total);
+      } else {
+        middleValue = total;
+      }
     }
 
     //Width and height
@@ -48,6 +54,8 @@ export default BaseChartComponent.extend({
     // 50 is for title
     var outerRadius = (h - 50 - 2 * layout.margin) / 2;
     var innerRadius = outerRadius * 0.618;
+    console.log("inner:" + innerRadius + " outer:" + outerRadius);
+
     var arc = d3.svg.arc()
       .innerRadius(innerRadius)
       .outerRadius(outerRadius);
@@ -104,12 +112,14 @@ export default BaseChartComponent.extend({
           return this.colors[i];
         }
       }.bind(this))
-      .attr("stroke-dasharray", function(d, i) {
-        if (d.value <= 1e-6) {
-          return "10,10";
-        }
-      }.bind(this));
     this.bindTooltip(path);
+    path.on("click", function (d) {
+      var data = d.data;
+      if (data.link) {
+        this.tooltip.remove();
+        document.location.href = data.link;
+      }
+    }.bind(this))
 
     // Show labels
     if (showLabels) {
@@ -126,27 +136,30 @@ export default BaseChartComponent.extend({
         }.bind(this))
         .attr("x", lx)
         .attr("y", function(d, i) {
-          return layout.y1 + 50 + (squareW + margin) * i + layout.margin;
+          return layout.y1 + 75 + (squareW + margin) * i + layout.margin;
         })
         .attr("width", squareW)
         .attr("height", squareW);
       select.append("text")
         .attr("x", lx + squareW + margin)
         .attr("y", function(d, i) {
-          return layout.y1 + 50 + (squareW + margin) * i + layout.margin + squareW / 2;
+          return layout.y1 + 80 + (squareW + margin) * i + layout.margin + squareW / 2;
         })
         .text(function(d) {
-          return d.label + ' = ' + d.value;
-        });
+          var value = d.value;
+          if (this.get("type") == "memory") {
+            value = Converter.memoryToSimpliedUnit(value);
+          }
+          return d.label + ' = ' + value + suffix;
+        }.bind(this));
     }
 
     if (middleLabel) {
       var highLightColor = this.colors[0];
       g.append("text").text(middleLabel).attr("x", cx).attr("y", cy - 10).
         attr("class", "donut-highlight-text").attr("fill", highLightColor);
-      g.append("text").text(middleValue).attr("x", cx).attr("y", cy + 20).
-        attr("class", "donut-highlight-text").attr("fill", highLightColor).
-        style("font-size", "30px");
+      g.append("text").text(middleValue).attr("x", cx).attr("y", cy + 15).
+        attr("class", "donut-highlight-sub").attr("fill", highLightColor);
     }
 
     path.transition()
@@ -154,8 +167,22 @@ export default BaseChartComponent.extend({
       .attrTween('d', tweenPie);
   },
 
+  _dataChange: Ember.observer("data", function() {
+    this.chart.g.selectAll("*").remove();
+    this.renderDonutChart(this.get("data"), this.get("title"), this.get("showLabels"),
+                          this.get("middleLabel"), this.get("middleValue"));
+  }),
+
   draw: function() {
     this.initChart();
+
+    var colorTargets = this.get("colorTargets");
+    if (colorTargets) {
+      var colorTargetReverse = Boolean(this.get("colorTargetReverse"));
+      var targets = colorTargets.split(" ");
+      this.colors = ColorUtils.getColors(this.get("data").length, targets, colorTargetReverse);
+    }
+
     this.renderDonutChart(this.get("data"), this.get("title"), this.get("showLabels"), 
                           this.get("middleLabel"), this.get("middleValue"));
   },

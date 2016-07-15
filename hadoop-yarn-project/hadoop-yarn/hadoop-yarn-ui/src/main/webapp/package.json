@@ -21,6 +21,7 @@
   "devDependencies": {
     "broccoli-asset-rev": "2.4.2",
     "broccoli-funnel": "1.0.1",
+    "em-table": "0.1.6",
     "ember-bootstrap": "0.5.1",
     "ember-array-contains-helper": "1.0.2",
     "ember-cli": "1.13.13",
@@ -45,5 +46,8 @@
     "ember-spin-spinner": "0.2.3",
     "ember-truth-helpers": "1.2.0",
     "select2": "4.0.0"
+  },
+  "dependencies": {
+    "em-helpers": "^0.5.13"
   }
 }

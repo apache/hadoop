@@ -106,4 +106,21 @@ export default {
       return [splits[0], splits[1], fileName];
     }
   },
+  memoryToSimpliedUnit: function(mb) {
+    var unit = "MB"
+    var value = mb;
+    if (value / 1024 >= 0.9) {
+      value = value / 1024;
+      unit = "GB";
+    }
+    if (value / 1024 >= 0.9) {
+      value = value / 1024;
+      unit = "TB";
+    }
+    if (value / 1024 >= 0.9) {
+      value = value / 1024;
+      unit = "PB";
+    }
+    return value.toFixed(1) + " " + unit;
+  }
 };

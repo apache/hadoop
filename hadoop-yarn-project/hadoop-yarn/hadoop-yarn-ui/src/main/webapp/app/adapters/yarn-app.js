@@ -23,6 +23,20 @@ export default AbstractAdapter.extend({
   restNameSpace: "cluster",
   serverName: "RM",
 
+  urlForQuery(query, modelName) {
+    var url = this._buildURL();
+    if (query.state) {
+      url = url + '/apps/?state=' + query.state;
+    }
+    return url;
+  },
+
+  urlForFindRecord(id, modelName, snapshot) {
+    var url = this._buildURL();
+    url = url + '/apps/' + id;
+    return url;
+  },
+
   pathForType(modelName) {
     return 'apps'; // move to some common place, return path by modelname.
   },

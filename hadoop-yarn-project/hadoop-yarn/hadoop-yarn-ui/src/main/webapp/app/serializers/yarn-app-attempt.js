@@ -40,7 +40,8 @@ export default DS.JSONAPISerializer.extend({
           nodeId: payload.nodeId,
           hosts: payload.host,
           state: payload.appAttemptState,
-          logsLink: payload.logsLink
+          logsLink: payload.logsLink,
+          appAttemptId: payload.appAttemptId
         }
       };
 
@@ -59,12 +60,16 @@ export default DS.JSONAPISerializer.extend({
       // return expected is { data: [ {}, {} ] }
       var normalizedArrayResponse = {};
 
-      // payload has apps : { app: [ {},{},{} ]  }
-      // need some error handling for ex apps or app may not be defined.
-      normalizedArrayResponse.data = payload.appAttempts.appAttempt.map(singleApp => {
-        return this.internalNormalizeSingleResponse(store, primaryModelClass,
-          singleApp, singleApp.id, requestType);
-      }, this);
+      if (payload.appAttempts && payload.appAttempts.appAttempt) {
+        // payload has apps : { app: [ {},{},{} ]  }
+        // need some error handling for ex apps or app may not be defined.
+        normalizedArrayResponse.data = payload.appAttempts.appAttempt.map(singleApp => {
+          return this.internalNormalizeSingleResponse(store, primaryModelClass,
+            singleApp, singleApp.id, requestType);
+        }, this);
+      } else {
+        normalizedArrayResponse.data = [];
+      }
       return normalizedArrayResponse;
     }
 });

@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,6 +25,7 @@ export default Ember.Component.extend({
     var ordering = this.get("ordering") ? true : this.get("ordering");
     var info = this.get("info") ? true : this.get("info");
     var bFilter = this.get("bFilter") ? true : this.get("bFilter");
+    var defaultSearch = this.get("defaultSearch") ? this.get("defaultSearch") : "";
 
     // Defines sorter for the columns if not default.
     // Can also specify a custom sorter.
@@ -66,11 +68,14 @@ export default Ember.Component.extend({
     console.log(orderArr[0]);
     Ember.$('#' + this.get('table-id')).DataTable({
       "paging":   paging,
-      "ordering": ordering, 
+      "ordering": ordering,
       "info":     info,
       "bFilter": bFilter,
       "order": orderArr,
-      "columnDefs": colDefs
+      "columnDefs": colDefs,
+      "oSearch": {
+        "sSearch": defaultSearch
+      }
     });
   }
 });

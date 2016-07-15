@@ -26,12 +26,13 @@
       {{/if}}
     </div>
     <div class="panel-body">
+      <br/><br/>
       <div class="col-md-8 container-fluid" id={{parent-id}}>
       </div>
 
       <!-- diag info -->
       <div class="col-md-4 container-fluid">
-        <div class="panel panel-default">
+        <div class="panel panel-default add-ellipsis">
           <div class="panel-heading">
             {{#if selected.link}}
               {{#link-to selected.linkname selected.id}}{{selected.id}}{{/link-to}}
