@@ -53,6 +53,7 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.annotations.VisibleForTesting;
 
 @Public
@@ -445,7 +446,8 @@ public class AllocationFileLoaderService extends AbstractService {
       Set<String> reservableQueues,
       Set<String> nonPreemptableQueues)
       throws AllocationConfigurationException {
-    String queueName = element.getAttribute("name").trim();
+    String queueName = CharMatcher.WHITESPACE.trimFrom(
+        element.getAttribute("name"));
 
     if (queueName.contains(".")) {
       throw new AllocationConfigurationException("Bad fair scheduler config "

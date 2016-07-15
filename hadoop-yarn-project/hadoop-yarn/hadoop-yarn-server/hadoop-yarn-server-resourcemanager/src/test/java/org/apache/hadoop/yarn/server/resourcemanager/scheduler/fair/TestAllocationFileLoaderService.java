@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -569,6 +572,31 @@ public class TestAllocationFileLoaderService {
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
     out.println("<queue name=\"      \">");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    AllocationFileLoaderService allocLoader = new AllocationFileLoaderService();
+    allocLoader.init(conf);
+    ReloadListener confHolder = new ReloadListener();
+    allocLoader.setReloadListener(confHolder);
+    allocLoader.reloadAllocations();
+  }
+
+  /**
+   * Verify that you can't have the queue name with just a non breaking
+   * whitespace in the allocations file.
+   */
+  @Test (expected = AllocationConfigurationException.class)
+  public void testQueueNameContainingNBWhitespace() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new OutputStreamWriter(
+        new FileOutputStream(ALLOC_FILE), StandardCharsets.UTF_8));
+    out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"\u00a0\">");
     out.println("</queue>");
     out.println("</allocations>");
     out.close();

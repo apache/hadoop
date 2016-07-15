@@ -4362,6 +4362,17 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("B.C", true)
         .getNumRunnableApps());
     assertNotNull(scheduler.getSchedulerApp(appAttemptId3));
+
+    // submit app with queue name "A\u00a0" (non-breaking space)
+    ApplicationAttemptId appAttemptId4 = createAppAttemptId(4, 1);
+    AppAddedSchedulerEvent appAddedEvent4 = new AppAddedSchedulerEvent(
+        appAttemptId4.getApplicationId(), "A\u00a0", "user1");
+    scheduler.handle(appAddedEvent4);
+    // submission rejected
+    assertEquals(3, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApplications().get(appAttemptId4.
+        getApplicationId()));
+    assertNull(scheduler.getSchedulerApp(appAttemptId4));
   }
 
   @Test

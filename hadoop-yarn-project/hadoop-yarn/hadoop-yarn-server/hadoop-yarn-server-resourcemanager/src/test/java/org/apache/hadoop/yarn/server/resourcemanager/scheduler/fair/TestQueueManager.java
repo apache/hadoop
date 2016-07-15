@@ -131,6 +131,9 @@ public class TestQueueManager {
     assertFalse(queueManager.isQueueNameValid(" a"));
     assertFalse(queueManager.isQueueNameValid("a "));
     assertFalse(queueManager.isQueueNameValid(" a "));
+    assertFalse(queueManager.isQueueNameValid("\u00a0"));
+    assertFalse(queueManager.isQueueNameValid("a\u00a0"));
+    assertFalse(queueManager.isQueueNameValid("\u00a0a\u00a0"));
     assertTrue(queueManager.isQueueNameValid("a b"));
     assertTrue(queueManager.isQueueNameValid("a"));
   }

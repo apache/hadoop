@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.xml.sax.SAXException;
 
+import com.google.common.base.CharMatcher;
 import com.google.common.annotations.VisibleForTesting;
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
@@ -457,6 +458,9 @@ public class QueueManager {
    */
   @VisibleForTesting
   boolean isQueueNameValid(String node) {
-    return !node.isEmpty() && node.equals(node.trim());
+    // use the same white space trim as in QueueMetrics() otherwise things fail
+    // guava uses a different definition for whitespace than java.
+    return !node.isEmpty() &&
+        node.equals(CharMatcher.WHITESPACE.trimFrom(node));
   }
 }
