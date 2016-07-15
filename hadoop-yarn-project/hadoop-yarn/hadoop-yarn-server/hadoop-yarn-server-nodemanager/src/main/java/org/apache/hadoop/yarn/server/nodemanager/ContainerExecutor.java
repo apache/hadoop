@@ -305,7 +305,7 @@ public abstract class ContainerExecutor implements Configurable {
       List<String> command, Path logDir, String outFilename)
       throws IOException {
     ContainerLaunch.ShellScriptBuilder sb =
-      ContainerLaunch.ShellScriptBuilder.create();
+        ContainerLaunch.ShellScriptBuilder.create();
     Set<String> whitelist = new HashSet<>();
 
     whitelist.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
@@ -316,7 +316,7 @@ public abstract class ContainerExecutor implements Configurable {
     whitelist.add(ApplicationConstants.Environment.JAVA_HOME.name());
 
     if (environment != null) {
-      for (Map.Entry<String,String> env : environment.entrySet()) {
+      for (Map.Entry<String, String> env : environment.entrySet()) {
         if (!whitelist.contains(env.getKey())) {
           sb.env(env.getKey(), env.getValue());
         } else {
@@ -326,19 +326,20 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     if (resources != null) {
-      for (Path path: resources.keySet()) {
-        for (String linkName: resources.get(path)) {
+      for (Map.Entry<Path, List<String>> resourceEntry :
+          resources.entrySet()) {
+        for (String linkName : resourceEntry.getValue()) {
           if (new Path(linkName).getName().equals(WILDCARD)) {
             // If this is a wildcarded path, link to everything in the
             // directory from the working directory
-            File directory = new File(path.toString());
+            File directory = new File(resourceEntry.getKey().toString());
 
             for (File wildLink : directory.listFiles()) {
               sb.symlink(new Path(wildLink.toString()),
                   new Path(wildLink.getName()));
             }
           } else {
-            sb.symlink(path, new Path(linkName));
+            sb.symlink(resourceEntry.getKey(), new Path(linkName));
           }
         }
       }
@@ -467,12 +468,12 @@ public abstract class ContainerExecutor implements Configurable {
    * @param groupId the job owner's GID
    * @param userName the job owner's username
    * @param pidFile the path to the container's PID file
-   * @param conf the configuration
+   * @param config the configuration
    * @return the command line to execute
    */
   protected String[] getRunCommand(String command, String groupId,
-      String userName, Path pidFile, Configuration conf) {
-    return getRunCommand(command, groupId, userName, pidFile, conf, null);
+      String userName, Path pidFile, Configuration config) {
+    return getRunCommand(command, groupId, userName, pidFile, config, null);
   }
 
   /**
@@ -488,18 +489,18 @@ public abstract class ContainerExecutor implements Configurable {
    * systems it is ignored.
    * @param pidFile the path to the container's PID file on Windows. On other
    * operating systems it is ignored.
-   * @param conf the configuration
+   * @param config the configuration
    * @param resource on Windows this parameter controls memory and CPU limits.
    * If null, no limits are set. On other operating systems it is ignored.
    * @return the command line to execute
    */
   protected String[] getRunCommand(String command, String groupId,
-      String userName, Path pidFile, Configuration conf, Resource resource) {
+      String userName, Path pidFile, Configuration config, Resource resource) {
     if (Shell.WINDOWS) {
       return getRunCommandForWindows(command, groupId, userName, pidFile,
-          conf, resource);
+          config, resource);
     } else {
-      return getRunCommandForOther(command, conf);
+      return getRunCommandForOther(command, config);
     }
 
   }
@@ -513,30 +514,31 @@ public abstract class ContainerExecutor implements Configurable {
    * @param groupId the job owner's GID
    * @param userName the job owner's username
    * @param pidFile the path to the container's PID file
-   * @param conf the configuration
+   * @param config the configuration
    * @param resource this parameter controls memory and CPU limits.
    * If null, no limits are set.
    * @return the command line to execute
    */
   protected String[] getRunCommandForWindows(String command, String groupId,
-      String userName, Path pidFile, Configuration conf, Resource resource) {
+      String userName, Path pidFile, Configuration config, Resource resource) {
     int cpuRate = -1;
     int memory = -1;
 
     if (resource != null) {
-      if (conf.getBoolean(
+      if (config.getBoolean(
           YarnConfiguration.NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED,
-          YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED)) {
-        memory = (int)resource.getMemorySize();
+          YarnConfiguration.
+            DEFAULT_NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED)) {
+        memory = (int) resource.getMemorySize();
       }
 
-      if (conf.getBoolean(
+      if (config.getBoolean(
           YarnConfiguration.NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED,
           YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED)) {
         int containerVCores = resource.getVirtualCores();
-        int nodeVCores = NodeManagerHardwareUtils.getVCores(conf);
+        int nodeVCores = NodeManagerHardwareUtils.getVCores(config);
         int nodeCpuPercentage =
-            NodeManagerHardwareUtils.getNodeCpuPercentage(conf);
+            NodeManagerHardwareUtils.getNodeCpuPercentage(config);
 
         float containerCpuPercentage =
             (float)(nodeCpuPercentage * containerVCores) / nodeVCores;
@@ -564,20 +566,20 @@ public abstract class ContainerExecutor implements Configurable {
    * Return a command line to execute the given command in the OS shell.
    *
    * @param command the command to execute
-   * @param conf the configuration
+   * @param config the configuration
    * @return the command line to execute
    */
   protected String[] getRunCommandForOther(String command,
-      Configuration conf) {
+      Configuration config) {
     List<String> retCommand = new ArrayList<>();
     boolean containerSchedPriorityIsSet = false;
     int containerSchedPriorityAdjustment =
         YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY;
 
-    if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) !=
+    if (config.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) !=
         null) {
       containerSchedPriorityIsSet = true;
-      containerSchedPriorityAdjustment = conf
+      containerSchedPriorityAdjustment = config
           .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY,
           YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
     }
