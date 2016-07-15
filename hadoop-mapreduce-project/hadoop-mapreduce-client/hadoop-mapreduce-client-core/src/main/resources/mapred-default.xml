@@ -1889,4 +1889,13 @@
   <value>SAMEORIGIN</value>
 </property>
 
+<property>
+  <description>
+    The maximum number of tasks that a job can have so that the Job History
+    Server will fully parse its associated job history file and load it into
+    memory. A value of -1 (default) will allow all jobs to be loaded.
+  </description>
+  <name>mapreduce.jobhistory.loadedjob.tasks.max</name>
+  <value>-1</value>
+</property>
 </configuration>

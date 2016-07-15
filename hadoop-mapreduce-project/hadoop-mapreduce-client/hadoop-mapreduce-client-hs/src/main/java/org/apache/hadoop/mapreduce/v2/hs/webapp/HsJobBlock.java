@@ -33,8 +33,10 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
+import org.apache.hadoop.mapreduce.v2.hs.UnparsedJob;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.AMAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
@@ -73,8 +75,18 @@ public class HsJobBlock extends HtmlBlock {
     JobId jobID = MRApps.toJobID(jid);
     Job j = appContext.getJob(jobID);
     if (j == null) {
-      html.
-        p()._("Sorry, ", jid, " not found.")._();
+      html.p()._("Sorry, ", jid, " not found.")._();
+      return;
+    }
+    if(j instanceof UnparsedJob) {
+      final int taskCount = j.getTotalMaps() + j.getTotalReduces();
+      UnparsedJob oversizedJob = (UnparsedJob) j;
+      html.p()._("The job has a total of " + taskCount + " tasks. ")
+          ._("Any job larger than " + oversizedJob.getMaxTasksAllowed() +
+              " will not be loaded.")._();
+      html.p()._("You can either use the CLI tool: 'mapred job -history'"
+          + " to view large jobs or adjust the property " +
+          JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX + ".")._();
       return;
     }
     List<AMInfo> amInfos = j.getAMInfos();
