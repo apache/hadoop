@@ -18,6 +18,10 @@ Release 2.7.4 - UNRELEASED
     HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
     (Vinayakumar B, Yongjun Zhang, and Brahma Reddy Battula via ozawa)
 
+    HADOOP-13202. Avoid possible overflow in
+    org.apache.hadoop.util.bloom.BloomFilter#getNBytes.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
