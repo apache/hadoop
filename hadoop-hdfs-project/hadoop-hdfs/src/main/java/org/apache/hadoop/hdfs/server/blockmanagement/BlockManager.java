@@ -1319,7 +1319,8 @@ public class BlockManager implements BlockStatsMXBean {
     if (!isPopulatingReplQueues()) {
       return;
     }
-    StringBuilder datanodes = new StringBuilder();
+    StringBuilder datanodes = blockLog.isDebugEnabled()
+        ? new StringBuilder() : null;
     for (DatanodeStorageInfo storage : blocksMap.getStorages(storedBlock)) {
       if (storage.getState() != State.NORMAL) {
         continue;
@@ -1328,10 +1329,12 @@ public class BlockManager implements BlockStatsMXBean {
       final Block b = getBlockOnStorage(storedBlock, storage);
       if (b != null) {
         invalidateBlocks.add(b, node, false);
-        datanodes.append(node).append(" ");
+        if (datanodes != null) {
+          datanodes.append(node).append(" ");
+        }
       }
     }
-    if (datanodes.length() != 0) {
+    if (datanodes != null && datanodes.length() != 0) {
       blockLog.debug("BLOCK* addToInvalidates: {} {}", storedBlock, datanodes);
     }
   }
