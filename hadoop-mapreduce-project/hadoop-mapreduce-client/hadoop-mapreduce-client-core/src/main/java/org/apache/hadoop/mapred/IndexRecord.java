@@ -29,8 +29,20 @@ import org.apache.hadoop.classification.InterfaceStability;
  * 环形Buffer）
  */
 public class IndexRecord {
+
+  /**
+   * 起始偏移量（字节数）
+   */
   public long startOffset;
+
+  /**
+   * Partition数据原始长度（字节数）
+   */
   public long rawLength;
+
+  /**
+   * partition数据长度，如果压缩则算压缩后的长度（字节数）
+   */
   public long partLength;
 
   public IndexRecord() { }
