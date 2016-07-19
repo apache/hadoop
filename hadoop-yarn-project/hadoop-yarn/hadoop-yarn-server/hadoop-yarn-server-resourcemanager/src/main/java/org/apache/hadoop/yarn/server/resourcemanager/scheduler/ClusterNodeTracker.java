@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -52,8 +50,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
   private Lock writeLock = readWriteLock.writeLock();
 
   private HashMap<NodeId, N> nodes = new HashMap<>();
-  private Map<String, N> nodeNameToNodeMap = new HashMap<>();
-  private Map<String, List<N>> nodesPerRack = new HashMap<>();
+  private Map<String, Integer> nodesPerRack = new HashMap<>();
 
   private Resource clusterCapacity = Resources.clone(Resources.none());
   private Resource staleClusterCapacity = null;
@@ -69,16 +66,14 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
     writeLock.lock();
     try {
       nodes.put(node.getNodeID(), node);
-      nodeNameToNodeMap.put(node.getNodeName(), node);
 
       // Update nodes per rack as well
       String rackName = node.getRackName();
-      List<N> nodesList = nodesPerRack.get(rackName);
-      if (nodesList == null) {
-        nodesList = new ArrayList<>();
-        nodesPerRack.put(rackName, nodesList);
+      Integer numNodes = nodesPerRack.get(rackName);
+      if (numNodes == null) {
+        numNodes = 0;
       }
-      nodesList.add(node);
+      nodesPerRack.put(rackName, ++numNodes);
 
       // Update cluster capacity
       Resources.addTo(clusterCapacity, node.getTotalResource());
@@ -131,8 +126,8 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
     readLock.lock();
     String rName = rackName == null ? "NULL" : rackName;
     try {
-      List<N> nodesList = nodesPerRack.get(rName);
-      return nodesList == null ? 0 : nodesList.size();
+      Integer nodeCount = nodesPerRack.get(rName);
+      return nodeCount == null ? 0 : nodeCount;
     } finally {
       readLock.unlock();
     }
@@ -159,18 +154,14 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
         LOG.warn("Attempting to remove a non-existent node " + nodeId);
         return null;
       }
-      nodeNameToNodeMap.remove(node.getNodeName());
 
       // Update nodes per rack as well
       String rackName = node.getRackName();
-      List<N> nodesList = nodesPerRack.get(rackName);
-      if (nodesList == null) {
-        LOG.error("Attempting to remove node from an empty rack " + rackName);
+      Integer numNodes = nodesPerRack.get(rackName);
+      if (numNodes > 0) {
+        nodesPerRack.put(rackName, --numNodes);
       } else {
-        nodesList.remove(node);
-        if (nodesList.isEmpty()) {
-          nodesPerRack.remove(rackName);
-        }
+        LOG.error("Attempting to remove node from an empty rack " + rackName);
       }
 
       // Update cluster capacity
@@ -305,30 +296,5 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
     }
     Collections.sort(sortedList, comparator);
     return sortedList;
-  }
-
-  /**
-   * Convenience method to return list of nodes corresponding to resourceName
-   * passed in the {@link ResourceRequest}.
-   *
-   * @param resourceName Host/rack name of the resource, or
-   * {@link ResourceRequest#ANY}
-   * @return list of nodes that match the resourceName
-   */
-  public List<N> getNodesByResourceName(final String resourceName) {
-    Preconditions.checkArgument(
-        resourceName != null && !resourceName.isEmpty());
-    List<N> retNodes = new ArrayList<>();
-    if (ResourceRequest.ANY.equals(resourceName)) {
-      return getAllNodes();
-    } else if (nodeNameToNodeMap.containsKey(resourceName)) {
-      retNodes.add(nodeNameToNodeMap.get(resourceName));
-    } else if (nodesPerRack.containsKey(resourceName)) {
-      return nodesPerRack.get(resourceName);
-    } else {
-      LOG.info(
-          "Could not find a node matching given resourceName " + resourceName);
-    }
-    return retNodes;
   }
 }
