@@ -157,10 +157,18 @@ public class LogCLIHelpers implements Configurable {
         AggregatedLogFormat.LogReader reader = null;
         PrintStream out = createPrintStream(localDir, fileName, containerId);
         try {
+          reader = new AggregatedLogFormat.LogReader(getConf(),
+              thisNodeFile.getPath());
+          if (getContainerLogsStream(containerId, reader) == null) {
+            continue;
+          }
           String containerString = String.format(CONTAINER_ON_NODE_PATTERN,
               containerId, thisNodeFile.getPath().getName());
           out.println(containerString);
           out.println(StringUtils.repeat("=", containerString.length()));
+          // We have to re-create reader object to reset the stream index
+          // after calling getContainerLogsStream which would move the stream
+          // index to the end of the log file.
           reader =
               new AggregatedLogFormat.LogReader(getConf(),
                 thisNodeFile.getPath());
@@ -220,6 +228,9 @@ public class LogCLIHelpers implements Configurable {
           if (getContainerLogsStream(containerId, reader) == null) {
             continue;
           }
+          // We have to re-create reader object to reset the stream index
+          // after calling getContainerLogsStream which would move the stream
+          // index to the end of the log file.
           reader =
               new AggregatedLogFormat.LogReader(getConf(),
               thisNodeFile.getPath());
