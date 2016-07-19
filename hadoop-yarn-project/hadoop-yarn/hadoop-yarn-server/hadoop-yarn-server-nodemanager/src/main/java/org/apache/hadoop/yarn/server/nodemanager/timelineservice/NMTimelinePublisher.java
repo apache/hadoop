@@ -203,8 +203,6 @@ public class NMTimelinePublisher extends CompositeService {
         containerStatus.getDiagnostics());
     eventInfo.put(ContainerMetricsConstants.EXIT_STATUS_EVENT_INFO,
         containerStatus.getExitStatus());
-    eventInfo.put(ContainerMetricsConstants.STATE_EVENT_INFO, containerStatus
-        .getState().toString());
 
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
