@@ -22,6 +22,9 @@ Release 2.7.4 - UNRELEASED
     org.apache.hadoop.util.bloom.BloomFilter#getNBytes.
     (Kai Sasaki via aajisaka)
 
+    HADOOP-12991. Conflicting default ports in DelegateToFileSystem.
+    (Kai Sasaki via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
