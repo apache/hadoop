@@ -69,7 +69,7 @@ public class TestOpenFilesWithSnapshot {
     // delete files separately
     fs.delete(new Path("/test/test/test2"), true);
     fs.delete(new Path("/test/test/test3"), true);
-    cluster.restartNameNode();
+    restartNameNode();
   }
 
   @Test
@@ -79,7 +79,7 @@ public class TestOpenFilesWithSnapshot {
 
     // delete parent directory
     fs.delete(new Path("/test/test"), true);
-    cluster.restartNameNode();
+    restartNameNode();
   }
 
   @Test
@@ -87,11 +87,7 @@ public class TestOpenFilesWithSnapshot {
     Path path = new Path("/test");
     doWriteAndAbort(fs, path);
     fs.delete(new Path("/test/test"), true);
-    NameNode nameNode = cluster.getNameNode();
-    NameNodeAdapter.enterSafeMode(nameNode, false);
-    NameNodeAdapter.saveNamespace(nameNode);
-    NameNodeAdapter.leaveSafeMode(nameNode);
-    cluster.restartNameNode(true);
+    restartNameNode();
     
     // read snapshot file after restart
     String test2snapshotPath = Snapshot.getSnapshotPath(path.toString(),
@@ -108,11 +104,7 @@ public class TestOpenFilesWithSnapshot {
     doWriteAndAbort(fs, path);
     fs.delete(new Path("/test/test/test2"), true);
     fs.delete(new Path("/test/test/test3"), true);
-    NameNode nameNode = cluster.getNameNode();
-    NameNodeAdapter.enterSafeMode(nameNode, false);
-    NameNodeAdapter.saveNamespace(nameNode);
-    NameNodeAdapter.leaveSafeMode(nameNode);
-    cluster.restartNameNode(true);
+    restartNameNode();
     
     // read snapshot file after restart
     String test2snapshotPath = Snapshot.getSnapshotPath(path.toString(),
@@ -203,6 +195,11 @@ public class TestOpenFilesWithSnapshot {
 
     fs.rename(new Path("/test/test"), new Path("/test/test-renamed"));
     fs.delete(new Path("/test/test-renamed"), true);
+    restartNameNode();
+  }
+
+  private void restartNameNode() throws Exception {
+    cluster.triggerBlockReports();
     NameNode nameNode = cluster.getNameNode();
     NameNodeAdapter.enterSafeMode(nameNode, false);
     NameNodeAdapter.saveNamespace(nameNode);
