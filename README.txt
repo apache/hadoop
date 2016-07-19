@@ -1,3 +1,7 @@
+
+本项目为本人近期阅读Hadoop源码时fork出来的，主要用于注释源码。
+
+
 For the latest information about Hadoop, please visit our website at:
 
    http://hadoop.apache.org/core/
