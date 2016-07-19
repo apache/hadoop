@@ -40,6 +40,7 @@ import org.apache.hadoop.util.Progressable;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public abstract class DelegateToFileSystem extends AbstractFileSystem {
+  private static final int DELEGATE_TO_FS_DEFAULT_PORT = -1;
   protected final FileSystem fsImpl;
   
   protected DelegateToFileSystem(URI theUri, FileSystem theFsImpl,
@@ -64,7 +65,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
    */
   private static int getDefaultPortIfDefined(FileSystem theFsImpl) {
     int defaultPort = theFsImpl.getDefaultPort();
-    return defaultPort != 0 ? defaultPort : -1;
+    return defaultPort != 0 ? defaultPort : DELEGATE_TO_FS_DEFAULT_PORT;
   }
 
   @Override
@@ -159,7 +160,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
 
   @Override
   public int getUriDefaultPort() {
-    return 0;
+    return DELEGATE_TO_FS_DEFAULT_PORT;
   }
 
   @Override
