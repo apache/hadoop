@@ -75,7 +75,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
-          <excludePackageNames>org.apache.hadoop.yarn.proto</excludePackageNames>
+          <excludePackageNames>org.apache.hadoop.yarn.proto:org.apache.hadoop.yarn.federation.proto</excludePackageNames>
         </configuration>
       </plugin>
     </plugins>
