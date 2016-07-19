@@ -1195,16 +1195,19 @@ public class BlockManager implements BlockStatsMXBean {
     if (!isPopulatingReplQueues()) {
       return;
     }
-    StringBuilder datanodes = new StringBuilder();
+    StringBuilder datanodes = blockLog.isDebugEnabled()
+        ? new StringBuilder() : null;
     for (DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
       if (storage.getState() != State.NORMAL) {
         continue;
       }
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       invalidateBlocks.add(b, node, false);
-      datanodes.append(node).append(" ");
+      if (datanodes != null) {
+        datanodes.append(node).append(" ");
+      }
     }
-    if (datanodes.length() != 0) {
+    if (datanodes != null & datanodes.length() != 0) {
       blockLog.debug("BLOCK* addToInvalidates: {} {}", b, datanodes);
     }
   }
