@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
@@ -47,7 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -57,7 +58,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestNMReconnect {
+/**
+ * TestNMReconnect run tests against the scheduler set by
+ * {@link ParameterizedSchedulerTestBase} which is configured
+ * in {@link YarnConfiguration}.
+ */
+public class TestNMReconnect extends ParameterizedSchedulerTestBase {
   private static final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
@@ -147,9 +153,8 @@ public class TestNMReconnect {
 
   @Test
   public void testCompareRMNodeAfterReconnect() throws Exception {
+    AbstractYarnScheduler scheduler = getScheduler();
     Configuration yarnConf = new YarnConfiguration();
-    CapacityScheduler scheduler = new CapacityScheduler();
-    scheduler.setConf(yarnConf);
     ConfigurationProvider configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(yarnConf);
     configurationProvider.init(yarnConf);
