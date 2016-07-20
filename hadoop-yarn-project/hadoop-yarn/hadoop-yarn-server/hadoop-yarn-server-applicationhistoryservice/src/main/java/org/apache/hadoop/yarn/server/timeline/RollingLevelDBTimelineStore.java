@@ -1243,8 +1243,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
    * Get the unique start time for a given entity as a byte array that sorts the
    * timestamps in reverse order (see
    * {@link GenericObjectMapper#writeReverseOrderedLong(long)}). If the start
-   * time doesn't exist, set it based on the information provided. Should only
-   * be called when a lock has been obtained on the entity.
+   * time doesn't exist, set it based on the information provided.
    *
    * @param entityId
    *          The id of the entity
@@ -1257,8 +1256,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
    * @return A StartAndInsertTime
    * @throws IOException
    */
-  private Long getAndSetStartTime(String entityId, String entityType,
-      Long startTime, List<TimelineEvent> events) throws IOException {
+  private Long getAndSetStartTime(String entityId,
+      String entityType, Long startTime, List<TimelineEvent> events)
+      throws IOException {
     EntityIdentifier entity = new EntityIdentifier(entityId, entityType);
     Long time = startTimeWriteCache.get(entity);
     if (time != null) {
@@ -1282,28 +1282,29 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
    * Checks db for start time and returns it if it exists. If it doesn't exist,
    * writes the suggested start time (if it is not null). This is only called
    * when the start time is not found in the cache, so it adds it back into the
-   * cache if it is found. Should only be called when a lock has been obtained
-   * on the entity.
+   * cache if it is found.
    */
   private Long checkStartTimeInDb(EntityIdentifier entity,
       Long suggestedStartTime) throws IOException {
     Long startAndInsertTime = null;
     // create lookup key for start time
     byte[] b = createStartTimeLookupKey(entity.getId(), entity.getType());
-    // retrieve value for key
-    byte[] v = starttimedb.get(b);
-    if (v == null) {
-      // start time doesn't exist in db
-      if (suggestedStartTime == null) {
-        return null;
-      }
-      startAndInsertTime = suggestedStartTime;
+    synchronized (this) {
+      // retrieve value for key
+      byte[] v = starttimedb.get(b);
+      if (v == null) {
+        // start time doesn't exist in db
+        if (suggestedStartTime == null) {
+          return null;
+        }
+        startAndInsertTime = suggestedStartTime;
 
-      // write suggested start time
-      starttimedb.put(b, writeReverseOrderedLong(suggestedStartTime));
-    } else {
-      // found start time in db, so ignore suggested start time
-      startAndInsertTime = readReverseOrderedLong(v, 0);
+        // write suggested start time
+        starttimedb.put(b, writeReverseOrderedLong(suggestedStartTime));
+      } else {
+        // found start time in db, so ignore suggested start time
+        startAndInsertTime = readReverseOrderedLong(v, 0);
+      }
     }
     startTimeWriteCache.put(entity, startAndInsertTime);
     startTimeReadCache.put(entity, startAndInsertTime);
