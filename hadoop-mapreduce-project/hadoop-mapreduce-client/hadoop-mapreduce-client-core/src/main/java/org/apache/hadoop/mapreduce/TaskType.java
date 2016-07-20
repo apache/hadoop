@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Enum for map, reduce, job-setup, job-cleanup, task-cleanup task types.
+ *
+ * 任务类型
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
