@@ -99,7 +99,7 @@ class JobSubmitter {
         Job.DEFAULT_USE_WILDCARD_FOR_LIBJARS);
     JobResourceUploader rUploader = new JobResourceUploader(jtFs, useWildcards);
 
-    rUploader.uploadFiles(job, jobSubmitDir);
+    rUploader.uploadResources(job, jobSubmitDir);
 
     // Get the working directory. If not set, sets it to filesystem working dir
     // This code has been added so that working directory reset before running
