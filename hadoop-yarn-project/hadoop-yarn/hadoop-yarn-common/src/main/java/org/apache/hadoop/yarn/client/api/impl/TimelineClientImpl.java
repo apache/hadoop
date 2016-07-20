@@ -111,6 +111,7 @@ public class TimelineClientImpl extends TimelineClient {
   private Configuration configuration;
   private float timelineServiceVersion;
   private TimelineWriter timelineWriter;
+  private SSLFactory sslFactory;
 
   @Private
   @VisibleForTesting
@@ -269,7 +270,7 @@ public class TimelineClientImpl extends TimelineClient {
     }
     ClientConfig cc = new DefaultClientConfig();
     cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    connConfigurator = newConnConfigurator(conf);
+    connConfigurator = initConnConfigurator(conf);
     if (UserGroupInformation.isSecurityEnabled()) {
       authenticator = new KerberosDelegationTokenAuthenticator();
     } else {
@@ -324,6 +325,9 @@ public class TimelineClientImpl extends TimelineClient {
   protected void serviceStop() throws Exception {
     if (this.timelineWriter != null) {
       this.timelineWriter.close();
+    }
+    if (this.sslFactory != null) {
+      this.sslFactory.destroy();
     }
     super.serviceStop();
   }
@@ -477,9 +481,9 @@ public class TimelineClientImpl extends TimelineClient {
 
   }
 
-  private static ConnectionConfigurator newConnConfigurator(Configuration conf) {
+  private ConnectionConfigurator initConnConfigurator(Configuration conf) {
     try {
-      return newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
+      return initSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
     } catch (Exception e) {
       LOG.debug("Cannot load customized ssl related configuration. " +
           "Fallback to system-generic settings.", e);
@@ -497,16 +501,15 @@ public class TimelineClientImpl extends TimelineClient {
     }
   };
 
-  private static ConnectionConfigurator newSslConnConfigurator(final int timeout,
+  private ConnectionConfigurator initSslConnConfigurator(final int timeout,
       Configuration conf) throws IOException, GeneralSecurityException {
-    final SSLFactory factory;
     final SSLSocketFactory sf;
     final HostnameVerifier hv;
 
-    factory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
-    factory.init();
-    sf = factory.createSSLSocketFactory();
-    hv = factory.getHostnameVerifier();
+    sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    sslFactory.init();
+    sf = sslFactory.createSSLSocketFactory();
+    hv = sslFactory.getHostnameVerifier();
 
     return new ConnectionConfigurator() {
       @Override
