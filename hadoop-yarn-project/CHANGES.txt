@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.7.3 - UNRELEASED
+Release 2.7.3 - 2016-07-27
 
   INCOMPATIBLE CHANGES
 
@@ -175,6 +175,9 @@ Release 2.7.3 - UNRELEASED
 
     YARN-4686. MiniYARNCluster.start() returns before cluster is completely
     started. (Eric Badger via epayne)
+
+    YARN-5309. Fixed SSLFactory truststore reloader thread leak in
+    TimelineClientImpl. (Weiwei Yang via vvasudev)
 
 Release 2.7.2 - 2016-01-25
 
