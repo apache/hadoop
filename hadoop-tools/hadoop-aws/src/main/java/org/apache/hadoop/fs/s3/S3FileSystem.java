@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -58,7 +59,8 @@ import org.apache.hadoop.util.Progressable;
 @Deprecated
 public class S3FileSystem extends FileSystem {
 
-  private static boolean hasWarnedDeprecation = false;
+  private static final AtomicBoolean hasWarnedDeprecation
+      = new AtomicBoolean(false);
 
   private URI uri;
 
@@ -67,23 +69,20 @@ public class S3FileSystem extends FileSystem {
   private Path workingDir;
 
   public S3FileSystem() {
-    warnDeprecation();
     // set store in initialize()
   }
 
   public S3FileSystem(FileSystemStore store) {
-    warnDeprecation();
     this.store = store;
   }
 
   /**
    * This is to warn the first time in a JVM that an S3FileSystem is created.
    */
-  private static synchronized void warnDeprecation() {
-    if (!hasWarnedDeprecation) {
-      System.err.println("S3FileSystem is deprecated and will be removed in " +
+  private static void warnDeprecation() {
+    if (!hasWarnedDeprecation.getAndSet(true)) {
+      LOG.warn("S3FileSystem is deprecated and will be removed in " +
           "future releases. Use NativeS3FileSystem or S3AFileSystem instead.");
-      hasWarnedDeprecation = true;
     }
   }
 
@@ -105,6 +104,7 @@ public class S3FileSystem extends FileSystem {
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
+    warnDeprecation();
     if (store == null) {
       store = createDefaultStore(conf);
     }
