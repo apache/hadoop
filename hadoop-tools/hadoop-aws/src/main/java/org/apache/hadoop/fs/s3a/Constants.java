@@ -82,6 +82,14 @@ public final class Constants {
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
+  // socket send buffer to be used in Amazon client
+  public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
+  public static final int DEFAULT_SOCKET_SEND_BUFFER = 8 * 1024;
+
+  // socket send buffer to be used in Amazon client
+  public static final String SOCKET_RECV_BUFFER = "fs.s3a.socket.recv.buffer";
+  public static final int DEFAULT_SOCKET_RECV_BUFFER = 8 * 1024;
+
   // number of records to get while paging through a directory listing
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";
   public static final int DEFAULT_MAX_PAGING_KEYS = 5000;

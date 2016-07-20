@@ -501,6 +501,18 @@ this capability.
     </property>
 
     <property>
+      <name>fs.s3a.socket.send.buffer</name>
+      <value>8192</value>
+      <description>Socket send buffer hint to amazon connector. Represented in bytes.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.socket.recv.buffer</name>
+      <value>8192</value>
+      <description>Socket receive buffer hint to amazon connector. Represented in bytes.</description>
+    </property>
+
+    <property>
       <name>fs.s3a.threads.keepalivetime</name>
       <value>60</value>
       <description>Number of seconds a thread can be idle before being

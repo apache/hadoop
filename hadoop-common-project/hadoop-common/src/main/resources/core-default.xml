@@ -917,6 +917,18 @@
 </property>
 
 <property>
+  <name>fs.s3a.socket.send.buffer</name>
+  <value>8192</value>
+  <description>Socket send buffer hint to amazon connector. Represented in bytes.</description>
+</property>
+
+<property>
+  <name>fs.s3a.socket.recv.buffer</name>
+  <value>8192</value>
+  <description>Socket receive buffer hint to amazon connector. Represented in bytes.</description>
+</property>
+
+<property>
   <name>fs.s3a.paging.maximum</name>
   <value>5000</value>
   <description>How many keys to request from S3 when doing 
