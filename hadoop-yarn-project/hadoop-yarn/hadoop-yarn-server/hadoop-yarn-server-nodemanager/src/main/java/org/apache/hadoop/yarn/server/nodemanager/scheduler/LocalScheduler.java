@@ -61,6 +61,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,7 +113,7 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   private DistSchedulerParams appParams = new DistSchedulerParams();
   private final OpportunisticContainerAllocator.ContainerIdCounter containerIdCounter =
       new OpportunisticContainerAllocator.ContainerIdCounter();
-  private Map<String, NodeId> nodeList = new HashMap<>();
+  private Map<String, NodeId> nodeList = new LinkedHashMap<>();
 
   // Mapping of NodeId to NodeTokens. Populated either from RM response or
   // generated locally if required.
