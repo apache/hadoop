@@ -37,6 +37,17 @@ import org.apache.hadoop.conf.Configurable;
  *
  * <p>Note: If you require your Partitioner class to obtain the Job's
  * configuration object, implement the {@link Configurable} interface.</p>
+ *
+ * Partitioner对map输出的key进行划分,决定key及其记录应该发往哪一个reducer.
+ *
+ * 即指定每一个key应该由哪个reducer来处理.
+ *
+ * 发往同一个reducer的所有key组成一个Partition.
+ *
+ * 如果作业只有一个reducer,则框架不会该作业创建Partitioner.
+ *
+ * 作业使用哪一个Partitioner由用户配置决定,Partitioner的逻辑中需要使用作业的配置信息,
+ * 可以通过实现Configurable接口访问配置信息.
  * 
  * @see Reducer
  */
@@ -49,6 +60,9 @@ public abstract class Partitioner<KEY, VALUE> {
    * number of partitions i.e. number of reduce-tasks for the job.
    *   
    * <p>Typically a hash function on a all or a subset of the key.</p>
+   *
+   * 每个Partition(Reducer)对应一个整数编号,该方法返回代码key所属的Partition
+   * 的编号. 传入的Partition总数即为作业的reducer总数.
    *
    * @param key the key to be partioned.
    * @param value the entry value.
