@@ -163,6 +163,11 @@ public class S3AFileSystem extends FileSystem {
           DEFAULT_ESTABLISH_TIMEOUT, 0));
       awsConf.setSocketTimeout(intOption(conf, SOCKET_TIMEOUT,
           DEFAULT_SOCKET_TIMEOUT, 0));
+      int sockSendBuffer = intOption(conf, SOCKET_SEND_BUFFER,
+          DEFAULT_SOCKET_SEND_BUFFER, 2048);
+      int sockRecvBuffer = intOption(conf, SOCKET_RECV_BUFFER,
+          DEFAULT_SOCKET_RECV_BUFFER, 2048);
+      awsConf.setSocketBufferSizeHints(sockSendBuffer, sockRecvBuffer);
       String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
       if (!signerOverride.isEmpty()) {
         LOG.debug("Signer override = {}", signerOverride);

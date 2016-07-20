@@ -44,6 +44,7 @@ import java.io.EOFException;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Look at the performance of S3a operations.
@@ -71,6 +72,8 @@ public class TestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Before
   public void openFS() throws IOException {
     Configuration conf = getConf();
+    conf.setInt(SOCKET_SEND_BUFFER, 16 * 1024);
+    conf.setInt(SOCKET_RECV_BUFFER, 16 * 1024);
     String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
