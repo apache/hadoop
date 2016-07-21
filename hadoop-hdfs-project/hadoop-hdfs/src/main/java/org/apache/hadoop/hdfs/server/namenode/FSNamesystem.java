@@ -4327,8 +4327,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                  UnresolvedLinkException, SnapshotAccessControlException,
                  AclException {
     src = FSDirectory.normalizePath(src);
-    String[] names = INode.getPathNames(src);
-    byte[][] components = INode.getPathComponents(names);
+    byte[][] components = INode.getPathComponents(src);
     final int lastInodeIndex = components.length - 1;
 
     dir.writeLock();
@@ -4344,7 +4343,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       StringBuilder pathbuilder = new StringBuilder();
       int i = 1;
       for(; i < inodes.length && inodes[i] != null; i++) {
-        pathbuilder.append(Path.SEPARATOR).append(names[i]);
+        pathbuilder.append(Path.SEPARATOR).
+            append(DFSUtil.bytes2String(components[i]));
         if (!inodes[i].isDirectory()) {
           throw new FileAlreadyExistsException(
                   "Parent path is not a directory: "
@@ -4386,7 +4386,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       // create directories beginning from the first null index
       for(; i < inodes.length; i++) {
-        pathbuilder.append(Path.SEPARATOR).append(names[i]);
+        pathbuilder.append(Path.SEPARATOR).
+            append(DFSUtil.bytes2String(components[i]));
         dir.unprotectedMkdir(allocateNewInodeId(), iip, i, components[i],
                 (i < lastInodeIndex) ? parentPermissions : permissions, null,
                 now);

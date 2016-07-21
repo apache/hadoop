@@ -417,6 +417,15 @@ public class DFSUtil {
   }
 
   /**
+   * Convert a UTF8 string to an array of byte arrays.
+   */
+  public static byte[][] getPathComponents(String path) {
+    // avoid intermediate split to String[]
+    final byte[] bytes = string2Bytes(path);
+    return bytes2byteArray(bytes, bytes.length, (byte)Path.SEPARATOR_CHAR);
+  }
+
+  /**
    * Splits the array of bytes into array of arrays of bytes
    * on byte separator
    * @param bytes the array of bytes to split
