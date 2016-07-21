@@ -737,18 +737,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   @VisibleForTesting
   public static byte[][] getPathComponents(String path) {
-    return getPathComponents(getPathNames(path));
-  }
-
-  /** Convert strings to byte arrays for path components. */
-  static byte[][] getPathComponents(String[] strings) {
-    if (strings.length == 0) {
-      return new byte[][]{null};
-    }
-    byte[][] bytes = new byte[strings.length][];
-    for (int i = 0; i < strings.length; i++)
-      bytes[i] = DFSUtil.string2Bytes(strings[i]);
-    return bytes;
+    checkAbsolutePath(path);
+    return DFSUtil.getPathComponents(path);
   }
 
   /**
@@ -757,10 +747,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @return array of path components.
    */
   public static String[] getPathNames(String path) {
+    checkAbsolutePath(path);
+    return StringUtils.split(path, Path.SEPARATOR_CHAR);
+  }
+
+  private static void checkAbsolutePath(final String path) {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
       throw new AssertionError("Absolute path required");
     }
-    return StringUtils.split(path, Path.SEPARATOR_CHAR);
   }
 
   @Override
