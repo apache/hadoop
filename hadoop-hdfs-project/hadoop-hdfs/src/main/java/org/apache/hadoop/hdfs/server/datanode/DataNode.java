@@ -634,7 +634,7 @@ public class DataNode extends ReconfigurableBase
    * @param newVolumes a comma separated string that specifies the data volumes.
    * @return changed volumes.
    * @throws IOException if none of the directories are specified in the
-   * configuration.
+   * configuration, or the storage type of a directory is changed.
    */
   @VisibleForTesting
   ChangedVolumes parseChangedVolumes(String newVolumes) throws IOException {
@@ -644,6 +644,12 @@ public class DataNode extends ReconfigurableBase
 
     if (locations.isEmpty()) {
       throw new IOException("No directory is specified.");
+    }
+
+    // Use the existing StorageLocation to detect storage type changes.
+    Map<String, StorageLocation> existingLocations = new HashMap<>();
+    for (StorageLocation loc : getStorageLocations(this.conf)) {
+      existingLocations.put(loc.getFile().getCanonicalPath(), loc);
     }
 
     ChangedVolumes results = new ChangedVolumes();
@@ -659,6 +665,12 @@ public class DataNode extends ReconfigurableBase
         if (location.getFile().getCanonicalPath().equals(
             dir.getRoot().getCanonicalPath())) {
           sl.remove();
+          StorageLocation old = existingLocations.get(
+              location.getFile().getCanonicalPath());
+          if (old != null &&
+              old.getStorageType() != location.getStorageType()) {
+            throw new IOException("Changing storage type is not allowed.");
+          }
           results.unchangedLocations.add(location);
           found = true;
           break;
