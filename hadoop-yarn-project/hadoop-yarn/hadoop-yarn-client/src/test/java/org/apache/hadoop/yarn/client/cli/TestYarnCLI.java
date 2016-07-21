@@ -1070,7 +1070,7 @@ public class TestYarnCLI {
     NodeState[] states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    int result = cli.run(new String[] { "-list", "--states", "NEW" });
+    int result = cli.run(new String[] {"-list", "-states", "NEW"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1091,7 +1091,7 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--states", "RUNNING" });
+    result = cli.run(new String[] {"-list", "-states", "RUNNING"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1109,13 +1109,13 @@ public class TestYarnCLI {
     verify(sysOut, times(2)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
-    result = cli.run(new String[] { "-list" });
+    result = cli.run(new String[] {"-list"});
     assertEquals(0, result);
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
     verify(sysOut, times(3)).write(any(byte[].class), anyInt(), anyInt());
 
     sysOutStream.reset();
-    result = cli.run(new String[] { "-list", "-showDetails" });
+    result = cli.run(new String[] {"-list", "-showDetails"});
     assertEquals(0, result);
     baos = new ByteArrayOutputStream();
     pw = new PrintWriter(baos);
@@ -1149,7 +1149,7 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--states", "UNHEALTHY" });
+    result = cli.run(new String[] {"-list", "-states", "UNHEALTHY"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1170,7 +1170,7 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--states", "DECOMMISSIONED" });
+    result = cli.run(new String[] {"-list", "-states", "DECOMMISSIONED"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1191,7 +1191,7 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--states", "REBOOTED" });
+    result = cli.run(new String[] {"-list", "-states", "REBOOTED"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1212,7 +1212,7 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--states", "LOST" });
+    result = cli.run(new String[] {"-list", "-states", "LOST"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1236,8 +1236,8 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--states", 
-                                        "NEW,RUNNING,LOST,REBOOTED" });
+    result = cli.run(new String[] {"-list", "-states",
+                                        "NEW,RUNNING,LOST,REBOOTED"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1268,7 +1268,7 @@ public class TestYarnCLI {
     states = nodeStates.toArray(new NodeState[0]);
     when(client.getNodeReports(states))
         .thenReturn(getNodeReports(nodeReports, nodeStates));
-    result = cli.run(new String[] { "-list", "--all" });
+    result = cli.run(new String[] {"-list", "-All"});
     assertEquals(0, result);
     verify(client).getNodeReports(states);
     baos = new ByteArrayOutputStream();
@@ -1294,6 +1294,10 @@ public class TestYarnCLI {
     nodesReportStr = baos.toString("UTF-8");
     Assert.assertEquals(nodesReportStr, sysOutStream.toString());
     verify(sysOut, times(10)).write(any(byte[].class), anyInt(), anyInt());
+
+    sysOutStream.reset();
+    result = cli.run(new String[] { "-list", "-states", "InvalidState"});
+    assertEquals(-1, result);
   }
 
   private List<NodeReport> getNodeReports(
@@ -1884,7 +1888,10 @@ public class TestYarnCLI {
     pw.println("                    details about each node.");
     pw.println(" -showDetails       Works with -list to show more details about each node.");
     pw.println(" -states <States>   Works with -list to filter nodes based on input");
-    pw.println("                    comma-separated list of node states.");
+    pw.println("                    comma-separated list of node states. The valid node");
+    pw.println("                    state can be one of the following:");
+    pw.println("                    NEW,RUNNING,UNHEALTHY,DECOMMISSIONED,LOST,REBOOTED,DEC");
+    pw.println("                    OMMISSIONING,SHUTDOWN.");
     pw.println(" -status <NodeId>   Prints the status report of the node.");
     pw.close();
     String nodesHelpStr = baos.toString("UTF-8");
