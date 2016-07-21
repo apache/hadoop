@@ -21,6 +21,8 @@ Release 2.7.4 - UNRELEASED
     YARN-5353. ResourceManager can leak delegation tokens when they are shared across
     apps. (Jason Lowe via Varun Saxena)
 
+    YARN-3707. RM Web UI queue filter doesn't work. (Wangda Tan via jianhe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
