@@ -136,7 +136,7 @@ import com.google.common.collect.Sets;
  */
 @InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "Hive", "MapReduce", "Pig"})
 @InterfaceStability.Unstable
-public class MiniDFSCluster {
+public class MiniDFSCluster implements AutoCloseable {
 
   private static final String NAMESERVICE_ID_PREFIX = "nameserviceId";
   private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
@@ -3056,5 +3056,10 @@ public class MiniDFSCluster {
     } finally {
       writer.close();
     }
+  }
+
+  @Override
+  public void close() {
+    shutdown();
   }
 }
