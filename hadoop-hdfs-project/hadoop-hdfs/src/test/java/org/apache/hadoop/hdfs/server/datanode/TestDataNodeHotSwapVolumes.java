@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -252,6 +253,27 @@ public class TestDataNodeHotSwapVolumes {
       fail("Should throw IOException: empty inputs.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("No directory is specified.", e);
+    }
+  }
+
+  @Test
+  public void testParseStorageTypeChanges() throws IOException {
+    startDFSCluster(1, 1);
+    DataNode dn = cluster.getDataNodes().get(0);
+    Configuration conf = dn.getConf();
+    List<StorageLocation> oldLocations = DataNode.getStorageLocations(conf);
+
+    // Change storage type of an existing StorageLocation
+    String newLoc = String.format("[%s]%s", StorageType.SSD,
+        oldLocations.get(1).getUri());
+    String newDataDirs = oldLocations.get(0).toString() + "," + newLoc;
+
+    try {
+      dn.parseChangedVolumes(newDataDirs);
+      fail("should throw IOE because storage type changes.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Changing storage type is not allowed", e);
     }
   }
 
