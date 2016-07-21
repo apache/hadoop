@@ -213,6 +213,10 @@ class AclCommands extends FsCommand {
               "Missing either <acl_spec> or <path>");
         }
         aclEntries = AclEntry.parseAclSpec(args.removeFirst(), !cf.getOpt("x"));
+        if (aclEntries.isEmpty()) {
+          throw new HadoopIllegalArgumentException(
+              "Missing <acl_spec> entry");
+        }
       }
 
       if (args.isEmpty()) {
