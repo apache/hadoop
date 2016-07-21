@@ -25,6 +25,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-12991. Conflicting default ports in DelegateToFileSystem.
     (Kai Sasaki via aajisaka)
 
+    HADOOP-11149. Increase the timeout of TestZKFailoverController.
+    (Steve Loughran via wheat9)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
