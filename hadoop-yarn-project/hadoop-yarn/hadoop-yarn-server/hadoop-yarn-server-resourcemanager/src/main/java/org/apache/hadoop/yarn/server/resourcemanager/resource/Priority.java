@@ -27,13 +27,5 @@ public class Priority {
     priority.setPriority(prio);
     return priority;
   }
-  
-  public static class Comparator 
-  implements java.util.Comparator<org.apache.hadoop.yarn.api.records.Priority> {
-    @Override
-    public int compare(org.apache.hadoop.yarn.api.records.Priority o1, org.apache.hadoop.yarn.api.records.Priority o2) {
-      return o1.getPriority() - o2.getPriority();
-    }
-  }
-  
+
 }

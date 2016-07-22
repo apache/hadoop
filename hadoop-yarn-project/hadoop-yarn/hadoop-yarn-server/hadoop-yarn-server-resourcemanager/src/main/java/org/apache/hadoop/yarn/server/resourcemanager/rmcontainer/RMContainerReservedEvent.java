@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 
 /**
  * The event signifying that a container has been reserved.
@@ -33,15 +33,15 @@ public class RMContainerReservedEvent extends RMContainerEvent {
 
   private final Resource reservedResource;
   private final NodeId reservedNode;
-  private final Priority reservedPriority;
+  private final SchedulerRequestKey reservedSchedulerKey;
   
   public RMContainerReservedEvent(ContainerId containerId,
       Resource reservedResource, NodeId reservedNode, 
-      Priority reservedPriority) {
+      SchedulerRequestKey reservedSchedulerKey) {
     super(containerId, RMContainerEventType.RESERVED);
     this.reservedResource = reservedResource;
     this.reservedNode = reservedNode;
-    this.reservedPriority = reservedPriority;
+    this.reservedSchedulerKey = reservedSchedulerKey;
   }
 
   public Resource getReservedResource() {
@@ -52,8 +52,8 @@ public class RMContainerReservedEvent extends RMContainerEvent {
     return reservedNode;
   }
 
-  public Priority getReservedPriority() {
-    return reservedPriority;
+  public SchedulerRequestKey getReservedSchedulerKey() {
+    return reservedSchedulerKey;
   }
 
 }

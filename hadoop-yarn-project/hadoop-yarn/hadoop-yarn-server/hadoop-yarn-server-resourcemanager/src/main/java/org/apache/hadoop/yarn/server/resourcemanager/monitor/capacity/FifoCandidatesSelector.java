@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -343,12 +342,10 @@ public class FifoCandidatesSelector
     Collections.sort(containers, new Comparator<RMContainer>() {
       @Override
       public int compare(RMContainer a, RMContainer b) {
-        Comparator<Priority> c = new org.apache.hadoop.yarn.server
-            .resourcemanager.resource.Priority.Comparator();
-        int priorityComp = c.compare(b.getContainer().getPriority(),
-            a.getContainer().getPriority());
-        if (priorityComp != 0) {
-          return priorityComp;
+        int schedKeyComp = b.getAllocatedSchedulerKey()
+                .compareTo(a.getAllocatedSchedulerKey());
+        if (schedKeyComp != 0) {
+          return schedKeyComp;
         }
         return b.getContainerId().compareTo(a.getContainerId());
       }

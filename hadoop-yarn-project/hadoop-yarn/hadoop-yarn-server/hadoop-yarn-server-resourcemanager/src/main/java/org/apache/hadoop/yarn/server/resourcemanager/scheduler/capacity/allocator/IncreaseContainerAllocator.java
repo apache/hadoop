@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -37,6 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
@@ -115,7 +116,8 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
         node.getUnallocatedResource())) {
       // OK, we can allocate this increase request
       // Unreserve it first
-      application.unreserve(increaseRequest.getPriority(),
+      application.unreserve(
+          increaseRequest.getRMContainer().getAllocatedSchedulerKey(),
           (FiCaSchedulerNode) node, increaseRequest.getRMContainer());
       
       // Notify application
@@ -152,7 +154,8 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       return createSuccessfullyIncreasedCSAssignment(increaseRequest, false);
     } else {
       boolean reservationSucceeded =
-          application.reserveIncreasedContainer(increaseRequest.getPriority(),
+          application.reserveIncreasedContainer(
+              increaseRequest.getRMContainer().getAllocatedSchedulerKey(),
               node, increaseRequest.getRMContainer(),
               increaseRequest.getDeltaCapacity());
       
@@ -228,11 +231,11 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
        * priority, but will skip increase request and move to next increase
        * request if queue-limit or user-limit aren't satisfied 
        */
-      for (Priority priority : application.getPriorities()) {
+      for (SchedulerRequestKey schedulerKey : application.getSchedulerKeys()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Looking at increase request for application="
               + application.getApplicationAttemptId() + " priority="
-              + priority);
+              + schedulerKey.getPriority());
         }
 
         /*
@@ -242,14 +245,14 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
          * cannot be allocated.
          */
         Map<ContainerId, SchedContainerChangeRequest> increaseRequestMap =
-            sinfo.getIncreaseRequests(nodeId, priority);
+            sinfo.getIncreaseRequests(nodeId, schedulerKey);
 
         // We don't have more increase request on this priority, skip..
         if (null == increaseRequestMap) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("There's no increase request for "
                 + application.getApplicationAttemptId() + " priority="
-                + priority);
+                + schedulerKey.getPriority());
           }
           continue;
         }
@@ -318,7 +321,8 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
         // Remove invalid in request requests
         if (!toBeRemovedRequests.isEmpty()) {
           for (SchedContainerChangeRequest req : toBeRemovedRequests) {
-            sinfo.removeIncreaseRequest(req.getNodeId(), req.getPriority(),
+            sinfo.removeIncreaseRequest(req.getNodeId(),
+                req.getRMContainer().getAllocatedSchedulerKey(),
                 req.getContainerId());
           }
         }
@@ -337,8 +341,9 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       
       // We already reserved this increase container
       SchedContainerChangeRequest request =
-          sinfo.getIncreaseRequest(nodeId, reservedContainer.getContainer()
-              .getPriority(), reservedContainer.getContainerId());
+          sinfo.getIncreaseRequest(nodeId,
+              reservedContainer.getAllocatedSchedulerKey(),
+              reservedContainer.getContainerId());
       
       // We will cancel the reservation any of following happens
       // - Container finished

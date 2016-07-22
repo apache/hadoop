@@ -92,8 +92,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
@@ -2316,7 +2321,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals(1, app.getLiveContainers().size());
     // Reserved container should still be at lower priority
     for (RMContainer container : app.getReservedContainers()) {
-      assertEquals(2, container.getReservedPriority().getPriority());
+      assertEquals(2,
+          container.getReservedSchedulerKey().getPriority().getPriority());
     }
     
     // Complete container
@@ -2817,7 +2823,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(node1UpdateEvent);
     assertEquals(1, app.getLiveContainers().size());
   }
-  
+
   @Test
   public void testCancelStrictLocality() throws IOException {
     scheduler.init(conf);
@@ -4485,9 +4491,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // time
     clock.tickSec(DELAY_THRESHOLD_TIME_MS / 1000);
     scheduler.attemptScheduling(node);
-    Map<Priority, Long> lastScheduledContainer =
+    Map<SchedulerRequestKey, Long> lastScheduledContainer =
         fsAppAttempt.getLastScheduledContainer();
-    long initSchedulerTime = lastScheduledContainer.get(priority);
+    long initSchedulerTime =
+        lastScheduledContainer.get(TestUtils.toSchedulerKey(priority));
     assertEquals(DELAY_THRESHOLD_TIME_MS, initSchedulerTime);
   }
 

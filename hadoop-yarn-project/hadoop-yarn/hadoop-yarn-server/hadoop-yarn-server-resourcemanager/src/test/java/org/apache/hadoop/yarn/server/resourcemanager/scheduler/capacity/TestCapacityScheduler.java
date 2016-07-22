@@ -116,6 +116,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
@@ -1244,7 +1246,7 @@ public class TestCapacityScheduler {
     rm1.stop();
   }
   
-  @Test(timeout = 30000)
+  @Test(timeout = 300000)
   public void testRecoverRequestAfterPreemption() throws Exception {
     Configuration conf = new Configuration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -1277,8 +1279,8 @@ public class TestCapacityScheduler {
 
       // Already the node local resource request is cleared from RM after
       // allocation.
-      Assert.assertNull(app.getResourceRequest(request.getPriority(),
-          request.getResourceName()));
+      Assert.assertNull(app.getResourceRequest(
+          SchedulerRequestKey.create(request), request.getResourceName()));
     }
 
     // Call killContainer to preempt the container
@@ -1290,7 +1292,7 @@ public class TestCapacityScheduler {
       // handling.
       Assert.assertEquals(
           1,
-          app.getResourceRequest(request.getPriority(),
+          app.getResourceRequest(SchedulerRequestKey.create(request),
               request.getResourceName()).getNumContainers());
     }
 

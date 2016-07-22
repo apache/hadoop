@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -205,7 +207,9 @@ public class ProportionalCapacityPreemptionPolicyMockFramework {
         Container c = mock(Container.class);
         when(c.getResource()).thenReturn(res);
         when(c.getPriority()).thenReturn(pri);
+        SchedulerRequestKey sk = SchedulerRequestKey.extractFrom(c);
         RMContainerImpl rmc = mock(RMContainerImpl.class);
+        when(rmc.getAllocatedSchedulerKey()).thenReturn(sk);
         when(rmc.getAllocatedNode()).thenReturn(host);
         when(rmc.getNodeLabelExpression()).thenReturn(exp);
         when(rmc.getAllocatedResource()).thenReturn(res);

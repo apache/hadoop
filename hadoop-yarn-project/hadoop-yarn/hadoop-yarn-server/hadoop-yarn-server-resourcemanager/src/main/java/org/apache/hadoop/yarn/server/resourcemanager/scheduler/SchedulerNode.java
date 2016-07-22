@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -308,11 +307,11 @@ public abstract class SchedulerNode {
   /**
    * Reserve container for the attempt on this node.
    * @param attempt Application attempt asking for the reservation.
-   * @param priority Priority of the reservation.
+   * @param schedulerKey Priority of the reservation.
    * @param container Container reserving resources for.
    */
   public abstract void reserveResource(SchedulerApplicationAttempt attempt,
-      Priority priority, RMContainer container);
+      SchedulerRequestKey schedulerKey, RMContainer container);
 
   /**
    * Unreserve resources on this node.
