@@ -81,7 +81,9 @@ The following is a typical storage policy table.
 | 5 | Warm | DISK: 1, ARCHIVE: *n*-1 | ARCHIVE, DISK | ARCHIVE, DISK |
 | 2 | Cold | ARCHIVE: *n* | \<none\> | \<none\> |
 
-Note that the Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
+Note 1: The Lazy\_Persist policy is useful only for single replica blocks. For blocks with more than one replicas, all the replicas will be written to DISK since writing only one of the replicas to RAM\_DISK does not improve the overall performance.
+
+Note 2: For the erasure coded files with striping layout, the suitable storage policies are All\_SSD, Hot, Cold. So, if user sets the policy for striped EC files other than the mentioned policies, it will not follow that policy while creating or moving block.
 
 ### Storage Policy Resolution
 
