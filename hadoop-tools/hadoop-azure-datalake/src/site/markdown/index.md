@@ -79,7 +79,7 @@ Syntax to access Azure data lake storage account over [Webhdfs Specification 2.7
 #### <a name="#OAuth2_Support" />OAuth2 Support
 Usage of Azure Data Lake Storage requires OAuth2 bearer token to be present as part of the HTTPS header as per OAuth2 specification. Valid OAuth2 bearer token should be obtained from Azure Active Directory for valid users who have  access to Azure Data Lake Storage Account.
 
-Azure Active Directory (Azure AD) is Microsoft’s multi-tenant cloud based directory and identity management service. See [https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/](https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/)
+Azure Active Directory (Azure AD) is Microsoftâ€™s multi-tenant cloud based directory and identity management service. See [https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/](https://azure.microsoft.com/en-in/documentation/articles/active-directory-whatis/)
 
 Following sections describes on OAuth2 configuration in core-site.xml.
 
@@ -229,10 +229,6 @@ Add the following properties to your core-site.xml
       <value>https://management.core.windows.net/</value>
     </property>
 
-    <property>
-      <name>fs.defaultFS</name>
-      <value>YOUR ADL STORE URL (e.g., https://example.azuredatalakestore.net) </value>
-    </property>
 
 
 ## <a name="Enabling_ADL" />Enabling ADL Filesystem
