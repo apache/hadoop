@@ -54,6 +54,8 @@ import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.VersionInfo;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -108,6 +110,12 @@ public class PrivateAzureDataLakeFileSystem extends SWebHdfsFileSystem {
   @Override
   public synchronized void initialize(URI uri, Configuration conf)
       throws IOException {
+    if (!conf.getBoolean(DFS_WEBHDFS_OAUTH_ENABLED_KEY,
+                         DFS_WEBHDFS_OAUTH_ENABLED_DEFAULT)) {
+      // clone configuration, enable OAuth2
+      conf = new Configuration(conf);
+      conf.setBoolean(DFS_WEBHDFS_OAUTH_ENABLED_KEY, true);
+    }
     super.initialize(uri, conf);
     overrideOwner = getConf()
         .getBoolean(ADLConfKeys.ADL_DEBUG_OVERRIDE_LOCAL_USER_AS_OWNER,
