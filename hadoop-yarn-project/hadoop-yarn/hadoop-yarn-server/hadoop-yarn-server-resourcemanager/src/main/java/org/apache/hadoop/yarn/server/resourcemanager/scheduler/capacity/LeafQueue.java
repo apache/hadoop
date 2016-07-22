@@ -1265,7 +1265,8 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       if (null != priority) {
-        removed = app.unreserve(rmContainer.getContainer().getPriority(), node,
+        removed = app.unreserve(
+            rmContainer.getAllocatedSchedulerKey(), node,
             rmContainer);
       }
 
@@ -1321,7 +1322,7 @@ public class LeafQueue extends AbstractCSQueue {
       
       // Remove container increase request if it exists
       application.removeIncreaseRequest(node.getNodeID(),
-          rmContainer.getAllocatedPriority(), rmContainer.getContainerId());
+          rmContainer.getAllocatedSchedulerKey(), rmContainer.getContainerId());
 
       boolean removed = false;
 
@@ -1335,7 +1336,7 @@ public class LeafQueue extends AbstractCSQueue {
         // happen under scheduler's lock... 
         // So, this is, in effect, a transaction across application & node
         if (rmContainer.getState() == RMContainerState.RESERVED) {
-          removed = application.unreserve(rmContainer.getReservedPriority(),
+          removed = application.unreserve(rmContainer.getReservedSchedulerKey(),
               node, rmContainer);
         } else {
           removed =
@@ -1785,7 +1786,8 @@ public class LeafQueue extends AbstractCSQueue {
       // Do we have increase request for the same container? If so, remove it
       boolean hasIncreaseRequest =
           app.removeIncreaseRequest(decreaseRequest.getNodeId(),
-              decreaseRequest.getPriority(), decreaseRequest.getContainerId());
+              decreaseRequest.getRMContainer().getAllocatedSchedulerKey(),
+              decreaseRequest.getContainerId());
       if (hasIncreaseRequest) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("While processing decrease requests, found an increase"

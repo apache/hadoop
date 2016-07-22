@@ -120,7 +120,8 @@ public class TestRMContainerImpl {
     assertEquals(RMContainerState.NEW, rmContainer.getState());
     assertEquals(resource, rmContainer.getAllocatedResource());
     assertEquals(nodeId, rmContainer.getAllocatedNode());
-    assertEquals(priority, rmContainer.getAllocatedPriority());
+    assertEquals(priority,
+        rmContainer.getAllocatedSchedulerKey().getPriority());
     verify(writer).containerStarted(any(RMContainer.class));
     verify(publisher).containerCreated(any(RMContainer.class), anyLong());
 
@@ -221,7 +222,8 @@ public class TestRMContainerImpl {
     assertEquals(RMContainerState.NEW, rmContainer.getState());
     assertEquals(resource, rmContainer.getAllocatedResource());
     assertEquals(nodeId, rmContainer.getAllocatedNode());
-    assertEquals(priority, rmContainer.getAllocatedPriority());
+    assertEquals(priority,
+        rmContainer.getAllocatedSchedulerKey().getPriority());
     verify(writer).containerStarted(any(RMContainer.class));
     verify(publisher).containerCreated(any(RMContainer.class), anyLong());
 

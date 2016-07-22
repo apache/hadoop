@@ -51,6 +51,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
@@ -399,5 +401,15 @@ public class TestUtils {
     conf.setUserLimitFactor(C, 100);
 
     return conf;
+  }
+
+  public static SchedulerRequestKey toSchedulerKey(Priority pri) {
+    return SchedulerRequestKey.create(
+        ResourceRequest.newInstance(pri, null, null, 0));
+  }
+
+  public static SchedulerRequestKey toSchedulerKey(int pri) {
+    return SchedulerRequestKey.create(ResourceRequest.newInstance(
+        Priority.newInstance(pri), null, null, 0));
   }
 }

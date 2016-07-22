@@ -22,7 +22,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,6 +33,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -375,13 +378,15 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     Set<RMContainer> set = new HashSet<RMContainer>();
     for (RMContainer container :
             scheduler.getSchedulerApp(app2).getLiveContainers()) {
-      if (container.getAllocatedPriority().getPriority() == 4) {
+      if (container.getAllocatedSchedulerKey().getPriority().getPriority() ==
+          4) {
         set.add(container);
       }
     }
     for (RMContainer container :
             scheduler.getSchedulerApp(app4).getLiveContainers()) {
-      if (container.getAllocatedPriority().getPriority() == 4) {
+      if (container.getAllocatedSchedulerKey().getPriority().getPriority() ==
+          4) {
         set.add(container);
       }
     }
@@ -1399,7 +1404,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    Priority priority = Priority.newInstance(20);
+    SchedulerRequestKey schedulerKey = TestUtils.toSchedulerKey(20);
     String host = "127.0.0.1";
     int GB = 1024;
 
@@ -1412,11 +1417,12 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // Create 3 container requests and place it in ask
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest nodeLocalRequest = createResourceRequest(GB, 1, host,
-            priority.getPriority(), 1, true);
+            schedulerKey.getPriority().getPriority(), 1, true);
     ResourceRequest rackLocalRequest = createResourceRequest(GB, 1,
-            node.getRackName(), priority.getPriority(), 1, true);
+        node.getRackName(), schedulerKey.getPriority().getPriority(), 1,
+        true);
     ResourceRequest offRackRequest = createResourceRequest(GB, 1,
-            ResourceRequest.ANY, priority.getPriority(), 1, true);
+        ResourceRequest.ANY, schedulerKey.getPriority().getPriority(), 1, true);
     ask.add(nodeLocalRequest);
     ask.add(rackLocalRequest);
     ask.add(offRackRequest);
@@ -1435,7 +1441,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     SchedulerApplicationAttempt app = scheduler.getSchedulerApp(appAttemptId);
 
     // ResourceRequest will be empty once NodeUpdate is completed
-    Assert.assertNull(app.getResourceRequest(priority, host));
+    Assert.assertNull(app.getResourceRequest(schedulerKey, host));
 
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     RMContainer rmContainer = app.getRMContainer(containerId1);
@@ -1458,7 +1464,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     Assert.assertEquals(3, requests.size());
     for (ResourceRequest request : requests) {
       Assert.assertEquals(1,
-              app.getResourceRequest(priority, request.getResourceName())
+              app.getResourceRequest(schedulerKey, request.getResourceName())
                       .getNumContainers());
     }
 

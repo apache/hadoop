@@ -98,10 +98,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   protected ApplicationAttemptId attemptId;
   protected Map<ContainerId, RMContainer> liveContainers =
       new HashMap<ContainerId, RMContainer>();
-  protected final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
-      new HashMap<Priority, Map<NodeId, RMContainer>>();
+  protected final Map<SchedulerRequestKey, Map<NodeId, RMContainer>>
+      reservedContainers = new HashMap<>();
 
-  private final Multiset<Priority> reReservations = HashMultiset.create();
+  private final Multiset<SchedulerRequestKey> reReservations =
+      HashMultiset.create();
   
   private Resource resourceLimit = Resource.newInstance(0, 0);
   private boolean unmanagedAM = true;
@@ -137,7 +138,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    * the application successfully schedules a task (at rack or node local), it
    * is reset to 0.
    */
-  Multiset<Priority> schedulingOpportunities = HashMultiset.create();
+  Multiset<SchedulerRequestKey> schedulingOpportunities = HashMultiset.create();
   
   /**
    * Count how many times the application has been given an opportunity to
@@ -146,12 +147,12 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    * incremented, and each time the application successfully schedules a task,
    * it is reset to 0 when schedule any task at corresponding priority.
    */
-  Multiset<Priority> missedNonPartitionedRequestSchedulingOpportunity =
+  Multiset<SchedulerRequestKey> missedNonPartitionedReqSchedulingOpportunity =
       HashMultiset.create();
   
   // Time of the last container scheduled at the current allowed level
-  protected Map<Priority, Long> lastScheduledContainer =
-      new HashMap<Priority, Long>();
+  protected Map<SchedulerRequestKey, Long> lastScheduledContainer =
+      new HashMap<>();
 
   protected Queue queue;
   protected boolean isStopped = false;
@@ -225,8 +226,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return appSchedulingInfo.getUser();
   }
 
-  public Map<String, ResourceRequest> getResourceRequests(Priority priority) {
-    return appSchedulingInfo.getResourceRequests(priority);
+  public Map<String, ResourceRequest> getResourceRequests(
+      SchedulerRequestKey schedulerKey) {
+    return appSchedulingInfo.getResourceRequests(schedulerKey);
   }
 
   public Set<ContainerId> getPendingRelease() {
@@ -237,22 +239,24 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return appSchedulingInfo.getNewContainerId();
   }
 
-  public Collection<Priority> getPriorities() {
-    return appSchedulingInfo.getPriorities();
+  public Collection<SchedulerRequestKey> getSchedulerKeys() {
+    return appSchedulingInfo.getSchedulerKeys();
   }
   
-  public synchronized ResourceRequest getResourceRequest(Priority priority,
-      String resourceName) {
-    return this.appSchedulingInfo.getResourceRequest(priority, resourceName);
+  public synchronized ResourceRequest getResourceRequest(
+      SchedulerRequestKey schedulerKey, String resourceName) {
+    return appSchedulingInfo.getResourceRequest(schedulerKey, resourceName);
   }
 
-  public synchronized int getTotalRequiredResources(Priority priority) {
-    ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
+  public synchronized int getTotalRequiredResources(
+      SchedulerRequestKey schedulerKey) {
+    ResourceRequest request =
+        getResourceRequest(schedulerKey, ResourceRequest.ANY);
     return request == null ? 0 : request.getNumContainers();
   }
 
-  public synchronized Resource getResource(Priority priority) {
-    return appSchedulingInfo.getResource(priority);
+  public synchronized Resource getResource(SchedulerRequestKey schedulerKey) {
+    return appSchedulingInfo.getResource(schedulerKey);
   }
 
   public String getQueueName() {
@@ -308,16 +312,18 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
   }
 
-  protected synchronized void resetReReservations(Priority priority) {
-    reReservations.setCount(priority, 0);
+  protected synchronized void resetReReservations(
+      SchedulerRequestKey schedulerKey) {
+    reReservations.setCount(schedulerKey, 0);
   }
 
-  protected synchronized void addReReservation(Priority priority) {
-    reReservations.add(priority);
+  protected synchronized void addReReservation(
+      SchedulerRequestKey schedulerKey) {
+    reReservations.add(schedulerKey);
   }
 
-  public synchronized int getReReservations(Priority priority) {
-    return reReservations.count(priority);
+  public synchronized int getReReservations(SchedulerRequestKey schedulerKey) {
+    return reReservations.count(schedulerKey);
   }
 
   /**
@@ -366,7 +372,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    */
   public synchronized List<RMContainer> getReservedContainers() {
     List<RMContainer> reservedContainers = new ArrayList<RMContainer>();
-    for (Map.Entry<Priority, Map<NodeId, RMContainer>> e : 
+    for (Map.Entry<SchedulerRequestKey, Map<NodeId, RMContainer>> e :
       this.reservedContainers.entrySet()) {
       reservedContainers.addAll(e.getValue().values());
     }
@@ -374,8 +380,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   public synchronized boolean reserveIncreasedContainer(SchedulerNode node,
-      Priority priority, RMContainer rmContainer, Resource reservedResource) {
-    if (commonReserve(node, priority, rmContainer, reservedResource)) {
+      SchedulerRequestKey schedulerKey, RMContainer rmContainer,
+      Resource reservedResource) {
+    if (commonReserve(node, schedulerKey, rmContainer, reservedResource)) {
       attemptResourceUsage.incReserved(node.getPartition(),
           reservedResource);
       // succeeded
@@ -386,10 +393,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   private synchronized boolean commonReserve(SchedulerNode node,
-      Priority priority, RMContainer rmContainer, Resource reservedResource) {
+      SchedulerRequestKey schedulerKey, RMContainer rmContainer,
+      Resource reservedResource) {
     try {
       rmContainer.handle(new RMContainerReservedEvent(rmContainer
-          .getContainerId(), reservedResource, node.getNodeID(), priority));
+          .getContainerId(), reservedResource, node.getNodeID(), schedulerKey));
     } catch (InvalidStateTransitionException e) {
       // We reach here could be caused by container already finished, return
       // false indicate it fails
@@ -397,10 +405,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     }
     
     Map<NodeId, RMContainer> reservedContainers = 
-        this.reservedContainers.get(priority);
+        this.reservedContainers.get(schedulerKey);
     if (reservedContainers == null) {
       reservedContainers = new HashMap<NodeId, RMContainer>();
-      this.reservedContainers.put(priority, reservedContainers);
+      this.reservedContainers.put(schedulerKey, reservedContainers);
     }
     reservedContainers.put(node.getNodeID(), rmContainer);
 
@@ -408,7 +416,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       LOG.debug("Application attempt " + getApplicationAttemptId()
           + " reserved container " + rmContainer + " on node " + node
           + ". This attempt currently has " + reservedContainers.size()
-          + " reserved containers at priority " + priority
+          + " reserved containers at priority " + schedulerKey.getPriority()
           + "; currentReservation " + reservedResource);
     }
     
@@ -416,7 +424,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   public synchronized RMContainer reserve(SchedulerNode node,
-      Priority priority, RMContainer rmContainer, Container container) {
+      SchedulerRequestKey schedulerKey, RMContainer rmContainer,
+      Container container) {
     // Create RMContainer if necessary
     if (rmContainer == null) {
       rmContainer =
@@ -427,13 +436,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       ((RMContainerImpl)rmContainer).setQueueName(this.getQueueName());
 
       // Reset the re-reservation count
-      resetReReservations(priority);
+      resetReReservations(schedulerKey);
     } else {
       // Note down the re-reservation
-      addReReservation(priority);
+      addReReservation(schedulerKey);
     }
     
-    commonReserve(node, priority, rmContainer, container.getResource());
+    commonReserve(node, schedulerKey, rmContainer, container.getResource());
 
     return rmContainer;
   }
@@ -442,12 +451,13 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
    * Has the application reserved the given <code>node</code> at the
    * given <code>priority</code>?
    * @param node node to be checked
-   * @param priority priority of reserved container
+   * @param schedulerKey scheduler key  of reserved container
    * @return true is reserved, false if not
    */
-  public synchronized boolean isReserved(SchedulerNode node, Priority priority) {
+  public synchronized boolean isReserved(SchedulerNode node,
+      SchedulerRequestKey schedulerKey) {
     Map<NodeId, RMContainer> reservedContainers = 
-        this.reservedContainers.get(priority);
+        this.reservedContainers.get(schedulerKey);
     if (reservedContainers != null) {
       return reservedContainers.containsKey(node.getNodeID());
     }
@@ -471,9 +481,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return resourceLimit;
   }
   
-  public synchronized int getNumReservedContainers(Priority priority) {
+  public synchronized int getNumReservedContainers(
+      SchedulerRequestKey schedulerKey) {
     Map<NodeId, RMContainer> reservedContainers = 
-        this.reservedContainers.get(priority);
+        this.reservedContainers.get(schedulerKey);
     return (reservedContainers == null) ? 0 : reservedContainers.size();
   }
   
@@ -495,8 +506,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   
   public synchronized void showRequests() {
     if (LOG.isDebugEnabled()) {
-      for (Priority priority : getPriorities()) {
-        Map<String, ResourceRequest> requests = getResourceRequests(priority);
+      for (SchedulerRequestKey schedulerKey : getSchedulerKeys()) {
+        Map<String, ResourceRequest> requests =
+            getResourceRequests(schedulerKey);
         if (requests != null) {
           LOG.debug("showRequests:" + " application=" + getApplicationId()
               + " headRoom=" + getHeadroom() + " currentConsumption="
@@ -635,59 +647,66 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
 
   public synchronized int addMissedNonPartitionedRequestSchedulingOpportunity(
-      Priority priority) {
-    missedNonPartitionedRequestSchedulingOpportunity.add(priority);
-    return missedNonPartitionedRequestSchedulingOpportunity.count(priority);
+      SchedulerRequestKey schedulerKey) {
+    missedNonPartitionedReqSchedulingOpportunity.add(schedulerKey);
+    return missedNonPartitionedReqSchedulingOpportunity.count(schedulerKey);
   }
 
   public synchronized void
-      resetMissedNonPartitionedRequestSchedulingOpportunity(Priority priority) {
-    missedNonPartitionedRequestSchedulingOpportunity.setCount(priority, 0);
+      resetMissedNonPartitionedRequestSchedulingOpportunity(
+      SchedulerRequestKey schedulerKey) {
+    missedNonPartitionedReqSchedulingOpportunity.setCount(schedulerKey, 0);
   }
 
   
-  public synchronized void addSchedulingOpportunity(Priority priority) {
-    int count = schedulingOpportunities.count(priority);
+  public synchronized void addSchedulingOpportunity(
+      SchedulerRequestKey schedulerKey) {
+    int count = schedulingOpportunities.count(schedulerKey);
     if (count < Integer.MAX_VALUE) {
-      schedulingOpportunities.setCount(priority, count + 1);
+      schedulingOpportunities.setCount(schedulerKey, count + 1);
     }
   }
   
-  public synchronized void subtractSchedulingOpportunity(Priority priority) {
-    int count = schedulingOpportunities.count(priority) - 1;
-    this.schedulingOpportunities.setCount(priority, Math.max(count,  0));
+  public synchronized void subtractSchedulingOpportunity(
+      SchedulerRequestKey schedulerKey) {
+    int count = schedulingOpportunities.count(schedulerKey) - 1;
+    this.schedulingOpportunities.setCount(schedulerKey, Math.max(count,  0));
   }
 
   /**
    * Return the number of times the application has been given an opportunity
    * to schedule a task at the given priority since the last time it
    * successfully did so.
+   * @param schedulerKey Scheduler Key
+   * @return number of scheduling opportunities
    */
-  public synchronized int getSchedulingOpportunities(Priority priority) {
-    return schedulingOpportunities.count(priority);
+  public synchronized int getSchedulingOpportunities(
+      SchedulerRequestKey schedulerKey) {
+    return schedulingOpportunities.count(schedulerKey);
   }
   
   /**
-   * Should be called when an application has successfully scheduled a container,
-   * or when the scheduling locality threshold is relaxed.
+   * Should be called when an application has successfully scheduled a
+   * container, or when the scheduling locality threshold is relaxed.
    * Reset various internal counters which affect delay scheduling
    *
-   * @param priority The priority of the container scheduled.
+   * @param schedulerKey The priority of the container scheduled.
    */
-  public synchronized void resetSchedulingOpportunities(Priority priority) {
-    resetSchedulingOpportunities(priority, System.currentTimeMillis());
+  public synchronized void resetSchedulingOpportunities(
+      SchedulerRequestKey schedulerKey) {
+    resetSchedulingOpportunities(schedulerKey, System.currentTimeMillis());
   }
 
   // used for continuous scheduling
-  public synchronized void resetSchedulingOpportunities(Priority priority,
-      long currentTimeMs) {
-    lastScheduledContainer.put(priority, currentTimeMs);
-    schedulingOpportunities.setCount(priority, 0);
+  public synchronized void resetSchedulingOpportunities(
+      SchedulerRequestKey schedulerKey, long currentTimeMs) {
+    lastScheduledContainer.put(schedulerKey, currentTimeMs);
+    schedulingOpportunities.setCount(schedulerKey, 0);
   }
 
   @VisibleForTesting
-  void setSchedulingOpportunities(Priority priority, int count) {
-    schedulingOpportunities.setCount(priority, count);
+  void setSchedulingOpportunities(SchedulerRequestKey schedulerKey, int count) {
+    schedulingOpportunities.setCount(schedulerKey, count);
   }
 
   synchronized AggregateAppResourceUsage getRunningAggregateAppResourceUsage() {
@@ -747,7 +766,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     return this.resourceLimit;
   }
 
-  public synchronized Map<Priority, Long> getLastScheduledContainer() {
+  public synchronized Map<SchedulerRequestKey, Long>
+      getLastScheduledContainer() {
     return this.lastScheduledContainer;
   }
 
@@ -892,8 +912,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   }
   
   public synchronized boolean removeIncreaseRequest(NodeId nodeId,
-      Priority priority, ContainerId containerId) {
-    return appSchedulingInfo.removeIncreaseRequest(nodeId, priority,
+      SchedulerRequestKey schedulerKey, ContainerId containerId) {
+    return appSchedulingInfo.removeIncreaseRequest(nodeId, schedulerKey,
         containerId);
   }
   
