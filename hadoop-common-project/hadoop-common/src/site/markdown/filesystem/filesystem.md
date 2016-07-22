@@ -34,7 +34,9 @@ state are not reflected in the filesystem itself: they are unique to the instanc
 of the client.
 
 **Implementation Note**: the static `FileSystem get(URI uri, Configuration conf) ` method MAY return
-a pre-existing instance of a filesystem client class&mdash;a class that may also be in use in other threads. The implementations of `FileSystem` which ship with Apache Hadoop *do not make any attempt to synchronize access to the working directory field*.
+a pre-existing instance of a filesystem client class&mdash;a class that may also be in use in other threads.
+The implementations of `FileSystem` which ship with Apache Hadoop
+*do not make any attempt to synchronize access to the working directory field*.
 
 ## Invariants
 
@@ -117,39 +119,50 @@ code may fail.
 
 #### Implementation Notes
 
-* The FTPFileSystem queries this value from the remote filesystem and may
-fail with a RuntimeException or subclass thereof if there is a connectivity
+* The `FTPFileSystem` queries this value from the remote filesystem and may
+fail with a `RuntimeException` or subclass thereof if there is a connectivity
 problem. The time to execute the operation is not bounded.
 
-### `FileStatus[] listStatus(Path p, PathFilter filter)`
+### `FileStatus[] listStatus(Path path, PathFilter filter)`
 
-A `PathFilter` `f` is a predicate function that returns true iff the path `p`
-meets the filter's conditions.
+Lists entries under a path, `path`.
+
+If `path` refers to a file and the filter accepts it,
+then that file's `FileStatus` entry is returned in a single-element array.
+
+If the path refers to a directory, the call returns a list of all its immediate
+child paths which are accepted by the filter —and does not include the directory
+itself.
+
+A `PathFilter` `filter` is a class whose `accept(path)` returns true iff the path
+`path` meets the filter's conditions.
 
 #### Preconditions
 
-Path must exist:
+Path `path` must exist:
 
-    if not exists(FS, p) : raise FileNotFoundException
+    if not exists(FS, path) : raise FileNotFoundException
 
 #### Postconditions
 
 
-    if isFile(FS, p) and f(p) :
-        result = [getFileStatus(p)]
+    if isFile(FS, path) and filter.accept(path) :
+      result = [ getFileStatus(path) ]
 
-    elif isFile(FS, p) and not f(P) :
-        result = []
+    elif isFile(FS, path) and not filter.accept(P) :
+      result = []
 
-    elif isDir(FS, p):
-       result [getFileStatus(c) for c in children(FS, p) where f(c) == True]
+    elif isDir(FS, path):
+      result = [
+        getFileStatus(c) for c in children(FS, path) if filter.accepts(c)
+      ]
 
 
 **Implicit invariant**: the contents of a `FileStatus` of a child retrieved
 via `listStatus()` are equal to those from a call of `getFileStatus()`
 to the same path:
 
-    forall fs in listStatus(Path) :
+    forall fs in listStatus(path) :
       fs == getFileStatus(fs.path)
 
 **Ordering of results**: there is no guarantee of ordering of the listed entries.
@@ -165,29 +178,28 @@ The details MAY be out of date, including the contents of any directory, the
 attributes of any files, and the existence of the path supplied.
 
 The state of a directory MAY change during the evaluation
-process. This may be reflected in a listing that is split between the pre-
-and post-update FileSystem states.
-
+process.
 
 * After an entry at path `P` is created, and before any other
- changes are made to the FileSystem, `listStatus(P)` MUST
+ changes are made to the filesystem, `listStatus(P)` MUST
  find the file and return its status.
 
-* After an entry at path `P` is deleted, `listStatus(P)`  MUST
+* After an entry at path `P` is deleted, and before any other
+ changes are made to the filesystem, `listStatus(P)` MUST
  raise a `FileNotFoundException`.
 
 * After an entry at path `P` is created, and before any other
- changes are made to the FileSystem, the result of `listStatus(parent(P))` SHOULD
+ changes are made to the filesystem, the result of `listStatus(parent(P))` SHOULD
  include the value of `getFileStatus(P)`.
 
 * After an entry at path `P` is created, and before any other
- changes are made to the FileSystem, the result of `listStatus(parent(P))` SHOULD
+ changes are made to the filesystem, the result of `listStatus(parent(P))` SHOULD
  NOT include the value of `getFileStatus(P)`.
 
 This is not a theoretical possibility, it is observable in HDFS when a
 directory contains many thousands of files.
 
-Consider a directory "d" with the contents:
+Consider a directory `"/d"` with the contents:
 
 	a
 	part-0000001
@@ -197,8 +209,8 @@ Consider a directory "d" with the contents:
 
 
 If the number of files is such that HDFS returns a partial listing in each
-response, then, if a listing `listStatus("d")` takes place concurrently with the operation
-`rename("d/a","d/z"))`, the result may be one of:
+response, then, if a listing `listStatus("/d")` takes place concurrently with the operation
+`rename("/d/a","/d/z"))`, the result may be one of:
 
 	[a, part-0000001, ... , part-9999999]
 	[part-0000001, ... , part-9999999, z]
@@ -211,6 +223,160 @@ these inconsistent views are only likely when listing a directory with many chil
 
 Other filesystems may have stronger consistency guarantees, or return inconsistent
 data more readily.
+
+### `FileStatus[] listStatus(Path path)`
+
+This is exactly equivalent to `listStatus(Path, DEFAULT_FILTER)` where
+`DEFAULT_FILTER.accept(path) = True` for all paths.
+
+The atomicity and consistency constraints are as for
+`listStatus(Path, DEFAULT_FILTER)`.
+
+### `FileStatus[] listStatus(Path[] paths, PathFilter filter)`
+
+Enumerate all files found in the list of directories passed in,
+calling `listStatus(path, filter)` on each one.
+
+As with `listStatus(path, filter)`, the results may be inconsistent.
+That is: the state of the filesystem changed during the operation.
+
+There are no guarantees as to whether paths are listed in a specific order, only
+that they must all be listed, and, at the time of listing, exist.
+
+#### Preconditions
+
+All paths must exist. There is no requirement for uniqueness.
+
+    forall p in paths :
+      exists(fs, p) else raise FileNotFoundException
+
+#### Postconditions
+
+The result is an array whose entries contain every status element
+found in the path listings, and no others.
+
+    result = [listStatus(p, filter) for p in paths]
+
+Implementations MAY merge duplicate entries; and/or optimize the
+operation by recoginizing duplicate paths and only listing the entries
+once.
+
+The default implementation iterates through the list; it does not perform
+any optimizations.
+
+The atomicity and consistency constraints are as for
+`listStatus(Path, PathFilter)`.
+
+
+### `FileStatus[] listStatus(Path[] paths)`
+
+Enumerate all files found in the list of directories passed in,
+calling `listStatus(path, DEFAULT_FILTER)` on each one, where
+the `DEFAULT_FILTER` accepts all path names.
+
+### `RemoteIterator[LocatedFileStatus] listLocatedStatus(Path path, PathFilter filter)`
+
+Return an iterator enumerating the `LocatedFileStatus` entries under
+a path. This is similar to `listStatus(Path)` except that the return
+value is an instance of the `LocatedFileStatus` subclass of a `FileStatus`,
+and that rather than return an entire list, an iterator is returned.
+
+This is actually a `protected` method, directly invoked by
+`listLocatedStatus(Path path):`. Calls to it may be delegated through
+layered filesystems, such as `FilterFileSystem`, so its implementation MUST
+be considered mandatory, even if `listLocatedStatus(Path path)` has been
+implemented in a different manner. There are open JIRAs proposing
+making this method public; it may happen in future.
+
+There is no requirement for the iterator to provide a consistent view
+of the child entries of a path. The default implementation does use
+`listStatus(Path)` to list its children, with its consistency constraints
+already documented. Other implementations may perform the enumeration even
+more dynamically. For example fetching a windowed subset of child entries,
+so avoiding building up large data structures and the
+transmission of large messages.
+In such situations, changes to the filesystem are more likely to become
+visible.
+
+Callers MUST assume that the iteration operation MAY fail if changes
+to the filesystem take place between this call returning and the iteration
+being completely performed.
+
+#### Preconditions
+
+Path `path` must exist:
+
+    exists(FS, path) : raise FileNotFoundException
+
+#### Postconditions
+
+The operation generates a set of results, `resultset`, equal to the result of
+`listStatus(path, filter)`:
+
+    if isFile(FS, path) and filter.accept(path) :
+      resultset =  [ getLocatedFileStatus(FS, path) ]
+
+    elif isFile(FS, path) and not filter.accept(path) :
+      resultset = []
+
+    elif isDir(FS, path) :
+      resultset = [
+        getLocatedFileStatus(FS, c)
+         for c in children(FS, path) where filter.accept(c)
+      ]
+
+The operation `getLocatedFileStatus(FS, path: Path): LocatedFileStatus`
+is defined as a generator of a `LocatedFileStatus` instance `ls`
+where:
+
+    fileStatus = getFileStatus(FS, path)
+
+    bl = getFileBlockLocations(FS, path, 0, fileStatus.len)
+
+    locatedFileStatus = new LocatedFileStatus(fileStatus, bl)
+
+The ordering in which the elements of `resultset` are returned in the iterator
+is undefined.
+
+The atomicity and consistency constraints are as for
+`listStatus(Path, PathFilter)`.
+
+### `RemoteIterator[LocatedFileStatus] listLocatedStatus(Path path)`
+
+The equivalent to `listLocatedStatus(path, DEFAULT_FILTER)`,
+where `DEFAULT_FILTER` accepts all path names.
+
+### `RemoteIterator[LocatedFileStatus] listFiles(Path path, boolean recursive)`
+
+Create an iterator over all files in/under a directory, potentially
+recursing into child directories.
+
+The goal of this operation is to permit large recursive directory scans
+to be handled more efficiently by filesystems, by reducing the amount
+of data which must be collected in a single RPC call.
+
+#### Preconditions
+
+    exists(FS, path) else raise FileNotFoundException
+
+### Postconditions
+
+The outcome is an iterator, whose output from the sequence of
+`iterator.next()` calls can be defined as the set `iteratorset`:
+
+    if not recursive:
+      iteratorset == listStatus(path)
+    else:
+      iteratorset = [
+        getLocatedFileStatus(FS, d)
+          for d in descendants(FS, path)
+      ]
+
+The function `getLocatedFileStatus(FS, d)` is as defined in
+`listLocatedStatus(Path, PathFilter)`.
+
+The atomicity and consistency constraints are as for
+`listStatus(Path, PathFilter)`.
 
 ### `BlockLocation[] getFileBlockLocations(FileStatus f, int s, int l)`
 
@@ -229,19 +395,19 @@ of block locations where the data in the range `[s:s+l]` can be found.
 
     if f == null :
         result = null
-    elif f.getLen()) <= s
+    elif f.getLen() <= s:
         result = []
-    else result = [ locations(FS, b) for all b in blocks(FS, p, s, s+l)]
+    else result = [ locations(FS, b) for b in blocks(FS, p, s, s+l)]
 
-where
+Where
 
       def locations(FS, b) = a list of all locations of a block in the filesystem
 
-      def blocks(FS, p, s, s +  l)  = a list of the blocks containing  data(FS, path)[s:s+l]
+      def blocks(FS, p, s, s +  l)  = a list of the blocks containing data(FS, path)[s:s+l]
 
 
-Note that that as `length(FS, f) ` is defined as 0 if `isDir(FS, f)`, the result
-of `getFileBlockLocations()` on a directory is []
+Note that that as `length(FS, f) ` is defined as `0` if `isDir(FS, f)`, the result
+of `getFileBlockLocations()` on a directory is `[]`
 
 
 If the filesystem is not location aware, it SHOULD return
@@ -256,7 +422,8 @@ If the filesystem is not location aware, it SHOULD return
 
 *A bug in Hadoop 1.0.3 means that a topology path of the same number
 of elements as the cluster topology MUST be provided, hence Filesystems SHOULD
-return that `"/default/localhost"` path
+return that `"/default/localhost"` path. While this is no longer an issue,
+the convention is generally retained.
 
 
 ###  `BlockLocation[] getFileBlockLocations(Path P, int S, int L)`
@@ -270,10 +437,13 @@ return that `"/default/localhost"` path
 
 #### Postconditions
 
-    result = getFileBlockLocations(getStatus(P), S, L)
+    result = getFileBlockLocations(getFileStatus(FS, P), S, L)
 
 
 ###  `long getDefaultBlockSize()`
+
+Get the "default" block size for a filesystem. This often used during
+split calculations to divide work optimally across a set of worker processes.
 
 #### Preconditions
 
@@ -293,6 +463,9 @@ A FileSystem MAY make this user-configurable (the S3 and Swift filesystem client
 
 ###  `long getDefaultBlockSize(Path p)`
 
+Get the "default" block size for a path —that is, the block size to be used
+when writing objects to a path in the filesystem.
+
 #### Preconditions
 
 
@@ -308,8 +481,18 @@ Filesystems that support mount points may have different default values for
 different paths, in which case the specific default value for the destination path
 SHOULD be returned.
 
+It is not an error if the path does not exist: the default/recommended value
+for that part of the filesystem MUST be returned.
 
 ###  `long getBlockSize(Path p)`
+
+This method is exactly equivalent to querying the block size
+of the `FileStatus` structure returned in `getFileStatus(p)`.
+It is deprecated in order to encourage users to make a single call to
+`getFileStatus(p)` and then use the result to examine multiple attributes
+of the file (e.g. length, type, block size). If more than one attribute is queried,
+This can become a significant performance optimization —and reduce load
+on the filesystem.
 
 #### Preconditions
 
@@ -321,7 +504,7 @@ SHOULD be returned.
 
     result == getFileStatus(P).getBlockSize()
 
-The outcome of this operation MUST be identical to that  contained in
+The outcome of this operation MUST be identical to that contained in
 the `FileStatus` returned from `getFileStatus(P)`.
 
 
@@ -415,7 +598,7 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3N, Swift and potentially other Object Stores do not currently change the FS state
+* S3N, S3A, Swift and potentially other Object Stores do not currently change the FS state
 until the output stream `close()` operation is completed.
 This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
  and potentially confuse file/directory logic
@@ -827,7 +1010,7 @@ Truncate cannot be performed on a file, which is open for writing or appending.
 Return: `true`, if truncation is finished and the file can be immediately
 opened for appending, or `false` otherwise.
 
-HDFS: HDFS reutrns `false` to indicate that a background process of adjusting
+HDFS: HDFS returns `false` to indicate that a background process of adjusting
 the length of the last block has been started, and clients should wait for it
 to complete before they can proceed with further file updates.
 
@@ -835,3 +1018,145 @@ to complete before they can proceed with further file updates.
 
 If an input stream is open when truncate() occurs, the outcome of read
 operations related to the part of the file being truncated is undefined.
+
+
+
+## <a name="RemoteIterator"></a> interface `RemoteIterator`
+
+The `RemoteIterator` interface is used as a remote-access equivalent
+to `java.util.Iterator`, allowing the caller to iterate through a finite sequence
+of remote data elements.
+
+The core differences are
+
+1. `Iterator`'s optional `void remove()` method is not supported.
+2. For those methods which are supported, `IOException` exceptions
+may be raised.
+
+```java
+public interface RemoteIterator<E> {
+  boolean hasNext() throws IOException;
+  E next() throws IOException;
+}
+```
+
+The basic view of the interface is that `hasNext()` being true implies
+that `next()` will successfully return the next entry in the list:
+
+```
+while hasNext(): next()
+```
+
+Equally, a successful call to `next()` implies that had `hasNext()` been invoked
+prior to the call to `next()`, it would have been true.
+
+```java
+boolean elementAvailable = hasNext();
+try {
+  next();
+  assert elementAvailable;
+} catch (NoSuchElementException e) {
+  assert !elementAvailable
+}
+```
+
+The `next()` operator MUST iterate through the list of available
+results, *even if no calls to `hasNext()` are made*.
+
+That is, it is possible to enumerate the results through a loop which
+only terminates when a `NoSuchElementException` exception is raised.
+
+```java
+try {
+  while (true) {
+    process(iterator.next());
+  }
+} catch (NoSuchElementException ignored) {
+  // the end of the list has been reached
+}
+```
+
+The output of the iteration is equivalent to the loop
+
+```java
+while (iterator.hasNext()) {
+  process(iterator.next());
+}
+```
+
+As raising exceptions is an expensive operation in JVMs, the `while(hasNext())`
+loop option is more efficient. (see also [Concurrency and the Remote Iterator](#RemoteIteratorConcurrency)
+for a dicussion on this topic).
+
+Implementors of the interface MUST support both forms of iterations; authors
+of tests SHOULD verify that both iteration mechanisms work.
+
+The iteration is required to return a finite sequence; both forms
+of loop MUST ultimately terminate. All implementations of the interface in the
+Hadoop codebase meet this requirement; all consumers assume that it holds.
+
+### `boolean hasNext()`
+
+Returns true if-and-only-if a subsequent single call to `next()` would
+return an element rather than raise an exception.
+
+#### Preconditions
+
+#### Postconditions
+
+    result = True ==> next() will succeed.
+    result = False ==> next() will raise an exception
+
+Multiple calls to `hasNext()`, without any intervening `next()` calls, MUST
+return the same value.
+
+```java
+boolean has1 = iterator.hasNext();
+boolean has2 = iterator.hasNext();
+assert has1 == has2;
+```
+
+### `E next()`
+
+Return the next element in the iteration.
+
+#### Preconditions
+
+    hasNext() else raise java.util.NoSuchElementException
+
+#### Postconditions
+
+    result = the next element in the iteration
+
+Repeated calls to `next()` return
+subsequent elements in the sequence, until the entire sequence has been returned.
+
+
+### <a name="RemoteIteratorConcurrency"></a>Concurrency and the Remote Iterator
+
+The primary use of `RemoteIterator` in the filesystem APIs is to list files
+on (possibly remote) filesystems. These filesystems are invariably accessed
+concurrently; the state of the filesystem MAY change between a `hasNext()`
+probe and the invocation of the `next()` call.
+
+Accordingly, a robust iteration through a `RemoteIterator` would catch and
+discard `NoSuchElementException` exceptions raised during the process, which
+could be done through the `while(true)` iteration example above, or
+through a `hasNext()/next()` sequence with an outer `try/catch` clause to
+catch a `NoSuchElementException` alongside other exceptions which may be
+raised during a failure (for example, a `FileNotFoundException`)
+
+
+```java
+try {
+  while (iterator.hasNext()) {
+    process(iterator.next());
+  }
+} catch (NoSuchElementException ignored) {
+  // the end of the list has been reached
+}
+```
+
+It is notable that this is *not* done in the Hadoop codebase. This does not imply
+that robust loops are not recommended —more that the concurrency
+problems were not considered during the implementation of these loops.
