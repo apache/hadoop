@@ -1275,12 +1275,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 
   @Deprecated
-  public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
-      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
-  @Deprecated
-  public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT =
-      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
-  @Deprecated
   public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
       HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL;
   @Deprecated

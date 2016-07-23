@@ -3377,15 +3377,6 @@
 </property>
 
 <property>
-  <name>dfs.client.use.legacy.blockreader</name>
-  <value>false</value>
-  <description>
-    If true, use the RemoteBlockReader class for local read short circuit.  If false, use
-    the newer RemoteBlockReader2 class.
-  </description>
-</property>
-
-<property>
   <name>dfs.client.write.byte-array-manager.count-limit</name>
   <value>2048</value>
   <description>
