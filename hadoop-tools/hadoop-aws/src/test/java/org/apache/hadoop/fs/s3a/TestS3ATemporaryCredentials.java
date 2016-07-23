@@ -19,10 +19,10 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.net.URI;
 
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProviderChain;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenResult;
@@ -31,6 +31,7 @@ import com.amazonaws.services.securitytoken.model.Credentials;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.conf.Configuration;
 
 import org.junit.Test;
@@ -53,9 +54,6 @@ public class TestS3ATemporaryCredentials extends AbstractFSContractTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestS3ATemporaryCredentials.class);
-
-  private S3AFileSystem fs;
-
 
   private static final String PROVIDER_CLASS =
       "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider";
@@ -84,15 +82,15 @@ public class TestS3ATemporaryCredentials extends AbstractFSContractTestBase {
       skip("STS functional tests disabled");
     }
 
-    String parentAccessKey = conf.getTrimmed(ACCESS_KEY, null);
-    String parentSecretKey = conf.getTrimmed(SECRET_KEY, null);
-    String stsEndpoint = conf.getTrimmed(TEST_STS_ENDPOINT, "");
-    AWSCredentialsProviderChain parentCredentials;
-    parentCredentials = new AWSCredentialsProviderChain(
-      new BasicAWSCredentialsProvider(parentAccessKey, parentSecretKey),
-      new InstanceProfileCredentialsProvider()
-    );
+    S3xLoginHelper.Login login = S3AUtils.getAWSAccessKeys(
+        URI.create("s3a://foobar"), conf);
+    if (!login.hasLogin()) {
+      skip("testSTS disabled because AWS credentials not configured");
+    }
+    AWSCredentialsProvider parentCredentials = new BasicAWSCredentialsProvider(
+        login.getUser(), login.getPassword());
 
+    String stsEndpoint = conf.getTrimmed(TEST_STS_ENDPOINT, "");
     AWSSecurityTokenServiceClient stsClient;
     stsClient = new AWSSecurityTokenServiceClient(parentCredentials);
     if (!stsEndpoint.isEmpty()) {
