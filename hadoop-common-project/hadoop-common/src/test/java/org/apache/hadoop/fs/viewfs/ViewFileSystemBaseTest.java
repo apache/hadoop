@@ -19,42 +19,41 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
-import static org.apache.hadoop.fs.FileSystemTestHelper.*;
-import org.apache.hadoop.fs.permission.AclEntry;
-import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
-import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 
 /**
@@ -885,4 +884,35 @@ abstract public class ViewFileSystemBaseTest {
   public void testInternalDeleteSnapshot() throws IOException {
     fsView.deleteSnapshot(new Path("/internalDir"), "snap1");
   }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalSetStoragePolicy() throws IOException {
+    fsView.setStoragePolicy(new Path("/internalDir"), "HOT");
+  }
+
+  @Test(expected = AccessControlException.class)
+  public void testInternalUnsetStoragePolicy() throws IOException {
+    fsView.unsetStoragePolicy(new Path("/internalDir"));
+  }
+
+  @Test(expected = NotInMountpointException.class)
+  public void testInternalgetStoragePolicy() throws IOException {
+    fsView.getStoragePolicy(new Path("/internalDir"));
+  }
+
+  @Test
+  public void testInternalGetAllStoragePolicies() throws IOException {
+    Collection<? extends BlockStoragePolicySpi> policies =
+        fsView.getAllStoragePolicies();
+    for (FileSystem fs : fsView.getChildFileSystems()) {
+      try {
+        for (BlockStoragePolicySpi s : fs.getAllStoragePolicies()) {
+          assertTrue("Missing policy: " + s, policies.contains(s));
+        }
+      } catch (UnsupportedOperationException e) {
+        // ignore
+      }
+    }
+  }
+
 }

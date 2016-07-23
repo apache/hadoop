@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -48,6 +50,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -56,7 +59,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
 import org.apache.hadoop.security.AccessControlException;
@@ -760,6 +762,43 @@ public class ViewFileSystem extends FileSystem {
     res.targetFileSystem.deleteSnapshot(res.remainingPath, snapshotName);
   }
 
+  @Override
+  public void setStoragePolicy(Path src, String policyName) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
+        true);
+    res.targetFileSystem.setStoragePolicy(res.remainingPath, policyName);
+  }
+
+  @Override
+  public void unsetStoragePolicy(Path src) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
+        true);
+    res.targetFileSystem.unsetStoragePolicy(res.remainingPath);
+  }
+
+  @Override
+  public BlockStoragePolicySpi getStoragePolicy(Path src) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(src),
+        true);
+    return res.targetFileSystem.getStoragePolicy(res.remainingPath);
+  }
+
+  @Override
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    Collection<BlockStoragePolicySpi> allPolicies = new HashSet<>();
+    for (FileSystem fs : getChildFileSystems()) {
+      try {
+        Collection<? extends BlockStoragePolicySpi> policies =
+            fs.getAllStoragePolicies();
+        allPolicies.addAll(policies);
+      } catch (UnsupportedOperationException e) {
+        // ignored
+      }
+    }
+    return allPolicies;
+  }
+
   /*
    * An instance of this class represents an internal dir of the viewFs 
    * that is internal dir of the mount table.
@@ -1078,6 +1117,40 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public QuotaUsage getQuotaUsage(Path f) throws IOException {
       throw new NotInMountpointException(f, "getQuotaUsage");
+    }
+
+    @Override
+    public void setStoragePolicy(Path src, String policyName)
+        throws IOException {
+      checkPathIsSlash(src);
+      throw readOnlyMountTable("setStoragePolicy", src);
+    }
+
+    @Override
+    public void unsetStoragePolicy(Path src) throws IOException {
+      checkPathIsSlash(src);
+      throw readOnlyMountTable("unsetStoragePolicy", src);
+    }
+
+    @Override
+    public BlockStoragePolicySpi getStoragePolicy(Path src) throws IOException {
+      throw new NotInMountpointException(src, "getStoragePolicy");
+    }
+
+    @Override
+    public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+        throws IOException {
+      Collection<BlockStoragePolicySpi> allPolicies = new HashSet<>();
+      for (FileSystem fs : getChildFileSystems()) {
+        try {
+          Collection<? extends BlockStoragePolicySpi> policies =
+              fs.getAllStoragePolicies();
+          allPolicies.addAll(policies);
+        } catch (UnsupportedOperationException e) {
+          // ignored
+        }
+      }
+      return allPolicies;
     }
   }
 }
