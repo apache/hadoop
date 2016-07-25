@@ -80,13 +80,13 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public void recomputeShares() {
+  public void updateInternal(boolean checkStarvation) {
     readLock.lock();
     try {
       policy.computeShares(childQueues, getFairShare());
       for (FSQueue childQueue : childQueues) {
         childQueue.getMetrics().setFairShare(childQueue.getFairShare());
-        childQueue.recomputeShares();
+        childQueue.updateInternal(checkStarvation);
       }
     } finally {
       readLock.unlock();
@@ -302,7 +302,7 @@ public class FSParentQueue extends FSQueue {
     }
     super.policy = policy;
   }
-  
+
   public void incrementRunnableApps() {
     writeLock.lock();
     try {
