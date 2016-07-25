@@ -63,6 +63,34 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
     public Iterator<BlockReportReplica> iterator() {
       return Collections.emptyIterator();
     }
+    @Override
+    public boolean isStorageReport() {
+      return false;
+    }
+  };
+
+  // STORAGE_REPORT is used to report all storages in the DN
+  public static final BlockListAsLongs STORAGE_REPORT = new BlockListAsLongs() {
+    @Override
+    public int getNumberOfBlocks() {
+      return -1;
+    }
+    @Override
+    public ByteString getBlocksBuffer() {
+      return ByteString.EMPTY;
+    }
+    @Override
+    public long[] getBlockListAsLongs() {
+      return EMPTY_LONGS;
+    }
+    @Override
+    public Iterator<BlockReportReplica> iterator() {
+      return Collections.emptyIterator();
+    }
+    @Override
+    public boolean isStorageReport() {
+      return true;
+    }
   };
 
   /**
@@ -253,6 +281,13 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
   abstract public long[] getBlockListAsLongs();
 
   /**
+   * Return true for STORAGE_REPORT BlocksListsAsLongs.
+   * Otherwise return false.
+   * @return boolean
+   */
+  abstract public boolean isStorageReport();
+
+  /**
    * Returns a singleton iterator over blocks in the block report.  Do not
    * add the returned blocks to a collection.
    * @return Iterator
@@ -392,6 +427,11 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
     }
 
     @Override
+    public boolean isStorageReport() {
+      return false;
+    }
+
+    @Override
     public Iterator<BlockReportReplica> iterator() {
       return new Iterator<BlockReportReplica>() {
         final BlockReportReplica block = new BlockReportReplica();
@@ -472,6 +512,11 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
         longs[i] = values.get(i);
       }
       return longs;
+    }
+
+    @Override
+    public boolean isStorageReport() {
+      return false;
     }
 
     @Override
