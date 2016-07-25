@@ -12,6 +12,9 @@ Release 2.7.4 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6744. Increase timeout on TestDFSIO tests (Eric Badger via
+    jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
