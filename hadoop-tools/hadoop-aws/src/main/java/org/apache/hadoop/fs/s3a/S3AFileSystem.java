@@ -588,9 +588,24 @@ public class S3AFileSystem extends FileSystem {
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     String key = pathToKey(f);
+    S3AFileStatus status = null;
+    try {
+      // get the status or throw an FNFE
+      status = getFileStatus(f);
 
-    if (!overwrite && exists(f)) {
-      throw new FileAlreadyExistsException(f + " already exists");
+      // if the thread reaches here, there is something at the path
+      if (status.isDirectory()) {
+        // path references a directory: automatic error
+        throw new FileAlreadyExistsException(f + " is a directory");
+      }
+      if (!overwrite) {
+        // path references a file and overwrite is disabled
+        throw new FileAlreadyExistsException(f + " already exists");
+      }
+      LOG.debug("Overwriting file {}", f);
+    } catch (FileNotFoundException e) {
+      // this means the file is not found
+
     }
     instrumentation.fileCreated();
     if (getConf().getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD)) {
