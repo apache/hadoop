@@ -236,7 +236,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_WRITE, execTime);
   }
 
-  @Test (timeout = 3000)
+  @Test (timeout = 10000)
   public void testRead() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -245,7 +245,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ, execTime);
   }
 
-  @Test (timeout = 3000)
+  @Test (timeout = 10000)
   public void testReadRandom() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -255,7 +255,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_RANDOM, execTime);
   }
 
-  @Test (timeout = 3000)
+  @Test (timeout = 10000)
   public void testReadBackward() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -265,7 +265,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_BACKWARD, execTime);
   }
 
-  @Test (timeout = 3000)
+  @Test (timeout = 10000)
   public void testReadSkip() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -275,7 +275,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_SKIP, execTime);
   }
 
-  @Test (timeout = 6000)
+  @Test (timeout = 10000)
   public void testAppend() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
