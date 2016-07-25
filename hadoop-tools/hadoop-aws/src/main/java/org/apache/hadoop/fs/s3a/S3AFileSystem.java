@@ -739,7 +739,7 @@ public class S3AFileSystem extends FileSystem {
       } else {
         copyFile(srcKey, dstKey, srcStatus.getLen());
       }
-      delete(src, false);
+      innerDelete(srcStatus, false);
     } else {
       LOG.debug("rename: renaming directory {} to {}", src, dst);
 
@@ -1065,16 +1065,20 @@ public class S3AFileSystem extends FileSystem {
    */
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
-      return innerDelete(f, recursive);
+      return innerDelete(getFileStatus(f), recursive);
+    } catch (FileNotFoundException e) {
+      LOG.debug("Couldn't delete {} - does not exist", f);
+      instrumentation.errorIgnored();
+      return false;
     } catch (AmazonClientException e) {
       throw translateException("delete", f, e);
     }
   }
 
   /**
-   * Delete a path. See {@link #delete(Path, boolean)}.
+   * Delete an object. See {@link #delete(Path, boolean)}.
    *
-   * @param f the path to delete.
+   * @param status fileStatus object
    * @param recursive if path is a directory and set to
    * true, the directory is deleted else throws an exception. In
    * case of a file the recursive can be set to either true or false.
@@ -1082,17 +1086,10 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException due to inability to delete a directory or file.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  private boolean innerDelete(Path f, boolean recursive) throws IOException,
-      AmazonClientException {
+  private boolean innerDelete(S3AFileStatus status, boolean recursive)
+      throws IOException, AmazonClientException {
+    Path f = status.getPath();
     LOG.debug("Delete path {} - recursive {}", f , recursive);
-    S3AFileStatus status;
-    try {
-      status = getFileStatus(f);
-    } catch (FileNotFoundException e) {
-      LOG.debug("Couldn't delete {} - does not exist", f);
-      instrumentation.errorIgnored();
-      return false;
-    }
 
     String key = pathToKey(f);
 
@@ -1318,8 +1315,9 @@ public class S3AFileSystem extends FileSystem {
       throws IOException, FileAlreadyExistsException, AmazonClientException {
     LOG.debug("Making directory: {}", f);
     incrementStatistic(INVOCATION_MKDIRS);
+    FileStatus fileStatus;
     try {
-      FileStatus fileStatus = getFileStatus(f);
+      fileStatus = getFileStatus(f);
 
       if (fileStatus.isDirectory()) {
         return true;
@@ -1327,10 +1325,10 @@ public class S3AFileSystem extends FileSystem {
         throw new FileAlreadyExistsException("Path is a file: " + f);
       }
     } catch (FileNotFoundException e) {
-      Path fPart = f;
+      Path fPart = f.getParent();
       do {
         try {
-          FileStatus fileStatus = getFileStatus(fPart);
+          fileStatus = getFileStatus(fPart);
           if (fileStatus.isDirectory()) {
             break;
           }
