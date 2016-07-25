@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -117,6 +116,23 @@ public class TestCapacityOverTimePolicy {
             res, minAlloc), false));
   }
 
+  @Test(expected = PlanningException.class)
+  public void testAllocationLargerThanValidWindow() throws IOException,
+      PlanningException {
+    // generate allocation that exceed the validWindow
+    int[] f = generateData(25*3600, (int) Math.ceil(0.69 * totCont));
+
+    ReservationDefinition rDef =
+        ReservationSystemTestUtil.createSimpleReservationDefinition(
+            initTime, initTime + f.length + 1, f.length);
+    assertTrue(plan.toString(),
+        plan.addReservation(new InMemoryReservationAllocation(
+            ReservationSystemTestUtil.getNewReservationId(), rDef, "u1",
+            "dedicated", initTime, initTime + f.length,
+            ReservationSystemTestUtil.generateAllocation(initTime, step, f),
+            res, minAlloc), false));
+  }
+
   @Test
   public void testSimplePass2() throws IOException, PlanningException {
     // generate allocation from single tenant that exceed avg momentarily but
@@ -151,7 +167,7 @@ public class TestCapacityOverTimePolicy {
     }
   }
 
-  @Test(expected = ResourceOverCommitException.class)
+  @Test(expected = PlanningQuotaException.class)
   public void testMultiTenantFail() throws IOException, PlanningException {
     // generate allocation from multiple tenants that exceed tot capacity
     int[] f = generateData(3600, (int) Math.ceil(0.25 * totCont));
