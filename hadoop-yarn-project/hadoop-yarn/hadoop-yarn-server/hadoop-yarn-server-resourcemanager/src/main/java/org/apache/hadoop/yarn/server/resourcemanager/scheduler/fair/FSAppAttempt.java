@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -726,8 +727,15 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
         ResourceRequest rackLocalRequest = getResourceRequest(priority,
             node.getRackName());
+        if (rackLocalRequest != null && !getQueue().checkQueueResourceLimit(rackLocalRequest.getCapability()) ) {
+          rackLocalRequest = null;  
+        }
+            
         ResourceRequest localRequest = getResourceRequest(priority,
             node.getNodeName());
+        if (localRequest != null && !getQueue().checkQueueResourceLimit(localRequest.getCapability()) ) { 
+          localRequest = null;
+        } 
 
         if (localRequest != null && !localRequest.getRelaxLocality()) {
           LOG.warn("Relax locality off is not supported on local request: "
@@ -764,8 +772,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
               NodeType.RACK_LOCAL, reserved);
         }
 
-        ResourceRequest offSwitchRequest =
-            getResourceRequest(priority, ResourceRequest.ANY);
+        ResourceRequest offSwitchRequest = null; 
+        Map<String, ResourceRequest> resourceRequestList = getResourceRequests(priority);
+        if(resourceRequestList != null) { 
+          offSwitchRequest = getRequestByQResourceLimit(resourceRequestList);
+        }
+            
         if (offSwitchRequest != null && !offSwitchRequest.getRelaxLocality()) {
           continue;
         }
@@ -782,6 +794,26 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
     return Resources.none();
   }
+
+   /**
+    * location: resource requests in a application -> a priority; <br/>
+    * choose a resource request depending on the queue's resource limit check
+    * @param resourceRequestList 
+    * @return 
+    */
+   @SuppressWarnings("rawtypes") 
+   private ResourceRequest getRequestByQResourceLimit(  
+     Map<String, ResourceRequest> resourceRequestList) {
+ 	Iterator iter = resourceRequestList.entrySet().iterator(); 
+ 	while( iter.hasNext() ) { 
+ 		Map.Entry entry = (Map.Entry)iter.next(); 
+ 		ResourceRequest rRequest = (ResourceRequest) entry.getValue();
+ 		if ( getQueue().checkQueueResourceLimit(rRequest.getCapability()) ) {
+ 			return rRequest; 
+ 		}
+ 	}
+ 	return null; 
+   }
 
   /**
    * Whether this app has containers requests that could be satisfied on the

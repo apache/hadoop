@@ -309,6 +309,21 @@ public abstract class FSQueue implements Queue, Schedulable {
     }
     return true;
   }
+  
+  /**
+   * helper method to check if this resource request should be assigned <br/>
+   * this check based on a equation:  resourceRequest + resourceUsed should be less than resourceMaxLimit
+   * @param resource
+   * @return   
+   */
+  public boolean checkQueueResourceLimit(Resource resource) {
+	Resource resourceWillUse = Resources.add(resource, getResourceUsage());
+	if ( !Resources.fitsIn( resourceWillUse,
+		scheduler.getAllocationConfiguration().getMaxResources(getName())) ) {
+		return false; 
+	}
+	return true; 
+  }
 
   /**
    * Returns true if queue has at least one app running.
