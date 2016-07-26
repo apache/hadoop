@@ -178,7 +178,6 @@ public class ResourceUtils {
       synchronized (ResourceUtils.class) {
         if (lock == null) {
           synchronized (ResourceUtils.class) {
-            lock = new Object();
             Map<String, ResourceInformation> resources = new HashMap<>();
             if (conf == null) {
               conf = new YarnConfiguration();
@@ -187,10 +186,12 @@ public class ResourceUtils {
               addResourcesFileToConf(resourceFile, conf);
               LOG.debug("Found " + resourceFile + ", adding to configuration");
               initializeResourcesMap(conf, resources);
+              lock = new Object();
             } catch (FileNotFoundException fe) {
               LOG.info("Unable to find '" + resourceFile
                   + "'. Falling back to memory and vcores as resources", fe);
               initializeResourcesMap(conf, resources);
+              lock = new Object();
             }
           }
         }
@@ -268,12 +269,12 @@ public class ResourceUtils {
       synchronized (ResourceUtils.class) {
         if (nodeLock == null) {
           synchronized (ResourceUtils.class) {
-            nodeLock = new Object();
             Map<String, ResourceInformation> nodeResources =
                 initializeNodeResourceInformation(conf);
             addManadtoryResources(nodeResources);
             checkMandatatoryResources(nodeResources);
             readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
+            nodeLock = new Object();
           }
         }
       }
