@@ -53,7 +53,8 @@ public class TestLazyPersistLockedMemory extends LazyPersistTestCase {
    * fall back to disk.
    */
   @Test
-  public void testWithNoLockedMemory() throws IOException {
+  public void testWithNoLockedMemory()
+      throws IOException, TimeoutException, InterruptedException {
     getClusterBuilder().setNumDatanodes(1)
                        .setMaxLockedMemory(0).build();
 
