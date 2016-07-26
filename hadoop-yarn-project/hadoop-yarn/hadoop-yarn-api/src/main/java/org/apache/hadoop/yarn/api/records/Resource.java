@@ -327,6 +327,8 @@ public abstract class Resource implements Comparable<Resource> {
     otherResources = other.getResources();
     long diff = thisResources.size() - otherResources.size();
     if (diff == 0) {
+      // compare memory and vcores first(in that order) to preserve
+      // existing behaviour
       if (thisResources.keySet().equals(otherResources.keySet())) {
         diff = this.getMemorySize() - other.getMemorySize();
         if (diff == 0) {
@@ -335,6 +337,11 @@ public abstract class Resource implements Comparable<Resource> {
         if (diff == 0) {
           for (Map.Entry<String, ResourceInformation> entry : thisResources
               .entrySet()) {
+            if (entry.getKey().equals(ResourceInformation.MEMORY_MB.getName())
+                || entry.getKey()
+                .equals(ResourceInformation.VCORES.getName())) {
+              continue;
+            }
             diff =
                 entry.getValue().compareTo(otherResources.get(entry.getKey()));
             if (diff != 0) {
