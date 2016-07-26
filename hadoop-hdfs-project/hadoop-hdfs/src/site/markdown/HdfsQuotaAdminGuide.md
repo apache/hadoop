@@ -100,14 +100,17 @@ Quotas are managed by a set of commands available only to the administrator.
     gigabytes and 2t for 2 terabytes etc. Best effort for each
     directory, with faults reported if N is neither zero nor a positive
     integer, the directory does not exist or it is a file, or the
-    directory would immediately exceed the new quota.
+    directory would immediately exceed the new quota. The storage type
+    specific quota is set when -storageType option is specified. Available
+    storageTypes are RAM_DISK,DISK,SSD,ARCHIVE.
 
 *   `hdfs dfsadmin -clrSpaceQuota -storageType <storagetype> <directory>...<directory>`
 
     Remove storage type quota specified for each directory. Best effort
     for each directory, with faults reported if the directory does not exist or
     it is a file. It is not a fault if the directory has no storage type quota on
-    for storage type specified.
+    for storage type specified. The storage type specific quota is cleared when -storageType
+    option is specified. Available storageTypes are RAM_DISK,DISK,SSD,ARCHIVE.
 
 Reporting Command
 -----------------
