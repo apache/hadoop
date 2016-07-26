@@ -397,10 +397,25 @@ public class DominantResourceCalculator extends ResourceCalculator {
   }
 
   @Override
-  public boolean fitsIn(Resource cluster,
-      Resource smaller, Resource bigger) {
-    return smaller.getMemorySize() <= bigger.getMemorySize()
-        && smaller.getVirtualCores() <= bigger.getVirtualCores();
+  public boolean fitsIn(Resource cluster, Resource smaller, Resource bigger) {
+    for (String resource : resourceNames) {
+      try {
+        ResourceInformation sResourceInformation =
+            smaller.getResourceInformation(resource);
+        ResourceInformation bResourceInformation =
+            bigger.getResourceInformation(resource);
+        Long sResourceValue = UnitsConversionUtil
+            .convert(sResourceInformation.getUnits(),
+                bResourceInformation.getUnits(),
+                sResourceInformation.getValue());
+        if(sResourceValue > bResourceInformation.getValue()) {
+          return false;
+        }
+      } catch (YarnException ye) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
