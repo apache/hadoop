@@ -242,6 +242,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   public static class JaasConfiguration extends
       javax.security.auth.login.Configuration {
 
+    private final javax.security.auth.login.Configuration baseConfig =
+        javax.security.auth.login.Configuration.getConfiguration();
     private static AppConfigurationEntry[] entry;
     private String entryName;
 
@@ -277,7 +279,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-      return (entryName.equals(name)) ? entry : null;
+      return (entryName.equals(name)) ? entry : ((baseConfig != null)
+        ? baseConfig.getAppConfigurationEntry(name) : null);
     }
 
     private String getKrb5LoginModuleName() {
