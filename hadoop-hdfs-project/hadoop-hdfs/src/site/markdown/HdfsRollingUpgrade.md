@@ -45,7 +45,7 @@ Introduction
 *HDFS rolling upgrade* allows upgrading individual HDFS daemons.
 For examples, the datanodes can be upgraded independent of the namenodes.
 A namenode can be upgraded independent of the other namenodes.
-The namenodes can be upgraded independent of datanods and journal nodes.
+The namenodes can be upgraded independent of datanodes and journal nodes.
 
 
 Upgrade
