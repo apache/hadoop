@@ -1942,8 +1942,8 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public boolean processReport(final DatanodeID nodeID,
       final DatanodeStorage storage,
-      final BlockListAsLongs newReport, BlockReportContext context,
-      boolean lastStorageInRpc) throws IOException {
+      final BlockListAsLongs newReport,
+      BlockReportContext context) throws IOException {
     namesystem.writeLock();
     final long startTime = Time.monotonicNow(); //after acquiring write lock
     final long endTime;
@@ -1993,30 +1993,14 @@ public class BlockManager implements BlockStatsMXBean {
       
       storageInfo.receivedBlockReport();
       if (context != null) {
-        storageInfo.setLastBlockReportId(context.getReportId());
-        if (lastStorageInRpc) {
-          int rpcsSeen = node.updateBlockReportContext(context);
-          if (rpcsSeen >= context.getTotalRpcs()) {
-            long leaseId = blockReportLeaseManager.removeLease(node);
-            BlockManagerFaultInjector.getInstance().
-                removeBlockReportLease(node, leaseId);
-            List<DatanodeStorageInfo> zombies = node.removeZombieStorages();
-            if (zombies.isEmpty()) {
-              LOG.debug("processReport 0x{}: no zombie storages found.",
-                  Long.toHexString(context.getReportId()));
-            } else {
-              for (DatanodeStorageInfo zombie : zombies) {
-                removeZombieReplicas(context, zombie);
-              }
-            }
-            node.clearBlockReportContext();
-          } else {
-            LOG.debug("processReport 0x{}: {} more RPCs remaining in this " +
-                    "report.", Long.toHexString(context.getReportId()),
-                (context.getTotalRpcs() - rpcsSeen)
-            );
-          }
+        if (context.getTotalRpcs() == context.getCurRpc() + 1) {
+          long leaseId = this.getBlockReportLeaseManager().removeLease(node);
+          BlockManagerFaultInjector.getInstance().
+              removeBlockReportLease(node, leaseId);
         }
+        LOG.debug("Processing RPC with index {} out of total {} RPCs in "
+                + "processReport 0x{}", context.getCurRpc(),
+            context.getTotalRpcs(), Long.toHexString(context.getReportId()));
       }
     } finally {
       endTime = Time.monotonicNow();
@@ -2040,6 +2024,26 @@ public class BlockManager implements BlockStatsMXBean {
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());
     return !node.hasStaleStorages();
+  }
+
+  public void removeZombieStorages(DatanodeRegistration nodeReg,
+      BlockReportContext context, Set<String> storageIDsInBlockReport)
+      throws UnregisteredNodeException {
+    namesystem.writeLock();
+    DatanodeDescriptor node = this.getDatanodeManager().getDatanode(nodeReg);
+    if (node != null) {
+      List<DatanodeStorageInfo> zombies =
+          node.removeZombieStorages(storageIDsInBlockReport);
+      if (zombies.isEmpty()) {
+        LOG.debug("processReport 0x{}: no zombie storages found.",
+            Long.toHexString(context.getReportId()));
+      } else {
+        for (DatanodeStorageInfo zombie : zombies) {
+          this.removeZombieReplicas(context, zombie);
+        }
+      }
+    }
+    namesystem.writeUnlock();
   }
 
   private void removeZombieReplicas(BlockReportContext context,

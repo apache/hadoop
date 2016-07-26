@@ -41,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.times;
@@ -86,6 +87,34 @@ public class TestDnRespectsBlockReportSplitThreshold {
     Path path = new Path("/" + filenamePrefix + ".dat");
     DFSTestUtil.createFile(fs, path, BLOCK_SIZE,
         blockCount * BLOCK_SIZE, BLOCK_SIZE, REPL_FACTOR, seed);
+  }
+
+  private void verifyCapturedArgumentsSplit(
+      ArgumentCaptor<StorageBlockReport[]> captor,
+      int expectedReportsPerCall,
+      int expectedTotalBlockCount) {
+    List<StorageBlockReport[]> listOfReports = captor.getAllValues();
+    int numBlocksReported = 0;
+    int storageIndex = 0;
+    int listOfReportsSize = listOfReports.size();
+    for (StorageBlockReport[] reports : listOfReports) {
+      if (storageIndex < (listOfReportsSize - 1)) {
+        assertThat(reports.length, is(expectedReportsPerCall));
+      } else {
+        assertThat(reports.length, is(listOfReportsSize));
+      }
+      for (StorageBlockReport report : reports) {
+        BlockListAsLongs blockList = report.getBlocks();
+        if (!blockList.isStorageReport()) {
+          numBlocksReported += blockList.getNumberOfBlocks();
+        } else {
+          assertEquals(blockList.getNumberOfBlocks(), -1);
+        }
+      }
+      storageIndex++;
+    }
+
+    assert(numBlocksReported >= expectedTotalBlockCount);
   }
 
   private void verifyCapturedArguments(
@@ -136,7 +165,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
         anyString(),
         captor.capture(),  Mockito.<BlockReportContext>anyObject());
 
-    verifyCapturedArguments(captor, 1, BLOCKS_IN_FILE);
+    verifyCapturedArgumentsSplit(captor, 1, BLOCKS_IN_FILE);
   }
 
   /**
@@ -200,7 +229,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
         anyString(),
         captor.capture(), Mockito.<BlockReportContext>anyObject());
 
-    verifyCapturedArguments(captor, 1, BLOCKS_IN_FILE);
+    verifyCapturedArgumentsSplit(captor, 1, BLOCKS_IN_FILE);
   }
 
 }
