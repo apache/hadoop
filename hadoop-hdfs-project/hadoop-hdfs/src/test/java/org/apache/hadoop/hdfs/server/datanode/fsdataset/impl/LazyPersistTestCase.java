@@ -130,17 +130,33 @@ public abstract class LazyPersistTestCase {
   public Timeout timeout = new Timeout(300000);
 
   protected final LocatedBlocks ensureFileReplicasOnStorageType(
-      Path path, StorageType storageType) throws IOException {
+      final Path path, final StorageType storageType)
+      throws IOException, TimeoutException, InterruptedException {
     // Ensure that returned block locations returned are correct!
     LOG.info("Ensure path: " + path + " is on StorageType: " + storageType);
     assertThat(fs.exists(path), is(true));
-    long fileLength = client.getFileInfo(path.toString()).getLen();
-    LocatedBlocks locatedBlocks =
-        client.getLocatedBlocks(path.toString(), 0, fileLength);
-    for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
-      assertThat(locatedBlock.getStorageTypes()[0], is(storageType));
-    }
-    return locatedBlocks;
+    final long fileLength = client.getFileInfo(path.toString()).getLen();
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          LocatedBlocks locatedBlocks =
+              client.getLocatedBlocks(path.toString(), 0, fileLength);
+          for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
+            if (locatedBlock.getStorageTypes()[0] != storageType) {
+              return false;
+            }
+          }
+          return true;
+        } catch (IOException ioe) {
+          LOG.warn("Exception got in ensureFileReplicasOnStorageType()", ioe);
+          return false;
+        }
+      }
+    }, 100, 30 * 1000);
+
+    return client.getLocatedBlocks(path.toString(), 0, fileLength);
   }
 
   /**

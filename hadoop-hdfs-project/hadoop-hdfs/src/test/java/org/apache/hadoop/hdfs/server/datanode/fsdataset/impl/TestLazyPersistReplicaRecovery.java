@@ -23,6 +23,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
@@ -30,7 +31,7 @@ import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
   @Test
   public void testDnRestartWithSavedReplicas()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
 
     getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
@@ -55,7 +56,7 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
 
   @Test
   public void testDnRestartWithUnsavedReplicas()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
 
     getClusterBuilder().build();
     FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
