@@ -25,11 +25,13 @@ import java.util.Map;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mortbay.util.ajax.JSON;
@@ -119,10 +121,18 @@ public class TestDataNodeMXBean {
       cluster.waitActive();
       assertEquals("After restart DN", 5, getTotalNumBlocks(mbs, mxbeanName));
       fs.delete(new Path("/tmp.txt1"), true);
-      // Wait till replica gets deleted on disk.
-      Thread.sleep(5000);
-      assertEquals("After delete one file", 4,
-              getTotalNumBlocks(mbs, mxbeanName));
+      // The total numBlocks should be updated after one file is deleted
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            return getTotalNumBlocks(mbs, mxbeanName) == 4;
+          } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+          }
+        }
+      }, 100, 30000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -131,7 +141,7 @@ public class TestDataNodeMXBean {
   }
 
   @SuppressWarnings("unchecked")
-  int getTotalNumBlocks(MBeanServer mbs, ObjectName mxbeanName)
+  private int getTotalNumBlocks(MBeanServer mbs, ObjectName mxbeanName)
           throws Exception {
     int totalBlocks = 0;
     String volumeInfo = (String) mbs.getAttribute(mxbeanName, "VolumeInfo");
