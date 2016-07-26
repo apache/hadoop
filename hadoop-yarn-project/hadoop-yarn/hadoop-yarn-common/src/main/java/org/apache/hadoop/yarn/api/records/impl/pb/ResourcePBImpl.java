@@ -228,7 +228,7 @@ public class ResourcePBImpl extends Resource {
         builder.addResourceValueMap(e);
       }
     }
-    builder.setMemory(this.getMemory());
+    builder.setMemory(this.getMemorySize());
     builder.setVirtualCores(this.getVirtualCores());
   }
 

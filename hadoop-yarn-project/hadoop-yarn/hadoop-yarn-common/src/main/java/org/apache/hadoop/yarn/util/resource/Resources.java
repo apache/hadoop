@@ -134,16 +134,12 @@ public class Resources {
 
     private Map<String, ResourceInformation> initResourceMap() {
       Map<String, ResourceInformation> tmp = new HashMap<>();
-      // Due to backwards compat, the max value for memory and vcores
-      // needs to be Integer.MAX_VALUE
-      int max = resourceValue > Integer.MAX_VALUE ? Integer.MAX_VALUE :
-          resourceValue.intValue();
       Map<String, ResourceInformation> types = ResourceUtils.getResourceTypes();
       if (types != null) {
         for (Map.Entry<String, ResourceInformation> entry : types.entrySet()) {
           tmp.put(entry.getKey(),
               ResourceInformation.newInstance(entry.getValue()));
-          tmp.get(entry.getKey()).setValue((long) max);
+          tmp.get(entry.getKey()).setValue(resourceValue);
         }
       }
       return tmp;
