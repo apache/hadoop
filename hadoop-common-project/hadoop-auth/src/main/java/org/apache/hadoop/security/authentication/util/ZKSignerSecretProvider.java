@@ -436,6 +436,8 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
   @InterfaceAudience.Private
   public static class JaasConfiguration extends Configuration {
 
+    private final javax.security.auth.login.Configuration baseConfig =
+        javax.security.auth.login.Configuration.getConfiguration();
     private static AppConfigurationEntry[] entry;
     private String entryName;
 
@@ -468,7 +470,8 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
 
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-      return (entryName.equals(name)) ? entry : null;
+      return (entryName.equals(name)) ? entry : ((baseConfig != null)
+        ? baseConfig.getAppConfigurationEntry(name) : null);
     }
 
     private String getKrb5LoginModuleName() {
