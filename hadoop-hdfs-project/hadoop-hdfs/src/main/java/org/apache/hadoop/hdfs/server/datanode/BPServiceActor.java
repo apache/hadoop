@@ -649,18 +649,23 @@ class BPServiceActor implements Runnable {
           return;
         }
         LOG.warn("RemoteException in offerService", re);
-        try {
-          long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-        }
+        sleepAfterException();
       } catch (IOException e) {
         LOG.warn("IOException in offerService", e);
+        sleepAfterException();
       }
       processQueueMessages();
     } // while (shouldRun())
   } // offerService
+
+  private void sleepAfterException() {
+    try {
+      long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
+      Thread.sleep(sleepTime);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
+  }
 
   /**
    * Register one bp with the corresponding NameNode
