@@ -308,10 +308,10 @@ class BlockReportLeaseManager {
       return false;
     }
     if (node.leaseId == 0) {
-      LOG.warn("BR lease 0x{} is not valid for DN {}, because the DN " +
+      LOG.warn("BR lease 0x{} is not found for DN {}, because the DN " +
                "is not in the pending set.",
                Long.toHexString(id), dn.getDatanodeUuid());
-      return false;
+      return true;
     }
     if (pruneIfExpired(monotonicNowMs, node)) {
       LOG.warn("BR lease 0x{} is not valid for DN {}, because the lease " +

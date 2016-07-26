@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -35,13 +36,32 @@ public class TestNNHandlesBlockReportPerStorage extends BlockReportTestBase {
   @Override
   protected void sendBlockReports(DatanodeRegistration dnR, String poolId,
       StorageBlockReport[] reports) throws IOException {
-    int i = 0;
-    for (StorageBlockReport report : reports) {
-      LOG.info("Sending block report for storage " + report.getStorage().getStorageID());
-      StorageBlockReport[] singletonReport = { report };
-      cluster.getNameNodeRpc().blockReport(dnR, poolId, singletonReport,
-          new BlockReportContext(reports.length, i, System.nanoTime(), 0L));
-      i++;
+    for (int r = 0; r < reports.length; r++) {
+      LOG.info("Sending block report for storage " +
+          reports[r].getStorage().getStorageID());
+      StorageBlockReport[] singletonReport = {reports[r]};
+      if (r != reports.length - 1) {
+        cluster.getNameNodeRpc().blockReport(dnR, poolId, singletonReport,
+            new BlockReportContext(reports.length, r, System.nanoTime(),
+                0L));
+      } else {
+        StorageBlockReport[] lastSplitReport =
+            new StorageBlockReport[reports.length];
+        // When block reports are split, send a dummy storage report for all
+        // other storages in the blockreport along with the last storage report
+        for (int i = 0; i <= r; i++) {
+          if (i == r) {
+            lastSplitReport[i] = reports[r];
+            break;
+          }
+          lastSplitReport[i] =
+              new StorageBlockReport(reports[i].getStorage(),
+                  BlockListAsLongs.STORAGE_REPORT);
+        }
+        cluster.getNameNodeRpc().blockReport(dnR, poolId, lastSplitReport,
+            new BlockReportContext(reports.length, r, System.nanoTime(),
+                0L));
+      }
     }
   }
 }
