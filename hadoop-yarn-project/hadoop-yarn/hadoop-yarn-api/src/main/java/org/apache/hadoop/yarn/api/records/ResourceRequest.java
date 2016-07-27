@@ -117,6 +117,10 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         ret = h1.compareTo(h2);
       }
       if (ret == 0) {
+        ret = r1.getExecutionTypeRequest()
+            .compareTo(r2.getExecutionTypeRequest());
+      }
+      if (ret == 0) {
         ret = r1.getCapability().compareTo(r2.getCapability());
       }
       return ret;
@@ -414,7 +418,8 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       if (other.getExecutionTypeRequest() != null) {
         return false;
       }
-    } else if (!execTypeRequest.equals(other.getExecutionTypeRequest())) {
+    } else if (!execTypeRequest.getExecutionType()
+        .equals(other.getExecutionTypeRequest().getExecutionType())) {
       return false;
     }
     if (getNodeLabelExpression() == null) {
@@ -441,12 +446,18 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       int hostNameComparison =
           this.getResourceName().compareTo(other.getResourceName());
       if (hostNameComparison == 0) {
-        int capabilityComparison =
-            this.getCapability().compareTo(other.getCapability());
-        if (capabilityComparison == 0) {
-          return this.getNumContainers() - other.getNumContainers();
+        int execTypeReqComparison = this.getExecutionTypeRequest()
+            .compareTo(other.getExecutionTypeRequest());
+        if (execTypeReqComparison == 0) {
+          int capabilityComparison =
+              this.getCapability().compareTo(other.getCapability());
+          if (capabilityComparison == 0) {
+            return this.getNumContainers() - other.getNumContainers();
+          } else {
+            return capabilityComparison;
+          }
         } else {
-          return capabilityComparison;
+          return execTypeReqComparison;
         }
       } else {
         return hostNameComparison;
