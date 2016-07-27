@@ -15,25 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+package org.apache.hadoop.test;
 
-import org.junit.BeforeClass;
+import org.junit.internal.AssumptionViolatedException;
 
-import java.io.IOException;
+/**
+ * JUnit assumptions for the environment (OS).
+ */
+public final class PlatformAssumptions {
+  public static final String OS_NAME = System.getProperty("os.name");
+  public static final boolean WINDOWS = OS_NAME.startsWith("Windows");
 
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+  private PlatformAssumptions() { }
 
-public class TestSymlinkLocalFSFileContext extends TestSymlinkLocalFS {
-
-  @BeforeClass
-  public static void testSetup() throws Exception {
-    FileContext context = FileContext.getLocalFSFileContext();
-    wrapper = new FileContextTestWrapper(context);
+  public static void assumeNotWindows() {
+    assumeNotWindows("Expected Unix-like platform but got " + OS_NAME);
   }
 
-  @Override
-  public void testRenameFileWithDestParentSymlink() throws IOException {
-    assumeNotWindows();
-    super.testRenameFileWithDestParentSymlink();
+  public static void assumeNotWindows(String message) {
+    if (WINDOWS) {
+      throw new AssumptionViolatedException(message);
+    }
+  }
+
+  public static void assumeWindows() {
+    if (!WINDOWS) {
+      throw new AssumptionViolatedException(
+          "Expected Windows platform but got " + OS_NAME);
+    }
   }
 }

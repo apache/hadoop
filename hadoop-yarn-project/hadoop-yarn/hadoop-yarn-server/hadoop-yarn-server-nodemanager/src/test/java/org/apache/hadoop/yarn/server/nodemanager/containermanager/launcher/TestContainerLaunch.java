@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -408,7 +409,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testPrependDistcache() throws Exception {
 
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -1129,7 +1130,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     String callCmd = "@call ";
     
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);
@@ -1177,7 +1178,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   @Test (timeout = 10000)
   public void testWindowsShellScriptBuilderEnv() throws IOException {
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);
@@ -1202,7 +1203,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     String mkDirCmd = "@if not exist \"\" mkdir \"\"";
 
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);
@@ -1225,7 +1226,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   @Test (timeout = 10000)
   public void testWindowsShellScriptBuilderLink() throws IOException {
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     String linkCmd = "@" + Shell.getWinUtilsPath() + " symlink \"\" \"\"";
 
     // The tests are built on assuming 8191 max command line length

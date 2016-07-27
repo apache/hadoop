@@ -26,7 +26,10 @@ import org.apache.hadoop.util.Shell;
 import java.io.*;
 import java.util.*;
 
-import junit.framework.*;
+import org.junit.Test;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +40,7 @@ import static org.junit.Assert.assertThat;
 /**
  * This class tests the local file system via the FileSystem abstraction.
  */
-public class TestLocalFileSystemPermission extends TestCase {
+public class TestLocalFileSystemPermission {
 
   public static final Logger LOGGER =
       LoggerFactory.getLogger(TestFcLocalFsPermission.class);
@@ -71,11 +74,9 @@ public class TestLocalFileSystemPermission extends TestCase {
     assertTrue(!fs.exists(name));
   }
 
+  @Test
   public void testLocalFSDirsetPermission() throws IOException {
-    if (Path.WINDOWS) {
-      LOGGER.info("Cannot run test for Windows");
-      return;
-    }
+    assumeNotWindows();
     LocalFileSystem localfs = FileSystem.getLocal(new Configuration());
     Configuration conf = localfs.getConf();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "044");
@@ -124,11 +125,9 @@ public class TestLocalFileSystemPermission extends TestCase {
   }
 
   /** Test LocalFileSystem.setPermission */
+  @Test
   public void testLocalFSsetPermission() throws IOException {
-    if (Path.WINDOWS) {
-      LOGGER.info("Cannot run test for Windows");
-      return;
-    }
+    assumeNotWindows();
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "044");
     LocalFileSystem localfs = FileSystem.getLocal(conf);
@@ -195,6 +194,7 @@ public class TestLocalFileSystemPermission extends TestCase {
   }
 
   /** Test LocalFileSystem.setOwner. */
+  @Test
   public void testLocalFSsetOwner() throws IOException {
     if (Path.WINDOWS) {
       LOGGER.info("Cannot run test for Windows");
@@ -248,6 +248,7 @@ public class TestLocalFileSystemPermission extends TestCase {
    * 5. For this directory we expect 715 as permission not 755
    * @throws Exception we can throw away all the exception.
    */
+  @Test
   public void testSetUmaskInRealTime() throws Exception {
     if (Path.WINDOWS) {
       LOGGER.info("Cannot run test for Windows");

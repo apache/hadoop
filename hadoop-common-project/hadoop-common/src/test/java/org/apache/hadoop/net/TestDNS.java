@@ -30,15 +30,14 @@ import javax.naming.NameNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
 import org.junit.Test;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Test host name and IP resolution and caching.
@@ -197,7 +196,7 @@ public class TestDNS {
    */
   @Test (timeout=60000)
   public void testLookupWithHostsFallback() throws Exception {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     final String oldHostname = changeDnsCachedHostname(DUMMY_HOSTNAME);
 
     try {

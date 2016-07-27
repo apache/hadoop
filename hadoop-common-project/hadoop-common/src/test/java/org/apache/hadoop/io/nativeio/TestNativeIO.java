@@ -42,6 +42,8 @@ import org.junit.Test;
 
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -107,9 +109,7 @@ public class TestNativeIO {
    */
   @Test (timeout = 30000)
   public void testMultiThreadedFstat() throws Exception {
-    if (Path.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     final FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testfstat"));
@@ -165,9 +165,7 @@ public class TestNativeIO {
 
   @Test (timeout = 30000)
   public void testSetFilePointer() throws Exception {
-    if (!Path.WINDOWS) {
-      return;
-    }
+    assumeWindows();
 
     LOG.info("Set a file pointer on Windows");
     try {
@@ -212,9 +210,7 @@ public class TestNativeIO {
 
   @Test (timeout = 30000)
   public void testCreateFile() throws Exception {
-    if (!Path.WINDOWS) {
-      return;
-    }
+    assumeWindows();
 
     LOG.info("Open a file on Windows with SHARE_DELETE shared mode");
     try {
@@ -255,9 +251,7 @@ public class TestNativeIO {
   /** Validate access checks on Windows */
   @Test (timeout = 30000)
   public void testAccess() throws Exception {
-    if (!Path.WINDOWS) {
-      return;
-    }
+    assumeWindows();
 
     File testFile = new File(TEST_DIR, "testfileaccess");
     assertTrue(testFile.createNewFile());
@@ -331,9 +325,7 @@ public class TestNativeIO {
 
   @Test (timeout = 30000)
   public void testOpenMissingWithoutCreate() throws Exception {
-    if (Path.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     LOG.info("Open a missing file without O_CREAT and it should fail");
     try {
@@ -348,9 +340,7 @@ public class TestNativeIO {
 
   @Test (timeout = 30000)
   public void testOpenWithCreate() throws Exception {
-    if (Path.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     LOG.info("Test creating a file with O_CREAT");
     FileDescriptor fd = NativeIO.POSIX.open(
@@ -382,9 +372,7 @@ public class TestNativeIO {
    */
   @Test (timeout = 30000)
   public void testFDDoesntLeak() throws IOException {
-    if (Path.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     for (int i = 0; i < 10000; i++) {
       FileDescriptor fd = NativeIO.POSIX.open(
@@ -403,9 +391,7 @@ public class TestNativeIO {
    */
   @Test (timeout = 30000)
   public void testChmod() throws Exception {
-    if (Path.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     try {
       NativeIO.POSIX.chmod("/this/file/doesnt/exist", 777);
@@ -428,9 +414,7 @@ public class TestNativeIO {
 
   @Test (timeout = 30000)
   public void testPosixFadvise() throws Exception {
-    if (Path.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     FileInputStream fis = new FileInputStream("/dev/zero");
     try {
@@ -497,19 +481,13 @@ public class TestNativeIO {
 
   @Test (timeout = 30000)
   public void testGetUserName() throws IOException {
-    if (Path.WINDOWS) {
-      return;
-    }
-
+    assumeNotWindows();
     assertFalse(NativeIO.POSIX.getUserName(0).isEmpty());
   }
 
   @Test (timeout = 30000)
   public void testGetGroupName() throws IOException {
-    if (Path.WINDOWS) {
-      return;
-    }
-
+    assumeNotWindows();
     assertFalse(NativeIO.POSIX.getGroupName(0).isEmpty());
   }
 
@@ -647,8 +625,7 @@ public class TestNativeIO {
 
   @Test (timeout=10000)
   public void testNativePosixConsts() {
-    assumeTrue("Native POSIX constants not required for Windows",
-      !Path.WINDOWS);
+    assumeNotWindows("Native POSIX constants not required for Windows");
     assertTrue("Native 0_RDONLY const not set", O_RDONLY >= 0);
     assertTrue("Native 0_WRONLY const not set", O_WRONLY >= 0);
     assertTrue("Native 0_RDWR const not set", O_RDWR >= 0);

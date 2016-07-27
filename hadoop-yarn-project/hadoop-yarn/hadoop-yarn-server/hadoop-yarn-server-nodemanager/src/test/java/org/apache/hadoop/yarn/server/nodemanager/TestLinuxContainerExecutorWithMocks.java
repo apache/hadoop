@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -123,7 +123,7 @@ public class TestLinuxContainerExecutorWithMocks {
 
   @Before
   public void setup() throws IOException, ContainerExecutionException {
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
 
     tmpMockExecutor = System.getProperty("test.build.data") +
         "/tmp-mock-container-executor";

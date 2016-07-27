@@ -43,10 +43,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -451,7 +451,7 @@ public class TestBalancer {
     // This test assumes stick-bit based block pin mechanism available only
     // in Linux/Unix. It can be unblocked on Windows when HDFS-7759 is ready to
     // provide a different mechanism for Windows.
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
 
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);

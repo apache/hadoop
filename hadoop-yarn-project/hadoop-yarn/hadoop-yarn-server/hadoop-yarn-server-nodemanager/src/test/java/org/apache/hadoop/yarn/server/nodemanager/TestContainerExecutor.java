@@ -31,8 +31,8 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 @SuppressWarnings("deprecation")
 public class TestContainerExecutor {
@@ -80,8 +80,7 @@ public class TestContainerExecutor {
 
   @Test (timeout = 5000)
   public void testRunCommandWithNoResources() {
-    // Windows only test
-    assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     Configuration conf = new Configuration();
     String[] command = containerExecutor.getRunCommand("echo", "group1", null, null,
         conf, Resource.newInstance(1024, 1));
@@ -93,8 +92,7 @@ public class TestContainerExecutor {
 
   @Test (timeout = 5000)
   public void testRunCommandWithMemoryOnlyResources() {
-    // Windows only test
-    assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED, "true");
     String[] command = containerExecutor.getRunCommand("echo", "group1", null, null,
@@ -107,8 +105,7 @@ public class TestContainerExecutor {
 
   @Test (timeout = 5000)
   public void testRunCommandWithCpuAndMemoryResources() {
-    // Windows only test
-    assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     int containerCores = 1;
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED, "true");

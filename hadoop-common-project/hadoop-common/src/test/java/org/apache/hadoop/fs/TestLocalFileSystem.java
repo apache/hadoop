@@ -21,7 +21,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
@@ -31,8 +30,9 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Random;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.*;
 
 import org.junit.After;
@@ -287,7 +287,7 @@ public class TestLocalFileSystem {
 
   @Test(timeout = 1000)
   public void testListStatusWithColons() throws IOException {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     File colonFile = new File(TEST_ROOT_DIR, "foo:bar");
     colonFile.mkdirs();
     FileStatus[] stats = fileSys.listStatus(new Path(TEST_ROOT_DIR));
@@ -298,7 +298,7 @@ public class TestLocalFileSystem {
   
   @Test
   public void testListStatusReturnConsistentPathOnWindows() throws IOException {
-    assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     String dirNoDriveSpec = TEST_ROOT_DIR;
     if (dirNoDriveSpec.charAt(1) == ':')
     	dirNoDriveSpec = dirNoDriveSpec.substring(2);

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assume.assumeTrue;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,7 +48,7 @@ public class TestNativeAzureFileSystemOperationsMocked extends
     System.out
         .println("Skipping testListStatusThrowsExceptionForUnreadableDir since WASB"
             + " doesn't honor directory permissions.");
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
   }
 
   @Override
