@@ -470,7 +470,13 @@ class BlockReceiver implements Closeable {
     try {
       clientChecksum.verifyChunkedSums(dataBuf, checksumBuf, clientname, 0);
     } catch (ChecksumException ce) {
-      LOG.warn("Checksum error in block " + block + " from " + inAddr, ce);
+      PacketHeader header = packetReceiver.getHeader();
+      String specificOffset = "specific offsets are:"
+          + " offsetInBlock = " + header.getOffsetInBlock()
+          + " offsetInPacket = " + ce.getPos();
+      LOG.warn("Checksum error in block "
+          + block + " from " + inAddr
+          + ", " + specificOffset, ce);
       // No need to report to namenode when client is writing.
       if (srcDataNode != null && isDatanode) {
         try {
