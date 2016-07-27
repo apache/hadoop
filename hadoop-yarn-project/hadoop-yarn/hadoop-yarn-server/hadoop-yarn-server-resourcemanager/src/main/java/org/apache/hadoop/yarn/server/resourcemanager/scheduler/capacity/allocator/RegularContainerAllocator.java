@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -695,15 +696,21 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       }
 
       // Non-exclusive scheduling opportunity is different: we need reset
-      // it every time to make sure non-labeled resource request will be
+      // it when:
+      // - It allocated on the default partition
+      //
+      // This is to make sure non-labeled resource request will be
       // most likely allocated on non-labeled nodes first.
-      application.resetMissedNonPartitionedRequestSchedulingOpportunity(
-          schedulerKey);
+      if (StringUtils.equals(node.getPartition(),
+          RMNodeLabelsManager.NO_LABEL)) {
+        application
+            .resetMissedNonPartitionedRequestSchedulingOpportunity(schedulerKey);
+      }
     }
 
     return allocationResult;
   }
-  
+
   private ContainerAllocation allocate(Resource clusterResource,
       FiCaSchedulerNode node, SchedulingMode schedulingMode,
       ResourceLimits resourceLimits, SchedulerRequestKey schedulerKey,
