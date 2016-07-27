@@ -768,8 +768,6 @@ public class TestNodeLabelContainerAllocation {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 8 * GB); // label = y
     MockNM nm2 = rm1.registerNode("h2:1234", 100 * GB); // label = <empty>
-    
-    ContainerId nextContainerId;
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
@@ -777,12 +775,13 @@ public class TestNodeLabelContainerAllocation {
     
     // request containers from am2, priority=1 asks for "" and priority=2 asks
     // for "y", "y" container should be allocated first
-    nextContainerId =
-        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     am1.allocate("*", 1 * GB, 1, 1, new ArrayList<ContainerId>(), "");
     am1.allocate("*", 1 * GB, 1, 2, new ArrayList<ContainerId>(), "y");
-    Assert.assertTrue(rm1.waitForState(nm1, nextContainerId,
-        RMContainerState.ALLOCATED));
+
+    // Do a node heartbeat once
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    cs.handle(new NodeUpdateSchedulerEvent(
+        rm1.getRMContext().getRMNodes().get(nm1.getNodeId())));
     
     // Check pending resource for am2, priority=1 doesn't get allocated before
     // priority=2 allocated
@@ -1674,7 +1673,7 @@ public class TestNodeLabelContainerAllocation {
     // Test case 7
     // After c allocated, d will go first because it has less used_capacity(x)
     // than c
-    doNMHeartbeat(rm, nm1.getNodeId(), 2);
+    doNMHeartbeat(rm, nm1.getNodeId(), 1);
     checkNumOfContainersInAnAppOnGivenNode(2, nm1.getNodeId(),
         cs.getApplicationAttempt(am1.getApplicationAttemptId()));
     checkNumOfContainersInAnAppOnGivenNode(3, nm1.getNodeId(),
