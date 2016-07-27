@@ -147,7 +147,7 @@ public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent
       try {
         // Sign the request. GET's have no payload so the content length is
         // zero.
-        StorageCredentialsHelper.signBlobAndQueueRequest(getCredentials(),
+        StorageCredentialsHelper.signBlobQueueAndFileRequest(getCredentials(),
           urlConnection, -1L, getOperationContext());
       } catch (InvalidKeyException e) {
         // Log invalid key exception to track signing error before the send
