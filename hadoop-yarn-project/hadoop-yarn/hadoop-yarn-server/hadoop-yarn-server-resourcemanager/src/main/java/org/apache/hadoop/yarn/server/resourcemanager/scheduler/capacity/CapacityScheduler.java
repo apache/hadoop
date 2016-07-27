@@ -1209,11 +1209,18 @@ public class CapacityScheduler extends
  }
 
   @VisibleForTesting
-  protected synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
+  public synchronized void allocateContainersToNode(FiCaSchedulerNode node) {
     if (rmContext.isWorkPreservingRecoveryEnabled()
         && !rmContext.isSchedulerReadyForAllocatingContainers()) {
       return;
     }
+
+    if (!nodeTracker.exists(node.getNodeID())) {
+      LOG.info("Skipping scheduling as the node " + node.getNodeID() +
+          " has been removed");
+      return;
+    }
+
     // reset allocation and reservation stats before we start doing any work
     updateSchedulerHealth(lastNodeUpdateTime, node,
       new CSAssignment(Resources.none(), NodeType.NODE_LOCAL));
