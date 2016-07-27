@@ -86,6 +86,11 @@ public class ExecutionTypeRequestPBImpl extends ExecutionTypeRequest {
   }
 
   @Override
+  public int compareTo(ExecutionTypeRequest other) {
+    return this.getExecutionType().compareTo(other.getExecutionType());
+  }
+
+  @Override
   public String toString() {
     return "{Execution Type: " + getExecutionType()
         + ", Enforce Execution Type: " + getEnforceExecutionType() + "}";
