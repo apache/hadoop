@@ -12,6 +12,9 @@ Release 2.7.4 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
+    NotReplicatedYetException on adding block. (iwasakims)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
