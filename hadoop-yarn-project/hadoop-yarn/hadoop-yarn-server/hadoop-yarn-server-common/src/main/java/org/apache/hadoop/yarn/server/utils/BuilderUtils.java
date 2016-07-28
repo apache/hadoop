@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -334,6 +335,7 @@ public class BuilderUtils {
     request.setResourceName(hostName);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
+    request.setExecutionTypeRequest(ExecutionTypeRequest.newInstance());
     return request;
   }
 
@@ -346,6 +348,7 @@ public class BuilderUtils {
     request.setCapability(capability);
     request.setNumContainers(numContainers);
     request.setNodeLabelExpression(label);
+    request.setExecutionTypeRequest(ExecutionTypeRequest.newInstance());
     return request;
   }
 
@@ -357,6 +360,7 @@ public class BuilderUtils {
     request.setCapability(r.getCapability());
     request.setNumContainers(r.getNumContainers());
     request.setNodeLabelExpression(r.getNodeLabelExpression());
+    request.setExecutionTypeRequest(r.getExecutionTypeRequest());
     return request;
   }
 
