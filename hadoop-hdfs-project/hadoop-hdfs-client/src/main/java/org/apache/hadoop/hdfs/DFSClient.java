@@ -1209,6 +1209,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return permission.applyUMask(dfsClientConf.getUMask());
   }
 
+  private FsPermission applyUMaskDir(FsPermission permission) {
+    if (permission == null) {
+      permission = FsPermission.getDirDefault();
+    }
+    return permission.applyUMask(dfsClientConf.getUMask());
+  }
+
   /**
    * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
    * Progressable, int, ChecksumOpt)} with the addition of favoredNodes that is
@@ -2458,7 +2465,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    *
    * @param src The path of the directory being created
    * @param permission The permission of the directory being created.
-   * If permission == null, use {@link FsPermission#getDefault()}.
+   * If permission == null, use {@link FsPermission#getDirDefault()}.
    * @param createParent create missing parent directory if true
    *
    * @return True if the operation success.
@@ -2467,7 +2474,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public boolean mkdirs(String src, FsPermission permission,
       boolean createParent) throws IOException {
-    final FsPermission masked = applyUMask(permission);
+    final FsPermission masked = applyUMaskDir(permission);
     return primitiveMkdir(src, masked, createParent);
   }
 
@@ -2488,9 +2495,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       boolean createParent) throws IOException {
     checkOpen();
     if (absPermission == null) {
-      absPermission = applyUMask(null);
+      absPermission = applyUMaskDir(null);
     }
-
     LOG.debug("{}: masked={}", src, absPermission);
     try (TraceScope ignored = tracer.newScope("mkdir")) {
       return namenode.mkdirs(src, absPermission, createParent);
