@@ -176,15 +176,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
               TimelineEntityGroupId groupId = eldest.getKey();
               LOG.debug("Evicting {} due to space limitations", groupId);
               EntityCacheItem cacheItem = eldest.getValue();
-              int activeStores = EntityCacheItem.getActiveStores();
-              if (activeStores > appCacheMaxSize * CACHE_ITEM_OVERFLOW_FACTOR) {
-                LOG.debug("Force release cache {} since {} stores are active",
-                    groupId, activeStores);
-                cacheItem.forceRelease();
-              } else {
-                LOG.debug("Try release cache {}", groupId);
-                cacheItem.tryRelease();
-              }
+              LOG.debug("Force release cache {}.", groupId);
+              cacheItem.forceRelease();
               if (cacheItem.getAppLogs().isDone()) {
                 appIdLogMap.remove(groupId.getApplicationId());
               }
@@ -862,7 +855,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
   @InterfaceAudience.Private
   @VisibleForTesting
   void setCachedLogs(TimelineEntityGroupId groupId, EntityCacheItem cacheItem) {
-    cacheItem.incrRefs();
     cachedLogs.put(groupId, cacheItem);
   }
 
@@ -945,8 +937,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
           LOG.debug("Set applogs {} for group id {}", appLogs, groupId);
           cacheItem.setAppLogs(appLogs);
           this.cachedLogs.put(groupId, cacheItem);
-          // Add the reference by the cache
-          cacheItem.incrRefs();
         } else {
           LOG.warn("AppLogs for groupId {} is set to null!", groupId);
         }
@@ -956,20 +946,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
     if (cacheItem.getAppLogs() != null) {
       AppLogs appLogs = cacheItem.getAppLogs();
       LOG.debug("try refresh cache {} {}", groupId, appLogs.getAppId());
-      // Add the reference by the store
-      cacheItem.incrRefs();
       cacheItems.add(cacheItem);
       store = cacheItem.refreshCache(aclManager, metrics);
     } else {
       LOG.warn("AppLogs for group id {} is null", groupId);
     }
     return store;
-  }
-
-  protected void tryReleaseCacheItems(List<EntityCacheItem> relatedCacheItems) {
-    for (EntityCacheItem item : relatedCacheItems) {
-      item.tryRelease();
-    }
   }
 
   @Override
@@ -991,7 +973,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
         returnEntities.addEntities(entities.getEntities());
       }
     }
-    tryReleaseCacheItems(relatedCacheItems);
     return returnEntities;
   }
 
@@ -1008,12 +989,10 @@ public class EntityGroupFSTimelineStore extends CompositeService
       TimelineEntity e =
           store.getEntity(entityId, entityType, fieldsToRetrieve);
       if (e != null) {
-        tryReleaseCacheItems(relatedCacheItems);
         return e;
       }
     }
     LOG.debug("getEntity: Found nothing");
-    tryReleaseCacheItems(relatedCacheItems);
     return null;
   }
 
@@ -1041,7 +1020,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
         }
       }
     }
-    tryReleaseCacheItems(relatedCacheItems);
     return returnEvents;
   }
 
