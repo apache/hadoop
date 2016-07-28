@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
@@ -97,7 +99,10 @@ public class AppInfo {
   protected int numNonAMContainerPreempted;
   protected int numAMContainerPreempted;
 
-  protected List<ResourceRequest> resourceRequests;
+  // list of resource requests
+  @XmlElement(name = "resourceRequests")
+  private List<ResourceRequestInfo> resourceRequests =
+      new ArrayList<ResourceRequestInfo>();
 
   protected LogAggregationStatus logAggregationStatus;
   protected boolean unmanagedApplication;
@@ -182,8 +187,16 @@ public class AppInfo {
             queueUsagePercentage = resourceReport.getQueueUsagePercentage();
             clusterUsagePercentage = resourceReport.getClusterUsagePercentage();
           }
-          resourceRequests = rm.getRMContext().getScheduler()
+
+          List<ResourceRequest> resourceRequestsRaw = rm.getRMContext()
+              .getScheduler()
               .getPendingResourceRequestsForAttempt(attempt.getAppAttemptId());
+
+          if (resourceRequestsRaw != null) {
+            for (ResourceRequest req : resourceRequestsRaw) {
+              resourceRequests.add(new ResourceRequestInfo(req));
+            }
+          }
         }
       }
 
@@ -352,7 +365,7 @@ public class AppInfo {
     return vcoreSeconds;
   }
 
-  public List<ResourceRequest> getResourceRequests() {
+  public List<ResourceRequestInfo> getResourceRequests() {
     return this.resourceRequests;
   }
 

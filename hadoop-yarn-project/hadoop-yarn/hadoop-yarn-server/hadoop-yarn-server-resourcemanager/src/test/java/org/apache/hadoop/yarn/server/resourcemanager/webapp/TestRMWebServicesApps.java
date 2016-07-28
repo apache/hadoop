@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -1153,6 +1154,30 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   }
 
   @Test
+  public void testUnmarshalAppInfo() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
+    amNodeManager.nodeHeartbeat(true);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").path(app1.getApplicationId().toString())
+        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+
+    AppInfo appInfo = response.getEntity(AppInfo.class);
+
+    // Check only a few values; all are validated in testSingleApp.
+    assertEquals(app1.getApplicationId().toString(), appInfo.getAppId());
+    assertEquals(app1.getName(), appInfo.getName());
+    assertEquals(app1.createApplicationState(), appInfo.getState());
+    assertEquals(app1.getAMResourceRequest().getCapability().getMemorySize(),
+        appInfo.getAllocatedMB());
+
+    rm.stop();
+  }
+
+  @Test
   public void testSingleAppsSlash() throws JSONException, Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
@@ -1284,10 +1309,10 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     rm.stop();
   }
 
-  public void verifyAppsXML(NodeList nodes, RMApp app) throws JSONException,
-      Exception {
+  public void verifyAppsXML(NodeList nodes, RMApp app)
+      throws JSONException, Exception {
 
-     for (int i = 0; i < nodes.getLength(); i++) {
+    for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
       verifyAppInfoGeneric(app,
@@ -1322,6 +1347,26 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlString(element, "appNodeLabelExpression"),
           WebServicesTestUtils.getXmlString(element, "amNodeLabelExpression"),
           WebServicesTestUtils.getXmlString(element, "amRPCAddress"));
+
+      assertEquals(element.getElementsByTagName("resourceRequests").getLength(),
+          1);
+      Element resourceRequests =
+          (Element) element.getElementsByTagName("resourceRequests").item(0);
+      Element capability =
+          (Element) resourceRequests.getElementsByTagName("capability").item(0);
+
+      verifyResourceRequestsGeneric(app,
+          WebServicesTestUtils.getXmlString(resourceRequests,
+              "nodeLabelExpression"),
+          WebServicesTestUtils.getXmlInt(resourceRequests, "numContainers"),
+          WebServicesTestUtils.getXmlBoolean(resourceRequests, "relaxLocality"),
+          WebServicesTestUtils.getXmlInt(resourceRequests, "priority"),
+          WebServicesTestUtils.getXmlString(resourceRequests, "resourceName"),
+          WebServicesTestUtils.getXmlLong(capability, "memory"),
+          WebServicesTestUtils.getXmlLong(capability, "vCores"),
+          WebServicesTestUtils.getXmlString(resourceRequests, "executionType"),
+          WebServicesTestUtils.getXmlBoolean(resourceRequests,
+              "enforceExecutionType"));
     }
   }
 
@@ -1348,7 +1393,6 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     }
     assertEquals("incorrect number of elements", expectedNumberOfElements,
         info.length());
-
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
         info.getString("queue"), info.getInt("priority"),
@@ -1370,6 +1414,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         appNodeLabelExpression,
         amNodeLabelExpression,
         amRPCAddress);
+
+    verifyResourceRequests(info.getJSONArray("resourceRequests"), app);
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
@@ -1447,6 +1493,49 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("amRPCAddress",
         AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()),
         amRPCAddress);
+  }
+
+  public void verifyResourceRequests(JSONArray resourceRequest, RMApp app)
+      throws JSONException {
+    JSONObject requestInfo = resourceRequest.getJSONObject(0);
+    verifyResourceRequestsGeneric(app,
+        requestInfo.getString("nodeLabelExpression"),
+        requestInfo.getInt("numContainers"),
+        requestInfo.getBoolean("relaxLocality"), requestInfo.getInt("priority"),
+        requestInfo.getString("resourceName"),
+        requestInfo.getJSONObject("capability").getLong("memory"),
+        requestInfo.getJSONObject("capability").getLong("vCores"),
+        requestInfo.getJSONObject("executionTypeRequest")
+            .getString("executionType"),
+        requestInfo.getJSONObject("executionTypeRequest")
+            .getBoolean("enforceExecutionType"));
+  }
+
+  public void verifyResourceRequestsGeneric(RMApp app,
+      String nodeLabelExpression, int numContainers, boolean relaxLocality,
+      int priority, String resourceName, long memory, long vCores,
+      String executionType, boolean enforceExecutionType) {
+    ResourceRequest request = app.getAMResourceRequest();
+    assertEquals("nodeLabelExpression doesn't match",
+        request.getNodeLabelExpression(), nodeLabelExpression);
+    assertEquals("numContainers doesn't match", request.getNumContainers(),
+        numContainers);
+    assertEquals("relaxLocality doesn't match", request.getRelaxLocality(),
+        relaxLocality);
+    assertEquals("priority does not match", request.getPriority().getPriority(),
+        priority);
+    assertEquals("resourceName does not match", request.getResourceName(),
+        resourceName);
+    assertEquals("memory does not match",
+        request.getCapability().getMemorySize(), memory);
+    assertEquals("vCores does not match",
+        request.getCapability().getVirtualCores(), vCores);
+    assertEquals("executionType does not match",
+        request.getExecutionTypeRequest().getExecutionType().name(),
+        executionType);
+    assertEquals("enforceExecutionType does not match",
+        request.getExecutionTypeRequest().getEnforceExecutionType(),
+        enforceExecutionType);
   }
 
   @Test

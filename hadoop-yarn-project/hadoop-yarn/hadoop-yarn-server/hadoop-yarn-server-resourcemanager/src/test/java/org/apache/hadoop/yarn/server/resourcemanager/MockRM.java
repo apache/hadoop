@@ -613,12 +613,12 @@ public class MockRM extends ResourceManager {
       sub.setLogAggregationContext(logAggregationContext);
     }
     sub.setCancelTokensWhenComplete(cancelTokensWhenComplete);
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY, capability, 1);
     if (amLabel != null && !amLabel.isEmpty()) {
-      ResourceRequest amResourceRequest = ResourceRequest.newInstance(
-          Priority.newInstance(0), ResourceRequest.ANY, capability, 1);
       amResourceRequest.setNodeLabelExpression(amLabel.trim());
-      sub.setAMContainerResourceRequest(amResourceRequest);
     }
+    sub.setAMContainerResourceRequest(amResourceRequest);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
