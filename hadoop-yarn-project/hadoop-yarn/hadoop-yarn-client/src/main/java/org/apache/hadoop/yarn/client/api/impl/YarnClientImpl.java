@@ -165,13 +165,6 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
 
-    if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-      YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
-      historyServiceEnabled = true;
-      historyClient = AHSClient.createAHSClient();
-      historyClient.init(conf);
-    }
-
     if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
       timelineServiceEnabled = true;
@@ -179,6 +172,18 @@ public class YarnClientImpl extends YarnClient {
       timelineClient.init(conf);
       timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
       timelineService = TimelineUtils.buildTimelineTokenService(conf);
+    }
+
+    // The AHSClientService is enabled by default when we start the
+    // TimelineServer which means we are able to get history information
+    // for applications/applicationAttempts/containers by using ahsClient
+    // when the TimelineServer is running.
+    if (timelineServiceEnabled || conf.getBoolean(
+        YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+        YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
+      historyServiceEnabled = true;
+      historyClient = AHSClient.createAHSClient();
+      historyClient.init(conf);
     }
 
     timelineServiceBestEffort = conf.getBoolean(
