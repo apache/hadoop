@@ -58,4 +58,8 @@ public class ResourceInfo {
   public void setvCores(int vCores) {
     this.vCores = vCores;
   }
+
+  public Resource getResource() {
+    return Resource.newInstance(memory, vCores);
+  }
 }
