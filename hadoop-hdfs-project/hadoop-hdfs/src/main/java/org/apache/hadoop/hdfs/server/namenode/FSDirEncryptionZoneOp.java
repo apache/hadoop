@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.InvalidProtocolBufferException;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 /**
  * Helper class to perform encryption zone operation.
@@ -76,11 +77,14 @@ final class FSDirEncryptionZoneOp {
       return null;
     }
     EncryptedKeyVersion edek = null;
+    long generateEDEKStartTime = monotonicNow();
     try {
       edek = fsd.getProvider().generateEncryptedKey(ezKeyName);
     } catch (GeneralSecurityException e) {
       throw new IOException(e);
     }
+    long generateEDEKTime = monotonicNow() - generateEDEKStartTime;
+    NameNode.getNameNodeMetrics().addGenerateEDEKTime(generateEDEKTime);
     Preconditions.checkNotNull(edek);
     return edek;
   }
@@ -355,6 +359,7 @@ final class FSDirEncryptionZoneOp {
       int sinceLastLog = logCoolDown; // always print the first failure
       boolean success = false;
       IOException lastSeenIOE = null;
+      long warmUpEDEKStartTime = monotonicNow();
       while (true) {
         try {
           kp.warmUpEncryptedKeys(keyNames);
@@ -382,6 +387,8 @@ final class FSDirEncryptionZoneOp {
         }
         sinceLastLog += retryInterval;
       }
+      long warmUpEDEKTime = monotonicNow() - warmUpEDEKStartTime;
+      NameNode.getNameNodeMetrics().addWarmUpEDEKTime(warmUpEDEKTime);
       if (!success) {
         NameNode.LOG.warn("Unable to warm up EDEKs.");
         if (lastSeenIOE != null) {

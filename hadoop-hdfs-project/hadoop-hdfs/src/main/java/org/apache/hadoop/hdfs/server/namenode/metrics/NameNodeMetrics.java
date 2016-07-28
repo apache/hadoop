@@ -115,6 +115,10 @@ public class NameNodeMetrics {
   final MutableQuantiles[] blockReportQuantiles;
   @Metric("Cache report") MutableRate cacheReport;
   final MutableQuantiles[] cacheReportQuantiles;
+  @Metric("Generate EDEK time") private MutableRate generateEDEKTime;
+  private final MutableQuantiles[] generateEDEKTimeQuantiles;
+  @Metric("Warm-up EDEK time") private MutableRate warmUpEDEKTime;
+  private final MutableQuantiles[] warmUpEDEKTimeQuantiles;
 
   @Metric("Duration in SafeMode at startup in msec")
   MutableGaugeInt safeModeTime;
@@ -139,6 +143,8 @@ public class NameNodeMetrics {
     syncsQuantiles = new MutableQuantiles[len];
     blockReportQuantiles = new MutableQuantiles[len];
     cacheReportQuantiles = new MutableQuantiles[len];
+    generateEDEKTimeQuantiles = new MutableQuantiles[len];
+    warmUpEDEKTimeQuantiles = new MutableQuantiles[len];
     
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -151,6 +157,12 @@ public class NameNodeMetrics {
       cacheReportQuantiles[i] = registry.newQuantiles(
           "cacheReport" + interval + "s",
           "Cache report", "ops", "latency", interval);
+      generateEDEKTimeQuantiles[i] = registry.newQuantiles(
+          "generateEDEKTime" + interval + "s",
+          "Generate EDEK time", "ops", "latency", interval);
+      warmUpEDEKTimeQuantiles[i] = registry.newQuantiles(
+          "warmupEDEKTime" + interval + "s",
+          "Warm up EDEK time", "ops", "latency", interval);
     }
   }
 
@@ -326,5 +338,19 @@ public class NameNodeMetrics {
 
   public void addPutImage(long latency) {
     putImage.add(latency);
+  }
+
+  public void addGenerateEDEKTime(long latency) {
+    generateEDEKTime.add(latency);
+    for (MutableQuantiles q : generateEDEKTimeQuantiles) {
+      q.add(latency);
+    }
+  }
+
+  public void addWarmUpEDEKTime(long latency) {
+    warmUpEDEKTime.add(latency);
+    for (MutableQuantiles q : warmUpEDEKTimeQuantiles) {
+      q.add(latency);
+    }
   }
 }
