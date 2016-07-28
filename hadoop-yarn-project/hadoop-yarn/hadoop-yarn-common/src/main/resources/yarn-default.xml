@@ -2137,6 +2137,17 @@
   </property>
 
   <property>
+    <name>yarn.timeline-service.entity-group-fs-store.app-cache-size</name>
+    <description>
+      Size of the reader cache for ATS v1.5 reader. This value controls how many
+      entity groups the ATS v1.5 server should cache. If the number of active
+      read entity groups is greater than the number of caches items, some reads
+      may return empty data. This value must be greater than 0.
+    </description>
+    <value>10</value>
+  </property>
+
+  <property>
     <name>yarn.timeline-service.client.fd-flush-interval-secs</name>
     <description>
       Flush interval for ATS v1.5 writer. This value controls how frequent
