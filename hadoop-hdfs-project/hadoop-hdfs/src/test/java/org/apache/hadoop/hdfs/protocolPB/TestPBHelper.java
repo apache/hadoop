@@ -329,7 +329,7 @@ public class TestPBHelper {
     List<RemoteEditLog> logs = new ArrayList<RemoteEditLog>();
     logs.add(new RemoteEditLog(1, 10));
     logs.add(new RemoteEditLog(11, 20));
-    RemoteEditLogManifest m = new RemoteEditLogManifest(logs);
+    RemoteEditLogManifest m = new RemoteEditLogManifest(logs, 20);
     RemoteEditLogManifestProto mProto = PBHelper.convert(m);
     RemoteEditLogManifest m1 = PBHelper.convert(mProto);
     

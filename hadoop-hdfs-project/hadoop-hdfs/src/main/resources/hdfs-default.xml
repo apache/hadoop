@@ -2790,6 +2790,16 @@
 </property>
 
 <property>
+  <name>dfs.ha.tail-edits.in-progress</name>
+  <value>false</value>
+  <description>
+    Whether enable standby namenode to tail in-progress edit logs.
+    Clients might want to turn it on when they want Standby NN to have
+    more up-to-date data.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.ec.reconstruction.stripedread.timeout.millis</name>
   <value>5000</value>
   <description>Datanode striped read timeout in milliseconds.
