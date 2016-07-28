@@ -211,17 +211,19 @@ public class DFSAdmin extends FsShell {
     private static final String NAME = "clrSpaceQuota";
     private static final String USAGE = "-"+NAME+" [-storageType <storagetype>] <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-    "Clear the space quota for each directory <dirName>.\n" +
-    "\t\tFor each directory, attempt to clear the quota. An error will be reported if\n" +
-    "\t\t1. the directory does not exist or is a file, or\n" +
-    "\t\t2. user is not an administrator.\n" +
-    "\t\tIt does not fault if the directory has no quota.\n" +
-    "\t\tThe storage type specific quota is cleared when -storageType option is specified." +
-    "\t\tAvailable storageTypes are \n" +
-    "\t\t- RAM_DISK\n" +
-    "\t\t- DISK\n" +
-    "\t\t- SSD\n" +
-    "\t\t- ARCHIVE";
+        "Clear the space quota for each directory <dirName>.\n" +
+        "\t\tFor each directory, attempt to clear the quota. " +
+        "An error will be reported if\n" +
+        "\t\t1. the directory does not exist or is a file, or\n" +
+        "\t\t2. user is not an administrator.\n" +
+        "\t\tIt does not fault if the directory has no quota.\n" +
+        "\t\tThe storage type specific quota is cleared when -storageType " +
+        "option is specified.\n" +
+        "\t\tAvailable storageTypes are \n" +
+        "\t\t- RAM_DISK\n" +
+        "\t\t- DISK\n" +
+        "\t\t- SSD\n" +
+        "\t\t- ARCHIVE";
 
 
     private StorageType type;
