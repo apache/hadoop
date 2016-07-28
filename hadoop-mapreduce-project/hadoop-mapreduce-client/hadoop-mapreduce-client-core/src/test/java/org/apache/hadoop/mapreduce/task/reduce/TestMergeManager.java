@@ -289,22 +289,29 @@ public class TestMergeManager {
     final long maxInMemReduce = mgr.getMaxInMemReduceLimit();
     assertTrue("Large in-memory reduce area unusable: " + maxInMemReduce,
         maxInMemReduce > Integer.MAX_VALUE);
+    assertEquals("maxSingleShuffleLimit to be capped at Integer.MAX_VALUE",
+        Integer.MAX_VALUE, mgr.maxSingleShuffleLimit);
+    verifyReservedMapOutputType(mgr, 10L, "MEMORY");
+    verifyReservedMapOutputType(mgr, 1L + Integer.MAX_VALUE, "DISK");
+  }
+
+  private void verifyReservedMapOutputType(MergeManagerImpl<Text, Text> mgr,
+      long size, String expectedShuffleMode) throws IOException {
+    final TaskAttemptID mapId = TaskAttemptID.forName("attempt_0_1_m_1_1");
+    final MapOutput<Text, Text> mapOutput = mgr.reserve(mapId, size, 1);
+    assertEquals("Shuffled bytes: " + size, expectedShuffleMode,
+        mapOutput.getDescription());
+    mgr.unreserve(size);
   }
 
   @Test
   public void testZeroShuffleMemoryLimitPercent() throws Exception {
     final JobConf jobConf = new JobConf();
     jobConf.setFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT, 0.0f);
-    final MergeManager<Text, Text> mgr =
+    final MergeManagerImpl<Text, Text> mgr =
         new MergeManagerImpl<>(null, jobConf, mock(LocalFileSystem.class),
             null, null, null, null, null, null, null, null, null, null,
             new MROutputFiles());
-    final long mapOutputSize = 10;
-    final int fetcher = 1;
-    final MapOutput<Text, Text> mapOutput = mgr.reserve(
-        TaskAttemptID.forName("attempt_0_1_m_1_1"),
-        mapOutputSize, fetcher);
-    assertEquals("Tiny map outputs should be shuffled to disk", "DISK",
-        mapOutput.getDescription());
+    verifyReservedMapOutputType(mgr, 10L, "DISK");
   }
 }
