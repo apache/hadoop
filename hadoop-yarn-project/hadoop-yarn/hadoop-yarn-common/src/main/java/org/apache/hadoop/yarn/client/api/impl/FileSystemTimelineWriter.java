@@ -269,9 +269,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     if (logFDsCache != null) {
       LOG.debug("Closing cache");
       logFDsCache.flush();
-      logFDsCache.close();
-      logFDsCache = null;
     }
+    IOUtils.cleanup(LOG, logFDsCache, fs);
   }
 
   @Override
