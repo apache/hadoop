@@ -1496,6 +1496,13 @@
 </property>
 
 <property>
+  <name>dfs.ha.tail-edits.rolledits.timeout</name>
+  <value>60</value>
+  <description>The timeout in seconds of calling rollEdits RPC on Active NN.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.automatic-failover.enabled</name>
   <value>false</value>
   <description>
