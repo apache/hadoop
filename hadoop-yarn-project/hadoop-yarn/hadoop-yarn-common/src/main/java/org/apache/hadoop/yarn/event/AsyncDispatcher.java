@@ -59,6 +59,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   // Indicates all the remaining dispatcher's events on stop have been drained
   // and processed.
+  // Race condition happens if dispatcher thread sets drained to true between
+  // handler setting drained to false and enqueueing event. YARN-3878 decided
+  // to ignore it because of its tiny impact. Also see YARN-5436.
   private volatile boolean drained = true;
   private final Object waitForDrained = new Object();
 
@@ -299,10 +302,5 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @VisibleForTesting
   protected boolean isEventThreadWaiting() {
     return eventHandlingThread.getState() == Thread.State.WAITING;
-  }
-
-  @VisibleForTesting
-  protected boolean isDrained() {
-    return this.drained;
   }
 }
