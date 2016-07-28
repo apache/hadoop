@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import static org.apache.hadoop.fs.permission.AclEntryScope.*;
-import static org.apache.hadoop.fs.permission.AclEntryType.*;
-import static org.apache.hadoop.fs.permission.FsAction.*;
-import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -46,6 +47,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestStickyBit {
 
@@ -53,6 +56,7 @@ public class TestStickyBit {
     UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
   static final UserGroupInformation user2 =
     UserGroupInformation.createUserForTesting("rose", new String[] {"powellestates"});
+  static final Logger LOG = LoggerFactory.getLogger(TestStickyBit.class);
 
   private static MiniDFSCluster cluster;
   private static Configuration conf;
@@ -342,6 +346,52 @@ public class TestStickyBit {
 
     assertTrue(hdfs.exists(sbSetOff));
     assertFalse(hdfs.getFileStatus(sbSetOff).getPermission().getStickyBit());
+  }
+
+  /**
+   * Sticky bit set on a directory can be reset either explicitly (like 0777)
+   * or by omitting the bit (like 777) in the permission. Ensure that the
+   * directory gets its sticky bit reset whenever it is omitted in permission.
+   */
+  @Test
+  public void testStickyBitReset() throws Exception {
+    Path sbExplicitTestDir = new Path("/DirToTestExplicitStickyBit");
+    Path sbOmittedTestDir = new Path("/DirToTestOmittedStickyBit");
+
+    // Creation of directories and verification of their existence
+    hdfs.mkdirs(sbExplicitTestDir);
+    hdfs.mkdirs(sbOmittedTestDir);
+    assertTrue(hdfs.exists(sbExplicitTestDir));
+    assertTrue(hdfs.exists(sbOmittedTestDir));
+
+    // Setting sticky bit explicitly on sbExplicitTestDir and verification
+    hdfs.setPermission(sbExplicitTestDir, new FsPermission((short) 01777));
+    LOG.info("Dir: {}, permission: {}", sbExplicitTestDir.getName(),
+            hdfs.getFileStatus(sbExplicitTestDir).getPermission());
+    assertTrue(hdfs.getFileStatus(sbExplicitTestDir).
+                  getPermission().getStickyBit());
+
+    // Sticky bit omitted on sbOmittedTestDir should behave like reset
+    hdfs.setPermission(sbOmittedTestDir, new FsPermission((short) 0777));
+    LOG.info("Dir: {}, permission: {}", sbOmittedTestDir.getName(),
+            hdfs.getFileStatus(sbOmittedTestDir).getPermission());
+    assertFalse(
+        hdfs.getFileStatus(sbOmittedTestDir).getPermission().getStickyBit());
+
+    // Resetting sticky bit explicitly on sbExplicitTestDir and verification
+    hdfs.setPermission(sbExplicitTestDir, new FsPermission((short) 00777));
+    LOG.info("Dir: {}, permission: {}", sbExplicitTestDir.getName(),
+            hdfs.getFileStatus(sbExplicitTestDir).getPermission());
+    assertFalse(
+        hdfs.getFileStatus(sbExplicitTestDir).getPermission().getStickyBit());
+
+    // Set the sticky bit and reset again by omitting in the permission
+    hdfs.setPermission(sbOmittedTestDir, new FsPermission((short) 01777));
+    hdfs.setPermission(sbOmittedTestDir, new FsPermission((short) 0777));
+    LOG.info("Dir: {}, permission: {}", sbOmittedTestDir.getName(),
+            hdfs.getFileStatus(sbOmittedTestDir).getPermission());
+    assertFalse(
+        hdfs.getFileStatus(sbOmittedTestDir).getPermission().getStickyBit());
   }
 
   @Test

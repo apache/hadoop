@@ -1059,19 +1059,23 @@ public class TestDFSShell {
             fs.getFileStatus(dir2).getPermission());
 
         confirmPermissionChange("u=rwx,g=rx,o=rx", "rwxr-xr-x", fs, shell, dir2);
-
+        // sticky bit explicit set
         confirmPermissionChange("+t", "rwxr-xr-t", fs, shell, dir2);
-
+        // sticky bit explicit reset
         confirmPermissionChange("-t", "rwxr-xr-x", fs, shell, dir2);
-
         confirmPermissionChange("=t", "--------T", fs, shell, dir2);
-
+        // reset all permissions
         confirmPermissionChange("0000", "---------", fs, shell, dir2);
-
+        // turn on rw permissions for all
         confirmPermissionChange("1666", "rw-rw-rwT", fs, shell, dir2);
-
-        confirmPermissionChange("777", "rwxrwxrwt", fs, shell, dir2);
-
+        // sticky bit explicit set along with x permission
+        confirmPermissionChange("1777", "rwxrwxrwt", fs, shell, dir2);
+        // sticky bit explicit reset
+        confirmPermissionChange("0777", "rwxrwxrwx", fs, shell, dir2);
+        // sticky bit explicit set
+        confirmPermissionChange("1777", "rwxrwxrwt", fs, shell, dir2);
+        // sticky bit implicit reset
+        confirmPermissionChange("777", "rwxrwxrwx", fs, shell, dir2);
         fs.delete(dir2, true);
       } else {
         LOG.info("Skipped sticky bit tests on Windows");
