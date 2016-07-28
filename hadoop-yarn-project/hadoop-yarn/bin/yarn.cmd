@@ -245,6 +245,7 @@ goto :eof
 :timelinereader
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer
+  set YARN_OPTS=%YARN_OPTS% %YARN_TIMELINEREADER_OPTS%
   goto :eof
 
 :nodemanager

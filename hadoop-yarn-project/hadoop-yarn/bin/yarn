@@ -175,6 +175,8 @@ function yarncmd_case
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
+      hadoop_debug "Append YARN_TIMELINEREADER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_TIMELINEREADER_OPTS}"
     ;;
     timelineserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
