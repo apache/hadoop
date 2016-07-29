@@ -128,6 +128,12 @@ final class FileDistributionCalculator {
 
         int bucket = fileSize > maxSize ? distribution.length - 1 : (int) Math
             .ceil((double)fileSize / steps);
+        // Compare the bucket value with distribution's length again,
+        // because sometimes the bucket value will be equal to
+        // the length when maxSize can't be divided completely by step.
+        if (bucket >= distribution.length) {
+          bucket = distribution.length - 1;
+        }
         ++distribution[bucket];
 
       } else if (p.getType() == INodeSection.INode.Type.DIRECTORY) {
