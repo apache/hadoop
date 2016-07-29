@@ -1150,4 +1150,47 @@ public class TestDecommission {
     assertEquals("Unexpected number of pending nodes", pending,
         decomManager.getNumPendingNodes());
   }
+
+  /**
+   * Fetching Live DataNodes by passing removeDecommissionedNode value as
+   * false- returns LiveNodeList with Node in Decommissioned state
+   * true - returns LiveNodeList without Node in Decommissioned state
+   * @throws InterruptedException
+   */
+  @Test
+  public void testCountOnDecommissionedNodeList() throws IOException{
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
+    try {
+      cluster =
+          new MiniDFSCluster.Builder(conf)
+              .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(1))
+              .numDataNodes(1).build();
+      cluster.waitActive();
+      DFSClient client = getDfsClient(cluster.getNameNode(0), conf);
+      validateCluster(client, 1);
+
+      ArrayList<ArrayList<DatanodeInfo>> namenodeDecomList =
+          new ArrayList<ArrayList<DatanodeInfo>>(1);
+      namenodeDecomList.add(0, new ArrayList<DatanodeInfo>(1));
+
+      // Move datanode1 to Decommissioned state
+      ArrayList<DatanodeInfo> decommissionedNode = namenodeDecomList.get(0);
+      decommissionNode(0, null,
+          decommissionedNode, AdminStates.DECOMMISSIONED);
+
+      FSNamesystem ns = cluster.getNamesystem(0);
+      DatanodeManager datanodeManager =
+          ns.getBlockManager().getDatanodeManager();
+      List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+      // fetchDatanode with false should return livedecommisioned node
+      datanodeManager.fetchDatanodes(live, null, false);
+      assertTrue(1==live.size());
+      // fetchDatanode with true should not return livedecommisioned node
+      datanodeManager.fetchDatanodes(live, null, true);
+      assertTrue(0==live.size());
+    }finally {
+      cluster.shutdown();
+    }
+  }
 }
