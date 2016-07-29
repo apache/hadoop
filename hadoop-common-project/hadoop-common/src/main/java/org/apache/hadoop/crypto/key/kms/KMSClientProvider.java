@@ -38,6 +38,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
@@ -536,8 +537,12 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           UserGroupInformation.AuthenticationMethod.PROXY)
                               ? currentUgi.getShortUserName() : null;
 
-      // creating the HTTP connection using the current UGI at constructor time
-      conn = actualUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+      // If current UGI contains kms-dt && is not proxy, doAs it to use its dt.
+      // Otherwise, create the HTTP connection using the UGI at constructor time
+      UserGroupInformation ugiToUse =
+          (currentUgiContainsKmsDt() && doAsUser == null) ?
+              currentUgi : actualUgi;
+      conn = ugiToUse.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
         @Override
         public HttpURLConnection run() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
@@ -1039,6 +1044,20 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         url.getPort());
     Text dtService = SecurityUtil.buildTokenService(addr);
     return dtService;
+  }
+
+  private boolean currentUgiContainsKmsDt() throws IOException {
+    // Add existing credentials from current UGI, since provider is cached.
+    Credentials creds = UserGroupInformation.getCurrentUser().
+        getCredentials();
+    if (!creds.getAllTokens().isEmpty()) {
+      org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
+          dToken = creds.getToken(getDelegationTokenService());
+      if (dToken != null) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
