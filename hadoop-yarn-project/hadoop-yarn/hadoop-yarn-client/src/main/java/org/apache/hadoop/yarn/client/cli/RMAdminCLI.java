@@ -98,11 +98,17 @@ public class RMAdminCLI extends HAAdmin {
               "Reload the queues' acls, states and scheduler specific " +
                   "properties. \n\t\tResourceManager will reload the " +
                   "mapred-queues configuration file."))
-          .put("-refreshNodes", new UsageInfo("[-g [timeout in seconds]]",
+          .put("-refreshNodes",
+              new UsageInfo("[-g [timeout in seconds] -client|server]",
               "Refresh the hosts information at the ResourceManager. Here "
-              + "[-g [timeout in seconds] is optional, if we specify the "
-              + "timeout then ResourceManager will wait for timeout before "
-              + "marking the NodeManager as decommissioned."))
+              + "[-g [timeout in seconds] -client|server] is optional, if we "
+              + "specify the timeout then ResourceManager will wait for "
+              + "timeout before marking the NodeManager as decommissioned."
+              + " The -client|server indicates if the timeout tracking should"
+              + " be handled by the client or the ResourceManager. The client"
+              + "-side tracking is blocking, while the server-side tracking"
+              + " is not. Omitting the timeout, or a timeout of -1, indicates"
+              + " an infinite timeout."))
           .put("-refreshNodesResources", new UsageInfo("",
               "Refresh resources of NodeManagers at the ResourceManager."))
           .put("-refreshSuperUserGroupsConfiguration", new UsageInfo("",
@@ -230,7 +236,7 @@ public class RMAdminCLI extends HAAdmin {
     summary.append("The full syntax is: \n\n" +
     "yarn rmadmin" +
       " [-refreshQueues]" +
-      " [-refreshNodes [-g [timeout in seconds]]]" +
+      " [-refreshNodes [-g [timeout in seconds] -client|server]]" +
       " [-refreshNodesResources]" +
       " [-refreshSuperUserGroupsConfiguration]" +
       " [-refreshUserToGroupsMappings]" +
@@ -312,7 +318,12 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int refreshNodes(long timeout) throws IOException, YarnException {
+  private int refreshNodes(long timeout, String trackingMode)
+      throws IOException, YarnException {
+    if (!"client".equals(trackingMode)) {
+      throw new UnsupportedOperationException(
+          "Only client tracking mode is currently supported.");
+    }
     // Graceful decommissioning with timeout
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshNodesRequest gracefulRequest = RefreshNodesRequest
@@ -721,11 +732,18 @@ public class RMAdminCLI extends HAAdmin {
       } else if ("-refreshNodes".equals(cmd)) {
         if (args.length == 1) {
           exitCode = refreshNodes();
-        } else if (args.length == 3) {
+        } else if (args.length == 3 || args.length == 4) {
           // if the graceful timeout specified
           if ("-g".equals(args[1])) {
-            long timeout = validateTimeout(args[2]);
-            exitCode = refreshNodes(timeout);
+            long timeout = -1;
+            String trackingMode;
+            if (args.length == 4) {
+              timeout = validateTimeout(args[2]);
+              trackingMode = validateTrackingMode(args[3]);
+            } else {
+              trackingMode = validateTrackingMode(args[2]);
+            }
+            exitCode = refreshNodes(timeout, trackingMode);
           } else {
             printUsage(cmd, isHAEnabled);
             return -1;
@@ -836,6 +854,16 @@ public class RMAdminCLI extends HAAdmin {
       throw new IllegalArgumentException(INVALID_TIMEOUT_ERR_MSG + timeout);
     }
     return timeout;
+  }
+
+  private String validateTrackingMode(String mode) {
+    if ("-client".equals(mode)) {
+      return "client";
+    }
+    if ("-server".equals(mode)) {
+      return "server";
+    }
+    throw new IllegalArgumentException("Invalid mode specified: " + mode);
   }
 
   @Override
