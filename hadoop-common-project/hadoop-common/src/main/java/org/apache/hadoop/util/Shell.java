@@ -205,7 +205,7 @@ public abstract class Shell {
     } else {
       String quotedUser = bashQuote(user);
       return new String[] {"bash", "-c", "id -gn " + quotedUser +
-          "; id -Gn " + quotedUser};
+                            "; id -Gn " + quotedUser};
     }
   }
 
@@ -220,18 +220,18 @@ public abstract class Shell {
     //'groups username' command return is inconsistent across different unixes
     if (WINDOWS) {
       return new String[]{getWinUtilsPath(), "groups", "-F", "\"" + user +
-          "\""};
+                           "\""};
     } else {
       String quotedUser = bashQuote(user);
       return new String[] {"bash", "-c", "id -g " + quotedUser + "; id -G " +
-          quotedUser};
+                            quotedUser};
     }
   }
 
   /** A command to get a given netgroup's user list. */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
-    return new String [] {"getent", "netgroup", netgroup};
+    return new String[] {"getent", "netgroup", netgroup};
   }
 
   /** Return a command to get permission information. */
@@ -313,9 +313,9 @@ public abstract class Shell {
 
     if (isSetsidAvailable) {
       // Use the shell-builtin as it support "--" in all Hadoop supported OSes
-      return new String[] { "kill", "-" + code, "--", "-" + pid};
+      return new String[] {"kill", "-" + code, "--", "-" + pid};
     } else {
-      return new String[] { "kill", "-" + code, pid };
+      return new String[] {"kill", "-" + code, pid };
     }
   }
 
@@ -365,8 +365,8 @@ public abstract class Shell {
   public static String[] getRunScriptCommand(File script) {
     String absolutePath = script.getAbsolutePath();
     return WINDOWS ?
-      new String[] { "cmd", "/c", absolutePath }
-      : new String[] { "/bin/bash", bashQuote(absolutePath) };
+      new String[] {"cmd", "/c", absolutePath }
+      : new String[] {"/bin/bash", bashQuote(absolutePath) };
   }
 
   /** a Unix command to set permission: {@value}. */
