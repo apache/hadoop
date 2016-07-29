@@ -15,6 +15,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9601. NNThroughputBenchmark.BlockReportStats should handle
     NotReplicatedYetException on adding block. (iwasakims)
 
+    HDFS-10691. FileDistribution fails in hdfs oiv command due to
+    ArrayIndexOutOfBoundsException. (Yiqun Lin via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
