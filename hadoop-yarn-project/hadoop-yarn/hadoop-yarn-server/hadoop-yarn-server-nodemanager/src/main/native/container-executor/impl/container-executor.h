@@ -182,7 +182,7 @@ int signal_container_as_user(const char *user, int pid, int sig);
 // delete a directory (or file) recursively as the user. The directory
 // could optionally be relative to the baseDir set of directories (if the same
 // directory appears on multiple disk volumes, the disk volumes should be passed
-// as the baseDirs). If baseDirs is not specified, then dir_to_be_deleted is 
+// as the baseDirs). If baseDirs is not specified, then dir_to_be_deleted is
 // assumed as the absolute path
 int delete_as_user(const char *user,
                    const char *dir_to_be_deleted,
