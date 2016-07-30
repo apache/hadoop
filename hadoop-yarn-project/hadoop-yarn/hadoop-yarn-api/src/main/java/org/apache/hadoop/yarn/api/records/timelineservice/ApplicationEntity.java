@@ -49,4 +49,32 @@ public class ApplicationEntity extends HierarchicalTimelineEntity {
   public void setQueue(String queue) {
     addInfo(QUEUE_INFO_KEY, queue);
   }
+
+  /**
+   * Checks if the input TimelineEntity object is an ApplicationEntity.
+   *
+   * @param te TimelineEntity object.
+   * @return true if input is an ApplicationEntity, false otherwise
+   */
+  public static boolean isApplicationEntity(TimelineEntity te) {
+    return (te == null ? false
+        : te.getType().equals(TimelineEntityType.YARN_APPLICATION.toString()));
+  }
+
+  /**
+   * @param te TimelineEntity object.
+   * @param eventId event with this id needs to be fetched
+   * @return TimelineEvent if TimelineEntity contains the desired event.
+   */
+  public static TimelineEvent getApplicationEvent(TimelineEntity te,
+      String eventId) {
+    if (isApplicationEntity(te)) {
+      for (TimelineEvent event : te.getEvents()) {
+        if (event.getId().equals(eventId)) {
+          return event;
+        }
+      }
+    }
+    return null;
+  }
 }
