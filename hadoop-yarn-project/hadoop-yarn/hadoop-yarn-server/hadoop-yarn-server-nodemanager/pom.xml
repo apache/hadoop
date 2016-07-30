@@ -274,6 +274,18 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/native/container-executor/impl/compat/fstatat.h</exclude>
+            <exclude>src/main/native/container-executor/impl/compat/openat.h</exclude>
+            <exclude>src/main/native/container-executor/impl/compat/unlinkat.h</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>

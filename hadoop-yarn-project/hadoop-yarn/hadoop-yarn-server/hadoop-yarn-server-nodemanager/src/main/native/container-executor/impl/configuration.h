@@ -24,7 +24,7 @@
 
 /**
  * Ensure that the configuration file and all of the containing directories
- * are only writable by root. Otherwise, an attacker can change the 
+ * are only writable by root. Otherwise, an attacker can change the
  * configuration and potentially cause damage.
  * returns 0 if permissions are ok
  */
@@ -78,7 +78,7 @@ void free_configurations(struct configuration *cfg);
 
 /**
  * If str is a string of the form key=val, find 'key'
- * 
+ *
  * @param input    The input string
  * @param out      Where to put the output string.
  * @param out_len  The length of the output buffer.
@@ -91,7 +91,7 @@ int get_kv_key(const char *input, char *out, size_t out_len);
 
 /**
  * If str is a string of the form key=val, find 'val'
- * 
+ *
  * @param input    The input string
  * @param out      Where to put the output string.
  * @param out_len  The length of the output buffer.
