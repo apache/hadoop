@@ -63,6 +63,19 @@ void display_usage(FILE *stream) {
 	  DELETE_AS_USER);
 }
 
+static void flush_and_close_log_files() {
+  if (LOGFILE != NULL) {
+    fflush(LOGFILE);
+    fclose(LOGFILE);
+    LOGFILE = NULL;
+  }
+  if (ERRORFILE != NULL) {
+    fflush(ERRORFILE);
+    fclose(ERRORFILE);
+    ERRORFILE = NULL;
+  }
+}
+
 int main(int argc, char **argv) {
   int invalid_args = 0; 
   int do_check_setup = 0;
@@ -109,6 +122,11 @@ int main(int argc, char **argv) {
   char * dir_to_be_deleted = NULL;
 
   char *executable_file = get_executable();
+  if (!executable_file) {
+    fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
+    flush_and_close_log_files();
+    exit(-1);
+  }
 
   char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
   char *conf_file = resolve_config_path(orig_conf_file, argv[0]);
@@ -116,10 +134,14 @@ int main(int argc, char **argv) {
   char *resources, *resources_key, *resources_value;
 
   if (conf_file == NULL) {
+    free(executable_file);
     fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   if (check_configuration_permissions(conf_file) != 0) {
+    free(executable_file);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   read_config(conf_file);
@@ -128,26 +150,42 @@ int main(int argc, char **argv) {
   // look up the node manager group in the config file
   char *nm_group = get_value(NM_GROUP_KEY);
   if (nm_group == NULL) {
+    free(executable_file);
     fprintf(ERRORFILE, "Can't get configured value for %s.\n", NM_GROUP_KEY);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   struct group *group_info = getgrnam(nm_group);
   if (group_info == NULL) {
+    free(executable_file);
     fprintf(ERRORFILE, "Can't get group information for %s - %s.\n", nm_group,
             strerror(errno));
-    fflush(LOGFILE);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   set_nm_uid(getuid(), group_info->gr_gid);
-  // if we are running from a setuid executable, make the real uid root
-  setuid(0);
-  // set the real and effective group id to the node manager group
-  setgid(group_info->gr_gid);
+  /*
+   * if we are running from a setuid executable, make the real uid root
+   * we're going to ignore this result just in case we aren't.
+   */
+  int ignore=setuid(0);
+
+  /*
+   * set the real and effective group id to the node manager group
+   * we're going to ignore this result just in case we aren't
+   */
+  ignore=setgid(group_info->gr_gid);
+
+  /* make the unused var warning to away */
+  ignore++;
 
   if (check_executor_permissions(executable_file) != 0) {
+    free(executable_file);
     fprintf(ERRORFILE, "Invalid permissions on container-executor binary.\n");
+    flush_and_close_log_files();
     return INVALID_CONTAINER_EXEC_PERMISSIONS;
   }
+  free(executable_file);
 
   if (do_check_setup != 0) {
     // basic setup checks done

@@ -17,7 +17,7 @@
  */
 
 // ensure we get the posix version of dirname by including this first
-#include <libgen.h> 
+#include <libgen.h>
 
 #include "configuration.h"
 #include "container-executor.h"
@@ -79,7 +79,7 @@ static int is_only_root_writable(const char *file) {
     return 0;
   }
   if ((file_stat.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
-    fprintf(ERRORFILE, 
+    fprintf(ERRORFILE,
 	    "File %s must not be world or group writable, but is %03o\n",
 	    file, file_stat.st_mode & (~S_IFMT));
     return 0;
@@ -103,8 +103,13 @@ char *resolve_config_path(const char* file_name, const char *root) {
     real_fname = buffer;
   }
 
+#ifdef HAVE_CANONICALIZE_FILE_NAME
+  char * ret = (real_fname == NULL) ? NULL : canonicalize_file_name(real_fname);
+#else
   char * ret = (real_fname == NULL) ? NULL : realpath(real_fname, NULL);
+#endif
 #ifdef DEBUG
+  fprintf(stderr,"ret = %s\n", ret);
   fprintf(stderr, "resolve_config_path(file_name=%s,root=%s)=%s\n",
           file_name, root ? root : "null", ret ? ret : "null");
 #endif
@@ -113,7 +118,7 @@ char *resolve_config_path(const char* file_name, const char *root) {
 
 /**
  * Ensure that the configuration file and all of the containing directories
- * are only writable by root. Otherwise, an attacker can change the 
+ * are only writable by root. Otherwise, an attacker can change the
  * configuration and potentially cause damage.
  * returns 0 if permissions are ok
  */
@@ -166,7 +171,7 @@ void read_config(const char* file_name) {
       exit(OUT_OF_MEMORY);
     }
     size_read = getline(&line,&linesize,conf_file);
- 
+
     //feof returns true only after we read past EOF.
     //so a file with no new line, at last can reach this place
     //if size_read returns negative check for eof condition
@@ -244,7 +249,7 @@ void read_config(const char* file_name) {
     config.size++;
     free(line);
   }
- 
+
   //close the file
   fclose(conf_file);
 

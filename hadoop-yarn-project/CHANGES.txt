@@ -118,6 +118,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4017. container-executor overuses PATH_MAX.
     (Sidharta Seethana via vvasudev)
 
+    YARN-5121. fix some container-executor portability issues.
+    (Allen Wittenauer) Backport YARN-6698 by  Akira Ajisaka.
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

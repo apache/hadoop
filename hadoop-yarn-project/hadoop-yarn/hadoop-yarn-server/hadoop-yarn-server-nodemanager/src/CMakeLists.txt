@@ -21,7 +21,20 @@ set(CMAKE_BUILD_TYPE, Release)
 include(../../../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
 
 include(CheckFunctionExists)
-CHECK_FUNCTION_EXISTS(fcloseall HAVE_FCLOSEALL)
+check_function_exists(canonicalize_file_name HAVE_CANONICALIZE_FILE_NAME)
+check_function_exists(fcloseall HAVE_FCLOSEALL)
+check_function_exists(fchmodat HAVE_FCHMODAT)
+check_function_exists(fdopendir HAVE_FDOPENDIR)
+check_function_exists(fstatat HAVE_FSTATAT)
+check_function_exists(openat HAVE_OPENAT)
+check_function_exists(unlinkat HAVE_UNLINKAT)
+
+if(APPLE)
+  include_directories( /System/Library/Frameworks )
+  find_library(COCOA_LIBRARY Cocoa)
+  mark_as_advanced(COCOA_LIBRARY)
+  set(EXTRA_LIBS ${COCOA_LIBRARY})
+endif(APPLE)
 
 function(output_directory TGT DIR)
     SET_TARGET_PROPERTIES(${TGT} PROPERTIES
@@ -47,6 +60,7 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 add_library(container
     main/native/container-executor/impl/configuration.c
     main/native/container-executor/impl/container-executor.c
+    main/native/container-executor/impl/get_executable.c
 )
 
 add_executable(container-executor
@@ -61,6 +75,6 @@ add_executable(test-container-executor
     main/native/container-executor/test/test-container-executor.c
 )
 target_link_libraries(test-container-executor
-    container
+    container ${EXTRA_LIBS}
 )
 output_directory(test-container-executor target/usr/local/bin)
