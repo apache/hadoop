@@ -27,15 +27,20 @@ class Status {
  public:
   // Create a success status.
   Status() : code_(0) {};
+
+  // Note: Avoid calling the Status constructors directly, call the factory methods instead
+
+  // Used for common status  types
   Status(int code, const char *msg);
-  Status(int code, const char *msg1, const char *msg2);
+  // Used for server side exceptions reported through RpcResponseProto and similar
+  Status(int code, const char *exception_class, const char *exception_details);
 
   // Factory methods
   static Status OK();
   static Status InvalidArgument(const char *msg);
   static Status ResourceUnavailable(const char *msg);
   static Status Unimplemented();
-  static Status Exception(const char *expception_class_name, const char *error_message);
+  static Status Exception(const char *exception_class_name, const char *exception_details);
   static Status Error(const char *error_message);
   static Status AuthenticationFailed();
   static Status Canceled();
@@ -61,13 +66,28 @@ class Status {
     kNotADirectory = static_cast<unsigned>(std::errc::not_a_directory),
     kFileAlreadyExists = static_cast<unsigned>(std::errc::file_exists),
     kPathIsNotEmptyDirectory = static_cast<unsigned>(std::errc::directory_not_empty),
+
+    // non-errc codes start at 256
     kException = 256,
     kAuthenticationFailed = 257,
+    kAccessControlException = 258,
+    kStandbyException = 259,
+    kSnapshotProtocolException = 260,
   };
+
+  std::string get_exception_class_str() const {
+    return exception_class_;
+  }
+
+  int get_server_exception_type() const {
+    return code_;
+  }
 
  private:
   int code_;
   std::string msg_;
+
+  std::string exception_class_;
 };
 
 }

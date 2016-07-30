@@ -118,11 +118,13 @@ public:
     { fragment = to_encoded(encoded_input,f); }
 
     std::string str(bool encoded_output=true) const;
+
+    // Get a string with each URI field printed on a seperate line
+    std::string GetDebugString() const;
 };
 
 inline std::ostream& operator<<(std::ostream &out, const URI &uri)
 { return out << uri.str(); }
 
 }
-
 #endif

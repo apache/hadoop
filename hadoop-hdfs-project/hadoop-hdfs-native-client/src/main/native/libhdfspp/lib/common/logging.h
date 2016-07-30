@@ -19,6 +19,8 @@
 #ifndef LIB_COMMON_LOGGING_H_
 #define LIB_COMMON_LOGGING_H_
 
+#include <asio/ip/tcp.hpp>
+
 #include "hdfspp/log.h"
 
 #include <iostream>
@@ -179,11 +181,10 @@ class LogMessage {
   LogMessage& operator<<(const std::string*);
   LogMessage& operator<<(const std::string&);
 
-  LogMessage& operator<<(const ::asio::ip::tcp::endpoint& endpoint);
-
   //convert to a string "true"/"false"
   LogMessage& operator<<(bool);
 
+  //integral types
   LogMessage& operator<<(int32_t);
   LogMessage& operator<<(uint32_t);
   LogMessage& operator<<(int64_t);
@@ -191,6 +192,10 @@ class LogMessage {
 
   //print address as hex
   LogMessage& operator<<(void *);
+
+  //asio types
+  LogMessage& operator<<(const ::asio::ip::tcp::endpoint& endpoint);
+
 
   std::string MsgString() const;
 

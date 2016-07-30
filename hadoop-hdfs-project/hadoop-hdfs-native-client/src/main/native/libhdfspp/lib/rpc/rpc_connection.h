@@ -112,6 +112,8 @@ void RpcConnectionImpl<NextLayer>::Connect(
 template <class NextLayer>
 void RpcConnectionImpl<NextLayer>::ConnectAndFlush(
     const std::vector<::asio::ip::tcp::endpoint> &server) {
+
+  LOG_INFO(kRPC, << "ConnectAndFlush called");
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
   if (server.empty()) {
@@ -408,7 +410,16 @@ void RpcConnectionImpl<NextLayer>::OnRecvCompleted(const ::asio::error_code &ori
           OnRecvCompleted(ec, size);
         });
   } else if (current_response_state_->state_ == Response::kParseResponse) {
-    HandleRpcResponse(current_response_state_);
+    // Check return status from the RPC response.  We may have received a msg
+    // indicating a server side error.
+
+    Status stat = HandleRpcResponse(current_response_state_);
+
+    if(stat.get_server_exception_type() == Status::kStandbyException) {
+      // May need to bail out, connect to new NN, and restart loop
+      LOG_INFO(kRPC, << "Communicating with standby NN, attempting to reconnect");
+    }
+
     current_response_state_ = nullptr;
     StartReading();
   }

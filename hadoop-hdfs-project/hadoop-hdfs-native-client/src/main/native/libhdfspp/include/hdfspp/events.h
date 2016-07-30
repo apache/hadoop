@@ -29,12 +29,19 @@ namespace hdfs {
  * Supported event names.  These names will stay consistent in libhdfs callbacks.
  *
  * Other events not listed here may be seen, but they are not stable and
- * should not be counted on.
+ * should not be counted on.  May need to be broken up into more components
+ * as more events are added.
  */
 
 static constexpr const char * FS_NN_CONNECT_EVENT = "NN::connect";
 static constexpr const char * FS_NN_READ_EVENT = "NN::read";
 static constexpr const char * FS_NN_WRITE_EVENT = "NN::write";
+
+// NN failover event due to issues with the current NN; might be standby, might be dead.
+// Invokes the fs_event_callback using the nameservice name in the cluster string.
+// The uint64_t value argument holds an address that can be reinterpreted as a const char *
+// and provides the full URI of the node the failover will attempt to connect to next.
+static constexpr const char * FS_NN_FAILOVER_EVENT = "NN::failover";
 
 static constexpr const char * FILE_DN_CONNECT_EVENT = "DN::connect";
 static constexpr const char * FILE_DN_READ_EVENT = "DN::read";

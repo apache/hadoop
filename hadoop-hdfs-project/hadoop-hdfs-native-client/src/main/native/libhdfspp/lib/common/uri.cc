@@ -133,11 +133,11 @@ std::vector<std::string> split(const std::string input, char separator)
 
 
 std::string copy_range(const UriTextRangeA *r) {
-	const int size = r->afterLast - r->first;
-	if (size) {
+  const int size = r->afterLast - r->first;
+  if (size) {
       return std::string(r->first, size);
-	}
-	return "";
+  }
+  return "";
 }
 
 bool parse_int(const UriTextRangeA *r, optional<uint16_t> * result) {
@@ -161,14 +161,14 @@ bool parse_int(const UriTextRangeA *r, optional<uint16_t> * result) {
 
 std::vector<std::string> copy_path(const UriPathSegmentA *ps) {
     std::vector<std::string> result;
-	if (nullptr == ps)
+  if (nullptr == ps)
       return result;
 
-	for (; ps != 0; ps = ps->next) {
-		result.push_back(copy_range(&ps->text));
-	}
+  for (; ps != 0; ps = ps->next) {
+    result.push_back(copy_range(&ps->text));
+  }
 
-	return result;
+  return result;
 }
 
 void parse_user_info(const UriTextRangeA *r, std::string * user, std::string * pass) {
@@ -204,7 +204,7 @@ std::vector<std::pair<std::string, std::string > > parse_query(const char *first
       uriFreeQueryListA(query);
     }
 
-	return result;
+  return result;
 }
 
 
@@ -366,6 +366,34 @@ void URI::remove_queries(const std::string &q_name, bool encoded_input)
       query.erase(query.begin() + i);
     }
   }
+}
+
+std::string URI::GetDebugString() const {
+  std::stringstream ss;
+  ss << std::endl;
+  ss << "\t" << "uri.str() = \"" << str() << "\"" << std::endl;
+  ss << "\t" << "uri.get_scheme() = \"" << get_scheme() << "\"" << std::endl;
+  ss << "\t" << "uri.get_host() = \"" << get_host() << "\"" << std::endl;
+
+  if(!port)
+    ss << "\t" << "uri.get_port() = unset optional<uint16_t>" << std::endl;
+  else
+    ss << "\t" << "uri.get_port() = \"" << port.value() << "\"" << std::endl;
+
+  ss << "\t" << "uri.get_path() = \"" << get_path() << "\"" << std::endl;
+  ss << "\t" << "uri.get_fragment() = \"" << get_fragment() << "\"" << std::endl;
+
+
+  std::vector<std::pair<std::string, std::string> > elems = get_query_elements();
+
+  if(elems.size() > 0)
+    ss << "\t" << "Query elements:" << std::endl;
+
+  for(auto qry = elems.begin(); qry != elems.end(); qry++) {
+    ss << "\t\t" << qry->first << " -> " << qry->second << std::endl;
+  }
+
+  return ss.str();
 }
 
 }
