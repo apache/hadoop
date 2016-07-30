@@ -27,6 +27,7 @@
 #include <tuple>
 #include <iostream>
 #include <pwd.h>
+#include <utility>
 
 #define FMT_THIS_ADDR "this=" << (void*)this
 
@@ -51,20 +52,9 @@ Status NameNodeOperations::CheckValidPermissionMask(short permissions) {
 }
 
 void NameNodeOperations::Connect(const std::string &cluster_name,
-                                 const std::string &server,
-                             const std::string &service,
-                             std::function<void(const Status &)> &&handler) {
-  using namespace asio_continuation;
-  typedef std::vector<tcp::endpoint> State;
-  auto m = Pipeline<State>::Create();
-  m->Push(Resolve(io_service_, server, service,
-                  std::back_inserter(m->state())))
-      .Push(Bind([this, m, cluster_name](const Continuation::Next &next) {
-        engine_.Connect(cluster_name, m->state(), next);
-      }));
-  m->Run([this, handler](const Status &status, const State &) {
-    handler(status);
-  });
+                                 const std::vector<ResolvedNamenodeInfo> &servers,
+                                 std::function<void(const Status &)> &&handler) {
+  engine_.Connect(cluster_name, servers, handler);
 }
 
 void NameNodeOperations::GetBlockLocations(const std::string & path,

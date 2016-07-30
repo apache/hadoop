@@ -21,33 +21,55 @@
 #include <cassert>
 #include <sstream>
 #include <cstring>
+#include <map>
 
 namespace hdfs {
 
-const char * kStatusAccessControlException = "org.apache.hadoop.security.AccessControlException";
-const char * kStatusSaslException = "javax.security.sasl.SaslException";
-const char * kPathNotFoundException = "org.apache.hadoop.fs.InvalidPathException";
-const char * kPathNotFoundException2 = "java.io.FileNotFoundException";
-const char * kPathIsNotDirectoryException = "org.apache.hadoop.fs.PathIsNotDirectoryException";
-const char * kSnapshotException = "org.apache.hadoop.hdfs.protocol.SnapshotException";
-const char * kFileAlreadyExistsException = "org.apache.hadoop.fs.FileAlreadyExistsException";
+//  Server side exceptions that we capture from the RpcResponseHeaderProto
+const char * kStatusAccessControlException     = "org.apache.hadoop.security.AccessControlException";
+const char * kPathIsNotDirectoryException      = "org.apache.hadoop.fs.PathIsNotDirectoryException";
+const char * kSnapshotException                = "org.apache.hadoop.hdfs.protocol.SnapshotException";
+const char * kStatusStandbyException           = "org.apache.hadoop.ipc.StandbyException";
+const char * kStatusSaslException              = "javax.security.sasl.SaslException";
+const char * kPathNotFoundException            = "org.apache.hadoop.fs.InvalidPathException";
+const char * kPathNotFoundException2           = "java.io.FileNotFoundException";
+const char * kFileAlreadyExistsException       = "org.apache.hadoop.fs.FileAlreadyExistsException";
 const char * kPathIsNotEmptyDirectoryException = "org.apache.hadoop.fs.PathIsNotEmptyDirectoryException";
 
-Status::Status(int code, const char *msg1) : code_(code) {
+
+const static std::map<std::string, int> kKnownServerExceptionClasses = {
+                                            {kStatusAccessControlException, Status::kAccessControlException},
+                                            {kPathIsNotDirectoryException, Status::kNotADirectory},
+                                            {kSnapshotException, Status::kSnapshotProtocolException},
+                                            {kStatusStandbyException, Status::kStandbyException},
+                                            {kStatusSaslException, Status::kAuthenticationFailed},
+                                            {kPathNotFoundException, Status::kPathNotFound},
+                                            {kPathNotFoundException2, Status::kPathNotFound},
+                                            {kFileAlreadyExistsException, Status::kFileAlreadyExists},
+                                            {kPathIsNotEmptyDirectoryException, Status::kPathIsNotEmptyDirectory}
+                                        };
+
+
+Status::Status(int code, const char *msg1)
+               : code_(code) {
   if(msg1) {
     msg_ = msg1;
   }
 }
 
-Status::Status(int code, const char *msg1, const char *msg2) : code_(code) {
-  std::stringstream ss;
-  if(msg1) {
-    ss << msg1;
-    if(msg2) {
-      ss << ":" << msg2;
-    }
+Status::Status(int code, const char *exception_class_name, const char *exception_details)
+               : code_(code) {
+  // If we can assure this never gets nullptr args this can be
+  // in the initializer list.
+  if(exception_class_name)
+    exception_class_ = exception_class_name;
+  if(exception_details)
+    msg_ = exception_details;
+
+  std::map<std::string, int>::const_iterator it = kKnownServerExceptionClasses.find(exception_class_);
+  if(it != kKnownServerExceptionClasses.end()) {
+    code_ = it->second;
   }
-  msg_ = ss.str();
 }
 
 
@@ -72,6 +94,7 @@ Status Status::Unimplemented() {
 }
 
 Status Status::Exception(const char *exception_class_name, const char *error_message) {
+  // Server side exception but can be represented by std::errc codes
   if (exception_class_name && (strcmp(exception_class_name, kStatusAccessControlException) == 0) )
     return Status(kPermissionDenied, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kStatusSaslException) == 0))
@@ -81,13 +104,13 @@ Status Status::Exception(const char *exception_class_name, const char *error_mes
   else if (exception_class_name && (strcmp(exception_class_name, kPathNotFoundException2) == 0))
     return Status(kPathNotFound, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kPathIsNotDirectoryException) == 0))
-      return Status(kNotADirectory, error_message);
+    return Status(kNotADirectory, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kSnapshotException) == 0))
-        return Status(kInvalidArgument, error_message);
+    return Status(kInvalidArgument, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kFileAlreadyExistsException) == 0))
-          return Status(kFileAlreadyExists, error_message);
+    return Status(kFileAlreadyExists, error_message);
   else if (exception_class_name && (strcmp(exception_class_name, kPathIsNotEmptyDirectoryException) == 0))
-          return Status(kPathIsNotEmptyDirectory, error_message);
+    return Status(kPathIsNotEmptyDirectory, error_message);
   else
     return Status(kException, exception_class_name, error_message);
 }
@@ -101,15 +124,19 @@ Status Status::AuthenticationFailed() {
 }
 
 Status Status::Canceled() {
-  return Status(kOperationCanceled,"Operation canceled");
+  return Status(kOperationCanceled, "Operation canceled");
 }
-
 
 std::string Status::ToString() const {
   if (code_ == kOk) {
     return "OK";
   }
-  return msg_;
+  std::stringstream ss;
+  if(!exception_class_.empty()) {
+    ss << exception_class_ << ":";
+  }
+  ss << msg_;
+  return ss.str();
 }
 
 }

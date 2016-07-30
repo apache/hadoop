@@ -118,7 +118,8 @@ Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int 
       call_id_(call_id),
       timer_(engine->io_service()),
       handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry) {
+      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
+      failover_count_(0) {
   ConstructPayload(&payload_, &request);
 }
 
@@ -129,7 +130,8 @@ Request::Request(LockFreeRpcEngine *engine, const std::string &method_name, int 
       call_id_(call_id),
       timer_(engine->io_service()),
       handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry) {
+      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
+      failover_count_(0) {
   ConstructPayload(&payload_, request);
 }
 
@@ -138,10 +140,13 @@ Request::Request(LockFreeRpcEngine *engine, Handler &&handler)
       call_id_(-1),
       timer_(engine->io_service()),
       handler_(std::move(handler)),
-      retry_count_(engine->retry_policy() ? 0 : kNoRetry) {
+      retry_count_(engine->retry_policy() ? 0 : kNoRetry),
+      failover_count_(0) {
 }
 
 void Request::GetPacket(std::string *res) const {
+  LOG_TRACE(kRPC, << "Request::GetPacket called");
+
   if (payload_.empty())
     return;
 
@@ -159,7 +164,25 @@ void Request::GetPacket(std::string *res) const {
 
 void Request::OnResponseArrived(pbio::CodedInputStream *is,
                                 const Status &status) {
+  LOG_TRACE(kRPC, << "Request::OnResponseArrived called");
   handler_(is, status);
+}
+
+std::string Request::GetDebugString() const {
+  // Basic description of this object, aimed at debugging
+  std::stringstream ss;
+  ss << "\nRequest Object:\n";
+  ss << "\tMethod name    = \"" << method_name_ << "\"\n";
+  ss << "\tCall id        = " << call_id_ << "\n";
+  ss << "\tRetry Count    = " << retry_count_ << "\n";
+  ss << "\tFailover count = " << failover_count_ << "\n";
+  return ss.str();
+}
+
+int Request::IncrementFailoverCount() {
+  // reset retry count when failing over
+  retry_count_ = 0;
+  return failover_count_++;
 }
 
 RpcConnection::RpcConnection(LockFreeRpcEngine *engine)
@@ -258,7 +281,7 @@ void RpcConnection::AsyncFlushPendingRequests() {
   });
 }
 
-void RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
+Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
 
   response->ar.reset(new pbio::ArrayInputStream(&response->data_[0], response->data_.size()));
@@ -270,7 +293,7 @@ void RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
   auto req = RemoveFromRunningQueue(h.callid());
   if (!req) {
     LOG_WARN(kRPC, << "RPC response with Unknown call id " << h.callid());
-    return;
+    return Status::Error("Rpc response with unknown call id");
   }
 
   Status status;
@@ -288,9 +311,22 @@ void RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
       Status::Exception(h.exceptionclassname().c_str(), h.errormsg().c_str());
   }
 
+  if(status.get_server_exception_type() == Status::kStandbyException) {
+    LOG_WARN(kRPC, << "Tried to connect to standby. status = " << status.ToString());
+
+    // We got the request back, but it needs to be resent to the other NN
+    std::vector<std::shared_ptr<Request>> reqs_to_redirect = {req};
+    PrependRequests_locked(reqs_to_redirect);
+
+    CommsError(status);
+    return status;
+  }
+
   io_service().post([req, response, status]() {
     req->OnResponseArrived(response->in.get(), status);  // Never call back while holding a lock
   });
+
+  return Status::OK();
 }
 
 void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
@@ -437,6 +473,15 @@ void RpcConnection::PreEnqueueRequests(
   // Don't start sending yet; will flush when connected
 }
 
+// Only call when already holding conn state lock
+void RpcConnection::PrependRequests_locked( std::vector<std::shared_ptr<Request>> requests) {
+  LOG_DEBUG(kRPC, << "RpcConnection::PrependRequests called");
+
+  pending_requests_.insert(pending_requests_.begin(), requests.begin(),
+                           requests.end());
+  // Don't start sending yet; will flush when connected
+}
+
 void RpcConnection::SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers) {
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
   event_handlers_ = event_handlers;
@@ -452,6 +497,7 @@ void RpcConnection::SetClusterName(std::string cluster_name) {
 
 void RpcConnection::CommsError(const Status &status) {
   assert(lock_held(connection_state_lock_));  // Must be holding lock before calling
+  LOG_DEBUG(kRPC, << "RpcConnection::CommsError called");
 
   Disconnect();
 

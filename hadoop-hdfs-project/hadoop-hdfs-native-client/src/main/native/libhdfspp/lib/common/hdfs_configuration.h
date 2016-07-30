@@ -46,6 +46,10 @@ class HdfsConfiguration : public Configuration {
     static constexpr const char * kHadoopSecurityAuthentication_simple = "simple";
     static constexpr const char * kHadoopSecurityAuthentication_kerberos = "kerberos";
 
+    static constexpr const char * kDfsClientFailoverMaxAttempts = "dfs.client.failover.max.attempts";
+    static constexpr const char * kDfsClientFailoverConnectionRetriesOnTimeouts = "dfs.client.failover.connection.retries.on.timeouts";
+
+
 private:
     friend class ConfigurationLoader;
 
@@ -57,6 +61,7 @@ private:
     HdfsConfiguration(const ConfigMap &src_map);
 
     static std::vector<std::string> GetDefaultFilenames();
+    std::vector<NamenodeInfo> LookupNameService(const std::string &nameservice);
 };
 
 }

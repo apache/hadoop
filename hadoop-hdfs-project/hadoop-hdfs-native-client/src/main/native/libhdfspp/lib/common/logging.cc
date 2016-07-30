@@ -177,11 +177,11 @@ LogMessage& LogMessage::operator<<(uint64_t val) {
   return *this;
 }
 
-
 LogMessage& LogMessage::operator<<(void *ptr) {
   msg_buffer_ << ptr;
   return *this;
 }
+
 
 std::string LogMessage::MsgString() const {
   return msg_buffer_.str();

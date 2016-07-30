@@ -20,7 +20,28 @@
 
 #include "common/uri.h"
 
+#include <string>
+#include <vector>
+#include <map>
+
 namespace hdfs {
+
+
+struct NamenodeInfo {
+  NamenodeInfo(const std::string &nameservice, const std::string &nodename, const URI &uri) :
+                nameservice(nameservice), name(nodename), uri(uri) {}
+  NamenodeInfo(){};
+  //nameservice this belongs to
+  std::string nameservice;
+  //node name
+  std::string name;
+  //host:port
+  URI uri;
+
+  //get server hostname and port (aka service)
+  std::string get_host() const;
+  std::string get_port() const;
+};
 
 /**
  * Options to control the behavior of the libhdfspp library.
@@ -44,7 +65,7 @@ struct Options {
    * Maximum number of retries for RPC operations
    **/
   int max_rpc_retries;
-  static const int kNoRetry = -1;
+  static const int kNoRetry = 0;
   static const int kDefaultMaxRpcRetries = kNoRetry;
 
   /**
@@ -66,6 +87,25 @@ struct Options {
   URI defaultFS;
 
   /**
+   * Namenodes used to provide HA for this cluster if applicable
+   **/
+  std::map<std::string, std::vector<NamenodeInfo>> services;
+
+
+  /**
+   * Client failover attempts before failover gives up
+   **/
+  int failover_max_retries;
+  static const unsigned int kDefaultFailoverMaxRetries = 15;
+
+  /**
+   * Client failover attempts before failover gives up if server
+   * connection is timing out.
+   **/
+  int failover_connection_max_retries;
+  static const unsigned int kDefaultFailoverConnectionMaxRetries = 0;
+
+  /*
    * Which form of authentication to use with the server
    * Default: simple
    */

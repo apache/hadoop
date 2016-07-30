@@ -20,6 +20,7 @@
 #include "test.pb.h"
 #include "RpcHeader.pb.h"
 #include "rpc/rpc_connection.h"
+#include "common/namenode_info.h"
 
 #include <google/protobuf/io/coded_stream.h>
 
@@ -43,10 +44,10 @@ namespace pbio = ::google::protobuf::io;
 
 namespace hdfs {
 
-std::vector<asio::ip::basic_endpoint<asio::ip::tcp>> make_endpoint() {
-  std::vector<asio::ip::basic_endpoint<asio::ip::tcp>> result;
-  result.push_back(asio::ip::basic_endpoint<asio::ip::tcp>());
-  return result;
+std::vector<ResolvedNamenodeInfo> make_endpoint() {
+  ResolvedNamenodeInfo result;
+  result.endpoints.push_back(asio::ip::basic_endpoint<asio::ip::tcp>());
+  return std::vector<ResolvedNamenodeInfo>({result});
 }
 
 class MockRPCConnection : public MockConnectionBase {
@@ -68,7 +69,7 @@ class SharedConnectionEngine : public RpcEngine {
 protected:
   std::shared_ptr<RpcConnection> NewConnection() override {
     // Stuff in some dummy endpoints so we don't error out
-    last_endpoints_ = make_endpoint();
+    last_endpoints_ = make_endpoint()[0].endpoints;
 
     return std::make_shared<RpcConnectionImpl<SharedMockRPCConnection>>(this);
   }
@@ -180,6 +181,11 @@ TEST(RpcEngineTest, TestConnectionResetAndRecover) {
   options.rpc_retry_delay_ms = 0;
   SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
 
+  // Normally determined during RpcEngine::Connect, but in this case options
+  // provides enough info to determine policy here.
+  engine.TEST_SetRetryPolicy(engine.TEST_GenerateRetryPolicyUsingOptions());
+
+
   EchoResponseProto server_resp;
   server_resp.set_message("foo");
 
@@ -214,6 +220,10 @@ TEST(RpcEngineTest, TestConnectionResetAndRecoverWithDelay) {
   options.max_rpc_retries = 1;
   options.rpc_retry_delay_ms = 1;
   SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
+
+  // Normally determined during RpcEngine::Connect, but in this case options
+  // provides enough info to determine policy here.
+  engine.TEST_SetRetryPolicy(engine.TEST_GenerateRetryPolicyUsingOptions());
 
   EchoResponseProto server_resp;
   server_resp.set_message("foo");
@@ -338,6 +348,10 @@ TEST(RpcEngineTest, TestEventCallbacks)
   options.max_rpc_retries = 99;
   options.rpc_retry_delay_ms = 0;
   SharedConnectionEngine engine(&io_service, options, "foo", "", "protocol", 1);
+
+  // Normally determined during RpcEngine::Connect, but in this case options
+  // provides enough info to determine policy here.
+  engine.TEST_SetRetryPolicy(engine.TEST_GenerateRetryPolicyUsingOptions());
 
   // Set up event callbacks
   int calls = 0;

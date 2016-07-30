@@ -17,31 +17,64 @@
  */
 
 #include "common/retry_policy.h"
+#include "common/logging.h"
+
+#include <sstream>
 
 namespace hdfs {
 
 RetryAction FixedDelayRetryPolicy::ShouldRetry(
     const Status &s, uint64_t retries, uint64_t failovers,
     bool isIdempotentOrAtMostOnce) const {
-  (void)s;
+  LOG_TRACE(kRPC, << "FixedDelayRetryPolicy::ShouldRetry(retries=" << retries << ", failovers=" << failovers << ")");
   (void)isIdempotentOrAtMostOnce;
   if (retries + failovers >= max_retries_) {
     return RetryAction::fail(
-        "Failovers (" + std::to_string(retries + failovers) +
-        ") exceeded maximum retries (" + std::to_string(max_retries_) + ")");
+        "Failovers and retries(" + std::to_string(retries + failovers) +
+        ") exceeded maximum retries (" + std::to_string(max_retries_) + "), Status: " +
+        s.ToString());
   } else {
     return RetryAction::retry(delay_);
   }
 }
 
+
 RetryAction NoRetryPolicy::ShouldRetry(
     const Status &s, uint64_t retries, uint64_t failovers,
     bool isIdempotentOrAtMostOnce) const {
-  (void)s;
+  LOG_TRACE(kRPC, << "NoRetryPolicy::ShouldRetry(retries=" << retries << ", failovers=" << failovers << ")");
   (void)retries;
   (void)failovers;
   (void)isIdempotentOrAtMostOnce;
-  return RetryAction::fail("No retry");
+  return RetryAction::fail("No retry, Status: " + s.ToString());
+}
+
+
+RetryAction FixedDelayWithFailover::ShouldRetry(const Status &s, uint64_t retries,
+    uint64_t failovers,
+    bool isIdempotentOrAtMostOnce) const {
+  (void)isIdempotentOrAtMostOnce;
+  LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry(retries=" << retries << ", failovers=" << failovers << ")");
+
+  if(s.code() == ::asio::error::timed_out && failovers < max_failover_retries_) {
+    // Try connecting to another NN in case this one keeps timing out
+    // Can add the backoff wait specified by dfs.client.failover.sleep.base.millis here
+    return RetryAction::failover(delay_);
+  }
+
+  if(retries < max_retries_) {
+    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries < max_retries_");
+    return RetryAction::retry(delay_);
+  } else if (retries >= max_retries_ && failovers < max_failover_retries_) {
+    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries >= max_retries_ && failovers < max_failover_retries_");
+    return RetryAction::failover(delay_);
+  } else if (retries >= max_retries_ && failovers == max_failover_retries_) {
+    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries >= max_retries_ && failovers == max_failover_retries_");
+    // 1 last retry on new connection
+    return RetryAction::retry(delay_);
+  }
+
+  return RetryAction::fail("Retry and failover didn't work, Status: " + s.ToString());
 }
 
 }

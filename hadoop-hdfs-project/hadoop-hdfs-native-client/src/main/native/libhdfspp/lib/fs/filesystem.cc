@@ -18,6 +18,8 @@
 
 #include "filesystem.h"
 
+#include "common/namenode_info.h"
+
 #include <functional>
 #include <limits>
 #include <future>
@@ -126,9 +128,35 @@ void FileSystemImpl::Connect(const std::string &server,
     handler (Status::Error("Null IoService"), this);
   }
 
-  cluster_name_ = server + ":" + service;
+  // DNS lookup here for namenode(s)
+  std::vector<ResolvedNamenodeInfo> resolved_namenodes;
 
-  nn_.Connect(cluster_name_, server, service, [this, handler](const Status & s) {
+  auto name_service = options_.services.find(server);
+  if(name_service != options_.services.end()) {
+    cluster_name_ = name_service->first;
+    resolved_namenodes = BulkResolve(&io_service_->io_service(), name_service->second);
+  } else {
+    cluster_name_ = server + ":" + service;
+
+    // tmp namenode info just to get this in the right format for BulkResolve
+    NamenodeInfo tmp_info;
+    optional<URI> uri = URI::parse_from_string("hdfs://" + cluster_name_);
+    if(!uri) {
+      LOG_ERROR(kFileSystem, << "Unable to use URI for cluster " << cluster_name_);
+      handler(Status::Error(("Invalid namenode " + cluster_name_ + " in config").c_str()), this);
+    }
+    tmp_info.uri = uri.value();
+
+    resolved_namenodes = BulkResolve(&io_service_->io_service(), {tmp_info});
+  }
+
+  for(unsigned int i=0;i<resolved_namenodes.size();i++) {
+    LOG_DEBUG(kFileSystem, << "Resolved Namenode");
+    LOG_DEBUG(kFileSystem, << resolved_namenodes[i].str());
+  }
+
+
+  nn_.Connect(cluster_name_, /*server, service*/ resolved_namenodes, [this, handler](const Status & s) {
     handler(s, this);
   });
 }
@@ -216,6 +244,13 @@ void FileSystemImpl::Open(
                                  << path << ") called");
 
   nn_.GetBlockLocations(path, [this, path, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
+    if(!stat.ok()) {
+      LOG_INFO(kFileSystem, << "FileSystemImpl::Open failed to get block locations. status=" << stat.ToString());
+      if(stat.get_server_exception_type() == Status::kStandbyException) {
+        LOG_INFO(kFileSystem, << "Operation not allowed on standby datanode");
+      }
+    }
+
     handler(stat, stat.ok() ? new FileHandleImpl(cluster_name_, path, &io_service_->io_service(), client_name_, file_info, bad_node_tracker_, event_handlers_)
                             : nullptr);
   });

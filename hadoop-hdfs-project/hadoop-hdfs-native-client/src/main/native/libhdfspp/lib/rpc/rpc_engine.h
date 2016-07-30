@@ -24,7 +24,11 @@
 #include "common/auth_info.h"
 #include "common/retry_policy.h"
 #include "common/libhdfs_events_impl.h"
+#include "common/util.h"
+#include "common/continuation/asio.h"
+#include "common/logging.h"
 #include "common/new_delete.h"
+#include "common/namenode_info.h"
 
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -38,6 +42,7 @@
 #include <unordered_map>
 #include <vector>
 #include <mutex>
+#include <future>
 
 namespace hdfs {
 
@@ -84,9 +89,14 @@ class Request {
   std::string  method_name() const { return method_name_; }
   ::asio::deadline_timer &timer() { return timer_; }
   int IncrementRetryCount() { return retry_count_++; }
+  int IncrementFailoverCount();
   void GetPacket(std::string *res) const;
   void OnResponseArrived(::google::protobuf::io::CodedInputStream *is,
                          const Status &status);
+
+  int get_failover_count() {return failover_count_;}
+
+  std::string GetDebugString() const;
 
  private:
   LockFreeRpcEngine *const engine_;
@@ -98,6 +108,7 @@ class Request {
   const Handler handler_;
 
   int retry_count_;
+  int failover_count_;
 };
 
 /*
@@ -136,6 +147,9 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   // Enqueue requests before the connection is connected.  Will be flushed
   //   on connect
   void PreEnqueueRequests(std::vector<std::shared_ptr<Request>> requests);
+
+  // Put requests at the front of the current request queue
+  void PrependRequests_locked(std::vector<std::shared_ptr<Request>> requests);
 
   void SetEventHandlers(std::shared_ptr<LibhdfsEvents> event_handlers);
   void SetClusterName(std::string cluster_name);
@@ -190,7 +204,7 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   static std::string SerializeRpcRequest(
       const std::string &method_name,
       const ::google::protobuf::MessageLite *req);
-  void HandleRpcResponse(std::shared_ptr<Response> response);
+  Status HandleRpcResponse(std::shared_ptr<Response> response);
   void HandleRpcTimeout(std::shared_ptr<Request> req,
                         const ::asio::error_code &ec);
   void CommsError(const Status &status);
@@ -261,6 +275,55 @@ public:
   virtual const Options &options() const = 0;
 };
 
+
+/*
+ *  Tracker gives the RpcEngine a quick way to use an endpoint that just
+ *  failed in order to lookup a set of endpoints for a failover node.
+ *
+ *  Note: For now this only deals with 2 NameNodes, but that's the default
+ *  anyway.
+ */
+class HANamenodeTracker {
+ public:
+  HANamenodeTracker(const std::vector<ResolvedNamenodeInfo> &servers,
+                    ::asio::io_service *ioservice,
+                    std::shared_ptr<LibhdfsEvents> event_handlers_);
+
+  virtual ~HANamenodeTracker();
+
+  bool is_enabled() const { return enabled_; }
+  bool is_resolved() const { return resolved_; }
+
+  // Get node opposite of the current one if possible (swaps active/standby)
+  // Note: This will always mutate internal state.  Use IsCurrentActive/Standby to
+  // get info without changing state
+  ResolvedNamenodeInfo GetFailoverAndUpdate(::asio::ip::tcp::endpoint current_endpoint);
+
+  bool IsCurrentActive_locked(const ::asio::ip::tcp::endpoint &ep) const;
+  bool IsCurrentStandby_locked(const ::asio::ip::tcp::endpoint &ep) const;
+
+ private:
+  // If HA should be enabled, according to our options and runtime info like # nodes provided
+  bool enabled_;
+  // If we were able to resolve at least 1 HA namenode
+  bool resolved_;
+
+  // Keep service in case a second round of DNS lookup is required
+  ::asio::io_service *ioservice_;
+
+  // Event handlers, for now this is the simplest place to catch all failover events
+  // and push info out to client application.  Possibly move into RPCEngine.
+  std::shared_ptr<LibhdfsEvents> event_handlers_;
+
+  // Only support 1 active and 1 standby for now.
+  ResolvedNamenodeInfo active_info_;
+  ResolvedNamenodeInfo standby_info_;
+
+  // Aquire when switching from active-standby
+  std::mutex swap_lock_;
+};
+
+
 /*
  * An engine for reliable communication with a NameNode.  Handles connection,
  * retry, and (someday) failover of the requested messages.
@@ -285,7 +348,7 @@ class RpcEngine : public LockFreeRpcEngine {
             const char *protocol_name, int protocol_version);
 
   void Connect(const std::string & cluster_name,
-               const std::vector<::asio::ip::tcp::endpoint> &server,
+               const std::vector<ResolvedNamenodeInfo> servers,
                RpcCallback &handler);
 
   void AsyncRpc(const std::string &method_name,
@@ -297,7 +360,6 @@ class RpcEngine : public LockFreeRpcEngine {
              const ::google::protobuf::MessageLite *req,
              const std::shared_ptr<::google::protobuf::MessageLite> &resp);
 
-  void Start();
   void Shutdown();
 
   /* Enqueues a CommsError without acquiring a lock*/
@@ -313,6 +375,8 @@ class RpcEngine : public LockFreeRpcEngine {
   int NextCallId() override { return ++call_id_; }
 
   void TEST_SetRpcConnection(std::shared_ptr<RpcConnection> conn);
+  void TEST_SetRetryPolicy(std::unique_ptr<const RetryPolicy> policy);
+  std::unique_ptr<const RetryPolicy> TEST_GenerateRetryPolicyUsingOptions();
 
   const std::string &client_name() const override { return client_name_; }
   const std::string &user_name() const override { return auth_info_.getUser(); }
@@ -338,7 +402,7 @@ private:
   const std::string client_name_;
   const std::string protocol_name_;
   const int protocol_version_;
-  const std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
+  std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
   AuthInfo auth_info_;
   std::string cluster_name_;
   std::atomic_int call_id_;
@@ -348,6 +412,9 @@ private:
 
   std::mutex engine_state_lock_;
 
+  // Keep endpoint info for all HA connections, a non-null ptr indicates
+  // that HA info was found in the configuation.
+  std::unique_ptr<HANamenodeTracker> ha_persisted_info_;
 };
 }
 

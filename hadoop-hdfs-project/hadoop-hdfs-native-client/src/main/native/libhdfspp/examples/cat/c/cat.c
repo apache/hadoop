@@ -86,6 +86,7 @@ void parse_uri(const char * uri_string, struct Uri * uri) {
 };
 
 int main(int argc, char** argv) {
+
   char error_text[1024];
   if (argc != 2) {
     fprintf(stderr, "usage: cat [hdfs://[<hostname>:<port>]]/<path-to-file>\n");

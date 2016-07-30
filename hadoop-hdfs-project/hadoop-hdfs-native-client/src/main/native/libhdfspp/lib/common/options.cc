@@ -26,12 +26,27 @@ const int Options::kNoRetry;
 const int Options::kDefaultMaxRpcRetries;
 const int Options::kDefaultRpcRetryDelayMs;
 const unsigned int Options::kDefaultHostExclusionDuration;
+const unsigned int Options::kDefaultFailoverMaxRetries;
+const unsigned int Options::kDefaultFailoverConnectionMaxRetries;
 
-Options::Options() : rpc_timeout(kDefaultRpcTimeout), rpc_connect_timeout(kDefaultRpcConnectTimeout),
+Options::Options() : rpc_timeout(kDefaultRpcTimeout),
+                     rpc_connect_timeout(kDefaultRpcConnectTimeout),
                      max_rpc_retries(kDefaultMaxRpcRetries),
                      rpc_retry_delay_ms(kDefaultRpcRetryDelayMs),
                      host_exclusion_duration(kDefaultHostExclusionDuration),
                      defaultFS(),
-                     authentication(kDefaultAuthentication)
-{}
+                     failover_max_retries(kDefaultFailoverMaxRetries),
+                     failover_connection_max_retries(kDefaultFailoverConnectionMaxRetries),
+                     authentication(kDefaultAuthentication) {}
+
+std::string NamenodeInfo::get_host() const {
+  return uri.get_host();
+}
+std::string NamenodeInfo::get_port() const {
+  optional<uint16_t> p = uri.get_port();
+  if(!p)
+    return std::to_string(-1);
+  return std::to_string(p.value());
+}
+
 }

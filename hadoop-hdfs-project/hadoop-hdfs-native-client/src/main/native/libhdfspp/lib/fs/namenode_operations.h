@@ -21,6 +21,7 @@
 #include "rpc/rpc_engine.h"
 #include "hdfspp/statinfo.h"
 #include "hdfspp/fsinfo.h"
+#include "common/namenode_info.h"
 #include "ClientNamenodeProtocol.pb.h"
 #include "ClientNamenodeProtocol.hrpc.inl"
 
@@ -45,13 +46,12 @@ public:
             const char *protocol_name, int protocol_version) :
   io_service_(io_service),
   engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
-  namenode_(& engine_) {}
+  namenode_(& engine_), options_(options) {}
 
   static Status CheckValidPermissionMask(short permissions);
 
   void Connect(const std::string &cluster_name,
-               const std::string &server,
-               const std::string &service,
+               const std::vector<ResolvedNamenodeInfo> &servers,
                std::function<void(const Status &)> &&handler);
 
   void GetBlockLocations(const std::string & path,
@@ -104,6 +104,7 @@ private:
   ::asio::io_service * io_service_;
   RpcEngine engine_;
   ClientNamenodeProtocol namenode_;
+  const Options options_;
 };
 }
 
