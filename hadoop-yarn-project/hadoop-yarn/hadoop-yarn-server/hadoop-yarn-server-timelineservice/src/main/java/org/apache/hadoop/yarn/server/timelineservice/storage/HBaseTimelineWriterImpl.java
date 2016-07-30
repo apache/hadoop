@@ -30,9 +30,9 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.service.AbstractService;
+import  org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
@@ -149,7 +149,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
       // if the entity is the application, the destination is the application
       // table
-      boolean isApplication = isApplicationEntity(te);
+      boolean isApplication = ApplicationEntity.isApplicationEntity(te);
       byte[] rowKey;
       if (isApplication) {
         ApplicationRowKey applicationRowKey =
@@ -171,7 +171,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
 
       if (isApplication) {
         TimelineEvent event =
-            getApplicationEvent(te,
+            ApplicationEntity.getApplicationEvent(te,
                 ApplicationMetricsConstants.CREATED_EVENT_TYPE);
         FlowRunRowKey flowRunRowKey =
             new FlowRunRowKey(clusterId, userId, flowName, flowRunId);
@@ -185,7 +185,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         storeFlowMetricsAppRunning(flowRunRowKey, appId, te);
         // if application has finished, store it's finish time and write final
         // values of all metrics
-        event = getApplicationEvent(te,
+        event = ApplicationEntity.getApplicationEvent(te,
             ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
         if (event != null) {
           onApplicationFinished(flowRunRowKey, flowVersion, appId, te,
@@ -469,33 +469,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         }
       } // event : events
     }
-  }
-
-  /**
-   * Checks if the input TimelineEntity object is an ApplicationEntity.
-   *
-   * @param te TimelineEntity object.
-   * @return true if input is an ApplicationEntity, false otherwise
-   */
-  static boolean isApplicationEntity(TimelineEntity te) {
-    return te.getType().equals(TimelineEntityType.YARN_APPLICATION.toString());
-  }
-
-  /**
-   * @param te TimelineEntity object.
-   * @param eventId event with this id needs to be fetched
-   * @return TimelineEvent if TimelineEntity contains the desired event.
-   */
-  private static TimelineEvent getApplicationEvent(TimelineEntity te,
-      String eventId) {
-    if (isApplicationEntity(te)) {
-      for (TimelineEvent event : te.getEvents()) {
-        if (event.getId().equals(eventId)) {
-          return event;
-        }
-      }
-    }
-    return null;
   }
 
   /*
