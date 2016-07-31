@@ -115,9 +115,6 @@ public class DatanodeStorageInfo {
   private volatile BlockInfoContiguous blockList = null;
   private int numBlocks = 0;
 
-  // The ID of the last full block report which updated this storage.
-  private long lastBlockReportId = 0;
-
   /** The number of block reports received */
   private int blockReportCount = 0;
 
@@ -180,14 +177,6 @@ public class DatanodeStorageInfo {
     this.dfsUsed = dfsUsed;
     this.remaining = remaining;
     this.blockPoolUsed = blockPoolUsed;
-  }
-
-  long getLastBlockReportId() {
-    return lastBlockReportId;
-  }
-
-  void setLastBlockReportId(long lastBlockReportId) {
-    this.lastBlockReportId = lastBlockReportId;
   }
 
   State getState() {
