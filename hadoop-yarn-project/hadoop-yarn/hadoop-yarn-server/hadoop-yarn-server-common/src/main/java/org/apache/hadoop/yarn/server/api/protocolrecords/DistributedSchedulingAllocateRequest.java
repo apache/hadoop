@@ -26,12 +26,14 @@ import org.apache.hadoop.yarn.api.records.Container;
 import java.util.List;
 
 /**
- * Request for a distributed scheduler to notify allocation of containers to
- * the Resource Manager.
+ * Object used by the Application Master when distributed scheduling is enabled,
+ * in order to forward the {@link AllocateRequest} for GUARANTEED containers to
+ * the Resource Manager, and to notify the Resource Manager about the allocation
+ * of OPPORTUNISTIC containers through the Distributed Scheduler.
  */
 @Public
 @Evolving
-public abstract class DistSchedAllocateRequest {
+public abstract class DistributedSchedulingAllocateRequest {
 
   /**
    * Get the underlying <code>AllocateRequest</code> object.

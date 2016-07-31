@@ -144,7 +144,7 @@
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-                  <include>distributed_scheduler_protocol.proto</include>
+                  <include>distributed_scheduling_am_protocol.proto</include>
                   <include>yarn_server_common_protos.proto</include>
                   <include>yarn_server_common_service_protos.proto</include>
                   <include>yarn_server_common_service_protos.proto</include>

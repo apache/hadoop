@@ -20,41 +20,47 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
-    .AllocateResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos;
-import org.apache.hadoop.yarn.server.api.protocolrecords
-    .DistSchedAllocateResponse;
-
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class DistSchedAllocateResponsePBImpl extends DistSchedAllocateResponse {
+/**
+ * Implementation of {@link DistributedSchedulingAllocateResponse}.
+ */
+public class DistributedSchedulingAllocateResponsePBImpl extends
+    DistributedSchedulingAllocateResponse {
 
-  YarnServerCommonServiceProtos.DistSchedAllocateResponseProto proto =
-      YarnServerCommonServiceProtos.DistSchedAllocateResponseProto.getDefaultInstance();
-  YarnServerCommonServiceProtos.DistSchedAllocateResponseProto.Builder builder = null;
+  YarnServerCommonServiceProtos.DistributedSchedulingAllocateResponseProto
+      proto = YarnServerCommonServiceProtos.
+          DistributedSchedulingAllocateResponseProto.getDefaultInstance();
+  YarnServerCommonServiceProtos.DistributedSchedulingAllocateResponseProto.
+      Builder builder = null;
   boolean viaProto = false;
 
   private AllocateResponse allocateResponse;
   private List<NodeId> nodesForScheduling;
 
-  public DistSchedAllocateResponsePBImpl() {
-    builder = YarnServerCommonServiceProtos.DistSchedAllocateResponseProto.newBuilder();
+  public DistributedSchedulingAllocateResponsePBImpl() {
+    builder = YarnServerCommonServiceProtos.
+        DistributedSchedulingAllocateResponseProto.newBuilder();
   }
 
-  public DistSchedAllocateResponsePBImpl(YarnServerCommonServiceProtos.DistSchedAllocateResponseProto proto) {
+  public DistributedSchedulingAllocateResponsePBImpl(
+      YarnServerCommonServiceProtos.
+      DistributedSchedulingAllocateResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public YarnServerCommonServiceProtos.DistSchedAllocateResponseProto getProto() {
+  public YarnServerCommonServiceProtos.
+      DistributedSchedulingAllocateResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -63,7 +69,8 @@ public class DistSchedAllocateResponsePBImpl extends DistSchedAllocateResponse {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = YarnServerCommonServiceProtos.DistSchedAllocateResponseProto.newBuilder(proto);
+      builder = YarnServerCommonServiceProtos.
+          DistributedSchedulingAllocateResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -79,19 +86,20 @@ public class DistSchedAllocateResponsePBImpl extends DistSchedAllocateResponse {
   private synchronized void mergeLocalToBuilder() {
     if (this.nodesForScheduling != null) {
       builder.clearNodesForScheduling();
-      Iterable<YarnProtos.NodeIdProto> iterable =
-          getNodeIdProtoIterable(this.nodesForScheduling);
+      Iterable<YarnProtos.NodeIdProto> iterable = getNodeIdProtoIterable(
+          this.nodesForScheduling);
       builder.addAllNodesForScheduling(iterable);
     }
     if (this.allocateResponse != null) {
       builder.setAllocateResponse(
-          ((AllocateResponsePBImpl)this.allocateResponse).getProto());
+          ((AllocateResponsePBImpl) this.allocateResponse).getProto());
     }
   }
+
   @Override
   public void setAllocateResponse(AllocateResponse response) {
     maybeInitBuilder();
-    if(allocateResponse == null) {
+    if (allocateResponse == null) {
       builder.clearAllocateResponse();
     }
     this.allocateResponse = response;
@@ -103,14 +111,14 @@ public class DistSchedAllocateResponsePBImpl extends DistSchedAllocateResponse {
       return this.allocateResponse;
     }
 
-    YarnServerCommonServiceProtos.DistSchedAllocateResponseProtoOrBuilder p =
-        viaProto ? proto : builder;
+    YarnServerCommonServiceProtos.
+        DistributedSchedulingAllocateResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
     if (!p.hasAllocateResponse()) {
       return null;
     }
 
-    this.allocateResponse =
-        new AllocateResponsePBImpl(p.getAllocateResponse());
+    this.allocateResponse = new AllocateResponsePBImpl(p.getAllocateResponse());
     return this.allocateResponse;
   }
 
@@ -138,8 +146,9 @@ public class DistSchedAllocateResponsePBImpl extends DistSchedAllocateResponse {
   }
 
   private synchronized void initLocalNodesForSchedulingList() {
-    YarnServerCommonServiceProtos.DistSchedAllocateResponseProtoOrBuilder p =
-        viaProto ? proto : builder;
+    YarnServerCommonServiceProtos.
+        DistributedSchedulingAllocateResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
     List<YarnProtos.NodeIdProto> list = p.getNodesForSchedulingList();
     nodesForScheduling = new ArrayList<>();
     if (list != null) {
@@ -148,6 +157,7 @@ public class DistSchedAllocateResponsePBImpl extends DistSchedAllocateResponse {
       }
     }
   }
+
   private synchronized Iterable<YarnProtos.NodeIdProto> getNodeIdProtoIterable(
       final List<NodeId> nodeList) {
     maybeInitBuilder();

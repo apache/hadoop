@@ -43,12 +43,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
-import org.apache.hadoop.yarn.server.api.protocolrecords
-    .DistSchedAllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +62,7 @@ public final class DefaultRequestInterceptor extends
     AbstractRequestInterceptor {
   private static final Logger LOG = LoggerFactory
       .getLogger(DefaultRequestInterceptor.class);
-  private DistributedSchedulerProtocol rmClient;
+  private DistributedSchedulingAMProtocol rmClient;
   private UserGroupInformation user = null;
 
   @Override
@@ -77,13 +76,13 @@ public final class DefaultRequestInterceptor extends
       user.addToken(appContext.getAMRMToken());
       final Configuration conf = this.getConf();
 
-      rmClient =
-          user.doAs(new PrivilegedExceptionAction<DistributedSchedulerProtocol>() {
+      rmClient = user.doAs(
+          new PrivilegedExceptionAction<DistributedSchedulingAMProtocol>() {
             @Override
-            public DistributedSchedulerProtocol run() throws Exception {
+            public DistributedSchedulingAMProtocol run() throws Exception {
               setAMRMTokenService(conf);
               return ServerRMProxy.createRMProxy(conf,
-                  DistributedSchedulerProtocol.class);
+                  DistributedSchedulingAMProtocol.class);
             }
           });
     } catch (IOException e) {
@@ -124,7 +123,7 @@ public final class DefaultRequestInterceptor extends
   }
 
   @Override
-  public DistSchedRegisterResponse
+  public RegisterDistributedSchedulingAMResponse
   registerApplicationMasterForDistributedScheduling
       (RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
@@ -134,13 +133,14 @@ public final class DefaultRequestInterceptor extends
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling(
-      DistSchedAllocateRequest request) throws YarnException, IOException {
+  public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
+      DistributedSchedulingAllocateRequest request)
+      throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Forwarding allocateForDistributedScheduling request" +
           "to the real YARN RM");
     }
-    DistSchedAllocateResponse allocateResponse =
+    DistributedSchedulingAllocateResponse allocateResponse =
         rmClient.allocateForDistributedScheduling(request);
     if (allocateResponse.getAllocateResponse().getAMRMToken() != null) {
       updateAMRMToken(allocateResponse.getAllocateResponse().getAMRMToken());
@@ -180,10 +180,10 @@ public final class DefaultRequestInterceptor extends
 
   @VisibleForTesting
   public void setRMClient(final ApplicationMasterProtocol rmClient) {
-    if (rmClient instanceof DistributedSchedulerProtocol) {
-      this.rmClient = (DistributedSchedulerProtocol)rmClient;
+    if (rmClient instanceof DistributedSchedulingAMProtocol) {
+      this.rmClient = (DistributedSchedulingAMProtocol)rmClient;
     } else {
-      this.rmClient = new DistributedSchedulerProtocol() {
+      this.rmClient = new DistributedSchedulingAMProtocol() {
         @Override
         public RegisterApplicationMasterResponse registerApplicationMaster
             (RegisterApplicationMasterRequest request) throws YarnException,
@@ -205,7 +205,7 @@ public final class DefaultRequestInterceptor extends
         }
 
         @Override
-        public DistSchedRegisterResponse
+        public RegisterDistributedSchedulingAMResponse
         registerApplicationMasterForDistributedScheduling
             (RegisterApplicationMasterRequest request) throws YarnException,
             IOException {
@@ -213,8 +213,9 @@ public final class DefaultRequestInterceptor extends
         }
 
         @Override
-        public DistSchedAllocateResponse allocateForDistributedScheduling(
-            DistSchedAllocateRequest request)
+        public DistributedSchedulingAllocateResponse
+            allocateForDistributedScheduling(
+            DistributedSchedulingAllocateRequest request)
                 throws YarnException, IOException {
           throw new IOException("Not Supported !!");
         }

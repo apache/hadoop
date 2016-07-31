@@ -26,22 +26,22 @@ import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
 import "yarn_service_protos.proto";
 
-message DistSchedRegisterResponseProto {
+message RegisterDistributedSchedulingAMResponseProto {
   optional RegisterApplicationMasterResponseProto register_response = 1;
-  optional ResourceProto max_alloc_capability = 2;
-  optional ResourceProto min_alloc_capability = 3;
-  optional ResourceProto incr_alloc_capability = 4;
+  optional ResourceProto max_container_resource = 2;
+  optional ResourceProto min_container_resource = 3;
+  optional ResourceProto incr_container_resource = 4;
   optional int32 container_token_expiry_interval = 5;
   optional int64 container_id_start = 6;
   repeated NodeIdProto nodes_for_scheduling = 7;
 }
 
-message DistSchedAllocateResponseProto {
+message DistributedSchedulingAllocateResponseProto {
   optional AllocateResponseProto allocate_response = 1;
   repeated NodeIdProto nodes_for_scheduling = 2;
 }
 
-message DistSchedAllocateRequestProto {
+message DistributedSchedulingAllocateRequestProto {
   optional AllocateRequestProto allocate_request = 1;
   repeated ContainerProto allocated_containers = 2;
 }

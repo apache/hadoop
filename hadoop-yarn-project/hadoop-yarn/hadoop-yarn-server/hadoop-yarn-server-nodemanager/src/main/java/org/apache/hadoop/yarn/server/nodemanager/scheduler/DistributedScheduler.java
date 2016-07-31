@@ -23,17 +23,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .FinishApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -46,14 +42,12 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.nodemanager.amrmproxy
-    .AMRMProxyApplicationContext;
+import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyApplicationContext;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AbstractRequestInterceptor;
 
 
 
-import org.apache.hadoop.yarn.server.nodemanager.security
-    .NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,19 +62,19 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * <p>The LocalScheduler runs on the NodeManager and is modelled as an
+ * <p>The DistributedScheduler runs on the NodeManager and is modeled as an
  * <code>AMRMProxy</code> request interceptor. It is responsible for the
- * following :</p>
+ * following:</p>
  * <ul>
  *   <li>Intercept <code>ApplicationMasterProtocol</code> calls and unwrap the
  *   response objects to extract instructions from the
- *   <code>ClusterManager</code> running on the ResourceManager to aid in making
- *   Scheduling scheduling decisions</li>
+ *   <code>ClusterMonitor</code> running on the ResourceManager to aid in making
+ *   distributed scheduling decisions.</li>
  *   <li>Call the <code>OpportunisticContainerAllocator</code> to allocate
- *   containers for the opportunistic resource outstandingOpReqs</li>
+ *   containers for the outstanding OPPORTUNISTIC container requests.</li>
  * </ul>
  */
-public final class LocalScheduler extends AbstractRequestInterceptor {
+public final class DistributedScheduler extends AbstractRequestInterceptor {
 
   static class PartitionedResourceRequests {
     private List<ResourceRequest> guaranteed = new ArrayList<>();
@@ -93,7 +87,7 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
     }
   }
 
-  static class DistSchedulerParams {
+  static class DistributedSchedulerParams {
     Resource maxResource;
     Resource minResource;
     Resource incrementResource;
@@ -101,18 +95,20 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   }
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(LocalScheduler.class);
+      .getLogger(DistributedScheduler.class);
 
   private final static RecordFactory RECORD_FACTORY =
       RecordFactoryProvider.getRecordFactory(null);
 
-  // Currently just used to keep track of allocated Containers
-  // Can be used for reporting stats later
+  // Currently just used to keep track of allocated containers.
+  // Can be used for reporting stats later.
   private Set<ContainerId> containersAllocated = new HashSet<>();
 
-  private DistSchedulerParams appParams = new DistSchedulerParams();
-  private final OpportunisticContainerAllocator.ContainerIdCounter containerIdCounter =
-      new OpportunisticContainerAllocator.ContainerIdCounter();
+  private DistributedSchedulerParams appParams =
+      new DistributedSchedulerParams();
+  private final OpportunisticContainerAllocator.ContainerIdCounter
+      containerIdCounter =
+          new OpportunisticContainerAllocator.ContainerIdCounter();
   private Map<String, NodeId> nodeList = new LinkedHashMap<>();
 
   // Mapping of NodeId to NodeTokens. Populated either from RM response or
@@ -123,7 +119,7 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   // This maintains a map of outstanding OPPORTUNISTIC Reqs. Key-ed by Priority,
   // Resource Name (Host/rack/any) and capability. This mapping is required
   // to match a received Container to an outstanding OPPORTUNISTIC
-  // ResourceRequests (ask)
+  // ResourceRequest (ask).
   final TreeMap<Priority, Map<Resource, ResourceRequest>>
       outstandingOpReqs = new TreeMap<>();
 
@@ -158,8 +154,8 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
    * @param request
    *          registration request
    * @return Allocate Response
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException YarnException
+   * @throws IOException IOException
    */
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster
@@ -177,14 +173,14 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
    * @param request
    *          allocation request
    * @return Allocate Response
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException YarnException
+   * @throws IOException IOException
    */
   @Override
   public AllocateResponse allocate(AllocateRequest request) throws
       YarnException, IOException {
-    DistSchedAllocateRequest distRequest =
-        RECORD_FACTORY.newRecordInstance(DistSchedAllocateRequest.class);
+    DistributedSchedulingAllocateRequest distRequest = RECORD_FACTORY
+        .newRecordInstance(DistributedSchedulingAllocateRequest.class);
     distRequest.setAllocateRequest(request);
     return allocateForDistributedScheduling(distRequest).getAllocateResponse();
   }
@@ -199,9 +195,6 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   /**
    * Check if we already have a NMToken. if Not, generate the Token and
    * add it to the response
-   * @param response
-   * @param nmTokens
-   * @param allocatedContainers
    */
   private void updateResponseWithNMTokens(AllocateResponse response,
       List<NMToken> nmTokens, List<Container> allocatedContainers) {
@@ -235,11 +228,11 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   }
 
   private void updateParameters(
-      DistSchedRegisterResponse registerResponse) {
-    appParams.minResource = registerResponse.getMinAllocatableCapabilty();
-    appParams.maxResource = registerResponse.getMaxAllocatableCapabilty();
+      RegisterDistributedSchedulingAMResponse registerResponse) {
+    appParams.minResource = registerResponse.getMinContainerResource();
+    appParams.maxResource = registerResponse.getMaxContainerResource();
     appParams.incrementResource =
-        registerResponse.getIncrAllocatableCapabilty();
+        registerResponse.getIncrContainerResource();
     if (appParams.incrementResource == null) {
       appParams.incrementResource = appParams.minResource;
     }
@@ -253,11 +246,12 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
 
   /**
    * Takes a list of ResourceRequests (asks), extracts the key information viz.
-   * (Priority, ResourceName, Capability) and adds it the outstanding
+   * (Priority, ResourceName, Capability) and adds to the outstanding
    * OPPORTUNISTIC outstandingOpReqs map. The nested map is required to enforce
    * the current YARN constraint that only a single ResourceRequest can exist at
-   * a give Priority and Capability
-   * @param resourceAsks
+   * a give Priority and Capability.
+   *
+   * @param resourceAsks the list with the {@link ResourceRequest}s
    */
   public void addToOutstandingReqs(List<ResourceRequest> resourceAsks) {
     for (ResourceRequest request : resourceAsks) {
@@ -297,11 +291,9 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
 
   /**
    * This method matches a returned list of Container Allocations to any
-   * outstanding OPPORTUNISTIC ResourceRequest
-   * @param capability
-   * @param allocatedContainers
+   * outstanding OPPORTUNISTIC ResourceRequest.
    */
-  public void matchAllocationToOutstandingRequest(Resource capability,
+  private void matchAllocationToOutstandingRequest(Resource capability,
       List<Container> allocatedContainers) {
     for (Container c : allocatedContainers) {
       containersAllocated.add(c.getId());
@@ -333,28 +325,29 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
   }
 
   @Override
-  public DistSchedRegisterResponse
+  public RegisterDistributedSchedulingAMResponse
       registerApplicationMasterForDistributedScheduling(
           RegisterApplicationMasterRequest request)
-              throws YarnException, IOException {
+      throws YarnException, IOException {
     LOG.info("Forwarding registration request to the" +
         "Distributed Scheduler Service on YARN RM");
-    DistSchedRegisterResponse dsResp = getNextInterceptor()
+    RegisterDistributedSchedulingAMResponse dsResp = getNextInterceptor()
         .registerApplicationMasterForDistributedScheduling(request);
     updateParameters(dsResp);
     return dsResp;
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling(
-      DistSchedAllocateRequest request) throws YarnException, IOException {
+  public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
+      DistributedSchedulingAllocateRequest request)
+      throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Forwarding allocate request to the" +
           "Distributed Scheduler Service on YARN RM");
     }
     // Partition requests into GUARANTEED and OPPORTUNISTIC reqs
-    PartitionedResourceRequests partitionedAsks = partitionAskList(
-        request.getAllocateRequest().getAskList());
+    PartitionedResourceRequests partitionedAsks =
+        partitionAskList(request.getAllocateRequest().getAskList());
 
     List<ContainerId> releasedContainers =
         request.getAllocateRequest().getReleaseList();
@@ -393,11 +386,12 @@ public final class LocalScheduler extends AbstractRequestInterceptor {
         allocatedContainers.addAll(e.getValue());
       }
     }
+
     request.setAllocatedContainers(allocatedContainers);
 
     // Send all the GUARANTEED Reqs to RM
     request.getAllocateRequest().setAskList(partitionedAsks.getGuaranteed());
-    DistSchedAllocateResponse dsResp =
+    DistributedSchedulingAllocateResponse dsResp =
         getNextInterceptor().allocateForDistributedScheduling(request);
 
     // Update host to nodeId mapping

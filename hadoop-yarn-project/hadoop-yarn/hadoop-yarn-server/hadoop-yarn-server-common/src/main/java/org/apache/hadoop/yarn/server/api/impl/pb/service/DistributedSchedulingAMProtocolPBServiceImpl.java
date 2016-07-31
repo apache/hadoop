@@ -20,24 +20,21 @@ package org.apache.hadoop.yarn.server.api.impl.pb.service;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
-import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateRequestPBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedAllocateResponsePBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistSchedRegisterResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
-    .FinishApplicationMasterRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
-    .FinishApplicationMasterResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSchedulingAllocateRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSchedulingAllocateResponsePBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterDistributedSchedulingAMResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMasterRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -47,27 +44,32 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 
 import java.io.IOException;
 
-public class DistributedSchedulerProtocolPBServiceImpl implements
-    DistributedSchedulerProtocolPB {
+/**
+ * Implementation of {@link DistributedSchedulingAMProtocolPB}.
+ */
+public class DistributedSchedulingAMProtocolPBServiceImpl implements
+    DistributedSchedulingAMProtocolPB {
 
-  private DistributedSchedulerProtocol real;
+  private DistributedSchedulingAMProtocol real;
 
-  public DistributedSchedulerProtocolPBServiceImpl(
-      DistributedSchedulerProtocol impl) {
+  public DistributedSchedulingAMProtocolPBServiceImpl(
+      DistributedSchedulingAMProtocol impl) {
     this.real = impl;
   }
 
   @Override
-  public YarnServerCommonServiceProtos.DistSchedRegisterResponseProto
-  registerApplicationMasterForDistributedScheduling(RpcController controller,
-      RegisterApplicationMasterRequestProto proto) throws
-      ServiceException {
+  public YarnServerCommonServiceProtos.
+      RegisterDistributedSchedulingAMResponseProto
+      registerApplicationMasterForDistributedScheduling(
+      RpcController controller, RegisterApplicationMasterRequestProto proto)
+      throws ServiceException {
     RegisterApplicationMasterRequestPBImpl request = new
         RegisterApplicationMasterRequestPBImpl(proto);
     try {
-      DistSchedRegisterResponse response =
+      RegisterDistributedSchedulingAMResponse response =
           real.registerApplicationMasterForDistributedScheduling(request);
-      return ((DistSchedRegisterResponsePBImpl) response).getProto();
+      return ((RegisterDistributedSchedulingAMResponsePBImpl) response)
+          .getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {
@@ -76,16 +78,19 @@ public class DistributedSchedulerProtocolPBServiceImpl implements
   }
 
   @Override
-  public YarnServerCommonServiceProtos.DistSchedAllocateResponseProto
-  allocateForDistributedScheduling(RpcController controller,
-      YarnServerCommonServiceProtos.DistSchedAllocateRequestProto proto)
+  public YarnServerCommonServiceProtos.
+      DistributedSchedulingAllocateResponseProto
+      allocateForDistributedScheduling(RpcController controller,
+      YarnServerCommonServiceProtos.
+          DistributedSchedulingAllocateRequestProto proto)
       throws ServiceException {
-    DistSchedAllocateRequestPBImpl request =
-        new DistSchedAllocateRequestPBImpl(proto);
+    DistributedSchedulingAllocateRequestPBImpl request =
+        new DistributedSchedulingAllocateRequestPBImpl(proto);
     try {
-      DistSchedAllocateResponse response = real
+      DistributedSchedulingAllocateResponse response = real
           .allocateForDistributedScheduling(request);
-      return ((DistSchedAllocateResponsePBImpl) response).getProto();
+      return ((DistributedSchedulingAllocateResponsePBImpl) response)
+          .getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
     } catch (IOException e) {

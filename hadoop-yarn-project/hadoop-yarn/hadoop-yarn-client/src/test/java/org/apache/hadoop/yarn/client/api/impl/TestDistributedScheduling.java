@@ -82,9 +82,9 @@ import static org.mockito.Mockito.when;
 /**
  * Validates End2End Distributed Scheduling flow which includes the AM
  * specifying OPPORTUNISTIC containers in its resource requests,
- * the AMRMProxyService on the NM, the LocalScheduler RequestInterceptor on
- * the NM and the DistributedSchedulingProtocol used by the framework to talk
- * to the DistributedSchedulingService running on the RM.
+ * the AMRMProxyService on the NM, the DistributedScheduler RequestInterceptor
+ * on the NM and the DistributedSchedulingProtocol used by the framework to talk
+ * to the DistributedSchedulingAMService running on the RM.
  */
 public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
 

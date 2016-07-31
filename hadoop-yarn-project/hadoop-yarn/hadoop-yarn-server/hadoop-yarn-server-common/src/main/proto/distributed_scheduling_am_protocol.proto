@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+
 /**
  * These .proto interfaces are public and stable.
  * Please see http://wiki.apache.org/hadoop/Compatibility
@@ -23,7 +24,7 @@
  */
 
 option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "DistributedSchedulerProtocol";
+option java_outer_classname = "DistributedSchedulingAMProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 package hadoop.yarn;
@@ -31,9 +32,8 @@ package hadoop.yarn;
 import "yarn_service_protos.proto";
 import "yarn_server_common_service_protos.proto";
 
-
-service DistributedSchedulerProtocolService {
-  rpc registerApplicationMasterForDistributedScheduling (RegisterApplicationMasterRequestProto) returns (DistSchedRegisterResponseProto);
+service DistributedSchedulingAMProtocolService {
+  rpc registerApplicationMasterForDistributedScheduling (RegisterApplicationMasterRequestProto) returns (RegisterDistributedSchedulingAMResponseProto);
+  rpc allocateForDistributedScheduling (DistributedSchedulingAllocateRequestProto) returns (DistributedSchedulingAllocateResponseProto);
   rpc finishApplicationMaster (FinishApplicationMasterRequestProto) returns (FinishApplicationMasterResponseProto);
-  rpc allocateForDistributedScheduling (DistSchedAllocateRequestProto) returns (DistSchedAllocateResponseProto);
 }
