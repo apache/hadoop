@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
-import org.apache.hadoop.yarn.server.nodemanager.scheduler.LocalScheduler.DistSchedulerParams;
+import org.apache.hadoop.yarn.server.nodemanager.scheduler.DistributedScheduler.DistributedSchedulerParams;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -37,15 +37,17 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * <p>The OpportunisticContainerAllocator allocates containers on a given list
- * of Nodes after it modifies the container sizes to within allowable limits
- * specified by the <code>ClusterManager</code> running on the RM. It tries to
- * distribute the containers as evenly as possible. It also uses the
- * <code>NMTokenSecretManagerInNM</code> to generate the required NM tokens for
- * the allocated containers</p>
+ * <p>
+ * The OpportunisticContainerAllocator allocates containers on a given list of
+ * nodes, after modifying the container sizes to respect the limits set by the
+ * ResourceManager. It tries to distribute the containers as evenly as possible.
+ * It also uses the <code>NMTokenSecretManagerInNM</code> to generate the
+ * required NM tokens for the allocated containers.
+ * </p>
  */
 public class OpportunisticContainerAllocator {
 
@@ -78,15 +80,15 @@ public class OpportunisticContainerAllocator {
     this.webpagePort = webpagePort;
   }
 
-  public Map<Resource, List<Container>> allocate(DistSchedulerParams appParams,
-      ContainerIdCounter idCounter, Collection<ResourceRequest> resourceAsks,
-      Set<String> blacklist, ApplicationAttemptId appAttId,
-      Map<String, NodeId> allNodes, String userName) throws YarnException {
+  public Map<Resource, List<Container>> allocate(
+      DistributedSchedulerParams appParams, ContainerIdCounter idCounter,
+      Collection<ResourceRequest> resourceAsks, Set<String> blacklist,
+      ApplicationAttemptId appAttId, Map<String, NodeId> allNodes,
+      String userName) throws YarnException {
     Map<Resource, List<Container>> containers = new HashMap<>();
-    Set<String> nodesAllocated = new HashSet<>();
     for (ResourceRequest anyAsk : resourceAsks) {
       allocateOpportunisticContainers(appParams, idCounter, blacklist, appAttId,
-          allNodes, userName, containers, nodesAllocated, anyAsk);
+          allNodes, userName, containers, anyAsk);
       LOG.info("Opportunistic allocation requested for ["
           + "priority=" + anyAsk.getPriority()
           + ", num_containers=" + anyAsk.getNumContainers()
@@ -96,30 +98,30 @@ public class OpportunisticContainerAllocator {
     return containers;
   }
 
-  private void allocateOpportunisticContainers(DistSchedulerParams appParams,
-      ContainerIdCounter idCounter, Set<String> blacklist,
-      ApplicationAttemptId id, Map<String, NodeId> allNodes, String userName,
-      Map<Resource, List<Container>> containers, Set<String> nodesAllocated,
-      ResourceRequest anyAsk) throws YarnException {
+  private void allocateOpportunisticContainers(
+      DistributedSchedulerParams appParams, ContainerIdCounter idCounter,
+      Set<String> blacklist, ApplicationAttemptId id,
+      Map<String, NodeId> allNodes, String userName,
+      Map<Resource, List<Container>> containers, ResourceRequest anyAsk)
+      throws YarnException {
     int toAllocate = anyAsk.getNumContainers()
-        - (containers.isEmpty() ?
-        0 : containers.get(anyAsk.getCapability()).size());
+        - (containers.isEmpty() ? 0 :
+            containers.get(anyAsk.getCapability()).size());
 
-    List<String> topKNodesLeft = new ArrayList<>();
-    for (String s : allNodes.keySet()) {
-      // Bias away from whatever we have already allocated and respect blacklist
-      if (nodesAllocated.contains(s) || blacklist.contains(s)) {
+    List<NodeId> nodesForScheduling = new ArrayList<>();
+    for (Entry<String, NodeId> nodeEntry : allNodes.entrySet()) {
+      // Do not use blacklisted nodes for scheduling.
+      if (blacklist.contains(nodeEntry.getKey())) {
         continue;
       }
-      topKNodesLeft.add(s);
+      nodesForScheduling.add(nodeEntry.getValue());
     }
     int numAllocated = 0;
-    int nextNodeToAllocate = 0;
+    int nextNodeToSchedule = 0;
     for (int numCont = 0; numCont < toAllocate; numCont++) {
-      String topNode = topKNodesLeft.get(nextNodeToAllocate);
-      nextNodeToAllocate++;
-      nextNodeToAllocate %= topKNodesLeft.size();
-      NodeId nodeId = allNodes.get(topNode);
+      nextNodeToSchedule++;
+      nextNodeToSchedule %= nodesForScheduling.size();
+      NodeId nodeId = nodesForScheduling.get(nextNodeToSchedule);
       Container container = buildContainer(appParams, idCounter, anyAsk, id,
           userName, nodeId);
       List<Container> cList = containers.get(anyAsk.getCapability());
@@ -134,7 +136,7 @@ public class OpportunisticContainerAllocator {
     LOG.info("Allocated " + numAllocated + " opportunistic containers.");
   }
 
-  private Container buildContainer(DistSchedulerParams appParams,
+  private Container buildContainer(DistributedSchedulerParams appParams,
       ContainerIdCounter idCounter, ResourceRequest rr, ApplicationAttemptId id,
       String userName, NodeId nodeId) throws YarnException {
     ContainerId cId =
@@ -165,7 +167,7 @@ public class OpportunisticContainerAllocator {
     return container;
   }
 
-  private Resource normalizeCapability(DistSchedulerParams appParams,
+  private Resource normalizeCapability(DistributedSchedulerParams appParams,
       ResourceRequest ask) {
     return Resources.normalize(RESOURCE_CALCULATOR,
         ask.getCapability(), appParams.minResource, appParams.maxResource,

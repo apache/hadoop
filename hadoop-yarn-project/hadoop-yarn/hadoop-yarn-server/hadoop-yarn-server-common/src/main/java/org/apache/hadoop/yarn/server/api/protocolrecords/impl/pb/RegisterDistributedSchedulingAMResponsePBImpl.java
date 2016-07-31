@@ -22,45 +22,54 @@ import com.google.protobuf.TextFormat;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 
-
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb
-    .RegisterApplicationMasterResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
-import org.apache.hadoop.yarn.server.api.protocolrecords
-    .DistSchedRegisterResponse;
-
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
+/**
+ * Implementation of {@link RegisterDistributedSchedulingAMResponse}.
+ */
+public class RegisterDistributedSchedulingAMResponsePBImpl extends
+    RegisterDistributedSchedulingAMResponse {
 
-  YarnServerCommonServiceProtos.DistSchedRegisterResponseProto proto =
-      YarnServerCommonServiceProtos.DistSchedRegisterResponseProto.getDefaultInstance();
-  YarnServerCommonServiceProtos.DistSchedRegisterResponseProto.Builder builder = null;
+  YarnServerCommonServiceProtos.RegisterDistributedSchedulingAMResponseProto
+      proto =
+          YarnServerCommonServiceProtos.
+          RegisterDistributedSchedulingAMResponseProto
+              .getDefaultInstance();
+  YarnServerCommonServiceProtos.RegisterDistributedSchedulingAMResponseProto.
+      Builder builder = null;
   boolean viaProto = false;
 
-  private Resource maxAllocatableCapability;
-  private Resource minAllocatableCapability;
-  private Resource incrAllocatableCapability;
+  private Resource maxContainerResource;
+  private Resource minContainerResource;
+  private Resource incrContainerResource;
   private List<NodeId> nodesForScheduling;
   private RegisterApplicationMasterResponse registerApplicationMasterResponse;
 
-  public DistSchedRegisterResponsePBImpl() {
-    builder = YarnServerCommonServiceProtos.DistSchedRegisterResponseProto.newBuilder();
+  public RegisterDistributedSchedulingAMResponsePBImpl() {
+    builder = YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProto.newBuilder();
   }
 
-  public DistSchedRegisterResponsePBImpl(YarnServerCommonServiceProtos.DistSchedRegisterResponseProto proto) {
+  public RegisterDistributedSchedulingAMResponsePBImpl(
+      YarnServerCommonServiceProtos.
+          RegisterDistributedSchedulingAMResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public YarnServerCommonServiceProtos.DistSchedRegisterResponseProto getProto() {
+  public YarnServerCommonServiceProtos.
+      RegisterDistributedSchedulingAMResponseProto
+          getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -69,7 +78,8 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = YarnServerCommonServiceProtos.DistSchedRegisterResponseProto.newBuilder(proto);
+      builder = YarnServerCommonServiceProtos.
+          RegisterDistributedSchedulingAMResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -85,21 +95,21 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
   private synchronized void mergeLocalToBuilder() {
     if (this.nodesForScheduling != null) {
       builder.clearNodesForScheduling();
-      Iterable<YarnProtos.NodeIdProto> iterable =
-          getNodeIdProtoIterable(this.nodesForScheduling);
+      Iterable<YarnProtos.NodeIdProto> iterable = getNodeIdProtoIterable(
+          this.nodesForScheduling);
       builder.addAllNodesForScheduling(iterable);
     }
-    if (this.maxAllocatableCapability != null) {
-      builder.setMaxAllocCapability(
-          ProtoUtils.convertToProtoFormat(this.maxAllocatableCapability));
+    if (this.maxContainerResource != null) {
+      builder.setMaxContainerResource(ProtoUtils.convertToProtoFormat(
+          this.maxContainerResource));
     }
-    if (this.minAllocatableCapability != null) {
-      builder.setMinAllocCapability(
-          ProtoUtils.convertToProtoFormat(this.minAllocatableCapability));
+    if (this.minContainerResource != null) {
+      builder.setMinContainerResource(ProtoUtils.convertToProtoFormat(
+          this.minContainerResource));
     }
-    if (this.incrAllocatableCapability != null) {
-      builder.setIncrAllocCapability(
-          ProtoUtils.convertToProtoFormat(this.incrAllocatableCapability));
+    if (this.incrContainerResource != null) {
+      builder.setIncrContainerResource(
+          ProtoUtils.convertToProtoFormat(this.incrContainerResource));
     }
     if (this.registerApplicationMasterResponse != null) {
       builder.setRegisterResponse(
@@ -111,7 +121,7 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
   @Override
   public void setRegisterResponse(RegisterApplicationMasterResponse resp) {
     maybeInitBuilder();
-    if(registerApplicationMasterResponse == null) {
+    if (registerApplicationMasterResponse == null) {
       builder.clearRegisterResponse();
     }
     this.registerApplicationMasterResponse = resp;
@@ -123,7 +133,9 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
       return this.registerApplicationMasterResponse;
     }
 
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
     if (!p.hasRegisterResponse()) {
       return null;
     }
@@ -134,78 +146,84 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
   }
 
   @Override
-  public void setMaxAllocatableCapabilty(Resource maxResource) {
+  public void setMaxContainerResource(Resource maxResource) {
     maybeInitBuilder();
-    if(maxAllocatableCapability == null) {
-      builder.clearMaxAllocCapability();
+    if (maxContainerResource == null) {
+      builder.clearMaxContainerResource();
     }
-    this.maxAllocatableCapability = maxResource;
+    this.maxContainerResource = maxResource;
   }
 
   @Override
-  public Resource getMaxAllocatableCapabilty() {
-    if (this.maxAllocatableCapability != null) {
-      return this.maxAllocatableCapability;
+  public Resource getMaxContainerResource() {
+    if (this.maxContainerResource != null) {
+      return this.maxContainerResource;
     }
 
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasMaxAllocCapability()) {
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
+    if (!p.hasMaxContainerResource()) {
       return null;
     }
 
-    this.maxAllocatableCapability =
-        ProtoUtils.convertFromProtoFormat(p.getMaxAllocCapability());
-    return this.maxAllocatableCapability;
+    this.maxContainerResource = ProtoUtils.convertFromProtoFormat(p
+        .getMaxContainerResource());
+    return this.maxContainerResource;
   }
 
   @Override
-  public void setMinAllocatableCapabilty(Resource minResource) {
+  public void setMinContainerResource(Resource minResource) {
     maybeInitBuilder();
-    if(minAllocatableCapability == null) {
-      builder.clearMinAllocCapability();
+    if (minContainerResource == null) {
+      builder.clearMinContainerResource();
     }
-    this.minAllocatableCapability = minResource;
+    this.minContainerResource = minResource;
   }
 
   @Override
-  public Resource getMinAllocatableCapabilty() {
-    if (this.minAllocatableCapability != null) {
-      return this.minAllocatableCapability;
+  public Resource getMinContainerResource() {
+    if (this.minContainerResource != null) {
+      return this.minContainerResource;
     }
 
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasMinAllocCapability()) {
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
+    if (!p.hasMinContainerResource()) {
       return null;
     }
 
-    this.minAllocatableCapability =
-        ProtoUtils.convertFromProtoFormat(p.getMinAllocCapability());
-    return this.minAllocatableCapability;
+    this.minContainerResource = ProtoUtils.convertFromProtoFormat(p
+        .getMinContainerResource());
+    return this.minContainerResource;
   }
 
   @Override
-  public void setIncrAllocatableCapabilty(Resource incrResource) {
+  public void setIncrContainerResource(Resource incrResource) {
     maybeInitBuilder();
-    if(incrAllocatableCapability == null) {
-      builder.clearIncrAllocCapability();
+    if (incrContainerResource == null) {
+      builder.clearIncrContainerResource();
     }
-    this.incrAllocatableCapability = incrResource;
+    this.incrContainerResource = incrResource;
   }
 
   @Override
-  public Resource getIncrAllocatableCapabilty() {
-    if (this.incrAllocatableCapability != null) {
-      return this.incrAllocatableCapability;
+  public Resource getIncrContainerResource() {
+    if (this.incrContainerResource != null) {
+      return this.incrContainerResource;
     }
 
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasIncrAllocCapability()) {
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
+    if (!p.hasIncrContainerResource()) {
       return null;
     }
 
-    this.incrAllocatableCapability =
-        ProtoUtils.convertFromProtoFormat(p.getIncrAllocCapability());
-    return this.incrAllocatableCapability;
+    this.incrContainerResource = ProtoUtils.convertFromProtoFormat(p
+        .getIncrContainerResource());
+    return this.incrContainerResource;
   }
 
   @Override
@@ -216,7 +234,9 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
 
   @Override
   public int getContainerTokenExpiryInterval() {
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
     if (!p.hasContainerTokenExpiryInterval()) {
       return 0;
     }
@@ -231,13 +251,14 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
 
   @Override
   public long getContainerIdStart() {
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
     if (!p.hasContainerIdStart()) {
       return 0;
     }
     return p.getContainerIdStart();
   }
-
 
   @Override
   public void setNodesForScheduling(List<NodeId> nodesForScheduling) {
@@ -263,7 +284,9 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
   }
 
   private synchronized void initLocalNodesForSchedulingList() {
-    YarnServerCommonServiceProtos.DistSchedRegisterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    YarnServerCommonServiceProtos.
+        RegisterDistributedSchedulingAMResponseProtoOrBuilder p =
+            viaProto ? proto : builder;
     List<YarnProtos.NodeIdProto> list = p.getNodesForSchedulingList();
     nodesForScheduling = new ArrayList<>();
     if (list != null) {
@@ -272,6 +295,7 @@ public class DistSchedRegisterResponsePBImpl extends DistSchedRegisterResponse {
       }
     }
   }
+
   private synchronized Iterable<YarnProtos.NodeIdProto> getNodeIdProtoIterable(
       final List<NodeId> nodeList) {
     maybeInitBuilder();

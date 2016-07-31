@@ -27,15 +27,15 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocol;
+import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
 import org.apache.hadoop.yarn.api.impl.pb.service.ApplicationMasterProtocolPBServiceImpl;
 
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -73,18 +73,18 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The DistributedSchedulingService is started instead of the
- * ApplicationMasterService if DistributedScheduling is enabled for the YARN
+ * The DistributedSchedulingAMService is started instead of the
+ * ApplicationMasterService if distributed scheduling is enabled for the YARN
  * cluster.
  * It extends the functionality of the ApplicationMasterService by servicing
  * clients (AMs and AMRMProxy request interceptors) that understand the
  * DistributedSchedulingProtocol.
  */
-public class DistributedSchedulingService extends ApplicationMasterService
-    implements DistributedSchedulerProtocol, EventHandler<SchedulerEvent> {
+public class DistributedSchedulingAMService extends ApplicationMasterService
+    implements DistributedSchedulingAMProtocol, EventHandler<SchedulerEvent> {
 
   private static final Log LOG =
-      LogFactory.getLog(DistributedSchedulingService.class);
+      LogFactory.getLog(DistributedSchedulingAMService.class);
 
   private final NodeQueueLoadMonitor nodeMonitor;
 
@@ -94,12 +94,12 @@ public class DistributedSchedulingService extends ApplicationMasterService
       new ConcurrentHashMap<>();
   private final int k;
 
-  public DistributedSchedulingService(RMContext rmContext,
-      YarnScheduler scheduler) {
-    super(DistributedSchedulingService.class.getName(), rmContext, scheduler);
+  public DistributedSchedulingAMService(RMContext rmContext,
+                                      YarnScheduler scheduler) {
+    super(DistributedSchedulingAMService.class.getName(), rmContext, scheduler);
     this.k = rmContext.getYarnConfiguration().getInt(
-        YarnConfiguration.DIST_SCHEDULING_TOP_K,
-        YarnConfiguration.DIST_SCHEDULING_TOP_K_DEFAULT);
+        YarnConfiguration.DIST_SCHEDULING_NODES_NUMBER_USED,
+        YarnConfiguration.DIST_SCHEDULING_NODES_NUMBER_USED_DEFAULT);
     long nodeSortInterval = rmContext.getYarnConfiguration().getLong(
         YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS,
         YarnConfiguration.
@@ -149,7 +149,7 @@ public class DistributedSchedulingService extends ApplicationMasterService
   @Override
   public Server getServer(YarnRPC rpc, Configuration serverConf,
       InetSocketAddress addr, AMRMTokenSecretManager secretManager) {
-    Server server = rpc.getServer(DistributedSchedulerProtocol.class, this,
+    Server server = rpc.getServer(DistributedSchedulingAMProtocol.class, this,
         addr, serverConf, secretManager,
         serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
@@ -184,43 +184,45 @@ public class DistributedSchedulingService extends ApplicationMasterService
   }
 
   @Override
-  public DistSchedRegisterResponse
+  public RegisterDistributedSchedulingAMResponse
   registerApplicationMasterForDistributedScheduling(
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
     RegisterApplicationMasterResponse response =
         registerApplicationMaster(request);
-    DistSchedRegisterResponse dsResp = recordFactory
-        .newRecordInstance(DistSchedRegisterResponse.class);
+    RegisterDistributedSchedulingAMResponse dsResp = recordFactory
+        .newRecordInstance(RegisterDistributedSchedulingAMResponse.class);
     dsResp.setRegisterResponse(response);
-    dsResp.setMinAllocatableCapabilty(
+    dsResp.setMinContainerResource(
         Resource.newInstance(
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MIN_MEMORY,
-                YarnConfiguration.DIST_SCHEDULING_MIN_MEMORY_DEFAULT),
+                YarnConfiguration.DIST_SCHEDULING_MIN_CONTAINER_MEMORY_MB,
+                YarnConfiguration.
+                    DIST_SCHEDULING_MIN_CONTAINER_MEMORY_MB_DEFAULT),
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MIN_VCORES,
-                YarnConfiguration.DIST_SCHEDULING_MIN_VCORES_DEFAULT)
+                YarnConfiguration.DIST_SCHEDULING_MIN_CONTAINER_VCORES,
+                YarnConfiguration.DIST_SCHEDULING_MIN_CONTAINER_VCORES_DEFAULT)
         )
     );
-    dsResp.setMaxAllocatableCapabilty(
+    dsResp.setMaxContainerResource(
         Resource.newInstance(
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY,
-                YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY_DEFAULT),
+                YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY_MB,
+                YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY_MB_DEFAULT),
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MAX_VCORES,
-                YarnConfiguration.DIST_SCHEDULING_MAX_VCORES_DEFAULT)
+                YarnConfiguration.DIST_SCHEDULING_MAX_CONTAINER_VCORES,
+                YarnConfiguration.DIST_SCHEDULING_MAX_CONTAINER_VCORES_DEFAULT)
         )
     );
-    dsResp.setIncrAllocatableCapabilty(
+    dsResp.setIncrContainerResource(
         Resource.newInstance(
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_INCR_MEMORY,
-                YarnConfiguration.DIST_SCHEDULING_INCR_MEMORY_DEFAULT),
+                YarnConfiguration.DIST_SCHEDULING_INCR_CONTAINER_MEMORY_MB,
+                YarnConfiguration.
+                    DIST_SCHEDULING_INCR_CONTAINER_MEMORY_MB_DEFAULT),
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_INCR_VCORES,
-                YarnConfiguration.DIST_SCHEDULING_INCR_VCORES_DEFAULT)
+                YarnConfiguration.DIST_SCHEDULING_INCR_CONTAINER_VCORES,
+                YarnConfiguration.DIST_SCHEDULING_INCR_CONTAINER_VCORES_DEFAULT)
         )
     );
     dsResp.setContainerTokenExpiryInterval(
@@ -238,8 +240,9 @@ public class DistributedSchedulingService extends ApplicationMasterService
   }
 
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling(
-      DistSchedAllocateRequest request) throws YarnException, IOException {
+  public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
+      DistributedSchedulingAllocateRequest request)
+      throws YarnException, IOException {
     List<Container> distAllocContainers = request.getAllocatedContainers();
     for (Container container : distAllocContainers) {
       // Create RMContainer
@@ -255,8 +258,8 @@ public class DistributedSchedulingService extends ApplicationMasterService
               RMContainerEventType.LAUNCHED));
     }
     AllocateResponse response = allocate(request.getAllocateRequest());
-    DistSchedAllocateResponse dsResp = recordFactory.newRecordInstance
-        (DistSchedAllocateResponse.class);
+    DistributedSchedulingAllocateResponse dsResp = recordFactory
+        .newRecordInstance(DistributedSchedulingAllocateResponse.class);
     dsResp.setAllocateResponse(response);
     dsResp.setNodesForScheduling(
         this.nodeMonitor.selectLeastLoadedNodes(this.k));
@@ -264,7 +267,7 @@ public class DistributedSchedulingService extends ApplicationMasterService
   }
 
   private void addToMapping(ConcurrentHashMap<String, Set<NodeId>> mapping,
-      String rackName, NodeId nodeId) {
+                            String rackName, NodeId nodeId) {
     if (rackName != null) {
       mapping.putIfAbsent(rackName, new HashSet<NodeId>());
       Set<NodeId> nodeIds = mapping.get(rackName);
@@ -275,7 +278,7 @@ public class DistributedSchedulingService extends ApplicationMasterService
   }
 
   private void removeFromMapping(ConcurrentHashMap<String, Set<NodeId>> mapping,
-      String rackName, NodeId nodeId) {
+                                 String rackName, NodeId nodeId) {
     if (rackName != null) {
       Set<NodeId> nodeIds = mapping.get(rackName);
       synchronized (nodeIds) {
@@ -346,7 +349,7 @@ public class DistributedSchedulingService extends ApplicationMasterService
       break;
     // <-- IGNORED EVENTS : END -->
     default:
-      LOG.error("Unknown event arrived at DistributedSchedulingService: "
+      LOG.error("Unknown event arrived at DistributedSchedulingAMService: "
           + event.toString());
     }
 

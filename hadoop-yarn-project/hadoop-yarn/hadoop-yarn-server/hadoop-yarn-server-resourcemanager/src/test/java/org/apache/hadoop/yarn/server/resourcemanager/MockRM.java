@@ -822,7 +822,7 @@ public class MockRM extends ResourceManager {
     if (this.rmContext.getYarnConfiguration().getBoolean(
         YarnConfiguration.DIST_SCHEDULING_ENABLED,
         YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
-      return new DistributedSchedulingService(getRMContext(), scheduler) {
+      return new DistributedSchedulingAMService(getRMContext(), scheduler) {
         @Override
         protected void serviceStart() {
           // override to not start rpc handler

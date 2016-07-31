@@ -20,24 +20,30 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.util.List;
 
+/**
+ * This is the response to registering an Application Master when distributed
+ * scheduling is enabled. Apart from the
+ * {@link RegisterApplicationMasterResponse}, it includes various parameters
+ * to be used during distributed scheduling, such as the min and max resources
+ * that can be requested by containers.
+ */
 @Public
 @Unstable
-public abstract class DistSchedRegisterResponse {
+public abstract class RegisterDistributedSchedulingAMResponse {
 
   @Public
   @Unstable
-  public static DistSchedRegisterResponse newInstance
+  public static RegisterDistributedSchedulingAMResponse newInstance
       (RegisterApplicationMasterResponse regAMResp) {
-    DistSchedRegisterResponse response =
-        Records.newRecord(DistSchedRegisterResponse.class);
+    RegisterDistributedSchedulingAMResponse response =
+        Records.newRecord(RegisterDistributedSchedulingAMResponse.class);
     response.setRegisterResponse(regAMResp);
     return response;
   }
@@ -53,27 +59,27 @@ public abstract class DistSchedRegisterResponse {
 
   @Public
   @Unstable
-  public abstract void setMinAllocatableCapabilty(Resource minResource);
+  public abstract void setMinContainerResource(Resource minResource);
 
   @Public
   @Unstable
-  public abstract Resource getMinAllocatableCapabilty();
+  public abstract Resource getMinContainerResource();
 
   @Public
   @Unstable
-  public abstract void setMaxAllocatableCapabilty(Resource maxResource);
+  public abstract void setMaxContainerResource(Resource maxResource);
 
   @Public
   @Unstable
-  public abstract Resource getMaxAllocatableCapabilty();
+  public abstract Resource getMaxContainerResource();
 
   @Public
   @Unstable
-  public abstract void setIncrAllocatableCapabilty(Resource maxResource);
+  public abstract void setIncrContainerResource(Resource maxResource);
 
   @Public
   @Unstable
-  public abstract Resource getIncrAllocatableCapabilty();
+  public abstract Resource getIncrContainerResource();
 
   @Public
   @Unstable

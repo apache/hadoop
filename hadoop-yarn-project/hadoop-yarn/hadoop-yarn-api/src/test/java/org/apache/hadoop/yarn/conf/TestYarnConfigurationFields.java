@@ -124,41 +124,6 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     configurationPrefixToSkipCompare
         .add(YarnConfiguration.NM_CPU_RESOURCE_ENABLED);
 
-    // Ignore Distributed Scheduling Related Configurations.
-    // Since it is still a "work in progress" feature
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_ENABLED);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_INCR_MEMORY);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_INCR_VCORES);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_MAX_VCORES);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_MIN_MEMORY);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_MIN_VCORES);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.DIST_SCHEDULING_TOP_K);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_LOAD_COMPARATOR);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_LENGTH);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_MAX_QUEUE_WAIT_TIME_MS);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_WAIT_TIME_MS);
-    configurationPrefixToSkipCompare
-        .add(YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV);
-
     // Set by container-executor.cfg
     configurationPrefixToSkipCompare.add(YarnConfiguration.NM_USER_HOME_DIR);
 

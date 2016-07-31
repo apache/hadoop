@@ -23,14 +23,15 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
 import org.apache.hadoop.yarn.proto.ApplicationMasterProtocol.ApplicationMasterProtocolService;
-import org.apache.hadoop.yarn.proto.DistributedSchedulerProtocol.DistributedSchedulerProtocolService;
+import org.apache.hadoop.yarn.proto.DistributedSchedulingAMProtocol.DistributedSchedulingAMProtocolService;
 
 @Private
 @Unstable
-@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.server.api.DistributedSchedulerProtocolPB",
+@ProtocolInfo(protocolName =
+    "org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocolPB",
     protocolVersion = 1)
-public interface DistributedSchedulerProtocolPB extends
-    DistributedSchedulerProtocolService.BlockingInterface,
+public interface DistributedSchedulingAMProtocolPB extends
+    DistributedSchedulingAMProtocolService.BlockingInterface,
     ApplicationMasterProtocolService.BlockingInterface,
-    ApplicationMasterProtocolPB {
+    ApplicationMasterProtocolPB  {
 }

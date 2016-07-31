@@ -21,12 +21,11 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.yarn.api.protocolrecords
-    .RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedRegisterResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
 
 import java.io.IOException;
 
@@ -118,8 +117,9 @@ public abstract class AbstractRequestInterceptor implements
    * @throws IOException
    */
   @Override
-  public DistSchedAllocateResponse allocateForDistributedScheduling(
-      DistSchedAllocateRequest request) throws YarnException, IOException {
+  public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
+      DistributedSchedulingAllocateRequest request)
+      throws YarnException, IOException {
     return (this.nextInterceptor != null) ?
         this.nextInterceptor.allocateForDistributedScheduling(request) : null;
   }
@@ -134,10 +134,10 @@ public abstract class AbstractRequestInterceptor implements
    * @throws IOException
    */
   @Override
-  public DistSchedRegisterResponse
+  public RegisterDistributedSchedulingAMResponse
       registerApplicationMasterForDistributedScheduling(
-          RegisterApplicationMasterRequest request)
-          throws YarnException, IOException {
+      RegisterApplicationMasterRequest request)
+      throws YarnException, IOException {
     return (this.nextInterceptor != null) ? this.nextInterceptor
         .registerApplicationMasterForDistributedScheduling(request) : null;
   }

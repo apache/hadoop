@@ -26,16 +26,24 @@ import org.apache.hadoop.yarn.util.Records;
 
 import java.util.List;
 
+/**
+ * This is the response of the Resource Manager to the
+ * {@link DistributedSchedulingAllocateRequest}, when distributed scheduling is
+ * enabled. It includes the {@link AllocateResponse} for the GUARANTEED
+ * containers allocated by the Resource Manager. Moreover, it includes a list
+ * with the nodes that can be used by the Distributed Scheduler when allocating
+ * containers.
+ */
 @Public
 @Unstable
-public abstract class DistSchedAllocateResponse {
+public abstract class DistributedSchedulingAllocateResponse {
 
   @Public
   @Unstable
-  public static DistSchedAllocateResponse newInstance(AllocateResponse
-      allResp) {
-    DistSchedAllocateResponse response =
-        Records.newRecord(DistSchedAllocateResponse.class);
+  public static DistributedSchedulingAllocateResponse newInstance(
+      AllocateResponse allResp) {
+    DistributedSchedulingAllocateResponse response =
+        Records.newRecord(DistributedSchedulingAllocateResponse.class);
     response.setAllocateResponse(allResp);
     return  response;
   }

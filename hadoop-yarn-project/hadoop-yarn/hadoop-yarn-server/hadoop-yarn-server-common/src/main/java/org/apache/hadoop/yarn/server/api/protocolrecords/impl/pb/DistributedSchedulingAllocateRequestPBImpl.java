@@ -26,39 +26,40 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.DistSchedAllocateRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.DistSchedAllocateRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.DistributedSchedulingAllocateRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.DistributedSchedulingAllocateRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DistSchedAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
 
 import java.util.Iterator;
 import java.util.List;
 
 /**
- * Implementation of {@link DistSchedAllocateRequest} for a distributed
- * scheduler to notify about the allocation of containers to the Resource
- * Manager.
+ * Implementation of {@link DistributedSchedulingAllocateRequest}.
  */
-public class DistSchedAllocateRequestPBImpl extends DistSchedAllocateRequest {
-  private DistSchedAllocateRequestProto.Builder builder = null;
+public class DistributedSchedulingAllocateRequestPBImpl
+    extends DistributedSchedulingAllocateRequest {
+  private DistributedSchedulingAllocateRequestProto.Builder builder = null;
   private boolean viaProto = false;
 
-  private DistSchedAllocateRequestProto proto;
+  private DistributedSchedulingAllocateRequestProto proto;
   private AllocateRequest allocateRequest;
   private List<Container> containers;
 
-  public DistSchedAllocateRequestPBImpl() {
-    builder = DistSchedAllocateRequestProto.newBuilder();
+  public DistributedSchedulingAllocateRequestPBImpl() {
+    builder = DistributedSchedulingAllocateRequestProto.newBuilder();
   }
 
-  public DistSchedAllocateRequestPBImpl(DistSchedAllocateRequestProto proto) {
+  public DistributedSchedulingAllocateRequestPBImpl(
+      DistributedSchedulingAllocateRequestProto proto) {
     this.proto = proto;
     this.viaProto = true;
   }
 
   @Override
   public AllocateRequest getAllocateRequest() {
-    DistSchedAllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    DistributedSchedulingAllocateRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (this.allocateRequest != null) {
       return this.allocateRequest;
     }
@@ -88,7 +89,8 @@ public class DistSchedAllocateRequestPBImpl extends DistSchedAllocateRequest {
   }
 
   private void initAllocatedContainers() {
-    DistSchedAllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    DistributedSchedulingAllocateRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     List<ContainerProto> list = p.getAllocatedContainersList();
     this.containers = new ArrayList<Container>();
     for (ContainerProto c : list) {
@@ -110,7 +112,7 @@ public class DistSchedAllocateRequestPBImpl extends DistSchedAllocateRequest {
     this.containers.addAll(pContainers);
   }
 
-  public DistSchedAllocateRequestProto getProto() {
+  public DistributedSchedulingAllocateRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -119,7 +121,7 @@ public class DistSchedAllocateRequestPBImpl extends DistSchedAllocateRequest {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = DistSchedAllocateRequestProto.newBuilder(proto);
+      builder = DistributedSchedulingAllocateRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }

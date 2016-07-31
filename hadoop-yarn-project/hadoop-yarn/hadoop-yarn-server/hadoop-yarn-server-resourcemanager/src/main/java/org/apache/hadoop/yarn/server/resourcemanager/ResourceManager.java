@@ -1180,12 +1180,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (this.rmContext.getYarnConfiguration().getBoolean(
         YarnConfiguration.DIST_SCHEDULING_ENABLED,
         YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
-      DistributedSchedulingService distributedSchedulingService = new
-          DistributedSchedulingService(this.rmContext, scheduler);
+      DistributedSchedulingAMService distributedSchedulingService = new
+          DistributedSchedulingAMService(this.rmContext, scheduler);
       EventDispatcher distSchedulerEventDispatcher =
           new EventDispatcher(distributedSchedulingService,
-              DistributedSchedulingService.class.getName());
-      // Add an event dispoatcher for the DistributedSchedulingService
+              DistributedSchedulingAMService.class.getName());
+      // Add an event dispatcher for the DistributedSchedulingAMService
       // to handle node updates/additions and removals.
       // Since the SchedulerEvent is currently a super set of theses,
       // we register interest for it..
