@@ -34,20 +34,31 @@ void loadLib(JNIEnv *env) {
 
 void setCoder(JNIEnv* env, jobject thiz, IsalCoder* pCoder) {
   jclass clazz = (*env)->GetObjectClass(env, thiz);
-  jfieldID __coderState = (*env)->GetFieldID(env, clazz, "__native_coder", "J");
-  (*env)->SetLongField(env, thiz, __coderState, (jlong) pCoder);
+  jfieldID fid = (*env)->GetFieldID(env, clazz, "nativeCoder", "J");
+  if (fid == NULL) {
+    THROW(env, "java/lang/UnsatisfiedLinkError",
+                                    "Field nativeCoder not found");
+  }
+  (*env)->SetLongField(env, thiz, fid, (jlong) pCoder);
 }
 
 IsalCoder* getCoder(JNIEnv* env, jobject thiz) {
   jclass clazz = (*env)->GetObjectClass(env, thiz);
 
-  jfieldID __verbose = (*env)->GetFieldID(env, clazz, "__native_verbose", "J");
-  int verbose = (int)(*env)->GetIntField(env, thiz, __verbose);
+  jmethodID mid = (*env)->GetMethodID(env, clazz, "allowVerboseDump", "()Z");
+  if (mid == NULL) {
+    THROW(env, "java/lang/UnsatisfiedLinkError",
+                         "Method allowVerboseDump not found");
+  }
+  jboolean verbose = (*env)->CallBooleanMethod(env, thiz, mid);
 
-  jfieldID __coderState = (*env)->GetFieldID(env, clazz, "__native_coder", "J");
-  IsalCoder* pCoder = (IsalCoder*)(*env)->GetLongField(env,
-                                                       thiz, __coderState);
-  pCoder->verbose = verbose;
+  jfieldID fid = (*env)->GetFieldID(env, clazz, "nativeCoder", "J");
+  if (fid == NULL) {
+    THROW(env, "java/lang/UnsatisfiedLinkError",
+                                    "Field nativeCoder not found");
+  }
+  IsalCoder* pCoder = (IsalCoder*)(*env)->GetLongField(env, thiz, fid);
+  pCoder->verbose = (verbose == JNI_TRUE) ? 1 : 0;
 
   return pCoder;
 }

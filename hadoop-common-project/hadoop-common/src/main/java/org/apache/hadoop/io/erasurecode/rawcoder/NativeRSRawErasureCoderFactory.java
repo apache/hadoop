@@ -21,24 +21,19 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
- * Raw erasure coder factory that can be used to create raw encoder and decoder.
- * It helps in configuration since only one factory class is needed to be
- * configured.
+ * A raw coder factory for raw Reed-Solomon coder in native using Intel ISA-L.
  */
+
 @InterfaceAudience.Private
-public interface RawErasureCoderFactory {
+public class NativeRSRawErasureCoderFactory implements RawErasureCoderFactory {
 
-  /**
-   * Create raw erasure encoder.
-   * @param coderOptions the options used to create the encoder
-   * @return raw erasure encoder
-   */
-  RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions);
+  @Override
+  public RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions) {
+    return new NativeRSRawEncoder(coderOptions);
+  }
 
-  /**
-   * Create raw erasure decoder.
-   * @param coderOptions the options used to create the encoder
-   * @return raw erasure decoder
-   */
-  RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions);
+  @Override
+  public RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions) {
+    return new NativeRSRawDecoder(coderOptions);
+  }
 }

@@ -48,8 +48,20 @@ class ByteBufferDecodingState extends DecodingState {
     checkOutputBuffers(outputs);
   }
 
+  ByteBufferDecodingState(RawErasureDecoder decoder,
+                         int decodeLength,
+                         int[] erasedIndexes,
+                         ByteBuffer[] inputs,
+                          ByteBuffer[] outputs) {
+    this.decoder = decoder;
+    this.decodeLength = decodeLength;
+    this.erasedIndexes = erasedIndexes;
+    this.inputs = inputs;
+    this.outputs = outputs;
+  }
+
   /**
-   * Convert to a ByteArrayEncodingState when it's backed by on-heap arrays.
+   * Convert to a ByteArrayDecodingState when it's backed by on-heap arrays.
    */
   ByteArrayDecodingState convertToByteArrayState() {
     int[] inputOffsets = new int[inputs.length];

@@ -17,28 +17,22 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
+import org.junit.Assume;
+import org.junit.Before;
 
 /**
- * Raw erasure coder factory that can be used to create raw encoder and decoder.
- * It helps in configuration since only one factory class is needed to be
- * configured.
+ * Test raw Reed-solomon coder implemented in Java.
  */
-@InterfaceAudience.Private
-public interface RawErasureCoderFactory {
+public class TestRSRawCoderInteroperable1 extends TestRSRawCoderBase {
 
-  /**
-   * Create raw erasure encoder.
-   * @param coderOptions the options used to create the encoder
-   * @return raw erasure encoder
-   */
-  RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions);
+  @Before
+  public void setup() {
+    Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
 
-  /**
-   * Create raw erasure decoder.
-   * @param coderOptions the options used to create the encoder
-   * @return raw erasure decoder
-   */
-  RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions);
+    this.encoderClass = RSRawEncoder.class;
+    this.decoderClass = NativeRSRawDecoder.class;
+    setAllowDump(true);
+  }
+
 }
