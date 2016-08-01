@@ -275,14 +275,15 @@ public class DFSUtil {
     Preconditions.checkArgument(offset >= 0 && offset < pathComponents.length);
     Preconditions.checkArgument(length >= 0 && offset + length <=
         pathComponents.length);
-    if (pathComponents.length == 1
+    if (offset == 0 && length == 1
         && (pathComponents[0] == null || pathComponents[0].length == 0)) {
       return Path.SEPARATOR;
     }
     StringBuilder result = new StringBuilder();
-    for (int i = offset; i < offset + length; i++) {
+    int lastIndex = offset + length - 1;
+    for (int i = offset; i <= lastIndex; i++) {
       result.append(new String(pathComponents[i], Charsets.UTF_8));
-      if (i < pathComponents.length - 1) {
+      if (i < lastIndex) {
         result.append(Path.SEPARATOR_CHAR);
       }
     }
@@ -348,40 +349,37 @@ public class DFSUtil {
   public static byte[][] bytes2byteArray(byte[] bytes,
                                          int len,
                                          byte separator) {
-    assert len <= bytes.length;
-    int splits = 0;
+    Preconditions.checkPositionIndex(len, bytes.length);
     if (len == 0) {
       return new byte[][]{null};
     }
-    // Count the splits. Omit multiple separators and the last one
-    for (int i = 0; i < len; i++) {
-      if (bytes[i] == separator) {
+    // Count the splits. Omit multiple separators and the last one by
+    // peeking at prior byte.
+    int splits = 0;
+    for (int i = 1; i < len; i++) {
+      if (bytes[i-1] == separator && bytes[i] != separator) {
         splits++;
       }
-    }
-    int last = len - 1;
-    while (last > -1 && bytes[last--] == separator) {
-      splits--;
     }
     if (splits == 0 && bytes[0] == separator) {
       return new byte[][]{null};
     }
     splits++;
     byte[][] result = new byte[splits][];
-    int startIndex = 0;
     int nextIndex = 0;
-    int index = 0;
-    // Build the splits
-    while (index < splits) {
+    // Build the splits.
+    for (int i = 0; i < splits; i++) {
+      int startIndex = nextIndex;
+      // find next separator in the bytes.
       while (nextIndex < len && bytes[nextIndex] != separator) {
         nextIndex++;
       }
-      result[index] = new byte[nextIndex - startIndex];
-      System.arraycopy(bytes, startIndex, result[index], 0, nextIndex
-              - startIndex);
-      index++;
-      startIndex = nextIndex + 1;
-      nextIndex = startIndex;
+      result[i] = (nextIndex > 0)
+          ? Arrays.copyOfRange(bytes, startIndex, nextIndex)
+          : DFSUtilClient.EMPTY_BYTES; // reuse empty bytes for root.
+      do { // skip over separators.
+        nextIndex++;
+      } while (nextIndex < len && bytes[nextIndex] == separator);
     }
     return result;
   }
