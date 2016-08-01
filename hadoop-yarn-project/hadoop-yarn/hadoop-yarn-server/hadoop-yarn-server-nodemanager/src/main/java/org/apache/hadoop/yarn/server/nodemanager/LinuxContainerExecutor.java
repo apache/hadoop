@@ -97,6 +97,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     resourcesHandler = getResourcesHandler(conf);
 
+    containerSchedPriorityIsSet = false;
     if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY)
         != null) {
       containerSchedPriorityIsSet = true;
