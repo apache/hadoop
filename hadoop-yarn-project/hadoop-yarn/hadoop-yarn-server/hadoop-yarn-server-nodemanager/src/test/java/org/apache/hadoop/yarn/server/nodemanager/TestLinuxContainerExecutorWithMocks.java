@@ -128,7 +128,7 @@ public class TestLinuxContainerExecutorWithMocks {
     tmpMockExecutor = System.getProperty("test.build.data") +
         "/tmp-mock-container-executor";
 
-    Configuration conf = new Configuration();
+    Configuration conf = new YarnConfiguration();
     LinuxContainerRuntime linuxContainerRuntime;
 
     setupMockExecutor(MOCK_EXECUTOR, conf);
@@ -220,7 +220,10 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testLaunchCommandWithoutPriority() throws IOException {
     // make sure the command doesn't contain the nice -n since priority
     // not specified
-   List<String> command = new ArrayList<String>();
+    List<String> command = new ArrayList<String>();
+    Configuration conf = mockExec.getConf();
+    conf.unset(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
+    mockExec.setConf(conf);
     mockExec.addSchedPriorityCommand(command);
     assertEquals("addSchedPriority should be empty", 0, command.size());
   }
@@ -243,7 +246,7 @@ public class TestLinuxContainerExecutorWithMocks {
           .build());
 
       List<String> result=readMockParams();
-      Assert.assertEquals(result.size(), 18);
+      Assert.assertEquals(result.size(), 19);
       Assert.assertEquals(result.get(0), YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
       Assert.assertEquals(result.get(1), "test");
       Assert.assertEquals(result.get(2), "0" );
