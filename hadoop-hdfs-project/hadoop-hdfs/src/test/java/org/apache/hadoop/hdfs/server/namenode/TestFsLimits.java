@@ -191,7 +191,7 @@ public class TestFsLimits {
       "/user/testHome/FileNameLength", PathComponentTooLongException.class);
 
     renameCheckParentDirectory("/user/testHome/FileNameLength",
-      "/user/testHome/really_big_name_0003_fail", "/user/testHome/",
+      "/user/testHome/really_big_name_0003_fail", "/user/testHome",
       PathComponentTooLongException.class);
 
   }
