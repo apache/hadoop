@@ -19,11 +19,11 @@
 package org.apache.hadoop.io;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -91,7 +91,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
     serializer.serialize(obj);
     byte[] buf = new byte[outBuf.getLength()];
     System.arraycopy(outBuf.getData(), 0, buf, 0, buf.length);
-    return new String(Base64.encodeBase64(buf), Charsets.UTF_8);
+    return new String(Base64.encodeBase64(buf), StandardCharsets.UTF_8);
   }
 
   @Override
