@@ -212,8 +212,6 @@ public final class ProviderUtils {
   public static char[] locatePassword(String envWithPass, String fileWithPass)
       throws IOException {
     char[] pass = null;
-    // Get the password file from the conf, if not present from the user's
-    // environment var
     if (System.getenv().containsKey(envWithPass)) {
       pass = System.getenv(envWithPass).toCharArray();
     }
