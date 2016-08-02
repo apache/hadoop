@@ -17,21 +17,25 @@
  */
 package org.apache.hadoop.http;
 
-import org.apache.commons.io.Charsets;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * This class is responsible for quoting HTML characters.
  */
 public class HtmlQuoting {
-  private static final byte[] ampBytes = "&amp;".getBytes(Charsets.UTF_8);
-  private static final byte[] aposBytes = "&apos;".getBytes(Charsets.UTF_8);
-  private static final byte[] gtBytes = "&gt;".getBytes(Charsets.UTF_8);
-  private static final byte[] ltBytes = "&lt;".getBytes(Charsets.UTF_8);
-  private static final byte[] quotBytes = "&quot;".getBytes(Charsets.UTF_8);
+  private static final byte[] AMP_BYTES =
+      "&amp;".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] APOS_BYTES =
+      "&apos;".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] GT_BYTES =
+      "&gt;".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] LT_BYTES =
+      "&lt;".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] QUOT_BYTES =
+      "&quot;".getBytes(StandardCharsets.UTF_8);
 
   /**
    * Does the given string need to be quoted?
@@ -65,7 +69,7 @@ public class HtmlQuoting {
     if (str == null) {
       return false;
     }
-    byte[] bytes = str.getBytes(Charsets.UTF_8);
+    byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
     return needsQuoting(bytes, 0 , bytes.length);
   }
 
@@ -81,11 +85,21 @@ public class HtmlQuoting {
                                     int off, int len) throws IOException {
     for(int i=off; i < off+len; i++) {
       switch (buffer[i]) {
-      case '&': output.write(ampBytes); break;
-      case '<': output.write(ltBytes); break;
-      case '>': output.write(gtBytes); break;
-      case '\'': output.write(aposBytes); break;
-      case '"': output.write(quotBytes); break;
+      case '&':
+        output.write(AMP_BYTES);
+        break;
+      case '<':
+        output.write(LT_BYTES);
+        break;
+      case '>':
+        output.write(GT_BYTES);
+        break;
+      case '\'':
+        output.write(APOS_BYTES);
+        break;
+      case '"':
+        output.write(QUOT_BYTES);
+        break;
       default: output.write(buffer, i, 1);
       }
     }
@@ -100,7 +114,7 @@ public class HtmlQuoting {
     if (item == null) {
       return null;
     }
-    byte[] bytes = item.getBytes(Charsets.UTF_8);
+    byte[] bytes = item.getBytes(StandardCharsets.UTF_8);
     if (needsQuoting(bytes, 0, bytes.length)) {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
       try {

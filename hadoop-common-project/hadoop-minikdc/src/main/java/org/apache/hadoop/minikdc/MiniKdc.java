@@ -17,7 +17,6 @@
  */
 
 package org.apache.hadoop.minikdc;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.text.StrSubstitutor;
@@ -65,6 +64,7 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -135,7 +135,8 @@ public class MiniKdc {
     Properties userConf = new Properties();
     InputStreamReader r = null;
     try {
-      r = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8);
+      r = new InputStreamReader(new FileInputStream(file),
+          StandardCharsets.UTF_8);
       userConf.load(r);
     } finally {
       if (r != null) {
@@ -450,7 +451,8 @@ public class MiniKdc {
     BufferedReader r = null;
 
     try {
-      r = new BufferedReader(new InputStreamReader(is2, Charsets.UTF_8));
+      r = new BufferedReader(
+          new InputStreamReader(is2, StandardCharsets.UTF_8));
       String line = r.readLine();
 
       while (line != null) {

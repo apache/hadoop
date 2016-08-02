@@ -20,12 +20,12 @@ package org.apache.hadoop.metrics2.sink.ganglia;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.configuration.SubsetConfiguration;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsSink;
@@ -233,7 +233,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
    * @param s the string to be written to buffer at offset location
    */
   protected void xdr_string(String s) {
-    byte[] bytes = s.getBytes(Charsets.UTF_8);
+    byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
     int len = bytes.length;
     xdr_int(len);
     System.arraycopy(bytes, 0, buffer, offset, len);
