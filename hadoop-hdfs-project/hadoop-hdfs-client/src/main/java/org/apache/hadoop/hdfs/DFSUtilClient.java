@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -71,6 +70,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
@@ -95,7 +95,7 @@ public class DFSUtilClient {
    * Converts a string to a byte array using UTF8 encoding.
    */
   public static byte[] string2Bytes(String str) {
-    return str.getBytes(Charsets.UTF_8);
+    return str.getBytes(StandardCharsets.UTF_8);
   }
 
   /**

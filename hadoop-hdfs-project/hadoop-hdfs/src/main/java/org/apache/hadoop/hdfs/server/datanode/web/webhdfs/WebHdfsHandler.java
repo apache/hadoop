@@ -57,10 +57,10 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -283,7 +283,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     } finally {
       IOUtils.cleanup(LOG, dfsclient);
     }
-    final byte[] js = JsonUtil.toJsonString(checksum).getBytes(Charsets.UTF_8);
+    final byte[] js =
+        JsonUtil.toJsonString(checksum).getBytes(StandardCharsets.UTF_8);
     resp =
       new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(js));
 

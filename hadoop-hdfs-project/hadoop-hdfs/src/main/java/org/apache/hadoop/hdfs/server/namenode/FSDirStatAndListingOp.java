@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.apache.hadoop.util.Time.now;
@@ -55,7 +55,8 @@ class FSDirStatAndListingOp {
       byte[] startAfter, boolean needLocation) throws IOException {
     byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(srcArg);
-    final String startAfterString = new String(startAfter, Charsets.UTF_8);
+    final String startAfterString =
+        new String(startAfter, StandardCharsets.UTF_8);
     String src = null;
 
     if (fsd.isPermissionEnabled()) {
