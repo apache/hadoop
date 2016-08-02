@@ -367,36 +367,11 @@ class BPServiceActor implements Runnable {
       } else {
         // Send one block report per message.
         for (int r = 0; r < reports.length; r++) {
-          StorageBlockReport[] singleReport = {reports[r]};
-          DatanodeCommand cmd;
-          if (r != reports.length - 1) {
-            cmd = bpNamenode.blockReport(bpRegistration, bpos.getBlockPoolId(),
-                singleReport, new BlockReportContext(reports.length, r,
-                    reportId, fullBrLeaseId, true));
-          } else {
-            StorageBlockReport[] lastSplitReport =
-                new StorageBlockReport[perVolumeBlockLists.size()];
-            // When block reports are split, the last RPC in the block report
-            // has the information about all storages in the block report.
-            // See HDFS-10301 for more details. To achieve this, the last RPC
-            // has 'n' storage reports, where 'n' is the number of storages in
-            // a DN. The actual block replicas are reported only for the
-            // last/n-th storage.
-            i = 0;
-            for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair :
-                perVolumeBlockLists.entrySet()) {
-              lastSplitReport[i++] = new StorageBlockReport(
-                  kvPair.getKey(), BlockListAsLongs.STORAGE_REPORT);
-              if (i == r) {
-                lastSplitReport[i] = reports[r];
-                break;
-              }
-            }
-            cmd = bpNamenode.blockReport(
-                bpRegistration, bpos.getBlockPoolId(), lastSplitReport,
-                new BlockReportContext(reports.length, r, reportId,
-                    fullBrLeaseId, true));
-          }
+          StorageBlockReport singleReport[] = { reports[r] };
+          DatanodeCommand cmd = bpNamenode.blockReport(
+              bpRegistration, bpos.getBlockPoolId(), singleReport,
+              new BlockReportContext(reports.length, r, reportId,
+                  fullBrLeaseId, true));
           numReportsSent++;
           numRPCs++;
           if (cmd != null) {
