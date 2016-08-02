@@ -238,9 +238,9 @@ public class TestShell extends Assert {
       expectedCommand =
           new String[]{getWinUtilsPath(), "task", "isAlive", anyPid };
     } else if (Shell.isSetsidAvailable) {
-      expectedCommand = new String[] { "bash", "-c", "kill -0 -- -" + anyPid };
+      expectedCommand = new String[] {"kill", "-0", "--", "-" + anyPid };
     } else {
-      expectedCommand = new String[]{ "bash", "-c", "kill -0 " + anyPid };
+      expectedCommand = new String[] {"kill", "-0", anyPid };
     }
     Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
@@ -258,9 +258,9 @@ public class TestShell extends Assert {
       expectedCommand =
           new String[]{getWinUtilsPath(), "task", "kill", anyPid };
     } else if (Shell.isSetsidAvailable) {
-      expectedCommand = new String[] { "bash", "-c", "kill -9 -- -" + anyPid };
+      expectedCommand = new String[] {"kill", "-9", "--", "-" + anyPid };
     } else {
-      expectedCommand = new String[]{ "bash", "-c", "kill -9 " + anyPid };
+      expectedCommand = new String[] {"kill", "-9", anyPid };
     }
     Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
   }
@@ -464,4 +464,10 @@ public class TestShell extends Assert {
     }
   }
 
+  @Test
+  public void testBashQuote() {
+    assertEquals("'foobar'", Shell.bashQuote("foobar"));
+    assertEquals("'foo'\\''bar'", Shell.bashQuote("foo'bar"));
+    assertEquals("''\\''foo'\\''bar'\\'''", Shell.bashQuote("'foo'bar'"));
+  }
 }
