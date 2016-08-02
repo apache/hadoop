@@ -1598,7 +1598,10 @@ public abstract class Server {
         String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
         // SASL wrapping is only used if the connection has a QOP, and
         // the value is not auth.  ex. auth-int & auth-priv
-        useWrap = (qop != null && !"auth".equalsIgnoreCase(qop));        
+        useWrap = (qop != null && !"auth".equalsIgnoreCase(qop));
+        if (!useWrap) {
+          disposeSasl();
+        }
       }
     }
     
@@ -1692,9 +1695,9 @@ public abstract class Server {
     private void switchToSimple() {
       // disable SASL and blank out any SASL server
       authProtocol = AuthProtocol.NONE;
-      saslServer = null;
+      disposeSasl();
     }
-    
+
     private RpcSaslProto buildSaslResponse(SaslState state, byte[] replyToken) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Will send " + state + " token of size "
@@ -1731,6 +1734,8 @@ public abstract class Server {
         try {
           saslServer.dispose();
         } catch (SaslException ignored) {
+        } finally {
+          saslServer = null;
         }
       }
     }
@@ -1980,7 +1985,7 @@ public abstract class Server {
           .getProtocol() : null;
 
       UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
-      if (saslServer == null) {
+      if (authProtocol == AuthProtocol.NONE) {
         user = protocolUser;
       } else {
         // user is authenticated
