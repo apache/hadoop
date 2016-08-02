@@ -18,8 +18,8 @@
 package org.apache.hadoop.oncrpc;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.io.Charsets;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 
@@ -166,11 +166,11 @@ public final class XDR {
   }
 
   public String readString() {
-    return new String(readVariableOpaque(), Charsets.UTF_8);
+    return new String(readVariableOpaque(), StandardCharsets.UTF_8);
   }
 
   public void writeString(String s) {
-    writeVariableOpaque(s.getBytes(Charsets.UTF_8));
+    writeVariableOpaque(s.getBytes(StandardCharsets.UTF_8));
   }
 
   private void writePadding() {

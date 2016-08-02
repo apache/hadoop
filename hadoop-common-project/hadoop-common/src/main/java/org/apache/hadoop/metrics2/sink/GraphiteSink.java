@@ -19,7 +19,6 @@
 package org.apache.hadoop.metrics2.sink;
 
 import org.apache.commons.configuration.SubsetConfiguration;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,6 +34,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 /**
  * A metrics sink that writes to a Graphite server
@@ -150,7 +150,8 @@ public class GraphiteSink implements MetricsSink, Closeable {
         try {
           // Open a connection to Graphite server.
           socket = new Socket(serverHost, serverPort);
-          writer = new OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8);
+        writer = new OutputStreamWriter(socket.getOutputStream(),
+                StandardCharsets.UTF_8);
         } catch (Exception e) {
           connectionFailures++;
           if (tooManyConnectionFailures()) {

@@ -46,6 +46,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,7 +69,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -222,7 +222,7 @@ public abstract class Server {
    * and send back a nicer response.
    */
   private static final ByteBuffer HTTP_GET_BYTES = ByteBuffer.wrap(
-      "GET ".getBytes(Charsets.UTF_8));
+      "GET ".getBytes(StandardCharsets.UTF_8));
   
   /**
    * An HTTP response to send back if we detect an HTTP request to our IPC
@@ -1888,7 +1888,7 @@ public abstract class Server {
     private void setupHttpRequestOnIpcPortResponse() throws IOException {
       Call fakeCall = new Call(0, RpcConstants.INVALID_RETRY_COUNT, null, this);
       fakeCall.setResponse(ByteBuffer.wrap(
-          RECEIVED_HTTP_REQ_RESPONSE.getBytes(Charsets.UTF_8)));
+          RECEIVED_HTTP_REQ_RESPONSE.getBytes(StandardCharsets.UTF_8)));
       fakeCall.sendResponse();
     }
 

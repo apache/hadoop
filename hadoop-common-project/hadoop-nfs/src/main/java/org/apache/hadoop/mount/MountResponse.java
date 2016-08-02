@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.mount;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.XDR;
@@ -77,7 +77,8 @@ public class MountResponse {
       if (hostGroups.length > 0) {
         for (int j = 0; j < hostGroups.length; j++) {
           xdr.writeBoolean(true); // Value follows - yes
-          xdr.writeVariableOpaque(hostGroups[j].getBytes(Charsets.UTF_8));
+          xdr.writeVariableOpaque(
+              hostGroups[j].getBytes(StandardCharsets.UTF_8));
         }
       }
       xdr.writeBoolean(false); // Value follows - no more group

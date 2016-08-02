@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
@@ -35,7 +36,6 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -424,7 +424,7 @@ public class LdapGroupsMapping
 
     StringBuilder password = new StringBuilder();
     try (Reader reader = new InputStreamReader(
-        new FileInputStream(pwFile), Charsets.UTF_8)) {
+        new FileInputStream(pwFile), StandardCharsets.UTF_8)) {
       int c = reader.read();
       while (c > -1) {
         password.append((char)c);

@@ -20,10 +20,10 @@ package org.apache.hadoop.security.alias;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -58,7 +58,7 @@ public class UserProvider extends CredentialProvider {
       return null;
     }
     return new CredentialEntry(
-        alias, new String(bytes, Charsets.UTF_8).toCharArray());
+        alias, new String(bytes, StandardCharsets.UTF_8).toCharArray());
   }
 
   @Override

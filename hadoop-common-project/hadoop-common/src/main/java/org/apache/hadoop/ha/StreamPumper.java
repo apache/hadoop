@@ -21,8 +21,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 
 /**
@@ -78,7 +78,7 @@ class StreamPumper {
 
   protected void pump() throws IOException {
     InputStreamReader inputStreamReader = new InputStreamReader(
-        stream, Charsets.UTF_8);
+        stream, StandardCharsets.UTF_8);
     BufferedReader br = new BufferedReader(inputStreamReader);
     String line = null;
     while ((line = br.readLine()) != null) {

@@ -25,12 +25,12 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -148,7 +148,7 @@ public class TestGangliaMetrics {
   private void checkMetrics(List<byte[]> bytearrlist, int expectedCount) {
     boolean[] foundMetrics = new boolean[expectedMetrics.length];
     for (byte[] bytes : bytearrlist) {
-      String binaryStr = new String(bytes, Charsets.UTF_8);
+      String binaryStr = new String(bytes, StandardCharsets.UTF_8);
       for (int index = 0; index < expectedMetrics.length; index++) {
         if (binaryStr.indexOf(expectedMetrics[index]) >= 0) {
           foundMetrics[index] = true;

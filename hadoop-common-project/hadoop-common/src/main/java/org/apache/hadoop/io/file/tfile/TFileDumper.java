@@ -18,13 +18,13 @@ package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -234,7 +234,7 @@ class TFileDumper {
               out.printf("%X", b);
             }
           } else {
-            out.print(new String(key, 0, sampleLen, Charsets.UTF_8));
+            out.print(new String(key, 0, sampleLen, StandardCharsets.UTF_8));
           }
           if (sampleLen < key.length) {
             out.print("...");
