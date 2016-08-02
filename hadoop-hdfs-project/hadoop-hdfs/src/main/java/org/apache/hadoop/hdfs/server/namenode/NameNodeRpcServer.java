@@ -1314,32 +1314,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
     boolean noStaleStorages = false;
     for (int r = 0; r < reports.length; r++) {
       final BlockListAsLongs blocks = reports[r].getBlocks();
-      if (!blocks.isStorageReport()) {
-        //
-        // BlockManager.processReport accumulates information of prior calls
-        // for the same node and storage, so the value returned by the last
-        // call of this loop is the final updated value for noStaleStorage.
-        //
-        final int index = r;
-        noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
-          @Override
-          public Boolean call()
-              throws IOException {
-            return bm.processReport(nodeReg, reports[index].getStorage(),
-                blocks, context);
-          }
-        });
-        metrics.incrStorageBlockReportOps();
-      }
-    }
-
-    if (nn.getFSImage().isUpgradeFinalized() &&
-        context.getTotalRpcs() == context.getCurRpc() + 1) {
-      Set<String> storageIDsInBlockReport = new HashSet<>();
-      for (StorageBlockReport report : reports) {
-        storageIDsInBlockReport.add(report.getStorage().getStorageID());
-      }
-      bm.removeZombieStorages(nodeReg, context, storageIDsInBlockReport);
+      //
+      // BlockManager.processReport accumulates information of prior calls
+      // for the same node and storage, so the value returned by the last
+      // call of this loop is the final updated value for noStaleStorage.
+      //
+      final int index = r;
+      noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
+        @Override
+        public Boolean call() throws IOException {
+          return bm.processReport(nodeReg, reports[index].getStorage(),
+              blocks, context, (index == reports.length - 1));
+        }
+      });
+      metrics.incrStorageBlockReportOps();
     }
 
     if (nn.getFSImage().isUpgradeFinalized() &&

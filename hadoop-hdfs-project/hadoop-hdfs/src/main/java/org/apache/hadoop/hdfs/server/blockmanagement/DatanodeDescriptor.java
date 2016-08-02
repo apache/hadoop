@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -64,6 +66,24 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // Stores status of decommissioning.
   // If node is not decommissioning, do not use this object for anything.
   public final DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
+
+  private long curBlockReportId = 0;
+
+  private BitSet curBlockReportRpcsSeen = null;
+
+  public int updateBlockReportContext(BlockReportContext context) {
+    if (curBlockReportId != context.getReportId()) {
+      curBlockReportId = context.getReportId();
+      curBlockReportRpcsSeen = new BitSet(context.getTotalRpcs());
+    }
+    curBlockReportRpcsSeen.set(context.getCurRpc());
+    return curBlockReportRpcsSeen.cardinality();
+  }
+
+  public void clearBlockReportContext() {
+    curBlockReportId = 0;
+    curBlockReportRpcsSeen = null;
+  }
 
   /** Block and targets pair */
   @InterfaceAudience.Private
@@ -289,8 +309,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   static final private List<DatanodeStorageInfo> EMPTY_STORAGE_INFO_LIST =
       ImmutableList.of();
 
-  List<DatanodeStorageInfo>
-  removeZombieStorages(Set<String> storageIDsInBlockReport) {
+  List<DatanodeStorageInfo> removeZombieStorages() {
     List<DatanodeStorageInfo> zombies = null;
     synchronized (storageMap) {
       Iterator<Map.Entry<String, DatanodeStorageInfo>> iter =
@@ -298,13 +317,18 @@ public class DatanodeDescriptor extends DatanodeInfo {
       while (iter.hasNext()) {
         Map.Entry<String, DatanodeStorageInfo> entry = iter.next();
         DatanodeStorageInfo storageInfo = entry.getValue();
-        if (!storageIDsInBlockReport.contains(storageInfo.getStorageID())) {
+        if (storageInfo.getLastBlockReportId() != curBlockReportId) {
+          LOG.info(storageInfo.getStorageID() + " had lastBlockReportId 0x" +
+              Long.toHexString(storageInfo.getLastBlockReportId()) +
+              ", but curBlockReportId = 0x" +
+              Long.toHexString(curBlockReportId));
           iter.remove();
           if (zombies == null) {
             zombies = new LinkedList<DatanodeStorageInfo>();
           }
           zombies.add(storageInfo);
         }
+        storageInfo.setLastBlockReportId(0);
       }
     }
     return zombies == null ? EMPTY_STORAGE_INFO_LIST : zombies;
