@@ -55,8 +55,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_DNS_ZONE_MASK;
-import static org.apache.hadoop.registry.client.api.RegistryConstants.KEY_DNS_ZONE_SUBNET;
+import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
 /**
  *
@@ -539,6 +538,34 @@ public class TestRegistryDNS extends Assert {
 
     Name name = getRegistryDNS().getReverseZoneName(conf);
     assertEquals("wrong name", "26.172.in-addr.arpa.", name.toString());
+  }
+
+  @Test
+  public void testSplitReverseZoneNames() throws Exception {
+    Configuration conf = new Configuration();
+    registryDNS = new RegistryDNS("TestRegistry");
+    conf.set(RegistryConstants.KEY_DNS_DOMAIN, "example.com");
+    conf.set(KEY_DNS_SPLIT_REVERSE_ZONE, "true");
+    conf.set(KEY_DNS_SPLIT_REVERSE_ZONE_RANGE, "256");
+    conf.set(KEY_DNS_ZONE_SUBNET, "172.26.32.0");
+    conf.set(KEY_DNS_ZONE_MASK, "255.255.224.0");
+    conf.setTimeDuration(RegistryConstants.KEY_DNS_TTL, 30L, TimeUnit.SECONDS);
+    conf.set(RegistryConstants.KEY_DNS_ZONES_DIR,
+        getClass().getResource("/").getFile());
+    if (isSecure()) {
+      conf.setBoolean(RegistryConstants.KEY_DNSSEC_ENABLED, true);
+      conf.set(RegistryConstants.KEY_DNSSEC_PUBLIC_KEY,
+          "AwEAAe1Jev0Az1khlQCvf0nud1/CNHQwwPEu8BNchZthdDxKPVn29yrD "
+              + "CHoAWjwiGsOSw3SzIPrawSbHzyJsjn0oLBhGrH6QedFGnydoxjNsw3m/ "
+              + "SCmOjR/a7LGBAMDFKqFioi4gOyuN66svBeY+/5uw72+0ei9AQ20gqf6q "
+              + "l9Ozs5bV");
+      conf.set(RegistryConstants.KEY_DNSSEC_PRIVATE_KEY_FILE,
+          getClass().getResource("/test.private").getFile());
+    }
+    registryDNS.setDomainName(conf);
+    registryDNS.setDNSSECEnabled(conf);
+    registryDNS.addSplitReverseZones(conf, 4);
+    assertEquals(4, registryDNS.getZoneCount());
   }
 
   public RegistryDNS getRegistryDNS() {

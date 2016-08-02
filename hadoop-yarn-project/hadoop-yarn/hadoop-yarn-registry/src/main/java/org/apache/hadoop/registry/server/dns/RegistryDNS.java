@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.registry.server.dns;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.net.util.Base64;
@@ -269,17 +270,61 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   }
 
   /**
+   * Return the number of zones in the map.
+   *
+   * @return number of zones in the map
+   */
+  @VisibleForTesting
+  protected int getZoneCount() {
+    return zones.size();
+  }
+
+  /**
    * Initializes the reverse lookup zone (mapping IP to name).
    *
    * @param conf the Hadoop configuration.
-   * @throws IOException
+   * @throws IOException if the DNSSEC key can not be read.
    */
   private void initializeReverseLookupZone(Configuration conf)
       throws IOException {
-    Name reverseLookupZoneName = getReverseZoneName(conf);
-    Zone reverseLookupZone =
-        configureZone(reverseLookupZoneName, conf);
-    zones.put(reverseLookupZone.getOrigin(), reverseLookupZone);
+    // Determine if the subnet should be split into
+    // multiple reverse zones, this can be necessary in
+    // network configurations where the hosts and containers
+    // are part of the same subnet (i.e. the containers only use
+    // part of the subnet).
+    Boolean shouldSplitReverseZone = conf.getBoolean(KEY_DNS_SPLIT_REVERSE_ZONE,
+        DEFAULT_DNS_SPLIT_REVERSE_ZONE);
+    if (shouldSplitReverseZone) {
+      int subnetCount = ReverseZoneUtils.getSubnetCountForReverseZones(conf);
+      addSplitReverseZones(conf, subnetCount);
+      // Single reverse zone
+    } else {
+      Name reverseLookupZoneName = getReverseZoneName(conf);
+      Zone reverseLookupZone = configureZone(reverseLookupZoneName, conf);
+      zones.put(reverseLookupZone.getOrigin(), reverseLookupZone);
+    }
+  }
+
+  /**
+   * Create the zones based on the zone count.
+   *
+   * @param conf        the Hadoop configuration.
+   * @param subnetCount number of subnets to create reverse zones for.
+   * @throws IOException if the DNSSEC key can not be read.
+   */
+  @VisibleForTesting
+  protected void addSplitReverseZones(Configuration conf, int subnetCount)
+      throws IOException {
+    String subnet = conf.get(KEY_DNS_ZONE_SUBNET);
+    String range = conf.get(KEY_DNS_SPLIT_REVERSE_ZONE_RANGE);
+
+    // Add the split reverse zones
+    for (int idx = 0; idx < subnetCount; idx++) {
+      Name reverseLookupZoneName = getReverseZoneName(ReverseZoneUtils
+          .getReverseZoneNetworkAddress(subnet, Integer.parseInt(range), idx));
+      Zone reverseLookupZone = configureZone(reverseLookupZoneName, conf);
+      zones.put(reverseLookupZone.getOrigin(), reverseLookupZone);
+    }
   }
 
   /**
@@ -427,7 +472,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    *
    * @param conf the Hadoop configuration.
    */
-  private void setDNSSECEnabled(Configuration conf) {
+  @VisibleForTesting
+  protected void setDNSSECEnabled(Configuration conf) {
     dnssecEnabled = conf.getBoolean(KEY_DNSSEC_ENABLED, false);
   }
 

@@ -144,6 +144,26 @@ public interface RegistryConstants {
   String KEY_DNS_ZONES_DIR = DNS_PREFIX + "zones-dir";
 
   /**
+   * Split Reverse Zone.
+   * It may be necessary to spit large reverse zone subnets
+   * into multiple zones to handle existing hosts collocated
+   * with containers.
+   */
+  String KEY_DNS_SPLIT_REVERSE_ZONE = DNS_PREFIX + "split-reverse-zone";
+
+  /**
+   * Default value for splitting the reverse zone.
+   */
+  boolean DEFAULT_DNS_SPLIT_REVERSE_ZONE = false;
+
+  /**
+   * Split Reverse Zone IP Range.
+   * How many IPs should be part of each reverse zone split
+   */
+  String KEY_DNS_SPLIT_REVERSE_ZONE_RANGE = DNS_PREFIX +
+      "split-reverse-zone-range";
+
+  /**
    * Key to set if the registry is secure: {@value}.
    * Turning it on changes the permissions policy from "open access"
    * to restrictions on kerberos with the option of
