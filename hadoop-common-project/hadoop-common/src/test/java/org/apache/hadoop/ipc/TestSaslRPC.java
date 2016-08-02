@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -270,7 +271,16 @@ public class TestSaslRPC extends TestRpcBase {
       assertEquals(TOKEN, authMethod);
       //QOP must be auth
       assertEquals(expectedQop.saslQop,
-                   RPC.getConnectionIdForProxy(proxy).getSaslQop());            
+                   RPC.getConnectionIdForProxy(proxy).getSaslQop());
+      int n = 0;
+      for (Connection connection : server.getConnections()) {
+        // only qop auth should dispose of the sasl server
+        boolean hasServer = (connection.saslServer != null);
+        assertTrue("qop:" + expectedQop + " hasServer:" + hasServer,
+            (expectedQop == QualityOfProtection.AUTHENTICATION) ^ hasServer);
+        n++;
+      }
+      assertTrue(n > 0);
       proxy.ping(null, newEmptyRequest());
     } finally {
       stop(server, proxy);
