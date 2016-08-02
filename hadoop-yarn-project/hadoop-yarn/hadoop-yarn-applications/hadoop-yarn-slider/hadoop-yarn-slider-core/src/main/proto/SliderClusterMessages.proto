@@ -1,0 +1,396 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.slider.api.proto";
+option java_outer_classname = "Messages";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package org.apache.slider.api;
+
+//import "Security.proto";
+
+/*
+  Look at SliderClusterProtocol.proto to see how to build this
+*/
+
+message RoleInstanceState {
+  required string name =        1;
+  optional string role =        2;
+  required uint32 state =       4;
+  required uint32 exitCode =    5;
+  optional string command =     6;
+  optional string diagnostics = 7;
+  repeated string output =      8;
+  repeated string environment = 9;
+  required uint32 roleId =     10;
+  required bool released =     11;
+  required int64 createTime =  12;
+  required int64 startTime =   13;
+  required string host =       14;
+  required string hostURL =    15;
+  optional string appVersion = 16;
+}
+
+/**
+ * stop the cluster
+ */
+message StopClusterRequestProto {
+  /**
+  message to include
+  */
+  required string message = 1;
+}
+
+/**
+ * stop the cluster
+ */
+message StopClusterResponseProto {
+}
+
+/**
+ * upgrade the containers
+ */
+message UpgradeContainersRequestProto {
+  /**
+  message to include
+  */
+  required string message =     1;
+  repeated string container =   2;
+  repeated string component =   3;
+}
+
+/**
+ * upgrade the containers
+ */
+message UpgradeContainersResponseProto {
+}
+
+/**
+ * flex the cluster
+ */
+message FlexClusterRequestProto {
+  required string clusterSpec = 1;
+}
+
+
+/**
+ * flex the cluster
+ */
+message FlexClusterResponseProto {
+  required bool response = 1;
+}
+
+
+/**
+ * void request
+ */
+message GetJSONClusterStatusRequestProto {
+}
+
+/**
+ * response
+ */
+message GetJSONClusterStatusResponseProto {
+  required string clusterSpec = 1;
+}
+
+/**
+ * list the nodes in a role
+ */
+message ListNodeUUIDsByRoleRequestProto {
+  required string role = 1;
+}
+
+/**
+ * list the nodes in a role
+ */
+message ListNodeUUIDsByRoleResponseProto {
+  repeated string uuid = 1 ;
+}
+
+/**
+ * get a node
+ */
+message GetNodeRequestProto {
+  required string uuid = 1;
+}
+
+
+/**
+ * response on a node
+ */
+message GetNodeResponseProto {
+   required RoleInstanceState clusterNode = 1 ;
+}
+
+/**
+ * list the nodes for the UUDs
+ */
+message GetClusterNodesRequestProto {
+  repeated string uuid = 1 ;
+}
+
+/**
+ * list the nodes in a role
+ */
+message GetClusterNodesResponseProto {
+  repeated RoleInstanceState clusterNode = 1 ;
+}
+
+/**
+ * Echo
+ */
+message EchoRequestProto {
+  required string text = 1;
+}
+
+/**
+ * Echo reply
+ */
+message EchoResponseProto {
+  required string text = 1;
+}
+
+
+/**
+ * Kill a container
+ */
+message KillContainerRequestProto {
+  required string id = 1;
+}
+
+/**
+ * Kill reply
+ */
+message KillContainerResponseProto {
+  required bool success = 1;
+}
+
+/**
+ * AM suicide
+ */
+message AMSuicideRequestProto {
+  required string text =      1;
+  required int32 signal =     2;
+  required int32 delay =      3;
+}
+
+/**
+ * AM suicide reply. For this to be returned implies
+ * a failure of the AM to kill itself
+ */
+message AMSuicideResponseProto {
+
+}
+
+
+/**
+ * Ask for the instance definition details
+ */
+message GetInstanceDefinitionRequestProto {
+
+}
+
+/**
+ * Get the definition back as three separate JSON strings
+ */
+message GetInstanceDefinitionResponseProto {
+  required string internal =        1;
+  required string resources =       2;
+  required string application =     3;
+}
+
+
+  /* ************************************************************************
+  
+  REST model and operations.
+  Below here the operations and payloads designed to mimic
+  the REST API. That API is now the source of those
+  specificatations; this is simply a derivative.
+  
+  **************************************************************************/
+
+/**
+ * See org.apache.slider.api.types.ApplicationLivenessInformation
+ */
+message ApplicationLivenessInformationProto {
+  optional bool allRequestsSatisfied = 1;
+  optional int32 requestsOutstanding = 2;
+}
+
+/*
+ * see org.apache.slider.api.types.ComponentInformation
+ */
+message ComponentInformationProto {
+  optional string name =           1;
+  optional int32 priority =        2;
+  optional int32 desired =         3;
+  optional int32 actual =          4;
+  optional int32 releasing =       5;
+  optional int32 requested =       6;
+  optional int32 failed =          7;
+  optional int32 started =         8;
+  optional int32 startFailed =     9;
+  optional int32 completed =      10;
+  optional int32 totalRequested = 11;
+  optional string failureMessage =12;
+  optional int32 placementPolicy =13;
+  repeated string containers =    14;
+  optional int32 failedRecently = 15;
+  optional int32 nodeFailed =     16;
+  optional int32 preempted =      17;
+  optional int32 pendingAntiAffineRequestCount = 18;
+  optional bool isAARequestOutstanding = 19;
+}
+
+/*
+ * see org.apache.slider.api.types.ContainerInformation
+ */
+message ContainerInformationProto {
+  optional string containerId =   1;
+  optional string component =     2;
+  optional bool released =        3;
+  optional int32 state =          4;
+  optional int32 exitCode =       5;
+  optional string diagnostics =   6;
+  optional int64 createTime =     7;
+  optional int64 startTime =      8;
+  repeated string output =        9;
+  optional string host =         10;
+  optional string hostURL =      11;
+  optional string placement =    12;
+  optional string appVersion =   13;
+}
+
+
+/*
+ * see org.apache.slider.api.types.PingInformation
+ */
+message PingInformationProto {
+  optional string text = 1;
+  optional string verb = 2;
+  optional string body = 3;
+  optional int64 time =  4;
+}
+
+message NodeEntryInformationProto {
+  required int32 priority =      1;
+  required int32 requested =     2;
+  required int32 starting =      3;
+  required int32 startFailed =   4;
+  required int32 failed =        5;
+  required int32 failedRecently= 6;
+  required int32 preempted =     7;
+  required int32 live =          8;
+  required int32 releasing =     9;
+  required int64 lastUsed =     10;
+  required string name =        11;
+}
+
+message NodeInformationProto {
+  required string hostname =    1;
+  required string state =       2;
+  required string httpAddress = 3;
+  required string rackName =    4;
+  required string labels =      5;
+  required string healthReport= 6;
+  required int64 lastUpdated =  7;
+  repeated NodeEntryInformationProto entries = 8;
+}
+
+message GetModelRequestProto {
+}
+
+message GetModelDesiredRequestProto {
+}
+
+message GetModelDesiredAppconfRequestProto {
+}
+
+message GetModelDesiredResourcesRequestProto {
+}
+
+message GetModelResolvedAppconfRequestProto {
+}
+
+message GetModelResolvedResourcesRequestProto {
+}
+
+message GetModelLiveResourcesRequestProto {
+}
+
+message GetLiveContainersRequestProto {
+}
+
+message GetLiveContainersResponseProto {
+  repeated string names = 1;
+  repeated ContainerInformationProto containers = 2;
+}
+
+message GetLiveContainerRequestProto {
+  required string containerId = 1;
+}
+
+
+message GetLiveComponentsRequestProto {
+}
+
+message GetLiveComponentsResponseProto {
+
+  repeated string names = 1;
+  repeated ComponentInformationProto components = 2;
+}
+
+message GetLiveComponentRequestProto {
+  required string name = 1;
+}
+
+message GetApplicationLivenessRequestProto {
+}
+
+message EmptyPayloadProto {
+}
+
+/**
+  Generic JSON, often containing data structures serialized as a string
+*/
+message WrappedJsonProto {
+  required string json = 1;
+}
+
+message GetCertificateStoreRequestProto {
+  optional string hostname =    1;
+  required string requesterId = 2;
+  required string password =    3;
+  required string type =        4;
+}
+
+message GetCertificateStoreResponseProto {
+  required bytes store = 1;
+}
+
+message GetLiveNodesRequestProto {
+}
+
+message GetLiveNodesResponseProto {
+  repeated NodeInformationProto nodes = 1;
+}
+
+message GetLiveNodeRequestProto {
+  required string name = 1;
+}

@@ -1,0 +1,184 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.slider.api.proto";
+option java_outer_classname = "SliderClusterAPI";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package org.apache.slider.api;
+
+/*
+
+Compiling
+
+Maven: How to do it as part of the build
+ mvn install -DskipTests -Pcompile-protobuf
+
+How to do it so as to get error messages
+
+protoc --java_out=src/main/java \
+ -Isrc/main/proto src/main/proto/SliderClusterMessages.proto \
+  src/main/proto/SliderClusterProtocol.proto
+
+Once happy: commit the changes
+
+*/
+
+//import "Security.proto";
+import "SliderClusterMessages.proto";
+
+
+/**
+ * Protocol used from between Slider Client and AM
+ */
+service SliderClusterProtocolPB {
+
+  /**
+   * Stop the cluster
+   */
+
+  rpc stopCluster(StopClusterRequestProto) 
+    returns(StopClusterResponseProto);
+    
+  /**
+   * Upgrade containers 
+   */
+  rpc upgradeContainers(UpgradeContainersRequestProto) 
+    returns(UpgradeContainersResponseProto);
+
+  /**
+   * Flex the cluster. 
+   */
+  rpc flexCluster(FlexClusterRequestProto) 
+    returns(FlexClusterResponseProto);
+
+  /**
+   * Get the current cluster status
+   */
+  rpc getJSONClusterStatus(GetJSONClusterStatusRequestProto)
+    returns(GetJSONClusterStatusResponseProto);
+      
+  /**
+   * Get the instance definition
+   */
+  rpc getInstanceDefinition(GetInstanceDefinitionRequestProto)
+   returns(GetInstanceDefinitionResponseProto);
+      
+  /**
+   * List all running nodes in a role
+   */
+  rpc listNodeUUIDsByRole(ListNodeUUIDsByRoleRequestProto)
+    returns(ListNodeUUIDsByRoleResponseProto);
+
+  /**
+   * Get the details on a node
+   */
+  rpc getNode(GetNodeRequestProto)
+    returns(GetNodeResponseProto);
+
+  /**
+   * Get the 
+   * details on a list of nodes.
+   * Unknown nodes are not returned
+   * <i>Important: the order of the results are undefined</i>
+   */
+  rpc getClusterNodes(GetClusterNodesRequestProto)
+    returns(GetClusterNodesResponseProto);
+    
+   /**
+    * echo some text
+    */
+   rpc echo(EchoRequestProto)
+     returns(EchoResponseProto); 
+
+   /**
+    * kill a container
+    */
+   rpc killContainer(KillContainerRequestProto)
+     returns(KillContainerResponseProto);
+      
+   /**
+    * kill the AM
+    */
+   rpc amSuicide(AMSuicideRequestProto)
+     returns(AMSuicideResponseProto);
+
+  /* ************************************************************************
+  
+  REST model and operations.
+  Below here the operations and payloads designed to mimic
+  the REST API. That API is now the source of those
+  specificatations; this is simply a derivative.
+  
+  **************************************************************************/
+
+  rpc getLivenessInformation(GetApplicationLivenessRequestProto) 
+    returns(ApplicationLivenessInformationProto);
+
+  rpc getLiveContainers(GetLiveContainersRequestProto) 
+    returns(GetLiveContainersResponseProto);
+
+  rpc getLiveContainer(GetLiveContainerRequestProto) 
+    returns(ContainerInformationProto);
+
+  rpc getLiveComponents(GetLiveComponentsRequestProto) 
+    returns(GetLiveComponentsResponseProto);
+
+  rpc getLiveComponent(GetLiveComponentRequestProto) 
+    returns(ComponentInformationProto);
+
+  rpc getLiveNodes(GetLiveNodesRequestProto)
+    returns(GetLiveNodesResponseProto);
+
+  rpc getLiveNode(GetLiveNodeRequestProto)
+    returns(NodeInformationProto);
+  
+// AggregateConf getModelDesired()
+  rpc getModelDesired(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+
+  // ConfTree getModelDesiredAppconf
+  rpc getModelDesiredAppconf(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+
+    // ConfTree getModelDesiredResources
+  rpc getModelDesiredResources(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+  
+// AggregateConf getModelResolved()
+  rpc getModelResolved(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+
+  // ConfTree getModelResolvedAppconf
+  rpc getModelResolvedAppconf(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+
+    // ConfTree getModelResolvedResources
+  rpc getModelResolvedResources(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+
+    // ConfTree getLiveResources
+  rpc getLiveResources(EmptyPayloadProto) 
+    returns(WrappedJsonProto);
+
+  rpc getClientCertificateStore(GetCertificateStoreRequestProto)
+    returns(GetCertificateStoreResponseProto);
+
+  
+  
+}

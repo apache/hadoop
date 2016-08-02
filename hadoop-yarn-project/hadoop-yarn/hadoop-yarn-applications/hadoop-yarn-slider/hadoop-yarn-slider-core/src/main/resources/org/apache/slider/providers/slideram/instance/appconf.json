@@ -1,0 +1,19 @@
+{
+  "schema": "http://example.org/specification/v2.0.0",
+
+  "metadata": {
+
+
+  },
+
+  "global": {
+    "env.MALLOC_ARENA_MAX": "4"
+  },
+
+  "components": {
+    "slider-appmaster" : {
+      "jvm.heapsize": "256M"
+    }
+
+  }
+}

@@ -1,0 +1,114 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+[
+
+  {
+    "type": "record",
+    "name": "NodeEntryRecord",
+    "namespace": "org.apache.slider.server.avro",
+    "fields": [
+      {
+        "name": "host",
+        "type": "string"
+      },
+      {
+        "name": "role",
+        "type": "int"
+      },
+      {
+        "name": "active",
+        "type": "boolean"
+      },
+      {
+        "name": "last_used",
+        "type": "long"
+      }
+    ]
+  },
+
+  {
+    "type": "record",
+    "name": "RoleHistoryHeader",
+    "namespace": "org.apache.slider.server.avro",
+    "fields": [
+      {
+        "name": "version",
+        "type": "int"
+      },
+      {
+        "name": "saved",
+        "type": "long"
+      },
+      {
+        "name": "savedx",
+        "type": "string"
+      },
+      {
+        "name": "savedate",
+        "type": "string",
+        "default": ""
+      },
+      {
+        "name": "roles",
+        "type": "int"
+      }
+    ]
+  },
+  {
+    "type": "record",
+    "name": "RoleHistoryMapping",
+    "namespace": "org.apache.slider.server.avro",
+    "fields": [
+      {
+        "name": "rolemap",
+        "type": {
+          "type": "map",
+          "values": "int"
+         }
+      }
+    ]
+  },
+  {
+    "type": "record",
+    "name": "RoleHistoryFooter",
+    "namespace": "org.apache.slider.server.avro",
+    "fields": [
+      {
+        "name": "count",
+        "type": "long"
+      }
+    ]
+  },
+
+  {
+    "type": "record",
+    "name": "RoleHistoryRecord",
+    "namespace": "org.apache.slider.server.avro",
+    "fields": [
+      {
+        "name": "entry",
+        "type": [
+          "org.apache.slider.server.avro.NodeEntryRecord",
+          "org.apache.slider.server.avro.RoleHistoryHeader",
+          "org.apache.slider.server.avro.RoleHistoryFooter",
+          "org.apache.slider.server.avro.RoleHistoryMapping"
+        ]
+      }
+    ]
+  }
+
+]

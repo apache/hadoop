@@ -1,0 +1,17 @@
+{
+  "schema": "http://example.org/specification/v2.0.0",
+
+  "metadata": {
+  },
+
+  "global": {
+    "internal.container.failure.shortlife": "60000",
+    "internal.container.failure.threshold": "5",
+    "slider.cluster.directory.permissions": "0770",
+    "slider.data.directory.permissions": "0770"
+  },
+
+  "components": {
+
+  }
+}
