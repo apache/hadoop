@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -28,7 +28,7 @@ import org.junit.Test;
  * Tests the docker stop command and its command
  * line arguments.
  */
-public class DockerStopCommandTest {
+public class TestDockerStopCommand {
 
   private DockerStopCommand dockerStopCommand;
 
