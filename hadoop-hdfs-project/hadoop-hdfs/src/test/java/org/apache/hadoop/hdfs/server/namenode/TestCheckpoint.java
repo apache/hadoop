@@ -1039,6 +1039,7 @@ public class TestCheckpoint {
    */
   @Test
   public void testCheckpoint() throws IOException {
+    Path tmpDir = new Path("/tmp_tmp");
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
     Configuration conf = new HdfsConfiguration();
@@ -1065,6 +1066,11 @@ public class TestCheckpoint {
       writeFile(fileSys, file1, replication);
       checkFile(fileSys, file1, replication);
 
+      for(int i=0; i < 1000; i++) {
+        fileSys.mkdirs(tmpDir);
+        fileSys.delete(tmpDir, true);
+      }
+
       //
       // Take a checkpoint
       //
@@ -1089,7 +1095,6 @@ public class TestCheckpoint {
     //
     // Restart cluster and verify that file1 still exist.
     //
-    Path tmpDir = new Path("/tmp_tmp");
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
           .format(false).build();
