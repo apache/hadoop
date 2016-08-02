@@ -555,7 +555,10 @@ public class LogsCLI extends Configured implements Tool {
         new ArrayList<ContainerLogsRequest>();
     boolean getAMContainerLists = false;
     String appId = request.getAppId().toString();
-    String errorMessage = "";
+    StringBuilder errorMessage = new StringBuilder();
+    // We will call RM webservice to get all AppAttempts information.
+    // If we get nothing, we will try to call AHS webservice to get AppAttempts
+    // which includes nodeAddress for the AM Containers.
     try {
       amContainersList = getAMContainerInfoForRMWebService(conf, appId);
       if (amContainersList != null && !amContainersList.isEmpty()) {
@@ -572,21 +575,28 @@ public class LogsCLI extends Configured implements Tool {
         }
       }
     } catch (Exception ex) {
-      errorMessage = ex.getMessage();
+      errorMessage.append(ex.getMessage() + "\n");
       if (request.isAppFinished()) {
-        try {
-          amContainersList = getAMContainerInfoForAHSWebService(conf, appId);
-          if (amContainersList != null && !amContainersList.isEmpty()) {
-            getAMContainerLists = true;
-            for (JSONObject amContainer : amContainersList) {
-              ContainerLogsRequest amRequest = new ContainerLogsRequest(
-                  request);
-              amRequest.setContainerId(amContainer.getString("amContainerId"));
-              requests.add(amRequest);
+        if (!conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
+          errorMessage.append("Please enable the timeline service "
+              + "and make sure the timeline server is running.");
+        } else {
+          try {
+            amContainersList = getAMContainerInfoForAHSWebService(conf, appId);
+            if (amContainersList != null && !amContainersList.isEmpty()) {
+              getAMContainerLists = true;
+              for (JSONObject amContainer : amContainersList) {
+                ContainerLogsRequest amRequest = new ContainerLogsRequest(
+                    request);
+                amRequest.setContainerId(
+                    amContainer.getString("amContainerId"));
+                requests.add(amRequest);
+              }
             }
+          } catch (Exception e) {
+            errorMessage.append(e.getMessage());
           }
-        } catch (Exception e) {
-          errorMessage = e.getMessage();
         }
       }
     }
@@ -595,6 +605,9 @@ public class LogsCLI extends Configured implements Tool {
       System.err.println("Unable to get AM container informations "
           + "for the application:" + appId);
       System.err.println(errorMessage);
+      System.err.println("Can not get AMContainers logs for "
+          + "the application:" + appId + " with the appOwner:"
+          + request.getAppOwner());
       return -1;
     }
 
@@ -635,19 +648,12 @@ public class LogsCLI extends Configured implements Tool {
 
     if (request.isAppFinished()) {
       if (containerId != null && !containerId.isEmpty()) {
-        if (nodeId == null || nodeId.isEmpty()) {
-          try {
-            nodeId =
-                getContainerReport(containerId).getAssignedNode().toString();
-            request.setNodeId(nodeId);
-          } catch (Exception ex) {
-            System.err.println(ex);
-            nodeId = null;
-          }
-        }
         if (nodeId != null && !nodeId.isEmpty()) {
           printContainerLogsForFinishedApplication(request,
               logCliHelper);
+        } else {
+          printContainerLogsForFinishedApplicationWithoutNodeId(
+              request, logCliHelper);
         }
       }
     } else {
@@ -825,39 +831,8 @@ public class LogsCLI extends Configured implements Tool {
   private int fetchAMContainerLogs(ContainerLogsRequest request,
       List<String> amContainersList, LogCLIHelpers logCliHelper)
       throws Exception {
-
-    // If the application is running, we will call the RM WebService
-    // to get the AppAttempts which includes the nodeHttpAddress
-    // and containerId for all the AM Containers.
-    // After that, we will call NodeManager webService to get the
-    // related logs
-    if (!request.isAppFinished()) {
-      return printAMContainerLogs(getConf(), request, amContainersList,
-          logCliHelper);
-    } else {
-      // If the application is in the final state, we will call RM webservice
-      // to get all AppAttempts information first. If we get nothing,
-      // we will try to call AHS webservice to get related AppAttempts
-      // which includes nodeAddress for the AM Containers.
-      // After that, we will use nodeAddress and containerId
-      // to get logs from HDFS directly.
-      if (getConf().getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-          YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
-        return printAMContainerLogs(getConf(), request, amContainersList,
-            logCliHelper);
-      } else {
-        ApplicationId appId = request.getAppId();
-        String appOwner = request.getAppOwner();
-        System.err.println("Can not get AMContainers logs for "
-            + "the application:" + appId + " with the appOwner:" + appOwner);
-        System.err.println("This application:" + appId + " has finished."
-            + " Please enable the application-history service or explicitly"
-            + " use 'yarn logs -applicationId <appId> "
-            + "-containerId <containerId> --nodeAddress <nodeHttpAddress>' "
-            + "to get the container logs.");
-        return -1;
-      }
-    }
+    return printAMContainerLogs(getConf(), request, amContainersList,
+        logCliHelper);
   }
 
   private int fetchContainerLogs(ContainerLogsRequest request,
@@ -868,13 +843,18 @@ public class LogsCLI extends Configured implements Tool {
     String nodeAddress = request.getNodeId();
     String appOwner = request.getAppOwner();
     boolean isAppFinished = request.isAppFinished();
-    // if we provide the node address and the application is in the final
-    // state, we could directly get logs from HDFS.
-    if (nodeAddress != null && isAppFinished) {
+    // if the application is in the final state,
+    // we could directly get logs from HDFS.
+    if (isAppFinished) {
       // if user specified "ALL" as the logFiles param, pass empty list
       // to logCliHelper so that it fetches all the logs
-      return printContainerLogsForFinishedApplication(
-          request, logCliHelper);
+      if (nodeAddress != null && !nodeAddress.isEmpty()) {
+        return printContainerLogsForFinishedApplication(
+            request, logCliHelper);
+      } else {
+        return printContainerLogsForFinishedApplicationWithoutNodeId(
+            request, logCliHelper);
+      }
     }
     String nodeHttpAddress = null;
     String nodeId = null;
