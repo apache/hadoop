@@ -28,6 +28,10 @@ Release 2.7.4 - UNRELEASED
     YARN-5462. TestNodeStatusUpdater.testNodeStatusUpdaterRetryAndNMShutdown
     fails intermittently (Eric Badger via jlowe)
 
+    YARN-4717. TestResourceLocalizationService.testPublicResourceInitializesLocalDir
+    fails Intermittently due to IllegalArgumentException from cleanup
+    (Daniel Templeton via rkanter)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
