@@ -71,7 +71,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       SchedContainerChangeRequest request) {
     CSAssignment assignment =
         new CSAssignment(request.getDeltaCapacity(), NodeType.NODE_LOCAL, null,
-            application, false, false);
+            application, CSAssignment.SkippedType.NONE, false);
     Resources.addTo(assignment.getAssignmentInformation().getReserved(),
         request.getDeltaCapacity());
     assignment.getAssignmentInformation().incrReservations();
@@ -88,7 +88,7 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
       SchedContainerChangeRequest request, boolean fromReservation) {
     CSAssignment assignment =
         new CSAssignment(request.getDeltaCapacity(), NodeType.NODE_LOCAL, null,
-            application, false, fromReservation);
+            application, CSAssignment.SkippedType.NONE, fromReservation);
     Resources.addTo(assignment.getAssignmentInformation().getAllocated(),
         request.getDeltaCapacity());
     assignment.getAssignmentInformation().incrAllocations();
@@ -311,7 +311,8 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
           // Try to allocate the increase request
           assigned =
               allocateIncreaseRequest(node, clusterResource, increaseRequest);
-          if (!assigned.getSkipped()) {
+          if (assigned.getSkippedType()
+              == CSAssignment.SkippedType.NONE) {
             // When we don't skip this request, which means we either allocated
             // OR reserved this request. We will break
             break;
@@ -328,7 +329,8 @@ public class IncreaseContainerAllocator extends AbstractContainerAllocator {
         }
 
         // We may have allocated something
-        if (assigned != null && !assigned.getSkipped()) {
+        if (assigned != null && assigned.getSkippedType()
+            == CSAssignment.SkippedType.NONE) {
           break;
         }
       }
