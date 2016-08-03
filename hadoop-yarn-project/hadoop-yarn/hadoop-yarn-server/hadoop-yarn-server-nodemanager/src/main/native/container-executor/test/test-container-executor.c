@@ -826,6 +826,7 @@ int main(int argc, char **argv) {
   LOGFILE = stdout;
   ERRORFILE = stderr;
 
+  printf("Attempting to clean up from any previous runs\n");
   // clean up any junk from previous run
   if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
     exit(1);
@@ -838,6 +839,9 @@ int main(int argc, char **argv) {
   if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
     exit(1);
   }
+
+  printf("\nOur executable is %s\n",get_executable(argv[0]));
+
   read_executor_config(TEST_ROOT "/test.cfg");
 
   local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
