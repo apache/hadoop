@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
@@ -972,8 +973,12 @@ public class LeafQueue extends AbstractCSQueue {
 
         // Done
         return assignment;
-      } else if (assignment.getSkipped()) {
+      } else if (assignment.getSkippedType()
+          == CSAssignment.SkippedType.OTHER) {
         application.updateNodeInfoForAMDiagnostics(node);
+      } else if(assignment.getSkippedType()
+          == CSAssignment.SkippedType.QUEUE_LIMIT) {
+        return assignment;
       } else {
         // If we don't allocate anything, and it is not skipped by application,
         // we will return to respect FIFO of applications
