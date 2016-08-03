@@ -32,7 +32,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestNativeAzureFileSystemAppend extends NativeAzureFileSystemBaseTest {
+public class TestNativeAzureFileSystemAppend extends AbstractWasbTestBase {
 
   private static final String TEST_FILE = "test.dat";
   private static final Path TEST_PATH = new Path(TEST_FILE);

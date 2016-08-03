@@ -37,8 +37,8 @@ import org.junit.Test;
  * client-side logging.
  *
  */
-public class TestNativeAzureFileSystemClientLogging extends
-    NativeAzureFileSystemBaseTest {
+public class TestNativeAzureFileSystemClientLogging
+    extends AbstractWasbTestBase {
 
   private AzureBlobStorageTestAccount testAccount;
 
