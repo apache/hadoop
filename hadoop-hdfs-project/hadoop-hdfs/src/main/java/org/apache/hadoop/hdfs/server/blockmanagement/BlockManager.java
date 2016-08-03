@@ -2278,9 +2278,9 @@ public class BlockManager implements BlockStatsMXBean {
       return;
     }
     long startTimeRescanPostponedMisReplicatedBlocks = Time.monotonicNow();
+    namesystem.writeLock();
     long startPostponedMisReplicatedBlocksCount =
         getPostponedMisreplicatedBlocksCount();
-    namesystem.writeLock();
     try {
       // blocksPerRescan is the configured number of blocks per rescan.
       // Randomly select blocksPerRescan consecutive blocks from the HashSet
@@ -2333,9 +2333,9 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     } finally {
-      namesystem.writeUnlock();
       long endPostponedMisReplicatedBlocksCount =
           getPostponedMisreplicatedBlocksCount();
+      namesystem.writeUnlock();
       LOG.info("Rescan of postponedMisreplicatedBlocks completed in " +
           (Time.monotonicNow() - startTimeRescanPostponedMisReplicatedBlocks) +
           " msecs. " + endPostponedMisReplicatedBlocksCount +
