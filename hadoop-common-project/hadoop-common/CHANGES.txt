@@ -28,6 +28,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-11149. Increase the timeout of TestZKFailoverController.
     (Steve Loughran via wheat9)
 
+    HADOOP-10980. TestActiveStandbyElector fails occasionally in trunk
+    (Eric Badger via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
