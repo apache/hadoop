@@ -33,6 +33,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersi
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,8 +94,8 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       try {
         return op.call(provider);
       } catch (IOException ioe) {
-        LOG.warn("KMS provider at [{}] threw an IOException [{}]!!",
-            provider.getKMSUrl(), ioe.getMessage());
+        LOG.warn("KMS provider at [{}] threw an IOException!! {}",
+            provider.getKMSUrl(), StringUtils.stringifyException(ioe));
         ex = ioe;
       } catch (Exception e) {
         if (e instanceof RuntimeException) {
