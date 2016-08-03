@@ -25,6 +25,9 @@ Release 2.7.4 - UNRELEASED
 
     YARN-5092. TestRMDelegationTokens fails intermittently. Contributed by Jason Lowe.
 
+    YARN-5462. TestNodeStatusUpdater.testNodeStatusUpdaterRetryAndNMShutdown
+    fails intermittently (Eric Badger via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
