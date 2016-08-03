@@ -468,6 +468,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected void serviceStop() throws Exception {
+      // Make sure that all containers are started before starting shutdown
+      syncBarrier.await(10000, TimeUnit.MILLISECONDS);
       System.out.println("Called stooppppp");
       super.serviceStop();
       isStopped = true;
@@ -1446,6 +1448,9 @@ public class TestNodeStatusUpdater {
       new File("start_file.txt"));
 
     try {
+      // Wait until we start stopping
+      syncBarrier.await(10000, TimeUnit.MILLISECONDS);
+      // Wait until we finish stopping
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
     }

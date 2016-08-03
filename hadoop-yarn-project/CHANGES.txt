@@ -45,6 +45,9 @@ Release 2.6.5 - UNRELEASED
     YARN-5353. ResourceManager can leak delegation tokens when they are shared across
     apps. (Jason Lowe via Varun Saxena)
 
+    YARN-5462. TestNodeStatusUpdater.testNodeStatusUpdaterRetryAndNMShutdown
+    fails intermittently (Eric Badger via jlowe)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
