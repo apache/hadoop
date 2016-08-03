@@ -24,7 +24,8 @@ import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
-public class TestNativeAzureFileSystemAtomicRenameDirList extends NativeAzureFileSystemBaseTest {
+public class TestNativeAzureFileSystemAtomicRenameDirList
+    extends AbstractWasbTestBase {
   private AzureBlobStorageTestAccount testAccount;
 
   // HBase-site config controlling HBase root dir
