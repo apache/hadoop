@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
@@ -280,6 +281,7 @@ public class TestApplicationPriority {
     // If app3 (highest priority among rest) gets active, it indicates that
     // priority is working with pendingApplications.
     rm.killApp(app1.getApplicationId());
+    rm.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.KILLED);
 
     // kick the scheduler, app3 (high among pending) gets free space
     MockAM am3 = MockRM.launchAM(app3, rm, nm1);
