@@ -85,7 +85,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -268,27 +267,40 @@ public class DFSUtil {
   /**
    * Given a list of path components returns a path as a UTF8 String
    */
-  public static String byteArray2PathString(byte[][] pathComponents,
-      int offset, int length) {
-    if (pathComponents.length == 0) {
+  public static String byteArray2PathString(final byte[][] components,
+      final int offset, final int length) {
+    // specifically not using StringBuilder to more efficiently build
+    // string w/o excessive byte[] copies and charset conversions.
+    final int range = offset + length;
+    Preconditions.checkPositionIndexes(offset, range, components.length);
+    if (length == 0) {
       return "";
     }
-    Preconditions.checkArgument(offset >= 0 && offset < pathComponents.length);
-    Preconditions.checkArgument(length >= 0 && offset + length <=
-        pathComponents.length);
-    if (offset == 0 && length == 1
-        && (pathComponents[0] == null || pathComponents[0].length == 0)) {
-      return Path.SEPARATOR;
+    // absolute paths start with either null or empty byte[]
+    byte[] firstComponent = components[offset];
+    boolean isAbsolute = (offset == 0 &&
+        (firstComponent == null || firstComponent.length == 0));
+    if (offset == 0 && length == 1) {
+      return isAbsolute ? Path.SEPARATOR : bytes2String(firstComponent);
     }
-    StringBuilder result = new StringBuilder();
-    int lastIndex = offset + length - 1;
-    for (int i = offset; i <= lastIndex; i++) {
-      result.append(new String(pathComponents[i], Charsets.UTF_8));
-      if (i < lastIndex) {
-        result.append(Path.SEPARATOR_CHAR);
-      }
+    // compute length of full byte[], seed with 1st component and delimiters
+    int pos = isAbsolute ? 0 : firstComponent.length;
+    int size = pos + length - 1;
+    for (int i=offset + 1; i < range; i++) {
+      size += components[i].length;
     }
-    return result.toString();
+    final byte[] result = new byte[size];
+    if (!isAbsolute) {
+      System.arraycopy(firstComponent, 0, result, 0, firstComponent.length);
+    }
+    // append remaining components as "/component".
+    for (int i=offset + 1; i < range; i++) {
+      result[pos++] = (byte)Path.SEPARATOR_CHAR;
+      int len = components[i].length;
+      System.arraycopy(components[i], 0, result, pos, len);
+      pos += len;
+    }
+    return bytes2String(result);
   }
 
   public static String byteArray2PathString(byte[][] pathComponents) {
