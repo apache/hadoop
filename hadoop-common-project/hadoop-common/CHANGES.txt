@@ -65,6 +65,8 @@ Release 2.6.5 - UNRELEASED
     HADOOP-11361. Fix a race condition in MetricsSourceAdapter.updateJmxCache.
     (Vinayakumar B, Yongjun Zhang, and Brahma Reddy Battula via ozawa)
 
+    HADOOP-13434. Add quoting to Shell class. (Owen O'Malley)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
