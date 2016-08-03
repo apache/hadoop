@@ -32,6 +32,9 @@ Release 2.7.4 - UNRELEASED
     fails Intermittently due to IllegalArgumentException from cleanup
     (Daniel Templeton via rkanter)
 
+    YARN-5469. Increase timeout of TestAmFilter.testFilter (Eric Badger via
+    jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
