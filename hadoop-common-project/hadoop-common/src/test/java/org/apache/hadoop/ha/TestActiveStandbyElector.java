@@ -66,7 +66,7 @@ public class TestActiveStandbyElector {
     }
 
     @Override
-    public ZooKeeper getNewZooKeeper() {
+    public ZooKeeper connectToZooKeeper() {
       ++count;
       return mockZK;
     }
@@ -749,7 +749,15 @@ public class TestActiveStandbyElector {
     try {
       new ActiveStandbyElector("127.0.0.1", 2000, ZK_PARENT_NAME,
           Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), mockApp,
-          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT) {
+
+          @Override
+          protected ZooKeeper createZooKeeper() throws IOException {
+            return Mockito.mock(ZooKeeper.class);
+          }
+      };
+
+
       Assert.fail("Did not throw zookeeper connection loss exceptions!");
     } catch (KeeperException ke) {
       GenericTestUtils.assertExceptionContains( "ConnectionLoss", ke);
