@@ -467,6 +467,7 @@ public class ParentQueue extends AbstractCSQueue {
             " cluster=" + clusterResource);
 
       } else {
+        assignment.setSkippedType(assignedToChild.getSkippedType());
         break;
       }
 
@@ -500,13 +501,13 @@ public class ParentQueue extends AbstractCSQueue {
   }
   
   private ResourceLimits getResourceLimitsOfChild(CSQueue child,
-      Resource clusterResource, ResourceLimits parentLimits) {
+      Resource clusterResource, Resource parentLimits) {
     // Set resource-limit of a given child, child.limit =
     // min(my.limit - my.used + child.used, child.max)
 
     // Parent available resource = parent-limit - parent-used-resource
     Resource parentMaxAvailableResource =
-        Resources.subtract(parentLimits.getLimit(), getUsedResources());
+        Resources.subtract(parentLimits, getUsedResources());
 
     // Child's limit = parent-available-resource + child-used
     Resource childLimit =
@@ -552,9 +553,9 @@ public class ParentQueue extends AbstractCSQueue {
   private synchronized CSAssignment assignContainersToChildQueues(
       Resource cluster, FiCaSchedulerNode node, ResourceLimits limits,
       SchedulingMode schedulingMode) {
-    CSAssignment assignment = 
-        new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
-    
+    CSAssignment assignment = CSAssignment.NULL_ASSIGNMENT;
+
+    Resource parentLimits = limits.getLimit();
     printChildQueues();
 
     // Try to assign to most 'under-served' sub-queue
@@ -568,20 +569,20 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Get ResourceLimits of child queue before assign containers
       ResourceLimits childLimits =
-          getResourceLimitsOfChild(childQueue, cluster, limits);
+          getResourceLimitsOfChild(childQueue, cluster, parentLimits);
       
-      assignment = childQueue.assignContainers(cluster, node, 
+      CSAssignment childAssignment = childQueue.assignContainers(cluster, node,
           childLimits, schedulingMode);
       if(LOG.isDebugEnabled()) {
         LOG.debug("Assigned to queue: " + childQueue.getQueuePath() +
-          " stats: " + childQueue + " --> " + 
-          assignment.getResource() + ", " + assignment.getType());
+            " stats: " + childQueue + " --> " +
+            childAssignment.getResource() + ", " + childAssignment.getType());
       }
 
       // If we do assign, remove the queue and re-insert in-order to re-sort
       if (Resources.greaterThan(
               resourceCalculator, cluster, 
-              assignment.getResource(), Resources.none())) {
+              childAssignment.getResource(), Resources.none())) {
         // Only update childQueues when we doing non-partitioned node
         // allocation.
         if (RMNodeLabelsManager.NO_LABEL.equals(node.getPartition())) {
@@ -594,7 +595,24 @@ public class ParentQueue extends AbstractCSQueue {
             printChildQueues();
           }
         }
+        assignment = childAssignment;
         break;
+      } else if (childAssignment.getSkippedType() ==
+          CSAssignment.SkippedType.QUEUE_LIMIT) {
+        if (assignment.getSkippedType() !=
+            CSAssignment.SkippedType.QUEUE_LIMIT) {
+          assignment = childAssignment;
+        }
+        Resource resourceToSubtract = Resources.max(resourceCalculator,
+            cluster, childLimits.getHeadroom(), Resources.none());
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Decrease parentLimits " + parentLimits +
+              " for " + this.getQueueName() + " by " +
+              resourceToSubtract + " as childQueue=" +
+              childQueue.getQueueName() + " is blocked");
+        }
+        parentLimits = Resources.subtract(parentLimits,
+            resourceToSubtract);
       }
     }
     
@@ -715,7 +733,8 @@ public class ParentQueue extends AbstractCSQueue {
     for (CSQueue childQueue : childQueues) {
       // Get ResourceLimits of child queue before assign containers
       ResourceLimits childLimits =
-          getResourceLimitsOfChild(childQueue, clusterResource, resourceLimits);     
+          getResourceLimitsOfChild(childQueue, clusterResource,
+              resourceLimits.getLimit());
       childQueue.updateClusterResource(clusterResource, childLimits);
     }
     

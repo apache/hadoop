@@ -55,8 +55,10 @@ public abstract class AbstractContainerAllocator {
       Resource clusterResource, ContainerAllocation result,
       RMContainer rmContainer) {
     // Handle skipped
-    boolean skipped =
-        (result.getAllocationState() == AllocationState.APP_SKIPPED);
+    CSAssignment.SkippedType skipped =
+        (result.getAllocationState() == AllocationState.APP_SKIPPED) ?
+        CSAssignment.SkippedType.OTHER :
+        CSAssignment.SkippedType.NONE;
     CSAssignment assignment = new CSAssignment(skipped);
     assignment.setApplication(application);
     
@@ -107,6 +109,11 @@ public abstract class AbstractContainerAllocator {
         if (rmContainer != null) {
           assignment.setFulfilledReservation(true);
         }
+      }
+    } else {
+      if (result.getAllocationState() == AllocationState.QUEUE_SKIPPED) {
+        assignment.setSkippedType(
+            CSAssignment.SkippedType.QUEUE_LIMIT);
       }
     }
     
