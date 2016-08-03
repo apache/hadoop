@@ -793,7 +793,23 @@ int set_user(const char *user) {
  */
 static int change_owner(const char* path, uid_t user, gid_t group) {
   if (geteuid() == user && getegid() == group) {
+
+  /*
+   * On the BSDs, this is not a guaranteed shortcut
+   * since group permissions are inherited
+   */
+
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+    if (chown(path, user, group) != 0) {
+      fprintf(LOGFILE, "Can't chown %s to %d:%d - %s\n", path, user, group,
+              strerror(errno));
+      return -1;
+    }
     return 0;
+#else
+    return 0;
+#endif
+
   } else {
     uid_t old_user = geteuid();
     gid_t old_group = getegid();
@@ -831,13 +847,13 @@ int create_directory_for_user(const char* path) {
   if (ret == 0) {
     if (0 == mkdir(path, permissions) || EEXIST == errno) {
       // need to reassert the group sticky bit
-      if (chmod(path, permissions) != 0) {
-        fprintf(LOGFILE, "Can't chmod %s to add the sticky bit - %s\n",
-                path, strerror(errno));
-        ret = -1;
-      } else if (change_owner(path, user, nm_gid) != 0) {
+      if (change_owner(path, user, nm_gid) != 0) {
         fprintf(LOGFILE, "Failed to chown %s to %d:%d: %s\n", path, user, nm_gid,
             strerror(errno));
+        ret = -1;
+      } else if (chmod(path, permissions) != 0) {
+        fprintf(LOGFILE, "Can't chmod %s to add the sticky bit - %s\n",
+                path, strerror(errno));
         ret = -1;
       }
     } else {

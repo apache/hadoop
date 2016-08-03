@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
+
 #include <stddef.h>
 
 /** Define a platform-independent constant instead of using PATH_MAX */
