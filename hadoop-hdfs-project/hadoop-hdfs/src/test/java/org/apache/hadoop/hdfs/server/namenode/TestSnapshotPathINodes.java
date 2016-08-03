@@ -155,7 +155,12 @@ public class TestSnapshotPathINodes {
         sub1.toString());
     assertEquals(nodesInPath.getINode(components.length - 3).getFullPathName(),
         dir.toString());
-    
+
+    assertEquals(Path.SEPARATOR, nodesInPath.getPath(0));
+    assertEquals(dir.toString(), nodesInPath.getPath(1));
+    assertEquals(sub1.toString(), nodesInPath.getPath(2));
+    assertEquals(file1.toString(), nodesInPath.getPath(3));
+
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, false);
     assertEquals(nodesInPath.length(), components.length);
     assertSnapshot(nodesInPath, false, null, -1);
