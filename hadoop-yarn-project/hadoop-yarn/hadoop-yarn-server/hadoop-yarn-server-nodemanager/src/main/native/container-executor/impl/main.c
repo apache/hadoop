@@ -139,9 +139,9 @@ in case of validation failures. Also sets up configuration / group information e
 This function is to be called in every invocation of container-executor, irrespective
 of whether an explicit checksetup operation is requested. */
 
-static void assert_valid_setup() {
+static void assert_valid_setup(char *argv0) {
   int ret;
-  char *executable_file = get_executable();
+  char *executable_file = get_executable(argv0);
   if (!executable_file) {
     fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
     flush_and_close_log_files();
@@ -518,7 +518,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
 int main(int argc, char **argv) {
   open_log_files();
-  assert_valid_setup();
+  assert_valid_setup(argv[0]);
 
   int operation;
   int ret = validate_arguments(argc, argv, &operation);
