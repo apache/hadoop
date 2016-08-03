@@ -346,11 +346,11 @@ public class INodesInPath {
   }
 
   public String getParentPath() {
-    return getPath(path.length - 1);
+    return getPath(path.length - 2);
   }
 
   public String getPath(int pos) {
-    return DFSUtil.byteArray2PathString(path, 0, pos);
+    return DFSUtil.byteArray2PathString(path, 0, pos + 1); // it's a length...
   }
 
   /**
