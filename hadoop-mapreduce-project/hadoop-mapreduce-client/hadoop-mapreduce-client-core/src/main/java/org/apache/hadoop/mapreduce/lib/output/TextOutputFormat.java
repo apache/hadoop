@@ -45,14 +45,16 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
   public static String SEPERATOR = "mapreduce.output.textoutputformat.separator";
   protected static class LineRecordWriter<K, V>
     extends RecordWriter<K, V> {
-    private static final byte[] newline = "\n".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] NEWLINE =
+      "\n".getBytes(StandardCharsets.UTF_8);
 
     protected DataOutputStream out;
     private final byte[] keyValueSeparator;
 
     public LineRecordWriter(DataOutputStream out, String keyValueSeparator) {
       this.out = out;
-      this.keyValueSeparator = keyValueSeparator.getBytes(StandardCharsets.UTF_8);
+      this.keyValueSeparator =
+        keyValueSeparator.getBytes(StandardCharsets.UTF_8);
     }
 
     public LineRecordWriter(DataOutputStream out) {
@@ -91,7 +93,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       if (!nullValue) {
         writeObject(value);
       }
-      out.write(newline);
+      out.write(NEWLINE);
     }
 
     public synchronized 
