@@ -209,4 +209,11 @@ public class TestShell extends TestCase {
       assertEquals(2, command.getRunCount());
     }
   }
+
+  @Test
+  public void testBashQuote() {
+    assertEquals("'foobar'", Shell.bashQuote("foobar"));
+    assertEquals("'foo'\\''bar'", Shell.bashQuote("foo'bar"));
+    assertEquals("''\\''foo'\\''bar'\\'''", Shell.bashQuote("'foo'bar'"));
+  }
 }
