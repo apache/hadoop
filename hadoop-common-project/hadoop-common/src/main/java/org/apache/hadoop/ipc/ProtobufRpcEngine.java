@@ -32,6 +32,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
+import org.apache.hadoop.ipc.RpcWritable;
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -68,7 +69,7 @@ public class ProtobufRpcEngine implements RpcEngine {
 
   static { // Register the rpcRequest deserializer for WritableRpcEngine 
     org.apache.hadoop.ipc.Server.registerProtocolEngine(
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcRequestWrapper.class,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcWritable.Buffer.class,
         new Server.ProtoBufRpcInvoker());
   }
 
@@ -612,8 +613,9 @@ public class ProtobufRpcEngine implements RpcEngine {
        */
       public Writable call(RPC.Server server, String protocol,
           Writable writableRequest, long receiveTime) throws Exception {
-        RpcRequestWrapper request = (RpcRequestWrapper) writableRequest;
-        RequestHeaderProto rpcRequest = request.requestHeader;
+        RpcWritable.Buffer request = (RpcWritable.Buffer) writableRequest;
+        RequestHeaderProto rpcRequest =
+            request.getValue(RequestHeaderProto.getDefaultInstance());
         String methodName = rpcRequest.getMethodName();
         String protoName = rpcRequest.getDeclaringClassProtocolName();
         long clientVersion = rpcRequest.getClientProtocolVersion();
@@ -632,9 +634,8 @@ public class ProtobufRpcEngine implements RpcEngine {
           throw new RpcNoSuchMethodException(msg);
         }
         Message prototype = service.getRequestPrototype(methodDescriptor);
-        Message param = prototype.newBuilderForType()
-            .mergeFrom(request.theRequestRead).build();
-        
+        Message param = request.getValue(prototype);
+
         Message result;
         long startTime = Time.now();
         int qTime = (int) (startTime - receiveTime);
@@ -663,7 +664,7 @@ public class ProtobufRpcEngine implements RpcEngine {
               exception.getClass().getSimpleName();
           server.updateMetrics(detailedMetricsName, qTime, processingTime);
         }
-        return new RpcResponseWrapper(result);
+        return RpcWritable.wrap(result);
       }
     }
   }
