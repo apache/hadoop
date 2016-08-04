@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -121,7 +120,7 @@ class FSDirMkdirOp {
   static Map.Entry<INodesInPath, String> createAncestorDirectories(
       FSDirectory fsd, INodesInPath iip, PermissionStatus permission)
       throws IOException {
-    final String last = new String(iip.getLastLocalName(), Charsets.UTF_8);
+    final String last = DFSUtil.bytes2String(iip.getLastLocalName());
     INodesInPath existing = iip.getExistingINodes();
     List<String> children = iip.getPath(existing.length(),
         iip.length() - existing.length());
@@ -189,7 +188,7 @@ class FSDirMkdirOp {
       throws IOException {
     assert fsd.hasWriteLock();
     existing = unprotectedMkdir(fsd, fsd.allocateNewInodeId(), existing,
-        localName.getBytes(Charsets.UTF_8), perm, null, now());
+        DFSUtil.string2Bytes(localName), perm, null, now());
     if (existing == null) {
       return null;
     }

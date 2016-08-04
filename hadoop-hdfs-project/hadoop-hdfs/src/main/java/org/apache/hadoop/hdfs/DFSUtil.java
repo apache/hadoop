@@ -37,7 +37,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY;
 
-import com.google.common.base.Charsets;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
@@ -45,6 +44,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -313,7 +313,11 @@ public class DFSUtil {
   public static String bytes2String(byte[] bytes) {
     return bytes2String(bytes, 0, bytes.length);
   }
-  
+
+  // Using the charset canonical name for String/byte[] conversions is much
+  // more efficient due to use of cached encoders/decoders.
+  private static final String UTF8_CSN = StandardCharsets.UTF_8.name();
+
   /**
    * Decode a specific range of bytes of the given byte array to a string
    * using UTF8.
@@ -325,18 +329,24 @@ public class DFSUtil {
    */
   public static String bytes2String(byte[] bytes, int offset, int length) {
     try {
-      return new String(bytes, offset, length, "UTF8");
-    } catch(UnsupportedEncodingException e) {
-      assert false : "UTF8 encoding is not supported ";
+      return new String(bytes, offset, length, UTF8_CSN);
+    } catch (UnsupportedEncodingException e) {
+      // should never happen!
+      throw new IllegalArgumentException("UTF8 encoding is not supported", e);
     }
-    return null;
   }
 
   /**
    * Converts a string to a byte array using UTF8 encoding.
    */
   public static byte[] string2Bytes(String str) {
-    return str.getBytes(Charsets.UTF_8);
+    try {
+      return str.getBytes(UTF8_CSN);
+    } catch (UnsupportedEncodingException e) {
+      // should never happen!
+      throw new IllegalArgumentException("UTF8 decoding is not supported", e);
+    }
+
   }
 
   /**
