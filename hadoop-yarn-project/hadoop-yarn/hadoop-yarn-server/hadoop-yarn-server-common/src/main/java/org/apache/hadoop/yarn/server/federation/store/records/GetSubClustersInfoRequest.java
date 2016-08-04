@@ -26,6 +26,10 @@ import org.apache.hadoop.yarn.util.Records;
 /**
  * Request class to obtain information about all sub-clusters that are
  * participating in federation.
+ *
+ * If filterInactiveSubClusters is set to true, only active sub-clusters will be
+ * returned; otherwise, all sub-clusters will be returned regardless of state.
+ * By default, filterInactiveSubClusters is true.
  */
 @Private
 @Unstable

@@ -53,6 +53,10 @@ public enum SubClusterState {
     return (this != SC_RUNNING && this != SC_NEW);
   }
 
+  public boolean isActive() {
+    return this == SC_RUNNING;
+  }
+
   public boolean isFinal() {
     return (this == SC_UNREGISTERED || this == SC_DECOMMISSIONED
         || this == SC_LOST);
