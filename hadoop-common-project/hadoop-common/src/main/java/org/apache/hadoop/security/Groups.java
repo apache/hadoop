@@ -18,14 +18,17 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
@@ -33,6 +36,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -42,7 +46,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Timer;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -62,8 +65,8 @@ public class Groups {
   private final GroupMappingServiceProvider impl;
 
   private final LoadingCache<String, List<String>> cache;
-  private final Map<String, List<String>> staticUserToGroupsMap =
-      new HashMap<String, List<String>>();
+  private final AtomicReference<Map<String, List<String>>> staticMapRef =
+      new AtomicReference<>();
   private final long cacheTimeout;
   private final long negativeCacheTimeout;
   private final long warningDeltaMs;
@@ -129,6 +132,8 @@ public class Groups {
         CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT);
     Collection<String> mappings = StringUtils.getStringCollection(
         staticMapping, ";");
+    Map<String, List<String>> staticUserToGroupsMap =
+        new HashMap<String, List<String>>();
     for (String users : mappings) {
       Collection<String> userToGroups = StringUtils.getStringCollection(users,
           "=");
@@ -147,6 +152,8 @@ public class Groups {
       }
       staticUserToGroupsMap.put(user, groups);
     }
+    staticMapRef.set(
+        staticUserToGroupsMap.isEmpty() ? null : staticUserToGroupsMap);
   }
 
   private boolean isNegativeCacheEnabled() {
@@ -166,9 +173,12 @@ public class Groups {
    */
   public List<String> getGroups(final String user) throws IOException {
     // No need to lookup for groups of static users
-    List<String> staticMapping = staticUserToGroupsMap.get(user);
-    if (staticMapping != null) {
-      return staticMapping;
+    Map<String, List<String>> staticUserToGroupsMap = staticMapRef.get();
+    if (staticUserToGroupsMap != null) {
+      List<String> staticMapping = staticUserToGroupsMap.get(user);
+      if (staticMapping != null) {
+        return staticMapping;
+      }
     }
 
     // Check the negative cache first
@@ -228,7 +238,9 @@ public class Groups {
         throw noGroupsForUser(user);
       }
 
-      return groups;
+      // return immutable de-duped list
+      return Collections.unmodifiableList(
+          new ArrayList<>(new LinkedHashSet<>(groups)));
     }
 
     /**

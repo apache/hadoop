@@ -8,6 +8,8 @@ Release 2.7.5 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-13442. Optimize UGI group lookups. (Daryn Sharp via kihwal, shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
