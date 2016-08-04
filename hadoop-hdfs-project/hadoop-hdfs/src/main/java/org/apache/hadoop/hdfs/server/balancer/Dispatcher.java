@@ -734,7 +734,7 @@ public class Dispatcher {
             long blockSize = pendingBlock.block.getNumBytes();
             incScheduledSize(-blockSize);
             task.size -= blockSize;
-            if (task.size == 0) {
+            if (task.size <= 0) {
               i.remove();
             }
             return pendingBlock;
