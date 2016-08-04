@@ -113,6 +113,7 @@ protected:
 
 TEST(BadDataNodeTest, TestNoNodes) {
   auto file_info = std::make_shared<struct FileInfo>();
+  file_info->file_length_ = 1; //To avoid running into EOF
   file_info->blocks_.push_back(LocatedBlockProto());
   LocatedBlockProto & block = file_info->blocks_[0];
   ExtendedBlockProto *b = block.mutable_b();
@@ -152,6 +153,7 @@ TEST(BadDataNodeTest, TestNoNodes) {
 
 TEST(BadDataNodeTest, NNEventCallback) {
   auto file_info = std::make_shared<struct FileInfo>();
+  file_info->file_length_ = 1; //To avoid running into EOF
   file_info->blocks_.push_back(LocatedBlockProto());
   LocatedBlockProto & block = file_info->blocks_[0];
   ExtendedBlockProto *b = block.mutable_b();
@@ -215,6 +217,7 @@ TEST(BadDataNodeTest, NNEventCallback) {
 
 TEST(BadDataNodeTest, RecoverableError) {
   auto file_info = std::make_shared<struct FileInfo>();
+  file_info->file_length_ = 1; //To avoid running into EOF
   file_info->blocks_.push_back(LocatedBlockProto());
   LocatedBlockProto & block = file_info->blocks_[0];
   ExtendedBlockProto *b = block.mutable_b();
@@ -265,6 +268,7 @@ TEST(BadDataNodeTest, RecoverableError) {
 
 TEST(BadDataNodeTest, InternalError) {
   auto file_info = std::make_shared<struct FileInfo>();
+  file_info->file_length_ = 1; //To avoid running into EOF
   file_info->blocks_.push_back(LocatedBlockProto());
   LocatedBlockProto & block = file_info->blocks_[0];
   ExtendedBlockProto *b = block.mutable_b();

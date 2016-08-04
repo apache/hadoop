@@ -16,5 +16,4 @@
 # limitations under the License.
 #
 
-add_subdirectory(c)
-add_subdirectory(cpp)
+add_subdirectory(cat)

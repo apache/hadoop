@@ -17,6 +17,7 @@
  */
 
 #include "common/util.h"
+#include "common/util_c.h"
 
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <exception>
@@ -106,4 +107,8 @@ std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
   return err;
 }
 
+}
+
+void ShutdownProtobufLibrary_C() {
+  google::protobuf::ShutdownProtobufLibrary();
 }

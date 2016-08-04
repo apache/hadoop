@@ -45,9 +45,12 @@ class Status {
   static Status AuthenticationFailed();
   static Status Canceled();
   static Status PathNotFound(const char *msg);
+  static Status InvalidOffset(const char *msg);
 
   // success
   bool ok() const { return code_ == 0; }
+
+  bool is_invalid_offset() const { return code_ == kInvalidOffset; }
 
   // Returns the string "OK" for success.
   std::string ToString() const;
@@ -73,6 +76,7 @@ class Status {
     kAccessControlException = 258,
     kStandbyException = 259,
     kSnapshotProtocolException = 260,
+    kInvalidOffset = 261,
   };
 
   std::string get_exception_class_str() const {

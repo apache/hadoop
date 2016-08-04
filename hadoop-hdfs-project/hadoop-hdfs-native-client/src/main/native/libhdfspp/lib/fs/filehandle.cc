@@ -48,11 +48,11 @@ FileHandleImpl::FileHandleImpl(const std::string & cluster_name,
 }
 
 void FileHandleImpl::PositionRead(
-    void *buf, size_t nbyte, uint64_t offset,
+    void *buf, size_t buf_size, uint64_t offset,
     const std::function<void(const Status &, size_t)> &handler) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::PositionRead("
                          << FMT_THIS_ADDR << ", buf=" << buf
-                         << ", nbyte=" << nbyte << ") called");
+                         << ", buf_size=" << buf_size << ") called");
 
   /* prevent usage after cancelation */
   if(cancel_state_->is_canceled()) {
@@ -71,13 +71,14 @@ void FileHandleImpl::PositionRead(
     handler(status, bytes_read);
   };
 
-  AsyncPreadSome(offset, asio::buffer(buf, nbyte), bad_node_tracker_, callback);
+  AsyncPreadSome(offset, asio::buffer(buf, buf_size), bad_node_tracker_, callback);
 }
 
-Status FileHandleImpl::PositionRead(void *buf, size_t *nbyte, off_t offset) {
+Status FileHandleImpl::PositionRead(void *buf, size_t buf_size, off_t offset, size_t *bytes_read) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::[sync]PositionRead("
                          << FMT_THIS_ADDR << ", buf=" << buf
-                         << ", nbyte=" << *nbyte << ") called");
+                         << ", buf_size=" << buf_size
+                         << ", offset=" << offset << ") called");
 
   auto callstate = std::make_shared<std::promise<std::tuple<Status, size_t>>>();
   std::future<std::tuple<Status, size_t>> future(callstate->get_future());
@@ -87,7 +88,7 @@ Status FileHandleImpl::PositionRead(void *buf, size_t *nbyte, off_t offset) {
     callstate->set_value(std::make_tuple(s,bytes));
   };
 
-  PositionRead(buf, *nbyte, offset, callback);
+  PositionRead(buf, buf_size, offset, callback);
 
   /* wait for async to finish */
   auto returnstate = future.get();
@@ -97,21 +98,21 @@ Status FileHandleImpl::PositionRead(void *buf, size_t *nbyte, off_t offset) {
     return stat;
   }
 
-  *nbyte = std::get<1>(returnstate);
+  *bytes_read = std::get<1>(returnstate);
   return stat;
 }
 
-Status FileHandleImpl::Read(void *buf, size_t *nbyte) {
+Status FileHandleImpl::Read(void *buf, size_t buf_size, size_t *bytes_read) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::Read("
                          << FMT_THIS_ADDR << ", buf=" << buf
-                         << ", nbyte=" << *nbyte << ") called");
+                         << ", buf_size=" << buf_size << ") called");
 
-  Status stat = PositionRead(buf, nbyte, offset_);
+  Status stat = PositionRead(buf, buf_size, offset_, bytes_read);
   if(!stat.ok()) {
     return stat;
   }
 
-  offset_ += *nbyte;
+  offset_ += *bytes_read;
   return Status::OK();
 }
 
@@ -176,6 +177,11 @@ void FileHandleImpl::AsyncPreadSome(
 
   if(cancel_state_->is_canceled()) {
     handler(Status::Canceled(), "", 0);
+    return;
+  }
+
+  if(offset >= file_info_->file_length_){
+    handler(Status::InvalidOffset("AsyncPreadSome: trying to begin a read past the EOF"), "", 0);
     return;
   }
 

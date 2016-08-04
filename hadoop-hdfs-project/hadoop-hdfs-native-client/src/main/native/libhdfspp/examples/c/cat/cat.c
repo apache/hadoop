@@ -22,68 +22,14 @@
   Doesn't deal with any flags for now, will just attempt to read the whole file.
 */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-
 #include "hdfspp/hdfs_ext.h"
+#include "uriparser2/uriparser2.h"
+#include "common/util_c.h"
 
 #define SCHEME "hdfs"
-#define MAX_STRING 1024
-
-struct Uri {
-  int valid;
-  char host[MAX_STRING];
-  int port;
-  char path[MAX_STRING];
-};
-
-int min(int a, int b) {
-    return a < b ? a : b;
-}
-
-void parse_uri(const char * uri_string, struct Uri * uri) {
-    uri->valid = 0;
-    uri->host[0] = 0;
-    uri->port = -1;
-    uri->path[0] = 0;
-
-    // most start with hdfs scheme
-    const char * remaining;
-    const char * scheme_end = strstr(uri_string, "://");
-    if (scheme_end != NULL) {
-      if (strncmp(uri_string, SCHEME, strlen(SCHEME)) != 0)
-        return;
-
-      remaining = scheme_end + 3;
-
-      // parse authority
-      const char * authority_end = strstr(remaining, "/");
-      if (authority_end != NULL) {
-        char authority[MAX_STRING];
-        strncpy(authority, remaining, min(authority_end - remaining, sizeof(authority)));
-        remaining = authority_end;
-
-        char * host_port_separator = strstr(authority, ":");
-        if (host_port_separator != NULL) {
-          errno = 0;
-          uri->port = strtol(host_port_separator + 1, NULL, 10);
-          if (errno != 0)
-            return;
-
-          // Terminate authority at the new end of the host
-          *host_port_separator = 0;
-        }
-        strncpy(uri->host, authority, sizeof(uri->host));
-      }
-      strncpy(uri->path, remaining, sizeof(uri->path));
-    } else {
-      // Absolute path
-      strncpy(uri->path, uri_string, sizeof(uri->path));
-    }
-
-    uri->valid = 1;
-};
 
 int main(int argc, char** argv) {
 
@@ -93,36 +39,46 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  URI * uri = NULL;
   const char * uri_path = argv[1];
-  struct Uri uri;
-  parse_uri(uri_path, &uri);
-  if (!uri.valid) {
-    fprintf(stderr, "malformed URI: %s\n", uri_path);
+
+  //Separate check for scheme is required, otherwise uriparser2.h library causes memory issues under valgrind
+  const char * scheme_end = strstr(uri_path, "://");
+  if (scheme_end) {
+    if (strncmp(uri_path, SCHEME, strlen(SCHEME)) != 0) {
+      fprintf(stderr, "Scheme %.*s:// is not supported.\n", (int) (scheme_end - uri_path), uri_path);
+      return 1;
+    } else {
+      uri = uri_parse(uri_path);
+    }
+  }
+  if (!uri) {
+    fprintf(stderr, "Malformed URI: %s\n", uri_path);
     return 1;
   }
 
   struct hdfsBuilder* builder = hdfsNewBuilder();
-  if (*uri.host != 0)
-    hdfsBuilderSetNameNode(builder, uri.host);
-  if (uri.port != -1)
-    hdfsBuilderSetNameNodePort(builder, uri.port);
+  if (uri->host)
+    hdfsBuilderSetNameNode(builder, uri->host);
+  if (uri->port != 0)
+    hdfsBuilderSetNameNodePort(builder, uri->port);
 
   hdfsFS fs = hdfsBuilderConnect(builder);
   if (fs == NULL) {
     hdfsGetLastError(error_text, sizeof(error_text));
-    const char * host = uri.host[0] ? uri.host : "<default>";
-    int port = uri.port;
-    if (-1 == port)
+    const char * host = uri->host ? uri->host : "<default>";
+    int port = uri->port;
+    if (port == 0)
       port = 8020;
     fprintf(stderr, "Unable to connect to %s:%d, hdfsConnect returned null.\n%s\n",
             host, port, error_text);
     return 1;
   }
 
-  hdfsFile file = hdfsOpenFile(fs, uri.path, 0, 0, 0, 0);
+  hdfsFile file = hdfsOpenFile(fs, uri->path, 0, 0, 0, 0);
   if (NULL == file) {
     hdfsGetLastError(error_text, sizeof(error_text));
-    fprintf(stderr, "Unable to open file %s: %s\n", uri.path, error_text );
+    fprintf(stderr, "Unable to open file %s: %s\n", uri->path, error_text );
     hdfsDisconnect(fs);
     hdfsFreeBuilder(builder);
     return 1;
@@ -158,5 +114,8 @@ int main(int argc, char** argv) {
   }
 
   hdfsFreeBuilder(builder);
+  free(uri);
+  // Clean up static data and prevent valgrind memory leaks
+  ShutdownProtobufLibrary_C();
   return 0;
 }

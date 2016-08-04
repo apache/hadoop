@@ -59,32 +59,27 @@ public:
                   std::shared_ptr<LibhdfsEvents> event_handlers);
 
   /*
-   * [Some day reliably] Reads a particular offset into the data file.
-   * On error, bytes_read returns the number of bytes successfully read; on
-   * success, bytes_read will equal nbyte
+   * Reads the file at the specified offset into the buffer.
+   * bytes_read returns the number of bytes successfully read on success
+   * and on error. Status::InvalidOffset is returned when trying to begin
+   * a read past the EOF.
    */
   void PositionRead(
     void *buf,
-    size_t nbyte,
+    size_t buf_size,
     uint64_t offset,
     const std::function<void(const Status &status, size_t bytes_read)> &handler
     ) override;
 
   /**
-   * Note:  The nbyte argument for Read and Pread as well as the
-   * offset argument for Seek are in/out parameters.
-   *
-   * For Read and Pread the value referenced by nbyte should
-   * be set to the number of bytes to read. Before returning
-   * the value referenced will be set by the callee to the number
-   * of bytes that was successfully read.
-   *
-   * For Seek the value referenced by offset should be the number
-   * of bytes to shift from the specified whence position.  The
-   * referenced value will be set to the new offset before returning.
-   **/
-  Status PositionRead(void *buf, size_t *bytes_read, off_t offset) override;
-  Status Read(void *buf, size_t *nbyte) override;
+   *  Reads the file at the specified offset into the buffer.
+   *  @param buf        output buffer
+   *  @param buf_size   size of the output buffer
+   *  @param offset     offset at which to start reading
+   *  @param bytes_read number of bytes successfully read
+   */
+  Status PositionRead(void *buf, size_t buf_size, off_t offset, size_t *bytes_read) override;
+  Status Read(void *buf, size_t buf_size, size_t *bytes_read) override;
   Status Seek(off_t *offset, std::ios_base::seekdir whence) override;
 
 
@@ -95,6 +90,7 @@ public:
    * If an error occurs during connection or transfer, the callback will be
    * called with bytes_read equal to the number of bytes successfully transferred.
    * If no data nodes can be found, status will be Status::ResourceUnavailable.
+   * If trying to begin a read past the EOF, status will be Status::InvalidOffset.
    *
    */
   void AsyncPreadSome(size_t offset, const MutableBuffers &buffers,
