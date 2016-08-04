@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -121,8 +120,7 @@ class FSDirMkdirOp {
   static Map.Entry<INodesInPath, String> createAncestorDirectories(
       FSDirectory fsd, INodesInPath iip, PermissionStatus permission)
       throws IOException {
-    final String last =
-        new String(iip.getLastLocalName(), StandardCharsets.UTF_8);
+    final String last = DFSUtil.bytes2String(iip.getLastLocalName());
     INodesInPath existing = iip.getExistingINodes();
     List<String> children = iip.getPath(existing.length(),
         iip.length() - existing.length());
@@ -190,7 +188,7 @@ class FSDirMkdirOp {
       throws IOException {
     assert fsd.hasWriteLock();
     existing = unprotectedMkdir(fsd, fsd.allocateNewInodeId(), existing,
-        localName.getBytes(StandardCharsets.UTF_8), perm, null, now());
+        DFSUtil.string2Bytes(localName), perm, null, now());
     if (existing == null) {
       return null;
     }

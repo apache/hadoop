@@ -38,7 +38,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_P
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -250,12 +249,7 @@ public class DFSUtil {
    * @return The decoded string
    */
   public static String bytes2String(byte[] bytes, int offset, int length) {
-    try {
-      return new String(bytes, offset, length, "UTF8");
-    } catch(UnsupportedEncodingException e) {
-      assert false : "UTF8 encoding is not supported ";
-    }
-    return null;
+    return DFSUtilClient.bytes2String(bytes, 0, bytes.length);
   }
 
   /**
