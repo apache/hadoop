@@ -441,8 +441,10 @@ public class TestUserGroupInformation {
     UserGroupInformation uugi = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
     assertEquals(USER_NAME, uugi.getUserName());
-    assertArrayEquals(new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME},
-                      uugi.getGroupNames());
+    String[] expected = new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+    assertArrayEquals(expected, uugi.getGroupNames());
+    assertArrayEquals(expected, uugi.getGroups().toArray(new String[0]));
+    assertEquals(GROUP1_NAME, uugi.getPrimaryGroupName());
   }
 
   @SuppressWarnings("unchecked") // from Mockito mocks

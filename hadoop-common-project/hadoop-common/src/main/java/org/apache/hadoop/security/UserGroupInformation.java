@@ -37,7 +37,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1467,11 +1466,11 @@ public class UserGroupInformation {
   }
 
   public String getPrimaryGroupName() throws IOException {
-    String[] groups = getGroupNames();
-    if (groups.length == 0) {
+    List<String> groups = getGroups();
+    if (groups.isEmpty()) {
       throw new IOException("There is no primary group for UGI " + this);
     }
-    return groups[0];
+    return groups.get(0);
   }
 
   /**
@@ -1584,26 +1583,35 @@ public class UserGroupInformation {
   }
 
   /**
+   * Get the group names for this user. {@ #getGroups(String)} is less
+   * expensive alternative when checking for a contained element.
+   * @return the list of users with the primary group first. If the command
+   *    fails, it returns an empty list.
+   */
+  public String[] getGroupNames() {
+    List<String> groups = getGroups();
+    return groups.toArray(new String[groups.size()]);
+  }
+
+  /**
    * Get the group names for this user.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
    */
-  public synchronized String[] getGroupNames() {
+  public List<String> getGroups() {
     ensureInitialized();
     try {
-      Set<String> result = new LinkedHashSet<String>
-        (groups.getGroups(getShortUserName()));
-      return result.toArray(new String[result.size()]);
+      return groups.getGroups(getShortUserName());
     } catch (IOException ie) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Failed to get groups for user " + getShortUserName()
             + " by " + ie);
         LOG.trace("TRACE", ie);
       }
-      return StringUtils.emptyStringArray;
+      return Collections.emptyList();
     }
   }
-  
+
   /**
    * Return the username.
    */
