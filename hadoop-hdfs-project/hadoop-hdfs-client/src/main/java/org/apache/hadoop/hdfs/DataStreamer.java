@@ -404,7 +404,6 @@ class DataStreamer extends Daemon {
                        ByteArrayManager byteArrayManage,
                        boolean isAppend, String[] favoredNodes,
                        EnumSet<AddBlockFlag> flags) {
-    this.block = block;
     this.dfsClient = dfsClient;
     this.src = src;
     this.progress = progress;
