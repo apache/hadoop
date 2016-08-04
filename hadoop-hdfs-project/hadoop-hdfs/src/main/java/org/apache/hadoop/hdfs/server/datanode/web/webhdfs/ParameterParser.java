@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -44,6 +43,7 @@ import org.apache.hadoop.security.token.Token;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -57,8 +57,8 @@ class ParameterParser {
   private final Map<String, List<String>> params;
 
   ParameterParser(QueryStringDecoder decoder, Configuration conf) {
-    this.path = decodeComponent(decoder.path().substring
-        (WEBHDFS_PREFIX_LENGTH), Charsets.UTF_8);
+    this.path = decodeComponent(decoder.path().substring(WEBHDFS_PREFIX_LENGTH),
+        StandardCharsets.UTF_8);
     this.params = decoder.parameters();
     this.conf = conf;
   }
@@ -131,7 +131,8 @@ class ParameterParser {
   }
 
   public EnumSet<CreateFlag> createFlag() {
-    String cf = decodeComponent(param(CreateFlagParam.NAME), Charsets.UTF_8);
+    String cf =
+        decodeComponent(param(CreateFlagParam.NAME), StandardCharsets.UTF_8);
 
     return new CreateFlagParam(cf).getValue();
   }

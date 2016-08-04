@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,7 +41,6 @@ import java.util.Map;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -84,7 +84,7 @@ public class DFSUtilClient {
    * Converts a string to a byte array using UTF8 encoding.
    */
   public static byte[] string2Bytes(String str) {
-    return str.getBytes(Charsets.UTF_8);
+    return str.getBytes(StandardCharsets.UTF_8);
   }
 
   /**
