@@ -311,11 +311,16 @@ public abstract class Shell {
       }
     }
 
+    // Use the bash-builtin instead of the Unix kill command (usually
+    // /bin/kill) as the bash-builtin supports "--" in all Hadoop supported
+    // OSes.
+    final String quotedPid = bashQuote(pid);
     if (isSetsidAvailable) {
-      // Use the shell-builtin as it support "--" in all Hadoop supported OSes
-      return new String[] {"kill", "-" + code, "--", "-" + pid};
+      return new String[] { "bash", "-c", "kill -" + code + " -- -" +
+          quotedPid };
     } else {
-      return new String[] {"kill", "-" + code, pid };
+      return new String[] { "bash", "-c", "kill -" + code + " " +
+          quotedPid };
     }
   }
 
