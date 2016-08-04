@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -45,26 +45,16 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
   public static String SEPERATOR = "mapreduce.output.textoutputformat.separator";
   protected static class LineRecordWriter<K, V>
     extends RecordWriter<K, V> {
-    private static final String utf8 = "UTF-8";
-    private static final byte[] newline;
-    static {
-      try {
-        newline = "\n".getBytes(utf8);
-      } catch (UnsupportedEncodingException uee) {
-        throw new IllegalArgumentException("can't find " + utf8 + " encoding");
-      }
-    }
+    private static final byte[] NEWLINE =
+      "\n".getBytes(StandardCharsets.UTF_8);
 
     protected DataOutputStream out;
     private final byte[] keyValueSeparator;
 
     public LineRecordWriter(DataOutputStream out, String keyValueSeparator) {
       this.out = out;
-      try {
-        this.keyValueSeparator = keyValueSeparator.getBytes(utf8);
-      } catch (UnsupportedEncodingException uee) {
-        throw new IllegalArgumentException("can't find " + utf8 + " encoding");
-      }
+      this.keyValueSeparator =
+        keyValueSeparator.getBytes(StandardCharsets.UTF_8);
     }
 
     public LineRecordWriter(DataOutputStream out) {
@@ -82,7 +72,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
         Text to = (Text) o;
         out.write(to.getBytes(), 0, to.getLength());
       } else {
-        out.write(o.toString().getBytes(utf8));
+        out.write(o.toString().getBytes(StandardCharsets.UTF_8));
       }
     }
 
@@ -103,7 +93,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       if (!nullValue) {
         writeObject(value);
       }
-      out.write(newline);
+      out.write(NEWLINE);
     }
 
     public synchronized 
