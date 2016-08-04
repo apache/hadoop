@@ -26,7 +26,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -2222,12 +2221,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     FsPermission perm = stat.getPermission();
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user = ugi.getShortUserName();
-    List<String> groups = Arrays.asList(ugi.getGroupNames());
     if (user.equals(stat.getOwner())) {
       if (perm.getUserAction().implies(mode)) {
         return;
       }
-    } else if (groups.contains(stat.getGroup())) {
+    } else if (ugi.getGroups().contains(stat.getGroup())) {
       if (perm.getGroupAction().implies(mode)) {
         return;
       }

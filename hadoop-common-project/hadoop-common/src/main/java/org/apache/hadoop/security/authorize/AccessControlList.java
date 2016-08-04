@@ -231,7 +231,7 @@ public class AccessControlList implements Writable {
     if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
     } else if (!groups.isEmpty()) {
-      for(String group: ugi.getGroupNames()) {
+      for (String group : ugi.getGroups()) {
         if (groups.contains(group)) {
           return true;
         }

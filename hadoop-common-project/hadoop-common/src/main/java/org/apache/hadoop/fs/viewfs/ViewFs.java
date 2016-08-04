@@ -843,14 +843,14 @@ public class ViewFs extends AbstractFileSystem {
     public FileStatus getFileStatus(final Path f) throws IOException {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
+          PERMISSION_555, ugi.getUserName(), ugi.getPrimaryGroupName(),
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, null));
     }
     
     @Override
     public FileStatus getFileLinkStatus(final Path f)
-        throws FileNotFoundException {
+        throws IOException {
       // look up i internalDirs children - ignore first Slash
       INode<AbstractFileSystem> inode =
         theInternalDir.children.get(f.toUri().toString().substring(1)); 
@@ -863,13 +863,13 @@ public class ViewFs extends AbstractFileSystem {
         INodeLink<AbstractFileSystem> inodelink = 
           (INodeLink<AbstractFileSystem>) inode;
         result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
-            PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
+            PERMISSION_555, ugi.getUserName(), ugi.getPrimaryGroupName(),
             inodelink.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
       } else {
         result = new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
+          PERMISSION_555, ugi.getUserName(), ugi.getPrimaryGroupName(),
           new Path(inode.fullPath).makeQualified(
               myUri, null));
       }
@@ -908,7 +908,7 @@ public class ViewFs extends AbstractFileSystem {
 
           result[i++] = new FileStatus(0, false, 0, 0,
             creationTime, creationTime,
-            PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
+            PERMISSION_555, ugi.getUserName(), ugi.getPrimaryGroupName(),
             link.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
@@ -1042,7 +1042,7 @@ public class ViewFs extends AbstractFileSystem {
     public AclStatus getAclStatus(Path path) throws IOException {
       checkPathIsSlash(path);
       return new AclStatus.Builder().owner(ugi.getUserName())
-          .group(ugi.getGroupNames()[0])
+          .group(ugi.getPrimaryGroupName())
           .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
           .stickyBit(false).build();
     }
