@@ -599,7 +599,19 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     return DFSUtil.bytes2String(path);
   }
-  
+
+  public byte[][] getPathComponents() {
+    int n = 0;
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      n++;
+    }
+    byte[][] components = new byte[n][];
+    for (INode inode = this; inode != null; inode = inode.getParent()) {
+      components[--n] = inode.getLocalNameBytes();
+    }
+    return components;
+  }
+
   @Override
   public String toString() {
     return getLocalName();
