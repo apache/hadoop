@@ -173,6 +173,10 @@ static int Error(const Status &stat) {
       errnum = ENOTEMPTY;
       default_message = "Directory is not empty";
       break;
+    case Status::Code::kInvalidOffset:
+      errnum = Status::Code::kInvalidOffset;
+      default_message = "Trying to begin a read past the EOF";
+      break;
     default:
       errnum = ENOSYS;
       default_message = "Error: unrecognised code";
@@ -754,8 +758,8 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
       return -1;
     }
 
-    size_t len = length;
-    Status stat = file->get_impl()->PositionRead(buffer, &len, position);
+    size_t len = 0;
+    Status stat = file->get_impl()->PositionRead(buffer, length, position, &len);
     if(!stat.ok()) {
       return Error(stat);
     }
@@ -775,8 +779,8 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
       return -1;
     }
 
-    size_t len = length;
-    Status stat = file->get_impl()->Read(buffer, &len);
+    size_t len = 0;
+    Status stat = file->get_impl()->Read(buffer, length, &len);
     if (!stat.ok()) {
       return Error(stat);
     }

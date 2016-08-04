@@ -127,6 +127,10 @@ Status Status::Canceled() {
   return Status(kOperationCanceled, "Operation canceled");
 }
 
+Status Status::InvalidOffset(const char *msg){
+  return Status(kInvalidOffset, msg);
+}
+
 std::string Status::ToString() const {
   if (code_ == kOk) {
     return "OK";

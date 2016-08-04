@@ -82,18 +82,18 @@ public:
    * stops at the block boundary.
    *
    * @param buf the pointer to the buffer
-   * @param nbyte the size of the buffer
+   * @param buf_size the size of the buffer
    * @param offset the offset the file
    *
    * The handler returns the datanode that serves the block and the number of
-   * bytes has read.
+   * bytes has read. Status::InvalidOffset is returned when trying to begin
+   * a read past the EOF.
    **/
   virtual void
-  PositionRead(void *buf, size_t nbyte, uint64_t offset,
+  PositionRead(void *buf, size_t buf_size, uint64_t offset,
                const std::function<void(const Status &, size_t)> &handler) = 0;
-
-  virtual Status PositionRead(void *buf, size_t *nbyte, off_t offset) = 0;
-  virtual Status Read(void *buf, size_t *nbyte) = 0;
+  virtual Status PositionRead(void *buf, size_t buf_size, off_t offset, size_t *bytes_read) = 0;
+  virtual Status Read(void *buf, size_t buf_size, size_t *bytes_read) = 0;
   virtual Status Seek(off_t *offset, std::ios_base::seekdir whence) = 0;
 
   /**

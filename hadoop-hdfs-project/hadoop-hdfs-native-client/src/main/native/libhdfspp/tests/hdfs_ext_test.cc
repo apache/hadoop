@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-//#include "expect.h"
-
 #include "hdfspp_mini_dfs.h"
 #include "hdfspp/hdfs_ext.h"
 #include <chrono>
@@ -293,6 +291,41 @@ TEST_F(HdfsExtTest, TestChmodChown) {
   hdfsFreeFileInfo(file_info, 1);
 }
 
+//Testing EOF
+TEST_F(HdfsExtTest, TestEOF) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Write to a file
+  errno = 0;
+  int size = 256;
+  std::string path = "/eofTest";
+  hdfsFile file = hdfsOpenFile(fs, path.c_str(), O_WRONLY, 0, 0, 0);
+  EXPECT_NE(nullptr, file);
+  void * buf = malloc(size);
+  memset(buf, ' ', size);
+  EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
+  free(buf);
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+  EXPECT_EQ(0, errno);
+
+  //Test normal reading (no EOF)
+  char buffer[300];
+  EXPECT_EQ(0, errno);
+  file = hdfsOpenFile(fs, path.c_str(), O_RDONLY, 0, 0, 0);
+  EXPECT_EQ(size, hdfsPread(fs, file, 0, buffer, sizeof(buffer)));
+  //Read executes correctly, but causes a warning (captured in HDFS-10595)
+  //and sets errno to EINPROGRESS 115 : Operation now in progress
+  errno = 0;
+
+  //Test reading at offset past the EOF
+  EXPECT_EQ(-1, hdfsPread(fs, file, sizeof(buffer), buffer, sizeof(buffer)));
+  EXPECT_EQ(Status::kInvalidOffset, errno);
+
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+  EXPECT_EQ(0, errno);
+}
 
 }
 
