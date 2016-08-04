@@ -22,6 +22,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -1045,14 +1046,15 @@ public class BlockManager implements BlockStatsMXBean {
     final boolean isCorrupt = numCorruptReplicas != 0 &&
         numCorruptReplicas == numNodes;
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptReplicas;
-    final DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
+    DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
     final byte[] blockIndices = blk.isStriped() ? new byte[numMachines] : null;
     int j = 0, i = 0;
     if (numMachines > 0) {
       for(DatanodeStorageInfo storage : blocksMap.getStorages(blk)) {
         final DatanodeDescriptor d = storage.getDatanodeDescriptor();
         final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
-        if (isCorrupt || (!replicaCorrupt)) {
+        if ((isCorrupt || (!replicaCorrupt)) &&
+            storage.getState() != State.FAILED) {
           machines[j++] = storage;
           // TODO this can be more efficient
           if (blockIndices != null) {
@@ -1063,6 +1065,11 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     }
+
+    if(j < machines.length) {
+      machines = Arrays.copyOf(machines, j);
+    }
+
     assert j == machines.length :
       "isCorrupt: " + isCorrupt + 
       " numMachines: " + numMachines +
