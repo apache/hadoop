@@ -2689,6 +2689,13 @@
   <!-- Other Configuration -->
 
   <property>
+    <description>
+      Machine list file to be loaded by the FederationSubCluster Resolver
+    </description>
+    <name>yarn.federation.machine-list</name>
+  </property>
+
+  <property>
     <description>The interval that the yarn client library uses to poll the
     completion status of the asynchronous API of application client protocol.
     </description>
