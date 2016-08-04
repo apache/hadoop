@@ -50,6 +50,11 @@ public class NativeRSRawDecoder extends AbstractNativeRawDecoder {
     destroyImpl();
   }
 
+  @Override
+  public boolean preferDirectBuffer() {
+    return true;
+  }
+
   private native void initImpl(int numDataUnits, int numParityUnits);
 
   private native void decodeImpl(
