@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -120,6 +121,15 @@ public abstract class INodeAttributeProvider {
 
   public abstract INodeAttributes getAttributes(String[] pathElements,
       INodeAttributes inode);
+
+  public INodeAttributes getAttributes(byte[][] components,
+      INodeAttributes inode) {
+    String[] elements = new String[components.length];
+    for (int i = 0; i < elements.length; i++) {
+      elements[i] = DFSUtil.bytes2String(components[i]);
+    }
+    return getAttributes(elements, inode);
+  }
 
   /**
    * Can be over-ridden by implementations to provide a custom Access Control
