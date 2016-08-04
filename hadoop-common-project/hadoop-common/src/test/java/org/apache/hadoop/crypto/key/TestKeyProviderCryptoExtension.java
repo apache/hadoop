@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.crypto.key;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -27,6 +31,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -131,5 +136,208 @@ public class TestKeyProviderCryptoExtension {
 
     assertArrayEquals("Wrong key material from decryptEncryptedKey",
         manualMaterial, apiMaterial);
+  }
+
+  @Test
+  public void testNonDefaultCryptoExtensionSelectionWithCachingKeyProvider()
+          throws Exception {
+    Configuration config = new Configuration();
+    KeyProvider localKp = new DummyCryptoExtensionKeyProvider(config);
+    localKp = new CachingKeyProvider(localKp, 30000, 30000);
+    EncryptedKeyVersion localEkv = getEncryptedKeyVersion(config, localKp);
+    Assert.assertEquals("dummyFakeKey@1",
+            localEkv.getEncryptionKeyVersionName());
+  }
+
+  @Test
+  public void testDefaultCryptoExtensionSelectionWithCachingKeyProvider()
+    throws Exception {
+    Configuration config = new Configuration();
+    KeyProvider localKp =
+            new UserProvider.Factory().
+                    createProvider(new URI("user:///"), config);
+    localKp = new CachingKeyProvider(localKp, 30000, 30000);
+    EncryptedKeyVersion localEkv = getEncryptedKeyVersion(config, localKp);
+    Assert.assertEquals(ENCRYPTION_KEY_NAME+"@0",
+            localEkv.getEncryptionKeyVersionName());
+  }
+
+  @Test
+  public void testNonDefaultCryptoExtensionSelectionOnKeyProviderExtension()
+    throws Exception {
+    Configuration config = new Configuration();
+    KeyProvider localKp = new UserProvider.Factory().
+            createProvider(new URI("user:///"), config);
+    localKp = new DummyCachingCryptoExtensionKeyProvider(localKp, 30000, 30000);
+    EncryptedKeyVersion localEkv = getEncryptedKeyVersion(config, localKp);
+    Assert.assertEquals("dummyCachingFakeKey@1",
+            localEkv.getEncryptionKeyVersionName());
+  }
+
+  private EncryptedKeyVersion getEncryptedKeyVersion(Configuration config,
+                                                     KeyProvider localKp)
+          throws IOException, GeneralSecurityException {
+    KeyProvider.Options localOptions = new KeyProvider.Options(config);
+    localOptions.setCipher(CIPHER);
+    localOptions.setBitLength(128);
+    KeyVersion localEncryptionKey =
+            localKp.createKey(ENCRYPTION_KEY_NAME,
+                    SecureRandom.getSeed(16), localOptions);
+    KeyProviderCryptoExtension localKpExt =
+            KeyProviderCryptoExtension.
+                    createKeyProviderCryptoExtension(localKp);
+    return localKpExt.generateEncryptedKey(localEncryptionKey.getName());
+  }
+
+  /**
+   * Dummy class to test that this key provider is chosen to
+   * provide CryptoExtension services over the DefaultCryptoExtension.
+   */
+  public class DummyCryptoExtensionKeyProvider extends KeyProvider
+          implements KeyProviderCryptoExtension.CryptoExtension {
+
+    private KeyProvider kp;
+    private KeyVersion kv;
+    private EncryptedKeyVersion ekv;
+
+    public DummyCryptoExtensionKeyProvider(Configuration conf) {
+      super(conf);
+      conf = new Configuration();
+      try {
+        this.kp = new UserProvider.Factory().createProvider(
+                new URI("user:///"), conf);
+        this.kv = new KeyVersion(ENCRYPTION_KEY_NAME,
+                "dummyFakeKey@1", new byte[16]);
+        this.ekv = new EncryptedKeyVersion(ENCRYPTION_KEY_NAME,
+                "dummyFakeKey@1", new byte[16], kv);
+      } catch (URISyntaxException e) {
+        fail(e.getMessage());
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+    }
+
+    @Override
+    public void warmUpEncryptedKeys(String... keyNames) throws IOException {
+
+    }
+
+    @Override
+    public void drain(String keyName) {
+
+    }
+
+    @Override
+    public EncryptedKeyVersion generateEncryptedKey(String encryptionKeyName)
+            throws IOException, GeneralSecurityException {
+      return this.ekv;
+    }
+
+    @Override
+    public KeyVersion decryptEncryptedKey(
+            EncryptedKeyVersion encryptedKeyVersion)
+            throws IOException, GeneralSecurityException {
+      return kv;
+    }
+
+    @Override
+    public KeyVersion getKeyVersion(String versionName)
+            throws IOException {
+      return this.kp.getKeyVersion(versionName);
+    }
+
+    @Override
+    public List<String> getKeys() throws IOException {
+      return this.kp.getKeys();
+    }
+
+    @Override
+    public List<KeyVersion> getKeyVersions(String name)
+            throws IOException {
+      return this.kp.getKeyVersions(name);
+    }
+
+    @Override
+    public Metadata getMetadata(String name)
+            throws IOException {
+      return this.kp.getMetadata(name);
+    }
+
+    @Override
+    public KeyVersion createKey(String name, byte[] material,
+                                Options localOptions) throws IOException {
+      return this.kp.createKey(name, material, localOptions);
+    }
+
+    @Override
+    public void deleteKey(String name) throws IOException {
+      this.kp.deleteKey(name);
+    }
+
+    @Override
+    public KeyVersion rollNewVersion(String name,
+                                     byte[] material) throws IOException {
+      return this.kp.rollNewVersion(name, material);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      this.kp.flush();
+    }
+  }
+
+  /**
+   * Dummy class to verify that CachingKeyProvider is used to
+   * provide CryptoExtension services if the CachingKeyProvider itself
+   * implements CryptoExtension.
+   */
+  public class DummyCachingCryptoExtensionKeyProvider
+          extends CachingKeyProvider
+          implements KeyProviderCryptoExtension.CryptoExtension {
+    private KeyProvider kp;
+    private KeyVersion kv;
+    private EncryptedKeyVersion ekv;
+
+    public DummyCachingCryptoExtensionKeyProvider(KeyProvider keyProvider,
+                                                  long keyTimeoutMillis,
+                                                  long currKeyTimeoutMillis) {
+      super(keyProvider, keyTimeoutMillis, currKeyTimeoutMillis);
+      conf = new Configuration();
+      try {
+        this.kp = new UserProvider.Factory().createProvider(
+                new URI("user:///"), conf);
+        this.kv = new KeyVersion(ENCRYPTION_KEY_NAME,
+                "dummyCachingFakeKey@1", new byte[16]);
+        this.ekv = new EncryptedKeyVersion(ENCRYPTION_KEY_NAME,
+                "dummyCachingFakeKey@1", new byte[16], kv);
+      } catch (URISyntaxException e) {
+        fail(e.getMessage());
+      } catch (IOException e) {
+        fail(e.getMessage());
+      }
+    }
+
+    @Override
+    public void warmUpEncryptedKeys(String... keyNames) throws IOException {
+
+    }
+
+    @Override
+    public void drain(String keyName) {
+
+    }
+
+    @Override
+    public EncryptedKeyVersion generateEncryptedKey(String encryptionKeyName)
+            throws IOException, GeneralSecurityException {
+      return this.ekv;
+    }
+
+    @Override
+    public KeyVersion decryptEncryptedKey(
+            EncryptedKeyVersion encryptedKeyVersion)
+            throws IOException, GeneralSecurityException {
+      return kv;
+    }
   }
 }

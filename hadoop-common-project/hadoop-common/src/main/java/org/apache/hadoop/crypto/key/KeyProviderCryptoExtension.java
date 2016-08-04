@@ -394,7 +394,12 @@ public class KeyProviderCryptoExtension extends
    * <p/>
    * If the given <code>KeyProvider</code> implements the
    * {@link CryptoExtension} interface the <code>KeyProvider</code> itself
-   * will provide the extension functionality, otherwise a default extension
+   * will provide the extension functionality.
+   * If the given <code>KeyProvider</code> implements the
+   * {@link KeyProviderExtension} interface and the KeyProvider being
+   * extended by the <code>KeyProvider</code> implements the
+   * {@link CryptoExtension} interface, the KeyProvider being extended will
+   * provide the extension functionality. Otherwise, a default extension
    * implementation will be used.
    *
    * @param keyProvider <code>KeyProvider</code> to use to create the
@@ -404,9 +409,19 @@ public class KeyProviderCryptoExtension extends
    */
   public static KeyProviderCryptoExtension createKeyProviderCryptoExtension(
       KeyProvider keyProvider) {
-    CryptoExtension cryptoExtension = (keyProvider instanceof CryptoExtension)
-                         ? (CryptoExtension) keyProvider
-                         : new DefaultCryptoExtension(keyProvider);
+    CryptoExtension cryptoExtension = null;
+    if (keyProvider instanceof CryptoExtension) {
+      cryptoExtension = (CryptoExtension) keyProvider;
+    } else if (keyProvider instanceof KeyProviderExtension &&
+            ((KeyProviderExtension)keyProvider).getKeyProvider() instanceof
+                    KeyProviderCryptoExtension.CryptoExtension) {
+      KeyProviderExtension keyProviderExtension =
+              (KeyProviderExtension)keyProvider;
+      cryptoExtension =
+              (CryptoExtension)keyProviderExtension.getKeyProvider();
+    } else {
+      cryptoExtension = new DefaultCryptoExtension(keyProvider);
+    }
     return new KeyProviderCryptoExtension(keyProvider, cryptoExtension);
   }
 
