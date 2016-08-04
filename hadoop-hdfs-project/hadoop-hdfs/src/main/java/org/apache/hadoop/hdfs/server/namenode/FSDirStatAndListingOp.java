@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static org.apache.hadoop.util.Time.now;
@@ -55,8 +54,7 @@ class FSDirStatAndListingOp {
       byte[] startAfter, boolean needLocation) throws IOException {
     byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(srcArg);
-    final String startAfterString =
-        new String(startAfter, StandardCharsets.UTF_8);
+    final String startAfterString = DFSUtil.bytes2String(startAfter);
     String src = null;
 
     if (fsd.isPermissionEnabled()) {
