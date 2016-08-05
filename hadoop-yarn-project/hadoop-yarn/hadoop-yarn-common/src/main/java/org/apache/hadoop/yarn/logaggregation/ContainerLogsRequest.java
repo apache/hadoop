@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation;
 
-import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 
@@ -30,7 +30,7 @@ public class ContainerLogsRequest {
   private String appOwner;
   private boolean appFinished;
   private String outputLocalDir;
-  private List<String> logTypes;
+  private Set<String> logTypes;
   private long bytes;
   private ContainerState containerState;
 
@@ -52,7 +52,7 @@ public class ContainerLogsRequest {
   public ContainerLogsRequest(ApplicationId applicationId,
       boolean isAppFinished, String owner,
       String address, String httpAddress, String container, String localDir,
-      List<String> logs, long bytes, ContainerState containerState) {
+      Set<String> logs, long bytes, ContainerState containerState) {
     this.setAppId(applicationId);
     this.setAppFinished(isAppFinished);
     this.setAppOwner(owner);
@@ -121,11 +121,11 @@ public class ContainerLogsRequest {
     this.outputLocalDir = outputLocalDir;
   }
 
-  public List<String> getLogTypes() {
+  public Set<String> getLogTypes() {
     return logTypes;
   }
 
-  public void setLogTypes(List<String> logTypes) {
+  public void setLogTypes(Set<String> logTypes) {
     this.logTypes = logTypes;
   }
 
