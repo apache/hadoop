@@ -49,7 +49,7 @@ public class QueueCapacitiesInfo {
     float absCapacity;
     float absUsedCapacity;
     float absMaxCapacity;
-    Float maxAMLimitPercentage;
+    float maxAMLimitPercentage;
     for (String partitionName : capacities.getExistingNodeLabels()) {
       usedCapacity = capacities.getUsedCapacity(partitionName) * 100;
       capacity = capacities.getCapacity(partitionName) * 100;
@@ -68,7 +68,7 @@ public class QueueCapacitiesInfo {
       queueCapacitiesByPartition.add(new PartitionQueueCapacitiesInfo(
           partitionName, capacity, usedCapacity, maxCapacity, absCapacity,
           absUsedCapacity, absMaxCapacity,
-          considerAMUsage ? maxAMLimitPercentage : null));
+          considerAMUsage ? maxAMLimitPercentage : 0f));
     }
   }
 
