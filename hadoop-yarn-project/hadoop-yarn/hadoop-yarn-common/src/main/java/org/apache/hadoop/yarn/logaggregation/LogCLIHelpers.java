@@ -67,7 +67,7 @@ public class LogCLIHelpers implements Configurable {
     options.setContainerId(containerId);
     options.setNodeId(nodeId);
     options.setAppOwner(jobOwner);
-    List<String> logs = new ArrayList<String>();
+    Set<String> logs = new HashSet<String>();
     options.setLogTypes(logs);
     options.setBytes(Long.MAX_VALUE);
     return dumpAContainerLogsForLogType(options, false);
@@ -136,7 +136,7 @@ public class LogCLIHelpers implements Configurable {
     String nodeId = options.getNodeId();
     String containerId = options.getContainerId();
     String localDir = options.getOutputLocalDir();
-    List<String> logType = options.getLogTypes();
+    List<String> logType = new ArrayList<String>(options.getLogTypes());
     RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
         applicationId, jobOwner);
     if (nodeFiles == null) {
@@ -208,7 +208,7 @@ public class LogCLIHelpers implements Configurable {
     String jobOwner = options.getAppOwner();
     String containerId = options.getContainerId();
     String localDir = options.getOutputLocalDir();
-    List<String> logType = options.getLogTypes();
+    List<String> logType = new ArrayList<String>(options.getLogTypes());
     RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
         applicationId, jobOwner);
     if (nodeFiles == null) {
@@ -344,7 +344,7 @@ public class LogCLIHelpers implements Configurable {
     ApplicationId appId = options.getAppId();
     String appOwner = options.getAppOwner();
     String localDir = options.getOutputLocalDir();
-    List<String> logTypes = options.getLogTypes();
+    List<String> logTypes = new ArrayList<String>(options.getLogTypes());
     RemoteIterator<FileStatus> nodeFiles = getRemoteNodeFileDir(
         appId, appOwner);
     if (nodeFiles == null) {
