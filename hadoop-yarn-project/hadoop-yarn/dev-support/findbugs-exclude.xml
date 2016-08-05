@@ -519,6 +519,7 @@
     <Or>
       <Field name="rmContext" />
       <Field name="applications" />
+      <Field name="activitiesManager" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
@@ -552,4 +553,15 @@
     <Package name="org.apache.hadoop.yarn.api.records.impl.pb" />
     <Bug pattern="NP_BOOLEAN_RETURN_NULL" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivityNodeInfo"/>
+    <Or>
+      <Field name="allocationState" />
+      <Field name="diagnostic" />
+      <Field name="name" />
+      <Field name="requestPriority" />
+      <Field name="appPriority" />
+    </Or>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
+  </Match>
 </FindBugsFilter>

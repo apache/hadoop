@@ -24,6 +24,10 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
@@ -43,17 +47,25 @@ public abstract class AbstractContainerAllocator {
   FiCaSchedulerApp application;
   final ResourceCalculator rc;
   final RMContext rmContext;
-  
+  ActivitiesManager activitiesManager;
+
   public AbstractContainerAllocator(FiCaSchedulerApp application,
       ResourceCalculator rc, RMContext rmContext) {
+    this(application, rc, rmContext, null);
+  }
+
+  public AbstractContainerAllocator(FiCaSchedulerApp application,
+      ResourceCalculator rc, RMContext rmContext,
+      ActivitiesManager activitiesManager) {
     this.application = application;
     this.rc = rc;
     this.rmContext = rmContext;
+    this.activitiesManager = activitiesManager;
   }
 
   protected CSAssignment getCSAssignmentFromAllocateResult(
       Resource clusterResource, ContainerAllocation result,
-      RMContainer rmContainer) {
+      RMContainer rmContainer, FiCaSchedulerNode node) {
     // Handle skipped
     CSAssignment.SkippedType skipped =
         (result.getAllocationState() == AllocationState.APP_SKIPPED) ?
@@ -61,7 +73,7 @@ public abstract class AbstractContainerAllocator {
         CSAssignment.SkippedType.NONE;
     CSAssignment assignment = new CSAssignment(skipped);
     assignment.setApplication(application);
-    
+
     // Handle excess reservation
     assignment.setExcessReservation(result.getContainerToBeUnreserved());
 
@@ -85,6 +97,23 @@ public abstract class AbstractContainerAllocator {
         assignment.getAssignmentInformation().incrReservations();
         Resources.addTo(assignment.getAssignmentInformation().getReserved(),
             allocatedResource);
+
+        if (rmContainer != null) {
+          ActivitiesLogger.APP.recordAppActivityWithAllocation(
+              activitiesManager, node, application, updatedContainer,
+              ActivityState.RE_RESERVED);
+          ActivitiesLogger.APP.finishSkippedAppAllocationRecording(
+              activitiesManager, application.getApplicationId(),
+              ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
+        } else {
+          ActivitiesLogger.APP.recordAppActivityWithAllocation(
+              activitiesManager, node, application, updatedContainer,
+              ActivityState.RESERVED);
+          ActivitiesLogger.APP.finishAllocatedAppAllocationRecording(
+              activitiesManager, application.getApplicationId(),
+              updatedContainer.getId(), ActivityState.RESERVED,
+              ActivityDiagnosticConstant.EMPTY);
+        }
       } else if (result.getAllocationState() == AllocationState.ALLOCATED){
         // This is a new container
         // Inform the ordering policy
@@ -105,10 +134,18 @@ public abstract class AbstractContainerAllocator {
         assignment.getAssignmentInformation().incrAllocations();
         Resources.addTo(assignment.getAssignmentInformation().getAllocated(),
             allocatedResource);
-        
+
         if (rmContainer != null) {
           assignment.setFulfilledReservation(true);
         }
+
+        ActivitiesLogger.APP.recordAppActivityWithAllocation(activitiesManager,
+            node, application, updatedContainer, ActivityState.ALLOCATED);
+        ActivitiesLogger.APP.finishAllocatedAppAllocationRecording(
+            activitiesManager, application.getApplicationId(),
+            updatedContainer.getId(), ActivityState.ACCEPTED,
+            ActivityDiagnosticConstant.EMPTY);
+
       }
 
       assignment.setContainersToKill(result.getToKillContainers());
@@ -118,13 +155,13 @@ public abstract class AbstractContainerAllocator {
             CSAssignment.SkippedType.QUEUE_LIMIT);
       }
     }
-    
+
     return assignment;
   }
-  
+
   /**
    * allocate needs to handle following stuffs:
-   * 
+   *
    * <ul>
    * <li>Select request: Select a request to allocate. E.g. select a resource
    * request based on requirement/priority/locality.</li>

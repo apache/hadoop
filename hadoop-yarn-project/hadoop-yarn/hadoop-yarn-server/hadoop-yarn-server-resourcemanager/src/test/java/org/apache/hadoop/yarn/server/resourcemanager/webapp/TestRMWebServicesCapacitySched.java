@@ -62,9 +62,9 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
-  private static MockRM rm;
-  private static CapacitySchedulerConfiguration csConf;
-  private static YarnConfiguration conf;
+  protected static MockRM rm;
+  protected static CapacitySchedulerConfiguration csConf;
+  protected static YarnConfiguration conf;
 
   private class QueueInfo {
     float capacity;

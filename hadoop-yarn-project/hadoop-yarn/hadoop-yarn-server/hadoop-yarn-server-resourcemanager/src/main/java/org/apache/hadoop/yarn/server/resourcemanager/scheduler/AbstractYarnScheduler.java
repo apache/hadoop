@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
@@ -96,6 +97,8 @@ public abstract class AbstractYarnScheduler
   protected RMContext rmContext;
   
   private volatile Priority maxClusterLevelAppPriority;
+
+  protected ActivitiesManager activitiesManager;
 
   /*
    * All schedulers which are inheriting AbstractYarnScheduler should use
@@ -789,4 +792,9 @@ public abstract class AbstractYarnScheduler
     }
     return schedulerChangeRequests;
   }
+
+  public ActivitiesManager getActivitiesManager() {
+    return this.activitiesManager;
+  }
+
 }

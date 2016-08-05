@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
@@ -108,8 +109,16 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext, Priority appPriority, boolean isAttemptRecovering) {
+    this(applicationAttemptId, user, queue, activeUsersManager, rmContext,
+        appPriority, isAttemptRecovering, null);
+  }
+
+  public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId,
+      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      RMContext rmContext, Priority appPriority, boolean isAttemptRecovering,
+      ActivitiesManager activitiesManager) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
-    
+
     RMApp rmApp = rmContext.getRMApps().get(getApplicationId());
 
     Resource amResource;
@@ -139,8 +148,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     if (scheduler.getResourceCalculator() != null) {
       rc = scheduler.getResourceCalculator();
     }
-    
-    containerAllocator = new ContainerAllocator(this, rc, rmContext);
+
+    containerAllocator = new ContainerAllocator(this, rc, rmContext,
+        activitiesManager);
 
     if (scheduler instanceof CapacityScheduler) {
       capacitySchedulerContext = (CapacitySchedulerContext) scheduler;
@@ -189,7 +199,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       return null;
     }
     
-    // Required sanity check - AM can call 'allocate' to update resource 
+    // Required sanity check - AM can call 'allocate' to update resource
     // request without locking the scheduler, hence we need to check
     if (getTotalRequiredResources(schedulerKey) <= 0) {
       return null;
@@ -493,7 +503,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   public LeafQueue getCSLeafQueue() {
     return (LeafQueue)queue;
   }
-  
+
   public CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, ResourceLimits currentResourceLimits,
       SchedulingMode schedulingMode, RMContainer reservedContainer) {
