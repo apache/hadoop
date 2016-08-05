@@ -71,13 +71,17 @@ public class AvailableSpaceBlockPlacementPolicy extends
   protected DatanodeDescriptor chooseDataNode(String scope) {
     DatanodeDescriptor a = (DatanodeDescriptor) clusterMap.chooseRandom(scope);
     DatanodeDescriptor b = (DatanodeDescriptor) clusterMap.chooseRandom(scope);
-    int ret = compareDataNode(a, b);
-    if (ret == 0) {
-      return a;
-    } else if (ret < 0) {
-      return (RAND.nextInt(100) < balancedPreference) ? a : b;
+    if (a != null && b != null){
+      int ret = compareDataNode(a, b);
+      if (ret == 0) {
+        return a;
+      } else if (ret < 0) {
+        return (RAND.nextInt(100) < balancedPreference) ? a : b;
+      } else {
+        return (RAND.nextInt(100) < balancedPreference) ? b : a;
+      }
     } else {
-      return (RAND.nextInt(100) < balancedPreference) ? b : a;
+      return a == null ? b : a;
     }
   }
 

@@ -303,6 +303,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-8498. Blocks can be committed with wrong size. (Jing Zhao)
     Backport HDFS-11732 by Zhe Zhang.
 
+    HDFS-10715. NPE when applying AvailableSpaceBlockPlacementPolicy.
+    (Guangbin Zhu)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
