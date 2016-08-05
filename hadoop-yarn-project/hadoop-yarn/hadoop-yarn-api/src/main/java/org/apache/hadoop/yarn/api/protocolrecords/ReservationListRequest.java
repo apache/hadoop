@@ -52,6 +52,7 @@ public abstract class ReservationListRequest {
    *                to be returned. Reservation allocations are subject to
    *                change in the event of re-planning as described by
    *                {@code ReservationDefinition}.
+   * @return the list of reservations via  {@link ReservationListRequest}
    */
   @Public
   @Unstable
@@ -84,6 +85,7 @@ public abstract class ReservationListRequest {
    *                to be returned. Reservation allocations are subject to
    *                change in the event of re-planning as described by
    *                {@code ReservationDefinition}.
+   * @return the list of reservations via {@link ReservationListRequest}
    */
   @Public
   @Unstable
@@ -105,6 +107,7 @@ public abstract class ReservationListRequest {
    * @param reservationId Optional. String representation of
    *                     {@code ReservationId} If provided, other fields will
    *                     be ignored.
+   * @return the list of reservations via {@link ReservationListRequest}
    */
   @Public
   @Unstable

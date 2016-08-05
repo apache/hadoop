@@ -59,6 +59,8 @@ public abstract class FinishApplicationMasterResponse {
   /**
    * Get the flag which indicates that the application has successfully
    * unregistered with the RM and the application can safely stop.
+   * @return true if the application has unregistered with the RM,
+   *         false otherwise
    */
   @Public
   @Stable
@@ -67,6 +69,8 @@ public abstract class FinishApplicationMasterResponse {
   /**
    * Set the flag which indicates that the application has successfully
    * unregistered with the RM and the application can safely stop.
+   * @param isUnregistered boolean flag to indicate that the application has
+   *        successfully unregistered with the RM
    */
   @Private
   @Unstable

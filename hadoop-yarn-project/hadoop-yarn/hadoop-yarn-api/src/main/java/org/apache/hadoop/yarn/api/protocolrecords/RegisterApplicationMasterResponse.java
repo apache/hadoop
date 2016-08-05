@@ -104,6 +104,7 @@ public abstract class RegisterApplicationMasterResponse {
    * <p>The ClientToAMToken master key is sent to <code>ApplicationMaster</code>
    * by <code>ResourceManager</code> via {@link RegisterApplicationMasterResponse}
    * , used to verify corresponding ClientToAMToken.</p>
+   * @return ClientToAMToken master key
    */
   @Public
   @Stable
@@ -118,6 +119,7 @@ public abstract class RegisterApplicationMasterResponse {
 
   /**
    * <p>Get the queue that the application was placed in.<p>
+   * @return the queue that the application was placed in.
    */
   @Public
   @Stable

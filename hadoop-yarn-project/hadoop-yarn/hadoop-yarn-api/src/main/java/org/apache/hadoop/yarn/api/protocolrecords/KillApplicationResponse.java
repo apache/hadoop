@@ -57,6 +57,8 @@ public abstract class KillApplicationResponse {
 
   /**
    * Get the flag which indicates that the process of killing application is completed or not.
+   * @return true if the process of killing application has completed,
+   *         false otherwise
    */
   @Public
   @Stable
