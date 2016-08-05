@@ -294,7 +294,6 @@ public class DiskBalancer {
   private void checkDiskBalancerEnabled()
       throws DiskBalancerException {
     if (!isDiskBalancerEnabled) {
-      LOG.error("Disk Balancer is not enabled.");
       throw new DiskBalancerException("Disk Balancer is not enabled.",
           DiskBalancerException.Result.DISK_BALANCER_NOT_ENABLED);
     }
