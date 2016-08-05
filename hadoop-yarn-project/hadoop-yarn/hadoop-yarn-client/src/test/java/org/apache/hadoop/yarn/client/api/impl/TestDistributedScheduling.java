@@ -84,7 +84,7 @@ import static org.mockito.Mockito.when;
  * specifying OPPORTUNISTIC containers in its resource requests,
  * the AMRMProxyService on the NM, the DistributedScheduler RequestInterceptor
  * on the NM and the DistributedSchedulingProtocol used by the framework to talk
- * to the DistributedSchedulingAMService running on the RM.
+ * to the OpportunisticContainerAllocatorAMService running on the RM.
  */
 public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
 
@@ -105,6 +105,8 @@ public class TestDistributedScheduling extends BaseAMRMProxyE2ETest {
 
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.
+        OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
     conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
     conf.setBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED, true);
     cluster.init(conf);
