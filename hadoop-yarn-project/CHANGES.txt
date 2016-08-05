@@ -48,6 +48,9 @@ Release 2.6.5 - UNRELEASED
     YARN-5462. TestNodeStatusUpdater.testNodeStatusUpdaterRetryAndNMShutdown
     fails intermittently (Eric Badger via jlowe)
 
+    YARN-4573. Fix test failure in TestRMAppTransitions#testAppRunningKill and
+    testAppKilledKilled. (Takashi Ohnishi via rohithsharmaks)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
