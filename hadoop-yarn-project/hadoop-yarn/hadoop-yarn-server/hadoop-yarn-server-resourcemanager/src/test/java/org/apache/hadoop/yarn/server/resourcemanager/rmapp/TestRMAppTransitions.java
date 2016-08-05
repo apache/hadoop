@@ -275,7 +275,7 @@ public class TestRMAppTransitions {
   // Test expected newly created app state
   private static void testAppStartState(ApplicationId applicationId, 
       String user, String name, String queue, RMApp application) {
-    Assert.assertTrue("application start time is not greater then 0", 
+    Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
     Assert.assertTrue("application start time is before currentTime", 
         application.getStartTime() <= System.currentTimeMillis());
@@ -300,7 +300,7 @@ public class TestRMAppTransitions {
 
   // test to make sure times are set when app finishes
   private static void assertStartTimeSet(RMApp application) {
-    Assert.assertTrue("application start time is not greater then 0", 
+    Assert.assertTrue("application start time is not greater than 0",
         application.getStartTime() > 0);
     Assert.assertTrue("application start time is before currentTime", 
         application.getStartTime() <= System.currentTimeMillis());
@@ -319,9 +319,9 @@ public class TestRMAppTransitions {
   // test to make sure times are set when app finishes
   private void assertTimesAtFinish(RMApp application) {
     assertStartTimeSet(application);
-    Assert.assertTrue("application finish time is not greater then 0",
+    Assert.assertTrue("application finish time is not greater than 0",
         (application.getFinishTime() > 0));
-    Assert.assertTrue("application finish time is not >= then start time",
+    Assert.assertTrue("application finish time is not >= than start time",
         (application.getFinishTime() >= application.getStartTime()));
   }
 
@@ -364,6 +364,7 @@ public class TestRMAppTransitions {
     application.getCurrentAppAttempt().handle(
         new RMAppAttemptEvent(application.getCurrentAppAttempt().getAppAttemptId(),
             RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
+    rmDispatcher.await();
   }
 
   protected RMApp testCreateAppNewSaving(
