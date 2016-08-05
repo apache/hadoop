@@ -279,6 +279,7 @@ public abstract class AllocateResponse {
    * AM will receive one NMToken per NM irrespective of the number of containers
    * issued on same NM. AM is expected to store these tokens until issued a
    * new token for the same NM.
+   * @return list of NMTokens required for communicating with NM
    */
   @Public
   @Stable
@@ -291,6 +292,7 @@ public abstract class AllocateResponse {
   /**
    * Get the list of newly increased containers by
    * <code>ResourceManager</code>.
+   * @return list of newly increased containers
    */
   @Public
   @Unstable
@@ -308,6 +310,7 @@ public abstract class AllocateResponse {
   /**
    * Get the list of newly decreased containers by
    * <code>ResourceManager</code>.
+   * @return the list of newly decreased containers
    */
   @Public
   @Unstable

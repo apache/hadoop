@@ -263,6 +263,7 @@ public interface ApplicationConstants {
      * Note: Use $$() method for cross-platform practice i.e. submit an
      * application from a Windows client to a Linux/Unix server or vice versa.
      * </p>
+     * @return expanded environment variable.
      */
     public String $() {
       if (Shell.WINDOWS) {
@@ -278,6 +279,7 @@ public interface ApplicationConstants {
      * expansion marker ('%' for Windows and '$' for Linux) by NodeManager on
      * container launch. For example: {{VAR}} will be replaced as $VAR on Linux,
      * and %VAR% on Windows.
+     * @return expanded environment variable.
      */
     @Public
     @Unstable
