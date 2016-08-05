@@ -19,6 +19,14 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 
 import org.apache.hadoop.yarn.api.BasePBImplRecordsTest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.DeleteApplicationHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.DeleteApplicationHomeSubClusterResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationHomeSubClusterResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationsHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationsHomeSubClusterResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetSubClusterInfoRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetSubClusterInfoResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetSubClustersInfoRequestProto;
@@ -31,6 +39,16 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterInfoProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterRegisterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterRegisterResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterResponseProto;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.DeleteApplicationHomeSubClusterRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.DeleteApplicationHomeSubClusterResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetApplicationHomeSubClusterRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetApplicationHomeSubClusterResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetApplicationsHomeSubClusterRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetApplicationsHomeSubClusterResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetSubClusterInfoRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetSubClusterInfoResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetSubClustersInfoRequestPBImpl;
@@ -43,6 +61,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubCluster
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterRegisterRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterRegisterResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateApplicationHomeSubClusterRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateApplicationHomeSubClusterResponsePBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,6 +78,7 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     generateByNewInstance(Version.class);
     generateByNewInstance(SubClusterId.class);
     generateByNewInstance(SubClusterInfo.class);
+    generateByNewInstance(ApplicationHomeSubCluster.class);
   }
 
   @Test
@@ -128,6 +149,66 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
   public void testGetSubClustersInfoResponse() throws Exception {
     validatePBImplRecord(GetSubClustersInfoResponsePBImpl.class,
         GetSubClustersInfoResponseProto.class);
+  }
+
+  @Test
+  public void testAddApplicationHomeSubClusterRequest() throws Exception {
+    validatePBImplRecord(AddApplicationHomeSubClusterRequestPBImpl.class,
+        AddApplicationHomeSubClusterRequestProto.class);
+  }
+
+  @Test
+  public void testAddApplicationHomeSubClusterResponse() throws Exception {
+    validatePBImplRecord(AddApplicationHomeSubClusterResponsePBImpl.class,
+        AddApplicationHomeSubClusterResponseProto.class);
+  }
+
+  @Test
+  public void testUpdateApplicationHomeSubClusterRequest() throws Exception {
+    validatePBImplRecord(UpdateApplicationHomeSubClusterRequestPBImpl.class,
+        UpdateApplicationHomeSubClusterRequestProto.class);
+  }
+
+  @Test
+  public void testUpdateApplicationHomeSubClusterResponse() throws Exception {
+    validatePBImplRecord(UpdateApplicationHomeSubClusterResponsePBImpl.class,
+        UpdateApplicationHomeSubClusterResponseProto.class);
+  }
+
+  @Test
+  public void testGetApplicationHomeSubClusterRequest() throws Exception {
+    validatePBImplRecord(GetApplicationHomeSubClusterRequestPBImpl.class,
+        GetApplicationHomeSubClusterRequestProto.class);
+  }
+
+  @Test
+  public void testGetApplicationHomeSubClusterResponse() throws Exception {
+    validatePBImplRecord(GetApplicationHomeSubClusterResponsePBImpl.class,
+        GetApplicationHomeSubClusterResponseProto.class);
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterRequest() throws Exception {
+    validatePBImplRecord(GetApplicationsHomeSubClusterRequestPBImpl.class,
+        GetApplicationsHomeSubClusterRequestProto.class);
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterResponse() throws Exception {
+    validatePBImplRecord(GetApplicationsHomeSubClusterResponsePBImpl.class,
+        GetApplicationsHomeSubClusterResponseProto.class);
+  }
+
+  @Test
+  public void testDeleteApplicationHomeSubClusterRequest() throws Exception {
+    validatePBImplRecord(DeleteApplicationHomeSubClusterRequestPBImpl.class,
+        DeleteApplicationHomeSubClusterRequestProto.class);
+  }
+
+  @Test
+  public void testDeleteApplicationHomeSubClusterResponse() throws Exception {
+    validatePBImplRecord(DeleteApplicationHomeSubClusterResponsePBImpl.class,
+        DeleteApplicationHomeSubClusterResponseProto.class);
   }
 
 }
