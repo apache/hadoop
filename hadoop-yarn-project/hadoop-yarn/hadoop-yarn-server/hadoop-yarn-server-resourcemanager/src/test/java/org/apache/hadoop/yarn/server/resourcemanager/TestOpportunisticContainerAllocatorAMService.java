@@ -71,12 +71,12 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Test cases for {@link DistributedSchedulingAMService}.
+ * Test cases for {@link OpportunisticContainerAllocatorAMService}.
  */
-public class TestDistributedSchedulingAMService {
+public class TestOpportunisticContainerAllocatorAMService {
 
-  // Test if the DistributedSchedulingAMService can handle both DSProtocol as
-  // well as AMProtocol clients
+  // Test if the OpportunisticContainerAllocatorAMService can handle both
+  // DSProtocol as well as AMProtocol clients
   @Test
   public void testRPCWrapping() throws Exception {
     Configuration conf = new Configuration();
@@ -111,8 +111,9 @@ public class TestDistributedSchedulingAMService {
             Resource.newInstance(1, 2), 1, true, "exp",
             ExecutionTypeRequest.newInstance(
                 ExecutionType.OPPORTUNISTIC, true))));
-    DistributedSchedulingAMService service =
+    OpportunisticContainerAllocatorAMService service =
         createService(factory, rmContext, c);
+    conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
     Server server = service.getServer(rpc, conf, addr, null);
     server.start();
 
@@ -195,9 +196,10 @@ public class TestDistributedSchedulingAMService {
         false, dsfinishResp.getIsUnregistered());
   }
 
-  private DistributedSchedulingAMService createService(final RecordFactory
-      factory, final RMContext rmContext, final Container c) {
-    return new DistributedSchedulingAMService(rmContext, null) {
+  private OpportunisticContainerAllocatorAMService createService(
+      final RecordFactory factory, final RMContext rmContext,
+      final Container c) {
+    return new OpportunisticContainerAllocatorAMService(rmContext, null) {
       @Override
       public RegisterApplicationMasterResponse registerApplicationMaster(
           RegisterApplicationMasterRequest request) throws

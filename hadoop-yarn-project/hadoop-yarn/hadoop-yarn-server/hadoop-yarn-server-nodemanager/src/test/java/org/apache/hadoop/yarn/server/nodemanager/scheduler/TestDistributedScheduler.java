@@ -38,11 +38,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAl
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
-import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+
+import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
@@ -189,7 +190,6 @@ public class TestDistributedScheduler {
       DistributedScheduler distributedScheduler) {
     NodeStatusUpdater nodeStatusUpdater = Mockito.mock(NodeStatusUpdater.class);
     Mockito.when(nodeStatusUpdater.getRMIdentifier()).thenReturn(12345l);
-    Context context = Mockito.mock(Context.class);
     NMContainerTokenSecretManager nmContainerTokenSecretManager = new
         NMContainerTokenSecretManager(conf);
     MasterKey mKey = new MasterKey() {
@@ -207,15 +207,13 @@ public class TestDistributedScheduler {
       public void setBytes(ByteBuffer bytes) {}
     };
     nmContainerTokenSecretManager.setMasterKey(mKey);
-    Mockito.when(context.getContainerTokenSecretManager()).thenReturn
-        (nmContainerTokenSecretManager);
     OpportunisticContainerAllocator containerAllocator =
-        new OpportunisticContainerAllocator(nodeStatusUpdater, context, 7777);
+        new OpportunisticContainerAllocator(nmContainerTokenSecretManager, 77);
 
     NMTokenSecretManagerInNM nmTokenSecretManagerInNM =
         new NMTokenSecretManagerInNM();
     nmTokenSecretManagerInNM.setMasterKey(mKey);
-    distributedScheduler.initLocal(
+    distributedScheduler.initLocal(1234,
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(1, 1), 1),
         containerAllocator, nmTokenSecretManagerInNM, "test");
 

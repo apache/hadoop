@@ -62,7 +62,7 @@ public final class DefaultRequestInterceptor extends
     AbstractRequestInterceptor {
   private static final Logger LOG = LoggerFactory
       .getLogger(DefaultRequestInterceptor.class);
-  private DistributedSchedulingAMProtocol rmClient;
+  private ApplicationMasterProtocol rmClient;
   private UserGroupInformation user = null;
 
   @Override
@@ -76,15 +76,7 @@ public final class DefaultRequestInterceptor extends
       user.addToken(appContext.getAMRMToken());
       final Configuration conf = this.getConf();
 
-      rmClient = user.doAs(
-          new PrivilegedExceptionAction<DistributedSchedulingAMProtocol>() {
-            @Override
-            public DistributedSchedulingAMProtocol run() throws Exception {
-              setAMRMTokenService(conf);
-              return ServerRMProxy.createRMProxy(conf,
-                  DistributedSchedulingAMProtocol.class);
-            }
-          });
+      rmClient = createRMClient(appContext, conf);
     } catch (IOException e) {
       String message =
           "Error while creating of RM app master service proxy for attemptId:"
@@ -97,6 +89,32 @@ public final class DefaultRequestInterceptor extends
       throw new YarnRuntimeException(message, e);
     } catch (Exception e) {
       throw new YarnRuntimeException(e);
+    }
+  }
+
+  private ApplicationMasterProtocol createRMClient(
+      AMRMProxyApplicationContext appContext, final Configuration conf)
+      throws IOException, InterruptedException {
+    if (appContext.getNMCotext().isDistributedSchedulingEnabled()) {
+      return user.doAs(
+          new PrivilegedExceptionAction<DistributedSchedulingAMProtocol>() {
+            @Override
+            public DistributedSchedulingAMProtocol run() throws Exception {
+              setAMRMTokenService(conf);
+              return ServerRMProxy.createRMProxy(conf,
+                  DistributedSchedulingAMProtocol.class);
+            }
+          });
+    } else {
+      return user.doAs(
+          new PrivilegedExceptionAction<ApplicationMasterProtocol>() {
+            @Override
+            public ApplicationMasterProtocol run() throws Exception {
+              setAMRMTokenService(conf);
+              return ClientRMProxy.createRMProxy(conf,
+                  ApplicationMasterProtocol.class);
+            }
+          });
     }
   }
 
@@ -127,9 +145,15 @@ public final class DefaultRequestInterceptor extends
   registerApplicationMasterForDistributedScheduling
       (RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
-    LOG.info("Forwarding registerApplicationMasterForDistributedScheduling" +
-        "request to the real YARN RM");
-    return rmClient.registerApplicationMasterForDistributedScheduling(request);
+    if (getApplicationContext().getNMCotext()
+        .isDistributedSchedulingEnabled()) {
+      LOG.info("Forwarding registerApplicationMasterForDistributedScheduling" +
+          "request to the real YARN RM");
+      return ((DistributedSchedulingAMProtocol)rmClient)
+          .registerApplicationMasterForDistributedScheduling(request);
+    } else {
+      throw new YarnException("Distributed Scheduling is not enabled !!");
+    }
   }
 
   @Override
@@ -140,13 +164,18 @@ public final class DefaultRequestInterceptor extends
       LOG.debug("Forwarding allocateForDistributedScheduling request" +
           "to the real YARN RM");
     }
-    DistributedSchedulingAllocateResponse allocateResponse =
-        rmClient.allocateForDistributedScheduling(request);
-    if (allocateResponse.getAllocateResponse().getAMRMToken() != null) {
-      updateAMRMToken(allocateResponse.getAllocateResponse().getAMRMToken());
+    if (getApplicationContext().getNMCotext()
+        .isDistributedSchedulingEnabled()) {
+      DistributedSchedulingAllocateResponse allocateResponse =
+          ((DistributedSchedulingAMProtocol)rmClient)
+              .allocateForDistributedScheduling(request);
+      if (allocateResponse.getAllocateResponse().getAMRMToken() != null) {
+        updateAMRMToken(allocateResponse.getAllocateResponse().getAMRMToken());
+      }
+      return allocateResponse;
+    } else {
+      throw new YarnException("Distributed Scheduling is not enabled !!");
     }
-
-    return allocateResponse;
   }
 
   @Override

@@ -73,18 +73,19 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The DistributedSchedulingAMService is started instead of the
+ * The OpportunisticContainerAllocatorAMService is started instead of the
  * ApplicationMasterService if distributed scheduling is enabled for the YARN
  * cluster.
  * It extends the functionality of the ApplicationMasterService by servicing
  * clients (AMs and AMRMProxy request interceptors) that understand the
  * DistributedSchedulingProtocol.
  */
-public class DistributedSchedulingAMService extends ApplicationMasterService
-    implements DistributedSchedulingAMProtocol, EventHandler<SchedulerEvent> {
+public class OpportunisticContainerAllocatorAMService
+    extends ApplicationMasterService implements DistributedSchedulingAMProtocol,
+    EventHandler<SchedulerEvent> {
 
   private static final Log LOG =
-      LogFactory.getLog(DistributedSchedulingAMService.class);
+      LogFactory.getLog(OpportunisticContainerAllocatorAMService.class);
 
   private final NodeQueueLoadMonitor nodeMonitor;
 
@@ -94,12 +95,13 @@ public class DistributedSchedulingAMService extends ApplicationMasterService
       new ConcurrentHashMap<>();
   private final int k;
 
-  public DistributedSchedulingAMService(RMContext rmContext,
-                                      YarnScheduler scheduler) {
-    super(DistributedSchedulingAMService.class.getName(), rmContext, scheduler);
+  public OpportunisticContainerAllocatorAMService(RMContext rmContext,
+      YarnScheduler scheduler) {
+    super(OpportunisticContainerAllocatorAMService.class.getName(),
+        rmContext, scheduler);
     this.k = rmContext.getYarnConfiguration().getInt(
-        YarnConfiguration.DIST_SCHEDULING_NODES_NUMBER_USED,
-        YarnConfiguration.DIST_SCHEDULING_NODES_NUMBER_USED_DEFAULT);
+        YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
+        YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT);
     long nodeSortInterval = rmContext.getYarnConfiguration().getLong(
         YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS,
         YarnConfiguration.
@@ -149,18 +151,21 @@ public class DistributedSchedulingAMService extends ApplicationMasterService
   @Override
   public Server getServer(YarnRPC rpc, Configuration serverConf,
       InetSocketAddress addr, AMRMTokenSecretManager secretManager) {
-    Server server = rpc.getServer(DistributedSchedulingAMProtocol.class, this,
-        addr, serverConf, secretManager,
-        serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
-    // To support application running on NMs that DO NOT support
-    // Dist Scheduling... The server multiplexes both the
-    // ApplicationMasterProtocol as well as the DistributedSchedulingProtocol
-    ((RPC.Server) server).addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
-        ApplicationMasterProtocolPB.class,
-        ApplicationMasterProtocolService.newReflectiveBlockingService(
-            new ApplicationMasterProtocolPBServiceImpl(this)));
-    return server;
+    if (YarnConfiguration.isDistSchedulingEnabled(serverConf)) {
+      Server server = rpc.getServer(DistributedSchedulingAMProtocol.class, this,
+          addr, serverConf, secretManager,
+          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
+      // To support application running on NMs that DO NOT support
+      // Dist Scheduling... The server multiplexes both the
+      // ApplicationMasterProtocol as well as the DistributedSchedulingProtocol
+      ((RPC.Server) server).addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+          ApplicationMasterProtocolPB.class,
+          ApplicationMasterProtocolService.newReflectiveBlockingService(
+              new ApplicationMasterProtocolPBServiceImpl(this)));
+      return server;
+    }
+    return super.getServer(rpc, serverConf, addr, secretManager);
   }
 
   @Override
@@ -196,40 +201,41 @@ public class DistributedSchedulingAMService extends ApplicationMasterService
     dsResp.setMinContainerResource(
         Resource.newInstance(
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MIN_CONTAINER_MEMORY_MB,
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB,
                 YarnConfiguration.
-                    DIST_SCHEDULING_MIN_CONTAINER_MEMORY_MB_DEFAULT),
+                    OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB_DEFAULT),
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MIN_CONTAINER_VCORES,
-                YarnConfiguration.DIST_SCHEDULING_MIN_CONTAINER_VCORES_DEFAULT)
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES,
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES_DEFAULT)
         )
     );
     dsResp.setMaxContainerResource(
         Resource.newInstance(
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY_MB,
-                YarnConfiguration.DIST_SCHEDULING_MAX_MEMORY_MB_DEFAULT),
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB,
+                YarnConfiguration
+                    .OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB_DEFAULT),
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_MAX_CONTAINER_VCORES,
-                YarnConfiguration.DIST_SCHEDULING_MAX_CONTAINER_VCORES_DEFAULT)
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES,
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES_DEFAULT)
         )
     );
     dsResp.setIncrContainerResource(
         Resource.newInstance(
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_INCR_CONTAINER_MEMORY_MB,
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB,
                 YarnConfiguration.
-                    DIST_SCHEDULING_INCR_CONTAINER_MEMORY_MB_DEFAULT),
+                    OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB_DEFAULT),
             getConfig().getInt(
-                YarnConfiguration.DIST_SCHEDULING_INCR_CONTAINER_VCORES,
-                YarnConfiguration.DIST_SCHEDULING_INCR_CONTAINER_VCORES_DEFAULT)
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES,
+                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES_DEFAULT)
         )
     );
     dsResp.setContainerTokenExpiryInterval(
         getConfig().getInt(
-            YarnConfiguration.DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS,
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
             YarnConfiguration.
-                DIST_SCHEDULING_CONTAINER_TOKEN_EXPIRY_MS_DEFAULT));
+                OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT));
     dsResp.setContainerIdStart(
         this.rmContext.getEpoch() << ResourceManager.EPOCH_BIT_SHIFT);
 
@@ -349,8 +355,8 @@ public class DistributedSchedulingAMService extends ApplicationMasterService
       break;
     // <-- IGNORED EVENTS : END -->
     default:
-      LOG.error("Unknown event arrived at DistributedSchedulingAMService: "
-          + event.toString());
+      LOG.error("Unknown event arrived at" +
+          "OpportunisticContainerAllocatorAMService: " + event.toString());
     }
 
   }
