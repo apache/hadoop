@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,10 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
-
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
@@ -45,9 +45,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Allocate normal (new) containers, considers locality/label, etc. Using
@@ -611,8 +608,10 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
             application.getNewContainerId());
 
     // Create the container
-    return BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
-        .getHttpAddress(), capability, schedulerKey.getPriority(), null);
+    return BuilderUtils.newContainer(containerId, nodeId,
+        node.getRMNode().getHttpAddress(), capability,
+        schedulerKey.getPriority(), null,
+        schedulerKey.getAllocationRequestId());
   }
   
   private ContainerAllocation handleNewContainerAllocation(

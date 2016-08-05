@@ -710,9 +710,10 @@ public class FifoScheduler extends
             .getApplicationAttemptId(), application.getNewContainerId());
 
         // Create the container
-        Container container =
-            BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
-              .getHttpAddress(), capability, schedulerKey.getPriority(), null);
+        Container container = BuilderUtils.newContainer(containerId, nodeId,
+            node.getRMNode().getHttpAddress(), capability,
+            schedulerKey.getPriority(), null,
+            schedulerKey.getAllocationRequestId());
         
         // Allocate!
         

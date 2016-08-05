@@ -18,12 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.TreeSet;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,5 +74,35 @@ public class TestAppSchedulingInfo {
     appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         blacklistRemovals);
     Assert.assertFalse(appSchedulingInfo.getAndResetBlacklistChanged());
+  }
+
+  @Test
+  public void testSchedulerRequestKeyOrdering() {
+    TreeSet<SchedulerRequestKey> ts = new TreeSet<>();
+    ts.add(TestUtils.toSchedulerKey(Priority.newInstance(1), 1));
+    ts.add(TestUtils.toSchedulerKey(Priority.newInstance(1), 2));
+    ts.add(TestUtils.toSchedulerKey(Priority.newInstance(0), 4));
+    ts.add(TestUtils.toSchedulerKey(Priority.newInstance(0), 3));
+    ts.add(TestUtils.toSchedulerKey(Priority.newInstance(2), 5));
+    ts.add(TestUtils.toSchedulerKey(Priority.newInstance(2), 6));
+    Iterator<SchedulerRequestKey> iter = ts.iterator();
+    SchedulerRequestKey sk = iter.next();
+    Assert.assertEquals(0, sk.getPriority().getPriority());
+    Assert.assertEquals(3, sk.getAllocationRequestId());
+    sk = iter.next();
+    Assert.assertEquals(0, sk.getPriority().getPriority());
+    Assert.assertEquals(4, sk.getAllocationRequestId());
+    sk = iter.next();
+    Assert.assertEquals(1, sk.getPriority().getPriority());
+    Assert.assertEquals(1, sk.getAllocationRequestId());
+    sk = iter.next();
+    Assert.assertEquals(1, sk.getPriority().getPriority());
+    Assert.assertEquals(2, sk.getAllocationRequestId());
+    sk = iter.next();
+    Assert.assertEquals(2, sk.getPriority().getPriority());
+    Assert.assertEquals(5, sk.getAllocationRequestId());
+    sk = iter.next();
+    Assert.assertEquals(2, sk.getPriority().getPriority());
+    Assert.assertEquals(6, sk.getAllocationRequestId());
   }
 }

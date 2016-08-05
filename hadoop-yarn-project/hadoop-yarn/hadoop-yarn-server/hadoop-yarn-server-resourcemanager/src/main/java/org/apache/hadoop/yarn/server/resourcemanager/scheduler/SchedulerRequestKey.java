@@ -30,9 +30,7 @@ public final class SchedulerRequestKey implements
     Comparable<SchedulerRequestKey> {
 
   private final Priority priority;
-
-  public static final SchedulerRequestKey UNDEFINED =
-      new SchedulerRequestKey(Priority.UNDEFINED);
+  private final long allocationRequestId;
 
   /**
    * Factory method to generate a SchedulerRequestKey from a ResourceRequest.
@@ -40,7 +38,8 @@ public final class SchedulerRequestKey implements
    * @return SchedulerRequestKey
    */
   public static SchedulerRequestKey create(ResourceRequest req) {
-    return new SchedulerRequestKey(req.getPriority());
+    return new SchedulerRequestKey(req.getPriority(),
+        req.getAllocationRequestId());
   }
 
   /**
@@ -50,11 +49,13 @@ public final class SchedulerRequestKey implements
    * @return SchedulerRequestKey
    */
   public static SchedulerRequestKey extractFrom(Container container) {
-    return new SchedulerRequestKey(container.getPriority());
+    return new SchedulerRequestKey(container.getPriority(),
+        container.getAllocationRequestId());
   }
 
-  private SchedulerRequestKey(Priority priority) {
+  private SchedulerRequestKey(Priority priority, long allocationRequestId) {
     this.priority = priority;
+    this.allocationRequestId = allocationRequestId;
   }
 
   /**
@@ -66,6 +67,15 @@ public final class SchedulerRequestKey implements
     return priority;
   }
 
+  /**
+   * Get the Id of the associated {@link ResourceRequest}.
+   *
+   * @return the Id of the associated {@link ResourceRequest}
+   */
+  public long getAllocationRequestId() {
+    return allocationRequestId;
+  }
+
   @Override
   public int compareTo(SchedulerRequestKey o) {
     if (o == null) {
@@ -75,7 +85,12 @@ public final class SchedulerRequestKey implements
         return 1;
       }
     }
-    return o.getPriority().compareTo(priority);
+    int priorityCompare = o.getPriority().compareTo(priority);
+    // we first sort by priority and then by allocationRequestId
+    if (priorityCompare != 0) {
+      return priorityCompare;
+    }
+    return Long.compare(allocationRequestId, o.getAllocationRequestId());
   }
 
   @Override
@@ -88,12 +103,20 @@ public final class SchedulerRequestKey implements
     }
 
     SchedulerRequestKey that = (SchedulerRequestKey) o;
-    return getPriority().equals(that.getPriority());
 
+    if (getAllocationRequestId() != that.getAllocationRequestId()) {
+      return false;
+    }
+    return getPriority() != null ?
+        getPriority().equals(that.getPriority()) :
+        that.getPriority() == null;
   }
 
   @Override
   public int hashCode() {
-    return getPriority().hashCode();
+    int result = getPriority() != null ? getPriority().hashCode() : 0;
+    result = 31 * result + (int) (getAllocationRequestId() ^ (
+        getAllocationRequestId() >>> 32));
+    return result;
   }
 }

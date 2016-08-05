@@ -236,7 +236,8 @@ public class BuilderUtils {
 
   public static Container newContainer(ContainerId containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority,
-      Token containerToken, ExecutionType executionType) {
+      Token containerToken, ExecutionType executionType,
+      long allocationRequestId) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -245,6 +246,7 @@ public class BuilderUtils {
     container.setPriority(priority);
     container.setContainerToken(containerToken);
     container.setExecutionType(executionType);
+    container.setAllocationRequestId(allocationRequestId);
     return container;
   }
 
@@ -252,7 +254,15 @@ public class BuilderUtils {
       String nodeHttpAddress, Resource resource, Priority priority,
       Token containerToken) {
     return newContainer(containerId, nodeId, nodeHttpAddress, resource,
-        priority, containerToken, ExecutionType.GUARANTEED);
+        priority, containerToken, ExecutionType.GUARANTEED, 0);
+  }
+
+  public static Container newContainer(ContainerId containerId, NodeId nodeId,
+      String nodeHttpAddress, Resource resource, Priority priority,
+      Token containerToken, long allocationRequestId) {
+    return newContainer(containerId, nodeId, nodeHttpAddress, resource,
+        priority, containerToken, ExecutionType.GUARANTEED,
+        allocationRequestId);
   }
 
   public static <T extends Token> T newToken(Class<T> tokenClass,
