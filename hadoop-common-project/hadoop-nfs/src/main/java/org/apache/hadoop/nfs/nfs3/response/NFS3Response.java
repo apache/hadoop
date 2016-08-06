@@ -43,6 +43,10 @@ public class NFS3Response {
   /**
    * Write the response, along with the rpc header (including verifier), to the
    * XDR.
+   * @param out XDR output message
+   * @param xid transaction id
+   * @param verifier verifies reply
+   * @return XDR response
    */
   public XDR serialize(XDR out, int xid, Verifier verifier) {
     RpcAcceptedReply reply = RpcAcceptedReply.getAcceptInstance(xid, verifier);

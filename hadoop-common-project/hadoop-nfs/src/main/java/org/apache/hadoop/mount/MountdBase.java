@@ -48,8 +48,8 @@ abstract public class MountdBase {
 
   /**
    * Constructor
-   * @param program
-   * @throws IOException
+   * @param program  rpc server which handles mount request
+   * @throws IOException fail to construct MountdBase
    */
   public MountdBase(RpcProgram program) throws IOException {
     rpcProgram = program;

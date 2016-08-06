@@ -45,6 +45,7 @@ public class FileHandle {
 
   /**
    * Handle is a 32 bytes number. For HDFS, the last 8 bytes is fileId.
+   * @param v file id
    */
   public FileHandle(long v) {
     fileId = v;
