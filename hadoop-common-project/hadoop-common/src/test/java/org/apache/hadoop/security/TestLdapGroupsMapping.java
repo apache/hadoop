@@ -52,7 +52,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -313,26 +312,6 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
       }
       ldapServer.join();
     }
-  }
-
-  /**
-   * Make sure that when
-   * {@link Configuration#getPassword(String)} throws an IOException,
-   * {@link LdapGroupsMapping#setConf(Configuration)} does not throw an NPE.
-   *
-   * @throws Exception
-   */
-  @Test(timeout = 10000)
-  public void testSetConf() throws Exception {
-    Configuration conf = new Configuration();
-    Configuration mockConf = Mockito.spy(conf);
-    when(mockConf.getPassword(anyString()))
-        .thenThrow(new IOException("injected IOException"));
-    // Set a dummy LDAP server URL.
-    mockConf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
-
-    LdapGroupsMapping groupsMapping = getGroupsMapping();
-    groupsMapping.setConf(mockConf);
   }
 
 }
