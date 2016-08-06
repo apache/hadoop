@@ -54,6 +54,7 @@ public class NfsTime {
 
   /**
    * Get the total time in milliseconds
+   * @return convert to milli seconds
    */
   public long getMilliSeconds() {
     return (long) (seconds) * 1000 + (long) (nseconds) / 1000000;

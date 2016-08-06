@@ -43,7 +43,10 @@ public interface MountInterface {
       return ordinal();
     }
 
-    /** @return the procedure corresponding to the value. */
+    /** The procedure of given value.
+     * @param value specifies the procedure index
+     * @return the procedure corresponding to the value.
+     */
     public static MNTPROC fromValue(int value) {
       if (value < 0 || value >= values().length) {
         return null;
@@ -52,19 +55,51 @@ public interface MountInterface {
     }
   }
 
-  /** MNTPROC_NULL - Do Nothing */
+  /**
+   * MNTPRC_NULL - Do Nothing.
+   * @param out XDR response used in NFS protocol
+   * @param xid transaction id
+   * @param client represents IP address
+   * @return XDR response
+   */
   public XDR nullOp(XDR out, int xid, InetAddress client);
 
-  /** MNTPROC_MNT - Add mount entry */
+  /**
+   * MNTPROC_MNT - Add mount entry.
+   * @param xdr XDR message used in NFS protocol
+   * @param out XDR response used in NFS protocol
+   * @param xid transaction id
+   * @param client represents IP address
+   * @return XDR response
+   */
   public XDR mnt(XDR xdr, XDR out, int xid, InetAddress client);
 
-  /** MNTPROC_DUMP - Return mount entries */
+  /**
+   * MNTPROC_DUMP - Return mount entries.
+   * @param out XDR response used in NFS protocol
+   * @param xid transaction id
+   * @param client represents IP address
+   * @return XDR response
+   */
   public XDR dump(XDR out, int xid, InetAddress client);
 
-  /** MNTPROC_UMNT - Remove mount entry */
+  /**
+   * MNTPROC_UMNT - Remove mount entry.
+   * @param xdr XDR message used in NFS protocol
+   * @param out XDR response used in NFS protocol
+   * @param xid transaction id
+   * @param client represents IP address
+   * @return XDR response
+   */
   public XDR umnt(XDR xdr, XDR out, int xid, InetAddress client);
 
-  /** MNTPROC_UMNTALL - Remove all mount entries */
+  /**
+   * MNTPROC_UMNTALL - Remove all mount entries.
+   * @param out XDR response used in NFS protocol
+   * @param xid transaction id
+   * @param client represents IP address
+   * @return XDR response
+   */
   public XDR umntall(XDR out, int xid, InetAddress client);
   
   /** MNTPROC_EXPORT and MNTPROC_EXPORTALL - Return export list */

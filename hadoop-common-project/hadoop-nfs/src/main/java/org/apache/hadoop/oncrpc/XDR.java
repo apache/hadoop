@@ -219,7 +219,12 @@ public final class XDR {
     }
   }
 
-  /** check if the rest of data has more than len bytes */
+  /**
+   * check if the rest of data has more than len bytes.
+   * @param xdr XDR message
+   * @param len minimum remaining length
+   * @return specify remaining length is enough or not
+   */
   public static boolean verifyLength(XDR xdr, int len) {
     return xdr.buf.remaining() >= len;
   }
@@ -231,7 +236,12 @@ public final class XDR {
     return b;
   }
 
-  /** Write an XDR message to a TCP ChannelBuffer */
+  /**
+   * Write an XDR message to a TCP ChannelBuffer.
+   * @param request XDR request
+   * @param last specifies last request or not
+   * @return TCP buffer
+   */
   public static ChannelBuffer writeMessageTcp(XDR request, boolean last) {
     Preconditions.checkState(request.state == XDR.State.WRITING);
     ByteBuffer b = request.buf.duplicate();
@@ -243,7 +253,11 @@ public final class XDR {
     return ChannelBuffers.copiedBuffer(headerBuf, b);
   }
 
-  /** Write an XDR message to a UDP ChannelBuffer */
+  /**
+   * Write an XDR message to a UDP ChannelBuffer.
+   * @param response XDR response
+   * @return UDP buffer
+   */
   public static ChannelBuffer writeMessageUdp(XDR response) {
     Preconditions.checkState(response.state == XDR.State.READING);
     // TODO: Investigate whether making a copy of the buffer is necessary.
