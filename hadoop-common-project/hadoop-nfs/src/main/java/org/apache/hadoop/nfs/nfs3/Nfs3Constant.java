@@ -76,7 +76,11 @@ public class Nfs3Constant {
       return ordinal();
     }
 
-    /** @return the procedure corresponding to the value. */
+    /**
+     * Convert to NFS procedure.
+     * @param value specify the index of NFS procedure
+     * @return the procedure corresponding to the value.
+     */
     public static NFSPROC3 fromValue(int value) {
       if (value < 0 || value >= values().length) {
         return null;

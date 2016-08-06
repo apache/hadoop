@@ -36,7 +36,14 @@ public class MountResponse {
   private MountResponse() {
   }
   
-  /** Response for RPC call {@link MountInterface.MNTPROC#MNT} */
+  /**
+   * Response for RPC call {@link MountInterface.MNTPROC#MNT}.
+   * @param status status of mount response
+   * @param xdr XDR message object
+   * @param xid transaction id
+   * @param handle file handle
+   * @return response XDR
+   */
   public static XDR writeMNTResponse(int status, XDR xdr, int xid,
       byte[] handle) {
     RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
@@ -50,7 +57,13 @@ public class MountResponse {
     return xdr;
   }
 
-  /** Response for RPC call {@link MountInterface.MNTPROC#DUMP} */
+  /**
+   * Response for RPC call {@link MountInterface.MNTPROC#DUMP}.
+   * @param xdr XDR message object
+   * @param xid transaction id
+   * @param mounts mount entries
+   * @return response XDR
+   */
   public static XDR writeMountList(XDR xdr, int xid, List<MountEntry> mounts) {
     RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     for (MountEntry mountEntry : mounts) {
@@ -62,7 +75,14 @@ public class MountResponse {
     return xdr;
   }
   
-  /** Response for RPC call {@link MountInterface.MNTPROC#EXPORT} */
+  /**
+   * Response for RPC call {@link MountInterface.MNTPROC#EXPORT}.
+   * @param xdr XDR message object
+   * @param xid transaction id
+   * @param exports export list
+   * @param hostMatcher the list of export host
+   * @return response XDR
+   */
   public static XDR writeExportList(XDR xdr, int xid, List<String> exports,
       List<NfsExports> hostMatcher) {
     assert (exports.size() == hostMatcher.size());

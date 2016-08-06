@@ -87,6 +87,8 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
 
   /**
    * Register this program with the local portmapper.
+   * @param transport transport layer for port map
+   * @param boundPort port number of bounded RPC program
    */
   public void register(int transport, int boundPort) {
     if (boundPort != port) {
@@ -104,6 +106,8 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   
   /**
    * Unregister this program with the local portmapper.
+   * @param transport transport layer for port map
+   * @param boundPort port number of bounded RPC program
    */
   public void unregister(int transport, int boundPort) {
     if (boundPort != port) {
@@ -121,6 +125,8 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   
   /**
    * Register the program with Portmap or Rpcbind
+   * @param mapEntry port map entries
+   * @param set specifies registration or not
    */
   protected void register(PortmapMapping mapEntry, boolean set) {
     XDR mappingRequest = PortmapRequest.create(mapEntry, set);
