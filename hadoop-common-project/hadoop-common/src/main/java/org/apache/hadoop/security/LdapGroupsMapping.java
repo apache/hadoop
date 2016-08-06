@@ -398,19 +398,15 @@ public class LdapGroupsMapping
   }
 
   String getPassword(Configuration conf, String alias, String defaultPass) {
-    String password = null;
+    String password = defaultPass;
     try {
       char[] passchars = conf.getPassword(alias);
       if (passchars != null) {
         password = new String(passchars);
       }
-      else {
-        password = defaultPass;
-      }
-    }
-    catch (IOException ioe) {
-      LOG.warn("Exception while trying to password for alias " + alias + ": "
-          + ioe.getMessage());
+    } catch (IOException ioe) {
+      LOG.warn("Exception while trying to get password for alias " + alias
+              + ": ", ioe);
     }
     return password;
   }
