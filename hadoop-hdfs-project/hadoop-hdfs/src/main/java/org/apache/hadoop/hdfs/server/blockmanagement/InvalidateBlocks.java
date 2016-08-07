@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSUtil;
 
@@ -151,7 +152,7 @@ class InvalidateBlocks {
       final LightWeightHashSet<Block> blocks = entry.getValue();
       if (blocks.size() > 0) {
         out.println(entry.getKey());
-        out.println(blocks);
+        out.println(StringUtils.join(',', blocks));
       }
     }
   }
