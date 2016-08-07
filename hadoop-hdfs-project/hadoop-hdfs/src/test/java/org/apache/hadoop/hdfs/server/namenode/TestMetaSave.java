@@ -163,7 +163,9 @@ public class TestMetaSave {
       assertTrue(line.equals("Metasave: Blocks 2 waiting deletion from 1 datanodes."));
      //skip 2 lines to reach HDFS-9033 scenario.
       line = reader.readLine();
+      // skip 1 line for Corrupt Blocks section.
       line = reader.readLine();
+      assertTrue(line.contains("blk"));
       line = reader.readLine();
       assertTrue(line.equals("Metasave: Number of datanodes: 2"));
       line = reader.readLine();
@@ -221,7 +223,7 @@ public class TestMetaSave {
 
   /**
    * Returns a File for the given name inside the log directory.
-   * 
+   *
    * @param name String file name
    * @return File for given name inside log directory
    */

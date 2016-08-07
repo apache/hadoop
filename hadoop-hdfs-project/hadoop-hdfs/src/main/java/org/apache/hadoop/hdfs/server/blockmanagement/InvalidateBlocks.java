@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSUtil;
 
@@ -140,7 +141,7 @@ class InvalidateBlocks {
   /** Print the contents to out. */
   synchronized void dump(final PrintWriter out) {
     final int size = node2blocks.values().size();
-    out.println("Metasave: Blocks " + numBlocks 
+    out.println("Metasave: Blocks " + numBlocks
         + " waiting deletion from " + size + " datanodes.");
     if (size == 0) {
       return;
@@ -150,7 +151,7 @@ class InvalidateBlocks {
       final LightWeightHashSet<Block> blocks = entry.getValue();
       if (blocks.size() > 0) {
         out.println(entry.getKey());
-        out.println(blocks);
+        out.println(StringUtils.join(",", blocks));
       }
     }
   }
@@ -196,7 +197,7 @@ class InvalidateBlocks {
     numBlocks -= toInvalidate.size();
     return toInvalidate;
   }
-  
+
   synchronized void clear() {
     node2blocks.clear();
     numBlocks = 0;
