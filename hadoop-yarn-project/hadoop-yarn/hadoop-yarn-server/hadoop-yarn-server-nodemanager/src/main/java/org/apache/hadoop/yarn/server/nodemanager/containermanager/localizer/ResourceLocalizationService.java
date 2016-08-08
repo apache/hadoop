@@ -1221,8 +1221,10 @@ public class ResourceLocalizationService extends CompositeService
         tokenOut =
             lfs.create(nmPrivateCTokensPath, EnumSet.of(CREATE, OVERWRITE));
         LOG.info("Writing credentials to the nmPrivate file "
-            + nmPrivateCTokensPath.toString() + ". Credentials list: ");
+            + nmPrivateCTokensPath.toString());
         if (LOG.isDebugEnabled()) {
+          LOG.debug("Credentials list in " + nmPrivateCTokensPath.toString()
+              + ": ");
           for (Token<? extends TokenIdentifier> tk : credentials
               .getAllTokens()) {
             LOG.debug(tk + " : " + buildTokenFingerprint(tk));
