@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import java.io.*;
+import java.nio.file.Files;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -25,7 +26,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import static org.apache.hadoop.test.MockitoMaker.*;
-import static org.apache.hadoop.fs.permission.FsAction.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
-import org.apache.hadoop.util.Shell;
 
 public class TestDiskChecker {
   final FsPermission defaultPerm = new FsPermission("755");
@@ -112,13 +111,29 @@ public class TestDiskChecker {
     _checkDirs(true, new FsPermission("666"), false);   // not listable
   }
 
+  /**
+   * Create an empty file with a random name under test directory.
+   * @return the created file
+   * @throws java.io.IOException if any
+   */
+  protected File createTempFile() throws java.io.IOException {
+    File testDir = new File(System.getProperty("test.build.data"));
+    return Files.createTempFile(testDir.toPath(), "test", "tmp").toFile();
+  }
+
+  /**
+   * Create an empty directory with a random name under test directory.
+   * @return the created directory
+   * @throws java.io.IOException if any
+   */
+  protected File createTempDir() throws java.io.IOException {
+    File testDir = new File(System.getProperty("test.build.data"));
+    return Files.createTempDirectory(testDir.toPath(), "test").toFile();
+  }
+
   private void _checkDirs(boolean isDir, FsPermission perm, boolean success)
       throws Throwable {
-    File localDir = File.createTempFile("test", "tmp");
-    if (isDir) {
-      localDir.delete();
-      localDir.mkdir();
-    }
+    File localDir = isDir ? createTempDir() : createTempFile();
     Shell.execCommand(Shell.getSetPermissionCommand(String.format("%04o",
       perm.toShort()), false, localDir.getAbsolutePath()));
     try {
@@ -163,11 +178,7 @@ public class TestDiskChecker {
 
   protected void checkDirs(boolean isDir, String perm, boolean success)
       throws Throwable {
-    File localDir = File.createTempFile("test", "tmp");
-    if (isDir) {
-      localDir.delete();
-      localDir.mkdir();
-    }
+    File localDir = isDir ? createTempDir() : createTempFile();
     Shell.execCommand(Shell.getSetPermissionCommand(perm, false,
                                                     localDir.getAbsolutePath()));
     try {
