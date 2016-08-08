@@ -19,25 +19,21 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationMembershipStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -45,16 +41,21 @@ import org.junit.Test;
  */
 public abstract class FederationStateStoreBaseTest {
 
-  static final Logger LOG =
-      LoggerFactory.getLogger(FederationStateStoreBaseTest.class);
   private static final MonotonicClock CLOCK = new MonotonicClock();
 
-  private FederationMembershipStateStore stateStore = getStateStore();
+  private FederationMembershipStateStore stateStore;
 
   @Before
   public void before() throws IOException {
-    clearMembership();
+    stateStore = getCleanStateStore();
   }
+
+  @After
+  public void after() {
+    stateStore = null;
+  }
+
+  protected abstract FederationMembershipStateStore getCleanStateStore();
 
   @Test
   public void testRegisterSubCluster() throws Exception {
@@ -63,11 +64,9 @@ public abstract class FederationStateStoreBaseTest {
 
     SubClusterRegisterResponse result = stateStore.registerSubCluster(
         SubClusterRegisterRequest.newInstance(subClusterInfo));
-    Map<SubClusterId, SubClusterInfo> membership = getMembership();
 
-    Assert.assertNotNull(membership.get(subClusterId));
     Assert.assertNotNull(result);
-    Assert.assertEquals(subClusterInfo, membership.get(subClusterId));
+    Assert.assertEquals(subClusterInfo, querySubClusterInfo(subClusterId));
   }
 
   @Test
@@ -83,10 +82,8 @@ public abstract class FederationStateStoreBaseTest {
 
     stateStore.deregisterSubCluster(deregisterRequest);
 
-    Map<SubClusterId, SubClusterInfo> membership = getMembership();
-    Assert.assertNotNull(membership.get(subClusterId));
-    Assert.assertEquals(membership.get(subClusterId).getState(),
-        SubClusterState.SC_UNREGISTERED);
+    Assert.assertEquals(SubClusterState.SC_UNREGISTERED,
+        querySubClusterInfo(subClusterId).getState());
   }
 
   @Test
@@ -179,10 +176,9 @@ public abstract class FederationStateStoreBaseTest {
         .newInstance(subClusterId, SubClusterState.SC_RUNNING, "cabability");
     stateStore.subClusterHeartbeat(heartbeatRequest);
 
-    Map<SubClusterId, SubClusterInfo> membership = getMembership();
-    Assert.assertEquals(membership.get(subClusterId).getState(),
-        SubClusterState.SC_RUNNING);
-    Assert.assertNotNull(membership.get(subClusterId).getLastHeartBeat());
+    Assert.assertEquals(SubClusterState.SC_RUNNING,
+        querySubClusterInfo(subClusterId).getState());
+    Assert.assertNotNull(querySubClusterInfo(subClusterId).getLastHeartBeat());
   }
 
   @Test
@@ -212,10 +208,11 @@ public abstract class FederationStateStoreBaseTest {
         CLOCK.getTime(), "cabability");
   }
 
-  protected abstract Map<SubClusterId, SubClusterInfo> getMembership();
-
-  protected abstract void clearMembership();
-
-  protected abstract FederationMembershipStateStore getStateStore();
+  private SubClusterInfo querySubClusterInfo(SubClusterId subClusterId)
+      throws YarnException {
+    GetSubClusterInfoRequest request =
+        GetSubClusterInfoRequest.newInstance(subClusterId);
+    return stateStore.getSubCluster(request).getSubClusterInfo();
+  }
 
 }

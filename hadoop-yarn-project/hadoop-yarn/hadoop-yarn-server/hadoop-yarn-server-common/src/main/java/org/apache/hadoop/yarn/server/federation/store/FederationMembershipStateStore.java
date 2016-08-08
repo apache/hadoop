@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbea
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterResponse;
-import org.apache.hadoop.yarn.server.records.Version;
 
 /**
  * FederationMembershipStateStore maintains the state of all
@@ -40,15 +39,6 @@ import org.apache.hadoop.yarn.server.records.Version;
 @Private
 @Unstable
 public interface FederationMembershipStateStore {
-
-  /**
-   * Get the {@link Version} of the underlying federation membership state
-   * store.
-   *
-   * @return the {@link Version} of the underlying federation membership state
-   *         store
-   */
-  Version getMembershipStateStoreVersion();
 
   /**
    * Register a <em>subcluster</em> by publishing capabilities as represented by
@@ -80,7 +70,7 @@ public interface FederationMembershipStateStore {
    */
   SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest subClusterDeregisterRequest)
-      throws YarnException;
+          throws YarnException;
 
   /**
    * Periodic heartbeat from a <code>ResourceManager</code> participating in
@@ -96,7 +86,7 @@ public interface FederationMembershipStateStore {
    */
   SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest subClusterHeartbeatRequest)
-      throws YarnException;
+          throws YarnException;
 
   /**
    * Get the membership information of <em>subcluster</em> as identified by
