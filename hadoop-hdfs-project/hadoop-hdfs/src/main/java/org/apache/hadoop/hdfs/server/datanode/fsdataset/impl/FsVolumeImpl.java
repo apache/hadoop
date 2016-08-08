@@ -45,6 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -304,7 +305,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   private void decDfsUsedAndNumBlocks(String bpid, long value,
                                       boolean blockFileDeleted) {
-    synchronized(dataset) {
+    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
         bp.decDfsUsed(value);
@@ -316,7 +317,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   void incDfsUsedAndNumBlocks(String bpid, long value) {
-    synchronized (dataset) {
+    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
         bp.incDfsUsed(value);
@@ -326,7 +327,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   void incDfsUsed(String bpid, long value) {
-    synchronized(dataset) {
+    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
         bp.incDfsUsed(value);
@@ -337,7 +338,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @VisibleForTesting
   public long getDfsUsed() throws IOException {
     long dfsUsed = 0;
-    synchronized(dataset) {
+    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
       for(BlockPoolSlice s : bpSlices.values()) {
         dfsUsed += s.getDfsUsed();
       }

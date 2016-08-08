@@ -39,6 +39,7 @@ import javax.management.StandardMBean;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -115,6 +116,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       DatanodeStorage.State.NORMAL;
   
   static final byte[] nullCrcFileData;
+
+  private final AutoCloseableLock datasetLock;
+
   static {
     DataChecksum checksum = DataChecksum.newDataChecksum(
         DataChecksum.Type.NULL, 16*1024 );
@@ -550,6 +554,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY),
         conf.getEnum(CONFIG_PROPERTY_STATE, DEFAULT_STATE));
     this.volume = new SimulatedVolume(this.storage);
+    this.datasetLock = new AutoCloseableLock();
   }
 
   public synchronized void injectBlocks(String bpid,
@@ -1366,5 +1371,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return null;
   }
 
+  @Override
+  public AutoCloseableLock acquireDatasetLock() {
+    return datasetLock.acquire();
+  }
 }
 

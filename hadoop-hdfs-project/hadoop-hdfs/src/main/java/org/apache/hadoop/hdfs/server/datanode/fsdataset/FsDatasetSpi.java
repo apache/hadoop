@@ -35,6 +35,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -639,4 +640,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   ReplicaInfo moveBlockAcrossVolumes(final ExtendedBlock block,
       FsVolumeSpi destination) throws IOException;
+
+  /**
+   * Acquire the lock of the data set.
+   */
+  AutoCloseableLock acquireDatasetLock();
 }

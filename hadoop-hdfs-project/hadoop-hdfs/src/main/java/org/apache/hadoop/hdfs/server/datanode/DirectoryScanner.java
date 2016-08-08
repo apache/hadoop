@@ -44,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -583,7 +584,7 @@ public class DirectoryScanner implements Runnable {
     Map<String, ScanInfo[]> diskReport = getDiskReport();
 
     // Hold FSDataset lock to prevent further changes to the block map
-    synchronized(dataset) {
+    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
       for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
         String bpid = entry.getKey();
         ScanInfo[] blockpoolReport = entry.getValue();
