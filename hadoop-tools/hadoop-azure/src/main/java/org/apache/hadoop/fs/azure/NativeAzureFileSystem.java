@@ -59,22 +59,20 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.fs.azure.AzureException;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.Time;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.StorageException;
-
-
-import org.apache.hadoop.io.IOUtils;
 
 /**
  * A {@link FileSystem} for reading and writing files stored on <a
@@ -90,6 +88,7 @@ public class NativeAzureFileSystem extends FileSystem {
    * A description of a folder rename operation, including the source and
    * destination keys, and descriptions of the files in the source folder.
    */
+
   public static class FolderRenamePending {
     private SelfRenewingLease folderLease;
     private String srcKey;
@@ -112,6 +111,7 @@ public class NativeAzureFileSystem extends FileSystem {
       ArrayList<FileMetadata> fileMetadataList = new ArrayList<FileMetadata>();
 
       // List all the files in the folder.
+      long start = Time.monotonicNow();
       String priorLastKey = null;
       do {
         PartialListing listing = fs.getStoreInterface().listAll(srcKey, AZURE_LIST_ALL,
@@ -122,6 +122,9 @@ public class NativeAzureFileSystem extends FileSystem {
         priorLastKey = listing.getPriorLastKey();
       } while (priorLastKey != null);
       fileMetadata = fileMetadataList.toArray(new FileMetadata[fileMetadataList.size()]);
+      long end = Time.monotonicNow();
+      LOG.debug("Time taken to list {} blobs for rename operation is: {} ms", fileMetadata.length, (end - start));
+
       this.committed = true;
     }
 
@@ -419,23 +422,18 @@ public class NativeAzureFileSystem extends FileSystem {
      */
     public void execute() throws IOException {
 
-      for (FileMetadata file : this.getFiles()) {
-
-        // Rename all materialized entries under the folder to point to the
-        // final destination.
-        if (file.getBlobMaterialization() == BlobMaterialization.Explicit) {
-          String srcName = file.getKey();
-          String suffix  = srcName.substring((this.getSrcKey()).length());
-          String dstName = this.getDstKey() + suffix;
-
-          // Rename gets exclusive access (via a lease) for files
-          // designated for atomic rename.
-          // The main use case is for HBase write-ahead log (WAL) and data
-          // folder processing correctness.  See the rename code for details.
-          boolean acquireLease = fs.getStoreInterface().isAtomicRenameKey(srcName);
-          fs.getStoreInterface().rename(srcName, dstName, acquireLease, null);
+      AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
+        @Override
+        public boolean execute(FileMetadata file) throws IOException{
+          renameFile(file);
+          return true;
         }
-      }
+      };
+
+      AzureFileSystemThreadPoolExecutor executor = this.fs.getThreadPoolExecutor(this.fs.renameThreadCount,
+          "AzureBlobRenameThread", "Rename", getSrcKey(), AZURE_RENAME_THREADS);
+
+      executor.executeParallel(this.getFiles(), task);
 
       // Rename the source folder 0-byte root file itself.
       FileMetadata srcMetadata2 = this.getSourceMetadata();
@@ -452,6 +450,25 @@ public class NativeAzureFileSystem extends FileSystem {
       // destination.
       fs.updateParentFolderLastModifiedTime(srcKey);
       fs.updateParentFolderLastModifiedTime(dstKey);
+    }
+
+    // Rename a single file
+    @VisibleForTesting
+    void renameFile(FileMetadata file) throws IOException{
+      // Rename all materialized entries under the folder to point to the
+      // final destination.
+      if (file.getBlobMaterialization() == BlobMaterialization.Explicit) {
+        String srcName = file.getKey();
+        String suffix  = srcName.substring((this.getSrcKey()).length());
+        String dstName = this.getDstKey() + suffix;
+
+        // Rename gets exclusive access (via a lease) for files
+        // designated for atomic rename.
+        // The main use case is for HBase write-ahead log (WAL) and data
+        // folder processing correctness.  See the rename code for details.
+        boolean acquireLease = this.fs.getStoreInterface().isAtomicRenameKey(srcName);
+        this.fs.getStoreInterface().rename(srcName, dstName, acquireLease, null);
+      }
     }
 
     /** Clean up after execution of rename.
@@ -661,6 +678,36 @@ public class NativeAzureFileSystem extends FileSystem {
    * Property to enable Append API.
    */
   public static final String APPEND_SUPPORT_ENABLE_PROPERTY_NAME = "fs.azure.enable.append.support";
+
+  /**
+   * The configuration property to set number of threads to be used for rename operation.
+   */
+  public static final String AZURE_RENAME_THREADS = "fs.azure.rename.threads";
+
+  /**
+   * The default number of threads to be used for rename operation.
+   */
+  public static final int DEFAULT_AZURE_RENAME_THREADS = 0;
+
+  /**
+   * The configuration property to set number of threads to be used for delete operation.
+   */
+  public static final String AZURE_DELETE_THREADS = "fs.azure.delete.threads";
+
+  /**
+   * The default number of threads to be used for delete operation.
+   */
+  public static final int DEFAULT_AZURE_DELETE_THREADS = 0;
+
+  /**
+   * The number of threads to be used for delete operation after reading user configuration.
+   */
+  private int deleteThreadCount = 0;
+
+  /**
+   * The number of threads to be used for rename operation after reading user configuration.
+   */
+  private int renameThreadCount = 0;
 
   private class NativeAzureFsInputStream extends FSInputStream {
     private InputStream in;
@@ -1172,6 +1219,9 @@ public class NativeAzureFileSystem extends FileSystem {
     LOG.debug("  blockSize  = {}",
         conf.getLong(AZURE_BLOCK_SIZE_PROPERTY_NAME, MAX_AZURE_BLOCK_SIZE));
 
+    // Initialize thread counts from user configuration
+    deleteThreadCount = conf.getInt(AZURE_DELETE_THREADS, DEFAULT_AZURE_DELETE_THREADS);
+    renameThreadCount = conf.getInt(AZURE_RENAME_THREADS, DEFAULT_AZURE_RENAME_THREADS);
   }
 
   private NativeFileSystemStore createDefaultStore(Configuration conf) {
@@ -1779,77 +1829,65 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // List all the blobs in the current folder.
       String priorLastKey = null;
-      PartialListing listing = null;
-      try {
-        listing = store.listAll(key, AZURE_LIST_ALL, 1,
-            priorLastKey);
-      } catch(IOException e) {
 
-        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+      // Start time for list operation
+      long start = Time.monotonicNow();
+      ArrayList<FileMetadata> fileMetadataList = new ArrayList<FileMetadata>();
 
-        if (innerException instanceof StorageException
-            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-          return false;
+      // List all the files in the folder with AZURE_UNBOUNDED_DEPTH depth.
+      do {
+        try {
+          PartialListing listing = store.listAll(key, AZURE_LIST_ALL,
+            AZURE_UNBOUNDED_DEPTH, priorLastKey);
+          for(FileMetadata file : listing.getFiles()) {
+            fileMetadataList.add(file);
+          }
+          priorLastKey = listing.getPriorLastKey();
+        } catch (IOException e) {
+          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+          if (innerException instanceof StorageException
+              && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+            return false;
+          }
+
+          throw e;
         }
+      } while (priorLastKey != null);
 
-        throw e;
+      long end = Time.monotonicNow();
+      LOG.debug("Time taken to list {} blobs for delete operation: {} ms", fileMetadataList.size(), (end - start));
+
+      final FileMetadata[] contents = fileMetadataList.toArray(new FileMetadata[fileMetadataList.size()]);
+
+      if (!recursive && contents.length > 0) {
+          // The folder is non-empty and recursive delete was not specified.
+          // Throw an exception indicating that a non-recursive delete was
+          // specified for a non-empty folder.
+          throw new IOException("Non-recursive delete of non-empty directory "
+              + f.toString());
       }
 
-      if (listing == null) {
+      // Delete all files / folders in current directory stored as list in 'contents'.
+      AzureFileSystemThreadTask task = new AzureFileSystemThreadTask() {
+        @Override
+        public boolean execute(FileMetadata file) throws IOException{
+          return deleteFile(file.getKey(), file.isDir());
+        }
+      };
+
+      AzureFileSystemThreadPoolExecutor executor = getThreadPoolExecutor(this.deleteThreadCount,
+          "AzureBlobDeleteThread", "Delete", key, AZURE_DELETE_THREADS);
+
+      if (!executor.executeParallel(contents, task)) {
+        LOG.error("Failed to delete files / subfolders in blob {}", key);
         return false;
       }
 
-      FileMetadata[] contents = listing.getFiles();
-      if (!recursive && contents.length > 0) {
-        // The folder is non-empty and recursive delete was not specified.
-        // Throw an exception indicating that a non-recursive delete was
-        // specified for a non-empty folder.
-        throw new IOException("Non-recursive delete of non-empty directory "
-            + f.toString());
-      }
-
-      // Delete all the files in the folder.
-      for (FileMetadata p : contents) {
-        // Tag on the directory name found as the suffix of the suffix of the
-        // parent directory to get the new absolute path.
-        String suffix = p.getKey().substring(
-            p.getKey().lastIndexOf(PATH_DELIMITER));
-        if (!p.isDir()) {
-          try {
-            store.delete(key + suffix);
-            instrumentation.fileDeleted();
-          } catch(IOException e) {
-
-            Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
-
-            if (innerException instanceof StorageException
-                && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-              return false;
-            }
-
-            throw e;
-          }
-        } else {
-          // Recursively delete contents of the sub-folders. Notice this also
-          // deletes the blob for the directory.
-          if (!delete(new Path(f.toString() + suffix), true)) {
-            return false;
-          }
-        }
-      }
-
-      try {
-        store.delete(key);
-      } catch(IOException e) {
-
-        Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
-
-        if (innerException instanceof StorageException
-            && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
-          return false;
-        }
-
-        throw e;
+      // Delete the current directory
+      if (!deleteFile(metaFile.getKey(), metaFile.isDir())) {
+        LOG.error("Failed delete directory {}", f.toString());
+        return false;
       }
 
       // Update parent directory last modified time
@@ -1859,11 +1897,39 @@ public class NativeAzureFileSystem extends FileSystem {
           updateParentFolderLastModifiedTime(key);
         }
       }
-      instrumentation.directoryDeleted();
     }
 
     // File or directory was successfully deleted.
     LOG.debug("Delete Successful for : {}", f.toString());
+    return true;
+  }
+
+  public AzureFileSystemThreadPoolExecutor getThreadPoolExecutor(int threadCount,
+      String threadNamePrefix, String operation, String key, String config) {
+    return new AzureFileSystemThreadPoolExecutor(threadCount, threadNamePrefix, operation, key, config);
+  }
+
+  // Delete single file / directory from key.
+  @VisibleForTesting
+  boolean deleteFile(String key, boolean isDir) throws IOException {
+    try {
+      store.delete(key);
+      if (isDir) {
+        instrumentation.directoryDeleted();
+      } else {
+        instrumentation.fileDeleted();
+      }
+    } catch(IOException e) {
+      Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+
+      if (innerException instanceof StorageException
+          && NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+        return false;
+      }
+
+      throw e;
+    }
+
     return true;
   }
 
@@ -2517,7 +2583,8 @@ public class NativeAzureFileSystem extends FileSystem {
    * @param dstKey Destination folder name.
    * @throws IOException
    */
-  private FolderRenamePending prepareAtomicFolderRename(
+  @VisibleForTesting
+  FolderRenamePending prepareAtomicFolderRename(
       String srcKey, String dstKey) throws IOException {
 
     if (store.isAtomicRenameKey(srcKey)) {
