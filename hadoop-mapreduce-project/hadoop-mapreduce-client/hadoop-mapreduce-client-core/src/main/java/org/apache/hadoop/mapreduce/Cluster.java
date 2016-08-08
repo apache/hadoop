@@ -106,6 +106,10 @@ public class Cluster {
         "Cannot initialize Cluster. Please check your configuration for "
             + MRConfig.FRAMEWORK_NAME
             + " and the correspond server addresses.");
+    if (jobTrackAddr != null) {
+      LOG.info(
+          "Initializing cluster for Job Tracker=" + jobTrackAddr.toString());
+    }
     for (ClientProtocolProvider provider : providerList) {
       LOG.debug("Trying ClientProtocolProvider : "
           + provider.getClass().getName());
