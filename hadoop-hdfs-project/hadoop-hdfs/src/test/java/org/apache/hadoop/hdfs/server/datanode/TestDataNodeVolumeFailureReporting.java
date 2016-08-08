@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
@@ -478,6 +479,25 @@ public class TestDataNodeVolumeFailureReporting {
         (1*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(false, 1);
     checkFailuresAtNameNode(dm, dns.get(0), false, dn1Vol1.getAbsolutePath());
+  }
+
+  @Test
+  public void testAutoFormatEmptyBlockPoolDirectory() throws Exception {
+    // remove the version file
+    DataNode dn = cluster.getDataNodes().get(0);
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    BlockPoolSliceStorage bps = dn.getStorage().getBPStorage(bpid);
+    Storage.StorageDirectory dir = bps.getStorageDir(0);
+    File current = dir.getCurrentDir();
+
+    File currentVersion = new File(current, "VERSION");
+    currentVersion.delete();
+    // restart the data node
+    assertTrue(cluster.restartDataNodes(true));
+    // the DN should tolerate one volume failure.
+    cluster.waitActive();
+    assertFalse("DataNode should not reformat if VERSION is missing",
+        currentVersion.exists());
   }
 
   /**
