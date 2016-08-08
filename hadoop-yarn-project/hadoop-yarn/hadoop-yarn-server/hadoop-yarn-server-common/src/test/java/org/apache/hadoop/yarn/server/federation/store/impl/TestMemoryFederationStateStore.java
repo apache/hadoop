@@ -17,11 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import java.util.Map;
-
 import org.apache.hadoop.yarn.server.federation.store.FederationMembershipStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
  * Unit tests for MemoryFederationStateStore.
@@ -29,21 +25,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 public class TestMemoryFederationStateStore
     extends FederationStateStoreBaseTest {
 
-  private static final MemoryFederationStateStore STATESTORE =
-      new MemoryFederationStateStore();
-
   @Override
-  protected Map<SubClusterId, SubClusterInfo> getMembership() {
-    return STATESTORE.getMembershipTable();
-  }
-
-  @Override
-  protected void clearMembership() {
-    STATESTORE.clearMembershipTable();
-  }
-
-  @Override
-  protected FederationMembershipStateStore getStateStore() {
-    return STATESTORE;
+  protected FederationMembershipStateStore getCleanStateStore() {
+    return new MemoryFederationStateStore();
   }
 }
