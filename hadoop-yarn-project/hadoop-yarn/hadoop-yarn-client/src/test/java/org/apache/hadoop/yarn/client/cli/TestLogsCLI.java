@@ -189,57 +189,70 @@ public class TestLogsCLI {
     pw.println("usage: yarn logs -applicationId <application ID> [OPTIONS]");
     pw.println();
     pw.println("general options are:");
-    pw.println(" -am <AM Containers>             Prints the AM Container logs for this");
-    pw.println("                                 application. Specify comma-separated");
-    pw.println("                                 value to get logs for related AM");
-    pw.println("                                 Container. For example, If we specify -am");
-    pw.println("                                 1,2, we will get the logs for the first");
-    pw.println("                                 AM Container as well as the second AM");
-    pw.println("                                 Container. To get logs for all AM");
-    pw.println("                                 Containers, use -am ALL. To get logs for");
-    pw.println("                                 the latest AM Container, use -am -1. By");
-    pw.println("                                 default, it will print all available");
-    pw.println("                                 logs. Work with -log_files to get only");
-    pw.println("                                 specific logs.");
-    pw.println(" -appOwner <Application Owner>   AppOwner (assumed to be current user if");
-    pw.println("                                 not specified)");
-    pw.println(" -containerId <Container ID>     ContainerId. By default, it will print");
-    pw.println("                                 all available logs. Work with -log_files");
-    pw.println("                                 to get only specific logs. If specified,");
-    pw.println("                                 the applicationId can be omitted");
-    pw.println(" -help                           Displays help for all commands.");
-    pw.println(" -list_nodes                     Show the list of nodes that successfully");
-    pw.println("                                 aggregated logs. This option can only be");
-    pw.println("                                 used with finished applications.");
-    pw.println(" -log_files <Log File Name>      Specify comma-separated value to get");
-    pw.println("                                 exact matched log files. Use \"ALL\" or");
-    pw.println("                                 \"*\"to fetch all the log files for the");
-    pw.println("                                 container. Specific -regex for using java");
-    pw.println("                                 regex to find matched log files.");
-    pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
-    pw.println(" -out <Local Directory>          Local directory for storing individual");
-    pw.println("                                 container logs. The container logs will");
-    pw.println("                                 be stored based on the node the container");
-    pw.println("                                 ran on.");
-    pw.println(" -regex                          Work with -log_files to find matched");
-    pw.println("                                 files by using java regex.");
-    pw.println(" -show_application_log_info      Show the containerIds which belong to the");
-    pw.println("                                 specific Application. You can combine");
-    pw.println("                                 this with --nodeAddress to get");
-    pw.println("                                 containerIds for all the containers on");
-    pw.println("                                 the specific NodeManager.");
-    pw.println(" -show_container_log_info        Show the container log metadata,");
-    pw.println("                                 including log-file names, the size of the");
-    pw.println("                                 log files. You can combine this with");
-    pw.println("                                 --containerId to get log metadata for the");
-    pw.println("                                 specific container, or with --nodeAddress");
-    pw.println("                                 to get log metadata for all the");
-    pw.println("                                 containers on the specific NodeManager.");
-    pw.println(" -size <size>                    Prints the log file's first 'n' bytes or");
-    pw.println("                                 the last 'n' bytes. Use negative values");
-    pw.println("                                 as bytes to read from the end and");
-    pw.println("                                 positive values as bytes to read from the");
-    pw.println("                                 beginning.");
+    pw.println(" -am <AM Containers>                     Prints the AM Container logs for");
+    pw.println("                                         this application. Specify");
+    pw.println("                                         comma-separated value to get logs");
+    pw.println("                                         for related AM Container. For");
+    pw.println("                                         example, If we specify -am 1,2,");
+    pw.println("                                         we will get the logs for the");
+    pw.println("                                         first AM Container as well as the");
+    pw.println("                                         second AM Container. To get logs");
+    pw.println("                                         for all AM Containers, use -am");
+    pw.println("                                         ALL. To get logs for the latest");
+    pw.println("                                         AM Container, use -am -1. By");
+    pw.println("                                         default, it will print all");
+    pw.println("                                         available logs. Work with");
+    pw.println("                                         -log_files to get only specific");
+    pw.println("                                         logs.");
+    pw.println(" -appOwner <Application Owner>           AppOwner (assumed to be current");
+    pw.println("                                         user if not specified)");
+    pw.println(" -containerId <Container ID>             ContainerId. By default, it will");
+    pw.println("                                         print all available logs. Work");
+    pw.println("                                         with -log_files to get only");
+    pw.println("                                         specific logs. If specified, the");
+    pw.println("                                         applicationId can be omitted");
+    pw.println(" -help                                   Displays help for all commands.");
+    pw.println(" -list_nodes                             Show the list of nodes that");
+    pw.println("                                         successfully aggregated logs.");
+    pw.println("                                         This option can only be used with");
+    pw.println("                                         finished applications.");
+    pw.println(" -log_files <Log File Name>              Specify comma-separated value to");
+    pw.println("                                         get exact matched log files. Use");
+    pw.println("                                         \"ALL\" or \"*\" to fetch all the log");
+    pw.println("                                         files for the container.");
+    pw.println(" -log_files_pattern <Log File Pattern>   Specify comma-separated value to");
+    pw.println("                                         get matched log files by using");
+    pw.println("                                         java regex. Use \".*\" to fetch all");
+    pw.println("                                         the log files for the container.");
+    pw.println(" -nodeAddress <Node Address>             NodeAddress in the format");
+    pw.println("                                         nodename:port");
+    pw.println(" -out <Local Directory>                  Local directory for storing");
+    pw.println("                                         individual container logs. The");
+    pw.println("                                         container logs will be stored");
+    pw.println("                                         based on the node the container");
+    pw.println("                                         ran on.");
+    pw.println(" -show_application_log_info              Show the containerIds which");
+    pw.println("                                         belong to the specific");
+    pw.println("                                         Application. You can combine this");
+    pw.println("                                         with --nodeAddress to get");
+    pw.println("                                         containerIds for all the");
+    pw.println("                                         containers on the specific");
+    pw.println("                                         NodeManager.");
+    pw.println(" -show_container_log_info                Show the container log metadata,");
+    pw.println("                                         including log-file names, the");
+    pw.println("                                         size of the log files. You can");
+    pw.println("                                         combine this with --containerId");
+    pw.println("                                         to get log metadata for the");
+    pw.println("                                         specific container, or with");
+    pw.println("                                         --nodeAddress to get log metadata");
+    pw.println("                                         for all the containers on the");
+    pw.println("                                         specific NodeManager.");
+    pw.println(" -size <size>                            Prints the log file's first 'n'");
+    pw.println("                                         bytes or the last 'n' bytes. Use");
+    pw.println("                                         negative values as bytes to read");
+    pw.println("                                         from the end and positive values");
+    pw.println("                                         as bytes to read from the");
+    pw.println("                                         beginning.");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -346,7 +359,7 @@ public class TestLogsCLI {
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
-        "-log_files", ".*", "-regex"});
+        "-log_files_pattern", ".*"});
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
         logMessage(containerId1, "syslog")));
@@ -392,7 +405,7 @@ public class TestLogsCLI {
     sysOutStream.reset();
 
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
-        "-log_files", "std*", "-regex"});
+        "-log_files_pattern", "std*"});
     assertTrue(exitCode == 0);
     assertFalse(sysOutStream.toString().contains(
         logMessage(containerId1, "syslog")));
@@ -807,6 +820,16 @@ public class TestLogsCLI {
     assertTrue(sysErrStream.toString().contains("Invalid options. "
         + "Can only accept one of show_application_log_info/"
         + "show_container_log_info."));
+    sysErrStream.reset();
+
+    // Specify log_files and log_files_pattern
+    // at the same time
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-log_files", "*", "-log_files_pattern", ".*"});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains("Invalid options. "
+        + "Can only accept one of log_files/"
+        + "log_files_pattern."));
     sysErrStream.reset();
 
     // Specify a file name to the option -out
