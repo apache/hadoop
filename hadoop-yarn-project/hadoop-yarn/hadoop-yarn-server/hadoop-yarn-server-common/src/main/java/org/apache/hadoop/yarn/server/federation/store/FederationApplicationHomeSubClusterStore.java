@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHom
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.records.Version;
 
 /**
  * FederationApplicationHomeSubClusterStore maintains the state of all
@@ -48,15 +47,6 @@ import org.apache.hadoop.yarn.server.records.Version;
 @Private
 @Unstable
 public interface FederationApplicationHomeSubClusterStore {
-
-  /**
-   * Get the {@link Version} of the underlying federation application state
-   * store.
-   *
-   * @return the {@link Version} of the underlying federation application state
-   *         store
-   */
-  Version getApplicationStateStoreVersion();
 
   /**
    * Register the home {@code SubClusterId} of the newly submitted
@@ -91,16 +81,16 @@ public interface FederationApplicationHomeSubClusterStore {
    * {@code ApplicationId}.
    *
    * @param request contains the application queried
-   * @return {@code ApplicationHomeSubCluster} containing the application's
-   *         home subcluster
+   * @return {@code ApplicationHomeSubCluster} containing the application's home
+   *         subcluster
    * @throws YarnException if the request is invalid/fails
    */
   GetApplicationHomeSubClusterResponse getApplicationHomeSubClusterMap(
       GetApplicationHomeSubClusterRequest request) throws YarnException;
 
   /**
-   * Get the {@code ApplicationHomeSubCluster} list representing the mapping
-   * of all submitted applications to it's home sub-cluster.
+   * Get the {@code ApplicationHomeSubCluster} list representing the mapping of
+   * all submitted applications to it's home sub-cluster.
    *
    * @param request empty representing all applications
    * @return the mapping of all submitted application to it's home sub-cluster

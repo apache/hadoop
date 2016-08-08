@@ -36,10 +36,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbea
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterResponse;
-import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * In-memory implementation of FederationMembershipStateStore.
@@ -50,11 +47,6 @@ public class MemoryFederationStateStore
   private final Map<SubClusterId, SubClusterInfo> membership =
       new ConcurrentHashMap<SubClusterId, SubClusterInfo>();
   private final MonotonicClock clock = new MonotonicClock();
-
-  @Override
-  public Version getMembershipStateStoreVersion() {
-    return null;
-  }
 
   @Override
   public SubClusterRegisterResponse registerSubCluster(
@@ -122,17 +114,6 @@ public class MemoryFederationStateStore
       }
     }
     return GetSubClustersInfoResponse.newInstance(result);
-
-  }
-
-  @VisibleForTesting
-  public Map<SubClusterId, SubClusterInfo> getMembershipTable() {
-    return membership;
-  }
-
-  @VisibleForTesting
-  public void clearMembershipTable() {
-    membership.clear();
   }
 
 }
