@@ -24,6 +24,15 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -96,6 +105,17 @@ public class EditLogTailer {
   private final long logRollPeriodMs;
 
   /**
+   * The timeout in milliseconds of calling rollEdits RPC to Active NN.
+   * @see HDFS-4176.
+   */
+  private final long rollEditsTimeoutMs;
+
+  /**
+   * The executor to run roll edit RPC call in a daemon thread.
+   */
+  private final ExecutorService rollEditsRpcExecutor;
+
+  /**
    * How often the Standby should check if there are new finalized segment(s)
    * available to be read from.
    */
@@ -125,7 +145,14 @@ public class EditLogTailer {
     
     sleepTimeMs = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT) * 1000;
-    
+
+    rollEditsTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT) * 1000;
+
+    rollEditsRpcExecutor = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true).build());
+
     LOG.debug("logRollPeriodMs=" + logRollPeriodMs +
         " sleepTime=" + sleepTimeMs);
   }
@@ -154,6 +181,7 @@ public class EditLogTailer {
   }
   
   public void stop() throws IOException {
+    rollEditsRpcExecutor.shutdown();
     tailerThread.setShouldRun(false);
     tailerThread.interrupt();
     try {
@@ -173,7 +201,7 @@ public class EditLogTailer {
   public void setEditLog(FSEditLog editLog) {
     this.editLog = editLog;
   }
-  
+
   public void catchupDuringFailover() throws IOException {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
@@ -267,24 +295,49 @@ public class EditLogTailer {
   }
 
   /**
+   * @return a Callable to roll logs on remote NameNode.
+   */
+  @VisibleForTesting
+  Callable<Void> getRollEditsTask() {
+    return new Callable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        getActiveNodeProxy().rollEditLog();
+        return null;
+      }
+    };
+  }
+
+  /**
    * Trigger the active node to roll its logs.
    */
-  private void triggerActiveLogRoll() {
-    LOG.info("Triggering log roll on remote NameNode " + activeAddr);
+  @VisibleForTesting
+  void triggerActiveLogRoll() {
+    LOG.info("Triggering log roll on remote NameNode");
+    Future<Void> future = null;
     try {
-      getActiveNodeProxy().rollEditLog();
+      future = rollEditsRpcExecutor.submit(getRollEditsTask());
+      future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
       lastRollTriggerTxId = lastLoadedTxnId;
-    } catch (IOException ioe) {
-      if (ioe instanceof RemoteException) {
-        ioe = ((RemoteException)ioe).unwrapRemoteException();
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RemoteException) {
+        IOException ioe = ((RemoteException) cause).unwrapRemoteException();
         if (ioe instanceof StandbyException) {
           LOG.info("Skipping log roll. Remote node is not in Active state: " +
               ioe.getMessage().split("\n")[0]);
           return;
         }
       }
-
-      LOG.warn("Unable to trigger a roll of the active NN", ioe);
+      LOG.warn("Unable to trigger a roll of the active NN", e);
+    } catch (TimeoutException e) {
+      if (future != null) {
+        future.cancel(true);
+      }
+      LOG.warn(String.format(
+          "Unable to finish rolling edits in %d ms", rollEditsTimeoutMs));
+    } catch (InterruptedException e) {
+      LOG.warn("Unable to trigger a roll of the active NN", e);
     }
   }
 
