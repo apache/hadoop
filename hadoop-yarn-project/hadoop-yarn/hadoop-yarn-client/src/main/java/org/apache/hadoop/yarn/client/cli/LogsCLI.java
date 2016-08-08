@@ -84,6 +84,8 @@ public class LogsCLI extends Configured implements Tool {
   private static final String APP_OWNER_OPTION = "appOwner";
   private static final String AM_CONTAINER_OPTION = "am";
   private static final String PER_CONTAINER_LOG_FILES_OPTION = "log_files";
+  private static final String PER_CONTAINER_LOG_FILES_REGEX_OPTION
+      = "log_files_pattern";
   private static final String LIST_NODES_OPTION = "list_nodes";
   private static final String SHOW_APPLICATION_LOG_INFO
       = "show_application_log_info";
@@ -91,7 +93,6 @@ public class LogsCLI extends Configured implements Tool {
       = "show_container_log_info";
   private static final String OUT_OPTION = "out";
   private static final String SIZE_OPTION = "size";
-  private static final String REGEX_OPTION = "regex";
   public static final String HELP_CMD = "help";
   private PrintStream outStream = System.out;
   private YarnClient yarnClient = null;
@@ -130,6 +131,7 @@ public class LogsCLI extends Configured implements Tool {
     boolean showContainerLogInfo = false;
     boolean useRegex = false;
     String[] logFiles = null;
+    String[] logFilesRegex = null;
     List<String> amContainersList = new ArrayList<String>();
     String localDir = null;
     long bytes = Long.MAX_VALUE;
@@ -145,7 +147,6 @@ public class LogsCLI extends Configured implements Tool {
       showApplicationLogInfo = commandLine.hasOption(
           SHOW_APPLICATION_LOG_INFO);
       showContainerLogInfo = commandLine.hasOption(SHOW_CONTAINER_LOG_INFO);
-      useRegex = commandLine.hasOption(REGEX_OPTION);
       if (getAMContainerLogs) {
         try {
           amContainersList = parseAMContainer(commandLine, printOpts);
@@ -156,6 +157,11 @@ public class LogsCLI extends Configured implements Tool {
       }
       if (commandLine.hasOption(PER_CONTAINER_LOG_FILES_OPTION)) {
         logFiles = commandLine.getOptionValues(PER_CONTAINER_LOG_FILES_OPTION);
+      }
+      if (commandLine.hasOption(PER_CONTAINER_LOG_FILES_REGEX_OPTION)) {
+        logFilesRegex = commandLine.getOptionValues(
+            PER_CONTAINER_LOG_FILES_REGEX_OPTION);
+        useRegex = true;
       }
       if (commandLine.hasOption(SIZE_OPTION)) {
         bytes = Long.parseLong(commandLine.getOptionValue(SIZE_OPTION));
@@ -206,6 +212,12 @@ public class LogsCLI extends Configured implements Tool {
       return -1;
     }
 
+    if (logFiles != null && logFiles.length > 0 && logFilesRegex != null
+        && logFilesRegex.length > 0) {
+      System.err.println("Invalid options. Can only accept one of "
+          + "log_files/log_files_pattern.");
+      return -1;
+    }
     if (localDir != null) {
       File file = new File(localDir);
       if (file.exists() && file.isFile()) {
@@ -248,10 +260,12 @@ public class LogsCLI extends Configured implements Tool {
     }
 
     Set<String> logs = new HashSet<String>();
-    if (fetchAllLogFiles(logFiles, useRegex)) {
+    if (fetchAllLogFiles(logFiles, logFilesRegex)) {
       logs.add("ALL");
     } else if (logFiles != null && logFiles.length > 0) {
       logs.addAll(Arrays.asList(logFiles));
+    } else if (logFilesRegex != null && logFilesRegex.length > 0) {
+      logs.addAll(Arrays.asList(logFilesRegex));
     }
 
     ContainerLogsRequest request = new ContainerLogsRequest(appId,
@@ -366,18 +380,28 @@ public class LogsCLI extends Configured implements Tool {
     return amContainersList;
   }
 
-  private boolean fetchAllLogFiles(String[] logFiles, boolean useRegex) {
+  private boolean fetchAllLogFiles(String[] logFiles, String[] logFilesRegex) {
 
-    // If no value is specified for the PER_CONTAINER_LOG_FILES_OPTION option,
+    // If no value is specified for the PER_CONTAINER_LOG_FILES_OPTION option
+    // and PER_CONTAINER_LOG_FILES_REGEX_OPTION
     // we will assume all logs.
-    if (logFiles == null || logFiles.length == 0) {
+    if ((logFiles == null || logFiles.length == 0) && (
+        logFilesRegex == null || logFilesRegex.length == 0)) {
       return true;
     }
 
-    List<String> logs = Arrays.asList(logFiles);
-    if (logs.contains("ALL") || logs.contains("*")||
-        (logs.contains(".*") && useRegex)) {
-      return true;
+    if (logFiles != null && logFiles.length > 0) {
+      List<String> logs = Arrays.asList(logFiles);
+      if (logs.contains("ALL") || logs.contains("*")) {
+        return true;
+      }
+    }
+
+    if (logFilesRegex != null && logFilesRegex.length > 0) {
+      List<String> logsRegex = Arrays.asList(logFilesRegex);
+      if (logsRegex.contains(".*")) {
+        return true;
+      }
     }
 
     return false;
@@ -753,15 +777,20 @@ public class LogsCLI extends Configured implements Tool {
     opts.addOption(amOption);
     Option logFileOpt = new Option(PER_CONTAINER_LOG_FILES_OPTION, true,
         "Specify comma-separated value "
-        + "to get exact matched log files. Use \"ALL\" or \"*\"to "
-        + "fetch all the log files for the container. Specific -regex "
-        + "for using java regex to find matched log files.");
+        + "to get exact matched log files. Use \"ALL\" or \"*\" to "
+        + "fetch all the log files for the container.");
     logFileOpt.setValueSeparator(',');
     logFileOpt.setArgs(Option.UNLIMITED_VALUES);
     logFileOpt.setArgName("Log File Name");
     opts.addOption(logFileOpt);
-    opts.addOption(REGEX_OPTION, false, "Work with -log_files to find "
-        + "matched files by using java regex.");
+    Option logFileRegexOpt = new Option(PER_CONTAINER_LOG_FILES_REGEX_OPTION,
+        true, "Specify comma-separated value "
+        + "to get matched log files by using java regex. Use \".*\" to "
+        + "fetch all the log files for the container.");
+    logFileRegexOpt.setValueSeparator(',');
+    logFileRegexOpt.setArgs(Option.UNLIMITED_VALUES);
+    logFileRegexOpt.setArgName("Log File Pattern");
+    opts.addOption(logFileRegexOpt);
     opts.addOption(SHOW_CONTAINER_LOG_INFO, false,
         "Show the container log metadata, "
         + "including log-file names, the size of the log files. "
@@ -804,7 +833,8 @@ public class LogsCLI extends Configured implements Tool {
     printOpts.addOption(commandOpts.getOption(SHOW_CONTAINER_LOG_INFO));
     printOpts.addOption(commandOpts.getOption(OUT_OPTION));
     printOpts.addOption(commandOpts.getOption(SIZE_OPTION));
-    printOpts.addOption(commandOpts.getOption(REGEX_OPTION));
+    printOpts.addOption(commandOpts.getOption(
+        PER_CONTAINER_LOG_FILES_REGEX_OPTION));
     return printOpts;
   }
 
