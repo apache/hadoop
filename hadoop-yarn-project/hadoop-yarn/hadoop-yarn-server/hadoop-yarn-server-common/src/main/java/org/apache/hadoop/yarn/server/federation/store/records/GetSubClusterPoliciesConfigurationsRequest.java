@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.util.Records;
 @Private
 @Unstable
 public abstract class GetSubClusterPoliciesConfigurationsRequest {
-  public GetSubClusterPoliciesConfigurationsRequest newInstance() {
+  public static GetSubClusterPoliciesConfigurationsRequest newInstance() {
     return Records.newRecord(GetSubClusterPoliciesConfigurationsRequest.class);
   }
 }

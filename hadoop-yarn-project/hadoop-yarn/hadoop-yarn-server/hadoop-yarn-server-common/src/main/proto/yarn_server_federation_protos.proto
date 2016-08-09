@@ -136,8 +136,9 @@ message DeleteApplicationHomeSubClusterResponseProto {
 }
 
 message SubClusterPolicyConfigurationProto {
-  optional string type = 1;
-  optional bytes params = 2;
+  optional string queue = 1;
+  optional string type = 2;
+  optional bytes params = 3;
 }
 
 message GetSubClusterPolicyConfigurationRequestProto {
@@ -149,8 +150,7 @@ message GetSubClusterPolicyConfigurationResponseProto {
 }
 
 message SetSubClusterPolicyConfigurationRequestProto {
-  optional string queue = 1;
-  optional SubClusterPolicyConfigurationProto policy_configuration = 2;
+  optional SubClusterPolicyConfigurationProto policy_configuration = 1;
 }
 
 message SetSubClusterPolicyConfigurationResponseProto {

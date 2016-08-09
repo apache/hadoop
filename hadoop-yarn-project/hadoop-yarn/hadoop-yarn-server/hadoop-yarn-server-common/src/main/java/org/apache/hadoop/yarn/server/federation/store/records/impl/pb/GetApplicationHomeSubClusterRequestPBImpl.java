@@ -108,6 +108,10 @@ public class GetApplicationHomeSubClusterRequestPBImpl
   public ApplicationId getApplicationId() {
     GetApplicationHomeSubClusterRequestProtoOrBuilder p =
         viaProto ? proto : builder;
+    if (applicationId != null) {
+      return applicationId;
+    }
+
     if (!p.hasApplicationId()) {
       return null;
     }
