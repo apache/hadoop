@@ -52,6 +52,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -507,16 +508,16 @@ public class JobHistoryEventHandler extends AbstractService
       if (conf != null) {
         // TODO Ideally this should be written out to the job dir
         // (.staging/jobid/files - RecoveryService will need to be patched)
-        FSDataOutputStream jobFileOut = null;
-        try {
-          if (logDirConfPath != null) {
-            jobFileOut = stagingDirFS.create(logDirConfPath, true);
-            conf.writeXml(jobFileOut);
-            jobFileOut.close();
+        if (logDirConfPath != null) {
+          Configuration redactedConf = new Configuration(conf);
+          MRJobConfUtil.redact(redactedConf);
+          try (FSDataOutputStream jobFileOut = stagingDirFS
+              .create(logDirConfPath, true)) {
+            redactedConf.writeXml(jobFileOut);
+          } catch (IOException e) {
+            LOG.info("Failed to write the job configuration file", e);
+            throw e;
           }
-        } catch (IOException e) {
-          LOG.info("Failed to write the job configuration file", e);
-          throw e;
         }
       }
     }

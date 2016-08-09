@@ -1932,4 +1932,12 @@
   <name>mapreduce.jobhistory.loadedjob.tasks.max</name>
   <value>-1</value>
 </property>
+
+<property>
+  <description>
+    The list of job configuration properties whose value will be redacted.
+  </description>
+  <name>mapreduce.job.redacted-properties</name>
+  <value></value>
+</property>
 </configuration>

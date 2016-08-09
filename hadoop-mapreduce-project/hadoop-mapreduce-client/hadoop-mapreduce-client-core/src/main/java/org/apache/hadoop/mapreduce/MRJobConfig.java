@@ -977,4 +977,9 @@ public interface MRJobConfig {
   public static final String MR_NUM_OPPORTUNISTIC_MAPS_PER_100 =
       "mapreduce.job.num-opportunistic-maps-per-100";
   public static final int DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PER_100 = 0;
+
+  /**
+   * A comma-separated list of properties whose value will be redacted.
+   */
+  String MR_JOB_REDACTED_PROPERTIES = "mapreduce.job.redacted-properties";
 }
