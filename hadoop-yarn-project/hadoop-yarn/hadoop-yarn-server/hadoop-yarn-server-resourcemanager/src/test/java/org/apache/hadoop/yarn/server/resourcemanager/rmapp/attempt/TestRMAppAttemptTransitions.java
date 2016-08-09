@@ -1427,6 +1427,13 @@ public class TestRMAppAttemptTransitions {
     Assert.assertTrue(applicationAttempt.getJustFinishedContainers().isEmpty());
     Assert.assertEquals(0, getFinishedContainersSentToAM(applicationAttempt)
         .size());
+
+    // verify if no containers to acknowledge to NM then event should not be
+    // triggered. Number of times event invoked is 1 i.e on second pull
+    containerStatuses = applicationAttempt.pullJustFinishedContainers();
+    Assert.assertEquals(0, containerStatuses.size());
+    Mockito.verify(rmnodeEventHandler, times(1))
+        .handle(Mockito.any(RMNodeEvent.class));
   }
 
   private static List<ContainerStatus> getFinishedContainersSentToAM(

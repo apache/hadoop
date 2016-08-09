@@ -10,6 +10,9 @@ Release 2.7.4 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-5262. Optimize sending RMNodeFinishedContainersPulledByAMEvent for
+    every AM heartbeat (Rohith Sharma K S via jlowe)
+
   BUG FIXES
 
     YARN-5197. RM leaks containers if running container disappears from
