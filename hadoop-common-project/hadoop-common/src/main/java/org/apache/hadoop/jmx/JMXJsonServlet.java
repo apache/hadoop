@@ -145,6 +145,15 @@ public class JMXJsonServlet extends HttpServlet {
   }
 
   /**
+   * Disable TRACE method to avoid TRACE vulnerability.
+   */
+  @Override
+  protected void doTrace(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+    resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+  }
+
+  /**
    * Process a GET request for the specified resource.
    * 
    * @param request
