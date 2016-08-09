@@ -445,7 +445,6 @@ void RpcConnection::SendRpcRequests(const std::vector<std::shared_ptr<Request> >
     Status status = Status::ResourceUnavailable("RpcConnection closed before send.");
     engine_->AsyncRpcCommsError(status, shared_from_this(), requests);
   } else {
-    pending_requests_.reserve(pending_requests_.size() + requests.size());
     for (auto r: requests) {
       if (r->method_name() != SASL_METHOD_NAME)
         pending_requests_.push_back(r);

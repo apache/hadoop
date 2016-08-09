@@ -41,6 +41,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <deque>
 #include <mutex>
 #include <future>
 
@@ -234,10 +235,10 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   // The request being sent over the wire; will also be in requests_on_fly_
   std::shared_ptr<Request> request_over_the_wire_;
   // Requests to be sent over the wire
-  std::vector<std::shared_ptr<Request>> pending_requests_;
+  std::deque<std::shared_ptr<Request>> pending_requests_;
   // Requests to be sent over the wire during authentication; not retried if
   //   there is a connection error
-  std::vector<std::shared_ptr<Request>> auth_requests_;
+  std::deque<std::shared_ptr<Request>> auth_requests_;
   // Requests that are waiting for responses
   typedef std::unordered_map<int, std::shared_ptr<Request>> RequestOnFlyMap;
   RequestOnFlyMap requests_on_fly_;
