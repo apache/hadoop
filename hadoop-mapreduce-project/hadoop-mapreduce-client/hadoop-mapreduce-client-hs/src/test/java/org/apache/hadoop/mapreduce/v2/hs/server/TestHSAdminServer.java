@@ -187,7 +187,8 @@ public class TestHSAdminServer {
     when(ugi.getRealUser()).thenReturn(superUser);
     when(superUser.getShortUserName()).thenReturn("superuser");
     when(superUser.getUserName()).thenReturn("superuser");
-    when(ugi.getGroupNames()).thenReturn(new String[] { "group3" });
+    when(ugi.getGroups())
+        .thenReturn(Arrays.asList(new String[] { "group3" }));
     when(ugi.getUserName()).thenReturn("regularUser");
 
     // Set super user groups not to include groups of regularUser
