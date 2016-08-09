@@ -13,6 +13,9 @@ Release 2.6.5 - UNRELEASED
     YARN-4690. Skip object allocation in FSAppAttempt#getResourceUsage when
     possible (Ming Ma via sjlee)
 
+    YARN-5262. Optimize sending RMNodeFinishedContainersPulledByAMEvent for
+    every AM heartbeat (Rohith Sharma K S via jlowe)
+
   BUG FIXES
 
     YARN-2046. Out of band heartbeats are sent only on container kill and
