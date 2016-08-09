@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import org.apache.hadoop.yarn.server.federation.store.FederationMembershipStateStore;
+import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 
 /**
  * Unit tests for MemoryFederationStateStore.
@@ -26,7 +26,7 @@ public class TestMemoryFederationStateStore
     extends FederationStateStoreBaseTest {
 
   @Override
-  protected FederationMembershipStateStore getCleanStateStore() {
+  protected FederationStateStore createStateStore() {
     return new MemoryFederationStateStore();
   }
 }

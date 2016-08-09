@@ -32,31 +32,13 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class SetSubClusterPolicyConfigurationRequest {
   @Private
   @Unstable
-  public SetSubClusterPolicyConfigurationRequest newInstance(
+  public static SetSubClusterPolicyConfigurationRequest newInstance(
       SubClusterPolicyConfiguration policy) {
     SetSubClusterPolicyConfigurationRequest request =
         Records.newRecord(SetSubClusterPolicyConfigurationRequest.class);
     request.setPolicyConfiguration(policy);
     return request;
   }
-
-  /**
-   * Get the name of the queue for which we are configuring a policy.
-   *
-   * @return the name of the queue
-   */
-  @Public
-  @Unstable
-  public abstract String getQueue();
-
-  /**
-   * Sets the name of the queue for which we are configuring a policy.
-   *
-   * @param queueName the name of the queue
-   */
-  @Private
-  @Unstable
-  public abstract void setQueue(String queueName);
 
   /**
    * Get the policy configuration assigned to the queue.

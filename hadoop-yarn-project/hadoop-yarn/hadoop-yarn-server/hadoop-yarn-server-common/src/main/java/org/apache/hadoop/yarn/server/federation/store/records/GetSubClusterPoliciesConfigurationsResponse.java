@@ -36,7 +36,7 @@ public abstract class GetSubClusterPoliciesConfigurationsResponse {
 
   @Private
   @Unstable
-  public GetSubClusterPoliciesConfigurationsResponse newInstance(
+  public static GetSubClusterPoliciesConfigurationsResponse newInstance(
       List<SubClusterPolicyConfiguration> policyConfigurations) {
     GetSubClusterPoliciesConfigurationsResponse response =
         Records.newRecord(GetSubClusterPoliciesConfigurationsResponse.class);

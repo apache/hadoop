@@ -33,7 +33,8 @@ public abstract class GetSubClusterPolicyConfigurationRequest {
 
   @Private
   @Unstable
-  public GetSubClusterPolicyConfigurationRequest newInstance(String queueName) {
+  public static GetSubClusterPolicyConfigurationRequest newInstance(
+      String queueName) {
     GetSubClusterPolicyConfigurationRequest request =
         Records.newRecord(GetSubClusterPolicyConfigurationRequest.class);
     request.setQueue(queueName);
