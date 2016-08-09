@@ -29,8 +29,8 @@ import java.nio.ByteBuffer;
 
 /**
  * {@link SubClusterPolicyConfiguration} is a class that represents a
- * configuration of a policy. It contains a policy type (resolve to a class
- * name) and its params as an opaque {@link ByteBuffer}.
+ * configuration of a policy. For a single queue, it contains a policy type
+ * (resolve to a class name) and its params as an opaque {@link ByteBuffer}.
  *
  * Note: by design the params are an opaque ByteBuffer, this allows for enough
  * flexibility to evolve the policies without impacting the protocols to/from
@@ -42,14 +42,33 @@ public abstract class SubClusterPolicyConfiguration {
 
   @Private
   @Unstable
-  public static SubClusterPolicyConfiguration newInstance(String policyType,
-      ByteBuffer policyParams) {
+  public static SubClusterPolicyConfiguration newInstance(String queue,
+      String policyType, ByteBuffer policyParams) {
     SubClusterPolicyConfiguration policy =
         Records.newRecord(SubClusterPolicyConfiguration.class);
+    policy.setQueue(queue);
     policy.setType(policyType);
     policy.setParams(policyParams);
     return policy;
   }
+
+  /**
+   * Get the name of the queue for which we are configuring a policy.
+   *
+   * @return the name of the queue
+   */
+  @Public
+  @Unstable
+  public abstract String getQueue();
+
+  /**
+   * Sets the name of the queue for which we are configuring a policy.
+   *
+   * @param queueName the name of the queue
+   */
+  @Private
+  @Unstable
+  public abstract void setQueue(String queueName);
 
   /**
    * Get the type of the policy. This could be random, round-robin, load-based,

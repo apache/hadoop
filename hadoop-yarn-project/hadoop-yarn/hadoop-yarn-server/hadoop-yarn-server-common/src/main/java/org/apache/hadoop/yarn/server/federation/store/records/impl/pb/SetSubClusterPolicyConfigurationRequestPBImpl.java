@@ -107,23 +107,6 @@ public class SetSubClusterPolicyConfigurationRequestPBImpl
   }
 
   @Override
-  public String getQueue() {
-    SetSubClusterPolicyConfigurationRequestProtoOrBuilder p =
-        viaProto ? proto : builder;
-    return p.getQueue();
-  }
-
-  @Override
-  public void setQueue(String queueName) {
-    maybeInitBuilder();
-    if (queueName == null) {
-      builder.clearQueue();
-      return;
-    }
-    builder.setQueue(queueName);
-  }
-
-  @Override
   public SubClusterPolicyConfiguration getPolicyConfiguration() {
     SetSubClusterPolicyConfigurationRequestProtoOrBuilder p =
         viaProto ? proto : builder;
