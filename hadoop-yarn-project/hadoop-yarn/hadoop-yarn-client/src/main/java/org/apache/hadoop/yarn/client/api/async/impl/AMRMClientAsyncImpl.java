@@ -329,7 +329,7 @@ extends AMRMClientAsync<T> {
           }
 
           String collectorAddress = response.getCollectorAddr();
-          TimelineClient timelineClient = client.getRegisteredTimeineClient();
+          TimelineClient timelineClient = client.getRegisteredTimelineClient();
           if (timelineClient != null && collectorAddress != null
               && !collectorAddress.isEmpty()) {
             if (collectorAddr == null

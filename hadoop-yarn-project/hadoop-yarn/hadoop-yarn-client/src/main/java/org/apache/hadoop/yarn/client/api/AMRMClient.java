@@ -473,7 +473,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * Get registered timeline client.
    * @return the registered timeline client
    */
-  public TimelineClient getRegisteredTimeineClient() {
+  public TimelineClient getRegisteredTimelineClient() {
     return this.timelineClient;
   }
 

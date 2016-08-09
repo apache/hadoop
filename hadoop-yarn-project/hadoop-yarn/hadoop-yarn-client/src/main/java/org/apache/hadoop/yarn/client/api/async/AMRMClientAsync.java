@@ -306,8 +306,8 @@ extends AbstractService {
    * Get registered timeline client.
    * @return the registered timeline client
    */
-  public TimelineClient getRegisteredTimeineClient() {
-    return client.getRegisteredTimeineClient();
+  public TimelineClient getRegisteredTimelineClient() {
+    return client.getRegisteredTimelineClient();
   }
 
   /**
