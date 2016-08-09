@@ -74,8 +74,10 @@ public class QueryCommand extends Command {
     ClientDatanodeProtocol dataNode = getDataNodeProxy(nodeAddress);
     try {
       DiskBalancerWorkStatus workStatus = dataNode.queryDiskBalancerPlan();
-      System.out.printf("Plan ID: %s %nResult: %s%n", workStatus.getPlanID(),
-          workStatus.getResult().toString());
+      System.out.printf("Plan File: %s%nPlan ID: %s%nResult: %s%n",
+              workStatus.getPlanFile(),
+              workStatus.getPlanID(),
+              workStatus.getResult().toString());
 
       if (cmd.hasOption(DiskBalancer.VERBOSE)) {
         System.out.printf("%s", workStatus.currentStateString());

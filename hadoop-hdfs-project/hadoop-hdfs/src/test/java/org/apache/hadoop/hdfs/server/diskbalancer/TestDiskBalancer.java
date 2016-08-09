@@ -61,6 +61,8 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestDiskBalancer {
 
+  private static final String PLAN_FILE = "/system/current.plan.json";
+
   @Test
   public void testDiskBalancerNameNodeConnectivity() throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -195,7 +197,7 @@ public class TestDiskBalancer {
       plan.getVolumeSetPlans().get(0).setTolerancePercent(10);
 
       // Submit the plan and wait till the execution is done.
-      newDN.submitDiskBalancerPlan(planID, 1, planJson, false);
+      newDN.submitDiskBalancerPlan(planID, 1, PLAN_FILE, planJson, false);
       String jmxString = newDN.getDiskBalancerStatus();
       assertNotNull(jmxString);
       DiskBalancerWorkStatus status =
@@ -307,7 +309,7 @@ public class TestDiskBalancer {
       String planJson = plan.toJson();
       String planID = DigestUtils.sha512Hex(planJson);
 
-      dataNode.submitDiskBalancerPlan(planID, 1, planJson, false);
+      dataNode.submitDiskBalancerPlan(planID, 1, PLAN_FILE, planJson, false);
 
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override

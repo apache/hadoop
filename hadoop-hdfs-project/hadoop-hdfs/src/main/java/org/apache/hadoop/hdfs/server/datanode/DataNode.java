@@ -3399,16 +3399,18 @@ public class DataNode extends ReconfigurableBase
    * @param planID  - Hash value of the plan.
    * @param planVersion - Plan version, reserved for future use. We have only
    *                    version 1 now.
-   * @param plan - Actual plan
+   * @param planFile - Plan file name
+   * @param planData - Actual plan data in json format
    * @throws IOException
    */
   @Override
-  public void submitDiskBalancerPlan(String planID,
-      long planVersion, String plan, boolean skipDateCheck) throws IOException {
-
+  public void submitDiskBalancerPlan(String planID, long planVersion,
+      String planFile, String planData, boolean skipDateCheck)
+      throws IOException {
     checkSuperuserPrivilege();
     // TODO : Support force option
-    this.diskBalancer.submitPlan(planID, planVersion, plan, skipDateCheck);
+    this.diskBalancer.submitPlan(planID, planVersion, planFile, planData,
+            skipDateCheck);
   }
 
   /**

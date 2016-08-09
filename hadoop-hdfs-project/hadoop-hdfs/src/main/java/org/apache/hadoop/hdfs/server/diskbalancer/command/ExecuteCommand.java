@@ -68,16 +68,18 @@ public class ExecuteCommand extends Command {
     try (FSDataInputStream plan = open(planFile)) {
       planData = IOUtils.toString(plan);
     }
-    submitPlan(planData);
+    submitPlan(planFile, planData);
   }
 
   /**
    * Submits plan to a given data node.
    *
-   * @param planData - PlanData Json String.
+   * @param planFile - Plan file name
+   * @param planData - Plan data in json format
    * @throws IOException
    */
-  private void submitPlan(String planData) throws IOException {
+  private void submitPlan(final String planFile, final String planData)
+          throws IOException {
     Preconditions.checkNotNull(planData);
     NodePlan plan = NodePlan.parseJson(planData);
     String dataNodeAddress = plan.getNodeName() + ":" + plan.getPort();
@@ -85,16 +87,15 @@ public class ExecuteCommand extends Command {
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);
     String planHash = DigestUtils.sha512Hex(planData);
     try {
+      // TODO : Support skipping date check.
       dataNode.submitDiskBalancerPlan(planHash, DiskBalancer.PLAN_VERSION,
-          planData, false); // TODO : Support skipping date check.
+                                      planFile, planData, false);
     } catch (DiskBalancerException ex) {
       LOG.error("Submitting plan on  {} failed. Result: {}, Message: {}",
           plan.getNodeName(), ex.getResult().toString(), ex.getMessage());
       throw ex;
     }
   }
-
-
 
   /**
    * Gets extended help for this command.
