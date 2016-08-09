@@ -1265,4 +1265,23 @@ public class TestBlockManager {
       file.delete();
     }
   }
+
+  @Test
+  public void testIsReplicaCorruptCall() throws Exception {
+    BlockManager spyBM = spy(bm);
+    List<DatanodeStorageInfo> origStorages = getStorages(0, 1, 3);
+    List<DatanodeDescriptor> origNodes = getNodes(origStorages);
+    BlockInfo blockInfo = addBlockOnNodes(0, origNodes);
+    spyBM.createLocatedBlocks(new BlockInfo[]{blockInfo}, 3L, false, 0L, 3L,
+        false, false, null, null);
+    verify(spyBM, Mockito.atLeast(0)).
+        isReplicaCorrupt(Mockito.any(BlockInfo.class),
+            Mockito.any(DatanodeDescriptor.class));
+    addCorruptBlockOnNodes(0, origNodes);
+    spyBM.createLocatedBlocks(new BlockInfo[]{blockInfo}, 3L, false, 0L, 3L,
+        false, false, null, null);
+    verify(spyBM, Mockito.atLeast(1)).
+        isReplicaCorrupt(Mockito.any(BlockInfo.class),
+            Mockito.any(DatanodeDescriptor.class));
+  }
 }

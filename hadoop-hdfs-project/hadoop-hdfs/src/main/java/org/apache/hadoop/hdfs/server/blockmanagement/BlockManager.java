@@ -1050,17 +1050,19 @@ public class BlockManager implements BlockStatsMXBean {
     final byte[] blockIndices = blk.isStriped() ? new byte[numMachines] : null;
     int j = 0, i = 0;
     if (numMachines > 0) {
+      final boolean noCorrupt = (numCorruptReplicas == 0);
       for(DatanodeStorageInfo storage : blocksMap.getStorages(blk)) {
-        final DatanodeDescriptor d = storage.getDatanodeDescriptor();
-        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
-        if ((isCorrupt || (!replicaCorrupt)) &&
-            storage.getState() != State.FAILED) {
-          machines[j++] = storage;
-          // TODO this can be more efficient
-          if (blockIndices != null) {
-            byte index = ((BlockInfoStriped) blk).getStorageBlockIndex(storage);
-            assert index >= 0;
-            blockIndices[i++] = index;
+        if (storage.getState() != State.FAILED) {
+          if (noCorrupt) {
+            machines[j++] = storage;
+            i = setBlockIndices(blk, blockIndices, i, storage);
+          } else {
+            final DatanodeDescriptor d = storage.getDatanodeDescriptor();
+            final boolean replicaCorrupt = isReplicaCorrupt(blk, d);
+            if (isCorrupt || !replicaCorrupt) {
+              machines[j++] = storage;
+              i = setBlockIndices(blk, blockIndices, i, storage);
+            }
           }
         }
       }
@@ -4585,5 +4587,20 @@ public class BlockManager implements BlockStatsMXBean {
 
   boolean isGenStampInFuture(Block block) {
     return blockIdManager.isGenStampInFuture(block);
+  }
+
+  boolean isReplicaCorrupt(BlockInfo blk, DatanodeDescriptor d) {
+    return corruptReplicas.isReplicaCorrupt(blk, d);
+  }
+
+  private int setBlockIndices(BlockInfo blk, byte[] blockIndices, int i,
+                              DatanodeStorageInfo storage) {
+    // TODO this can be more efficient
+    if (blockIndices != null) {
+      byte index = ((BlockInfoStriped)blk).getStorageBlockIndex(storage);
+      assert index >= 0;
+      blockIndices[i++] = index;
+    }
+    return i;
   }
 }
