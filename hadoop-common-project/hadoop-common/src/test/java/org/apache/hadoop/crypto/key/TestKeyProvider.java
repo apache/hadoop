@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.fail;
 
 public class TestKeyProvider {
 
@@ -182,7 +184,10 @@ public class TestKeyProvider {
 
     @Override
     public Metadata getMetadata(String name) throws IOException {
-      return new Metadata(CIPHER, 128, "description", null, new Date(), 0);
+      if (!"unknown".equals(name)) {
+        return new Metadata(CIPHER, 128, "description", null, new Date(), 0);
+      }
+      return null;
     }
 
     @Override
@@ -234,6 +239,27 @@ public class TestKeyProvider {
     Assert.assertEquals(128, kp.size);
     Assert.assertEquals(CIPHER, kp.algorithm);
     Assert.assertNotNull(kp.material);
+  }
+
+  @Test
+  public void testRolloverUnknownKey() throws Exception {
+    MyKeyProvider kp = new MyKeyProvider(new Configuration());
+    KeyProvider.Options options = new KeyProvider.Options(new Configuration());
+    options.setCipher(CIPHER);
+    options.setBitLength(128);
+    kp.createKey("hello", options);
+    Assert.assertEquals(128, kp.size);
+    Assert.assertEquals(CIPHER, kp.algorithm);
+    Assert.assertNotNull(kp.material);
+
+    kp = new MyKeyProvider(new Configuration());
+    try {
+      kp.rollNewVersion("unknown");
+      fail("should have thrown");
+    } catch (IOException e) {
+      String expectedError = "Can't find Metadata for key";
+      GenericTestUtils.assertExceptionContains(expectedError, e);
+    }
   }
 
   @Test

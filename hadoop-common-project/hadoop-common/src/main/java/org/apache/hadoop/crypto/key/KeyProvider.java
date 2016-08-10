@@ -557,6 +557,10 @@ public abstract class KeyProvider {
   public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
                                                        IOException {
     Metadata meta = getMetadata(name);
+    if (meta == null) {
+      throw new IOException("Can't find Metadata for key " + name);
+    }
+
     byte[] material = generateKey(meta.getBitLength(), meta.getCipher());
     return rollNewVersion(name, material);
   }
