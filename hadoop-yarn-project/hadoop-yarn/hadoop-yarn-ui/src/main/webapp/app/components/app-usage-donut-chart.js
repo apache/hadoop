@@ -26,7 +26,6 @@ export default BaseUsageDonutChart.extend({
   colors: d3.scale.category20().range(),
 
   draw: function() {
-    this.initChart();
     var usageByApps = [];
     var avail = 100;
 
@@ -59,9 +58,5 @@ export default BaseUsageDonutChart.extend({
 
     this.renderDonutChart(usageByApps, this.get("title"), this.get("showLabels"),
       this.get("middleLabel"), "100%", "%");
-  },
-
-  didInsertElement: function() {
-    this.draw();
   },
 })

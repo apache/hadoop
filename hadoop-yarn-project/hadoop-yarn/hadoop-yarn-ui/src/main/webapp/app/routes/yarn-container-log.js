@@ -19,12 +19,15 @@
 import Ember from 'ember';
 import Constants from 'yarn-ui/constants';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model(param) {
     var id = param.node_addr + Constants.PARAM_SEPARATOR + param.container_id +
         Constants.PARAM_SEPARATOR + param.filename;
     return Ember.RSVP.hash({
       containerLog: this.store.findRecord('yarn-container-log', id),
+      containerInfo: { id: param.container_id },
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     }).then(function(hash) {
       // Just return as its success.
@@ -36,6 +39,7 @@ export default Ember.Route.extend({
       } else {
         // Assume empty response received from server.
         return { nodeInfo: { id: param.node_id, addr: param.node_addr },
+            containerInfo: { id: param.container_id },
             containerLog: { logs: "", containerID: param.container_id,
                 logFileName: param.filename}};
       }
@@ -51,5 +55,9 @@ export default Ember.Route.extend({
         this.replaceWith('/error');
       }
     }
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-container-log');
   }
 });

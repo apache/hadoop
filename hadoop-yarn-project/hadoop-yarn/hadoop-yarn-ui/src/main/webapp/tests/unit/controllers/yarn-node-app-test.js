@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import { moduleFor, test } from 'ember-qunit';
 
-import AbstractRoute from './abstract';
+moduleFor('controller:yarn-node-app', 'Unit | Controller | yarn node app', {
+  // Specify the other units that are required for this test.
+  // needs: ['controller:foo']
+});
 
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      nodeApp: this.store.queryRecord('yarn-node-app',
-          { nodeAddr : param.node_addr, appId: param.app_id }),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
-    });
-  },
-
-  unloadAll() {
-    this.store.unloadAll('yarn-node-app');
-  }
+// Replace this with your real tests.
+test('it exists', function(assert) {
+  let controller = this.subject();
+  assert.ok(controller);
 });

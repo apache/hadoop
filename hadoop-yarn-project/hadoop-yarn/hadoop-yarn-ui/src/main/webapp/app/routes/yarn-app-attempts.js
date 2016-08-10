@@ -18,7 +18,9 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model(param) {
     return this.store.query('yarn-app-attempt', { appId: param.app_id}).then(function (attempts) {
       return {
@@ -26,5 +28,9 @@ export default Ember.Route.extend({
         attempts: attempts
       };
     });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app-attempt');
   }
 });

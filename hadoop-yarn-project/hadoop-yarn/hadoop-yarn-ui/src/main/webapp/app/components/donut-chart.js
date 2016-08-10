@@ -169,13 +169,12 @@ export default BaseChartComponent.extend({
 
   _dataChange: Ember.observer("data", function() {
     this.chart.g.selectAll("*").remove();
-    this.renderDonutChart(this.get("data"), this.get("title"), this.get("showLabels"),
-                          this.get("middleLabel"), this.get("middleValue"));
+    if(this.get("data")) {
+      this.draw();
+    }
   }),
 
   draw: function() {
-    this.initChart();
-
     var colorTargets = this.get("colorTargets");
     if (colorTargets) {
       var colorTargetReverse = Boolean(this.get("colorTargetReverse"));
@@ -188,6 +187,7 @@ export default BaseChartComponent.extend({
   },
 
   didInsertElement: function() {
+    this.initChart();
     this.draw();
   },
 })

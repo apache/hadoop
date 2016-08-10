@@ -18,18 +18,19 @@
 
 import Ember from 'ember';
 
-import AbstractRoute from './abstract';
+export default Ember.Controller.extend({
 
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      nodeApp: this.store.queryRecord('yarn-node-app',
-          { nodeAddr : param.node_addr, appId: param.app_id }),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
-    });
-  },
+  breadcrumbs: Ember.computed('model.nodeInfo', function () {
+    var nodeInfo = this.get('model.nodeInfo');
+    return [{
+      text: "Home",
+      routeName: 'application'
+    }, {
+      text: `Node [ ${nodeInfo.id} ]`,
+      href: `/#/yarn-node/${nodeInfo.id}/${nodeInfo.addr}`,
+    }, {
+      text: "Application",
+    }];
+  })
 
-  unloadAll() {
-    this.store.unloadAll('yarn-node-app');
-  }
 });

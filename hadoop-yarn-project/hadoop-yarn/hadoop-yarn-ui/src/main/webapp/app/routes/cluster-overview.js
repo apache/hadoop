@@ -18,7 +18,9 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model() {
     return Ember.RSVP.hash({
       clusterMetrics: this.store.findAll('ClusterMetric'),
@@ -26,11 +28,17 @@ export default Ember.Route.extend({
         {
           state: "RUNNING"
         }),
-      queues: this.store.findAll('yarn-queue'),
+      queues: this.store.query('yarn-queue', {}),
     });
   },
 
   afterModel() {
     this.controllerFor("ClusterOverview").set("loading", false);
+  },
+
+  unloadAll() {
+    this.store.unloadAll('ClusterMetric');
+    this.store.unloadAll('yarn-app');
+    this.store.unloadAll('yarn-queue');
   }
 });

@@ -26,7 +26,6 @@ export default BaseUsageDonutChart.extend({
   colors: d3.scale.category20().range(),
 
   draw: function() {
-    this.initChart();
     var usageByQueues = [];
     var avail = 100;
 
@@ -64,6 +63,7 @@ export default BaseUsageDonutChart.extend({
   },
 
   didInsertElement: function() {
+    this.initChart();
     this.draw();
   },
 })

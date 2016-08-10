@@ -18,7 +18,9 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model(param) {
     return Ember.RSVP.hash({
       selected : param.queue_name,
@@ -29,8 +31,12 @@ export default Ember.Route.extend({
   },
 
   afterModel(model) {
-    var store = this.store;
     model.selectedQueue = this.store.peekRecord('yarn-queue', model.selected);
-    model.apps = store.findAll('yarn-app');
+    model.apps = this.store.findAll('yarn-app');
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-queue');
+    this.store.unloadAll('yarn-app');
   }
 });

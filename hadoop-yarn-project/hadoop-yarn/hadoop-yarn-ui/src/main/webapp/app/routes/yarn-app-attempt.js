@@ -18,7 +18,9 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model(param) {
     return Ember.RSVP.hash({
       attempt: this.store.findRecord('yarn-app-attempt', param.app_attempt_id),
@@ -39,5 +41,10 @@ export default Ember.Route.extend({
           return [];
         })
     });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app-attempt');
+    this.store.unloadAll('yarn-container');
   }
 });

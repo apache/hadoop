@@ -18,11 +18,18 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model() {
     return Ember.RSVP.hash({
       apps: this.store.findAll('yarn-app'),
       clusterMetrics: this.store.findAll('ClusterMetric'),
     });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-app');
+    this.store.unloadAll('ClusterMetric');
   }
 });

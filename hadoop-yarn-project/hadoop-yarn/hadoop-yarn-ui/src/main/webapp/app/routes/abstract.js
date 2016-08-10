@@ -18,18 +18,15 @@
 
 import Ember from 'ember';
 
-import AbstractRoute from './abstract';
-
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      nodeApp: this.store.queryRecord('yarn-node-app',
-          { nodeAddr : param.node_addr, appId: param.app_id }),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
-    });
+export default Ember.Route.extend({
+  unloadAll() {
+    // Must be implemented by inheriting classes
   },
 
-  unloadAll() {
-    this.store.unloadAll('yarn-node-app');
+  actions: {
+    refresh: function () {
+      this.unloadAll();
+      this.refresh();
+    }
   }
 });
