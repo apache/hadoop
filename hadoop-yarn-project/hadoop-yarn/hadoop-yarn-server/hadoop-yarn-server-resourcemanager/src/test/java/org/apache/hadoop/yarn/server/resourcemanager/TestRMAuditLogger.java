@@ -18,11 +18,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertEquals;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
@@ -36,7 +38,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
 import org.junit.Before;
 import org.junit.Test;
-
+import org.junit.Assert;
 
 /**
  * Tests {@link RMAuditLogger}.
@@ -92,14 +94,26 @@ public class TestRMAuditLogger {
    * Test the AuditLog format for successful events.
    */
   private void testSuccessLogFormatHelper(boolean checkIP, ApplicationId appId,
-      ApplicationAttemptId attemptId, ContainerId containerId) {
-    String sLog = RMAuditLogger.createSuccessLog(USER, OPERATION, TARGET,
-        appId, attemptId, containerId);
+      ApplicationAttemptId attemptId, ContainerId containerId,
+      InetAddress remoteIp) {
+    InetAddress ip;
+    if (remoteIp != null) {
+      ip = remoteIp;
+    } else {
+      ip = Server.getRemoteIp();
+    }
+
     StringBuilder expLog = new StringBuilder();
     expLog.append("USER=test\t");
+
+    String sLog;
     if (checkIP) {
-      InetAddress ip = Server.getRemoteIp();
+      sLog = RMAuditLogger.createSuccessLog(USER, OPERATION, TARGET, appId,
+          attemptId, containerId, ip);
       expLog.append(Keys.IP.name() + "=" + ip.getHostAddress() + "\t");
+    } else {
+      sLog = RMAuditLogger.createSuccessLog(USER, OPERATION, TARGET, appId,
+          attemptId, containerId);
     }
     expLog.append("OPERATION=oper\tTARGET=tgt\tRESULT=SUCCESS");
 
@@ -113,6 +127,11 @@ public class TestRMAuditLogger {
       expLog.append("\tCONTAINERID=container_1");
     }
     assertEquals(expLog.toString(), sLog);
+  }
+
+  private void testSuccessLogFormatHelper(boolean checkIP, ApplicationId appId,
+      ApplicationAttemptId attemptId, ContainerId containerId) {
+    testSuccessLogFormatHelper(checkIP, appId, attemptId, containerId, null);
   }
 
   /**
@@ -131,6 +150,39 @@ public class TestRMAuditLogger {
     assertEquals(expLog.toString(), sLog);
   }
 
+  private void testSuccessLogFormatHelperWithIP(boolean checkIP,
+      ApplicationId appId, ApplicationAttemptId attemptId,
+      ContainerId containerId, InetAddress ip) {
+    testSuccessLogFormatHelper(checkIP, appId, attemptId, containerId, ip);
+  }
+
+  /**
+   * Tests the SuccessLog with two IP addresses.
+   *
+   * @param checkIP
+   * @param appId
+   * @param attemptId
+   * @param containerId
+   */
+  private void testSuccessLogFormatHelperWithIP(boolean checkIP,
+      ApplicationId appId, ApplicationAttemptId attemptId,
+      ContainerId containerId) {
+    testSuccessLogFormatHelperWithIP(checkIP, APPID, ATTEMPTID, CONTAINERID,
+        InetAddress.getLoopbackAddress());
+    byte[] ipAddr = new byte[] { 100, 10, 10, 1 };
+
+    InetAddress addr = null;
+    try {
+      addr = InetAddress.getByAddress(ipAddr);
+    } catch (UnknownHostException uhe) {
+      // should not happen as long as IP address format
+      // stays the same
+      Assert.fail("Check ip address being constructed");
+    }
+    testSuccessLogFormatHelperWithIP(checkIP, APPID, ATTEMPTID, CONTAINERID,
+        addr);
+  }
+
   /**
    * Test the AuditLog format for successful events with the various
    * parameters.
@@ -144,6 +196,7 @@ public class TestRMAuditLogger {
     testSuccessLogFormatHelper(checkIP, APPID, null, CONTAINERID);
     testSuccessLogFormatHelper(checkIP, null, ATTEMPTID, CONTAINERID);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID);
+    testSuccessLogFormatHelperWithIP(checkIP, APPID, ATTEMPTID, CONTAINERID);
     testSuccessLogNulls(checkIP);
   }
 

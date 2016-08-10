@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -548,11 +549,14 @@ public class TestRMAppTransitions {
   public void testAppNewKill() throws IOException {
     LOG.info("--- START: testAppNewKill ---");
 
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppNewKill", new String[] { "foo_group" });
     RMApp application = createNewTestApp(null);
     // NEW => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -601,11 +605,15 @@ public class TestRMAppTransitions {
   public void testAppNewSavingKill() throws IOException {
     LOG.info("--- START: testAppNewSavingKill ---");
 
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppNewSavingKill", new String[] { "foo_group" });
+
     RMApp application = testCreateAppNewSaving(null);
     // NEW_SAVING => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
+
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -651,11 +659,13 @@ public class TestRMAppTransitions {
   @Test
   public void testAppSubmittedKill() throws IOException, InterruptedException {
     LOG.info("--- START: testAppSubmittedKill---");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppSubmittedKill", new String[] { "foo_group" });
     RMApp application = testCreateAppSubmittedNoRecovery(null);
     // SUBMITTED => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
     application.handle(event);
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
@@ -703,11 +713,13 @@ public class TestRMAppTransitions {
   @Test
   public void testAppAcceptedKill() throws IOException, InterruptedException {
     LOG.info("--- START: testAppAcceptedKill ---");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppAcceptedKill", new String[] { "foo_group" });
     RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
     application.handle(event);
     rmDispatcher.await();
 
@@ -750,12 +762,14 @@ public class TestRMAppTransitions {
   @Test
   public void testAppRunningKill() throws IOException {
     LOG.info("--- START: testAppRunningKill ---");
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppRunningKill", new String[] { "foo_group" });
 
     RMApp application = testCreateAppRunning(null);
     // RUNNING => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
     application.handle(event);
     rmDispatcher.await();
 
@@ -915,13 +929,14 @@ public class TestRMAppTransitions {
   @Test (timeout = 30000)
   public void testAppKilledKilled() throws IOException {
     LOG.info("--- START: testAppKilledKilled ---");
-
+    UserGroupInformation fooUser = UserGroupInformation.createUserForTesting(
+        "fooTestAppKilledKill", new String[] { "foo_group" });
     RMApp application = testCreateAppRunning(null);
 
     // RUNNING => KILLED event RMAppEventType.KILL
-    RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL,
-        "Application killed by user.");
+    RMAppEvent event = new RMAppKillByClientEvent(
+        application.getApplicationId(), "Application killed by user.", fooUser,
+        Server.getRemoteIp());
     application.handle(event);
     rmDispatcher.await();
     sendAttemptUpdateSavedEvent(application);

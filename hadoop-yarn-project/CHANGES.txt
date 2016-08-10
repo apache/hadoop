@@ -44,6 +44,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4573. Fix test failure in TestRMAppTransitions#testAppRunningKill and
     testAppKilledKilled. (Takashi Ohnishi via rohithsharmaks)
 
+    YARN-5382. RM does not audit log kill request for active applications
+    (Vrushali C via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
