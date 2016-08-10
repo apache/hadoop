@@ -42,7 +42,11 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.DiskValidator;
+import org.apache.hadoop.util.DiskValidatorFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -52,6 +56,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class DirectoryCollection {
   private static final Log LOG = LogFactory.getLog(DirectoryCollection.class);
 
+  private final Configuration conf;
+  private final DiskValidator diskValidator;
   /**
    * The enum defines disk failure type.
    */
@@ -172,6 +178,16 @@ public class DirectoryCollection {
       float utilizationPercentageCutOffHigh,
       float utilizationPercentageCutOffLow,
       long utilizationSpaceCutOff) {
+    conf = new YarnConfiguration();
+    try {
+      diskValidator = DiskValidatorFactory.getInstance(
+          conf.get(YarnConfiguration.DISK_VALIDATOR));
+      LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
+          " is loaded.");
+    } catch (Exception e) {
+      throw new YarnRuntimeException(e);
+    }
+
     localDirs = new CopyOnWriteArrayList<>(dirs);
     errorDirs = new CopyOnWriteArrayList<>();
     fullDirs = new CopyOnWriteArrayList<>();
@@ -395,7 +411,7 @@ public class DirectoryCollection {
       String msg;
       try {
         File testDir = new File(dir);
-        DiskChecker.checkDir(testDir);
+        diskValidator.checkStatus(testDir);
         float diskUtilizationPercentageCutoff = goodDirs.contains(dir) ?
             diskUtilizationPercentageCutoffHigh : diskUtilizationPercentageCutoffLow;
         if (isDiskUsageOverPercentageLimit(testDir,
@@ -445,7 +461,7 @@ public class DirectoryCollection {
       i++;
     }
     try {
-      DiskChecker.checkDir(target);
+      diskValidator.checkStatus(target);
     } finally {
       FileUtils.deleteQuietly(target);
     }

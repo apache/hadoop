@@ -2975,6 +2975,14 @@
 
   <property>
     <description>
+      The name of disk validator.
+    </description>
+    <name>yarn.nodemanager.disk-validator</name>
+    <value>basic</value>
+  </property>
+
+  <property>
+  <description>
       Enable the CSRF filter for the timeline service web app
     </description>
     <name>yarn.timeline-service.webapp.rest-csrf.enabled</name>
