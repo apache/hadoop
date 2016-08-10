@@ -22,7 +22,6 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XA
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
 import java.util.AbstractMap;
 import java.util.concurrent.ExecutorService;
 import java.util.EnumSet;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
-import org.apache.hadoop.security.SecurityUtil;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -78,22 +76,13 @@ final class FSDirEncryptionZoneOp {
     if (ezKeyName == null) {
       return null;
     }
+    EncryptedKeyVersion edek = null;
     long generateEDEKStartTime = monotonicNow();
-    // Generate EDEK with login user (hdfs) so that KMS does not need
-    // an extra proxy configuration allowing hdfs to proxy its clients and
-    // KMS does not need configuration to allow non-hdfs user GENERATE_EEK
-    // operation.
-    EncryptedKeyVersion edek = SecurityUtil.doAsLoginUser(
-        new PrivilegedExceptionAction<EncryptedKeyVersion>() {
-          @Override
-          public EncryptedKeyVersion run() throws IOException {
-            try {
-              return fsd.getProvider().generateEncryptedKey(ezKeyName);
-            } catch (GeneralSecurityException e) {
-              throw new IOException(e);
-            }
-          }
-        });
+    try {
+      edek = fsd.getProvider().generateEncryptedKey(ezKeyName);
+    } catch (GeneralSecurityException e) {
+      throw new IOException(e);
+    }
     long generateEDEKTime = monotonicNow() - generateEDEKStartTime;
     NameNode.getNameNodeMetrics().addGenerateEDEKTime(generateEDEKTime);
     Preconditions.checkNotNull(edek);
