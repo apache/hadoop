@@ -267,3 +267,9 @@ li a.navigation-link.ember-view {
   color: #2196f3;
   font-weight: bold;
 }
+
+.breadcrumb-bar .refresh {
+  position: absolute;
+  right: 20px;
+  top: 3px;
+}
