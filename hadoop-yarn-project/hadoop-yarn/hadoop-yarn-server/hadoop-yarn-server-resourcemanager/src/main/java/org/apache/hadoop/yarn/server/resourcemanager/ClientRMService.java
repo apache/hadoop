@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.AccessControlException;
 import java.text.MessageFormat;
@@ -147,8 +148,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppKillByClientEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -772,20 +772,18 @@ public class ClientRMService extends AbstractService implements
     }
 
     if (application.isAppFinalStateStored()) {
-      RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
-          AuditConstants.KILL_APP_REQUEST, "ClientRMService", applicationId,
-          callerContext);
       return KillApplicationResponse.newInstance(true);
     }
 
-    String message = "Kill application " + applicationId +
-        " received from " + callerUGI;
-    if(null != Server.getRemoteAddress()) {
-      message += " at " + Server.getRemoteAddress();
+    String message = "Kill application " + applicationId + " received from "
+        + callerUGI;
+    InetAddress remoteAddress = Server.getRemoteIp();
+    if (null != remoteAddress) {
+      message += " at " + remoteAddress.getHostAddress();
     }
-    this.rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppEvent(applicationId, RMAppEventType.KILL,
-        message));
+    this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMAppKillByClientEvent(applicationId, message, callerUGI,
+            remoteAddress));
 
     // For UnmanagedAMs, return true so they don't retry
     return KillApplicationResponse.newInstance(
