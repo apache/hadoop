@@ -110,6 +110,8 @@ inline asio::ip::tcp::socket *get_asio_socket_ptr<asio::ip::tcp::socket>
   return s;
 }
 
+//Check if the high bit is set
+bool IsHighBitSet(uint64_t num);
 }
 
 #endif

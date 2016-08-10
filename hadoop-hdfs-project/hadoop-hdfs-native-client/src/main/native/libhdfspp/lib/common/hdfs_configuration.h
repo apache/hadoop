@@ -45,6 +45,7 @@ class HdfsConfiguration : public Configuration {
     static constexpr const char * kHadoopSecurityAuthenticationKey = "hadoop.security.authentication";
     static constexpr const char * kHadoopSecurityAuthentication_simple = "simple";
     static constexpr const char * kHadoopSecurityAuthentication_kerberos = "kerberos";
+    static constexpr const char * kDfsBlockSizeKey = "dfs.blocksize";
 
     static constexpr const char * kDfsClientFailoverMaxAttempts = "dfs.client.failover.max.attempts";
     static constexpr const char * kDfsClientFailoverConnectionRetriesOnTimeouts = "dfs.client.failover.connection.retries.on.timeouts";

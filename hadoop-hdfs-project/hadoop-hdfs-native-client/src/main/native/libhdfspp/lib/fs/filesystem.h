@@ -65,6 +65,16 @@ public:
                         &handler) override;
   Status Open(const std::string &path, FileHandle **handle) override;
 
+  virtual void GetPreferredBlockSize(const std::string &path,
+      const std::function<void(const Status &, const uint64_t &)> &handler) override;
+  virtual Status GetPreferredBlockSize(const std::string &path, uint64_t & block_size) override;
+
+  virtual void SetReplication(const std::string & path, int16_t replication, std::function<void(const Status &)> handler) override;
+  virtual Status SetReplication(const std::string & path, int16_t replication) override;
+
+  void SetTimes(const std::string & path, uint64_t mtime, uint64_t atime, std::function<void(const Status &)> handler) override;
+  Status SetTimes(const std::string & path, uint64_t mtime, uint64_t atime) override;
+
   void GetFileInfo(
       const std::string &path,
       const std::function<void(const Status &, const StatInfo &)> &handler) override;
@@ -88,14 +98,14 @@ public:
 
   Status GetListing(const std::string &path, std::shared_ptr<std::vector<StatInfo>> &stat_infos) override;
 
-  virtual void GetBlockLocations(const std::string & path,
+  virtual void GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) override;
-  virtual Status GetBlockLocations(const std::string & path,
+  virtual Status GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     std::shared_ptr<FileBlockLocation> * locations) override;
 
-  virtual void Mkdirs(const std::string & path, long permissions, bool createparent,
+  virtual void Mkdirs(const std::string & path, uint16_t permissions, bool createparent,
       std::function<void(const Status &)> handler) override;
-  virtual Status Mkdirs(const std::string & path, long permissions, bool createparent) override;
+  virtual Status Mkdirs(const std::string & path, uint16_t permissions, bool createparent) override;
 
   virtual void Delete(const std::string &path, bool recursive,
       const std::function<void(const Status &)> &handler) override;
@@ -106,8 +116,8 @@ public:
   virtual Status Rename(const std::string &oldPath, const std::string &newPath) override;
 
   virtual void SetPermission(const std::string & path,
-      short permissions, const std::function<void(const Status &)> &handler) override;
-  virtual Status SetPermission(const std::string & path, short permissions) override;
+      uint16_t permissions, const std::function<void(const Status &)> &handler) override;
+  virtual Status SetPermission(const std::string & path, uint16_t permissions) override;
 
   virtual void SetOwner(const std::string & path, const std::string & username,
       const std::string & groupname, const std::function<void(const Status &)> &handler) override;
@@ -165,6 +175,8 @@ public:
 
   /* all monitored events will need to lookup handlers */
   std::shared_ptr<LibhdfsEvents> get_event_handlers();
+
+  Options get_options();
 
 private:
   const Options options_;

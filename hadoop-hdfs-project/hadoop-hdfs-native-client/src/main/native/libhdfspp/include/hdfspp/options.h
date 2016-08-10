@@ -116,6 +116,13 @@ struct Options {
   Authentication authentication;
   static const Authentication kDefaultAuthentication = kSimple;
 
+  /**
+   * Block size in bytes.
+   * Default: 128 * 1024 * 1024 = 134217728
+   **/
+  long block_size;
+  static const long kDefaultBlockSize = 128*1024*1024;
+
   Options();
 };
 }

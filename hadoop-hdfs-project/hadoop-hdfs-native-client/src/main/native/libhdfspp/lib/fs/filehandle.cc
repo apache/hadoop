@@ -41,7 +41,7 @@ FileHandleImpl::FileHandleImpl(const std::string & cluster_name,
                                  std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
                                  std::shared_ptr<LibhdfsEvents> event_handlers)
     : cluster_name_(cluster_name), path_(path), io_service_(io_service), client_name_(client_name), file_info_(file_info),
-      bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()), event_handlers_(event_handlers) {
+      bad_node_tracker_(bad_data_nodes), offset_(0), cancel_state_(CancelTracker::New()), event_handlers_(event_handlers), bytes_read_(0) {
   LOG_TRACE(kFileHandle, << "FileHandleImpl::FileHandleImpl("
                          << FMT_THIS_ADDR << ", ...) called");
 
@@ -68,6 +68,7 @@ void FileHandleImpl::PositionRead(
       bad_node_tracker_->AddBadNode(contacted_datanode);
     }
 
+    bytes_read_ += bytes_read;
     handler(status, bytes_read);
   };
 
@@ -351,5 +352,9 @@ bool FileHandle::ShouldExclude(const Status &s) {
       return true;
   }
 }
+
+uint64_t FileHandleImpl::get_bytes_read() { return bytes_read_; }
+
+void FileHandleImpl::clear_bytes_read() { bytes_read_ = 0; }
 
 }

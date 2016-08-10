@@ -28,6 +28,7 @@ const int Options::kDefaultRpcRetryDelayMs;
 const unsigned int Options::kDefaultHostExclusionDuration;
 const unsigned int Options::kDefaultFailoverMaxRetries;
 const unsigned int Options::kDefaultFailoverConnectionMaxRetries;
+const long Options::kDefaultBlockSize;
 
 Options::Options() : rpc_timeout(kDefaultRpcTimeout),
                      rpc_connect_timeout(kDefaultRpcConnectTimeout),
@@ -37,7 +38,8 @@ Options::Options() : rpc_timeout(kDefaultRpcTimeout),
                      defaultFS(),
                      failover_max_retries(kDefaultFailoverMaxRetries),
                      failover_connection_max_retries(kDefaultFailoverConnectionMaxRetries),
-                     authentication(kDefaultAuthentication) {}
+                     authentication(kDefaultAuthentication),
+                     block_size(kDefaultBlockSize) {}
 
 std::string NamenodeInfo::get_host() const {
   return uri.get_host();

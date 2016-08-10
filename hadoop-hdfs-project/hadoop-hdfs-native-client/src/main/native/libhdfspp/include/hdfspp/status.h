@@ -46,11 +46,15 @@ class Status {
   static Status Canceled();
   static Status PathNotFound(const char *msg);
   static Status InvalidOffset(const char *msg);
+  static Status PathIsNotDirectory(const char *msg);
 
   // success
   bool ok() const { return code_ == 0; }
 
   bool is_invalid_offset() const { return code_ == kInvalidOffset; }
+
+  // contains ENOENT error
+  bool pathNotFound() const { return code_ == kPathNotFound; }
 
   // Returns the string "OK" for success.
   std::string ToString() const;

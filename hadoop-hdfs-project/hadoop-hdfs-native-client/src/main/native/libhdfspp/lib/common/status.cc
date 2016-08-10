@@ -89,6 +89,10 @@ Status Status::ResourceUnavailable(const char *msg) {
   return Status(kResourceUnavailable, msg);
 }
 
+Status Status::PathIsNotDirectory(const char *msg) {
+  return Status(kNotADirectory, msg);
+}
+
 Status Status::Unimplemented() {
   return Status(kUnimplemented, "");
 }

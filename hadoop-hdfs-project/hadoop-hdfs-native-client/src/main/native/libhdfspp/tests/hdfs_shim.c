@@ -50,25 +50,25 @@ int hdfsFileIsOpenForWrite(hdfsFile file) {
   return libhdfs_hdfsFileIsOpenForWrite(file->libhdfsRep);
 }
 
-int hdfsFileGetReadStatistics(hdfsFile file,
-                              struct hdfsReadStatistics **stats) {
-  return libhdfs_hdfsFileGetReadStatistics
-      (file->libhdfsRep, (struct libhdfs_hdfsReadStatistics **)stats);
+int hdfsFileGetReadStatistics(hdfsFile file, struct hdfsReadStatistics **stats) {
+  //We do not track which bytes were remote or local, so we assume all are local
+  int ret = libhdfspp_hdfsFileGetReadStatistics(file->libhdfsppRep, (struct libhdfspp_hdfsReadStatistics **)stats);
+  if(!ret) {
+    (*stats)->totalLocalBytesRead = (*stats)->totalBytesRead;
+  }
+  return ret;
 }
 
-int64_t hdfsReadStatisticsGetRemoteBytesRead(
-                        const struct hdfsReadStatistics *stats) {
-  return libhdfs_hdfsReadStatisticsGetRemoteBytesRead
-      ((struct libhdfs_hdfsReadStatistics *)stats);
+int64_t hdfsReadStatisticsGetRemoteBytesRead(const struct hdfsReadStatistics *stats) {
+  return libhdfspp_hdfsReadStatisticsGetRemoteBytesRead((struct libhdfspp_hdfsReadStatistics *)stats);
 }
 
 int hdfsFileClearReadStatistics(hdfsFile file) {
-  return libhdfs_hdfsFileClearReadStatistics(file->libhdfsRep);
+  return libhdfspp_hdfsFileClearReadStatistics(file->libhdfsppRep);
 }
 
 void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats) {
-  libhdfs_hdfsFileFreeReadStatistics(
-      (struct libhdfs_hdfsReadStatistics *)stats);
+  libhdfspp_hdfsFileFreeReadStatistics((struct libhdfspp_hdfsReadStatistics *)stats);
 }
 
 hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user) {
@@ -208,15 +208,15 @@ int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
 }
 
 int hdfsConfGetStr(const char *key, char **val) {
-  return libhdfs_hdfsConfGetStr(key, val);
+  return libhdfspp_hdfsConfGetStr(key, val);
 }
 
 int hdfsConfGetInt(const char *key, int32_t *val) {
-  return libhdfs_hdfsConfGetInt(key, val);
+  return libhdfspp_hdfsConfGetInt(key, val);
 }
 
 void hdfsConfStrFree(char *val) {
-  libhdfs_hdfsConfStrFree(val);
+  libhdfspp_hdfsConfStrFree(val);
 }
 
 int hdfsDisconnect(hdfsFS fs) {
@@ -269,15 +269,30 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
 }
 
 int hdfsExists(hdfsFS fs, const char *path) {
-  return libhdfs_hdfsExists(fs->libhdfsRep, path);
+  return libhdfspp_hdfsExists(fs->libhdfsppRep, path);
 }
 
 int hdfsSeek(hdfsFS fs, hdfsFile file, tOffset desiredPos) {
-  return libhdfs_hdfsSeek(fs->libhdfsRep, file->libhdfsRep, desiredPos);
+  int ret1 = libhdfs_hdfsSeek(fs->libhdfsRep, file->libhdfsRep, desiredPos);
+  int ret2 = libhdfspp_hdfsSeek(fs->libhdfsppRep, file->libhdfsppRep, desiredPos);
+  if (ret1) {
+    return ret1;
+  } else if (ret2) {
+    return ret2;
+  } else {
+    return 0;
+  }
 }
 
 tOffset hdfsTell(hdfsFS fs, hdfsFile file) {
-  return libhdfs_hdfsTell(fs->libhdfsRep, file->libhdfsRep);
+  tOffset ret1 = libhdfs_hdfsTell(fs->libhdfsRep, file->libhdfsRep);
+  tOffset ret2 = libhdfspp_hdfsTell(fs->libhdfsppRep, file->libhdfsppRep);
+  if (ret1 != ret2) {
+    errno = EIO;
+    return -1;
+  } else {
+    return ret1;
+  }
 }
 
 tSize hdfsRead(hdfsFS fs, hdfsFile file, void* buffer, tSize length) {
@@ -320,7 +335,7 @@ int hdfsHSync(hdfsFS fs, hdfsFile file) {
 }
 
 int hdfsAvailable(hdfsFS fs, hdfsFile file) {
-  return libhdfs_hdfsAvailable(fs->libhdfsRep, file->libhdfsRep);
+  return libhdfspp_hdfsAvailable(fs->libhdfsppRep, file->libhdfsppRep);
 }
 
 int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst) {
@@ -340,11 +355,19 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
 }
 
 char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
-  return libhdfs_hdfsGetWorkingDirectory(fs->libhdfsRep, buffer, bufferSize);
+  return libhdfspp_hdfsGetWorkingDirectory(fs->libhdfsppRep, buffer, bufferSize);
 }
 
 int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
-  return libhdfs_hdfsSetWorkingDirectory(fs->libhdfsRep, path);
+  int ret1 = libhdfspp_hdfsSetWorkingDirectory(fs->libhdfsppRep, path);
+  int ret2 = libhdfs_hdfsSetWorkingDirectory(fs->libhdfsRep, path);
+  if (ret1) {
+    return ret1;
+  } else if (ret2) {
+    return ret2;
+  } else {
+    return 0;
+  }
 }
 
 int hdfsCreateDirectory(hdfsFS fs, const char* path) {
@@ -352,7 +375,7 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path) {
 }
 
 int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
-  return libhdfs_hdfsSetReplication(fs->libhdfsRep, path, replication);
+  return libhdfspp_hdfsSetReplication(fs->libhdfsppRep, path, replication);
 }
 
 hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path,
@@ -376,19 +399,19 @@ int hdfsFileIsEncrypted(hdfsFileInfo *hdfsFileInfo) {
 
 char*** hdfsGetHosts(hdfsFS fs, const char* path,
         tOffset start, tOffset length) {
-  return libhdfs_hdfsGetHosts(fs->libhdfsRep, path, start, length);
+  return libhdfspp_hdfsGetHosts(fs->libhdfsppRep, path, start, length);
 }
 
 void hdfsFreeHosts(char ***blockHosts) {
-  return libhdfs_hdfsFreeHosts(blockHosts);
+  return libhdfspp_hdfsFreeHosts(blockHosts);
 }
 
 tOffset hdfsGetDefaultBlockSize(hdfsFS fs) {
-  return libhdfs_hdfsGetDefaultBlockSize(fs->libhdfsRep);
+  return libhdfspp_hdfsGetDefaultBlockSize(fs->libhdfsppRep);
 }
 
 tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
-  return libhdfs_hdfsGetDefaultBlockSizeAtPath(fs->libhdfsRep, path);
+  return libhdfspp_hdfsGetDefaultBlockSizeAtPath(fs->libhdfsppRep, path);
 }
 
 tOffset hdfsGetCapacity(hdfsFS fs) {
@@ -409,7 +432,7 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode) {
 }
 
 int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime) {
-  return libhdfs_hdfsUtime(fs->libhdfsRep, path, mtime, atime);
+  return libhdfspp_hdfsUtime(fs->libhdfsppRep, path, mtime, atime);
 }
 
 struct hadoopRzOptions *hadoopRzOptionsAlloc(void) {

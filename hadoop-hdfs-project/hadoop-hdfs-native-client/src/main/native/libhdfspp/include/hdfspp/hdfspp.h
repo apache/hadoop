@@ -124,6 +124,12 @@ public:
    */
   virtual void SetFileEventCallback(file_event_callback callback) = 0;
 
+  /* how many bytes have been successfully read */
+  virtual uint64_t get_bytes_read() = 0;
+
+  /* resets the number of bytes read to zero */
+  virtual void clear_bytes_read() = 0;
+
   virtual ~FileHandle();
 };
 
@@ -172,6 +178,41 @@ class FileSystem {
   virtual Status Open(const std::string &path, FileHandle **handle) = 0;
 
   /**
+   * Get the block size for the given file.
+   * @param path The path to the file
+   */
+  virtual void GetPreferredBlockSize(const std::string &path,
+      const std::function<void(const Status &, const uint64_t &)> &handler) = 0;
+  virtual Status GetPreferredBlockSize(const std::string &path, uint64_t & block_size) = 0;
+
+  /**
+   * Set replication for an existing file.
+   * <p>
+   * The NameNode sets replication to the new value and returns.
+   * The actual block replication is not expected to be performed during
+   * this method call. The blocks will be populated or removed in the
+   * background as the result of the routine block maintenance procedures.
+   *
+   * @param src file name
+   * @param replication new replication
+   */
+  virtual void SetReplication(const std::string & path, int16_t replication, std::function<void(const Status &)> handler) = 0;
+  virtual Status SetReplication(const std::string & path, int16_t replication) = 0;
+
+  /**
+   * Sets the modification and access time of the file to the specified time.
+   * @param src The string representation of the path
+   * @param mtime The number of milliseconds since Jan 1, 1970.
+   *              Setting mtime to -1 means that modification time should not
+   *              be set by this call.
+   * @param atime The number of milliseconds since Jan 1, 1970.
+   *              Setting atime to -1 means that access time should not be set
+   *              by this call.
+   */
+  virtual void SetTimes(const std::string & path, uint64_t mtime, uint64_t atime, std::function<void(const Status &)> handler) = 0;
+  virtual Status SetTimes(const std::string & path, uint64_t mtime, uint64_t atime) = 0;
+
+  /**
    * Returns metadata about the file if the file/directory exists.
    **/
   virtual void
@@ -209,12 +250,12 @@ class FileSystem {
                             std::shared_ptr<std::vector<StatInfo>> & stat_infos) = 0;
 
   /**
-   * Returns the locations of all known blocks for the indicated file, or an error
+   * Returns the locations of all known blocks for the indicated file (or part of it), or an error
    * if the information clould not be found
    */
-  virtual void GetBlockLocations(const std::string & path,
+  virtual void GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) = 0;
-  virtual Status GetBlockLocations(const std::string & path,
+  virtual Status GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     std::shared_ptr<FileBlockLocation> * locations) = 0;
 
   /**
@@ -224,9 +265,9 @@ class FileSystem {
    *  @param permissions    Permissions for the new directory   (negative value for the default permissions)
    *  @param createparent   Create parent directories if they do not exist (may not be empty)
    */
-  virtual void Mkdirs(const std::string & path, long permissions, bool createparent,
+  virtual void Mkdirs(const std::string & path, uint16_t permissions, bool createparent,
       std::function<void(const Status &)> handler) = 0;
-  virtual Status Mkdirs(const std::string & path, long permissions, bool createparent) = 0;
+  virtual Status Mkdirs(const std::string & path, uint16_t permissions, bool createparent) = 0;
 
   /**
    *  Delete the given file or directory from the file system.
@@ -257,8 +298,8 @@ class FileSystem {
    * @param permissions   the bitmask to set it to (should be between 0 and 01777)
    */
   virtual void SetPermission(const std::string & path,
-      short permissions, const std::function<void(const Status &)> &handler) = 0;
-  virtual Status SetPermission(const std::string & path, short permissions) = 0;
+      uint16_t permissions, const std::function<void(const Status &)> &handler) = 0;
+  virtual Status SetPermission(const std::string & path, uint16_t permissions) = 0;
 
   /**
    * Set Owner of a path (i.e. a file or a directory).
@@ -335,6 +376,8 @@ class FileSystem {
    * @param callback The function to call when a reporting event occurs.
    */
   virtual void SetFsEventCallback(fs_event_callback callback) = 0;
+
+  virtual Options get_options() = 0;
 };
 }
 

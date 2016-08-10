@@ -43,15 +43,18 @@ static constexpr tPort kDefaultPort = 8020;
 
 /* Separate the handles used by the C api from the C++ API*/
 struct hdfs_internal {
-  hdfs_internal(FileSystem *p) : filesystem_(p) {}
+  hdfs_internal(FileSystem *p) : filesystem_(p), working_directory("/") {}
   hdfs_internal(std::unique_ptr<FileSystem> p)
-      : filesystem_(std::move(p)) {}
+      : filesystem_(std::move(p)), working_directory("/") {}
   virtual ~hdfs_internal(){};
   FileSystem *get_impl() { return filesystem_.get(); }
   const FileSystem *get_impl() const { return filesystem_.get(); }
+  std::string get_working_directory() { return working_directory; }
+  void set_working_directory(std::string new_directory) { working_directory = new_directory; }
 
  private:
   std::unique_ptr<FileSystem> filesystem_;
+  std::string working_directory;      //has to always start and end with '/'
 };
 
 struct hdfsFile_internal {
@@ -198,6 +201,7 @@ static int ReportCaughtNonException()
   return Error(Status::Exception("Uncaught value not derived from std::exception", ""));
 }
 
+/* return false on failure */
 bool CheckSystem(hdfsFS fs) {
   if (!fs) {
     ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
@@ -208,15 +212,36 @@ bool CheckSystem(hdfsFS fs) {
 }
 
 /* return false on failure */
-bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
-  if (!CheckSystem(fs))
-    return false;
-
+bool CheckHandle(hdfsFile file) {
   if (!file) {
     ReportError(EBADF, "Cannot perform FS operations with null File handle.");
     return false;
   }
   return true;
+}
+
+/* return false on failure */
+bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
+  if (!CheckSystem(fs))
+    return false;
+
+  if (!CheckHandle(file))
+    return false;
+
+  return true;
+}
+
+optional<std::string> getAbsolutePath(hdfsFS fs, const char* path) {
+  //Does not support . (dot) and .. (double dot) semantics
+  if (!path || path[0] == '\0') {
+    Error(Status::InvalidArgument("getAbsolutePath: argument 'path' cannot be NULL or empty"));
+    return optional<std::string>();
+  }
+  if (path[0] != '/') {
+    //we know that working directory always ends with '/'
+    return fs->get_working_directory().append(path);
+  }
+  return optional<std::string>(path);
 }
 
 /**
@@ -225,10 +250,30 @@ bool CheckSystemAndHandle(hdfsFS fs, hdfsFile file) {
 
 int hdfsFileIsOpenForRead(hdfsFile file) {
   /* files can only be open for reads at the moment, do a quick check */
-  if (file) {
-    return 1; // Update implementation when we get file writing
+  if (!CheckHandle(file)){
+    return 0;
   }
-  return 0;
+  return 1; // Update implementation when we get file writing
+}
+
+int hdfsFileIsOpenForWrite(hdfsFile file) {
+  /* files can only be open for reads at the moment, so return false */
+  CheckHandle(file);
+  return -1; // Update implementation when we get file writing
+}
+
+int hdfsConfGetLong(const char *key, int64_t *val)
+{
+  try
+  {
+    errno = 0;
+    hdfsBuilder builder;
+    return hdfsBuilderConfGetLong(&builder, key, val);
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
 }
 
 hdfsFS doHdfsConnect(optional<std::string> nn, optional<tPort> port, optional<std::string> user, const Options & options) {
@@ -329,8 +374,12 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
       ReportError(ENODEV, "Cannot perform FS operations with null FS handle.");
       return nullptr;
     }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return nullptr;
+    }
     FileHandle *f = nullptr;
-    Status stat = fs->get_impl()->Open(path, &f);
+    Status stat = fs->get_impl()->Open(*abs_path, &f);
     if (!stat.ok()) {
       Error(stat);
       return nullptr;
@@ -364,11 +413,165 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file) {
   }
 }
 
+char* hdfsGetWorkingDirectory(hdfsFS fs, char *buffer, size_t bufferSize) {
+  try
+  {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return nullptr;
+    }
+    std::string wd = fs->get_working_directory();
+    size_t size = wd.size();
+    if (size + 1 > bufferSize) {
+      std::stringstream ss;
+      ss << "hdfsGetWorkingDirectory: bufferSize is " << bufferSize <<
+          ", which is not enough to fit working directory of size " << (size + 1);
+      Error(Status::InvalidArgument(ss.str().c_str()));
+      return nullptr;
+    }
+    wd.copy(buffer, size);
+    buffer[size] = '\0';
+    return buffer;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return nullptr;
+  } catch (...) {
+    ReportCaughtNonException();
+    return nullptr;
+  }
+}
+
+int hdfsSetWorkingDirectory(hdfsFS fs, const char* path) {
+  try
+  {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    //Enforce last character to be '/'
+    std::string withSlash = *abs_path;
+    char last = withSlash.back();
+    if (last != '/'){
+      withSlash += '/';
+    }
+    fs->set_working_directory(withSlash);
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsAvailable(hdfsFS fs, hdfsFile file) {
+  //Since we do not have read ahead implemented, return 0 if fs and file are good;
+  errno = 0;
+  if (!CheckSystemAndHandle(fs, file)) {
+    return -1;
+  }
+  return 0;
+}
+
+tOffset hdfsGetDefaultBlockSize(hdfsFS fs) {
+  try {
+    errno = 0;
+    return fs->get_impl()->get_options().block_size;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return -1;
+  } catch (...) {
+    ReportCaughtNonException();
+    return -1;
+  }
+}
+
+tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    uint64_t block_size;
+    Status stat = fs->get_impl()->GetPreferredBlockSize(*abs_path, block_size);
+    if (!stat.ok()) {
+      if (stat.pathNotFound()){
+        return fs->get_impl()->get_options().block_size;
+      } else {
+        return Error(stat);
+      }
+    }
+    return block_size;
+  } catch (const std::exception & e) {
+    ReportException(e);
+    return -1;
+  } catch (...) {
+    ReportCaughtNonException();
+    return -1;
+  }
+}
+
+int hdfsSetReplication(hdfsFS fs, const char* path, int16_t replication) {
+    try {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        return -1;
+      }
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return -1;
+      }
+      if(replication < 1){
+        return Error(Status::InvalidArgument("SetReplication: argument 'replication' cannot be less than 1"));
+      }
+      Status stat;
+      stat = fs->get_impl()->SetReplication(*abs_path, replication);
+      if (!stat.ok()) {
+        return Error(stat);
+      }
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
+}
+
+int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime) {
+    try {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        return -1;
+      }
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return -1;
+      }
+      Status stat;
+      stat = fs->get_impl()->SetTimes(*abs_path, mtime, atime);
+      if (!stat.ok()) {
+        return Error(stat);
+      }
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
+}
+
 tOffset hdfsGetCapacity(hdfsFS fs) {
   try {
     errno = 0;
     if (!CheckSystem(fs)) {
-       return -1;
+      return -1;
     }
 
     hdfs::FsInfo fs_info;
@@ -391,7 +594,7 @@ tOffset hdfsGetUsed(hdfsFS fs) {
   try {
     errno = 0;
     if (!CheckSystem(fs)) {
-       return -1;
+      return -1;
     }
 
     hdfs::FsInfo fs_info;
@@ -459,15 +662,41 @@ void StatInfoToHdfsFileInfo(hdfsFileInfo * file_info,
   file_info->mLastAccess = stat_info.access_time;
 }
 
+int hdfsExists(hdfsFS fs, const char *path) {
+  try {
+    errno = 0;
+    if (!CheckSystem(fs)) {
+      return -1;
+    }
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
+    hdfs::StatInfo stat_info;
+    Status stat = fs->get_impl()->GetFileInfo(*abs_path, stat_info);
+    if (!stat.ok()) {
+      return Error(stat);
+    }
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
 hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path) {
   try {
     errno = 0;
     if (!CheckSystem(fs)) {
        return nullptr;
     }
-
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return nullptr;
+    }
     hdfs::StatInfo stat_info;
-    Status stat = fs->get_impl()->GetFileInfo(path, stat_info);
+    Status stat = fs->get_impl()->GetFileInfo(*abs_path, stat_info);
     if (!stat.ok()) {
       Error(stat);
       return nullptr;
@@ -491,9 +720,12 @@ hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
         *numEntries = 0;
         return nullptr;
       }
-
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return nullptr;
+      }
       std::shared_ptr<std::vector<StatInfo>>  stat_infos;
-      Status stat = fs->get_impl()->GetListing(path, stat_infos);
+      Status stat = fs->get_impl()->GetListing(*abs_path, stat_infos);
       if (!stat.ok()) {
         Error(stat);
         *numEntries = 0;
@@ -540,12 +772,13 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path) {
     if (!CheckSystem(fs)) {
       return -1;
     }
-    if (!path) {
-      return Error(Status::InvalidArgument("hdfsCreateDirectory: argument 'path' cannot be NULL"));
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
     }
     Status stat;
-    //-1 for default permissions and true for creating all non-existant parent directories
-    stat = fs->get_impl()->Mkdirs(path, -1, true);
+    //Use default permissions and set true for creating all non-existant parent directories
+    stat = fs->get_impl()->Mkdirs(*abs_path, NameNodeOperations::GetDefaultPermissionMask(), true);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -563,11 +796,12 @@ int hdfsDelete(hdfsFS fs, const char* path, int recursive) {
       if (!CheckSystem(fs)) {
         return -1;
       }
-      if (!path) {
-        return Error(Status::InvalidArgument("hdfsDelete: argument 'path' cannot be NULL"));
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return -1;
       }
       Status stat;
-      stat = fs->get_impl()->Delete(path, recursive);
+      stat = fs->get_impl()->Delete(*abs_path, recursive);
       if (!stat.ok()) {
         return Error(stat);
       }
@@ -585,14 +819,13 @@ int hdfsRename(hdfsFS fs, const char* oldPath, const char* newPath) {
     if (!CheckSystem(fs)) {
       return -1;
     }
-    if (!oldPath) {
-      return Error(Status::InvalidArgument("hdfsRename: argument 'oldPath' cannot be NULL"));
-    }
-    if (!newPath) {
-      return Error(Status::InvalidArgument("hdfsRename: argument 'newPath' cannot be NULL"));
+    const optional<std::string> old_abs_path = getAbsolutePath(fs, oldPath);
+    const optional<std::string> new_abs_path = getAbsolutePath(fs, newPath);
+    if(!old_abs_path || !new_abs_path) {
+      return -1;
     }
     Status stat;
-    stat = fs->get_impl()->Rename(oldPath, newPath);
+    stat = fs->get_impl()->Rename(*old_abs_path, *new_abs_path);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -610,14 +843,15 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode){
       if (!CheckSystem(fs)) {
         return -1;
       }
-      if (!path) {
-        return Error(Status::InvalidArgument("hdfsChmod: argument 'path' cannot be NULL"));
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return -1;
       }
       Status stat = NameNodeOperations::CheckValidPermissionMask(mode);
       if (!stat.ok()) {
         return Error(stat);
       }
-      stat = fs->get_impl()->SetPermission(path, mode);
+      stat = fs->get_impl()->SetPermission(*abs_path, mode);
       if (!stat.ok()) {
         return Error(stat);
       }
@@ -635,14 +869,15 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
       if (!CheckSystem(fs)) {
         return -1;
       }
-      if (!path) {
-        return Error(Status::InvalidArgument("hdfsChown: argument 'path' cannot be NULL"));
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return -1;
       }
       std::string own = (owner) ? owner : "";
       std::string grp = (group) ? group : "";
 
       Status stat;
-      stat = fs->get_impl()->SetOwner(path, own, grp);
+      stat = fs->get_impl()->SetOwner(*abs_path, own, grp);
       if (!stat.ok()) {
         return Error(stat);
       }
@@ -660,14 +895,15 @@ int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
     if (!CheckSystem(fs)) {
       return -1;
     }
-    if (!path) {
-      return Error(Status::InvalidArgument("hdfsCreateSnapshot: argument 'path' cannot be NULL"));
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
     }
     Status stat;
     if(!name){
-      stat = fs->get_impl()->CreateSnapshot(path, "");
+      stat = fs->get_impl()->CreateSnapshot(*abs_path, "");
     } else {
-      stat = fs->get_impl()->CreateSnapshot(path, name);
+      stat = fs->get_impl()->CreateSnapshot(*abs_path, name);
     }
     if (!stat.ok()) {
       return Error(stat);
@@ -686,14 +922,15 @@ int hdfsDeleteSnapshot(hdfsFS fs, const char* path, const char* name) {
     if (!CheckSystem(fs)) {
       return -1;
     }
-    if (!path) {
-      return Error(Status::InvalidArgument("hdfsDeleteSnapshot: argument 'path' cannot be NULL"));
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
     }
     if (!name) {
       return Error(Status::InvalidArgument("hdfsDeleteSnapshot: argument 'name' cannot be NULL"));
     }
     Status stat;
-    stat = fs->get_impl()->DeleteSnapshot(path, name);
+    stat = fs->get_impl()->DeleteSnapshot(*abs_path, name);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -711,11 +948,12 @@ int hdfsAllowSnapshot(hdfsFS fs, const char* path) {
     if (!CheckSystem(fs)) {
       return -1;
     }
-    if (!path) {
-      return Error(Status::InvalidArgument("hdfsAllowSnapshot: argument 'path' cannot be NULL"));
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
     }
     Status stat;
-    stat = fs->get_impl()->AllowSnapshot(path);
+    stat = fs->get_impl()->AllowSnapshot(*abs_path);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -733,11 +971,12 @@ int hdfsDisallowSnapshot(hdfsFS fs, const char* path) {
     if (!CheckSystem(fs)) {
       return -1;
     }
-    if (!path) {
-      return Error(Status::InvalidArgument("hdfsDisallowSnapshot: argument 'path' cannot be NULL"));
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
     }
     Status stat;
-    stat = fs->get_impl()->DisallowSnapshot(path);
+    stat = fs->get_impl()->DisallowSnapshot(*abs_path);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -791,6 +1030,55 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length) {
   } catch (...) {
     return ReportCaughtNonException();
   }
+}
+
+int hdfsUnbufferFile(hdfsFile file) {
+  //Currently we are not doing any buffering
+  CheckHandle(file);
+  return -1;
+}
+
+int hdfsFileGetReadStatistics(hdfsFile file, struct hdfsReadStatistics **stats) {
+  try
+    {
+      errno = 0;
+      if (!CheckHandle(file)) {
+        return -1;
+      }
+      *stats = new hdfsReadStatistics;
+      memset(*stats, 0, sizeof(hdfsReadStatistics));
+      (*stats)->totalBytesRead = file->get_impl()->get_bytes_read();
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
+}
+
+int hdfsFileClearReadStatistics(hdfsFile file) {
+  try
+    {
+      errno = 0;
+      if (!CheckHandle(file)) {
+        return -1;
+      }
+      file->get_impl()->clear_bytes_read();
+      return 0;
+    } catch (const std::exception & e) {
+      return ReportException(e);
+    } catch (...) {
+      return ReportCaughtNonException();
+    }
+}
+
+int64_t hdfsReadStatisticsGetRemoteBytesRead(const struct hdfsReadStatistics *stats) {
+    return stats->totalBytesRead - stats->totalLocalBytesRead;
+}
+
+void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats) {
+    errno = 0;
+    delete stats;
 }
 
 /* 0 on success, -1 on error*/
@@ -868,9 +1156,12 @@ int hdfsGetBlockLocations(hdfsFS fs, const char *path, struct hdfsBlockLocations
       ReportError(EINVAL, "Null pointer passed to hdfsGetBlockLocations");
       return -1;
     }
-
+    const optional<std::string> abs_path = getAbsolutePath(fs, path);
+    if(!abs_path) {
+      return -1;
+    }
     std::shared_ptr<FileBlockLocation> ppLocations;
-    Status stat = fs->get_impl()->GetBlockLocations(path, &ppLocations);
+    Status stat = fs->get_impl()->GetBlockLocations(*abs_path, 0, std::numeric_limits<int64_t>::max(), &ppLocations);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -943,6 +1234,59 @@ int hdfsFreeBlockLocations(struct hdfsBlockLocations * blockLocations) {
   return 0;
 }
 
+char*** hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length) {
+  try
+    {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        return nullptr;
+      }
+      const optional<std::string> abs_path = getAbsolutePath(fs, path);
+      if(!abs_path) {
+        return nullptr;
+      }
+      std::shared_ptr<FileBlockLocation> ppLocations;
+      Status stat = fs->get_impl()->GetBlockLocations(*abs_path, start, length, &ppLocations);
+      if (!stat.ok()) {
+        Error(stat);
+        return nullptr;
+      }
+      const std::vector<BlockLocation> & ppBlockLocations = ppLocations->getBlockLocations();
+      char ***hosts = new char**[ppBlockLocations.size() + 1];
+      for (size_t i=0; i < ppBlockLocations.size(); i++) {
+        const std::vector<DNInfo> & ppDNInfos = ppBlockLocations[i].getDataNodes();
+        hosts[i] = new char*[ppDNInfos.size() + 1];
+        for (size_t j=0; j < ppDNInfos.size(); j++) {
+          auto ppDNInfo = ppDNInfos[j];
+          hosts[i][j] = new char[ppDNInfo.getHostname().size() + 1];
+          strncpy(hosts[i][j], ppDNInfo.getHostname().c_str(), ppDNInfo.getHostname().size() + 1);
+        }
+        hosts[i][ppDNInfos.size()] = nullptr;
+      }
+      hosts[ppBlockLocations.size()] = nullptr;
+      return hosts;
+    } catch (const std::exception & e) {
+      ReportException(e);
+      return nullptr;
+    } catch (...) {
+      ReportCaughtNonException();
+      return nullptr;
+    }
+}
+
+void hdfsFreeHosts(char ***blockHosts) {
+  errno = 0;
+  if (blockHosts == nullptr)
+    return;
+
+  for (size_t i = 0; blockHosts[i]; i++) {
+    for (size_t j = 0; blockHosts[i][j]; j++) {
+      delete[] blockHosts[i][j];
+    }
+    delete[] blockHosts[i];
+  }
+  delete blockHosts;
+}
 
 /*******************************************************************
  *                EVENT CALLBACKS
@@ -1221,6 +1565,28 @@ int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val
         ReportError(EINVAL, "Builder value is not valid");
         return -1;
       }
+      *val = *value;
+      return 0;
+    }
+    // If not found, don't change val
+    ReportError(EINVAL, "Could not get Builder value");
+    return 0;
+  } catch (const std::exception & e) {
+    return ReportException(e);
+  } catch (...) {
+    return ReportCaughtNonException();
+  }
+}
+
+int hdfsBuilderConfGetLong(struct hdfsBuilder *bld, const char *key, int64_t *val)
+{
+  try
+  {
+    errno = 0;
+    // Pull from default configuration
+    optional<int64_t> value = bld->config.GetInt(key);
+    if (value)
+    {
       *val = *value;
       return 0;
     }

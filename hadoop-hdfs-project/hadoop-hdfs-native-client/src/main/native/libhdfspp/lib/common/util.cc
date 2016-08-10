@@ -107,6 +107,15 @@ std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
   return err;
 }
 
+bool IsHighBitSet(uint64_t num) {
+  uint64_t firstBit = (uint64_t) 1 << 63;
+  if (num & firstBit) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 }
 
 void ShutdownProtobufLibrary_C() {
