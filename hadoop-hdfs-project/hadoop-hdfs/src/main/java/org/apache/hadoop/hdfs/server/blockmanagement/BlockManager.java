@@ -1807,6 +1807,8 @@ public class BlockManager {
     final long endTime;
     DatanodeDescriptor node;
     Collection<Block> invalidatedBlocks = null;
+    String strBlockReportId =
+        context != null ? Long.toHexString(context.getReportId()) : "";
 
     try {
       node = datanodeManager.getDatanode(nodeID);
@@ -1825,9 +1827,10 @@ public class BlockManager {
       }
       if (namesystem.isInStartupSafeMode()
           && storageInfo.getBlockReportCount() > 0) {
-        blockLog.info("BLOCK* processReport: "
-            + "discarded non-initial block report from {}"
-            + " because namenode still in startup phase", nodeID);
+        blockLog.info("BLOCK* processReport 0x{}: "
+                + "discarded non-initial block report from {}"
+                + " because namenode still in startup phase",
+            strBlockReportId, nodeID);
         return !node.hasStaleStorages();
       }
 
@@ -1836,7 +1839,7 @@ public class BlockManager {
         // ordinary block reports.  This shortens restart times.
         processFirstBlockReport(storageInfo, newReport);
       } else {
-        invalidatedBlocks = processReport(storageInfo, newReport);
+        invalidatedBlocks = processReport(storageInfo, newReport, context);
       }
       
       storageInfo.receivedBlockReport();
@@ -1870,8 +1873,9 @@ public class BlockManager {
 
     if (invalidatedBlocks != null) {
       for (Block b : invalidatedBlocks) {
-        blockLog.info("BLOCK* processReport: {} on node {} size {} does not " +
-            "belong to any file", b, node, b.getNumBytes());
+        blockLog.info("BLOCK* processReport 0x{}: {} on node {} size {} " +
+            "does not belong to any file", strBlockReportId,
+            b, node, b.getNumBytes());
       }
     }
 
@@ -1880,10 +1884,11 @@ public class BlockManager {
     if (metrics != null) {
       metrics.addBlockReport((int) (endTime - startTime));
     }
-    blockLog.info("BLOCK* processReport: from storage {} node {}, " +
-        "blocks: {}, hasStaleStorage: {}, processing time: {} msecs", storage
-        .getStorageID(), nodeID, newReport.getNumberOfBlocks(),
-        node.hasStaleStorages(), (endTime - startTime));
+    blockLog.info("BLOCK* processReport 0x{}: from storage {} node {}, " +
+        "blocks: {}, hasStaleStorage: {}, processing time: {} msecs",
+        strBlockReportId, storage.getStorageID(), nodeID,
+        newReport.getNumberOfBlocks(), node.hasStaleStorages(),
+        (endTime - startTime));
     return !node.hasStaleStorages();
   }
 
@@ -1989,7 +1994,8 @@ public class BlockManager {
   
   private Collection<Block> processReport(
       final DatanodeStorageInfo storageInfo,
-      final BlockListAsLongs report) throws IOException {
+      final BlockListAsLongs report,
+      BlockReportContext context) throws IOException {
     // Normal case:
     // Modify the (block-->datanode) map, according to the difference
     // between the old and new block report.
@@ -2001,6 +2007,11 @@ public class BlockManager {
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
     reportDiff(storageInfo, report,
         toAdd, toRemove, toInvalidate, toCorrupt, toUC);
+
+    String strBlockReportId = "";
+    if (context != null) {
+      strBlockReportId = Long.toHexString(context.getReportId());
+    }
    
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
     // Process the blocks on each queue
@@ -2016,8 +2027,8 @@ public class BlockManager {
       numBlocksLogged++;
     }
     if (numBlocksLogged > maxNumBlocksToLog) {
-      blockLog.info("BLOCK* processReport: logged info for {} of {} " +
-          "reported.", maxNumBlocksToLog, numBlocksLogged);
+      blockLog.info("BLOCK* processReport 0x{}: logged info for {} of {} " +
+          "reported.", strBlockReportId, maxNumBlocksToLog, numBlocksLogged);
     }
     for (Block b : toInvalidate) {
       addToInvalidates(b, node);
