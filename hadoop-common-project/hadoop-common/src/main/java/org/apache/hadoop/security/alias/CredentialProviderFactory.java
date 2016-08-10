@@ -45,7 +45,8 @@ public abstract class CredentialProviderFactory {
                                              ) throws IOException;
 
   private static final ServiceLoader<CredentialProviderFactory> serviceLoader =
-      ServiceLoader.load(CredentialProviderFactory.class);
+      ServiceLoader.load(CredentialProviderFactory.class,
+          CredentialProviderFactory.class.getClassLoader());
 
   public static List<CredentialProvider> getProviders(Configuration conf
                                                ) throws IOException {
