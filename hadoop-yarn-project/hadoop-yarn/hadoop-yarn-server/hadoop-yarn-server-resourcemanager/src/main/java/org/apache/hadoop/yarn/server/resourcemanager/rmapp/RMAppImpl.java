@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -75,6 +76,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
@@ -804,7 +807,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       if (oldState != getState()) {
         LOG.info(appID + " State change from " + oldState + " to "
-            + getState());
+            + getState() + " on event=" + event.getType());
       }
     } finally {
       this.writeLock.unlock();
@@ -1247,6 +1250,25 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
+  /**
+   * Log the audit event for kill by client.
+   *
+   * @param event
+   *          The {@link RMAppEvent} to be logged
+   */
+  static void auditLogKillEvent(RMAppEvent event) {
+    if (event instanceof RMAppKillByClientEvent) {
+      RMAppKillByClientEvent killEvent = (RMAppKillByClientEvent) event;
+      UserGroupInformation callerUGI = killEvent.getCallerUGI();
+      String userName = null;
+      if (callerUGI != null) {
+        userName = callerUGI.getShortUserName();
+      }
+      InetAddress remoteIP = killEvent.getIp();
+      RMAuditLogger.logSuccess(userName, AuditConstants.KILL_APP_REQUEST,
+          "RMAppImpl", event.getApplicationId(), remoteIP);
+    }
+  }
 
   private static class AppKilledTransition extends FinalTransition {
     public AppKilledTransition() {
@@ -1257,6 +1279,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
+      RMAppImpl.auditLogKillEvent(event);
     };
   }
 
@@ -1270,6 +1293,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.handler.handle(
           new RMAppAttemptEvent(app.currentAttempt.getAppAttemptId(),
               RMAppAttemptEventType.KILL, event.getDiagnosticMsg()));
+      RMAppImpl.auditLogKillEvent(event);
     }
   }
 
