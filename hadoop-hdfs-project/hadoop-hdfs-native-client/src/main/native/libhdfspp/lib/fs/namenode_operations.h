@@ -48,14 +48,27 @@ public:
   engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
   namenode_(& engine_), options_(options) {}
 
-  static Status CheckValidPermissionMask(short permissions);
+  static uint16_t GetDefaultPermissionMask();
+
+  static Status CheckValidPermissionMask(uint16_t permissions);
+
+  static Status CheckValidReplication(uint16_t replication);
 
   void Connect(const std::string &cluster_name,
                const std::vector<ResolvedNamenodeInfo> &servers,
                std::function<void(const Status &)> &&handler);
 
-  void GetBlockLocations(const std::string & path,
+  void GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler);
+
+  void GetPreferredBlockSize(const std::string & path,
+    std::function<void(const Status &, const uint64_t)> handler);
+
+  void SetReplication(const std::string & path, int16_t replication,
+    std::function<void(const Status &)> handler);
+
+  void SetTimes(const std::string & path, uint64_t mtime, uint64_t atime,
+    std::function<void(const Status &)> handler);
 
   void GetFileInfo(const std::string & path,
       std::function<void(const Status &, const StatInfo &)> handler);
@@ -67,7 +80,7 @@ public:
         std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> handler,
         const std::string & start_after = "");
 
-  void Mkdirs(const std::string & path, long permissions, bool createparent,
+  void Mkdirs(const std::string & path, uint16_t permissions, bool createparent,
     std::function<void(const Status &)> handler);
 
   void Delete(const std::string & path, bool recursive,
@@ -76,7 +89,7 @@ public:
   void Rename(const std::string & oldPath, const std::string & newPath,
       std::function<void(const Status &)> handler);
 
-  void SetPermission(const std::string & path, short permissions,
+  void SetPermission(const std::string & path, uint16_t permissions,
       std::function<void(const Status &)> handler);
 
   void SetOwner(const std::string & path, const std::string & username,

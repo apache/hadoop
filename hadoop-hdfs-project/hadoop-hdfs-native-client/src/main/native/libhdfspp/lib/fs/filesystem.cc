@@ -243,14 +243,13 @@ void FileSystemImpl::Open(
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
-  nn_.GetBlockLocations(path, [this, path, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
+  nn_.GetBlockLocations(path, 0, std::numeric_limits<int64_t>::max(), [this, path, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
     if(!stat.ok()) {
       LOG_INFO(kFileSystem, << "FileSystemImpl::Open failed to get block locations. status=" << stat.ToString());
       if(stat.get_server_exception_type() == Status::kStandbyException) {
         LOG_INFO(kFileSystem, << "Operation not allowed on standby datanode");
       }
     }
-
     handler(stat, stat.ok() ? new FileHandleImpl(cluster_name_, path, &io_service_->io_service(), client_name_, file_info, bad_node_tracker_, event_handlers_)
                             : nullptr);
   });
@@ -326,12 +325,23 @@ BlockLocation LocatedBlockToBlockLocation(const hadoop::hdfs::LocatedBlockProto 
   return result;
 }
 
-void FileSystemImpl::GetBlockLocations(const std::string & path,
+void FileSystemImpl::GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
   const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> handler)
 {
   LOG_DEBUG(kFileSystem, << "FileSystemImpl::GetBlockLocations("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
+
+  //Protobuf gives an error 'Negative value is not supported'
+  //if the high bit is set in uint64 in GetBlockLocations
+  if (IsHighBitSet(offset)) {
+    handler(Status::InvalidArgument("GetBlockLocations: argument 'offset' cannot have high bit set"), nullptr);
+    return;
+  }
+  if (IsHighBitSet(length)) {
+    handler(Status::InvalidArgument("GetBlockLocations: argument 'length' cannot have high bit set"), nullptr);
+    return;
+  }
 
   auto conversion = [handler](const Status & status, std::shared_ptr<const struct FileInfo> fileInfo) {
     if (status.ok()) {
@@ -354,10 +364,10 @@ void FileSystemImpl::GetBlockLocations(const std::string & path,
     }
   };
 
-  nn_.GetBlockLocations(path, conversion);
+  nn_.GetBlockLocations(path, offset, length, conversion);
 }
 
-Status FileSystemImpl::GetBlockLocations(const std::string & path,
+Status FileSystemImpl::GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
   std::shared_ptr<FileBlockLocation> * fileBlockLocations)
 {
   LOG_DEBUG(kFileSystem, << "FileSystemImpl::[sync]GetBlockLocations("
@@ -375,7 +385,7 @@ Status FileSystemImpl::GetBlockLocations(const std::string & path,
     callstate->set_value(std::make_tuple(s,blockInfo));
   };
 
-  GetBlockLocations(path, callback);
+  GetBlockLocations(path, offset, length, callback);
 
   /* wait for async to finish */
   auto returnstate = future.get();
@@ -386,6 +396,119 @@ Status FileSystemImpl::GetBlockLocations(const std::string & path,
   }
 
   *fileBlockLocations = std::get<1>(returnstate);
+
+  return stat;
+}
+
+void FileSystemImpl::GetPreferredBlockSize(const std::string &path,
+    const std::function<void(const Status &, const uint64_t &)> &handler) {
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::GetPreferredBlockSize("
+                                 << FMT_THIS_ADDR << ", path="
+                                 << path << ") called");
+
+  nn_.GetPreferredBlockSize(path, handler);
+}
+
+Status FileSystemImpl::GetPreferredBlockSize(const std::string &path, uint64_t & block_size) {
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::[sync]GetPreferredBlockSize("
+                                 << FMT_THIS_ADDR << ", path="
+                                 << path << ") called");
+
+  auto callstate = std::make_shared<std::promise<std::tuple<Status, uint64_t>>>();
+  std::future<std::tuple<Status, uint64_t>> future(callstate->get_future());
+
+  /* wrap async FileSystem::GetPreferredBlockSize with promise to make it a blocking call */
+  auto h = [callstate](const Status &s, const uint64_t & bsize) {
+    callstate->set_value(std::make_tuple(s, bsize));
+  };
+
+  GetPreferredBlockSize(path, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = std::get<0>(returnstate);
+  uint64_t size = std::get<1>(returnstate);
+
+  if (!stat.ok()) {
+    return stat;
+  }
+
+  block_size = size;
+  return stat;
+}
+
+void FileSystemImpl::SetReplication(const std::string & path, int16_t replication, std::function<void(const Status &)> handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::SetReplication(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", replication=" << replication << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetReplication: argument 'path' cannot be empty"));
+    return;
+  }
+  Status replStatus = NameNodeOperations::CheckValidReplication(replication);
+  if (!replStatus.ok()) {
+    handler(replStatus);
+    return;
+  }
+
+  nn_.SetReplication(path, replication, handler);
+}
+
+Status FileSystemImpl::SetReplication(const std::string & path, int16_t replication) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]SetReplication(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", replication=" << replication << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::SetReplication with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  SetReplication(path, replication, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = returnstate;
+
+  return stat;
+}
+
+void FileSystemImpl::SetTimes(const std::string & path, uint64_t mtime, uint64_t atime,
+    std::function<void(const Status &)> handler) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::SetTimes(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", mtime=" << mtime << ", atime=" << atime << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetTimes: argument 'path' cannot be empty"));
+    return;
+  }
+
+  nn_.SetTimes(path, mtime, atime, handler);
+}
+
+Status FileSystemImpl::SetTimes(const std::string & path, uint64_t mtime, uint64_t atime) {
+  LOG_DEBUG(kFileSystem,
+      << "FileSystemImpl::[sync]SetTimes(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", mtime=" << mtime << ", atime=" << atime << ") called");
+
+  auto callstate = std::make_shared<std::promise<Status>>();
+  std::future<Status> future(callstate->get_future());
+
+  /* wrap async FileSystem::SetTimes with promise to make it a blocking call */
+  auto h = [callstate](const Status &s) {
+    callstate->set_value(s);
+  };
+
+  SetTimes(path, mtime, atime, h);
+
+  /* block until promise is set */
+  auto returnstate = future.get();
+  Status stat = returnstate;
 
   return stat;
 }
@@ -543,7 +666,7 @@ Status FileSystemImpl::GetListing(const std::string &path, std::shared_ptr<std::
   return stat;
 }
 
-void FileSystemImpl::Mkdirs(const std::string & path, long permissions, bool createparent,
+void FileSystemImpl::Mkdirs(const std::string & path, uint16_t permissions, bool createparent,
     std::function<void(const Status &)> handler) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::Mkdirs(" << FMT_THIS_ADDR << ", path=" << path <<
@@ -554,10 +677,16 @@ void FileSystemImpl::Mkdirs(const std::string & path, long permissions, bool cre
     return;
   }
 
+  Status permStatus = NameNodeOperations::CheckValidPermissionMask(permissions);
+  if (!permStatus.ok()) {
+    handler(permStatus);
+    return;
+  }
+
   nn_.Mkdirs(path, permissions, createparent, handler);
 }
 
-Status FileSystemImpl::Mkdirs(const std::string & path, long permissions, bool createparent) {
+Status FileSystemImpl::Mkdirs(const std::string & path, uint16_t permissions, bool createparent) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]Mkdirs(" << FMT_THIS_ADDR << ", path=" << path <<
       ", permissions=" << permissions << ", createparent=" << createparent << ") called");
@@ -653,7 +782,7 @@ Status FileSystemImpl::Rename(const std::string &oldPath, const std::string &new
 }
 
 void FileSystemImpl::SetPermission(const std::string & path,
-    short permissions, const std::function<void(const Status &)> &handler) {
+    uint16_t permissions, const std::function<void(const Status &)> &handler) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::SetPermission(" << FMT_THIS_ADDR << ", path=" << path << ", permissions=" << permissions << ") called");
 
@@ -670,7 +799,7 @@ void FileSystemImpl::SetPermission(const std::string & path,
   nn_.SetPermission(path, permissions, handler);
 }
 
-Status FileSystemImpl::SetPermission(const std::string & path, short permissions) {
+Status FileSystemImpl::SetPermission(const std::string & path, uint16_t permissions) {
   LOG_DEBUG(kFileSystem,
       << "FileSystemImpl::[sync]SetPermission(" << FMT_THIS_ADDR << ", path=" << path << ", permissions=" << permissions << ") called");
 
@@ -894,6 +1023,10 @@ void FileSystemImpl::SetFsEventCallback(fs_event_callback callback) {
 
 std::shared_ptr<LibhdfsEvents> FileSystemImpl::get_event_handlers() {
   return event_handlers_;
+}
+
+Options FileSystemImpl::get_options() {
+  return options_;
 }
 
 }

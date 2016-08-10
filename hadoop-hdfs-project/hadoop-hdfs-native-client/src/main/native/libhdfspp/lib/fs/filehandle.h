@@ -113,6 +113,12 @@ public:
    **/
   std::shared_ptr<LibhdfsEvents> get_event_handlers();
 
+  /* how many bytes have been successfully read */
+  virtual uint64_t get_bytes_read() override;
+
+  /* resets the number of bytes read to zero */
+  virtual void clear_bytes_read() override;
+
 protected:
   virtual std::shared_ptr<BlockReader> CreateBlockReader(const BlockReaderOptions &options,
                                                          std::shared_ptr<DataNodeConnection> dn,
@@ -133,6 +139,7 @@ private:
   CancelHandle cancel_state_;
   ReaderGroup readers_;
   std::shared_ptr<LibhdfsEvents> event_handlers_;
+  uint64_t bytes_read_;
 };
 
 }

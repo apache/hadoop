@@ -93,13 +93,12 @@ static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
 
     blockSize = hdfsGetDefaultBlockSize(fs);
     if (blockSize < 0) {
-        ret = errno;
-        fprintf(stderr, "hdfsGetDefaultBlockSize failed with error %d\n", ret);
-        return ret;
+        fprintf(stderr, "hdfsGetDefaultBlockSize failed with error %d\n", errno);
+        return -1;
     } else if (blockSize != TLH_DEFAULT_BLOCK_SIZE) {
         fprintf(stderr, "hdfsGetDefaultBlockSize got %"PRId64", but we "
                 "expected %d\n", blockSize, TLH_DEFAULT_BLOCK_SIZE);
-        return EIO;
+        return -1;
     }
 
     blockSize = hdfsGetDefaultBlockSizeAtPath(fs, path);
@@ -204,6 +203,8 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     EXPECT_ZERO(hdfsFlush(fs, file));
     EXPECT_ZERO(hdfsHSync(fs, file));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
+
+    EXPECT_ZERO(doTestGetDefaultBlockSize(fs, paths->file1));
 
     /* There should be 1 entry in the directory. */
     hdfsFileInfo * dirList = hdfsListDirectory(fs, paths->prefix, &numEntries);

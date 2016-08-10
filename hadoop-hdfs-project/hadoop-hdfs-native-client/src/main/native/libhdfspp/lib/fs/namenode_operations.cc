@@ -39,14 +39,26 @@ namespace hdfs {
  *                    NAMENODE OPERATIONS
  ****************************************************************************/
 
-Status NameNodeOperations::CheckValidPermissionMask(short permissions) {
-  if (permissions < 0 || permissions > 01777) {
+uint16_t NameNodeOperations::GetDefaultPermissionMask() {
+  return 0755;
+}
+
+Status NameNodeOperations::CheckValidPermissionMask(uint16_t permissions) {
+  if (permissions > 01777) {
     std::stringstream errormsg;
-    errormsg << "IsValidPermissionMask: argument 'permissions' is " << std::oct
+    errormsg << "CheckValidPermissionMask: argument 'permissions' is " << std::oct
         << std::showbase << permissions << " (should be between 0 and 01777)";
-    //Avoid copying by binding errormsg.str() to a const reference, which extends its lifetime
-    const std::string& tmp = errormsg.str();
-    return Status::InvalidArgument(tmp.c_str());
+    return Status::InvalidArgument(errormsg.str().c_str());
+  }
+  return Status::OK();
+}
+
+Status NameNodeOperations::CheckValidReplication(uint16_t replication) {
+  if (replication < 1 || replication > 512) {
+    std::stringstream errormsg;
+    errormsg << "CheckValidReplication: argument 'replication' is "
+        << replication << " (should be between 1 and 512)";
+    return Status::InvalidArgument(errormsg.str().c_str());
   }
   return Status::OK();
 }
@@ -57,7 +69,7 @@ void NameNodeOperations::Connect(const std::string &cluster_name,
   engine_.Connect(cluster_name, servers, handler);
 }
 
-void NameNodeOperations::GetBlockLocations(const std::string & path,
+void NameNodeOperations::GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
   std::function<void(const Status &, std::shared_ptr<const struct FileInfo>)> handler)
 {
   using ::hadoop::hdfs::GetBlockLocationsRequestProto;
@@ -71,10 +83,21 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
     return;
   }
 
+  //Protobuf gives an error 'Negative value is not supported'
+  //if the high bit is set in uint64 in GetBlockLocations
+  if (IsHighBitSet(offset)) {
+    handler(Status::InvalidArgument("GetBlockLocations: argument 'offset' cannot have high bit set"), nullptr);
+    return;
+  }
+  if (IsHighBitSet(length)) {
+    handler(Status::InvalidArgument("GetBlockLocations: argument 'length' cannot have high bit set"), nullptr);
+    return;
+  }
+
   GetBlockLocationsRequestProto req;
   req.set_src(path);
-  req.set_offset(0);
-  req.set_length(std::numeric_limits<long long>::max());
+  req.set_offset(offset);
+  req.set_length(length);
 
   auto resp = std::make_shared<GetBlockLocationsResponseProto>();
 
@@ -103,6 +126,106 @@ void NameNodeOperations::GetBlockLocations(const std::string & path,
     }
   });
 }
+
+void NameNodeOperations::GetPreferredBlockSize(const std::string & path,
+  std::function<void(const Status &, const uint64_t)> handler)
+{
+  using ::hadoop::hdfs::GetPreferredBlockSizeRequestProto;
+  using ::hadoop::hdfs::GetPreferredBlockSizeResponseProto;
+
+  LOG_TRACE(kFileSystem, << "NameNodeOperations::GetPreferredBlockSize("
+                           << FMT_THIS_ADDR << ", path=" << path << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("GetPreferredBlockSize: argument 'path' cannot be empty"), -1);
+    return;
+  }
+
+  GetPreferredBlockSizeRequestProto req;
+  req.set_filename(path);
+
+  auto resp = std::make_shared<GetPreferredBlockSizeResponseProto>();
+
+  namenode_.GetPreferredBlockSize(&req, resp, [resp, handler, path](const Status &stat) {
+    if (stat.ok() && resp -> has_bsize()) {
+      uint64_t block_size = resp -> bsize();
+      handler(stat, block_size);
+    } else {
+      handler(stat, -1);
+    }
+  });
+}
+
+void NameNodeOperations::SetReplication(const std::string & path, int16_t replication,
+  std::function<void(const Status &)> handler)
+{
+  using ::hadoop::hdfs::SetReplicationRequestProto;
+  using ::hadoop::hdfs::SetReplicationResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::SetReplication(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", replication=" << replication << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetReplication: argument 'path' cannot be empty"));
+    return;
+  }
+  Status replStatus = CheckValidReplication(replication);
+  if (!replStatus.ok()) {
+    handler(replStatus);
+    return;
+  }
+  SetReplicationRequestProto req;
+  req.set_src(path);
+  req.set_replication(replication);
+
+  auto resp = std::make_shared<SetReplicationResponseProto>();
+
+  namenode_.SetReplication(&req, resp, [resp, handler, path](const Status &stat) {
+    if (stat.ok()) {
+      // Checking resp
+      if(resp -> has_result() && resp ->result() == 1) {
+        handler(stat);
+      } else {
+        //NameNode does not specify why there is no result, in my testing it was happening when the path is not found
+        std::string errormsg = "No such file or directory: " + path;
+        Status statNew = Status::PathNotFound(errormsg.c_str());
+        handler(statNew);
+      }
+    } else {
+      handler(stat);
+    }
+  });
+}
+
+void NameNodeOperations::SetTimes(const std::string & path, uint64_t mtime, uint64_t atime,
+  std::function<void(const Status &)> handler)
+{
+  using ::hadoop::hdfs::SetTimesRequestProto;
+  using ::hadoop::hdfs::SetTimesResponseProto;
+
+  LOG_TRACE(kFileSystem,
+      << "NameNodeOperations::SetTimes(" << FMT_THIS_ADDR << ", path=" << path <<
+      ", mtime=" << mtime << ", atime=" << atime << ") called");
+
+  if (path.empty()) {
+    handler(Status::InvalidArgument("SetTimes: argument 'path' cannot be empty"));
+    return;
+  }
+
+  SetTimesRequestProto req;
+  req.set_src(path);
+  req.set_mtime(mtime);
+  req.set_atime(atime);
+
+  auto resp = std::make_shared<SetTimesResponseProto>();
+
+  namenode_.SetTimes(&req, resp, [resp, handler, path](const Status &stat) {
+      handler(stat);
+  });
+}
+
+
 
 void NameNodeOperations::GetFileInfo(const std::string & path,
   std::function<void(const Status &, const StatInfo &)> handler)
@@ -216,7 +339,7 @@ void NameNodeOperations::GetListing(
       });
 }
 
-void NameNodeOperations::Mkdirs(const std::string & path, long permissions, bool createparent,
+void NameNodeOperations::Mkdirs(const std::string & path, uint16_t permissions, bool createparent,
   std::function<void(const Status &)> handler)
 {
   using ::hadoop::hdfs::MkdirsRequestProto;
@@ -232,13 +355,14 @@ void NameNodeOperations::Mkdirs(const std::string & path, long permissions, bool
   }
 
   MkdirsRequestProto req;
+  Status permStatus = CheckValidPermissionMask(permissions);
+  if (!permStatus.ok()) {
+    handler(permStatus);
+    return;
+  }
   req.set_src(path);
   hadoop::hdfs::FsPermissionProto *perm = req.mutable_masked();
-  if (permissions < 0) {
-    perm->set_perm(0755);
-  } else {
-    perm->set_perm(permissions);
-  }
+  perm->set_perm(permissions);
   req.set_createparent(createparent);
 
   auto resp = std::make_shared<MkdirsResponseProto>();
@@ -336,7 +460,7 @@ void NameNodeOperations::Rename(const std::string & oldPath, const std::string &
 }
 
 void NameNodeOperations::SetPermission(const std::string & path,
-    short permissions, std::function<void(const Status &)> handler) {
+    uint16_t permissions, std::function<void(const Status &)> handler) {
   using ::hadoop::hdfs::SetPermissionRequestProto;
   using ::hadoop::hdfs::SetPermissionResponseProto;
 

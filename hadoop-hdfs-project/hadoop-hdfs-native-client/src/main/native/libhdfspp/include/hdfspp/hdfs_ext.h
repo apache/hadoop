@@ -115,6 +115,20 @@ int hdfsBuilderConfGetStr(struct hdfsBuilder *bld, const char *key,
 LIBHDFS_EXTERNAL
 int hdfsBuilderConfGetInt(struct hdfsBuilder *bld, const char *key, int32_t *val);
 
+
+/**
+ * Get a configuration long from the settings currently read into the builder.
+ *
+ * @param key      The key to find
+ * @param val      (out param) The value.  This will NOT be changed if the
+ *                 key isn't found.
+ *
+ * @return         0 on success; -1 otherwise.
+ *                 Failure to find the key is not an error.
+ */
+LIBHDFS_EXTERNAL
+int hdfsBuilderConfGetLong(struct hdfsBuilder *bld, const char *key, int64_t *val);
+
 struct hdfsDNInfo {
   const char *    ip_address;
   const char *    hostname;

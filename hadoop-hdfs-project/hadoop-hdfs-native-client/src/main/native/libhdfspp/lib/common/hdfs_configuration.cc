@@ -144,6 +144,7 @@ Options HdfsConfiguration::GetOptions() {
   OptionalSet(result.max_rpc_retries, GetInt(kIpcClientConnectMaxRetriesKey));
   OptionalSet(result.rpc_retry_delay_ms, GetInt(kIpcClientConnectRetryIntervalKey));
   OptionalSet(result.defaultFS, GetUri(kFsDefaultFsKey));
+  OptionalSet(result.block_size, GetInt(kDfsBlockSizeKey));
 
 
   OptionalSet(result.failover_max_retries, GetInt(kDfsClientFailoverMaxAttempts));

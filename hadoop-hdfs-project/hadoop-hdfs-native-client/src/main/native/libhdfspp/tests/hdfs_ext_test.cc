@@ -39,8 +39,8 @@ TEST_F(HdfsExtTest, TestGetBlockLocations) {
   EXPECT_EQ(0, result);
 
   // Test non-extant files
-  result = hdfsGetBlockLocations(connection, "non_extant_file", &blocks);
-  EXPECT_NE(0, result);  // Should be an error
+  EXPECT_EQ(-1, hdfsGetBlockLocations(connection, "non_extant_file", &blocks));  // Should be an error
+  EXPECT_EQ((int) std::errc::no_such_file_or_directory, errno);
 
   // Test an extant file
   std::string filename = connection.newFile(1024);
@@ -296,7 +296,6 @@ TEST_F(HdfsExtTest, TestEOF) {
   HdfsHandle connection = cluster.connect_c();
   hdfsFS fs = connection.handle();
   EXPECT_NE(nullptr, fs);
-
   //Write to a file
   errno = 0;
   int size = 256;
@@ -308,28 +307,284 @@ TEST_F(HdfsExtTest, TestEOF) {
   EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
   free(buf);
   EXPECT_EQ(0, hdfsCloseFile(fs, file));
-  EXPECT_EQ(0, errno);
+  //libhdfs file operations work, but sometimes sets errno ENOENT : 2
 
   //Test normal reading (no EOF)
   char buffer[300];
-  EXPECT_EQ(0, errno);
   file = hdfsOpenFile(fs, path.c_str(), O_RDONLY, 0, 0, 0);
   EXPECT_EQ(size, hdfsPread(fs, file, 0, buffer, sizeof(buffer)));
   //Read executes correctly, but causes a warning (captured in HDFS-10595)
   //and sets errno to EINPROGRESS 115 : Operation now in progress
-  errno = 0;
 
   //Test reading at offset past the EOF
   EXPECT_EQ(-1, hdfsPread(fs, file, sizeof(buffer), buffer, sizeof(buffer)));
   EXPECT_EQ(Status::kInvalidOffset, errno);
 
   EXPECT_EQ(0, hdfsCloseFile(fs, file));
+}
+
+  //Testing hdfsExists
+  TEST_F(HdfsExtTest, TestExists) {
+
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+  //Path not found
+  EXPECT_EQ(-1, hdfsExists(fs, "/wrong/dir/"));
+  EXPECT_EQ((int ) std::errc::no_such_file_or_directory, errno);
+
+  //Correct operation
+  std::string pathDir = "/testExistsDir";
+  EXPECT_EQ(0, hdfsCreateDirectory(fs, pathDir.c_str()));
+  EXPECT_EQ(0, hdfsExists(fs, pathDir.c_str()));
+  std::string pathFile = connection.newFile(pathDir.c_str(), 1024);
+  EXPECT_EQ(0, hdfsExists(fs, pathFile.c_str()));
+
+  //Permission denied
+  EXPECT_EQ(0, hdfsChmod(fs, pathDir.c_str(), 0700));
+  HdfsHandle connection2 = cluster.connect_c("OtherGuy");
+  hdfsFS fs2 = connection2.handle();
+  EXPECT_EQ(-1, hdfsExists(fs2, pathFile.c_str()));
+  EXPECT_EQ((int ) std::errc::permission_denied, errno);
+}
+
+//Testing Replication and Time modifications
+TEST_F(HdfsExtTest, TestReplAndTime) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  std::string path = "/wrong/dir/";
+
+  //Path not found
+  EXPECT_EQ(-1, hdfsSetReplication(fs, path.c_str(), 3));
+  EXPECT_EQ((int ) std::errc::no_such_file_or_directory, errno);
+  EXPECT_EQ(-1, hdfsUtime(fs, path.c_str(), 1000000, 1000000));
+  EXPECT_EQ((int ) std::errc::no_such_file_or_directory, errno);
+
+  //Correct operation
+  path = connection.newFile(1024);
+  EXPECT_EQ(0, hdfsSetReplication(fs, path.c_str(), 7));
+  EXPECT_EQ(0, hdfsUtime(fs, path.c_str(), 123456789, 987654321));
+  hdfsFileInfo *file_info;
+  EXPECT_NE(nullptr, file_info = hdfsGetPathInfo(fs, path.c_str()));
+  EXPECT_EQ(7, file_info->mReplication);
+  EXPECT_EQ(123456789, file_info->mLastMod);
+  EXPECT_EQ(987654321, file_info->mLastAccess);
+  hdfsFreeFileInfo(file_info, 1);
+
+  //Wrong arguments
+  EXPECT_EQ(-1, hdfsSetReplication(fs, path.c_str(), 0));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+  EXPECT_EQ(-1, hdfsSetReplication(fs, path.c_str(), 513));
+  EXPECT_EQ((int ) std::errc::invalid_argument, errno);
+
+  //Permission denied
+  EXPECT_EQ(0, hdfsChmod(fs, path.c_str(), 0700));
+  HdfsHandle connection2 = cluster.connect_c("OtherGuy");
+  hdfsFS fs2 = connection2.handle();
+  EXPECT_EQ(-1, hdfsSetReplication(fs2, path.c_str(), 3));
+  EXPECT_EQ((int ) std::errc::permission_denied, errno);
+  EXPECT_EQ(-1, hdfsUtime(fs2, path.c_str(), 111111111, 222222222));
+  EXPECT_EQ((int ) std::errc::permission_denied, errno);
+}
+
+//Testing getting default block size at path
+TEST_F(HdfsExtTest, TestDefaultBlockSize) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Correct operation (existing path)
+  std::string path = connection.newFile(1024);
+  long block_size = hdfsGetDefaultBlockSizeAtPath(fs, path.c_str());
+  EXPECT_GT(block_size, 0);
+  hdfsFileInfo *file_info;
+  EXPECT_NE(nullptr, file_info = hdfsGetPathInfo(fs, path.c_str()));
+  EXPECT_EQ(block_size, file_info->mBlockSize);
+  hdfsFreeFileInfo(file_info, 1);
+
+  //Non-existing path
+  path = "/wrong/dir/";
+  EXPECT_GT(hdfsGetDefaultBlockSizeAtPath(fs, path.c_str()), 0);
+
+  //No path specified
+  EXPECT_GT(hdfsGetDefaultBlockSize(fs), 0);
+}
+
+//Testing getting hosts
+TEST_F(HdfsExtTest, TestHosts) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  char *** hosts = nullptr;
+
+  // Free a null pointer
+  hdfsFreeHosts(hosts);
+  EXPECT_EQ(0, errno);
+
+  // Test non-existent files
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, "/wrong/file/", 0, std::numeric_limits<int64_t>::max()));
+  EXPECT_EQ((int ) std::errc::no_such_file_or_directory, errno);
+
+  // Test an existent file
+  std::string filename = connection.newFile(1024);
+  EXPECT_NE(nullptr, hosts = hdfsGetHosts(fs, filename.c_str(), 0, std::numeric_limits<int64_t>::max()));
+
+  //Make sure there is at least one host
+  EXPECT_NE(nullptr, *hosts);
+  EXPECT_NE(nullptr, **hosts);
+
+  hdfsFreeHosts(hosts);
+  EXPECT_EQ(0, errno);
+
+  //Test invalid arguments
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), 0, std::numeric_limits<int64_t>::max()+1));
+  EXPECT_EQ((int) std::errc::invalid_argument, errno);
+
+  //Test invalid arguments
+  EXPECT_EQ(nullptr, hdfsGetHosts(fs, filename.c_str(), std::numeric_limits<int64_t>::max()+1, std::numeric_limits<int64_t>::max()));
+  EXPECT_EQ((int) std::errc::invalid_argument, errno);
+}
+
+//Testing read statistics
+TEST_F(HdfsExtTest, TestReadStats) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  struct hdfsReadStatistics *stats;
+
+  //Write to a file
+  int size = 256;
+  std::string path = "/readStatTest";
+  hdfsFile file = hdfsOpenFile(fs, path.c_str(), O_WRONLY, 0, 0, 0);
+  EXPECT_NE(nullptr, file);
+  void * buf = malloc(size);
+  bzero(buf, size);
+  EXPECT_EQ(size, hdfsWrite(fs, file, buf, size));
+  free(buf);
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+
+  //test before reading
+  file = hdfsOpenFile(fs, path.c_str(), O_RDONLY, 0, 0, 0);
+  EXPECT_EQ(0, hdfsFileGetReadStatistics(file, &stats));
+  EXPECT_EQ(0, stats->totalBytesRead);
+  hdfsFileFreeReadStatistics(stats);
+
+  //test after reading
+  char buffer[123];
+  //Read executes correctly, but causes a warning (captured in HDFS-10595)
+  EXPECT_EQ(sizeof(buffer), hdfsRead(fs, file, buffer, sizeof(buffer)));
+  EXPECT_EQ(0, hdfsFileGetReadStatistics(file, &stats));
+  EXPECT_EQ(sizeof(buffer), stats->totalBytesRead);
+  EXPECT_EQ(sizeof(buffer), stats->totalLocalBytesRead);
+  EXPECT_EQ(0, hdfsReadStatisticsGetRemoteBytesRead(stats));
+  hdfsFileFreeReadStatistics(stats);
+
+  //test after clearing
+  EXPECT_EQ(0, hdfsFileClearReadStatistics(file));
+  EXPECT_EQ(0, hdfsFileGetReadStatistics(file, &stats));
+  EXPECT_EQ(0, stats->totalBytesRead);
+  hdfsFileFreeReadStatistics(stats);
+
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
   EXPECT_EQ(0, errno);
 }
 
+//Testing working directory
+TEST_F(HdfsExtTest, TestWorkingDirectory) {
+  HdfsHandle connection = cluster.connect_c();
+  hdfsFS fs = connection.handle();
+  EXPECT_NE(nullptr, fs);
+
+  //Correct operation of setter and getter
+  std::string pathDir = "/testWorkDir/";
+  EXPECT_EQ(0, hdfsCreateDirectory(fs, pathDir.c_str()));
+  std::string pathFile = connection.newFile(pathDir.c_str(), 1024);
+  EXPECT_EQ(0, hdfsSetWorkingDirectory(fs, pathDir.c_str()));
+  char array[100];
+  EXPECT_STREQ(pathDir.c_str(), hdfsGetWorkingDirectory(fs, array, 100));
+
+  //Get relative path
+  std::size_t slashPos = pathFile.find_last_of("/");
+  std::string fileName = pathFile.substr(slashPos + 1);
+
+  //Testing various functions with relative path:
+
+  //hdfsGetDefaultBlockSizeAtPath
+  EXPECT_GT(hdfsGetDefaultBlockSizeAtPath(fs, fileName.c_str()), 0);
+
+  //hdfsSetReplication
+  EXPECT_EQ(0, hdfsSetReplication(fs, fileName.c_str(), 7));
+
+  //hdfsUtime
+  EXPECT_EQ(0, hdfsUtime(fs, fileName.c_str(), 123456789, 987654321));
+
+  //hdfsExists
+  EXPECT_EQ(0, hdfsExists(fs, fileName.c_str()));
+
+  //hdfsGetPathInfo
+  hdfsFileInfo *file_info;
+  EXPECT_NE(nullptr, file_info = hdfsGetPathInfo(fs, fileName.c_str()));
+  hdfsFreeFileInfo(file_info, 1);
+
+  //hdfsOpenFile
+  hdfsFile file;
+  file = hdfsOpenFile(fs, fileName.c_str(), O_RDONLY, 0, 0, 0);
+  EXPECT_EQ(0, hdfsCloseFile(fs, file));
+
+  //hdfsCreateDirectory
+  EXPECT_EQ(0, hdfsCreateDirectory(fs, "newDir"));
+
+  //add another file
+  std::string fileName2 = connection.newFile(pathDir + "/newDir", 1024);
+
+  //hdfsListDirectory
+  int numEntries;
+  hdfsFileInfo * dirList;
+  EXPECT_NE(nullptr, dirList = hdfsListDirectory(fs, "newDir", &numEntries));
+  EXPECT_EQ(1, numEntries);
+  hdfsFreeFileInfo(dirList, 1);
+
+  //hdfsChmod
+  EXPECT_EQ(0, hdfsChmod(fs, fileName.c_str(), 0777));
+
+  //hdfsChown
+  EXPECT_EQ(0, hdfsChown(fs, fileName.c_str(), "cool", "nice"));
+
+  //hdfsDisallowSnapshot
+  EXPECT_EQ(0, hdfsDisallowSnapshot(fs, "newDir"));
+
+  //hdfsAllowSnapshot
+  EXPECT_EQ(0, hdfsAllowSnapshot(fs, "newDir"));
+
+  //hdfsCreateSnapshot
+  EXPECT_EQ(0, hdfsCreateSnapshot(fs, "newDir", "Some"));
+
+  //hdfsDeleteSnapshot
+  EXPECT_EQ(0, hdfsDeleteSnapshot(fs, "newDir", "Some"));
+
+  //hdfsGetBlockLocations
+  hdfsBlockLocations * blocks = nullptr;
+  EXPECT_EQ(0, hdfsGetBlockLocations(connection, fileName.c_str(), &blocks));
+  hdfsFreeBlockLocations(blocks);
+
+  //hdfsGetHosts
+  char *** hosts;
+  EXPECT_NE(nullptr, hosts = hdfsGetHosts(fs, fileName.c_str(), 0, std::numeric_limits<int64_t>::max()));
+  hdfsFreeHosts(hosts);
+
+  //hdfsRename
+  EXPECT_EQ(0, hdfsRename(fs, fileName.c_str(), "new_file_name"));
+
+  //hdfsDelete
+  EXPECT_EQ(0, hdfsDelete(fs, "new_file_name", 0));
 }
 
 
+}
 
 int main(int argc, char *argv[]) {
   // The following line must be executed to initialize Google Mock
