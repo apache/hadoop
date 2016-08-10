@@ -897,6 +897,10 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "resourcemanager.minimum.version";
   public static final String DEFAULT_NM_RESOURCEMANAGER_MINIMUM_VERSION = "NONE";
 
+  /** Disk Validator. */
+  public static final String DISK_VALIDATOR = NM_PREFIX + "disk-validator";
+  public static final String DEFAULT_DISK_VALIDATOR = "basic";
+
   /**
    * Maximum size of contain's diagnostics to keep for relaunching container
    * case.
