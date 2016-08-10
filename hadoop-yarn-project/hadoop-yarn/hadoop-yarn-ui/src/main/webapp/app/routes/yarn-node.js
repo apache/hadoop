@@ -18,7 +18,9 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model(param) {
     // Fetches data from both NM and RM. RM is queried to get node usage info.
     return Ember.RSVP.hash({
@@ -26,5 +28,10 @@ export default Ember.Route.extend({
       node: this.store.findRecord('yarn-node', param.node_addr),
       rmNode: this.store.findRecord('yarn-rm-node', param.node_id)
     });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-node');
+    this.store.unloadAll('yarn-rm-node');
   }
 });

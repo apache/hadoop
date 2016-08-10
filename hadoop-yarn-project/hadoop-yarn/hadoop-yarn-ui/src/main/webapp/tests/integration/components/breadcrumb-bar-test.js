@@ -16,20 +16,28 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import { moduleForComponent, test } from 'ember-qunit';
+import hbs from 'htmlbars-inline-precompile';
 
-import AbstractRoute from './abstract';
+moduleForComponent('breadcrumb-bar', 'Integration | Component | breadcrumb bar', {
+  integration: true
+});
 
-export default AbstractRoute.extend({
-  model(param) {
-    return Ember.RSVP.hash({
-      nodeApp: this.store.queryRecord('yarn-node-app',
-          { nodeAddr : param.node_addr, appId: param.app_id }),
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
-    });
-  },
+test('it renders', function(assert) {
 
-  unloadAll() {
-    this.store.unloadAll('yarn-node-app');
-  }
+  // Set any properties with this.set('myProperty', 'value');
+  // Handle any actions with this.on('myAction', function(val) { ... });" + EOL + EOL +
+
+  this.render(hbs`{{breadcrumb-bar}}`);
+
+  assert.equal(this.$().text().trim(), '');
+
+  // Template block usage:" + EOL +
+  this.render(hbs`
+    {{#breadcrumb-bar}}
+      template block text
+    {{/breadcrumb-bar}}
+  `);
+
+  assert.equal(this.$().text().trim(), 'template block text');
 });

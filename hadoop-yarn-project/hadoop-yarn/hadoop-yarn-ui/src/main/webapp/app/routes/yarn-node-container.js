@@ -18,7 +18,9 @@
 
 import Ember from 'ember';
 
-export default Ember.Route.extend({
+import AbstractRoute from './abstract';
+
+export default AbstractRoute.extend({
   model(param) {
     // Get a specific container running on a specific node.
     return Ember.RSVP.hash({
@@ -26,5 +28,9 @@ export default Ember.Route.extend({
           { nodeHttpAddr: param.node_addr, containerId: param.container_id }),
       nodeInfo: { id: param.node_id, addr: param.node_addr }
     });
+  },
+
+  unloadAll() {
+    this.store.unloadAll('yarn-node-container');
   }
 });
