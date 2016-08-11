@@ -328,7 +328,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     private boolean waittingForFailOver() {
       int maximumWaittingTime = 50;
       int count = 0;
-      while (!failoverTriggered.get() && count >= maximumWaittingTime) {
+      while (!failoverTriggered.get() && count <= maximumWaittingTime) {
         try {
           Thread.sleep(100);
         } catch (InterruptedException e) {
@@ -336,7 +336,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
         }
         count++;
       }
-      if (count >= maximumWaittingTime) {
+      if (count >= maximumWaittingTime && failoverThread != null) {
         return false;
       }
       try {
