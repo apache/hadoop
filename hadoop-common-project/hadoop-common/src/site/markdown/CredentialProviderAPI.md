@@ -96,7 +96,7 @@ In summary, first, provision the credentials into a provider then configure the 
 ##### Supported Features
 | Feature\Component | Description | Link |
 |:---- |:---- |:---|
-|LDAPGroupsMapping    |LDAPGroupsMapping is used to look up the groups for a given user in LDAP. The CredentialProvider API is used to protect the LDAP bind password and those needed for SSL.|TODO|
+|LDAPGroupsMapping    |LDAPGroupsMapping is used to look up the groups for a given user in LDAP. The CredentialProvider API is used to protect the LDAP bind password and those needed for SSL.|[LDAP Groups Mapping](GroupsMapping.html#LDAP_Groups_Mapping)|
 |SSL Passwords        |FileBasedKeyStoresFactory leverages the credential provider API in order to resolve the SSL related passwords.|TODO|
 |HDFS                 |DFSUtil leverages Configuration.getPassword method to use the credential provider API and/or fallback to the clear text value stored in ssl-server.xml.|TODO|
 |YARN                 |WebAppUtils uptakes the use of the credential provider API through the new method on Configuration called getPassword. This provides an alternative to storing the passwords in clear text within the ssl-server.xml file while maintaining backward compatibility.|TODO|
