@@ -1192,7 +1192,7 @@ public class UserGroupInformation {
     if (now - user.getLastLogin() < MIN_TIME_BEFORE_RELOGIN ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
-          " before.");
+          " before. Last Login=" + user.getLastLogin());
       return false;
     }
     return true;
