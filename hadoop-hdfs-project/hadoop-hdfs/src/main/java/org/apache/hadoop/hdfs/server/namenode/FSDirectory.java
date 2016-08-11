@@ -991,9 +991,9 @@ public class FSDirectory implements Closeable {
     final int count = parent.getChildrenList(CURRENT_STATE_ID).size();
     if (count >= maxDirItems) {
       final MaxDirectoryItemsExceededException e
-          = new MaxDirectoryItemsExceededException(maxDirItems, count);
+          = new MaxDirectoryItemsExceededException(parentPath, maxDirItems,
+          count);
       if (namesystem.isImageLoaded()) {
-        e.setPathName(parentPath);
         throw e;
       } else {
         // Do not throw if edits log is still being processed
