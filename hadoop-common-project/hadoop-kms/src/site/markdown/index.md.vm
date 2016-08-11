@@ -19,6 +19,8 @@
 Hadoop Key Management Server (KMS) - Documentation Sets
 =======================================================
 
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
+
 Hadoop KMS is a cryptographic key management server based on Hadoop's **KeyProvider** API.
 
 It provides a client and a server components which communicate over HTTP using a REST API.
@@ -33,6 +35,18 @@ KMS Client Configuration
 ------------------------
 
 The KMS client `KeyProvider` uses the **kms** scheme, and the embedded URL must be the URL of the KMS. For example, for a KMS running on `http://localhost:9600/kms`, the KeyProvider URI is `kms://http@localhost:9600/kms`. And, for a KMS running on `https://localhost:9600/kms`, the KeyProvider URI is `kms://https@localhost:9600/kms`
+
+The following is an example to configure HDFS NameNode as a KMS client in
+`hdfs-site.xml`:
+
+    <property>
+      <name>dfs.encryption.key.provider.uri</name>
+      <value>kms://http@localhost:9600/kms</value>
+      <description>
+        The KeyProvider to use when interacting with encryption keys used
+        when reading and writing to an encryption zone.
+      </description>
+    </property>
 
 KMS
 ---
@@ -623,13 +637,51 @@ Additionally, KMS delegation token secret manager can be configured with the fol
   </property>
 ```
 
-$H3 Using Multiple Instances of KMS Behind a Load-Balancer or VIP
+$H3 High Availability
 
-KMS supports multiple KMS instances behind a load-balancer or VIP for scalability and for HA purposes.
+Multiple KMS instances may be used to provide high availability and scalability.
+Currently there are two approaches to supporting multiple KMS instances:
+running KMS instances behind a load-balancer/VIP,
+or using LoadBalancingKMSClientProvider.
 
-When using multiple KMS instances behind a load-balancer or VIP, requests from the same user may be handled by different KMS instances.
+In both approaches, KMS instances must be specially configured to work properly
+as a single logical service, because requests from the same client may be
+handled by different KMS instances. In particular,
+Kerberos Principals Configuration, HTTP Authentication Signature and Delegation
+Tokens require special attention.
 
-KMS instances behind a load-balancer or VIP must be specially configured to work properly as a single logical service.
+$H4 Behind a Load-Balancer or VIP
+
+Because KMS clients and servers communicate via a REST API over HTTP,
+Load-balancer or VIP may be used to distribute incoming traffic to achieve
+scalability and HA. In this mode, clients are unaware of multiple KMS instances
+at the server-side.
+
+$H4 Using LoadBalancingKMSClientProvider
+
+An alternative to running multiple KMS instances behind a load-balancer or VIP,
+is to use LoadBalancingKMSClientProvider. Using this approach, a KMS client
+(for example, a HDFS NameNode) is aware of multiple KMS instances, and it sends
+requests to them in a round-robin fashion. LoadBalancingKMSClientProvider is
+implicitly used when more than one URI is specified in
+`dfs.encryption.key.provider.uri`.
+
+The following example in `hdfs-site.xml` configures two KMS
+instances, `kms01.example.com` and `kms02.example.com`.
+The hostnames are separated by semi-colons, and all KMS instances must run
+on the same port.
+
+    <property>
+      <name>dfs.encryption.key.provider.uri</name>
+      <value>kms://https@kms01.example.com;kms02.example.com:9600/kms</value>
+      <description>
+        The KeyProvider to use when interacting with encryption keys used
+        when reading and writing to an encryption zone.
+      </description>
+    </property>
+
+If a request to a KMS instance fails, clients retry with the next instance. The
+request is returned as failure only if all instances fail.
 
 $H4 HTTP Kerberos Principals Configuration
 
