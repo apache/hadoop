@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.text.DateFormat;
 import java.util.Arrays;
@@ -55,6 +56,9 @@ import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -666,7 +670,7 @@ public class Balancer {
     LOG.info("included nodes = " + p.getIncludedNodes());
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
-
+    checkKeytabAndInit(conf);
     System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
@@ -708,6 +712,22 @@ public class Balancer {
       }
     }
     return ExitStatus.SUCCESS.getExitCode();
+  }
+
+  private static void checkKeytabAndInit(Configuration conf)
+      throws IOException {
+    if (conf.getBoolean(DFSConfigKeys.DFS_BALANCER_KEYTAB_ENABLED_KEY,
+        DFSConfigKeys.DFS_BALANCER_KEYTAB_ENABLED_DEFAULT)) {
+      LOG.info("Keytab is configured, will login using keytab.");
+      UserGroupInformation.setConfiguration(conf);
+      String addr = conf.get(DFSConfigKeys.DFS_BALANCER_ADDRESS_KEY,
+          DFSConfigKeys.DFS_BALANCER_ADDRESS_DEFAULT);
+      InetSocketAddress socAddr = NetUtils.createSocketAddr(addr, 0,
+          DFSConfigKeys.DFS_BALANCER_ADDRESS_KEY);
+      SecurityUtil.login(conf, DFSConfigKeys.DFS_BALANCER_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_BALANCER_KERBEROS_PRINCIPAL_KEY,
+          socAddr.getHostName());
+    }
   }
 
   /* Given elaspedTime in ms, return a printable string */
