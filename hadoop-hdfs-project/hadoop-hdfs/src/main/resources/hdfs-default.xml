@@ -1534,7 +1534,7 @@
   <value></value>
   <description>
     The NameNode service principal. This is typically set to
-    nn/_HOST@REALM.TLD. Each NameNode will subsitute _HOST with its
+    nn/_HOST@REALM.TLD. Each NameNode will substitute _HOST with its
     own fully qualified hostname at startup. The _HOST placeholder
     allows using the same configuration setting on both NameNodes
     in an HA setup.
@@ -1556,7 +1556,7 @@
   <value></value>
   <description>
     The DataNode service principal. This is typically set to
-    dn/_HOST@REALM.TLD. Each DataNode will subsitute _HOST with its
+    dn/_HOST@REALM.TLD. Each DataNode will substitute _HOST with its
     own fully qualified hostname at startup. The _HOST placeholder
     allows using the same configuration setting on all DataNodes.
   </description>
@@ -1577,7 +1577,7 @@
   <value></value>
   <description>
     The JournalNode service principal. This is typically set to
-    jn/_HOST@REALM.TLD. Each JournalNode will subsitute _HOST with its
+    jn/_HOST@REALM.TLD. Each JournalNode will substitute _HOST with its
     own fully qualified hostname at startup. The _HOST placeholder
     allows using the same configuration setting on all JournalNodes.
   </description>
@@ -2989,4 +2989,43 @@
     retries or failovers for WebHDFS client.
   </description>
 </property>
+  <property>
+    <name>dfs.balancer.keytab.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to enable login using a keytab for Kerberized Hadoop.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.address</name>
+    <value>0.0.0.0:0</value>
+    <description>
+      The hostname used for a keytab based Kerberos login. Keytab based login
+      can be enabled with dfs.balancer.keytab.enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file used by the Balancer to login as its
+      service principal. The principal name is configured with
+      dfs.balancer.kerberos.principal. Keytab based login can be
+      enabled with dfs.balancer.keytab.enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.balancer.kerberos.principal</name>
+    <value></value>
+    <description>
+      The Balancer principal. This is typically set to
+      balancer/_HOST@REALM.TLD. The Balancer will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on different servers.
+      Keytab based login can be enabled with dfs.balancer.keytab.enabled.
+    </description>
+  </property>
 </configuration>
