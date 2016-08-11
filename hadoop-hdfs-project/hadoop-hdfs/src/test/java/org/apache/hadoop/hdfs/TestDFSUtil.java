@@ -82,7 +82,11 @@ import org.junit.Test;
 import com.google.common.collect.Sets;
 
 public class TestDFSUtil {
-  
+
+  static final String NS1_NN_ADDR    = "ns1-nn.example.com:9820";
+  static final String NS1_NN1_ADDR   = "ns1-nn1.example.com:9820";
+  static final String NS1_NN2_ADDR   = "ns1-nn2.example.com:9820";
+
   /**
    * Reset to default UGI settings since some tests change them.
    */
@@ -588,8 +592,6 @@ public class TestDFSUtil {
   @Test
   public void testGetHaNnHttpAddresses() throws IOException {
     final String LOGICAL_HOST_NAME = "ns1";
-    final String NS1_NN1_ADDR      = "ns1-nn1.example.com:8020";
-    final String NS1_NN2_ADDR      = "ns1-nn2.example.com:8020";
 
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
 
@@ -638,9 +640,6 @@ public class TestDFSUtil {
   public void testGetNNUris() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
 
-    final String NS1_NN_ADDR   = "ns1-nn.example.com:8020";
-    final String NS1_NN1_ADDR   = "ns1-nn1.example.com:8020";
-    final String NS1_NN2_ADDR   = "ns1-nn2.example.com:8020";
     final String NS2_NN_ADDR    = "ns2-nn.example.com:8020";
     final String NN1_ADDR       = "nn.example.com:8020";
     final String NN1_SRVC_ADDR  = "nn.example.com:8021";
@@ -649,12 +648,10 @@ public class TestDFSUtil {
     conf.set(DFS_NAMESERVICES, "ns1");
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1"), NS1_NN1_ADDR);
-
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "hdfs://" + NN2_ADDR);
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
 
     Collection<URI> uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 2, uris.size());
     assertTrue("Missing URI for name service ns1",
         uris.contains(new URI("hdfs://" + NS1_NN1_ADDR)));
@@ -669,15 +666,11 @@ public class TestDFSUtil {
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_ADDR);
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_ADDR);
-
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1"), NS1_NN_ADDR);
-
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns2"), NS2_NN_ADDR);
-
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "hdfs://" + NN1_ADDR);
-
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN2_ADDR);
 
     /**
@@ -715,7 +708,6 @@ public class TestDFSUtil {
         + "ConfiguredFailoverProxyProvider");
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 3, uris.size());
     assertTrue("Missing URI for name service ns1",
         uris.contains(new URI("hdfs://ns1")));
@@ -729,7 +721,6 @@ public class TestDFSUtil {
         "viewfs://vfs-name.example.com");
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 3, uris.size());
     assertTrue("Missing URI for name service ns1",
         uris.contains(new URI("hdfs://ns1")));
@@ -743,7 +734,6 @@ public class TestDFSUtil {
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://ns1");
     
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 3, uris.size());
     assertTrue("Missing URI for name service ns1",
         uris.contains(new URI("hdfs://ns1")));
@@ -757,7 +747,6 @@ public class TestDFSUtil {
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 1, uris.size());
     assertTrue("Missing URI for RPC address (defaultFS)",
         uris.contains(new URI("hdfs://" + NN1_ADDR)));
@@ -767,7 +756,6 @@ public class TestDFSUtil {
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, NN2_ADDR);
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 1, uris.size());
     assertTrue("Missing URI for RPC address",
         uris.contains(new URI("hdfs://" + NN2_ADDR)));
@@ -779,7 +767,6 @@ public class TestDFSUtil {
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_ADDR);
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 1, uris.size());
     assertTrue("Missing URI for service ns1",
         uris.contains(new URI("hdfs://" + NN1_ADDR)));
@@ -791,10 +778,39 @@ public class TestDFSUtil {
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_SRVC_ADDR);
     
     uris = DFSUtil.getInternalNsRpcUris(conf);
-
     assertEquals("Incorrect number of URIs returned", 1, uris.size());
     assertTrue("Missing URI for service address",
         uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)));
+  }
+
+  @Test
+  public void testGetNNUris2() throws Exception {
+    // Make sure that an HA URI plus a slash being the default URI doesn't
+    // result in multiple entries being returned.
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set(DFS_NAMESERVICES, "ns1");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),
+        "nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_ADDR);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_ADDR);
+
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1"), NS1_NN_ADDR);
+
+    String proxyProviderKey = HdfsClientConfigKeys.Failover.
+        PROXY_PROVIDER_KEY_PREFIX + ".ns1";
+    conf.set(proxyProviderKey, "org.apache.hadoop.hdfs.server.namenode.ha."
+        + "ConfiguredFailoverProxyProvider");
+
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://ns1/");
+
+    Collection<URI> uris = DFSUtil.getInternalNsRpcUris(conf);
+
+    assertEquals("Incorrect number of URIs returned", 1, uris.size());
+    assertTrue("Missing URI for name service ns1",
+        uris.contains(new URI("hdfs://ns1")));
   }
 
   @Test (timeout=15000)
