@@ -771,12 +771,7 @@ public class DFSUtil {
     Set<URI> nonPreferredUris = new HashSet<URI>();
     
     for (String nsId : nameServices) {
-      URI nsUri;
-      try {
-        nsUri = new URI(HdfsConstants.HDFS_URI_SCHEME + "://" + nsId);
-      } catch (URISyntaxException ue) {
-        throw new IllegalArgumentException(ue);
-      }
+      URI nsUri = createUri(HdfsConstants.HDFS_URI_SCHEME, nsId, -1);
       /**
        * Determine whether the logical URI of the name service can be resolved
        * by the configured failover proxy provider. If not, we should try to
@@ -816,7 +811,8 @@ public class DFSUtil {
     for (String key : keys) {
       String addr = conf.get(key);
       if (addr != null) {
-        URI uri = createUri("hdfs", NetUtils.createSocketAddr(addr));
+        URI uri = createUri(HdfsConstants.HDFS_URI_SCHEME,
+            NetUtils.createSocketAddr(addr));
         if (!uriFound) {
           uriFound = true;
           ret.add(uri);
@@ -834,19 +830,21 @@ public class DFSUtil {
     // nor the rpc-address (which overrides defaultFS) is given.
     if (!uriFound) {
       URI defaultUri = FileSystem.getDefaultUri(conf);
+      if (defaultUri != null) {
+        // checks if defaultUri is ip:port format
+        // and convert it to hostname:port format
+        if (defaultUri.getPort() != -1) {
+          defaultUri = createUri(defaultUri.getScheme(),
+              NetUtils.createSocketAddr(defaultUri.getHost(),
+                  defaultUri.getPort()));
+        }
 
-      // checks if defaultUri is ip:port format
-      // and convert it to hostname:port format
-      if (defaultUri != null && (defaultUri.getPort() != -1)) {
-        defaultUri = createUri(defaultUri.getScheme(),
-            NetUtils.createSocketAddr(defaultUri.getHost(),
-                defaultUri.getPort()));
-      }
+        defaultUri = trimUri(defaultUri);
 
-      if (defaultUri != null &&
-          HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
-          !nonPreferredUris.contains(defaultUri)) {
-        ret.add(defaultUri);
+        if (HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
+            !nonPreferredUris.contains(defaultUri)) {
+          ret.add(defaultUri);
+        }
       }
     }
     
@@ -1175,16 +1173,30 @@ public class DFSUtil {
     public boolean match(InetSocketAddress s);
   }
 
-  /** Create a URI from the scheme and address */
+  /** Create an URI from scheme and address. */
   public static URI createUri(String scheme, InetSocketAddress address) {
+    return createUri(scheme, address.getHostName(), address.getPort());
+  }
+
+  /** Create an URI from scheme, host, and port. */
+  public static URI createUri(String scheme, String host, int port) {
     try {
-      return new URI(scheme, null, address.getHostName(), address.getPort(),
-          null, null, null);
-    } catch (URISyntaxException ue) {
-      throw new IllegalArgumentException(ue);
+      return new URI(scheme, null, host, port, null, null, null);
+    } catch (URISyntaxException x) {
+      throw new IllegalArgumentException(x.getMessage(), x);
     }
   }
-  
+
+  /** Remove unnecessary path from HDFS URI. */
+  static URI trimUri(URI uri) {
+    String path = uri.getPath();
+    if (HdfsConstants.HDFS_URI_SCHEME.equals(uri.getScheme()) &&
+        path != null && !path.isEmpty()) {
+      uri = createUri(uri.getScheme(), uri.getHost(), uri.getPort());
+    }
+    return uri;
+  }
+
   /**
    * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}
    * @param conf configuration
