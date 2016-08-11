@@ -740,5 +740,31 @@ public class CommonConfigurationKeysPublic {
       "hadoop.http.logs.enabled";
   /** Defalt value for HADOOP_HTTP_LOGS_ENABLED */
   public static final boolean HADOOP_HTTP_LOGS_ENABLED_DEFAULT = true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH =
+      "hadoop.security.credential.provider.path";
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK =
+      "hadoop.security.credential.clear-text-fallback";
+  public static final boolean
+      HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK_DEFAULT = true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String  HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY =
+      "hadoop.security.credstore.java-keystore-provider.password-file";
 }
 

@@ -250,10 +250,52 @@
   <name>hadoop.security.group.mapping.ldap.ssl.keystore.password.file</name>
   <value></value>
   <description>
-    The path to a file containing the password of the LDAP SSL keystore.
+    The path to a file containing the password of the LDAP SSL keystore. If
+    the password is not configured in credential providers and the property
+    hadoop.security.group.mapping.ldap.ssl.keystore.password is not set,
+    LDAPGroupsMapping reads password from the file.
 
     IMPORTANT: This file should be readable only by the Unix user running
-    the daemons.
+    the daemons and should be a local file.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl.keystore.password</name>
+  <value></value>
+  <description>
+    The password of the LDAP SSL keystore. this property name is used as an
+    alias to get the password from credential providers. If the password can
+    not be found and hadoop.security.credential.clear-text-fallback is true
+    LDAPGroupsMapping uses the value of this property for password.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credential.clear-text-fallback</name>
+  <value>true</value>
+  <description>
+    true or false to indicate whether or not to fall back to storing credential
+    password as clear text. The default value is true. This property only works
+    when the password can't not be found from credential providers.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value></value>
+  <description>
+    A comma-separated list of URLs that indicates the type and
+    location of a list of providers that should be consulted.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credstore.java-keystore-provider.password-file</name>
+  <value></value>
+  <description>
+    The path to a file containing the custom password for all keystores
+    that may be configured in the provider path.
   </description>
 </property>
 
@@ -270,10 +312,24 @@
   <name>hadoop.security.group.mapping.ldap.bind.password.file</name>
   <value></value>
   <description>
-    The path to a file containing the password of the bind user.
+    The path to a file containing the password of the bind user. If
+    the password is not configured in credential providers and the property
+    hadoop.security.group.mapping.ldap.bind.password is not set,
+    LDAPGroupsMapping reads password from the file.
 
     IMPORTANT: This file should be readable only by the Unix user running
-    the daemons.
+    the daemons and should be a local file.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value></value>
+  <description>
+    The password of the bind user. this property name is used as an
+    alias to get the password from credential providers. If the password can
+    not be found and hadoop.security.credential.clear-text-fallback is true
+    LDAPGroupsMapping uses the value of this property for password.
   </description>
 </property>
 
