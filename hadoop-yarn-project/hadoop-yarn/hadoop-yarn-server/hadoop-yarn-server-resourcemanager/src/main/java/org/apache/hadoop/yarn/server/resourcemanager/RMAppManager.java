@@ -285,7 +285,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user) throws YarnException, AccessControlException {
+      String user) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     RMAppImpl application =
@@ -334,8 +334,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery)
-      throws YarnException, AccessControlException {
+      String user, boolean isRecovery) throws YarnException {
     // Do queue mapping
     if (!isRecovery) {
       if (rmContext.getQueuePlacementManager() != null) {
@@ -378,9 +377,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
                   SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
                   applicationId.toString(), appName, Server.getRemoteAddress(),
                   null))) {
-        throw new AccessControlException(
+        throw RPCUtil.getRemoteException(new AccessControlException(
             "User " + user + " does not have permission to submit "
-                + applicationId + " to queue " + submissionContext.getQueue());
+                + applicationId + " to queue " + submissionContext.getQueue()));
       }
     }
 
