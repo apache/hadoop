@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -369,25 +370,32 @@ public class TestRMAppTransitions {
 
   protected RMApp testCreateAppNewSaving(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = createNewTestApp(submissionContext);
+    RMApp application = createNewTestApp(submissionContext);
     // NEW => NEW_SAVING event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.NEW_SAVING, application);
+    // verify sendATSCreateEvent() is not get called during
+    // RMAppNewlySavingTransition.
+    verify(publisher, times(0)).appCreated(eq(application), anyLong());
     return application;
   }
 
   protected RMApp testCreateAppSubmittedNoRecovery(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = testCreateAppNewSaving(submissionContext);
-    // NEW_SAVING => SUBMITTED event RMAppEventType.APP_SAVED
+    RMApp application = testCreateAppNewSaving(submissionContext);
+    // NEW_SAVING => SUBMITTED event RMAppEventType.APP_NEW_SAVED
     RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.APP_NEW_SAVED);
+        new RMAppEvent(application.getApplicationId(),
+        RMAppEventType.APP_NEW_SAVED);
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
+    // verify sendATSCreateEvent() is get called during
+    // AddApplicationToSchedulerTransition.
+    verify(publisher).appCreated(eq(application), anyLong());
     return application;
   }
 
@@ -402,7 +410,6 @@ public class TestRMAppTransitions {
     RMAppEvent event =
         new RMAppRecoverEvent(application.getApplicationId(), state);
 
-
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
@@ -412,7 +419,7 @@ public class TestRMAppTransitions {
   protected RMApp testCreateAppAccepted(
       ApplicationSubmissionContext submissionContext) throws IOException {
     RMApp application = testCreateAppSubmittedNoRecovery(submissionContext);
-  // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
+    // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
             RMAppEventType.APP_ACCEPTED);
@@ -424,7 +431,7 @@ public class TestRMAppTransitions {
 
   protected RMApp testCreateAppRunning(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = testCreateAppAccepted(submissionContext);
+    RMApp application = testCreateAppAccepted(submissionContext);
     // ACCEPTED => RUNNING event RMAppEventType.ATTEMPT_REGISTERED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 

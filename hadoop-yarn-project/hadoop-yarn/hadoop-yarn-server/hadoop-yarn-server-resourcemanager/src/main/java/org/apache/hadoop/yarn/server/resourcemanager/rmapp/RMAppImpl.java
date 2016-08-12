@@ -833,8 +833,9 @@ public class RMAppImpl implements RMApp, Recoverable {
       this.nextAttemptId = firstAttemptIdInStateStore;
     }
 
-    // send the ATS create Event
-    sendATSCreateEvent(this, this.startTime);
+    // send the ATS create Event during RM recovery.
+    // NOTE: it could be duplicated with events sent before RM get restarted.
+    sendATSCreateEvent();
 
     RMAppAttemptImpl preAttempt = null;
     for (ApplicationAttemptId attemptId :
@@ -1049,6 +1050,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.handler.handle(new AppAddedSchedulerEvent(app.user,
           app.submissionContext, false));
+      // send the ATS create Event
+      app.sendATSCreateEvent();
     }
   }
 
@@ -1127,9 +1130,6 @@ public class RMAppImpl implements RMApp, Recoverable {
       // communication
       LOG.info("Storing application with id " + app.applicationId);
       app.rmContext.getStateStore().storeNewApplication(app);
-
-      // send the ATS create Event
-      app.sendATSCreateEvent(app, app.startTime);
     }
   }
 
@@ -1827,9 +1827,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     return callerContext;
   }
 
-  private void sendATSCreateEvent(RMApp app, long startTime) {
-    rmContext.getRMApplicationHistoryWriter().applicationStarted(app);
-    rmContext.getSystemMetricsPublisher().appCreated(app, startTime);
+  private void sendATSCreateEvent() {
+    rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
+    rmContext.getSystemMetricsPublisher().appCreated(this, this.startTime);
   }
 
   @Private
