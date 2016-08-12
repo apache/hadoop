@@ -273,3 +273,7 @@ li a.navigation-link.ember-view {
   right: 20px;
   top: 3px;
 }
+
+.x-scroll {
+  overflow-x: scroll;
+}
