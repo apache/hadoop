@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.7.3 - 2016-08-01
+Release 2.7.3 - 2016-09-19
 
   INCOMPATIBLE CHANGES
 
