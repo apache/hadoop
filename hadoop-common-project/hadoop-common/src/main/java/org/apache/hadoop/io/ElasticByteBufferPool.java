@@ -101,6 +101,7 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
 
   @Override
   public synchronized void putBuffer(ByteBuffer buffer) {
+    buffer.clear();
     TreeMap<Key, ByteBuffer> tree = getBufferTree(buffer.isDirect());
     while (true) {
       Key key = new Key(buffer.capacity(), System.nanoTime());

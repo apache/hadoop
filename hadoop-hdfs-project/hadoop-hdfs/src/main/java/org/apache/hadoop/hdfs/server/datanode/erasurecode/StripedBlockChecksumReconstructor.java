@@ -57,6 +57,7 @@ public class StripedBlockChecksumReconstructor extends StripedReconstructor {
   }
 
   private void init() throws IOException {
+    initDecoderIfNecessary();
     getStripedReader().init();
     // allocate buffer to keep the reconstructed block data
     targetBuffer = allocateBuffer(getBufferSize());
@@ -150,8 +151,6 @@ public class StripedBlockChecksumReconstructor extends StripedReconstructor {
   }
 
   private void reconstructTargets(int toReconstructLen) {
-    initDecoderIfNecessary();
-
     ByteBuffer[] inputs = getStripedReader().getInputBuffers(toReconstructLen);
 
     ByteBuffer[] outputs = new ByteBuffer[1];

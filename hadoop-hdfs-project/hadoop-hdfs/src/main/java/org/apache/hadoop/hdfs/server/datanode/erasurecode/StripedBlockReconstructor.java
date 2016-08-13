@@ -49,6 +49,8 @@ class StripedBlockReconstructor extends StripedReconstructor
   public void run() {
     getDatanode().incrementXmitsInProgress();
     try {
+      initDecoderIfNecessary();
+
       getStripedReader().init();
 
       stripedWriter.init();
@@ -96,8 +98,6 @@ class StripedBlockReconstructor extends StripedReconstructor
   }
 
   private void reconstructTargets(int toReconstructLen) {
-    initDecoderIfNecessary();
-
     ByteBuffer[] inputs = getStripedReader().getInputBuffers(toReconstructLen);
 
     int[] erasedIndices = stripedWriter.getRealTargetIndices();

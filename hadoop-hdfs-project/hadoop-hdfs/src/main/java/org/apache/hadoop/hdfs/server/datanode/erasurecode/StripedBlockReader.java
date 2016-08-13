@@ -90,6 +90,10 @@ class StripedBlockReader {
     return buffer;
   }
 
+  void freeReadBuffer() {
+    buffer = null;
+  }
+
   void resetBlockReader(long offsetInBlock) {
     this.blockReader = createBlockReader(offsetInBlock);
   }

@@ -180,7 +180,7 @@ class StripedReader {
   }
 
   protected ByteBuffer allocateReadBuffer() {
-    return ByteBuffer.allocate(getBufferSize());
+    return reconstructor.allocateBuffer(getBufferSize());
   }
 
   private void initZeroStrip() {
@@ -421,7 +421,16 @@ class StripedReader {
   }
 
   void close() {
+    if (zeroStripeBuffers != null) {
+      for (ByteBuffer zeroStripeBuffer : zeroStripeBuffers) {
+        reconstructor.freeBuffer(zeroStripeBuffer);
+      }
+    }
+    zeroStripeBuffers = null;
+
     for (StripedBlockReader reader : readers) {
+      reconstructor.freeBuffer(reader.getReadBuffer());
+      reader.freeReadBuffer();
       reader.closeBlockReader();
     }
   }
