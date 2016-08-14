@@ -3635,7 +3635,7 @@ public class TestCapacityScheduler {
     }
     assertEquals("A Used Resource should be 2 GB", 2 * GB,
         cs.getQueue("a").getUsedResources().getMemorySize());
-    assertEquals("B Used Resource should be 2 GB", 13 * GB,
+    assertEquals("B Used Resource should be 13 GB", 13 * GB,
         cs.getQueue("b").getUsedResources().getMemorySize());
     r1 = TestUtils.createResourceRequest(
         ResourceRequest.ANY, 2 * GB, 1, true, priority, recordFactory);
@@ -3659,10 +3659,14 @@ public class TestCapacityScheduler {
     ContainerId containerId2 =ContainerId.newContainerId(appAttemptId2, 11);
 
     cs.handle(new ContainerExpiredSchedulerEvent(containerId1));
+    rm.drainEvents();
+    CapacityScheduler.schedule(cs);
+
     cs.handle(new ContainerExpiredSchedulerEvent(containerId2));
     CapacityScheduler.schedule(cs);
     rm.drainEvents();
-    assertEquals("A Used Resource should be 2 GB", 4 * GB,
+
+    assertEquals("A Used Resource should be 4 GB", 4 * GB,
         cs.getQueue("a").getUsedResources().getMemorySize());
     assertEquals("B Used Resource should be 12 GB", 12 * GB,
         cs.getQueue("b").getUsedResources().getMemorySize());
