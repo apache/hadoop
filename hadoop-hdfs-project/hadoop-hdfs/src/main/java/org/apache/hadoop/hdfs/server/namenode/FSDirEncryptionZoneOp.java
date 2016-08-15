@@ -146,8 +146,6 @@ final class FSDirEncryptionZoneOp {
   static HdfsFileStatus createEncryptionZone(final FSDirectory fsd,
       final String srcArg, final FSPermissionChecker pc, final String cipher,
       final String keyName, final boolean logRetryCache) throws IOException {
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(srcArg);
     final CipherSuite suite = CipherSuite.convert(cipher);
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     final String src;
@@ -157,7 +155,7 @@ final class FSDirEncryptionZoneOp {
 
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, srcArg, pathComponents);
+      src = fsd.resolvePath(pc, srcArg);
       final XAttr ezXAttr = fsd.ezManager.createEncryptionZone(src, suite,
           version, keyName);
       xAttrs.add(ezXAttr);
@@ -180,14 +178,12 @@ final class FSDirEncryptionZoneOp {
   static Map.Entry<EncryptionZone, HdfsFileStatus> getEZForPath(
       final FSDirectory fsd, final String srcArg, final FSPermissionChecker pc)
       throws IOException {
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(srcArg);
     final String src;
     final INodesInPath iip;
     final EncryptionZone ret;
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, srcArg, pathComponents);
+      src = fsd.resolvePath(pc, srcArg);
       iip = fsd.getINodesInPath(src, true);
       if (iip.getLastINode() == null) {
         throw new FileNotFoundException("Path not found: " + iip.getPath());

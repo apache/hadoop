@@ -82,14 +82,12 @@ final class FSDirAppendOp {
       final boolean logRetryCache) throws IOException {
     assert fsn.hasWriteLock();
 
-    final byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(srcArg);
     final LocatedBlock lb;
     final FSDirectory fsd = fsn.getFSDirectory();
     final String src;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, srcArg, pathComponents);
+      src = fsd.resolvePath(pc, srcArg);
       final INodesInPath iip = fsd.getINodesInPath4Write(src);
       // Verify that the destination does not exist as a directory already
       final INode inode = iip.getLastINode();

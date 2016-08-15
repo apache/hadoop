@@ -52,24 +52,20 @@ import static org.apache.hadoop.util.Time.now;
 class FSDirStatAndListingOp {
   static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
       byte[] startAfter, boolean needLocation) throws IOException {
-    byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(srcArg);
     final String startAfterString = DFSUtil.bytes2String(startAfter);
     String src = null;
 
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
-      src = fsd.resolvePath(pc, srcArg, pathComponents);
+      src = fsd.resolvePath(pc, srcArg);
     } else {
-      src = FSDirectory.resolvePath(srcArg, pathComponents, fsd);
+      src = FSDirectory.resolvePath(srcArg, fsd);
     }
 
     // Get file name when startAfter is an INodePath
     if (FSDirectory.isReservedName(startAfterString)) {
-      byte[][] startAfterComponents = FSDirectory
-          .getPathComponentsForReservedPath(startAfterString);
       try {
-        String tmp = FSDirectory.resolvePath(src, startAfterComponents, fsd);
+        String tmp = FSDirectory.resolvePath(startAfterString, fsd);
         byte[][] regularPath = INode.getPathComponents(tmp);
         startAfter = regularPath[regularPath.length - 1];
       } catch (IOException e) {
@@ -110,14 +106,13 @@ class FSDirStatAndListingOp {
     if (!DFSUtil.isValidName(src)) {
       throw new InvalidPathException("Invalid file name: " + src);
     }
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
-      src = fsd.resolvePath(pc, src, pathComponents);
+      src = fsd.resolvePath(pc, srcArg);
       final INodesInPath iip = fsd.getINodesInPath(src, resolveLink);
       fsd.checkPermission(pc, iip, false, null, null, null, null, false);
     } else {
-      src = FSDirectory.resolvePath(src, pathComponents, fsd);
+      src = FSDirectory.resolvePath(srcArg, fsd);
     }
     return getFileInfo(fsd, src, FSDirectory.isReservedRawName(srcArg),
                        resolveLink);
@@ -128,8 +123,7 @@ class FSDirStatAndListingOp {
    */
   static boolean isFileClosed(FSDirectory fsd, String src) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     final INodesInPath iip = fsd.getINodesInPath(src, true);
     if (fsd.isPermissionEnabled()) {
       fsd.checkTraverse(pc, iip);
@@ -139,9 +133,8 @@ class FSDirStatAndListingOp {
 
   static ContentSummary getContentSummary(
       FSDirectory fsd, String src) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     final INodesInPath iip = fsd.getINodesInPath(src, false);
     if (fsd.isPermissionEnabled()) {
       fsd.checkPermission(pc, iip, false, null, null, null,
@@ -164,11 +157,10 @@ class FSDirStatAndListingOp {
         "Negative length is not supported. File: " + src);
     CacheManager cm = fsd.getFSNamesystem().getCacheManager();
     BlockManager bm = fsd.getBlockManager();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean isReservedName = FSDirectory.isReservedRawName(src);
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
+      src = fsd.resolvePath(pc, src);
       final INodesInPath iip = fsd.getINodesInPath(src, true);
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
@@ -628,12 +620,11 @@ class FSDirStatAndListingOp {
 
   static QuotaUsage getQuotaUsage(
       FSDirectory fsd, String src) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip;
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
+      src = fsd.resolvePath(pc, src);
       iip = fsd.getINodesInPath(src, false);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPermission(pc, iip, false, null, null, null,
