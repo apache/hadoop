@@ -116,8 +116,7 @@ class FSDirWriteFileOp {
   static void abandonBlock(
       FSDirectory fsd, FSPermissionChecker pc, ExtendedBlock b, long fileId,
       String src, String holder) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
 
     final INode inode;
     final INodesInPath iip;
@@ -178,8 +177,7 @@ class FSDirWriteFileOp {
     final byte storagePolicyID;
     String clientMachine;
 
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsn.dir.resolvePath(pc, src, pathComponents);
+    src = fsn.dir.resolvePath(pc, src);
     FileState fileState = analyzeFileState(fsn, src, fileId, clientName,
                                            previous, onRetryBlock);
     if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
@@ -341,8 +339,7 @@ class FSDirWriteFileOp {
 
     boolean isRawPath = FSDirectory.isReservedRawName(src);
     FSDirectory fsd = fsn.getFSDirectory();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip = fsd.getINodesInPath4Write(src);
 
     // Verify that the destination does not exist as a directory already.
@@ -451,9 +448,8 @@ class FSDirWriteFileOp {
       FSPermissionChecker pc, String src,
       CryptoProtocolVersion[] supportedVersions)
       throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSDirectory fsd = fsn.getFSDirectory();
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip = fsd.getINodesInPath4Write(src);
     // Nothing to do if the path is not within an EZ
     final EncryptionZone zone = FSDirEncryptionZoneOp.getEZForPath(fsd, iip);
@@ -696,8 +692,7 @@ class FSDirWriteFileOp {
                                         src + " for " + holder);
     }
     checkBlock(fsn, last);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsn.dir.resolvePath(pc, src, pathComponents);
+    src = fsn.dir.resolvePath(pc, src);
     boolean success = completeFileInternal(fsn, src, holder,
                                            ExtendedBlock.getLocalBlock(last),
                                            fileId);
