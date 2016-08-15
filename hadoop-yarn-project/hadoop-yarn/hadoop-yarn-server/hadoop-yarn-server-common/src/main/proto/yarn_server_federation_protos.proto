@@ -102,6 +102,7 @@ message AddApplicationHomeSubClusterRequestProto {
 }
 
 message AddApplicationHomeSubClusterResponseProto {
+  optional SubClusterIdProto home_sub_cluster = 1;
 }
 
 message UpdateApplicationHomeSubClusterRequestProto {
