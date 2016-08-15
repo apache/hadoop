@@ -43,18 +43,25 @@ static constexpr tPort kDefaultPort = 8020;
 
 /* Separate the handles used by the C api from the C++ API*/
 struct hdfs_internal {
-  hdfs_internal(FileSystem *p) : filesystem_(p), working_directory("/") {}
+  hdfs_internal(FileSystem *p) : filesystem_(p), working_directory_("/") {}
   hdfs_internal(std::unique_ptr<FileSystem> p)
-      : filesystem_(std::move(p)), working_directory("/") {}
+      : filesystem_(std::move(p)), working_directory_("/") {}
   virtual ~hdfs_internal(){};
   FileSystem *get_impl() { return filesystem_.get(); }
   const FileSystem *get_impl() const { return filesystem_.get(); }
-  std::string get_working_directory() { return working_directory; }
-  void set_working_directory(std::string new_directory) { working_directory = new_directory; }
+  std::string get_working_directory() {
+    std::lock_guard<std::mutex> read_guard(wd_lock_);
+    return working_directory_;
+  }
+  void set_working_directory(std::string new_directory) {
+    std::lock_guard<std::mutex> write_guard(wd_lock_);
+    working_directory_ = new_directory;
+  }
 
  private:
   std::unique_ptr<FileSystem> filesystem_;
-  std::string working_directory;      //has to always start and end with '/'
+  std::string working_directory_;      //has to always start and end with '/'
+  std::mutex wd_lock_;                 //synchronize access to the working directory
 };
 
 struct hdfsFile_internal {

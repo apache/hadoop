@@ -353,8 +353,8 @@ bool FileHandle::ShouldExclude(const Status &s) {
   }
 }
 
-uint64_t FileHandleImpl::get_bytes_read() { return bytes_read_; }
+uint64_t FileHandleImpl::get_bytes_read() { return bytes_read_.load(); }
 
-void FileHandleImpl::clear_bytes_read() { bytes_read_ = 0; }
+void FileHandleImpl::clear_bytes_read() { bytes_read_.store(0); }
 
 }
