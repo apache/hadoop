@@ -214,8 +214,10 @@ public class TestMiniYarnClusterNodeUtilization {
     // We check if the nodeUtilization is up to date
     for (int i=0; i<100; i++) {
       for (RMNode ni : rmContext.getRMNodes().values()) {
-        if (ni.getNodeUtilization().equals(nodeUtilization)) {
-          break;
+        if (ni.getNodeUtilization() != null) {
+            if (ni.getNodeUtilization().equals(nodeUtilization)) {
+              break;
+            }
         }
       }
       Thread.sleep(100);
