@@ -158,6 +158,7 @@ public class GreedyPlanner implements Planner {
 
     // since the volume data changed , we need to recompute the DataDensity.
     currentSet.computeVolumeDataDensity();
+    printQueue(currentSet.getSortedQueue());
   }
 
   /**
@@ -184,7 +185,7 @@ public class GreedyPlanner implements Planner {
     if (maxLowVolumeCanReceive <= 0) {
       LOG.debug("{} Skipping disk from computation. Maximum data size " +
           "achieved.", lowVolume.getPath());
-      lowVolume.setSkip(true);
+      skipVolume(currentSet, lowVolume);
     }
 
     long maxHighVolumeCanGive = highVolume.getUsed() -
@@ -195,7 +196,7 @@ public class GreedyPlanner implements Planner {
     if (maxHighVolumeCanGive <= 0) {
       LOG.debug(" {} Skipping disk from computation. Minimum data size " +
           "achieved.", highVolume.getPath());
-      highVolume.setSkip(true);
+      skipVolume(currentSet, highVolume);
     }
 
 
@@ -219,16 +220,19 @@ public class GreedyPlanner implements Planner {
    */
   private void skipVolume(DiskBalancerVolumeSet currentSet,
                           DiskBalancerVolume volume) {
-
-    String message = String.format(
-        "Skipping volume. Volume : %s " +
-            "Type : %s Target " +
-            "Number of bytes : %f lowVolume dfsUsed : %d. Skipping this " +
-            "volume from all future balancing calls.", volume.getPath(),
-        volume.getStorageType(),
-        currentSet.getIdealUsed() * volume.getCapacity(), volume.getUsed());
+    if (LOG.isDebugEnabled()) {
+      String message =
+          String.format(
+              "Skipping volume. Volume : %s " +
+              "Type : %s Target " +
+              "Number of bytes : %f lowVolume dfsUsed : %d. Skipping this " +
+              "volume from all future balancing calls.", volume.getPath(),
+              volume.getStorageType(),
+              currentSet.getIdealUsed() * volume.getCapacity(),
+              volume.getUsed());
+      LOG.debug(message);
+    }
     volume.setSkip(true);
-    LOG.debug(message);
   }
 
   // Removes all volumes which are part of the volumeSet but skip flag is set.
@@ -242,6 +246,7 @@ public class GreedyPlanner implements Planner {
       }
     }
     currentSet.computeVolumeDataDensity();
+    printQueue(currentSet.getSortedQueue());
   }
 
   /**
@@ -251,14 +256,14 @@ public class GreedyPlanner implements Planner {
    * @param queue - Queue
    */
   private void printQueue(TreeSet<DiskBalancerVolume> queue) {
-    String format = String.format("First Volume : %s, DataDensity : %f",
-        queue.first().getPath(),
-        queue.first().getVolumeDataDensity());
-    LOG.info(format);
-
-    format = String
-        .format("Last Volume : %s, DataDensity : %f%n", queue.last().getPath(),
-            queue.last().getVolumeDataDensity());
-    LOG.info(format);
+    if (LOG.isDebugEnabled()) {
+      String format =
+          String.format(
+              "First Volume : %s, DataDensity : %f, " +
+              "Last Volume : %s, DataDensity : %f",
+              queue.first().getPath(), queue.first().getVolumeDataDensity(),
+              queue.last().getPath(), queue.last().getVolumeDataDensity());
+      LOG.debug(format);
+    }
   }
 }
