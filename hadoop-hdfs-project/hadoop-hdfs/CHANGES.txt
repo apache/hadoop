@@ -45,6 +45,8 @@ Release 2.6.5 - UNRELEASED
     HDFS-9365. Balancer does not work with the HDFS-6376 HA setup. (Tsz Wo
     Nicholas Sze)
 
+    HDFS-9696. Garbage snapshot records linger forever. (kihwal)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
