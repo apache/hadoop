@@ -255,6 +255,9 @@ Release 2.7.3 - UNRELEASED
 
     HDFS-9696. Garbage snapshot records linger forever. (kihwal)
 
+    HDFS-10763. Open files can leak permanently due to inconsistent lease
+    update. (kihwal)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
