@@ -2184,6 +2184,7 @@ public class TestCapacityScheduler {
 
     // check postconditions
     rm.waitForState(app.getApplicationId(), RMAppState.KILLED);
+    rm.waitForAppRemovedFromScheduler(app.getApplicationId());
     appsInRoot = scheduler.getAppsInQueue("root");
     assertTrue(appsInRoot.isEmpty());
 
