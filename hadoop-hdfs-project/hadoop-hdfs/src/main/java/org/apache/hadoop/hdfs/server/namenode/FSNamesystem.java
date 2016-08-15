@@ -3275,7 +3275,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new IOException("Cannot finalize file " + src
           + " because it is not under construction");
     }
-    leaseManager.removeLease(uc.getClientName(), pendingFile);
 
     pendingFile.recordModification(latestSnapshot);
 
@@ -3285,6 +3284,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     pendingFile.toCompleteFile(now(),
         allowCommittedBlock? numCommittedAllowed: 0,
         blockManager.getMinReplication());
+
+    leaseManager.removeLease(uc.getClientName(), pendingFile);
 
     // close file and persist block allocations for this file
     closeFile(src, pendingFile);
