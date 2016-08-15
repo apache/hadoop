@@ -139,7 +139,7 @@ private:
   CancelHandle cancel_state_;
   ReaderGroup readers_;
   std::shared_ptr<LibhdfsEvents> event_handlers_;
-  uint64_t bytes_read_;
+  std::atomic<uint64_t> bytes_read_;
 };
 
 }
