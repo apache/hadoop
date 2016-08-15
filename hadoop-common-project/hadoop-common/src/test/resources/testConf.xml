@@ -106,11 +106,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-q\s+Print \? instead of non-printable characters\.( )*</expected-output>
+          <expected-output>^\s*rather than a number of bytes\.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*rather than a number of bytes\.( )*</expected-output>
+          <expected-output>^\s*-q\s+Print \? instead of non-printable characters\.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
