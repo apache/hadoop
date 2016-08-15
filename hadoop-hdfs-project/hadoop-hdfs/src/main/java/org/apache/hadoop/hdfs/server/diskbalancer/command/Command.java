@@ -33,13 +33,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
 import org.apache.hadoop.hdfs.tools.DiskBalancer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -418,6 +422,37 @@ public abstract class Command extends Configured {
     }
 
     return Math.min(nodes, cluster.getNodes().size());
+  }
+
+  /**
+   * Reads the Physical path of the disks we are balancing. This is needed to
+   * make the disk balancer human friendly and not used in balancing.
+   *
+   * @param node - Disk Balancer Node.
+   */
+  protected void populatePathNames(
+      DiskBalancerDataNode node) throws IOException {
+    // if the cluster is a local file system, there is no need to
+    // invoke rpc call to dataNode.
+    if (getClusterURI().getScheme().startsWith("file")) {
+      return;
+    }
+    String dnAddress = node.getDataNodeIP() + ":" + node.getDataNodePort();
+    ClientDatanodeProtocol dnClient = getDataNodeProxy(dnAddress);
+    String volumeNameJson = dnClient.getDiskBalancerSetting(
+        DiskBalancerConstants.DISKBALANCER_VOLUME_NAME);
+    ObjectMapper mapper = new ObjectMapper();
+
+    @SuppressWarnings("unchecked")
+    Map<String, String> volumeMap =
+        mapper.readValue(volumeNameJson, HashMap.class);
+    for (DiskBalancerVolumeSet set : node.getVolumeSets().values()) {
+      for (DiskBalancerVolume vol : set.getVolumes()) {
+        if (volumeMap.containsKey(vol.getUuid())) {
+          vol.setPath(volumeMap.get(vol.getUuid()));
+        }
+      }
+    }
   }
 
   /**

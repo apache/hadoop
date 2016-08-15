@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
+
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
@@ -50,6 +51,7 @@ import static org.apache.hadoop.hdfs.tools.DiskBalancer.HELP;
 import static org.apache.hadoop.hdfs.tools.DiskBalancer.NODE;
 import static org.apache.hadoop.hdfs.tools.DiskBalancer.PLAN;
 import static org.apache.hadoop.hdfs.tools.DiskBalancer.QUERY;
+import static org.apache.hadoop.hdfs.tools.DiskBalancer.REPORT;
 
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
@@ -262,6 +264,41 @@ public class TestDiskBalancerCommand {
   }
 
   @Test(timeout = 60000)
+  public void testReportNodeWithoutJson() throws Exception {
+    String dataNodeUuid = cluster.getDataNodes().get(0).getDatanodeUuid();
+    final String planArg = String.format("-%s -%s %s",
+        REPORT, NODE, dataNodeUuid);
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid))));
+    assertThat(
+        outputs.get(2),
+        is(allOf(containsString(dataNodeUuid),
+            containsString("2 volumes with node data density 0.00"))));
+    assertThat(
+        outputs.get(3),
+        is(allOf(containsString("DISK"),
+            containsString("/dfs/data/data1"),
+            containsString("0.00"),
+            containsString("1.00"))));
+    assertThat(
+        outputs.get(4),
+        is(allOf(containsString("DISK"),
+            containsString("/dfs/data/data2"),
+            containsString("0.00"),
+            containsString("1.00"))));
+  }
+
+  @Test(timeout = 60000)
   public void testReadClusterFromJson() throws Exception {
     ClusterConnector jsonConnector = ConnectorFactory.getCluster(clusterJson,
         conf);
@@ -281,6 +318,17 @@ public class TestDiskBalancerCommand {
         .format(
             "hdfs diskbalancer %s", planArg);
     runCommand(cmdLine, cluster);
+  }
+
+  /* test -plan  DataNodeID */
+  @Test(timeout = 60000)
+  public void testPlanJsonNode() throws Exception {
+    final String planArg = String.format("-%s %s", PLAN,
+        "a87654a9-54c7-4693-8dd9-c9c7021dc340");
+    final String cmdLine = String
+        .format(
+            "hdfs diskbalancer %s", planArg);
+    runCommand(cmdLine);
   }
 
   /* Test that illegal arguments are handled correctly*/

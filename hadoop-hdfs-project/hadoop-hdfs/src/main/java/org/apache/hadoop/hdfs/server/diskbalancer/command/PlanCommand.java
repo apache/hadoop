@@ -24,23 +24,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
-import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
-    .DiskBalancerVolumeSet;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 import org.apache.hadoop.hdfs.tools.DiskBalancer;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Class that implements Plan Command.
@@ -158,30 +148,6 @@ public class PlanCommand extends Command {
     }
   }
 
-  /**
-   * Reads the Physical path of the disks we are balancing. This is needed to
-   * make the disk balancer human friendly and not used in balancing.
-   *
-   * @param node - Disk Balancer Node.
-   */
-  private void populatePathNames(DiskBalancerDataNode node) throws IOException {
-    String dnAddress = node.getDataNodeIP() + ":" + node.getDataNodePort();
-    ClientDatanodeProtocol dnClient = getDataNodeProxy(dnAddress);
-    String volumeNameJson = dnClient.getDiskBalancerSetting(
-        DiskBalancerConstants.DISKBALANCER_VOLUME_NAME);
-    ObjectMapper mapper = new ObjectMapper();
-
-    @SuppressWarnings("unchecked")
-    Map<String, String> volumeMap =
-        mapper.readValue(volumeNameJson, HashMap.class);
-    for (DiskBalancerVolumeSet set : node.getVolumeSets().values()) {
-      for (DiskBalancerVolume vol : set.getVolumes()) {
-        if (volumeMap.containsKey(vol.getUuid())) {
-          vol.setPath(volumeMap.get(vol.getUuid()));
-        }
-      }
-    }
-  }
 
   /**
    * Gets extended help for this command.

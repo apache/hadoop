@@ -130,7 +130,7 @@ public class ReportCommand extends Command {
   }
 
   private void handleNodeReport(final CommandLine cmd, StrBuilder result,
-      final String nodeFormat, final String volumeFormat) {
+      final String nodeFormat, final String volumeFormat) throws Exception {
     String outputLine = "";
     /*
      * get value that identifies a DataNode from command line, it could be UUID,
@@ -152,6 +152,8 @@ public class ReportCommand extends Command {
       final String trueStr = "True";
       final String falseStr = "False";
       DiskBalancerDataNode dbdn = getNode(nodeVal);
+      // get storage path of datanode
+      populatePathNames(dbdn);
 
       if (dbdn == null) {
         outputLine = String.format(
