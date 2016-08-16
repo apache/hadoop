@@ -43,10 +43,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
 import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -197,35 +197,36 @@ public abstract class GenericTestUtils {
     private StringWriter sw = new StringWriter();
     private WriterAppender appender;
     private Logger logger;
-
+    
     public static LogCapturer captureLogs(Log l) {
       Logger logger = ((Log4JLogger)l).getLogger();
-      return new LogCapturer(logger);
+      LogCapturer c = new LogCapturer(logger);
+      return c;
     }
-
-    public static LogCapturer captureLogs(org.slf4j.Logger logger) {
-      return new LogCapturer(toLog4j(logger));
-    }
+    
 
     private LogCapturer(Logger logger) {
       this.logger = logger;
-      this.appender = new WriterAppender(new PatternLayout(), sw);
-      logger.addAppender(appender);
+      Layout layout = Logger.getRootLogger().getAppender("stdout").getLayout();
+      WriterAppender wa = new WriterAppender(layout, sw);
+      logger.addAppender(wa);
     }
-
+    
     public String getOutput() {
       return sw.toString();
     }
-
+    
     public void stopCapturing() {
       logger.removeAppender(appender);
+
     }
 
     public void clearOutput() {
       sw.getBuffer().setLength(0);
     }
   }
-
+  
+  
   /**
    * Mockito answer helper that triggers one latch as soon as the
    * method is called, then waits on another before continuing.
