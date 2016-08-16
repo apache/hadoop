@@ -963,12 +963,18 @@ public class BlockManager implements BlockStatsMXBean {
     DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
     int j = 0;
     if (numMachines > 0) {
+      final boolean noCorrupt = (numCorruptReplicas == 0);
       for(DatanodeStorageInfo storage : blocksMap.getStorages(blk)) {
-        final DatanodeDescriptor d = storage.getDatanodeDescriptor();
-        final boolean replicaCorrupt = corruptReplicas.isReplicaCorrupt(blk, d);
-        if ((isCorrupt || (!replicaCorrupt)) &&
-            storage.getState() != State.FAILED) {
-          machines[j++] = storage;
+        if (storage.getState() != State.FAILED) {
+          if (noCorrupt) {
+            machines[j++] = storage;
+          } else {
+            final DatanodeDescriptor d = storage.getDatanodeDescriptor();
+            final boolean replicaCorrupt = isReplicaCorrupt(blk, d);
+            if (isCorrupt || !replicaCorrupt) {
+              machines[j++] = storage;
+            }
+          }
         }
       }
     }
@@ -4061,5 +4067,9 @@ public class BlockManager implements BlockStatsMXBean {
 
   boolean isGenStampInFuture(Block block) {
     return blockIdManager.isGenStampInFuture(block);
+  }
+
+  boolean isReplicaCorrupt(BlockInfo blk, DatanodeDescriptor d) {
+    return corruptReplicas.isReplicaCorrupt(blk, d);
   }
 }
