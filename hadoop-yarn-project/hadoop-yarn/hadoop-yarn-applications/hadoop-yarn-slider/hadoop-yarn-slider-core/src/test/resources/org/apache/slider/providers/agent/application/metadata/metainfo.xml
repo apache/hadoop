@@ -1,0 +1,180 @@
+<?xml version="1.0"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<metainfo>
+  <schemaVersion>2.0</schemaVersion>
+  <application>
+    <name>STORM</name>
+    <comment>Apache Hadoop Stream processing framework</comment>
+    <version>0.9.1.2.1</version>
+    <exportedConfigs>storm-site</exportedConfigs>
+
+    <exportGroups>
+      <exportGroup>
+        <name>QuickLinks</name>
+        <exports>
+          <export>
+            <name>app.jmx</name>
+            <value>http://${STORM_REST_API_HOST}:${site.global.rest_api_port}/api/cluster/summary</value>
+          </export>
+          <export>
+            <name>app.monitor</name>
+            <value>http://${STORM_UI_SERVER_HOST}:${site.storm-site.ui.port}</value>
+          </export>
+          <export>
+            <name>app.metrics</name>
+            <value>http://${site.global.ganglia_server_host}/cgi-bin/rrd.py?c=${site.global.ganglia_server_id}</value>
+          </export>
+          <export>
+            <name>ganglia.ui</name>
+            <value>http://${site.global.ganglia_server_host}/ganglia?c=${site.global.ganglia_server_id}</value>
+          </export>
+          <export>
+            <name>nimbus.url</name>
+            <value>http://${NIMBUS_HOST}:${site.storm-site.nimbus.thrift.port}</value>
+          </export>
+        </exports>
+      </exportGroup>
+    </exportGroups>
+
+    <commandOrders>
+      <commandOrder>
+        <command>NIMBUS-START</command>
+        <requires>SUPERVISOR-INSTALLED,STORM_UI_SERVER-INSTALLED,DRPC_SERVER-INSTALLED,STORM_REST_API-INSTALLED
+        </requires>
+      </commandOrder>
+      <commandOrder>
+        <command>SUPERVISOR-START</command>
+        <requires>NIMBUS-STARTED</requires>
+      </commandOrder>
+      <commandOrder>
+        <command>DRPC_SERVER-START</command>
+        <requires>NIMBUS-STARTED</requires>
+      </commandOrder>
+      <commandOrder>
+        <command>STORM_REST_API-START</command>
+        <requires>NIMBUS-STARTED,DRPC_SERVER-STARTED,STORM_UI_SERVER-STARTED</requires>
+      </commandOrder>
+      <commandOrder>
+        <command>STORM_UI_SERVER-START</command>
+        <requires>NIMBUS-STARTED</requires>
+      </commandOrder>
+    </commandOrders>
+
+    <components>
+
+      <component>
+        <name>NIMBUS</name>
+        <category>MASTER</category>
+        <autoStartOnFailure>true</autoStartOnFailure>
+        <appExports>QuickLinks-nimbus.url,QuickLinks-ganglia.ui,QuickLinks-app.metrics</appExports>
+        <commandScript>
+          <script>scripts/nimbus.py</script>
+          <scriptType>PYTHON</scriptType>
+          <timeout>600</timeout>
+        </commandScript>
+      </component>
+
+      <component>
+        <name>STORM_REST_API</name>
+        <category>MASTER</category>
+        <autoStartOnFailure>true</autoStartOnFailure>
+        <appExports>QuickLinks-app.jmx</appExports>
+        <commandScript>
+          <script>scripts/rest_api.py</script>
+          <scriptType>PYTHON</scriptType>
+          <timeout>600</timeout>
+        </commandScript>
+      </component>
+
+      <component>
+        <name>SUPERVISOR</name>
+        <category>SLAVE</category>
+        <autoStartOnFailure>true</autoStartOnFailure>
+        <componentExports>
+          <componentExport>
+            <name>log_viewer_port</name>
+            <value>${THIS_HOST}:${site.storm-site.logviewer.port}</value>
+          </componentExport>
+        </componentExports>
+        <commandScript>
+          <script>scripts/supervisor.py</script>
+          <scriptType>PYTHON</scriptType>
+          <timeout>600</timeout>
+        </commandScript>
+      </component>
+
+      <component>
+        <name>STORM_UI_SERVER</name>
+        <category>MASTER</category>
+        <publishConfig>true</publishConfig>
+        <appExports>QuickLinks-app.monitor</appExports>
+        <autoStartOnFailure>true</autoStartOnFailure>
+        <commandScript>
+          <script>scripts/ui_server.py</script>
+          <scriptType>PYTHON</scriptType>
+          <timeout>600</timeout>
+        </commandScript>
+      </component>
+
+      <component>
+        <name>DRPC_SERVER</name>
+        <category>MASTER</category>
+        <autoStartOnFailure>true</autoStartOnFailure>
+        <commandScript>
+          <script>scripts/drpc_server.py</script>
+          <scriptType>PYTHON</scriptType>
+          <timeout>600</timeout>
+        </commandScript>
+      </component>
+
+      <component>
+        <name>ANOTHER_COMPONENT</name>
+        <category>MASTER</category>
+        <commands>
+          <command>
+            <exec>start command</exec>
+          </command>
+          <command>
+            <exec>stop command</exec>
+            <name>STOP</name>
+          </command>
+        </commands>
+      </component>
+    </components>
+
+    <osSpecifics>
+      <osSpecific>
+        <osType>any</osType>
+        <packages>
+          <package>
+            <type>tarball</type>
+            <name>files/apache-storm-0.9.1.2.1.1.0-237.tar.gz</name>
+          </package>
+        </packages>
+      </osSpecific>
+    </osSpecifics>
+
+    <packages>
+      <package>
+        <type>tarball</type>
+        <name>test-tarball-name.tgz</name>
+      </package>
+    </packages>
+  </application>
+</metainfo>
