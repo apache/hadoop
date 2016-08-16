@@ -2181,4 +2181,33 @@
     <description>The class names of the Span Receivers to use for Hadoop.
     </description>
   </property>
+
+  <property>
+    <name>hadoop.caller.context.enabled</name>
+    <value>false</value>
+    <description>When the feature is enabled, additional fields are written into
+      name-node audit log records for auditing coarse granularity operations.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.caller.context.max.size</name>
+    <value>128</value>
+    <description>The maximum bytes a caller context string can have. If the
+      passed caller context is longer than this maximum bytes, client will
+      truncate it before sending to server. Note that the server may have a
+      different maximum size, and will truncate the caller context to the
+      maximum size it allows.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.caller.context.signature.max.size</name>
+    <value>40</value>
+    <description>
+      The caller's signature (optional) is for offline validation. If the
+      signature exceeds the maximum allowed bytes in server, the caller context
+      will be abandoned, in which case the caller context will not be recorded
+      in audit logs.
+    </description>
+  </property>
+
 </configuration>
