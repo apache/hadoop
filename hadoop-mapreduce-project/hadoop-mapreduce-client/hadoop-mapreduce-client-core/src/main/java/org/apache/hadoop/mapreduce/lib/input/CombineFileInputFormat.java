@@ -600,6 +600,10 @@ public abstract class CombineFileInputFormat<K, V>
         if (!isSplitable) {
           // if the file is not splitable, just create the one block with
           // full file length
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("File is not splittable so no parallelization "
+                + "is possible: " + stat.getPath());
+          }
           blocks = new OneBlockInfo[1];
           fileSize = stat.getLen();
           blocks[0] = new OneBlockInfo(stat.getPath(), 0, fileSize,
