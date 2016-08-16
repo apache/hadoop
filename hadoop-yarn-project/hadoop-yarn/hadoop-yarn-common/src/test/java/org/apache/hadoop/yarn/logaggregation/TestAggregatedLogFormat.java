@@ -140,7 +140,8 @@ public class TestAggregatedLogFormat {
     final int ch = filler;
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    LogWriter logWriter = new LogWriter(conf, remoteAppLogFile, ugi);
+    LogWriter logWriter = new LogWriter(new Configuration(), remoteAppLogFile,
+        ugi);
 
     LogKey logKey = new LogKey(testContainerId);
     LogValue logValue =
