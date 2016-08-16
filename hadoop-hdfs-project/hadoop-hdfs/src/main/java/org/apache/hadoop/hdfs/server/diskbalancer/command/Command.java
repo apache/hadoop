@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.tools.DiskBalancer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +70,8 @@ import java.util.TreeSet;
  * Common interface for command handling.
  */
 public abstract class Command extends Configured {
+  private static final ObjectReader READER =
+      new ObjectMapper().reader(HashMap.class);
   static final Logger LOG = LoggerFactory.getLogger(Command.class);
   private Map<String, String> validArgs = new HashMap<>();
   private URI clusterURI;
@@ -441,11 +444,10 @@ public abstract class Command extends Configured {
     ClientDatanodeProtocol dnClient = getDataNodeProxy(dnAddress);
     String volumeNameJson = dnClient.getDiskBalancerSetting(
         DiskBalancerConstants.DISKBALANCER_VOLUME_NAME);
-    ObjectMapper mapper = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
     Map<String, String> volumeMap =
-        mapper.readValue(volumeNameJson, HashMap.class);
+        READER.readValue(volumeNameJson);
     for (DiskBalancerVolumeSet set : node.getVolumeSets().values()) {
       for (DiskBalancerVolume vol : set.getVolumes()) {
         if (volumeMap.containsKey(vol.getUuid())) {

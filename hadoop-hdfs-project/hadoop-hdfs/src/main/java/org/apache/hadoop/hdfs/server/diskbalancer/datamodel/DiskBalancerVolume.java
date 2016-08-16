@@ -19,9 +19,11 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 
 import java.io.IOException;
 
@@ -30,6 +32,9 @@ import java.io.IOException;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DiskBalancerVolume {
+  private static final ObjectReader READER =
+      new ObjectMapper().reader(DiskBalancerVolume.class);
+
   private String path;
   private long capacity;
   private String storageType;
@@ -58,8 +63,7 @@ public class DiskBalancerVolume {
    * @throws IOException
    */
   public static DiskBalancerVolume parseJson(String json) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(json, DiskBalancerVolume.class);
+    return READER.readValue(json);
   }
 
   /**
@@ -305,8 +309,7 @@ public class DiskBalancerVolume {
    * @throws IOException
    */
   public String toJson() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return JsonUtil.toJsonString(this);
   }
 
   /**

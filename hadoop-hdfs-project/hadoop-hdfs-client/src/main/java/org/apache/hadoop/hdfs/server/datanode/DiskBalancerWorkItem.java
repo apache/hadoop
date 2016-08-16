@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.htrace.fasterxml.jackson.annotation.JsonInclude;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 
 import java.io.IOException;
 
@@ -34,6 +35,10 @@ import java.io.IOException;
 @InterfaceStability.Unstable
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class DiskBalancerWorkItem {
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectReader READER =
+      new ObjectMapper().reader(DiskBalancerWorkItem.class);
+
   private  long startTime;
   private long secondsElapsed;
   private long bytesToCopy;
@@ -74,8 +79,7 @@ public class DiskBalancerWorkItem {
    */
   public static DiskBalancerWorkItem parseJson(String json) throws IOException {
     Preconditions.checkNotNull(json);
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.readValue(json, DiskBalancerWorkItem.class);
+    return READER.readValue(json);
   }
 
   /**
@@ -169,8 +173,7 @@ public class DiskBalancerWorkItem {
    * @throws IOException
    */
   public String toJson() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(this);
+    return MAPPER.writeValueAsString(this);
   }
 
   /**

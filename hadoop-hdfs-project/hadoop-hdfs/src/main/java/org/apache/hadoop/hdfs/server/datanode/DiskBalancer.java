@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.util.Time;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -263,8 +263,7 @@ public class DiskBalancer {
       for (Map.Entry<String, FsVolumeSpi> entry : volMap.entrySet()) {
         pathMap.put(entry.getKey(), entry.getValue().getBasePath());
       }
-      ObjectMapper mapper = new ObjectMapper();
-      return mapper.writeValueAsString(pathMap);
+      return JsonUtil.toJsonString(pathMap);
     } catch (DiskBalancerException ex) {
       throw ex;
     } catch (IOException e) {
