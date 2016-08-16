@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.test;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.junit.Test;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.assertTrue;
 
 public class TestGenericTestUtils extends GenericTestUtils {
 
@@ -73,6 +81,42 @@ public class TestGenericTestUtils extends GenericTestUtils {
     public String toString() {
       return null;
     }
+  }
+
+  @Test(timeout = 10000)
+  public void testLogCapturer() {
+    final Log log = LogFactory.getLog(TestGenericTestUtils.class);
+    LogCapturer logCapturer = LogCapturer.captureLogs(log);
+    final String infoMessage = "info message";
+    // test get output message
+    log.info(infoMessage);
+    assertTrue(logCapturer.getOutput().endsWith(
+        String.format(infoMessage + "%n")));
+    // test clear output
+    logCapturer.clearOutput();
+    assertTrue(logCapturer.getOutput().isEmpty());
+    // test stop capturing
+    logCapturer.stopCapturing();
+    log.info(infoMessage);
+    assertTrue(logCapturer.getOutput().isEmpty());
+  }
+
+  @Test(timeout = 10000)
+  public void testLogCapturerSlf4jLogger() {
+    final Logger logger = LoggerFactory.getLogger(TestGenericTestUtils.class);
+    LogCapturer logCapturer = LogCapturer.captureLogs(logger);
+    final String infoMessage = "info message";
+    // test get output message
+    logger.info(infoMessage);
+    assertTrue(logCapturer.getOutput().endsWith(
+        String.format(infoMessage + "%n")));
+    // test clear output
+    logCapturer.clearOutput();
+    assertTrue(logCapturer.getOutput().isEmpty());
+    // test stop capturing
+    logCapturer.stopCapturing();
+    logger.info(infoMessage);
+    assertTrue(logCapturer.getOutput().isEmpty());
   }
 
 }
