@@ -17,13 +17,19 @@
  */
 package org.apache.hadoop.yarn.api.records;
 
+/**
+ * Specifies the different types of decommissioning of nodes.
+ */
 public enum DecommissionType {
-  /** Decomissioning nodes in normal way **/
+  /** Decomissioning nodes in normal way. **/
   NORMAL,
 
-  /** Graceful decommissioning of nodes **/
+  /** Graceful decommissioning of nodes. **/
   GRACEFUL,
 
-  /** Forceful decommissioning of nodes which are already in progress **/
+  /**
+   * Forceful decommissioning of nodes whose decommissioning is already in
+   * progress.
+   **/
   FORCEFUL
 }
