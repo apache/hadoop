@@ -19,26 +19,33 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 /**
  * A immutable object that stores the number of live replicas and
- * the number of decommissined Replicas.
+ * the number of decommissioned Replicas.
  */
 public class NumberReplicas {
   private int liveReplicas;
-  private int decommissionedReplicas;
+
+  // Tracks only the decommissioning replicas
+  private int decommissioning;
+  // Tracks only the decommissioned replicas
+  private int decommissioned;
   private int corruptReplicas;
   private int excessReplicas;
   private int replicasOnStaleNodes;
 
   NumberReplicas() {
-    initialize(0, 0, 0, 0, 0);
+    initialize(0, 0, 0, 0, 0, 0);
   }
 
-  NumberReplicas(int live, int decommissioned, int corrupt, int excess, int stale) {
-    initialize(live, decommissioned, corrupt, excess, stale);
+  NumberReplicas(int live, int decommissioned, int decommissioning, int corrupt,
+                 int excess, int stale) {
+    initialize(live, decommissioned, decommissioning, corrupt, excess, stale);
   }
 
-  void initialize(int live, int decommissioned, int corrupt, int excess, int stale) {
+  void initialize(int live, int decommissioned, int decommissioning,
+                  int corrupt, int excess, int stale) {
     liveReplicas = live;
-    decommissionedReplicas = decommissioned;
+    this.decommissioning = decommissioning;
+    this.decommissioned = decommissioned;
     corruptReplicas = corrupt;
     excessReplicas = excess;
     replicasOnStaleNodes = stale;
@@ -47,12 +54,46 @@ public class NumberReplicas {
   public int liveReplicas() {
     return liveReplicas;
   }
+
+  /**
+   *
+   * @return decommissioned replicas + decommissioning replicas
+   * It is deprecated by decommissionedAndDecommissioning
+   * due to its misleading name.
+   */
+  @Deprecated
   public int decommissionedReplicas() {
-    return decommissionedReplicas;
+    return decommissionedAndDecommissioning();
   }
+
+  /**
+   *
+   * @return decommissioned and decommissioning replicas
+   */
+  public int decommissionedAndDecommissioning() {
+    return decommissioned + decommissioning;
+  }
+
+  /**
+   *
+   * @return decommissioned replicas only
+   */
+  public int decommissioned() {
+    return decommissioned;
+  }
+
+  /**
+   *
+   * @return decommissioning replicas only
+   */
+  public int decommissioning() {
+    return decommissioning;
+  }
+
   public int corruptReplicas() {
     return corruptReplicas;
   }
+
   public int excessReplicas() {
     return excessReplicas;
   }

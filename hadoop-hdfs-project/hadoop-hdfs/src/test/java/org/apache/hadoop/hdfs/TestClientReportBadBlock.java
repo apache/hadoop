@@ -191,7 +191,7 @@ public class TestClientReportBadBlock {
       verifyFirstBlockCorrupted(filePath, false);
       int expectedReplicaCount = repl-corruptBlocReplicas;
       verifyCorruptedBlockCount(filePath, expectedReplicaCount);
-      verifyFsckHealth("Target Replicas is 3 but found 1 replica");
+      verifyFsckHealth("Target Replicas is 3 but found 1 live replica");
       testFsckListCorruptFilesBlocks(filePath, 0);
     }
   }

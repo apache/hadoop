@@ -1467,4 +1467,85 @@ public class TestFsck {
       }
     }
   }
+
+  /**
+   * Test for blocks on decommissioning hosts are not shown as missing
+   */
+  @Test
+  public void testFsckWithDecommissionedReplicas() throws Exception {
+
+    final short REPL_FACTOR = 1;
+    short NUM_DN = 2;
+    final long blockSize = 512;
+    final long fileSize = 1024;
+    boolean checkDecommissionInProgress = false;
+    String [] racks = {"/rack1", "/rack2"};
+    String [] hosts = {"host1", "host2"};
+
+    Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+
+    MiniDFSCluster cluster;
+    DistributedFileSystem dfs ;
+    cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DN).hosts(hosts)
+            .racks(racks).build();
+
+    assertNotNull("Failed Cluster Creation", cluster);
+    cluster.waitClusterUp();
+    dfs = cluster.getFileSystem();
+    assertNotNull("Failed to get FileSystem", dfs);
+
+    DFSTestUtil util = new DFSTestUtil.Builder().
+        setName(getClass().getSimpleName()).setNumFiles(1).build();
+
+    //create files
+    final String testFile = new String("/testfile");
+    final Path path = new Path(testFile);
+    util.createFile(dfs, path, fileSize, REPL_FACTOR, 1000L);
+    util.waitReplication(dfs, path, REPL_FACTOR);
+    try {
+      // make sure datanode that has replica is fine before decommission
+      String outStr = runFsck(conf, 0, true, testFile);
+      System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+
+      // decommission datanode
+      ExtendedBlock eb = util.getFirstBlock(dfs, path);
+      DatanodeDescriptor dn = cluster.getNameNode().getNamesystem()
+          .getBlockManager().getBlockCollection(eb.getLocalBlock())
+          .getBlocks()[0].getDatanode(0);
+      cluster.getNameNode().getNamesystem().getBlockManager()
+          .getDatanodeManager().getDecomManager().startDecommission(dn);
+      String dnName = dn.getXferAddr();
+
+      // wait for decommission start
+      DatanodeInfo datanodeInfo = null;
+      int count = 0;
+      do {
+        Thread.sleep(2000);
+        for (DatanodeInfo info : dfs.getDataNodeStats()) {
+          if (dnName.equals(info.getXferAddr())) {
+            datanodeInfo = info;
+          }
+        }
+        // check the replica status should be healthy(0)
+        // instead of corruption (1) during decommissioning
+        if(!checkDecommissionInProgress && datanodeInfo != null
+            && datanodeInfo.isDecommissionInProgress()) {
+          String fsckOut = runFsck(conf, 0, true, testFile);
+          checkDecommissionInProgress =  true;
+        }
+      } while (datanodeInfo != null && !datanodeInfo.isDecommissioned());
+
+      // check the replica status should be healthy(0) after decommission
+      // is done
+      String fsckOut = runFsck(conf, 0, true, testFile);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

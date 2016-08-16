@@ -192,7 +192,7 @@ public class TestReadOnlySharedStorage {
     assertThat(numberReplicas.liveReplicas(), is(expectedReplicas));
     assertThat(numberReplicas.excessReplicas(), is(0));
     assertThat(numberReplicas.corruptReplicas(), is(0));
-    assertThat(numberReplicas.decommissionedReplicas(), is(0));
+    assertThat(numberReplicas.decommissionedAndDecommissioning(), is(0));
     assertThat(numberReplicas.replicasOnStaleNodes(), is(0));
     
     BlockManagerTestUtil.updateState(blockManager);

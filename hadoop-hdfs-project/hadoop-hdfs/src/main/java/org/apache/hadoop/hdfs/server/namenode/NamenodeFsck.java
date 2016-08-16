@@ -245,8 +245,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.println("No. of live Replica: " + numberReplicas.liveReplicas());
       out.println("No. of excess Replica: " + numberReplicas.excessReplicas());
       out.println("No. of stale Replica: " + numberReplicas.replicasOnStaleNodes());
-      out.println("No. of decommission Replica: "
-          + numberReplicas.decommissionedReplicas());
+      out.println("No. of decommissioned Replica: "
+          + numberReplicas.decommissioned());
+      out.println("No. of decommissioning Replica: "
+          + numberReplicas.decommissioning());
       out.println("No. of corrupted Replica: " + numberReplicas.corruptReplicas());
       //record datanodes that have corrupted block replica
       Collection<DatanodeDescriptor> corruptionRecord = null;
@@ -502,10 +504,16 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       NumberReplicas numberReplicas =
           namenode.getNamesystem().getBlockManager().countNodes(block.getLocalBlock());
       int liveReplicas = numberReplicas.liveReplicas();
-      res.totalReplicas += liveReplicas;
+      int decommissionedReplicas = numberReplicas.decommissioned();;
+      int decommissioningReplicas = numberReplicas.decommissioning();
+      res.decommissionedReplicas +=  decommissionedReplicas;
+      res.decommissioningReplicas += decommissioningReplicas;
+      int totalReplicas = liveReplicas + decommissionedReplicas +
+          decommissioningReplicas;
+      res.totalReplicas += totalReplicas;
       short targetFileReplication = file.getReplication();
       res.numExpectedReplicas += targetFileReplication;
-      if(liveReplicas < res.minReplication){
+      if(totalReplicas < res.minReplication){
         res.numUnderMinReplicatedBlocks++;
       }
       if (liveReplicas > targetFileReplication) {
@@ -525,10 +533,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         out.print("\n" + path + ": CORRUPT blockpool " + block.getBlockPoolId() + 
             " block " + block.getBlockName()+"\n");
       }
-      if (liveReplicas >= res.minReplication)
+      if (totalReplicas >= res.minReplication)
         res.numMinReplicatedBlocks++;
-      if (liveReplicas < targetFileReplication && liveReplicas > 0) {
-        res.missingReplicas += (targetFileReplication - liveReplicas);
+      if (totalReplicas < targetFileReplication && totalReplicas > 0) {
+        res.missingReplicas += (targetFileReplication - totalReplicas);
         res.numUnderReplicatedBlocks += 1;
         underReplicatedPerFile++;
         if (!showFiles) {
@@ -537,7 +545,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         out.println(" Under replicated " + block +
                     ". Target Replicas is " +
                     targetFileReplication + " but found " +
-                    liveReplicas + " replica(s).");
+                    liveReplicas + " live replica(s), " +
+                    decommissionedReplicas + " decommissioned replica(s) and " +
+                    decommissioningReplicas + " decommissioning replica(s).");
       }
 
       // count mis replicated blocks
@@ -555,7 +565,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                     block + ". " + blockPlacementStatus.getErrorDescription());
       }
       report.append(i + ". " + blkName + " len=" + block.getNumBytes());
-      if (liveReplicas == 0) {
+      if (totalReplicas == 0) {
         report.append(" MISSING!");
         res.addMissing(block.toString(), block.getNumBytes());
         missing++;
@@ -855,6 +865,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long corruptBlocks = 0L;
     long excessiveReplicas = 0L;
     long missingReplicas = 0L;
+    long decommissionedReplicas = 0L;
+    long decommissioningReplicas = 0L;
     long numUnderMinReplicatedBlocks=0L;
     long numOverReplicatedBlocks = 0L;
     long numUnderReplicatedBlocks = 0L;
@@ -926,7 +938,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.append(" (Total open file blocks (not validated): ").append(
             totalOpenFilesBlocks).append(")");
       }
-      if (corruptFiles > 0 || numUnderMinReplicatedBlocks>0) {
+      if (corruptFiles > 0 || numUnderMinReplicatedBlocks > 0) {
         res.append("\n  ********************************");
         if(numUnderMinReplicatedBlocks>0){
           res.append("\n  UNDER MIN REPL'D BLOCKS:\t").append(numUnderMinReplicatedBlocks);
@@ -988,6 +1000,14 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.append(" (").append(
             ((float) (missingReplicas * 100) / (float) numExpectedReplicas)).append(
             " %)");
+      }
+      if (decommissionedReplicas > 0) {
+        res.append("\n DecommissionedReplicas:\t").append(
+            decommissionedReplicas);
+      }
+      if (decommissioningReplicas > 0) {
+        res.append("\n DecommissioningReplicas:\t").append(
+            decommissioningReplicas);
       }
       return res.toString();
     }
