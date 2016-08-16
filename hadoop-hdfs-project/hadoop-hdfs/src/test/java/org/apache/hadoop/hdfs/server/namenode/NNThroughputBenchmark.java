@@ -95,36 +95,10 @@ import org.apache.log4j.LogManager;
  * except for the name-node. Each operation is executed
  * by calling directly the respective name-node method.
  * The name-node here is real all other components are simulated.
- * 
- * This benchmark supports
- * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic_Options">
- * standard command-line options</a>. If you use remote namenode by <tt>-fs</tt>
- * option, its config <tt>dfs.namenode.fs-limits.min-block-size</tt> should be
- * set as 16.
  *
- * Command line arguments for the benchmark include:
- * <ol>
- * <li>total number of operations to be performed,</li>
- * <li>number of threads to run these operations,</li>
- * <li>followed by operation specific input parameters.</li>
- * <li>-logLevel L specifies the logging level when the benchmark runs.
- * The default logging level is {@link Level#ERROR}.</li>
- * <li>-UGCacheRefreshCount G will cause the benchmark to call
- * {@link NameNodeRpcServer#refreshUserToGroupsMappings} after
- * every G operations, which purges the name-node's user group cache.
- * By default the refresh is never called.</li>
- * <li>-keepResults do not clean up the name-space after execution.</li>
- * <li>-useExisting do not recreate the name-space, use existing data.</li>
- * </ol>
- * 
- * The benchmark first generates inputs for each thread so that the
- * input generation overhead does not effect the resulting statistics.
- * The number of operations performed by threads is practically the same. 
- * Precisely, the difference between the number of operations 
- * performed by any two threads does not exceed 1.
- * 
- * Then the benchmark executes the specified number of operations using 
- * the specified number of threads and outputs the resulting stats.
+ * For usage, please see <a href="http://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Benchmarking.html#NNThroughputBenchmark">the documentation</a>.
+ * Meanwhile, if you change the usage of this program, please also update the
+ * documentation accordingly.
  */
 public class NNThroughputBenchmark implements Tool {
   private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
