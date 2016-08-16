@@ -157,7 +157,7 @@ public class DiskBalancer {
    * Takes a client submitted plan and converts into a set of work items that
    * can be executed by the blockMover.
    *
-   * @param planId      - A SHA512 of the plan string
+   * @param planId      - A SHA-1 of the plan string
    * @param planVersion - version of the plan string - for future use.
    * @param planFileName    - Plan file name
    * @param planData    - Plan data in json format
@@ -308,7 +308,7 @@ public class DiskBalancer {
   /**
    * Verifies that user provided plan is valid.
    *
-   * @param planID      - SHA 512 of the plan.
+   * @param planID      - SHA-1 of the plan.
    * @param planVersion - Version of the plan, for future use.
    * @param plan        - Plan String in Json.
    * @param force       - Skip verifying when the plan was generated.
@@ -345,15 +345,15 @@ public class DiskBalancer {
   }
 
   /**
-   * Verifies that plan matches the SHA512 provided by the client.
+   * Verifies that plan matches the SHA-1 provided by the client.
    *
-   * @param planID - Sha512 Hex Bytes
+   * @param planID - SHA-1 Hex Bytes
    * @param plan   - Plan String
    * @throws DiskBalancerException
    */
   private NodePlan verifyPlanHash(String planID, String plan)
       throws DiskBalancerException {
-    final long sha512Length = 128;
+    final long sha1Length = 40;
     if (plan == null || plan.length() == 0) {
       LOG.error("Disk Balancer -  Invalid plan.");
       throw new DiskBalancerException("Invalid plan.",
@@ -361,8 +361,8 @@ public class DiskBalancer {
     }
 
     if ((planID == null) ||
-        (planID.length() != sha512Length) ||
-        !DigestUtils.sha512Hex(plan.getBytes(Charset.forName("UTF-8")))
+        (planID.length() != sha1Length) ||
+        !DigestUtils.shaHex(plan.getBytes(Charset.forName("UTF-8")))
             .equalsIgnoreCase(planID)) {
       LOG.error("Disk Balancer - Invalid plan hash.");
       throw new DiskBalancerException("Invalid or mis-matched hash.",

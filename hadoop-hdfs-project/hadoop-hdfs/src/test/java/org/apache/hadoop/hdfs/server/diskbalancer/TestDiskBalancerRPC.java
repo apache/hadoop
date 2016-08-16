@@ -317,7 +317,7 @@ public class TestDiskBalancerRPC {
       plan = new NodePlan(node.getDataNodeName(), node.getDataNodePort());
       planner.balanceVolumeSet(node, node.getVolumeSets().get("DISK"), plan);
       planVersion = 1;
-      planHash = DigestUtils.sha512Hex(plan.toJson());
+      planHash = DigestUtils.shaHex(plan.toJson());
       return this;
     }
   }

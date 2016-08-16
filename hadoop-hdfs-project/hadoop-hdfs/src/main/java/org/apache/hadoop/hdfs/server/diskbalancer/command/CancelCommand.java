@@ -93,7 +93,7 @@ public class CancelCommand extends Command {
     String dataNodeAddress = plan.getNodeName() + ":" + plan.getPort();
     Preconditions.checkNotNull(dataNodeAddress);
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);
-    String planHash = DigestUtils.sha512Hex(planData);
+    String planHash = DigestUtils.shaHex(planData);
     try {
       dataNode.cancelDiskBalancePlan(planHash);
     } catch (DiskBalancerException ex) {

@@ -154,7 +154,7 @@ message GetBalancerBandwidthResponseProto {
  * balancer plan to a data node.
  */
 message SubmitDiskBalancerPlanRequestProto {
-  required string planID = 1;         // A hash of the plan like SHA512
+  required string planID = 1;         // A hash of the plan like SHA-1
   required string plan = 2;           // Plan file data in Json format
   optional uint64 planVersion = 3;    // Plan version number
   optional bool ignoreDateCheck = 4;  // Ignore date checks on this plan.

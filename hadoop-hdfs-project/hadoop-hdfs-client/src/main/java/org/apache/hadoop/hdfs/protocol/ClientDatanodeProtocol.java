@@ -175,7 +175,7 @@ public interface ClientDatanodeProtocol {
   /**
    * Cancel an executing plan.
    *
-   * @param planID - A SHA512 hash of the plan string.
+   * @param planID - A SHA-1 hash of the plan string.
    */
   void cancelDiskBalancePlan(String planID) throws IOException;
 

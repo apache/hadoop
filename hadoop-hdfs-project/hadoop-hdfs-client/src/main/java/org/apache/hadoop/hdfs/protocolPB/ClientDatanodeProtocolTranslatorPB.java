@@ -369,7 +369,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   /**
    * Cancels an executing disk balancer plan.
    *
-   * @param planID - A SHA512 hash of the plan string.
+   * @param planID - A SHA-1 hash of the plan string.
    * @throws IOException on error
    */
   @Override
