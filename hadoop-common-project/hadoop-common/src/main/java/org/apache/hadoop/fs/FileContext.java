@@ -303,7 +303,7 @@ public class FileContext {
    * 
    * @throws UnsupportedFileSystemException If the file system for
    *           <code>absOrFqPath</code> is not supported.
-   * @throws IOExcepton If the file system for <code>absOrFqPath</code> could
+   * @throws IOException If the file system for <code>absOrFqPath</code> could
    *         not be instantiated.
    */
   protected AbstractFileSystem getFSofPath(final Path absOrFqPath)
@@ -2713,7 +2713,7 @@ public class FileContext {
   /**
    * Query the effective storage policy ID for the given file or directory.
    *
-   * @param src file or directory path.
+   * @param path file or directory path.
    * @return storage policy for give file.
    * @throws IOException
    */

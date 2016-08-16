@@ -15,6 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * Tools to help define network clients and servers.
+ */
 @InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 package org.apache.hadoop.ipc;
