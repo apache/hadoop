@@ -369,6 +369,13 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
                 splitHosts[0], splitHosts[1]));
           }
         } else {
+          if (LOG.isDebugEnabled()) {
+            // Log only if the file is big enough to be splitted
+            if (length > Math.min(file.getBlockSize(), minSize)) {
+              LOG.debug("File is not splittable so no parallelization "
+                  + "is possible: " + file.getPath());
+            }
+          }
           String[][] splitHosts = getSplitHostsAndCachedHosts(blkLocations,0,length,clusterMap);
           splits.add(makeSplit(path, 0, length, splitHosts[0], splitHosts[1]));
         }
