@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -74,10 +73,10 @@ public class KMSACLs implements Runnable, KeyACLs {
   private volatile Map<Type, AccessControlList> blacklistedAcls;
   @VisibleForTesting
   volatile Map<String, HashMap<KeyOpType, AccessControlList>> keyAcls;
-  private final Map<KeyOpType, AccessControlList> defaultKeyAcls =
-      new HashMap<KeyOpType, AccessControlList>();
-  private final Map<KeyOpType, AccessControlList> whitelistKeyAcls =
-      new HashMap<KeyOpType, AccessControlList>();
+  @VisibleForTesting
+  volatile Map<KeyOpType, AccessControlList> defaultKeyAcls = new HashMap<>();
+  @VisibleForTesting
+  volatile Map<KeyOpType, AccessControlList> whitelistKeyAcls = new HashMap<>();
   private ScheduledExecutorService executorService;
   private long lastReload;
 
@@ -111,7 +110,8 @@ public class KMSACLs implements Runnable, KeyACLs {
     blacklistedAcls = tempBlacklist;
   }
 
-  private void setKeyACLs(Configuration conf) {
+  @VisibleForTesting
+  void setKeyACLs(Configuration conf) {
     Map<String, HashMap<KeyOpType, AccessControlList>> tempKeyAcls =
         new HashMap<String, HashMap<KeyOpType,AccessControlList>>();
     Map<String, String> allKeyACLS =
@@ -148,38 +148,43 @@ public class KMSACLs implements Runnable, KeyACLs {
         }
       }
     }
-
     keyAcls = tempKeyAcls;
+
+    final Map<KeyOpType, AccessControlList> tempDefaults = new HashMap<>();
+    final Map<KeyOpType, AccessControlList> tempWhitelists = new HashMap<>();
     for (KeyOpType keyOp : KeyOpType.values()) {
-      if (!defaultKeyAcls.containsKey(keyOp)) {
-        String confKey = KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + keyOp;
-        String aclStr = conf.get(confKey);
-        if (aclStr != null) {
-          if (keyOp == KeyOpType.ALL) {
-            // Ignore All operation for default key acl
-            LOG.warn("Should not configure default key ACL for KEY_OP '{}'", keyOp);
-          } else {
-            if (aclStr.equals("*")) {
-              LOG.info("Default Key ACL for KEY_OP '{}' is set to '*'", keyOp);
-            }
-            defaultKeyAcls.put(keyOp, new AccessControlList(aclStr));
-          }
+      parseAclsWithPrefix(conf, KMSConfiguration.DEFAULT_KEY_ACL_PREFIX,
+          keyOp, tempDefaults);
+      parseAclsWithPrefix(conf, KMSConfiguration.WHITELIST_KEY_ACL_PREFIX,
+          keyOp, tempWhitelists);
+    }
+    defaultKeyAcls = tempDefaults;
+    whitelistKeyAcls = tempWhitelists;
+  }
+
+  /**
+   * Parse the acls from configuration with the specified prefix. Currently
+   * only 2 possible prefixes: whitelist and default.
+   *
+   * @param conf The configuration.
+   * @param prefix The prefix.
+   * @param keyOp The key operation.
+   * @param results The collection of results to add to.
+   */
+  private void parseAclsWithPrefix(final Configuration conf,
+      final String prefix, final KeyOpType keyOp,
+      Map<KeyOpType, AccessControlList> results) {
+    String confKey = prefix + keyOp;
+    String aclStr = conf.get(confKey);
+    if (aclStr != null) {
+      if (keyOp == KeyOpType.ALL) {
+        // Ignore All operation for default key and whitelist key acls
+        LOG.warn("Invalid KEY_OP '{}' for {}, ignoring", keyOp, prefix);
+      } else {
+        if (aclStr.equals("*")) {
+          LOG.info("{} for KEY_OP '{}' is set to '*'", prefix, keyOp);
         }
-      }
-      if (!whitelistKeyAcls.containsKey(keyOp)) {
-        String confKey = KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + keyOp;
-        String aclStr = conf.get(confKey);
-        if (aclStr != null) {
-          if (keyOp == KeyOpType.ALL) {
-            // Ignore All operation for whitelist key acl
-            LOG.warn("Should not configure whitelist key ACL for KEY_OP '{}'", keyOp);
-          } else {
-            if (aclStr.equals("*")) {
-              LOG.info("Whitelist Key ACL for KEY_OP '{}' is set to '*'", keyOp);
-            }
-            whitelistKeyAcls.put(keyOp, new AccessControlList(aclStr));
-          }
-        }
+        results.put(keyOp, new AccessControlList(aclStr));
       }
     }
   }
