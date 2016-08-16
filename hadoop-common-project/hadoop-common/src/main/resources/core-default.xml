@@ -431,6 +431,16 @@
 </property>
 
 <property>
+  <name>hadoop.security.sensitive-config-keys</name>
+  <value>password$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
+  <description>A comma-separated list of regular expressions to match against
+      configuration keys that should be redacted where appropriate, for
+      example, when logging modified properties during a reconfiguration,
+      private credentials should not be logged.
+  </description>
+</property>
+
+<property>
   <name>hadoop.workaround.non.threadsafe.getpwuid</name>
   <value>true</value>
   <description>Some operating systems or authentication modules are known to

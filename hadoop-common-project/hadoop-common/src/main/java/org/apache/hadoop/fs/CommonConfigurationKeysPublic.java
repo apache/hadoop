@@ -714,5 +714,19 @@ public class CommonConfigurationKeysPublic {
       "hadoop.shell.safely.delete.limit.num.files";
   public static final long HADOOP_SHELL_SAFELY_DELETE_LIMIT_NUM_FILES_DEFAULT =
       100;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS =
+      "hadoop.security.sensitive-config-keys";
+  public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT =
+      "password$" + "," +
+      "fs.s3.*[Ss]ecret.?[Kk]ey" + "," +
+      "fs.azure\\.account.key.*" + "," +
+      "dfs.webhdfs.oauth2.[a-z]+.token" + "," +
+      HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
 }
 
