@@ -85,7 +85,7 @@ public class DebugAdmin extends Configured implements Tool {
   private class VerifyBlockChecksumCommand extends DebugCommand {
     VerifyBlockChecksumCommand() {
       super("verify",
-"verify [-meta <metadata-file>] [-block <block-file>]",
+"verify -meta <metadata-file> [-block <block-file>]",
 "  Verify HDFS metadata and block files.  If a block file is specified, we\n" +
 "  will verify that the checksums in the metadata file match the block\n" +
 "  file.");
@@ -199,7 +199,7 @@ public class DebugAdmin extends Configured implements Tool {
   private class RecoverLeaseCommand extends DebugCommand {
     RecoverLeaseCommand() {
       super("recoverLease",
-"recoverLease [-path <path>] [-retries <num-retries>]",
+"recoverLease -path <path> [-retries <num-retries>]",
 "  Recover the lease on the specified path.  The path must reside on an\n" +
 "  HDFS filesystem.  The default number of retries is 1.");
     }
