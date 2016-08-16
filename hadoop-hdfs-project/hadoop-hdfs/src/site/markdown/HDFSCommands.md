@@ -604,7 +604,7 @@ Useful commands to help administrators debug HDFS issues, like validating block 
 
 ### `verify`
 
-Usage: `hdfs debug verify [-meta <metadata-file>] [-block <block-file>]`
+Usage: `hdfs debug verify -meta <metadata-file> [-block <block-file>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -615,7 +615,7 @@ Verify HDFS metadata and block files. If a block file is specified, we will veri
 
 ### `recoverLease`
 
-Usage: `hdfs debug recoverLease [-path <path>] [-retries <num-retries>]`
+Usage: `hdfs debug recoverLease -path <path> [-retries <num-retries>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
