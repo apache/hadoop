@@ -266,33 +266,40 @@ public class DiskBalancer extends Configured implements Tool {
   private void addPlanCommands(Options opt) {
 
     Option plan = OptionBuilder.withLongOpt(PLAN)
-        .withDescription("creates a plan for datanode.")
+        .withDescription("Hostname, IP address or UUID of datanode " +
+            "for which a plan is created.")
         .hasArg()
         .create();
     getPlanOptions().addOption(plan);
     opt.addOption(plan);
 
 
-    Option outFile = OptionBuilder.withLongOpt(OUTFILE)
-        .hasArg()
-        .withDescription("File to write output to, if not specified " +
-            "defaults will be used.")
+    Option outFile = OptionBuilder.withLongOpt(OUTFILE).hasArg()
+        .withDescription(
+            "Local path of file to write output to, if not specified "
+                + "defaults will be used.")
         .create();
     getPlanOptions().addOption(outFile);
     opt.addOption(outFile);
 
-    Option bandwidth = OptionBuilder.withLongOpt(BANDWIDTH)
-        .hasArg()
-        .withDescription("Maximum disk bandwidth to be consumed by " +
-            "diskBalancer. e.g. 10")
+    Option bandwidth = OptionBuilder.withLongOpt(BANDWIDTH).hasArg()
+        .withDescription(
+            "Maximum disk bandwidth (MB/s) in integer to be consumed by "
+                + "diskBalancer. e.g. 10 MB/s.")
         .create();
     getPlanOptions().addOption(bandwidth);
     opt.addOption(bandwidth);
 
     Option threshold = OptionBuilder.withLongOpt(THRESHOLD)
         .hasArg()
-        .withDescription("Percentage skew that we" +
-            "tolerate before diskbalancer starts working e.g. 10")
+        .withDescription("Percentage of data skew that is tolerated before"
+            + " disk balancer starts working. For example, if"
+            + " total data on a 2 disk node is 100 GB then disk"
+            + " balancer calculates the expected value on each disk,"
+            + " which is 50 GB. If the tolerance is 10% then data"
+            + " on a single disk needs to be more than 60 GB"
+            + " (50 GB + 10% tolerance value) for Disk balancer to"
+            + " balance the disks.")
         .create();
     getPlanOptions().addOption(threshold);
     opt.addOption(threshold);
