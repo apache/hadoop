@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
@@ -113,7 +114,7 @@ public class TestDirectoryScanner {
 
   /** Truncate a block file */
   private long truncateBlockFile() throws IOException {
-    synchronized (fds) {
+    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = b.getBlockFile();
         File mf = b.getMetaFile();
@@ -138,7 +139,7 @@ public class TestDirectoryScanner {
 
   /** Delete a block file */
   private long deleteBlockFile() {
-    synchronized(fds) {
+    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = b.getBlockFile();
         File mf = b.getMetaFile();
@@ -154,7 +155,7 @@ public class TestDirectoryScanner {
 
   /** Delete block meta file */
   private long deleteMetaFile() {
-    synchronized(fds) {
+    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File file = b.getMetaFile();
         // Delete a metadata file
@@ -173,7 +174,7 @@ public class TestDirectoryScanner {
    * @throws IOException
    */
   private void duplicateBlock(long blockId) throws IOException {
-    synchronized (fds) {
+    try(AutoCloseableLock lock = fds.acquireDatasetLock()) {
       ReplicaInfo b = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
       try (FsDatasetSpi.FsVolumeReferences volumes =
           fds.getFsVolumeReferences()) {

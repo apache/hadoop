@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.util.AutoCloseableLock;
 
 public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
 
@@ -447,5 +448,10 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   @Override
   public boolean isDeletingBlock(String bpid, long blockId) {
     return false;
+  }
+
+  @Override
+  public AutoCloseableLock acquireDatasetLock() {
+    return null;
   }
 }

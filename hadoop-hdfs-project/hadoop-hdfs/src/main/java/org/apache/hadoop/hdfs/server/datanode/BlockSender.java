@@ -46,6 +46,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.SocketOutputStream;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.htrace.core.Sampler;
 import org.apache.htrace.core.TraceScope;
@@ -242,7 +243,7 @@ class BlockSender implements java.io.Closeable {
       }
       
       final long replicaVisibleLength;
-      synchronized(datanode.data) { 
+      try(AutoCloseableLock lock = datanode.data.acquireDatasetLock()) {
         replica = getReplica(block, datanode);
         replicaVisibleLength = replica.getVisibleLength();
       }
