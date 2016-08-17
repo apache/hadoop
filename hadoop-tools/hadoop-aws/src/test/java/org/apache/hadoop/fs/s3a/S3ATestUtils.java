@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -131,6 +132,20 @@ public class S3ATestUtils {
       Thread.sleep(500);
     } while (endtime > System.currentTimeMillis());
     throw lastException;
+  }
+
+  /**
+   * patch the endpoint option so that irrespective of where other tests
+   * are working, the IO performance tests can work with the landsat
+   * images.
+   * @param conf configuration to patch
+   */
+  public static void useCSVDataEndpoint(Configuration conf) {
+    String endpoint = conf.getTrimmed(S3AScaleTestBase.KEY_CSVTEST_ENDPOINT,
+        S3AScaleTestBase.DEFAULT_CSVTEST_ENDPOINT);
+    if (!endpoint.isEmpty()) {
+      conf.set(ENDPOINT, endpoint);
+    }
   }
 
   /**
