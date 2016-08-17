@@ -26,6 +26,8 @@ Release 2.7.3 - 2016-08-19
     HADOOP-13298. Fix the leftover L&N files in
     hadoop-build-tools/src/main/resources/META-INF/. (ozawa)
 
+    HADOOP-13434. Added quoting to Shell class. (Owen O'Malley via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-12810. FileSystem#listLocatedStatus causes unnecessary RPC calls
