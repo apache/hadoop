@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -30,10 +31,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -63,6 +67,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -579,6 +584,96 @@ public class TestLogsCLI {
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
+  }
+
+  @Test (timeout = 5000)
+  public void testGetRunningContainerLogs() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    NodeId nodeId = NodeId.newInstance("localhost", 1234);
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId
+        .newInstance(appId, 1);
+
+    // Create a mock ApplicationAttempt Report
+    ApplicationAttemptReport mockAttemptReport = mock(
+        ApplicationAttemptReport.class);
+    doReturn(appAttemptId).when(mockAttemptReport).getApplicationAttemptId();
+    List<ApplicationAttemptReport> attemptReports = Arrays.asList(
+        mockAttemptReport);
+
+    // Create one mock containerReport
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
+    ContainerReport mockContainerReport1 = mock(ContainerReport.class);
+    doReturn(containerId1).when(mockContainerReport1).getContainerId();
+    doReturn(nodeId).when(mockContainerReport1).getAssignedNode();
+    doReturn("http://localhost:2345").when(mockContainerReport1)
+        .getNodeHttpAddress();
+    doReturn(ContainerState.RUNNING).when(mockContainerReport1)
+        .getContainerState();
+    List<ContainerReport> containerReports = Arrays.asList(
+        mockContainerReport1);
+
+    // Mock the YarnClient, and it would report the previous created
+    // mockAttemptReport and previous two created mockContainerReports
+    YarnClient mockYarnClient = createMockYarnClient(
+        YarnApplicationState.RUNNING, ugi.getShortUserName(), true,
+        attemptReports, containerReports);
+    doReturn(mockContainerReport1).when(mockYarnClient).getContainerReport(
+        any(ContainerId.class));
+
+    // create local logs
+    Configuration configuration = new Configuration();
+    FileSystem fs = FileSystem.get(configuration);
+    String rootLogDir = "target/LocalLogs";
+    Path rootLogDirPath = new Path(rootLogDir);
+    if (fs.exists(rootLogDirPath)) {
+      fs.delete(rootLogDirPath, true);
+    }
+    assertTrue(fs.mkdirs(rootLogDirPath));
+
+    Path appLogsDir = new Path(rootLogDirPath, appId.toString());
+    if (fs.exists(appLogsDir)) {
+      fs.delete(appLogsDir, true);
+    }
+    assertTrue(fs.mkdirs(appLogsDir));
+
+    String fileName = "syslog";
+    List<String> logTypes = new ArrayList<String>();
+    logTypes.add(fileName);
+    // create container logs in localLogDir
+    createContainerLogInLocalDir(appLogsDir, containerId1, fs, logTypes);
+
+    Path containerDirPath = new Path(appLogsDir, containerId1.toString());
+    Path logPath = new Path(containerDirPath, fileName);
+    File logFile = new File(logPath.toString());
+    final FileInputStream fis = new FileInputStream(logFile);
+
+    try {
+      LogsCLI cli = spy(new LogsCLIForTest(mockYarnClient));
+      Set<String> logsSet = new HashSet<String>();
+      logsSet.add(fileName);
+      doReturn(logsSet).when(cli).getMatchedContainerLogFiles(
+          any(ContainerLogsRequest.class), anyBoolean());
+      ClientResponse mockReponse = mock(ClientResponse.class);
+      doReturn(ClientResponse.Status.OK).when(mockReponse)
+          .getClientResponseStatus();
+      doReturn(fis).when(mockReponse).getEntityInputStream();
+      doReturn(mockReponse).when(cli).getResponeFromNMWebService(
+          any(Configuration.class),
+          any(Client.class),
+          any(ContainerLogsRequest.class), anyString());
+      cli.setConf(new YarnConfiguration());
+      int exitCode = cli.run(new String[] {"-containerId",
+          containerId1.toString()});
+      assertTrue(exitCode == 0);
+      assertTrue(sysOutStream.toString().contains(
+          logMessage(containerId1, "syslog")));
+      sysOutStream.reset();
+    } finally {
+      IOUtils.closeQuietly(fis);
+      fs.delete(new Path(rootLogDir), true);
+    }
   }
 
   @Test (timeout = 5000)
