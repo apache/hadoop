@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +42,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -462,15 +464,7 @@ public class LogsCLI extends Configured implements Tool {
     PrintStream out = logCliHelper.createPrintStream(localDir, nodeId,
         containerIdStr);
     try {
-      // fetch all the log files for the container
-      // filter the log files based on the given -log_files pattern
-      List<PerLogFileInfo> allLogFileInfos=
-          getContainerLogFiles(getConf(), containerIdStr, nodeHttpAddress);
-      List<String> fileNames = new ArrayList<String>();
-      for (PerLogFileInfo fileInfo : allLogFileInfos) {
-        fileNames.add(fileInfo.getFileName());
-      }
-      Set<String> matchedFiles = getMatchedLogFiles(request, fileNames,
+      Set<String> matchedFiles = getMatchedContainerLogFiles(request,
           useRegex);
       if (matchedFiles.isEmpty()) {
         System.err.println("Can not find any log file matching the pattern: "
@@ -487,22 +481,33 @@ public class LogsCLI extends Configured implements Tool {
       out.println(containerString);
       out.println(StringUtils.repeat("=", containerString.length()));
       boolean foundAnyLogs = false;
+      byte[] buffer = new byte[65536];
       for (String logFile : newOptions.getLogTypes()) {
         out.println("LogType:" + logFile);
         out.println("Log Upload Time:"
             + Times.format(System.currentTimeMillis()));
         out.println("Log Contents:");
+        InputStream is = null;
         try {
-          WebResource webResource =
-              webServiceClient.resource(WebAppUtils.getHttpSchemePrefix(conf)
-                  + nodeHttpAddress);
-          ClientResponse response =
-              webResource.path("ws").path("v1").path("node")
-                .path("containers").path(containerIdStr).path("logs")
-                .path(logFile)
-                .queryParam("size", Long.toString(request.getBytes()))
-                .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
-          out.println(response.getEntity(String.class));
+          ClientResponse response = getResponeFromNMWebService(conf,
+              webServiceClient, request, logFile);
+          if (response != null && response.getStatusInfo().getStatusCode() ==
+              ClientResponse.Status.OK.getStatusCode()) {
+            is = response.getEntityInputStream();
+            int len = 0;
+            while((len = is.read(buffer)) != -1) {
+              out.write(buffer, 0, len);
+            }
+            out.println();
+          } else {
+            out.println("Can not get any logs for the log file: " + logFile);
+            String msg = "Response from the NodeManager:" + nodeId +
+                " WebService is " + ((response == null) ? "null":
+                "not successful," + " HTTP error code: " +
+                response.getStatus() + ", Server response:\n" +
+                response.getEntity(String.class));
+            out.println(msg);
+          }
           StringBuilder sb = new StringBuilder();
           sb.append("End of LogType:" + logFile + ".");
           if (request.getContainerState() == ContainerState.RUNNING) {
@@ -517,6 +522,8 @@ public class LogsCLI extends Configured implements Tool {
           System.err.println("Can not find the log file:" + logFile
               + " for the container:" + containerIdStr + " in NodeManager:"
               + nodeId);
+        } finally {
+          IOUtils.closeQuietly(is);
         }
       }
       // for the case, we have already uploaded partial logs in HDFS
@@ -1188,5 +1195,34 @@ public class LogsCLI extends Configured implements Tool {
     public void setFileLength(String fileLength) {
       this.fileLength = fileLength;
     }
+  }
+
+  @VisibleForTesting
+  public Set<String> getMatchedContainerLogFiles(ContainerLogsRequest request,
+      boolean useRegex) throws IOException {
+    // fetch all the log files for the container
+    // filter the log files based on the given -log_files pattern
+    List<PerLogFileInfo> allLogFileInfos=
+        getContainerLogFiles(getConf(), request.getContainerId(),
+            request.getNodeHttpAddress());
+    List<String> fileNames = new ArrayList<String>();
+    for (PerLogFileInfo fileInfo : allLogFileInfos) {
+      fileNames.add(fileInfo.getFileName());
+    }
+    return getMatchedLogFiles(request, fileNames,
+        useRegex);
+  }
+
+  @VisibleForTesting
+  public ClientResponse getResponeFromNMWebService(Configuration conf,
+      Client webServiceClient, ContainerLogsRequest request, String logFile) {
+    WebResource webResource =
+        webServiceClient.resource(WebAppUtils.getHttpSchemePrefix(conf)
+        + request.getNodeHttpAddress());
+    return webResource.path("ws").path("v1").path("node")
+        .path("containers").path(request.getContainerId()).path("logs")
+        .path(logFile)
+        .queryParam("size", Long.toString(request.getBytes()))
+        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
   }
 }
