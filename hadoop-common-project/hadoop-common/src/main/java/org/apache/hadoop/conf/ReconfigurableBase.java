@@ -112,8 +112,12 @@ public abstract class ReconfigurableBase
       Collection<PropertyChange> changes =
           this.parent.getChangedProperties(newConf, oldConf);
       Map<PropertyChange, Optional<String>> results = Maps.newHashMap();
+      ConfigRedactor oldRedactor = new ConfigRedactor(oldConf);
+      ConfigRedactor newRedactor = new ConfigRedactor(newConf);
       for (PropertyChange change : changes) {
         String errorMessage = null;
+        String oldValRedacted = oldRedactor.redact(change.prop, change.oldVal);
+        String newValRedacted = newRedactor.redact(change.prop, change.newVal);
         if (!this.parent.isPropertyReconfigurable(change.prop)) {
           errorMessage = "Property " + change.prop +
               " is not reconfigurable";
@@ -122,8 +126,9 @@ public abstract class ReconfigurableBase
           continue;
         }
         LOG.info("Change property: " + change.prop + " from \""
-            + ((change.oldVal == null) ? "<default>" : change.oldVal)
-            + "\" to \"" + ((change.newVal == null) ? "<default>" : change.newVal)
+            + ((change.oldVal == null) ? "<default>" : oldValRedacted)
+            + "\" to \""
+            + ((change.newVal == null) ? "<default>" : newValRedacted)
             + "\".");
         try {
           this.parent.reconfigurePropertyImpl(change.prop, change.newVal);
