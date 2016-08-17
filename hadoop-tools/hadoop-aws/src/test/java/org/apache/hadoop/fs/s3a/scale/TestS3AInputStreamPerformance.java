@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -79,6 +80,7 @@ public class TestS3AInputStreamPerformance extends S3AScaleTestBase {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
       testDataAvailable = false;
     } else {
+      S3ATestUtils.useCSVDataEndpoint(conf);
       testData = new Path(testFile);
       Path path = this.testData;
       bindS3aFS(path);
