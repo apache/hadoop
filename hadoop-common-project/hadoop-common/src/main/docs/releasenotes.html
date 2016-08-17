@@ -220,6 +220,10 @@ These release notes include new developer and user-facing incompatibilities, fea
      Minor test reported by zhihai xu and fixed by zhihai xu (test)<br>
      <b>TestResourceLocalizationService.testPublicResourceInitializesLocalDir fails Intermittently due to IOException from cleanup</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-3426">YARN-3426</a>.
+     Blocker sub-task reported by Li Lu and fixed by Li Lu <br>
+     <b>Add jdiff support to YARN</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-3404">YARN-3404</a>.
      Minor improvement reported by Ryu Kobayashi and fixed by Ryu Kobayashi <br>
      <b>View the queue name to YARN Application page</b><br>
@@ -556,7 +560,7 @@ In this improvement, we add a new API isCommitJobRepeatable() to OutputCommitter
      <b>seen_txid in the shared edits directory is modified during bootstrapping</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9530">HDFS-9530</a>.
-     Critical bug reported by Fei Hui and fixed by Brahma Reddy Battula <br>
+     Critical bug reported by Fei Hui and fixed by Brahma Reddy Battula (datanode)<br>
      <b>ReservedSpace is not cleared for abandoned Blocks</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9516">HDFS-9516</a>.
@@ -583,17 +587,13 @@ In this improvement, we add a new API isCommitJobRepeatable() to OutputCommitter
      Major bug reported by Stanislav Antic and fixed by Yongjun Zhang (namenode)<br>
      <b>FSImage may get corrupted after deleting snapshot</b><br>
      <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-9395">HDFS-9395</a>.
-     Major bug reported by Kihwal Lee and fixed by Kuhu Shukla <br>
-     <b>Make HDFS audit logging consistant</b><br>
-     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9383">HDFS-9383</a>.
      Major bug reported by Kihwal Lee and fixed by Tsz Wo Nicholas Sze <br>
      <b>TestByteArrayManager#testByteArrayManager fails</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9365">HDFS-9365</a>.
      Major bug reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (balancer &amp; mover)<br>
-     <b>Balaner does not work with the HDFS-6376 HA setup</b><br>
+     <b>Balancer does not work with the HDFS-6376 HA setup</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-9347">HDFS-9347</a>.
      Major bug reported by Wei-Chiu Chuang and fixed by Wei-Chiu Chuang (test)<br>
@@ -670,6 +670,10 @@ In this improvement, we add a new API isCommitJobRepeatable() to OutputCommitter
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2043">HDFS-2043</a>.
      Major bug reported by Aaron T. Myers and fixed by Yiqun Lin (test)<br>
      <b>TestHFlush failing intermittently</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-13434">HADOOP-13434</a>.
+     Major bug reported by Owen O'Malley and fixed by Owen O'Malley <br>
+     <b>Add quoting to Shell class</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-13350">HADOOP-13350</a>.
      Blocker bug reported by Xiao Chen and fixed by Xiao Chen (build)<br>
@@ -874,6 +878,10 @@ In this improvement, we add a new API isCommitJobRepeatable() to OutputCommitter
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-12107">HADOOP-12107</a>.
      Critical bug reported by Sangjin Lee and fixed by Sangjin Lee (fs)<br>
      <b>long running apps may have a huge number of StatisticsData instances under FileSystem</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-11814">HADOOP-11814</a>.
+     Minor task reported by Li Lu and fixed by Li Lu <br>
+     <b>Reformat hadoop-annotations, o.a.h.classification.tools</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-11252">HADOOP-11252</a>.
      Critical bug reported by Wilfred Spiegelenburg and fixed by Masatake Iwasaki (ipc)<br>
