@@ -280,4 +280,16 @@ public final class S3AUtils {
       return val;
     }
   }
+
+  /**
+   * String information about a summary entry for debug messages.
+   * @param summary summary object
+   * @return string value
+   */
+  public static String stringify(S3ObjectSummary summary) {
+    StringBuilder builder = new StringBuilder(summary.getKey().length() + 100);
+    builder.append(summary.getKey()).append(' ');
+    builder.append("size=").append(summary.getSize());
+    return builder.toString();
+  }
 }
