@@ -132,6 +132,11 @@ public class FSDirectory implements Closeable {
           null, null, null, HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
           HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
 
+  public final static HdfsFileStatus DOT_SNAPSHOT_DIR_STATUS =
+      new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
+          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+          HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
+
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
   private volatile boolean skipQuotaCheck = false; //skip while consuming edits
@@ -526,12 +531,66 @@ public class FSDirectory implements Closeable {
    * @throws FileNotFoundException
    * @throws AccessControlException
    */
-  String resolvePath(FSPermissionChecker pc, String path)
-      throws FileNotFoundException, AccessControlException {
-    if (isReservedRawName(path) && isPermissionEnabled) {
+  INodesInPath resolvePath(FSPermissionChecker pc, String src)
+      throws UnresolvedLinkException, FileNotFoundException,
+      AccessControlException {
+    return resolvePath(pc, src, true);
+  }
+
+  INodesInPath resolvePath(FSPermissionChecker pc, String src,
+      boolean resolveLink) throws UnresolvedLinkException,
+  FileNotFoundException, AccessControlException {
+    byte[][] components = INode.getPathComponents(src);
+    if (isPermissionEnabled && pc != null && isReservedRawName(components)) {
       pc.checkSuperuserPrivilege();
     }
-    return resolvePath(path, this);
+    components = resolveComponents(components, this);
+    return INodesInPath.resolve(rootDir, components, resolveLink);
+  }
+
+  INodesInPath resolvePathForWrite(FSPermissionChecker pc, String src)
+      throws UnresolvedLinkException, FileNotFoundException,
+      AccessControlException {
+    return resolvePathForWrite(pc, src, true);
+  }
+
+  INodesInPath resolvePathForWrite(FSPermissionChecker pc, String src,
+      boolean resolveLink) throws UnresolvedLinkException,
+  FileNotFoundException, AccessControlException {
+    INodesInPath iip = resolvePath(pc, src, resolveLink);
+    if (iip.isSnapshot()) {
+      throw new SnapshotAccessControlException(
+          "Modification on a read-only snapshot is disallowed");
+    }
+    return iip;
+  }
+
+  INodesInPath resolvePath(FSPermissionChecker pc, String src, long fileId)
+      throws UnresolvedLinkException, FileNotFoundException,
+      AccessControlException {
+    // Older clients may not have given us an inode ID to work with.
+    // In this case, we have to try to resolve the path and hope it
+    // hasn't changed or been deleted since the file was opened for write.
+    INodesInPath iip;
+    if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
+      iip = resolvePath(pc, src);
+    } else {
+      INode inode = getInode(fileId);
+      if (inode == null) {
+        iip = INodesInPath.fromComponents(INode.getPathComponents(src));
+      } else {
+        iip = INodesInPath.fromINode(inode);
+      }
+    }
+    return iip;
+  }
+
+  // this method can be removed after IIP is used more extensively
+  static String resolvePath(String src,
+      FSDirectory fsd) throws FileNotFoundException {
+    byte[][] pathComponents = INode.getPathComponents(src);
+    pathComponents = resolveComponents(pathComponents, fsd);
+    return DFSUtil.byteArray2PathString(pathComponents);
   }
 
   /**
@@ -1305,6 +1364,12 @@ public class FSDirectory implements Closeable {
     return CHECK_RESERVED_FILE_NAMES && src.equals(DOT_RESERVED_PATH_PREFIX);
   }
 
+  public static boolean isExactReservedName(byte[][] components) {
+    return CHECK_RESERVED_FILE_NAMES &&
+           (components.length == 2) &&
+           isReservedName(components);
+  }
+
   static boolean isReservedRawName(String src) {
     return src.startsWith(DOT_RESERVED_PATH_PREFIX +
         Path.SEPARATOR + RAW_STRING);
@@ -1316,9 +1381,15 @@ public class FSDirectory implements Closeable {
   }
 
   static boolean isReservedName(byte[][] components) {
-    return (components.length > 2) &&
+    return (components.length > 1) &&
             Arrays.equals(INodeDirectory.ROOT_NAME, components[0]) &&
             Arrays.equals(DOT_RESERVED, components[1]);
+  }
+
+  static boolean isReservedRawName(byte[][] components) {
+    return (components.length > 2) &&
+           isReservedName(components) &&
+           Arrays.equals(RAW, components[2]);
   }
 
   /**
@@ -1339,19 +1410,18 @@ public class FSDirectory implements Closeable {
    * /.reserved/raw/a/b/c is equivalent (they both refer to the same
    * unencrypted file).
    * 
-   * @param src path that is being processed
+   * @param pathComponents to be resolved
    * @param fsd FSDirectory
    * @return if the path indicates an inode, return path after replacing up to
    *         <inodeid> with the corresponding path of the inode, else the path
-   *         in {@code src} as is. If the path refers to a path in the "raw"
-   *         directory, return the non-raw pathname.
+   *         in {@code pathComponents} as is. If the path refers to a path in
+   *         the "raw" directory, return the non-raw pathname.
    * @throws FileNotFoundException if inodeid is invalid
    */
-  static String resolvePath(String src,
+  static byte[][] resolveComponents(byte[][] pathComponents,
       FSDirectory fsd) throws FileNotFoundException {
-    byte[][] pathComponents = INode.getPathComponents(src);
     final int nComponents = pathComponents.length;
-    if (!isReservedName(pathComponents)) {
+    if (nComponents < 3 || !isReservedName(pathComponents)) {
       /* This is not a /.reserved/ path so do nothing. */
     } else if (Arrays.equals(DOT_INODES, pathComponents[2])) {
       /* It's a /.reserved/.inodes path. */
@@ -1372,9 +1442,7 @@ public class FSDirectory implements Closeable {
         }
       }
     }
-    // this double conversion will be unnecessary when resolving returns
-    // INodesInPath (needs components byte[][])
-    return DFSUtil.byteArray2PathString(pathComponents);
+    return pathComponents;
   }
 
   private static byte[][] resolveDotInodesPath(
@@ -1428,15 +1496,12 @@ public class FSDirectory implements Closeable {
     return components;
   }
 
-  INode getINode4DotSnapshot(String src) throws UnresolvedLinkException {
+  INode getINode4DotSnapshot(INodesInPath iip) throws UnresolvedLinkException {
     Preconditions.checkArgument(
-        src.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR),
-        "%s does not end with %s", src, HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR);
+        iip.isDotSnapshotDir(), "%s does not end with %s",
+        iip.getPath(), HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR);
 
-    final String dirPath = normalizePath(src.substring(0,
-        src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
-
-    final INode node = this.getINode(dirPath);
+    final INode node = iip.getINode(-2);
     if (node != null && node.isDirectory()
         && node.asDirectory().isSnapshottable()) {
       return node;

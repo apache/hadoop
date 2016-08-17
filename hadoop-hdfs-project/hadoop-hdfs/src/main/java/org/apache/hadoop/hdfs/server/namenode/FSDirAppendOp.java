@@ -87,8 +87,8 @@ final class FSDirAppendOp {
     final String src;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, srcArg);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      final INodesInPath iip = fsd.resolvePathForWrite(pc, srcArg);
+      src = iip.getPath();
       // Verify that the destination does not exist as a directory already
       final INode inode = iip.getLastINode();
       final String path = iip.getPath();

@@ -73,12 +73,12 @@ final class FSDirErasureCodingOp {
     FSPermissionChecker pc = null;
     pc = fsn.getPermissionChecker();
     FSDirectory fsd = fsn.getFSDirectory();
-    src = fsd.resolvePath(pc, src);
     final INodesInPath iip;
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(src, false);
+      iip = fsd.resolvePathForWrite(pc, src, false);
+      src = iip.getPath();
       xAttrs = createErasureCodingPolicyXAttr(fsn, iip, ecPolicy);
     } finally {
       fsd.writeUnlock();
@@ -221,11 +221,9 @@ final class FSDirErasureCodingOp {
 
   private static INodesInPath getINodesInPath(final FSNamesystem fsn,
       final String srcArg) throws IOException {
-    String src = srcArg;
     final FSDirectory fsd = fsn.getFSDirectory();
     final FSPermissionChecker pc = fsn.getPermissionChecker();
-    src = fsd.resolvePath(pc, src);
-    INodesInPath iip = fsd.getINodesInPath(src, true);
+    INodesInPath iip = fsd.resolvePath(pc, srcArg);
     if (fsn.isPermissionEnabled()) {
       fsn.getFSDirectory().checkPathAccess(pc, iip, FsAction.READ);
     }
