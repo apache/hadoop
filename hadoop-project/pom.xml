@@ -813,6 +813,16 @@
         <version>${jackson2.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.fasterxml.jackson.module</groupId>
+        <artifactId>jackson-module-jaxb-annotations</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${jackson2.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
         <artifactId>jackson-dataformat-cbor</artifactId>
         <version>${jackson2.version}</version>
@@ -826,6 +836,12 @@
         <groupId>org.mock-server</groupId>
         <artifactId>mockserver-netty</artifactId>
         <version>3.9.2</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.avro</groupId>
@@ -841,6 +857,11 @@
         <groupId>org.apache.ant</groupId>
         <artifactId>ant</artifactId>
         <version>1.8.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.re2j</groupId>
+        <artifactId>re2j</artifactId>
+        <version>${re2j.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.protobuf</groupId>
@@ -860,7 +881,7 @@
       <dependency>
         <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core4</artifactId>
-        <version>4.0.1-incubating</version>
+        <version>4.1.0-incubating</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
