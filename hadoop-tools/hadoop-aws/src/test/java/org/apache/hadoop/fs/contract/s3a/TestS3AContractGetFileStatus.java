@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
+import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 public class TestS3AContractGetFileStatus extends AbstractContractGetFileStatusTest {
 
@@ -28,4 +30,18 @@ public class TestS3AContractGetFileStatus extends AbstractContractGetFileStatusT
     return new S3AContract(conf);
   }
 
+  @Override
+  public void teardown() throws Exception {
+    getLog().info("FS details {}", getFileSystem());
+    super.teardown();
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    S3ATestUtils.disableFilesystemCaching(conf);
+    // aggressively low page size forces tests to go multipage
+    conf.setInt(Constants.MAX_PAGING_KEYS, 2);
+    return conf;
+  }
 }

@@ -69,6 +69,8 @@ public enum Statistic {
   OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests"),
   OBJECT_LIST_REQUESTS("object_list_requests",
       "Number of object listings made"),
+  OBJECT_CONTINUE_LIST_REQUESTS("object_continue_list_requests",
+      "Number of continued object listings made"),
   OBJECT_METADATA_REQUESTS("object_metadata_requests",
       "Number of requests for object metadata"),
   OBJECT_MULTIPART_UPLOAD_ABORTED("object_multipart_aborted",
