@@ -463,7 +463,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Stop renewal of lease for the file. */
-  void endFileLease(final long inodeId) throws IOException {
+  void endFileLease(final long inodeId) {
     getLeaseRenewer().closeFile(inodeId, this);
   }
 

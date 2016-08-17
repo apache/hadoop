@@ -798,6 +798,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
 
   @Override
   void abort() throws IOException {
+    final MultipleIOException.Builder b = new MultipleIOException.Builder();
     synchronized (this) {
       if (isClosed()) {
         return;
@@ -808,9 +809,19 @@ public class DFSStripedOutputStream extends DFSOutputStream {
                 + (dfsClient.getConf().getHdfsTimeout() / 1000)
                 + " seconds expired."));
       }
-      closeThreads(true);
+
+      try {
+        closeThreads(true);
+      } catch (IOException e) {
+        b.add(e);
+      }
     }
+
     dfsClient.endFileLease(fileId);
+    final IOException ioe = b.build();
+    if (ioe != null) {
+      throw ioe;
+    }
   }
 
   @Override
