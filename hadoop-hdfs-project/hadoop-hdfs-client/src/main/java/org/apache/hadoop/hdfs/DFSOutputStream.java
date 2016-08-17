@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.namenode.RetryStartFileException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.io.EnumSetWritable;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
@@ -709,6 +710,7 @@ public class DFSOutputStream extends FSOutputSummer
    * resources associated with this stream.
    */
   void abort() throws IOException {
+    final MultipleIOException.Builder b = new MultipleIOException.Builder();
     synchronized (this) {
       if (isClosed()) {
         return;
@@ -717,9 +719,19 @@ public class DFSOutputStream extends FSOutputSummer
           new IOException("Lease timeout of "
               + (dfsClient.getConf().getHdfsTimeout() / 1000)
               + " seconds expired."));
-      closeThreads(true);
+
+      try {
+        closeThreads(true);
+      } catch (IOException e) {
+        b.add(e);
+      }
     }
+
     dfsClient.endFileLease(fileId);
+    final IOException ioe = b.build();
+    if (ioe != null) {
+      throw ioe;
+    }
   }
 
   boolean isClosed() {
@@ -752,13 +764,21 @@ public class DFSOutputStream extends FSOutputSummer
    */
   @Override
   public void close() throws IOException {
+    final MultipleIOException.Builder b = new MultipleIOException.Builder();
     synchronized (this) {
       try (TraceScope ignored = dfsClient.newPathTraceScope(
           "DFSOutputStream#close", src)) {
         closeImpl();
+      } catch (IOException e) {
+        b.add(e);
       }
     }
+
     dfsClient.endFileLease(fileId);
+    final IOException ioe = b.build();
+    if (ioe != null) {
+      throw ioe;
+    }
   }
 
   protected synchronized void closeImpl() throws IOException {

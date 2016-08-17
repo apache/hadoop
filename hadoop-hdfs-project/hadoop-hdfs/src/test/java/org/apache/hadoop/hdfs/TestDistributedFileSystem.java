@@ -111,7 +111,6 @@ import org.mockito.stubbing.Answer;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.mockito.internal.util.reflection.Whitebox;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1487,4 +1486,37 @@ public class TestDistributedFileSystem {
     }
   }
 
+  @Test
+  public void testDFSCloseFilesBeingWritten() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      DistributedFileSystem fileSys = cluster.getFileSystem();
+
+      // Create one file then delete it to trigger the FileNotFoundException
+      // when closing the file.
+      fileSys.create(new Path("/test/dfsclose/file-0"));
+      fileSys.delete(new Path("/test/dfsclose/file-0"), true);
+
+      DFSClient dfsClient = fileSys.getClient();
+      // Construct a new dfsClient to get the same LeaseRenewer instance,
+      // to avoid the original client being added to the leaseRenewer again.
+      DFSClient newDfsClient =
+          new DFSClient(cluster.getFileSystem(0).getUri(), conf);
+      LeaseRenewer leaseRenewer = newDfsClient.getLeaseRenewer();
+
+      dfsClient.closeAllFilesBeingWritten(false);
+      // Remove new dfsClient in leaseRenewer
+      leaseRenewer.closeClient(newDfsClient);
+
+      // The list of clients corresponding to this renewer should be empty
+      assertEquals(true, leaseRenewer.isEmpty());
+      assertEquals(true, dfsClient.isFilesBeingWrittenEmpty());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
