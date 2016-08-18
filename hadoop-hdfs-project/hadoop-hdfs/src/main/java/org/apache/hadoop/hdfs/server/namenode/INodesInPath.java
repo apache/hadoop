@@ -73,6 +73,10 @@ public class INodesInPath {
     return new INodesInPath(inodes, path);
   }
 
+  static INodesInPath fromComponents(byte[][] components) {
+    return new INodesInPath(new INode[components.length], components);
+  }
+
   /**
    * Given some components, create a path name.
    * @param components The path components
@@ -432,6 +436,10 @@ public class INodesInPath {
    */
   boolean isSnapshot() {
     return this.isSnapshot;
+  }
+
+  boolean isDotSnapshotDir() {
+    return isDotSnapshotDir(getLastLocalName());
   }
 
   private static String toString(INode inode) {

@@ -60,8 +60,8 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src);
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       unprotectedSetPermission(fsd, src, permission);
     } finally {
@@ -81,8 +81,8 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src);
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
@@ -108,8 +108,8 @@ public class FSDirAttrOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src);
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       // Write access is required to set access and modification times
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
@@ -138,8 +138,8 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      final INodesInPath iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
@@ -211,8 +211,7 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
-      path = fsd.resolvePath(pc, path);
-      final INodesInPath iip = fsd.getINodesInPath(path, false);
+      final INodesInPath iip = fsd.resolvePath(pc, path, false);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
       }
@@ -232,8 +231,8 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, src);
-      final INodesInPath iip = fsd.getINodesInPath(src, false);
+      final INodesInPath iip = fsd.resolvePath(pc, src, false);
+      src = iip.getPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkTraverse(pc, iip);
       }
