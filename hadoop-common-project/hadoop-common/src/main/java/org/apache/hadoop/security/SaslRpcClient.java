@@ -305,13 +305,16 @@ public class SaslRpcClient {
         authType.getProtocol() + "/" + authType.getServerId(),
         KerberosPrincipal.KRB_NT_SRV_HST).getName();
 
-    boolean isPrincipalValid = false;
-
     // use the pattern if defined
     String serverKeyPattern = conf.get(serverKey + ".pattern");
     if (serverKeyPattern != null && !serverKeyPattern.isEmpty()) {
       Pattern pattern = GlobPattern.compile(serverKeyPattern);
-      isPrincipalValid = pattern.matcher(serverPrincipal).matches();
+      if (!pattern.matcher(serverPrincipal).matches()) {
+        throw new IllegalArgumentException(String.format(
+            "Server has invalid Kerberos principal: %s,"
+                + " doesn't match the pattern: %s",
+            serverPrincipal, serverKeyPattern));
+      }
     } else {
       // check that the server advertised principal matches our conf
       String confPrincipal = SecurityUtil.getServerPrincipal(
@@ -330,11 +333,11 @@ public class SaslRpcClient {
             "Kerberos principal name does NOT have the expected hostname part: "
                 + confPrincipal);
       }
-      isPrincipalValid = serverPrincipal.equals(confPrincipal);
-    }
-    if (!isPrincipalValid) {
-      throw new IllegalArgumentException(
-          "Server has invalid Kerberos principal: " + serverPrincipal);
+      if (!serverPrincipal.equals(confPrincipal)) {
+        throw new IllegalArgumentException(String.format(
+            "Server has invalid Kerberos principal: %s, expecting: %s",
+            serverPrincipal, confPrincipal));
+      }
     }
     return serverPrincipal;
   }
