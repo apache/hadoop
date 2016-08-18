@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * to run those tests.  The returned account might integrate with Azure Storage
  * directly or it might be a mock implementation.
  */
-abstract class AbstractWasbTestBase {
+public abstract class AbstractWasbTestBase {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractWasbTestBase.class);
