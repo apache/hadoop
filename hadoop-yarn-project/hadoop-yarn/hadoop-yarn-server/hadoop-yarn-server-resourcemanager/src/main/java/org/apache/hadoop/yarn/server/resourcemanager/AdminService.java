@@ -447,7 +447,8 @@ public class AdminService extends CompositeService implements
         rmContext.getNodesListManager().refreshNodes(conf);
         break;
       case GRACEFUL:
-        rmContext.getNodesListManager().refreshNodesGracefully(conf);
+        rmContext.getNodesListManager().refreshNodesGracefully(
+            conf, request.getDecommissionTimeout());
         break;
       case FORCEFUL:
         rmContext.getNodesListManager().refreshNodesForcefully();

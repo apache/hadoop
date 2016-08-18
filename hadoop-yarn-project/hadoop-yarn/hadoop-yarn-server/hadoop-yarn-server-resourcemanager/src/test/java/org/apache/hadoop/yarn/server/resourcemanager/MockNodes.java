@@ -274,6 +274,11 @@ public class MockNodes {
     public QueuedContainersStatus getQueuedContainersStatus() {
       return null;
     }
+
+    @Override
+    public Integer getDecommissioningTimeout() {
+      return null;
+    }
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode,

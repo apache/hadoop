@@ -43,6 +43,16 @@ public abstract class RefreshNodesRequest {
     return request;
   }
 
+  @Private
+  @Unstable
+  public static RefreshNodesRequest newInstance(
+      DecommissionType decommissionType, Integer timeout) {
+    RefreshNodesRequest request = Records.newRecord(RefreshNodesRequest.class);
+    request.setDecommissionType(decommissionType);
+    request.setDecommissionTimeout(timeout);
+    return request;
+  }
+
   /**
    * Set the DecommissionType
    * 
@@ -56,4 +66,18 @@ public abstract class RefreshNodesRequest {
    * @return decommissionType
    */
   public abstract DecommissionType getDecommissionType();
+
+  /**
+   * Set the DecommissionTimeout.
+   *
+   * @param timeout graceful decommission timeout in seconds
+   */
+  public abstract void setDecommissionTimeout(Integer timeout);
+
+  /**
+   * Get the DecommissionTimeout.
+   *
+   * @return decommissionTimeout
+   */
+  public abstract Integer getDecommissionTimeout();
 }

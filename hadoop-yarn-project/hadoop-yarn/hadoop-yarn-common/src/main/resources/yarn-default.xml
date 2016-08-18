@@ -2503,6 +2503,24 @@
   </property>
 
   <property>
+    <description>
+    Timeout in seconds for YARN node graceful decommission.
+    This is the maximal time to wait for running containers and applications to complete
+    before transition a DECOMMISSIONING node into DECOMMISSIONED.
+    </description>
+    <name>yarn.resourcemanager.nodemanager-graceful-decommission-timeout-secs</name>
+    <value>3600</value>
+  </property>
+
+  <property>
+    <description>
+    Timeout in seconds of DecommissioningNodesWatcher internal polling.
+    </description>
+    <name>yarn.resourcemanager.decommissioning-nodes-watcher.poll-interval-secs</name>
+    <value>20</value>
+  </property>
+
+  <property>
     <description>The Node Label script to run. Script output Line starting with
      "NODE_PARTITION:" will be considered as Node Label Partition. In case of
      multiple lines have this pattern, then last one will be considered

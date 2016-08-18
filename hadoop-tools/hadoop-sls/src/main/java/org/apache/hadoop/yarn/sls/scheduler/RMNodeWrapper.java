@@ -202,4 +202,9 @@ public class RMNodeWrapper implements RMNode {
   @Override
   public void setUntrackedTimeStamp(long timeStamp) {
   }
+
+  @Override
+  public Integer getDecommissioningTimeout() {
+    return null;
+  }
 }

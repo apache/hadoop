@@ -213,6 +213,11 @@ public class NodeInfo {
     @Override
     public void setUntrackedTimeStamp(long timeStamp) {
     }
+
+    @Override
+    public Integer getDecommissioningTimeout() {
+      return null;
+    }
   }
 
   public static RMNode newNodeInfo(String rackName, String hostName,

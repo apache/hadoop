@@ -254,17 +254,6 @@ public class TestRMNodeTransitions {
         cm.getNumDecommissioningNMs());
     Assert.assertEquals("Decommissioned Nodes", initialDecommissioned,
         cm.getNumDecommisionedNMs());
-
-    // Verify node in DECOMMISSIONING will be changed by status update
-    // without running apps
-    statusEvent = getMockRMNodeStatusEventWithoutRunningApps();
-    node.handle(statusEvent);
-    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
-    Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
-    Assert.assertEquals("Decommissioning Nodes", initialDecommissioning - 1,
-        cm.getNumDecommissioningNMs());
-    Assert.assertEquals("Decommissioned Nodes", initialDecommissioned + 1,
-        cm.getNumDecommisionedNMs());
   }
 
   @Test
