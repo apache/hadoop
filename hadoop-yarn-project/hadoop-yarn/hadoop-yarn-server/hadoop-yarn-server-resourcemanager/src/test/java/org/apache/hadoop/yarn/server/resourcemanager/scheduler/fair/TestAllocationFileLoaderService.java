@@ -179,12 +179,16 @@ public class TestAllocationFileLoaderService {
     out.println("<queue name=\"queueE\">");
     out.println("<minSharePreemptionTimeout>60</minSharePreemptionTimeout>");
     out.println("</queue>");
-    //Make queue F a parent queue without configured leaf queues using the 'type' attribute
+    // Make queue F a parent queue without configured leaf queues using the
+    // 'type' attribute
     out.println("<queue name=\"queueF\" type=\"parent\" >");
+    out.println("<maxChildResources>2048mb,64vcores</maxChildResources>");
     out.println("</queue>");
     // Create hierarchical queues G,H, with different min/fair share preemption
-    // timeouts and preemption thresholds
+    // timeouts and preemption thresholds. Also add a child default to make sure
+    // it doesn't impact queue H.
     out.println("<queue name=\"queueG\">");
+    out.println("<maxChildResources>2048mb,64vcores</maxChildResources>");
     out.println("<fairSharePreemptionTimeout>120</fairSharePreemptionTimeout>");
     out.println("<minSharePreemptionTimeout>50</minSharePreemptionTimeout>");
     out.println("<fairSharePreemptionThreshold>0.6</fairSharePreemptionThreshold>");
@@ -240,6 +244,12 @@ public class TestAllocationFileLoaderService {
         queueConf.getMaxResources("root.queueD"));
     assertEquals(Resources.createResource(4096, 100),
         queueConf.getMaxResources("root.queueE"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueF"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueG"));
+    assertEquals(Resources.createResource(4096, 100),
+        queueConf.getMaxResources("root.queueG.queueH"));
 
     assertEquals(Resources.createResource(1024, 0),
         queueConf.getMinResources("root.queueA"));
@@ -251,8 +261,33 @@ public class TestAllocationFileLoaderService {
         queueConf.getMinResources("root.queueD"));
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueE"));
+    assertEquals(Resources.createResource(0),
+        queueConf.getMinResources("root.queueF"));
+    assertEquals(Resources.createResource(0),
+        queueConf.getMinResources("root.queueG"));
+    assertEquals(Resources.createResource(0),
+        queueConf.getMinResources("root.queueG.queueH"));
 
-    assertEquals(15, queueConf.getQueueMaxApps("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
+    assertNull("Max child resources unexpectedly set for queue root.queueA",
+        queueConf.getMaxChildResources("root.queueA"));
+    assertNull("Max child resources unexpectedly set for queue root.queueB",
+        queueConf.getMaxChildResources("root.queueB"));
+    assertNull("Max child resources unexpectedly set for queue root.queueC",
+        queueConf.getMaxChildResources("root.queueC"));
+    assertNull("Max child resources unexpectedly set for queue root.queueD",
+        queueConf.getMaxChildResources("root.queueD"));
+    assertNull("Max child resources unexpectedly set for queue root.queueE",
+        queueConf.getMaxChildResources("root.queueE"));
+    assertEquals(Resources.createResource(2048, 64),
+        queueConf.getMaxChildResources("root.queueF"));
+    assertEquals(Resources.createResource(2048, 64),
+        queueConf.getMaxChildResources("root.queueG"));
+    assertNull("Max child resources unexpectedly set for "
+        + "queue root.queueG.queueH",
+        queueConf.getMaxChildResources("root.queueG.queueH"));
+
+    assertEquals(15, queueConf.getQueueMaxApps("root."
+        + YarnConfiguration.DEFAULT_QUEUE_NAME));
     assertEquals(15, queueConf.getQueueMaxApps("root.queueA"));
     assertEquals(15, queueConf.getQueueMaxApps("root.queueB"));
     assertEquals(15, queueConf.getQueueMaxApps("root.queueC"));

@@ -139,8 +139,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     conf = createConfiguration();
     resourceManager = new MockRM(conf);
 
-    // TODO: This test should really be using MockRM. For now starting stuff
-    // that is needed at a bare minimum.
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
     resourceManager.getRMContext().getStateStore().start();
 
@@ -335,8 +333,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     }
   }
 
+  /**
+   * Test fair shares when max resources are set but are too high to impact
+   * the shares.
+   *
+   * @throws IOException if scheduler reinitialization fails
+   */
   @Test
-  public void testFairShareWithMaxResources() throws IOException {
+  public void testFairShareWithHighMaxResources() throws IOException {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     // set queueA and queueB maxResources,
     // the sum of queueA and queueB maxResources is more than
@@ -376,11 +380,184 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(
         "queueA", false);
     // queueA's weight is 0.25, so its fair share should be 2 * 1024.
-    assertEquals(2 * 1024, queue.getFairShare().getMemorySize());
+    assertEquals("Queue A did not get its expected fair share",
+        2 * 1024, queue.getFairShare().getMemorySize());
     // queueB's weight is 0.75, so its fair share should be 6 * 1024.
     queue = scheduler.getQueueManager().getLeafQueue(
         "queueB", false);
-    assertEquals(6 * 1024, queue.getFairShare().getMemorySize());
+    assertEquals("Queue B did not get its expected fair share",
+        6 * 1024, queue.getFairShare().getMemorySize());
+  }
+
+  /**
+   * Test fair shares when max resources are set and are low enough to impact
+   * the shares.
+   *
+   * @throws IOException if scheduler reinitialization fails
+   */
+  @Test
+  public void testFairShareWithLowMaxResources() throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("  <queue name=\"queueA\">");
+    out.println("    <maxResources>1024 mb 1 vcores</maxResources>");
+    out.println("    <weight>0.75</weight>");
+    out.println("  </queue>");
+    out.println("  <queue name=\"queueB\">");
+    out.println("    <maxResources>3072 mb 3 vcores</maxResources>");
+    out.println("    <weight>0.25</weight>");
+    out.println("  </queue>");
+    out.println("</allocations>");
+    out.close();
+
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    ApplicationAttemptId attId1 =
+        createSchedulingRequest(1024, 1, "queueA", "user1", 2);
+    ApplicationAttemptId attId2 =
+        createSchedulingRequest(1024, 1, "queueB", "user1", 4);
+
+    scheduler.update();
+
+    FSLeafQueue queue =
+        scheduler.getQueueManager().getLeafQueue("queueA", false);
+    // queueA's weight is 0.5, so its fair share should be 6GB, but it's
+    // capped at 1GB.
+    assertEquals("Queue A did not get its expected fair share",
+        1 * 1024, queue.getFairShare().getMemorySize());
+    // queueB's weight is 0.5, so its fair share should be 2GB, but the
+    // other queue is capped at 1GB, so queueB's share is 7GB,
+    // capped at 3GB.
+    queue = scheduler.getQueueManager().getLeafQueue(
+        "queueB", false);
+    assertEquals("Queue B did not get its expected fair share",
+        3 * 1024, queue.getFairShare().getMemorySize());
+
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(updateEvent);
+    scheduler.handle(updateEvent);
+    scheduler.handle(updateEvent);
+    scheduler.handle(updateEvent);
+    scheduler.handle(updateEvent);
+    scheduler.handle(updateEvent);
+
+    // App 1 should be running with 1 container
+    assertEquals("App 1 is not running with the correct number of containers",
+        1, scheduler.getSchedulerApp(attId1).getLiveContainers().size());
+    // App 2 should be running with 3 containers
+    assertEquals("App 2 is not running with the correct number of containers",
+        3, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
+  }
+
+  /**
+   * Test the child max resource settings.
+   *
+   * @throws IOException if scheduler reinitialization fails
+   */
+  @Test
+  public void testChildMaxResources() throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("  <queue name=\"queueA\" type=\"parent\">");
+    out.println("    <maxChildResources>2048mb,2vcores</maxChildResources>");
+    out.println("  </queue>");
+    out.println("</allocations>");
+    out.close();
+
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    ApplicationAttemptId attId1 =
+        createSchedulingRequest(1024, 1, "queueA.queueB", "user1", 8);
+    ApplicationAttemptId attId2 =
+        createSchedulingRequest(1024, 1, "queueA.queueC", "user1", 8);
+
+    scheduler.update();
+
+    NodeUpdateSchedulerEvent nodeEvent = new NodeUpdateSchedulerEvent(node1);
+
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+
+    // Apps should be running with 2 containers
+    assertEquals("App 1 is not running with the correct number of containers",
+        2, scheduler.getSchedulerApp(attId1).getLiveContainers().size());
+    assertEquals("App 2 is not running with the correct number of containers",
+        2, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
+
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("  <queue name=\"queueA\" type=\"parent\">");
+    out.println("    <maxChildResources>3072mb,3vcores</maxChildResources>");
+    out.println("  </queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    scheduler.update();
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+    scheduler.handle(nodeEvent);
+
+    // Apps should be running with 3 containers now
+    assertEquals("App 1 is not running with the correct number of containers",
+        3, scheduler.getSchedulerApp(attId1).getLiveContainers().size());
+    assertEquals("App 2 is not running with the correct number of containers",
+        3, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
+
+    out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("  <queue name=\"queueA\" type=\"parent\">");
+    out.println("    <maxChildResources>1024mb,1vcores</maxChildResources>");
+    out.println("  </queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    scheduler.update();
+    scheduler.handle(nodeEvent);
+
+    // Apps still should be running with 3 containers because we don't preempt
+    assertEquals("App 1 is not running with the correct number of containers",
+        3, scheduler.getSchedulerApp(attId1).getLiveContainers().size());
+    assertEquals("App 2 is not running with the correct number of containers",
+        3, scheduler.getSchedulerApp(attId2).getLiveContainers().size());
   }
 
   @Test
