@@ -21,9 +21,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -78,5 +82,44 @@ public class TestLeaseManager {
 
     //Initiate a call to checkLease. This should exit within the test timeout
     lm.checkLeases();
+  }
+
+  /**
+   * Make sure the lease is restored even if only the inode has the record.
+   */
+  @Test
+  public void testLeaseRestorationOnRestart() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+          .numDataNodes(1).build();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      // Create an empty file
+      String path = "/testLeaseRestorationOnRestart";
+      FSDataOutputStream out = dfs.create(new Path(path));
+
+      // Remove the lease from the lease manager, but leave it in the inode.
+      FSDirectory dir = cluster.getNamesystem().getFSDirectory();
+      INodeFile file = dir.getINode(path).asFile();
+      cluster.getNamesystem().leaseManager.removeLease(
+          file.getFileUnderConstructionFeature().getClientName(), path);
+
+      // Save a fsimage.
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      // Restart the namenode.
+      cluster.restartNameNode(true);
+
+      // Check whether the lease manager has the lease
+      assertNotNull("Lease should exist",
+          cluster.getNamesystem().leaseManager.getLeaseByPath(path));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }
