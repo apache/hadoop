@@ -165,10 +165,10 @@ public final class ReloadingX509TrustManager
   throws IOException, GeneralSecurityException {
     X509TrustManager trustManager = null;
     KeyStore ks = KeyStore.getInstance(type);
-    lastLoaded = file.lastModified();
     FileInputStream in = new FileInputStream(file);
     try {
       ks.load(in, password.toCharArray());
+      lastLoaded = file.lastModified();
       LOG.debug("Loaded truststore '" + file + "'");
     } finally {
       in.close();
