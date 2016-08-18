@@ -59,8 +59,6 @@ Release 2.7.3 - UNRELEASED
     HDFS-8578. On upgrade, Datanode should process all storage/data dirs in
     parallel.  (vinayakumarb and szetszwo via szetszwo)
 
-    HDFS-9395. Make HDFS audit logging consistant (Kuhu Shukla via kihwal)
-
     HDFS-9048. DistCp documentation is out-of-dated
     (Daisuke Kobayashi via iwasakims)
 
