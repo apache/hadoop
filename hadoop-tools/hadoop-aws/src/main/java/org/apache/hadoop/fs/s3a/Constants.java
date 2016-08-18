@@ -128,8 +128,8 @@ public final class Constants {
   public static final String FAST_BUFFER_SIZE = "fs.s3a.fast.buffer.size";
   public static final int DEFAULT_FAST_BUFFER_SIZE = 1048576; //1MB
 
-  // private | public-read | public-read-write | authenticated-read | 
-  // log-delivery-write | bucket-owner-read | bucket-owner-full-control
+  // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
+  // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl
   public static final String CANNED_ACL = "fs.s3a.acl.default";
   public static final String DEFAULT_CANNED_ACL = "";
 
