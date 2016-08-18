@@ -97,7 +97,7 @@ public class ClusterMetricsInfo {
     this.rebootedNodes = clusterMetrics.getNumRebootedNMs();
     this.shutdownNodes = clusterMetrics.getNumShutdownNMs();
     this.totalNodes = activeNodes + lostNodes + decommissionedNodes
-        + rebootedNodes + unhealthyNodes + shutdownNodes;
+        + rebootedNodes + unhealthyNodes + decommissioningNodes + shutdownNodes;
   }
 
   public int getAppsSubmitted() {

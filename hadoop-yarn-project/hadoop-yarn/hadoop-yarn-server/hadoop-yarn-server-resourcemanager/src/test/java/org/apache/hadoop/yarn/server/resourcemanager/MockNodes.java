@@ -272,6 +272,11 @@ public class MockNodes {
     @Override
     public void setUntrackedTimeStamp(long timeStamp) {
     }
+
+    @Override
+    public Integer getDecommissioningTimeout() {
+      return null;
+    }
   };
 
   private static RMNode buildRMNode(int rack, final Resource perNode,

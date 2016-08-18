@@ -37,6 +37,7 @@ message RefreshQueuesResponseProto {
 
 message RefreshNodesRequestProto {
   optional DecommissionTypeProto decommissionType = 1 [default = NORMAL];
+  optional int32 decommissionTimeout = 2;
 }
 message RefreshNodesResponseProto {
 }

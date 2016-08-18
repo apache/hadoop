@@ -795,6 +795,20 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
 
+  /**
+   * Timeout in seconds for YARN node graceful decommission.
+   * This is the maximal time to wait for running containers and applications
+   * to complete before transition a DECOMMISSIONING node into DECOMMISSIONED.
+   */
+  public static final String RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT =
+      RM_PREFIX + "nodemanager-graceful-decommission-timeout-secs";
+  public static final int DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT = 3600;
+
+  public static final String RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL =
+      RM_PREFIX + "decommissioning-nodes-watcher.poll-interval-secs";
+  public static final int
+      DEFAULT_RM_DECOMMISSIONING_NODES_WATCHER_POLL_INTERVAL = 20;
+
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////

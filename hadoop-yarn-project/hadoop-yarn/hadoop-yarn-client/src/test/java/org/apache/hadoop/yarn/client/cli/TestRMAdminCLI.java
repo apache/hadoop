@@ -267,7 +267,7 @@ public class TestRMAdminCLI {
         CheckForDecommissioningNodesRequest.class))).thenReturn(response);
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshNodes(
-        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL));
+        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL, 1));
     verify(admin, never()).refreshNodes(
         RefreshNodesRequest.newInstance(DecommissionType.FORCEFUL));
   }
@@ -327,7 +327,7 @@ public class TestRMAdminCLI {
           });
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin, atLeastOnce()).refreshNodes(
-        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL));
+        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL, -1));
     verify(admin, never()).refreshNodes(
         RefreshNodesRequest.newInstance(DecommissionType.FORCEFUL));
   }
@@ -345,10 +345,6 @@ public class TestRMAdminCLI {
     // negative timeout
     String[] negativeTimeoutArgs = {"-refreshNodes", "-g", "-1000", "-client"};
     assertEquals(-1, rmAdminCLI.run(negativeTimeoutArgs));
-
-    // server tracking mode
-    String[] serveTrackingrArgs = {"-refreshNodes", "-g", "1", "-server"};
-    assertEquals(-1, rmAdminCLI.run(serveTrackingrArgs));
 
     // invalid tracking mode
     String[] invalidTrackingArgs = {"-refreshNodes", "-g", "1", "-foo"};
@@ -465,8 +461,9 @@ public class TestRMAdminCLI {
       assertTrue(dataOut
           .toString()
           .contains(
-              "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in " +
-              "seconds] -client|server]] [-refreshNodesResources] [-refresh" +
+              "yarn rmadmin [-refreshQueues] [-refreshNodes "+
+              "[-g|graceful [timeout in seconds] -client|server]] " +
+              "[-refreshNodesResources] [-refresh" +
               "SuperUserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup " +
               "[username]] [-addToClusterNodeLabels " +
@@ -485,7 +482,8 @@ public class TestRMAdminCLI {
       assertTrue(dataOut
           .toString()
           .contains(
-              "-refreshNodes [-g [timeout in seconds] -client|server]: " +
+              "-refreshNodes [-g|graceful [timeout in seconds]" +
+              " -client|server]: " +
               "Refresh the hosts information at the ResourceManager."));
       assertTrue(dataOut
           .toString()
@@ -518,8 +516,8 @@ public class TestRMAdminCLI {
       testError(new String[] { "-help", "-refreshQueues" },
           "Usage: yarn rmadmin [-refreshQueues]", dataErr, 0);
       testError(new String[] { "-help", "-refreshNodes" },
-          "Usage: yarn rmadmin [-refreshNodes [-g [timeout in seconds] " +
-          "-client|server]]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshNodes [-g|graceful " +
+          "[timeout in seconds] -client|server]]", dataErr, 0);
       testError(new String[] { "-help", "-refreshNodesResources" },
           "Usage: yarn rmadmin [-refreshNodesResources]", dataErr, 0);
       testError(new String[] { "-help", "-refreshUserToGroupsMappings" },
@@ -558,8 +556,8 @@ public class TestRMAdminCLI {
       assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
       oldOutPrintStream.println(dataOut);
       String expectedHelpMsg = 
-          "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in "
-              + "seconds] -client|server]] "
+          "yarn rmadmin [-refreshQueues] [-refreshNodes [-g|graceful "
+              + "[timeout in seconds] -client|server]] "
               + "[-refreshNodesResources] [-refreshSuperUserGroupsConfiguration] "
               + "[-refreshUserToGroupsMappings] "
               + "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup"

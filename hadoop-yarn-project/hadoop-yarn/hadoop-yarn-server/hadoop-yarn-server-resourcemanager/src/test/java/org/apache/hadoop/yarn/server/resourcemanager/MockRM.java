@@ -709,6 +709,9 @@ public class MockRM extends ResourceManager {
   public void waitForState(NodeId nodeId, NodeState finalState)
       throws InterruptedException {
     RMNode node = getRMContext().getRMNodes().get(nodeId);
+    if (node == null) {
+      node = getRMContext().getInactiveRMNodes().get(nodeId);
+    }
     Assert.assertNotNull("node shouldn't be null", node);
     int timeWaiting = 0;
     while (!finalState.equals(node.getState())) {
@@ -722,9 +725,15 @@ public class MockRM extends ResourceManager {
       timeWaiting += WAIT_MS_PER_LOOP;
     }
 
-    System.out.println("Node State is : " + node.getState());
+    System.out.println("Node " + nodeId + " State is : " + node.getState());
     Assert.assertEquals("Node state is not correct (timedout)", finalState,
         node.getState());
+  }
+
+  public void sendNodeEvent(MockNM nm, RMNodeEventType event) throws Exception {
+    RMNodeImpl node = (RMNodeImpl)
+        getRMContext().getRMNodes().get(nm.getNodeId());
+    node.handle(new RMNodeEvent(nm.getNodeId(), event));
   }
 
   public KillApplicationResponse killApp(ApplicationId appId) throws Exception {

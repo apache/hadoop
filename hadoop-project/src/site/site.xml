@@ -136,6 +136,7 @@
       <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
       <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
       <item name="Reservation System" href="hadoop-yarn/hadoop-yarn-site/ReservationSystem.html"/>
+      <item name="Graceful Decommission" href="hadoop-yarn/hadoop-yarn-site/GracefulDecommission.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">

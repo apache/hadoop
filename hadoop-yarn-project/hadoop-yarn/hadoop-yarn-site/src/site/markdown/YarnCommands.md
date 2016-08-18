@@ -243,7 +243,7 @@ Usage:
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -refreshQueues | Reload the queues' acls, states and scheduler specific properties. ResourceManager will reload the mapred-queues configuration file. |
-| -refreshNodes | Refresh the hosts information at the ResourceManager. |
+| -refreshNodes [-g|graceful [timeout in seconds] -client|server] | Refresh the hosts information at the ResourceManager. -g option indicates graceful decommission of excluded hosts, in which case, the optional timeout indicates maximal time in seconds ResourceManager should wait before forcefully mark the node as decommissioned. |
 | -refreshNodesResources | Refresh resources of NodeManagers at the ResourceManager. |
 | -refreshSuperUserGroupsConfiguration | Refresh superuser proxy groups mappings. |
 | -refreshUserToGroupsMappings | Refresh user-to-groups mappings. |
