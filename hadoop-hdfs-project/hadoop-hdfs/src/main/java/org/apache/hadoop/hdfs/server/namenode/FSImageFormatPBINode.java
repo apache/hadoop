@@ -220,13 +220,11 @@ public final class FSImageFormatPBINode {
     private final FSDirectory dir;
     private final FSNamesystem fsn;
     private final FSImageFormatProtobuf.Loader parent;
-    private final List<INodeFile> ucFiles;
 
     Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent) {
       this.fsn = fsn;
       this.dir = fsn.dir;
       this.parent = parent;
-      this.ucFiles = new ArrayList<INodeFile>();
     }
 
     void loadINodeDirectorySection(InputStream in) throws IOException {
@@ -270,20 +268,17 @@ public final class FSImageFormatPBINode {
      * Load the under-construction files section, and update the lease map
      */
     void loadFilesUnderConstructionSection(InputStream in) throws IOException {
-     // This section is consumed, but not actually used for restoring leases.
       while (true) {
         FileUnderConstructionEntry entry = FileUnderConstructionEntry
             .parseDelimitedFrom(in);
         if (entry == null) {
           break;
         }
-      }
-
-      // Add a lease for each and every file under construction.
-      for (INodeFile file : ucFiles) {
+        // update the lease manager
+        INodeFile file = dir.getInode(entry.getInodeId()).asFile();
         FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
         Preconditions.checkState(uc != null); // file must be under-construction
-        fsn.leaseManager.addLease(uc.getClientName(), file.getFullPathName());
+        fsn.leaseManager.addLease(uc.getClientName(), entry.getFullPath());
       }
     }
 
@@ -351,7 +346,6 @@ public final class FSImageFormatPBINode {
 
       // under-construction information
       if (f.hasFileUC()) {
-        ucFiles.add(file);
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
         file.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         if (blocks.length > 0) {

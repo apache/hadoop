@@ -4205,6 +4205,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new IOException("Cannot finalize file " + src
           + " because it is not under construction");
     }
+    leaseManager.removeLease(uc.getClientName(), src);
     
     pendingFile.recordModification(latestSnapshot);
 
@@ -4212,8 +4213,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Create permanent INode, update blocks. No need to replace the inode here
     // since we just remove the uc feature from pendingFile
     pendingFile.toCompleteFile(now());
-
-    leaseManager.removeLease(uc.getClientName(), src);
 
     waitForLoadingFSImage();
     // close file and persist block allocations for this file
