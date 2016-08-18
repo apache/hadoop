@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
+import com.aliyun.oss.ClientException;
 import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.aliyun.oss.common.auth.DefaultCredentialProvider;
 import com.aliyun.oss.common.auth.DefaultCredentials;
@@ -782,7 +783,7 @@ public class AliyunOSSFileSystem extends FileSystem {
           ossClient.completeMultipartUpload(completeMultipartUploadRequest);
       LOG.debug(completeMultipartUploadResult.getETag());
       return true;
-    } catch (Exception e) {
+    } catch (OSSException | ClientException e) {
       AbortMultipartUploadRequest abortMultipartUploadRequest =
           new AbortMultipartUploadRequest(bucketName, dstKey, uploadId);
       ossClient.abortMultipartUpload(abortMultipartUploadRequest);

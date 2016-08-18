@@ -227,12 +227,12 @@ public class AliyunOSSInputStream extends FSInputStream {
   }
 
   @Override
-  public void seek(long pos) throws IOException {
+  public synchronized void seek(long pos) throws IOException {
     checkNotClosed();
     if (position == pos) {
       return;
     } else if (pos > position && pos < position + partRemaining) {
-      wrappedStream.skip(pos - position);
+      AliyunOSSUtils.skipFully(wrappedStream, pos - position);
       position = pos;
     } else {
       reopen(pos);
@@ -240,7 +240,7 @@ public class AliyunOSSInputStream extends FSInputStream {
   }
 
   @Override
-  public long getPos() throws IOException {
+  public synchronized long getPos() throws IOException {
     checkNotClosed();
     return position;
   }

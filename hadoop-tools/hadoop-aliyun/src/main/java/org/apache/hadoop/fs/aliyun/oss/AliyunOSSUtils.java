@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.aliyun.oss;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -116,7 +117,7 @@ final public class AliyunOSSUtils {
 
   /**
    * Extract the user information details from a URI.
-   * @param name URI of the filesystem
+   * @param name URI of the filesystem.
    * @return a login tuple, possibly empty.
    */
   public static UserInfo extractLoginDetails(URI name) {
@@ -146,6 +147,29 @@ final public class AliyunOSSUtils {
     } catch (UnsupportedEncodingException e) {
       // This should never happen; translate it if it does.
       throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Skips the requested number of bytes or fail if there are not enough left.
+   * This allows for the possibility that {@link InputStream#skip(long)} may not
+   * skip as many bytes as requested (most likely because of reaching EOF).
+   * @param is the input stream to skip.
+   * @param n the number of bytes to skip.
+   * @throws IOException thrown when skipped less number of bytes.
+   */
+  public static void skipFully(InputStream is, long n) throws IOException {
+    long total = 0;
+    long cur = 0;
+
+    do {
+      cur = is.skip(n - total);
+      total += cur;
+    } while((total < n) && (cur > 0));
+
+    if (total < n) {
+      throw new IOException("Failed to skip " + n + " bytes, possibly due " +
+              "to EOF.");
     }
   }
 }

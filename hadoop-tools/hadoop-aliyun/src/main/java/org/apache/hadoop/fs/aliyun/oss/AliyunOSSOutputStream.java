@@ -29,6 +29,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.aliyun.oss.ClientException;
+import com.aliyun.oss.OSSException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -113,7 +115,9 @@ public class AliyunOSSOutputStream extends OutputStream {
         multipartUploadObject();
       }
     } finally {
-      tmpFile.delete();
+      if (!tmpFile.delete()) {
+        LOG.warn("Can not delete file: " + tmpFile);
+      }
     }
   }
 
@@ -174,7 +178,7 @@ public class AliyunOSSOutputStream extends OutputStream {
         FileInputStream fis = new FileInputStream(object);
         try {
           long skipBytes = partSize * i;
-          fis.skip(skipBytes);
+          AliyunOSSUtils.skipFully(fis, skipBytes);
           long size = (partSize < dataLen - skipBytes) ?
               partSize : dataLen - skipBytes;
           UploadPartRequest uploadPartRequest = new UploadPartRequest();
@@ -198,7 +202,7 @@ public class AliyunOSSOutputStream extends OutputStream {
       CompleteMultipartUploadResult completeMultipartUploadResult =
           ossClient.completeMultipartUpload(completeMultipartUploadRequest);
       LOG.debug(completeMultipartUploadResult.getETag());
-    } catch (Exception e) {
+    } catch (OSSException | ClientException e) {
       AbortMultipartUploadRequest abortMultipartUploadRequest =
           new AbortMultipartUploadRequest(bucketName, key, uploadId);
       ossClient.abortMultipartUpload(abortMultipartUploadRequest);
