@@ -95,6 +95,11 @@ public class DrainDispatcher extends AsyncDispatcher {
   }
 
   @Override
+  protected boolean isDrained() {
+    return drained;
+  }
+
+  @Override
   protected void serviceStop() throws Exception {
     stopped = true;
     super.serviceStop();

@@ -148,7 +148,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
               YarnConfiguration.DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT);
 
       synchronized (waitForDrained) {
-        while (!drained && eventHandlingThread != null
+        while (!isDrained() && eventHandlingThread != null
             && eventHandlingThread.isAlive()
             && System.currentTimeMillis() < endTime) {
           waitForDrained.wait(1000);
@@ -302,5 +302,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @VisibleForTesting
   protected boolean isEventThreadWaiting() {
     return eventHandlingThread.getState() == Thread.State.WAITING;
+  }
+
+  protected boolean isDrained() {
+    return drained;
   }
 }
