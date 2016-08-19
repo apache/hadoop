@@ -70,15 +70,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
-    .RMContainerNMDoneChangeResourceEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerNMDoneChangeResourceEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -189,7 +188,8 @@ public abstract class AbstractYarnScheduler
   public void addBlacklistedNodeIdsToList(SchedulerApplicationAttempt app,
       List<NodeId> blacklistNodeIdList) {
     for (Map.Entry<NodeId, N> nodeEntry : nodes.entrySet()) {
-      if (SchedulerAppUtils.isBlacklisted(app, nodeEntry.getValue(), LOG)) {
+      if (SchedulerAppUtils.isPlaceBlacklisted(app, nodeEntry.getValue(), 
+          LOG)) {
         blacklistNodeIdList.add(nodeEntry.getKey());
       }
     }

@@ -41,32 +41,32 @@ public class TestAppSchedulingInfo {
     AppSchedulingInfo  appSchedulingInfo = new AppSchedulingInfo(
         appAttemptId, "test", queue, null, 0, new ResourceUsage());
 
-    appSchedulingInfo.updateBlacklist(new ArrayList<String>(),
+    appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         new ArrayList<String>());
     Assert.assertFalse(appSchedulingInfo.getAndResetBlacklistChanged());
 
     ArrayList<String> blacklistAdditions = new ArrayList<String>();
     blacklistAdditions.add("node1");
     blacklistAdditions.add("node2");
-    appSchedulingInfo.updateBlacklist(blacklistAdditions,
+    appSchedulingInfo.updatePlacesBlacklistedByApp(blacklistAdditions,
         new ArrayList<String>());
     Assert.assertTrue(appSchedulingInfo.getAndResetBlacklistChanged());
 
     blacklistAdditions.clear();
     blacklistAdditions.add("node1");
-    appSchedulingInfo.updateBlacklist(blacklistAdditions,
+    appSchedulingInfo.updatePlacesBlacklistedByApp(blacklistAdditions,
         new ArrayList<String>());
     Assert.assertFalse(appSchedulingInfo.getAndResetBlacklistChanged());
 
     ArrayList<String> blacklistRemovals = new ArrayList<String>();
     blacklistRemovals.add("node1");
-    appSchedulingInfo.updateBlacklist(new ArrayList<String>(),
+    appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         blacklistRemovals);
-    appSchedulingInfo.updateBlacklist(new ArrayList<String>(),
+    appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         blacklistRemovals);
     Assert.assertTrue(appSchedulingInfo.getAndResetBlacklistChanged());
 
-    appSchedulingInfo.updateBlacklist(new ArrayList<String>(),
+    appSchedulingInfo.updatePlacesBlacklistedByApp(new ArrayList<String>(),
         blacklistRemovals);
     Assert.assertFalse(appSchedulingInfo.getAndResetBlacklistChanged());
   }
