@@ -117,6 +117,7 @@ public class DNConf {
 
   private final int volFailuresTolerated;
   private final int volsConfigured;
+  private final int maxDataLength;
 
   public DNConf(Configuration conf) {
     this.conf = conf;
@@ -149,6 +150,8 @@ public class DNConf {
     readaheadLength = conf.getLong(
         HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY,
         HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+    maxDataLength = conf.getInt(DFSConfigKeys.IPC_MAXIMUM_DATA_LENGTH,
+        DFSConfigKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     dropCacheBehindWrites = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY,
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_DEFAULT);
@@ -388,5 +391,9 @@ public class DNConf {
 
   public int getVolsConfigured() {
     return volsConfigured;
+  }
+
+  int getMaxDataLength() {
+    return maxDataLength;
   }
 }
