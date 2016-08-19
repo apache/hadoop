@@ -18,15 +18,16 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.hadoop.security.ssl.SslSelectChannelConnectorSecure;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.SslSocketConnector;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.jetty.webapp.WebAppContext;
 
 import java.io.File;
@@ -54,7 +55,7 @@ public class MiniKMS {
       if (!ssl) {
         server.getConnectors()[0].setHost(host);
       } else {
-        SslSocketConnector c = new SslSocketConnectorSecure();
+        SslSelectChannelConnector c = new SslSelectChannelConnectorSecure();
         c.setHost(host);
         c.setNeedClientAuth(false);
         c.setKeystore(keyStore);
@@ -71,7 +72,7 @@ public class MiniKMS {
 
   private static URL getJettyURL(Server server) {
     boolean ssl = server.getConnectors()[0].getClass()
-        == SslSocketConnectorSecure.class;
+        == SslSelectChannelConnectorSecure.class;
     try {
       String scheme = (ssl) ? "https" : "http";
       return new URL(scheme + "://" +
