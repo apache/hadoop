@@ -195,6 +195,10 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
   public static final int DEFAULT_SHUFFLE_PORT = 13562;
 
+  public static final String SHUFFLE_LISTEN_QUEUE_SIZE =
+      "mapreduce.shuffle.listen.queue.size";
+  public static final int DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE = 128;
+
   public static final String SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED =
       "mapreduce.shuffle.connection-keep-alive.enable";
   public static final boolean DEFAULT_SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED = false;
@@ -504,6 +508,8 @@ public class ShuffleHandler extends AuxiliaryService {
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+    bootstrap.setOption("backlog", conf.getInt(SHUFFLE_LISTEN_QUEUE_SIZE,
+        DEFAULT_SHUFFLE_LISTEN_QUEUE_SIZE));
     bootstrap.setOption("child.keepAlive", true);
     bootstrap.setPipelineFactory(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
