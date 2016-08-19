@@ -109,9 +109,11 @@ public abstract class FileContextMainOperationsBaseTest  {
   
   @After
   public void tearDown() throws Exception {
-    boolean del = fc.delete(new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test")), true);
-    assertTrue(del);
-    fc.delete(localFsRootPath, true);
+    if (fc != null) {
+      boolean del = fc.delete(new Path(fileContextTestHelper.getAbsoluteTestRootPath(fc), new Path("test")), true);
+      assertTrue(del);
+      fc.delete(localFsRootPath, true);
+    }
   }
   
   
