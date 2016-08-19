@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -45,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.User;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -56,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -91,6 +95,7 @@ import static org.mockito.Mockito.when;
 public class TestLeafQueue {  
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
+  private static final Log LOG = LogFactory.getLog(TestLeafQueue.class);
 
   RMContext rmContext;
   RMContext spyRMContext;
@@ -100,16 +105,29 @@ public class TestLeafQueue {
   CapacitySchedulerContext csContext;
   
   CSQueue root;
-  Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+  Map<String, CSQueue> queues;
   
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
 
-  private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
+  private final ResourceCalculator resourceCalculator =
+      new DefaultResourceCalculator();
   
+  private final ResourceCalculator dominantResourceCalculator =
+      new DominantResourceCalculator();
+
   @Before
   public void setUp() throws Exception {
+    setUpInternal(resourceCalculator);
+  }
+
+  private void setUpWithDominantResourceCalculator() throws Exception {
+    setUpInternal(dominantResourceCalculator);
+  }
+
+  private void setUpInternal(ResourceCalculator rC) throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
+    queues = new HashMap<String, CSQueue>();
     cs = spy(spyCs);
     rmContext = TestUtils.getMockRMContext();
     spyRMContext = spy(rmContext);
@@ -128,6 +146,8 @@ public class TestLeafQueue {
     csConf = 
         new CapacitySchedulerConfiguration();
     csConf.setBoolean("yarn.scheduler.capacity.user-metrics.enable", true);
+    csConf.setBoolean(
+        "yarn.scheduler.capacity.reservations-continue-look-all-nodes", false);
     final String newRoot = "root" + System.currentTimeMillis();
     setupQueueConfiguration(csConf, newRoot);
     YarnConfiguration conf = new YarnConfiguration();
@@ -146,6 +166,7 @@ public class TestLeafQueue {
         thenReturn(CapacityScheduler.nonPartitionedQueueComparator);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
+    when(csContext.getResourceCalculator()).thenReturn(rC);
     when(csContext.getRMContext()).thenReturn(rmContext);
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
@@ -172,7 +193,8 @@ public class TestLeafQueue {
         .thenReturn(new YarnConfiguration());
     when(cs.getNumClusterNodes()).thenReturn(3);
   }
-  
+
+
   private static final String A = "a";
   private static final String B = "b";
   private static final String C = "c";
@@ -601,14 +623,180 @@ public class TestLeafQueue {
     assertEquals((int)(a.getCapacity() * node_0.getTotalResource().getMemorySize()),
         a.getMetrics().getAvailableMB());
   }
-  
+  @Test
+  public void testDRFUsageRatioRounding() throws Exception {
+    CSAssignment assign;
+    setUpWithDominantResourceCalculator();
+    // Mock the queue
+    LeafQueue b = stubLeafQueue((LeafQueue) queues.get(E));
+
+    // Users
+    final String user0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app0 =
+        new FiCaSchedulerApp(appAttemptId0, user0, b,
+            b.getActiveUsersManager(), spyRMContext);
+    b.submitApplicationAttempt(app0, user0);
+
+    // Setup some nodes
+    String host0 = "127.0.0.1";
+    FiCaSchedulerNode node0 =
+        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 80 * GB, 100);
+
+    // Make cluster relatively large so usageRatios are small
+    int numNodes = 1000;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (80 * GB), numNodes * 100);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    // Set user-limit. Need a small queue within a large cluster.
+    b.setUserLimit(50);
+    b.setUserLimitFactor(1000000);
+    b.setMaxCapacity(1.0f);
+    b.setAbsoluteCapacity(0.00001f);
+
+    // First allocation is larger than second but is still vcore dominant
+    // so usage ratio will be based on vcores. If consumedRatio doesn't round
+    // in our favor then new limit calculation will actually be less than
+    // what is currently consumed and we will fail to allocate
+    Priority priority = TestUtils.createMockPriority(1);
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 20 * GB, 29, 1, true,
+            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+    assign = b.assignContainers(clusterResource, node0, new ResourceLimits(
+        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 10 * GB, 29, 2, true,
+            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+    assign = b.assignContainers(clusterResource, node0, new ResourceLimits(
+        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    assertTrue("Still within limits, should assign",
+        assign.getResource().getMemorySize() > 0);
+  }
+
+  @Test
+  public void testDRFUserLimits() throws Exception {
+    setUpWithDominantResourceCalculator();
+
+    // Mock the queue
+    LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
+    // unset maxCapacity
+    b.setMaxCapacity(1.0f);
+
+    // Users
+    final String user0 = "user_0";
+    final String user1 = "user_1";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app0 =
+        new FiCaSchedulerApp(appAttemptId0, user0, b,
+            b.getActiveUsersManager(), spyRMContext);
+    b.submitApplicationAttempt(app0, user0);
+
+    final ApplicationAttemptId appAttemptId2 =
+        TestUtils.getMockApplicationAttemptId(2, 0);
+    FiCaSchedulerApp app2 =
+        new FiCaSchedulerApp(appAttemptId2, user1, b,
+            b.getActiveUsersManager(), spyRMContext);
+    b.submitApplicationAttempt(app2, user1);
+
+    // Setup some nodes
+    String host0 = "127.0.0.1";
+    FiCaSchedulerNode node0 =
+        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 8 * GB, 100);
+    String host1 = "127.0.0.2";
+    FiCaSchedulerNode node1 =
+        TestUtils.getMockNode(host1, DEFAULT_RACK, 0, 8 * GB, 100);
+
+    int numNodes = 2;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (8 * GB), numNodes * 100);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    // Setup resource-requests so that one application is memory dominant
+    // and other application is vcores dominant
+    Priority priority = TestUtils.createMockPriority(1);
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 1 * GB, 40, 10, true,
+            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+
+    app2.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 2 * GB, 10, 10, true,
+            priority, recordFactory, RMNodeLabelsManager.NO_LABEL)));
+
+    /**
+     * Start testing...
+     */
+
+    // Set user-limit
+    b.setUserLimit(50);
+    b.setUserLimitFactor(2);
+    User queueUser0 = b.getUser(user0);
+    User queueUser1 = b.getUser(user1);
+
+    assertEquals("There should 2 active users!", 2, b
+        .getActiveUsersManager().getNumActiveUsers());
+    // Fill both Nodes as far as we can
+    CSAssignment assign;
+    do {
+      assign =
+          b.assignContainers(clusterResource, node0, new ResourceLimits(
+              clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+      LOG.info(assign.toString());
+    } while (assign.getResource().getMemorySize() > 0 &&
+        assign.getAssignmentInformation().getNumReservations() == 0);
+    do {
+      assign =
+          b.assignContainers(clusterResource, node1, new ResourceLimits(
+              clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    } while (assign.getResource().getMemorySize() > 0 &&
+        assign.getAssignmentInformation().getNumReservations() == 0);
+    //LOG.info("user_0: " + queueUser0.getUsed());
+    //LOG.info("user_1: " + queueUser1.getUsed());
+
+    assertTrue("Verify user_0 got resources ", queueUser0.getUsed()
+        .getMemorySize() > 0);
+    assertTrue("Verify user_1 got resources ", queueUser1.getUsed()
+        .getMemorySize() > 0);
+    assertTrue(
+        "Exepected AbsoluteUsedCapacity > 0.95, got: "
+            + b.getAbsoluteUsedCapacity(), b.getAbsoluteUsedCapacity() > 0.95);
+
+    // Verify consumedRatio is based on dominant resources
+    float expectedRatio =
+        queueUser0.getUsed().getVirtualCores()
+            / (numNodes * 100.0f)
+            + queueUser1.getUsed().getMemorySize()
+            / (numNodes * 8.0f * GB);
+    assertEquals(expectedRatio, b.getUsageRatio(""), 0.001);
+    // Add another node and make sure consumedRatio is adjusted
+    // accordingly.
+    numNodes = 3;
+    clusterResource =
+        Resources.createResource(numNodes * (8 * GB), numNodes * 100);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource, new ResourceLimits(
+        clusterResource));
+    expectedRatio =
+        queueUser0.getUsed().getVirtualCores()
+            / (numNodes * 100.0f)
+            + queueUser1.getUsed().getMemorySize()
+            / (numNodes * 8.0f * GB);
+    assertEquals(expectedRatio, b.getUsageRatio(""), 0.001);
+  }
+
   @Test
   public void testUserLimits() throws Exception {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     //unset maxCapacity
     a.setMaxCapacity(1.0f);
-    
+
     // Users
     final String user_0 = "user_0";
     final String user_1 = "user_1";
