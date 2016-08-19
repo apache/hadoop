@@ -29,6 +29,9 @@ Release 2.7.6 - UNRELEASED
 
     HDFS-13120. Snapshot diff could be corrupted after concat. (xyao)
 
+    HDFS-7959. WebHdfs logging is missing on Datanode (Kihwal Lee via sjlee)
+    Backport HDFS-13126 by Erik Krogen.
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
