@@ -774,7 +774,8 @@ public class LeafQueue extends AbstractCSQueue {
           application.getAMResource(partitionName));
       user.getResourceUsage().decAMUsed(partitionName,
           application.getAMResource(partitionName));
-      metrics.decAMUsed(application.getUser(), application.getAMResource());
+      metrics.decAMUsed(application.getUser(),
+          application.getAMResource(partitionName));
     }
     applicationAttemptMap.remove(application.getApplicationAttemptId());
 
