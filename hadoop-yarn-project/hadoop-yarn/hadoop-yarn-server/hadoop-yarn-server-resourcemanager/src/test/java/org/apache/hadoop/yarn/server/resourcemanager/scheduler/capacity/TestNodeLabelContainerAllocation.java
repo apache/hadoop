@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -1959,6 +1960,14 @@ public class TestNodeLabelContainerAllocation {
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
     assertEquals(0 * GB, leafQueue.getMetrics().getAvailableMB());
     assertEquals(5 * GB, leafQueue.getMetrics().getAllocatedMB());
+
+    // Kill all apps in queue a
+    cs.killAllAppsInQueue("a");
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForAppRemovedFromScheduler(app1.getApplicationId());
+
+    assertEquals(0 * GB, leafQueue.getMetrics().getUsedAMResourceMB());
+    assertEquals(0, leafQueue.getMetrics().getUsedAMResourceVCores());
     rm1.close();
   }
 
