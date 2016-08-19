@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 
 import javax.servlet.ServletContext;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -138,6 +139,16 @@ public class NameNodeHttpServer {
         httpAddr, httpsAddr, "hdfs",
         DFSConfigKeys.DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+
+    final boolean xFrameEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED,
+        DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED_DEFAULT);
+
+    final String xFrameOptionValue = conf.getTrimmed(
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE,
+        DFSConfigKeys.DFS_XFRAME_OPTION_VALUE_DEFAULT);
+
+    builder.configureXFrame(xFrameEnabled).setXFrameOption(xFrameOptionValue);
 
     httpServer = builder.build();
 
@@ -309,5 +320,14 @@ public class NameNodeHttpServer {
 
   public static HAServiceProtocol.HAServiceState getNameNodeStateFromContext(ServletContext context) {
     return getNameNodeFromContext(context).getServiceState();
+  }
+
+  /**
+   * Returns the httpServer.
+   * @return HttpServer2
+   */
+  @VisibleForTesting
+  public HttpServer2 getHttpServer() {
+    return httpServer;
   }
 }

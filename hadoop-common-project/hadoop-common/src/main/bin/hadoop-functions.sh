@@ -602,25 +602,25 @@ function hadoop_basic_init
   HADOOP_SSH_PARALLEL=${HADOOP_SSH_PARALLEL:-10}
 }
 
-## @description  Set the slave support information to the contents
+## @description  Set the worker support information to the contents
 ## @description  of `filename`
 ## @audience     public
 ## @stability    stable
 ## @replaceable  no
 ## @param        filename
 ## @return       will exit if file does not exist
-function hadoop_populate_slaves_file
+function hadoop_populate_workers_file
 {
-  local slavesfile=$1
+  local workersfile=$1
   shift
-  if [[ -f "${slavesfile}" ]]; then
+  if [[ -f "${workersfile}" ]]; then
     # shellcheck disable=2034
-    HADOOP_SLAVES="${slavesfile}"
-  elif [[ -f "${HADOOP_CONF_DIR}/${slavesfile}" ]]; then
+    HADOOP_WORKERS="${workersfile}"
+  elif [[ -f "${HADOOP_CONF_DIR}/${workersfile}" ]]; then
     # shellcheck disable=2034
-    HADOOP_SLAVES="${HADOOP_CONF_DIR}/${slavesfile}"
+    HADOOP_WORKERS="${HADOOP_CONF_DIR}/${workersfile}"
   else
-    hadoop_error "ERROR: Cannot find hosts file \"${slavesfile}\""
+    hadoop_error "ERROR: Cannot find hosts file \"${workersfile}\""
     hadoop_exit_with_usage 1
   fi
 }
@@ -669,14 +669,14 @@ function hadoop_actual_ssh
 {
   # we are passing this function to xargs
   # should get hostname followed by rest of command line
-  local slave=$1
+  local worker=$1
   shift
 
   # shellcheck disable=SC2086
-  ssh ${HADOOP_SSH_OPTS} ${slave} $"${@// /\\ }" 2>&1 | sed "s/^/$slave: /"
+  ssh ${HADOOP_SSH_OPTS} ${worker} $"${@// /\\ }" 2>&1 | sed "s/^/$worker: /"
 }
 
-## @description  Connect to ${HADOOP_SLAVES} or ${HADOOP_SLAVE_NAMES}
+## @description  Connect to ${HADOOP_WORKERS} or ${HADOOP_WORKER_NAMES}
 ## @description  and execute command.
 ## @audience     private
 ## @stability    evolving
@@ -687,45 +687,52 @@ function hadoop_connect_to_hosts
 {
   # shellcheck disable=SC2124
   local params="$@"
-  local slave_file
+  local worker_file
   local tmpslvnames
 
   #
   # ssh (or whatever) to a host
   #
   # User can specify hostnames or a file where the hostnames are (not both)
-  if [[ -n "${HADOOP_SLAVES}" && -n "${HADOOP_SLAVE_NAMES}" ]] ; then
-    hadoop_error "ERROR: Both HADOOP_SLAVES and HADOOP_SLAVE_NAME were defined. Aborting."
+  if [[ -n "${HADOOP_WORKERS}" && -n "${HADOOP_WORKER_NAMES}" ]] ; then
+    hadoop_error "ERROR: Both HADOOP_WORKERS and HADOOP_WORKER_NAME were defined. Aborting."
     exit 1
-  elif [[ -z "${HADOOP_SLAVE_NAMES}" ]]; then
-    slave_file=${HADOOP_SLAVES:-${HADOOP_CONF_DIR}/slaves}
+  elif [[ -z "${HADOOP_WORKER_NAMES}" ]]; then
+    if [[ -n "${HADOOP_WORKERS}" ]]; then
+      worker_file=${HADOOP_WORKERS}
+    elif [[ -f "${HADOOP_CONF_DIR}/workers" ]]; then
+      worker_file=${HADOOP_CONF_DIR}/workers
+    elif [[ -f "${HADOOP_CONF_DIR}/slaves" ]]; then
+      hadoop_error "WARNING: 'slaves' file has been deprecated. Please use 'workers' file instead."
+      worker_file=${HADOOP_CONF_DIR}/slaves
+    fi
   fi
 
   # if pdsh is available, let's use it.  otherwise default
   # to a loop around ssh.  (ugh)
   if [[ -e '/usr/bin/pdsh' ]]; then
-    if [[ -z "${HADOOP_SLAVE_NAMES}" ]] ; then
+    if [[ -z "${HADOOP_WORKER_NAMES}" ]] ; then
       # if we were given a file, just let pdsh deal with it.
       # shellcheck disable=SC2086
       PDSH_SSH_ARGS_APPEND="${HADOOP_SSH_OPTS}" pdsh \
-      -f "${HADOOP_SSH_PARALLEL}" -w ^"${slave_file}" $"${@// /\\ }" 2>&1
+      -f "${HADOOP_SSH_PARALLEL}" -w ^"${worker_file}" $"${@// /\\ }" 2>&1
     else
       # no spaces allowed in the pdsh arg host list
       # shellcheck disable=SC2086
-      tmpslvnames=$(echo ${SLAVE_NAMES} | tr -s ' ' ,)
+      tmpslvnames=$(echo ${HADOOP_WORKER_NAMES} | tr -s ' ' ,)
       PDSH_SSH_ARGS_APPEND="${HADOOP_SSH_OPTS}" pdsh \
         -f "${HADOOP_SSH_PARALLEL}" \
         -w "${tmpslvnames}" $"${@// /\\ }" 2>&1
     fi
   else
-    if [[ -z "${HADOOP_SLAVE_NAMES}" ]]; then
-      HADOOP_SLAVE_NAMES=$(sed 's/#.*$//;/^$/d' "${slave_file}")
+    if [[ -z "${HADOOP_WORKER_NAMES}" ]]; then
+      HADOOP_WORKER_NAMES=$(sed 's/#.*$//;/^$/d' "${worker_file}")
     fi
     hadoop_connect_to_hosts_without_pdsh "${params}"
   fi
 }
 
-## @description  Connect to ${SLAVE_NAMES} and execute command
+## @description  Connect to ${HADOOP_WORKER_NAMES} and execute command
 ## @description  under the environment which does not support pdsh.
 ## @audience     private
 ## @stability    evolving
@@ -736,24 +743,24 @@ function hadoop_connect_to_hosts_without_pdsh
 {
   # shellcheck disable=SC2124
   local params="$@"
-  local slaves=(${HADOOP_SLAVE_NAMES})
-  for (( i = 0; i < ${#slaves[@]}; i++ ))
+  local workers=(${HADOOP_WORKER_NAMES})
+  for (( i = 0; i < ${#workers[@]}; i++ ))
   do
     if (( i != 0 && i % HADOOP_SSH_PARALLEL == 0 )); then
       wait
     fi
     # shellcheck disable=SC2086
-    hadoop_actual_ssh "${slaves[$i]}" ${params} &
+    hadoop_actual_ssh "${workers[$i]}" ${params} &
   done
   wait
 }
 
-## @description  Utility routine to handle --slaves mode
+## @description  Utility routine to handle --workers mode
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  yes
 ## @param        commandarray
-function hadoop_common_slave_mode_execute
+function hadoop_common_worker_mode_execute
 {
   #
   # input should be the command line as given by the user
@@ -761,13 +768,13 @@ function hadoop_common_slave_mode_execute
   #
   local argv=("$@")
 
-  # if --slaves is still on the command line, remove it
+  # if --workers is still on the command line, remove it
   # to prevent loops
   # Also remove --hostnames and --hosts along with arg values
   local argsSize=${#argv[@]};
   for (( i = 0; i < argsSize; i++ ))
   do
-    if [[ "${argv[$i]}" =~ ^--slaves$ ]]; then
+    if [[ "${argv[$i]}" =~ ^--workers$ ]]; then
       unset argv[$i]
     elif [[ "${argv[$i]}" =~ ^--hostnames$ ]] ||
       [[ "${argv[$i]}" =~ ^--hosts$ ]]; then
@@ -2051,13 +2058,13 @@ function hadoop_parse_args
       --hostnames)
         shift
         # shellcheck disable=SC2034
-        HADOOP_SLAVE_NAMES="$1"
+        HADOOP_WORKER_NAMES="$1"
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
       ;;
       --hosts)
         shift
-        hadoop_populate_slaves_file "$1"
+        hadoop_populate_workers_file "$1"
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
       ;;
@@ -2068,10 +2075,10 @@ function hadoop_parse_args
         shift
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+2))
       ;;
-      --slaves)
+      --workers)
         shift
         # shellcheck disable=SC2034
-        HADOOP_SLAVE_MODE=true
+        HADOOP_WORKER_MODE=true
         ((HADOOP_PARSE_COUNTER=HADOOP_PARSE_COUNTER+1))
       ;;
       *)

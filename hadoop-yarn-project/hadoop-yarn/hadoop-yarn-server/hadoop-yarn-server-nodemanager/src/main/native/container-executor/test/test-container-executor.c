@@ -29,7 +29,19 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#define TEST_ROOT "/tmp/test-container-executor"
+#ifdef __APPLE__
+#include <CoreFoundation/CFString.h>
+#include <CoreFoundation/CFPreferences.h>
+
+#define TMPDIR "/private/tmp"
+#define RELTMPDIR "../.."
+#else
+#define RELTMPDIR ".."
+#define TMPDIR "/tmp"
+#endif
+
+#define TEST_ROOT TMPDIR "/test-container-executor"
+
 #define DONT_TOUCH_FILE "dont-touch-me"
 #define NM_LOCAL_DIRS       TEST_ROOT "/local-1%" TEST_ROOT "/local-2%" \
                TEST_ROOT "/local-3%" TEST_ROOT "/local-4%" TEST_ROOT "/local-5"
@@ -155,8 +167,8 @@ void check_pid_file(const char* pid_file, pid_t mypid) {
 }
 
 void test_get_user_directory() {
-  char *user_dir = get_user_directory("/tmp", "user");
-  char *expected = "/tmp/usercache/user";
+  char *user_dir = get_user_directory(TMPDIR, "user");
+  char *expected = TMPDIR "/usercache/user";
   if (strcmp(user_dir, expected) != 0) {
     printf("test_get_user_directory expected %s got %s\n", expected, user_dir);
     exit(1);
@@ -165,8 +177,8 @@ void test_get_user_directory() {
 }
 
 void test_get_app_directory() {
-  char *expected = "/tmp/usercache/user/appcache/app_200906101234_0001";
-  char *app_dir = (char *) get_app_directory("/tmp", "user",
+  char *expected = TMPDIR "/usercache/user/appcache/app_200906101234_0001";
+  char *app_dir = (char *) get_app_directory(TMPDIR, "user",
       "app_200906101234_0001");
   if (strcmp(app_dir, expected) != 0) {
     printf("test_get_app_directory expected %s got %s\n", expected, app_dir);
@@ -176,9 +188,9 @@ void test_get_app_directory() {
 }
 
 void test_get_container_directory() {
-  char *container_dir = get_container_work_directory("/tmp", "owen", "app_1",
+  char *container_dir = get_container_work_directory(TMPDIR, "owen", "app_1",
 						 "container_1");
-  char *expected = "/tmp/usercache/owen/appcache/app_1/container_1";
+  char *expected = TMPDIR"/usercache/owen/appcache/app_1/container_1";
   if (strcmp(container_dir, expected) != 0) {
     printf("Fail get_container_work_directory got %s expected %s\n",
 	   container_dir, expected);
@@ -188,9 +200,9 @@ void test_get_container_directory() {
 }
 
 void test_get_container_launcher_file() {
-  char *expected_file = ("/tmp/usercache/user/appcache/app_200906101234_0001"
+  char *expected_file = (TMPDIR"/usercache/user/appcache/app_200906101234_0001"
 			 "/launch_container.sh");
-  char *app_dir = get_app_directory("/tmp", "user",
+  char *app_dir = get_app_directory(TMPDIR, "user",
                                     "app_200906101234_0001");
   char *container_file =  get_container_launcher_file(app_dir);
   if (strcmp(container_file, expected_file) != 0) {
@@ -241,9 +253,9 @@ void test_resolve_config_path() {
            TEST_ROOT "\n");
     exit(1);
   }
-  if (strcmp(resolve_config_path(".." TEST_ROOT, TEST_ROOT), TEST_ROOT) != 0) {
+  if (strcmp(resolve_config_path(RELTMPDIR TEST_ROOT, TEST_ROOT), TEST_ROOT) != 0) {
     printf("FAIL: failed to resolve config_name on a relative path name: "
-           ".." TEST_ROOT " (relative to " TEST_ROOT ")");
+           RELTMPDIR TEST_ROOT " (relative to " TEST_ROOT ")");
     exit(1);
   }
 }
@@ -266,9 +278,9 @@ void test_delete_container() {
     exit(1);
   }
   char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_1");
-  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", yarn_username, 
+  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", yarn_username,
                                        DONT_TOUCH_FILE);
-  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2", 
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2",
 					      yarn_username, "app_1", "container_1");
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
@@ -328,9 +340,9 @@ void test_delete_container() {
 
 void test_delete_app() {
   char* app_dir = get_app_directory(TEST_ROOT "/local-2", yarn_username, "app_2");
-  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", yarn_username, 
+  char* dont_touch = get_app_directory(TEST_ROOT "/local-2", yarn_username,
                                        DONT_TOUCH_FILE);
-  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2", 
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-2",
 					      yarn_username, "app_2", "container_1");
   char buffer[100000];
   sprintf(buffer, "mkdir -p %s/who/let/the/dogs/out/who/who", container_dir);
@@ -488,7 +500,7 @@ void test_signal_container_group() {
     exit(0);
   }
   printf("Child container launched as %" PRId64 "\n", (int64_t)child);
-  // there's a race condition for child calling change_user and us 
+  // there's a race condition for child calling change_user and us
   // calling signal_container_as_user, hence sleeping
   sleep(3);
   if (signal_container_as_user(yarn_username, child, SIGKILL) != 0) {
@@ -504,7 +516,7 @@ void test_signal_container_group() {
     exit(1);
   }
   if (WTERMSIG(status) != SIGKILL) {
-    printf("FAIL: child was killed with %d instead of %d\n", 
+    printf("FAIL: child was killed with %d instead of %d\n",
 	   WTERMSIG(status), SIGKILL);
     exit(1);
   }
@@ -550,7 +562,7 @@ void test_init_app() {
   fflush(stderr);
   pid_t child = fork();
   if (child == -1) {
-    printf("FAIL: failed to fork process for init_app - %s\n", 
+    printf("FAIL: failed to fork process for init_app - %s\n",
 	   strerror(errno));
     exit(1);
   } else if (child == 0) {
@@ -632,7 +644,7 @@ void test_run_container() {
     printf("FAIL: failed to seteuid back to user - %s\n", strerror(errno));
     exit(1);
   }
-  if (fprintf(script, "#!/bin/bash\n"
+  if (fprintf(script, "#!/usr/bin/env bash\n"
                      "touch foobar\n"
                      "exit 0") < 0) {
     printf("FAIL: fprintf failed - %s\n", strerror(errno));
@@ -644,17 +656,17 @@ void test_run_container() {
   }
   fflush(stdout);
   fflush(stderr);
-  char* container_dir = get_container_work_directory(TEST_ROOT "/local-1", 
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-1",
 					      yarn_username, "app_4", "container_1");
   const char * pid_file = TEST_ROOT "/pid.txt";
 
   pid_t child = fork();
   if (child == -1) {
-    printf("FAIL: failed to fork process for init_app - %s\n", 
+    printf("FAIL: failed to fork process for init_app - %s\n",
 	   strerror(errno));
     exit(1);
   } else if (child == 0) {
-    if (launch_container_as_user(yarn_username, "app_4", "container_1", 
+    if (launch_container_as_user(yarn_username, "app_4", "container_1",
           container_dir, script_name, TEST_ROOT "/creds.txt", pid_file,
           local_dirs, log_dirs,
           "cgroups", cgroups_pids) != 0) {
@@ -796,13 +808,51 @@ void test_recursive_unlink_children() {
   }
 }
 
+/**
+ * This test is used to verify that app and container directories can be
+ * created with required permissions when umask has been set to a restrictive
+ * value of 077.
+ */
+void test_dir_permissions() {
+  printf("\nTesting dir permissions\n");
+
+  // Set umask to 077
+  umask(077);
+
+  // Change user to the yarn user. This only takes effect when we're
+  // running as root.
+  if (seteuid(user_detail->pw_uid) != 0) {
+    printf("FAIL: failed to seteuid to user - %s\n", strerror(errno));
+    exit(1);
+  }
+
+  // Create container directories for "app_5"
+  char* container_dir = get_container_work_directory(TEST_ROOT "/local-1",
+                                     yarn_username, "app_5", "container_1");
+  create_log_dirs("app_5", log_dirs);
+  create_container_directories(yarn_username, "app_5", "container_1",
+                               local_dirs, log_dirs, container_dir);
+
+  // Verify directories have been created with required permissions
+  mode_t container_dir_perm = S_IRWXU | S_IRGRP | S_IXGRP;
+  struct stat sb;
+  if (stat(container_dir, &sb) != 0 ||
+      check_dir(container_dir, sb.st_mode, container_dir_perm, 1) != 0) {
+    printf("FAIL: failed to create container directory %s "
+           "with required permissions\n", container_dir);
+    exit(1);
+  }
+
+  free(container_dir);
+}
+
 // This test is expected to be executed either by a regular
 // user or by root. If executed by a regular user it doesn't
 // test all the functions that would depend on changing the
 // effective user id. If executed by a super-user everything
 // gets tested. Here are different ways of execing the test binary:
 // 1. regular user assuming user == yarn user
-//    $ test-container-executor     
+//    $ test-container-executor
 // 2. regular user with a given yarn user
 //    $ test-container-executor yarn_user
 // 3. super user with a given user and assuming user == yarn user
@@ -810,14 +860,16 @@ void test_recursive_unlink_children() {
 // 4. super user with a given user and a given yarn user
 //    # test-container-executor user yarn_user
 int main(int argc, char **argv) {
+  int ret;
   LOGFILE = stdout;
   ERRORFILE = stderr;
 
+  printf("Attempting to clean up from any previous runs\n");
   // clean up any junk from previous run
   if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
     exit(1);
   }
-  
+
   if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
     exit(1);
   }
@@ -825,6 +877,9 @@ int main(int argc, char **argv) {
   if (write_config_file(TEST_ROOT "/test.cfg", 1) != 0) {
     exit(1);
   }
+
+  printf("\nOur executable is %s\n",get_executable(argv[0]));
+
   read_executor_config(TEST_ROOT "/test.cfg");
 
   local_dirs = extract_values(strdup(NM_LOCAL_DIRS));
@@ -881,9 +936,35 @@ int main(int argc, char **argv) {
 
   test_check_user(0);
 
+#ifdef __APPLE__
+   printf("OS X: disabling CrashReporter\n");
+  /*
+   * disable the "unexpectedly quit" dialog box
+   * because we know we're going to make our container
+   * do exactly that.
+   */
+  CFStringRef crashType      = CFSTR("DialogType");
+  CFStringRef crashModeNone  = CFSTR("None");
+  CFStringRef crashAppID     = CFSTR("com.apple.CrashReporter");
+  CFStringRef crashOldMode   = CFPreferencesCopyAppValue(CFSTR("DialogType"), CFSTR("com.apple.CrashReporter"));
+
+  CFPreferencesSetAppValue(crashType, crashModeNone, crashAppID);
+  CFPreferencesAppSynchronize(crashAppID);
+#endif
+
   // the tests that change user need to be run in a subshell, so that
   // when they change user they don't give up our privs
   run_test_in_child("test_signal_container_group", test_signal_container_group);
+
+#ifdef __APPLE__
+  /*
+   * put the "unexpectedly quit" dialog back
+   */
+
+  CFPreferencesSetAppValue(crashType, crashOldMode, crashAppID);
+  CFPreferencesAppSynchronize(crashAppID);
+  printf("OS X: CrashReporter re-enabled\n");
+#endif
 
   // init app and run container can't be run if you aren't testing as root
   if (getuid() == 0) {
@@ -893,7 +974,17 @@ int main(int argc, char **argv) {
     test_run_container();
   }
 
-  seteuid(0);
+  // This test needs to be run in a subshell, so that when it changes umask
+  // and user, it doesn't give up our privs.
+  run_test_in_child("test_dir_permissions", test_dir_permissions);
+
+  /*
+   * try to seteuid(0).  if it doesn't work, carry on anyway.
+   * we're going to capture the return value to get rid of a 
+   * compiler warning.
+   */
+  ret=seteuid(0);
+  ret++;
   // test_delete_user must run as root since that's how we use the delete_as_user
   test_delete_user();
   free_executor_configurations();
@@ -904,11 +995,19 @@ int main(int argc, char **argv) {
   }
 
   read_executor_config(TEST_ROOT "/test.cfg");
+#ifdef __APPLE__
+  username = "_uucp";
+  test_check_user(1);
+
+  username = "_networkd";
+  test_check_user(1);
+#else
   username = "bin";
   test_check_user(1);
 
   username = "sys";
   test_check_user(1);
+#endif
 
   run("rm -fr " TEST_ROOT);
   printf("\nFinished tests\n");

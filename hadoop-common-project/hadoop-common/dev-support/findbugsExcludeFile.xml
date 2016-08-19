@@ -47,6 +47,19 @@
        <Field name="out" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+    <!--
+       The nativeCoder field is get/set and used by native codes.
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.io.erasurecode.rawcoder.AbstractNativeRawEncoder" />
+        <Field name="nativeCoder" />
+        <Bug pattern="UUF_UNUSED_FIELD" />
+    </Match>
+    <Match>
+        <Class name="org.apache.hadoop.io.erasurecode.rawcoder.AbstractNativeRawDecoder" />
+        <Field name="nativeCoder" />
+        <Bug pattern="UUF_UNUSED_FIELD" />
+    </Match>
      <!-- 
        Further SaslException should be ignored during cleanup and
        original exception should be re-thrown.

@@ -519,11 +519,11 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       }
     );
     metrics.register("variable.cluster.allocated.vcores",
-      new Gauge<Long>() {
+      new Gauge<Integer>() {
         @Override
-        public Long getValue() {
+        public Integer getValue() {
           if(getRootQueueMetrics() == null) {
-            return 0L;
+            return 0;
           } else {
             return getRootQueueMetrics().getAllocatedVirtualCores();
           }
@@ -543,11 +543,11 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       }
     );
     metrics.register("variable.cluster.available.vcores",
-      new Gauge<Long>() {
+      new Gauge<Integer>() {
         @Override
-        public Long getValue() {
+        public Integer getValue() {
           if(getRootQueueMetrics() == null) {
-            return 0l;
+            return 0;
           } else {
             return getRootQueueMetrics().getAvailableVirtualCores();
           }

@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Test;
 
-public class TestFileSystemOperationsExceptionHandlingMultiThreaded extends
-  NativeAzureFileSystemBaseTest {
+public class TestFileSystemOperationsExceptionHandlingMultiThreaded
+    extends AbstractWasbTestBase {
 
   FSDataInputStream inputStream = null;
 

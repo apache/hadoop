@@ -80,7 +80,7 @@ class BackupJournalManager implements JournalManager {
 
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxnId, boolean inProgressOk) {
+      long fromTxnId, boolean inProgressOk, boolean onlyDurableTxns) {
     // This JournalManager is never used for input. Therefore it cannot
     // return any transactions
   }

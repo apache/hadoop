@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import com.google.common.base.Joiner;
+import java.util.Collections;
+import java.util.Set;
 
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
-import java.util.Collections;
+import com.google.common.base.Joiner;
 
 /**
  * Event to record Failed and Killed completion of jobs
@@ -118,5 +122,24 @@ public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
   public String getDiagnostics() {
     final CharSequence diagnostics = datum.getDiagnostics();
     return diagnostics == null ? NODIAGS : diagnostics.toString();
+  }
+
+  @Override
+  public TimelineEvent toTimelineEvent() {
+    TimelineEvent tEvent = new TimelineEvent();
+    tEvent.setId(StringUtils.toUpperCase(getEventType().name()));
+    tEvent.addInfo("FINISH_TIME", getFinishTime());
+    tEvent.addInfo("NUM_MAPS", getFinishedMaps());
+    tEvent.addInfo("NUM_REDUCES", getFinishedReduces());
+    tEvent.addInfo("JOB_STATUS", getStatus());
+    tEvent.addInfo("DIAGNOSTICS", getDiagnostics());
+    tEvent.addInfo("FINISHED_MAPS", getFinishedMaps());
+    tEvent.addInfo("FINISHED_REDUCES", getFinishedReduces());
+    return tEvent;
+  }
+
+  @Override
+  public Set<TimelineMetric> getTimelineMetrics() {
+    return null;
   }
 }

@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.security;
 
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -49,6 +51,7 @@ public class TestPermission {
   final private static Path ROOT_PATH = new Path("/data");
   final private static Path CHILD_DIR1 = new Path(ROOT_PATH, "child1");
   final private static Path CHILD_DIR2 = new Path(ROOT_PATH, "child2");
+  final private static Path CHILD_DIR3 = new Path(ROOT_PATH, "child3");
   final private static Path CHILD_FILE1 = new Path(ROOT_PATH, "file1");
   final private static Path CHILD_FILE2 = new Path(ROOT_PATH, "file2");
   final private static Path CHILD_FILE3 = new Path(ROOT_PATH, "file3");
@@ -216,6 +219,9 @@ public class TestPermission {
       
       // following dir/file creations are legal
       nnfs.mkdirs(CHILD_DIR1);
+      status = nnfs.getFileStatus(CHILD_DIR1);
+      assertThat("Expect 755 = 777 (default dir) - 022 (default umask)",
+          status.getPermission().toString(), is("rwxr-xr-x"));
       out = nnfs.create(CHILD_FILE1);
       status = nnfs.getFileStatus(CHILD_FILE1);
       assertTrue(status.getPermission().toString().equals("rw-r--r--"));
@@ -226,6 +232,12 @@ public class TestPermission {
       nnfs.setPermission(CHILD_FILE1, new FsPermission("700"));
       status = nnfs.getFileStatus(CHILD_FILE1);
       assertTrue(status.getPermission().toString().equals("rwx------"));
+
+      // mkdirs with null permission
+      nnfs.mkdirs(CHILD_DIR3, null);
+      status = nnfs.getFileStatus(CHILD_DIR3);
+      assertThat("Expect 755 = 777 (default dir) - 022 (default umask)",
+          status.getPermission().toString(), is("rwxr-xr-x"));
 
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];

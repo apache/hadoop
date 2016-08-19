@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -284,11 +285,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user) throws YarnException, AccessControlException {
+      String user) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
-    RMAppImpl application =
-        createAndPopulateNewRMApp(submissionContext, submitTime, user, false);
+    // Passing start time as -1. It will be eventually set in RMAppImpl
+    // constructor.
+    RMAppImpl application = createAndPopulateNewRMApp(
+        submissionContext, submitTime, user, false, -1);
     Credentials credentials = null;
     try {
       credentials = parseCredentials(submissionContext);
@@ -326,15 +329,14 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true);
+            appState.getUser(), true, appState.getStartTime());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery)
-      throws YarnException, AccessControlException {
+      String user, boolean isRecovery, long startTime) throws YarnException {
     // Do queue mapping
     if (!isRecovery) {
       if (rmContext.getQueuePlacementManager() != null) {
@@ -370,24 +372,27 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           && !authorizer.checkPermission(
               new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
                   SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
-                  applicationId.toString(), appName))
+                  applicationId.toString(), appName, Server.getRemoteAddress(),
+                  null))
           && !authorizer.checkPermission(
               new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
                   SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
-                  applicationId.toString(), appName))) {
-        throw new AccessControlException(
+                  applicationId.toString(), appName, Server.getRemoteAddress(),
+                  null))) {
+        throw RPCUtil.getRemoteException(new AccessControlException(
             "User " + user + " does not have permission to submit "
-                + applicationId + " to queue " + submissionContext.getQueue());
+                + applicationId + " to queue " + submissionContext.getQueue()));
       }
     }
 
     // Create RMApp
-    RMAppImpl application = new RMAppImpl(applicationId, rmContext, this.conf,
-        submissionContext.getApplicationName(), user,
-        submissionContext.getQueue(), submissionContext, this.scheduler,
-        this.masterService, submitTime, submissionContext.getApplicationType(),
-        submissionContext.getApplicationTags(), amReq);
-
+    RMAppImpl application =
+        new RMAppImpl(applicationId, rmContext, this.conf,
+            submissionContext.getApplicationName(), user,
+            submissionContext.getQueue(),
+            submissionContext, this.scheduler, this.masterService,
+            submitTime, submissionContext.getApplicationType(),
+            submissionContext.getApplicationTags(), amReq, startTime);
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not
     // influence each other
@@ -397,6 +402,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           + " is already present! Cannot add a duplicate!";
       LOG.warn(message);
       throw new YarnException(message);
+    }
+
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      // Start timeline collector for the submitted app
+      application.startTimelineCollector();
     }
     // Inform the ACLs Manager
     this.applicationACLsManager.addApplication(applicationId,

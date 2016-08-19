@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -47,10 +47,9 @@ import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -63,6 +62,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
@@ -96,7 +96,8 @@ public class TestContainerLogsPage {
     healthChecker.init(conf);
     LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
     NMContext nmContext = new NodeManager.NMContext(null, null, dirsHandler,
-        new ApplicationACLsManager(conf), new NMNullStateStoreService(), false);
+        new ApplicationACLsManager(conf), new NMNullStateStoreService(), false,
+            conf);
     // Add an application and the corresponding containers
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     String user = "nobody";
@@ -136,7 +137,8 @@ public class TestContainerLogsPage {
     when(dirsHandlerForFullDisk.getLogDirsForRead()).
         thenReturn(Arrays.asList(new String[] {absLogDir.getAbsolutePath()}));
     nmContext = new NodeManager.NMContext(null, null, dirsHandlerForFullDisk,
-        new ApplicationACLsManager(conf), new NMNullStateStoreService(), false);
+        new ApplicationACLsManager(conf), new NMNullStateStoreService(), false,
+        conf);
     nmContext.getApplications().put(appId, app);
     container.setState(ContainerState.RUNNING);
     nmContext.getContainers().put(container1, container);
@@ -158,7 +160,8 @@ public class TestContainerLogsPage {
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
     NMContext nmContext = new NodeManager.NMContext(null, null, dirsHandler,
-        new ApplicationACLsManager(conf), new NMNullStateStoreService(), false);
+        new ApplicationACLsManager(conf), new NMNullStateStoreService(), false,
+        conf);
     // Add an application and the corresponding containers
     String user = "nobody";
     long clusterTimeStamp = 1234;

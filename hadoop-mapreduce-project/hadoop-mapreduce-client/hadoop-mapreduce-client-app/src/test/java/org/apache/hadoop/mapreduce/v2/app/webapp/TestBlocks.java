@@ -23,6 +23,9 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
+import org.apache.hadoop.yarn.webapp.View;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -64,6 +67,9 @@ public class TestBlocks {
     Path path = new Path("conf");
     Configuration configuration = new Configuration();
     configuration.set("Key for test", "Value for test");
+    final String redactedProp = "Key for redaction";
+    configuration.set(MRJobConfig.MR_JOB_REDACTED_PROPERTIES,
+        redactedProp);
     when(job.getConfFile()).thenReturn(path);
     when(job.loadConfFile()).thenReturn(configuration);
 
@@ -84,9 +90,10 @@ public class TestBlocks {
     configurationBlock.render(html);
     pWriter.flush();
     assertTrue(data.toString().contains("Key for test"));
-
     assertTrue(data.toString().contains("Value for test"));
-
+    assertTrue(data.toString().contains(redactedProp));
+    assertTrue(data.toString().contains(
+        MRJobConfUtil.REDACTION_REPLACEMENT_VAL));
   }
 
   /**
@@ -206,6 +213,68 @@ public class TestBlocks {
         +"attempt_0_0001_r_000000_0</a>"));
   }
 
+  @Test
+  public void testSingleCounterBlock() {
+    AppContext appCtx = mock(AppContext.class);
+    View.ViewContext ctx = mock(View.ViewContext.class);
+    JobId jobId = new JobIdPBImpl();
+    jobId.setId(0);
+    jobId.setAppId(ApplicationIdPBImpl.newInstance(0, 1));
+
+    TaskId mapTaskId = new TaskIdPBImpl();
+    mapTaskId.setId(0);
+    mapTaskId.setTaskType(TaskType.MAP);
+    mapTaskId.setJobId(jobId);
+    Task mapTask = mock(Task.class);
+    when(mapTask.getID()).thenReturn(mapTaskId);
+    TaskReport mapReport = mock(TaskReport.class);
+    when(mapTask.getReport()).thenReturn(mapReport);
+    when(mapTask.getType()).thenReturn(TaskType.MAP);
+
+    TaskId reduceTaskId = new TaskIdPBImpl();
+    reduceTaskId.setId(0);
+    reduceTaskId.setTaskType(TaskType.REDUCE);
+    reduceTaskId.setJobId(jobId);
+    Task reduceTask = mock(Task.class);
+    when(reduceTask.getID()).thenReturn(reduceTaskId);
+    TaskReport reduceReport = mock(TaskReport.class);
+    when(reduceTask.getReport()).thenReturn(reduceReport);
+    when(reduceTask.getType()).thenReturn(TaskType.REDUCE);
+
+    Map<TaskId, Task> tasks =
+            new HashMap<TaskId, Task>();
+    tasks.put(mapTaskId, mapTask);
+    tasks.put(reduceTaskId, reduceTask);
+
+    Job job = mock(Job.class);
+    when(job.getTasks()).thenReturn(tasks);
+    when(appCtx.getJob(any(JobId.class))).thenReturn(job);
+
+    // SingleCounter for map task
+    SingleCounterBlockForMapTest blockForMapTest
+            = spy(new SingleCounterBlockForMapTest(appCtx, ctx));
+    PrintWriter pWriterForMapTest = new PrintWriter(data);
+    Block htmlForMapTest = new BlockForTest(new HtmlBlockForTest(),
+            pWriterForMapTest, 0, false);
+    blockForMapTest.render(htmlForMapTest);
+    pWriterForMapTest.flush();
+    assertTrue(data.toString().contains("task_0_0001_m_000000"));
+    assertFalse(data.toString().contains("task_0_0001_r_000000"));
+
+    data.reset();
+    // SingleCounter for reduce task
+    SingleCounterBlockForReduceTest blockForReduceTest
+            = spy(new SingleCounterBlockForReduceTest(appCtx, ctx));
+    PrintWriter pWriterForReduceTest = new PrintWriter(data);
+    Block htmlForReduceTest = new BlockForTest(new HtmlBlockForTest(),
+            pWriterForReduceTest, 0, false);
+    blockForReduceTest.render(htmlForReduceTest);
+    pWriterForReduceTest.flush();
+    System.out.println(data.toString());
+    assertFalse(data.toString().contains("task_0_0001_m_000000"));
+    assertTrue(data.toString().contains("task_0_0001_r_000000"));
+  }
+
   private class ConfBlockForTest extends ConfBlock {
     private final Map<String, String> params = new HashMap<String, String>();
 
@@ -247,6 +316,62 @@ public class TestBlocks {
 
     public AttemptsBlockForTest(App ctx, Configuration conf) {
       super(ctx, conf);
+    }
+
+    @Override
+    public String url(String... parts) {
+      String result = "url://";
+      for (String string : parts) {
+        result += string + ":";
+      }
+      return result;
+    }
+  }
+
+  private class SingleCounterBlockForMapTest extends SingleCounterBlock {
+
+    public SingleCounterBlockForMapTest(AppContext appCtx, ViewContext ctx) {
+      super(appCtx, ctx);
+    }
+
+    public String $(String key, String defaultValue) {
+      if (key.equals(TITLE)) {
+        return "org.apache.hadoop.mapreduce.JobCounter DATA_LOCAL_MAPS for " +
+                "job_12345_0001";
+      } else if (key.equals(AMParams.JOB_ID)) {
+        return "job_12345_0001";
+      } else if (key.equals(AMParams.TASK_ID)) {
+        return "";
+      }
+      return "";
+    }
+
+    @Override
+    public String url(String... parts) {
+      String result = "url://";
+      for (String string : parts) {
+        result += string + ":";
+      }
+      return result;
+    }
+  }
+
+  private class SingleCounterBlockForReduceTest extends SingleCounterBlock {
+
+    public SingleCounterBlockForReduceTest(AppContext appCtx, ViewContext ctx) {
+      super(appCtx, ctx);
+    }
+
+    public String $(String key, String defaultValue) {
+      if (key.equals(TITLE)) {
+        return "org.apache.hadoop.mapreduce.JobCounter DATA_LOCAL_REDUCES " +
+            "for job_12345_0001";
+      } else if (key.equals(AMParams.JOB_ID)) {
+        return "job_12345_0001";
+      } else if (key.equals(AMParams.TASK_ID)) {
+        return "";
+      }
+      return "";
     }
 
     @Override

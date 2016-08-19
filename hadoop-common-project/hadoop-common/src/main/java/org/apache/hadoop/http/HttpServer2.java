@@ -56,7 +56,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
-import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
+import org.apache.hadoop.security.ssl.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.security.SecurityUtil;
@@ -77,7 +77,7 @@ import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.handler.HandlerCollection;
 import org.mortbay.jetty.handler.RequestLogHandler;
 import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSocketConnector;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.jetty.servlet.AbstractSessionManager;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -136,6 +136,11 @@ public final class HttpServer2 implements FilterContainer {
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
   private final SignerSecretProvider secretProvider;
+  private XFrameOption xFrameOption;
+  private boolean xFrameOptionIsEnabled;
+  private static final String X_FRAME_VALUE = "xFrameOption";
+  private static final String X_FRAME_ENABLED = "X_FRAME_ENABLED";
+
 
   /**
    * Class to construct instances of HTTP server with specific options.
@@ -167,6 +172,9 @@ public final class HttpServer2 implements FilterContainer {
     private boolean disallowFallbackToRandomSignerSecretProvider;
     private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
     private String excludeCiphers;
+
+    private boolean xFrameEnabled;
+    private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
 
     public Builder setName(String name){
       this.name = name;
@@ -276,6 +284,30 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    /**
+     * Adds the ability to control X_FRAME_OPTIONS on HttpServer2.
+     * @param xFrameEnabled - True enables X_FRAME_OPTIONS false disables it.
+     * @return Builder.
+     */
+    public Builder configureXFrame(boolean xFrameEnabled) {
+      this.xFrameEnabled = xFrameEnabled;
+      return this;
+    }
+
+    /**
+     * Sets a valid X-Frame-option that can be used by HttpServer2.
+     * @param option - String DENY, SAMEORIGIN or ALLOW-FROM are the only valid
+     *               options. Any other value will throw IllegalArgument
+     *               Exception.
+     * @return  Builder.
+     */
+    public Builder setXFrameOption(String option) {
+      this.xFrameOption = XFrameOption.getEnum(option);
+      return this;
+    }
+
+
+
     public HttpServer2 build() throws IOException {
       Preconditions.checkNotNull(name, "name is not set");
       Preconditions.checkState(!endpoints.isEmpty(), "No endpoints specified");
@@ -300,29 +332,7 @@ public final class HttpServer2 implements FilterContainer {
         if ("http".equals(scheme)) {
           listener = HttpServer2.createDefaultChannelConnector();
         } else if ("https".equals(scheme)) {
-          SslSocketConnector c = new SslSocketConnectorSecure();
-          c.setHeaderBufferSize(1024*64);
-          c.setNeedClientAuth(needsClientAuth);
-          c.setKeyPassword(keyPassword);
-
-          if (keyStore != null) {
-            c.setKeystore(keyStore);
-            c.setKeystoreType(keyStoreType);
-            c.setPassword(keyStorePassword);
-          }
-
-          if (trustStore != null) {
-            c.setTruststore(trustStore);
-            c.setTruststoreType(trustStoreType);
-            c.setTrustPassword(trustStorePassword);
-          }
-
-          if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
-            c.setExcludeCipherSuites(excludeCiphers.split(","));
-            LOG.info("Excluded Cipher List:" + excludeCiphers);
-          }
-
-          listener = c;
+          listener = createHttpsChannelConnector();
 
         } else {
           throw new HadoopIllegalArgumentException(
@@ -335,6 +345,32 @@ public final class HttpServer2 implements FilterContainer {
       server.loadListeners();
       return server;
     }
+
+    private Connector createHttpsChannelConnector() {
+      SslSelectChannelConnector c = new SslSelectChannelConnectorSecure();
+      configureChannelConnector(c);
+
+      c.setNeedClientAuth(needsClientAuth);
+      c.setKeyPassword(keyPassword);
+
+      if (keyStore != null) {
+        c.setKeystore(keyStore);
+        c.setKeystoreType(keyStoreType);
+        c.setPassword(keyStorePassword);
+      }
+
+      if (trustStore != null) {
+        c.setTruststore(trustStore);
+        c.setTruststoreType(trustStoreType);
+        c.setTrustPassword(trustStorePassword);
+      }
+
+      if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
+        c.setExcludeCipherSuites(excludeCiphers.split(","));
+        LOG.info("Excluded Cipher List:" + excludeCiphers);
+      }
+      return c;
+    }
   }
 
   private HttpServer2(final Builder b) throws IOException {
@@ -342,6 +378,9 @@ public final class HttpServer2 implements FilterContainer {
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
+    this.xFrameOptionIsEnabled = b.xFrameEnabled;
+    this.xFrameOption = b.xFrameOption;
+
     try {
       this.secretProvider =
           constructSecretProvider(b, webAppContext.getServletContext());
@@ -398,7 +437,11 @@ public final class HttpServer2 implements FilterContainer {
 
     addDefaultApps(contexts, appDir, conf);
 
-    addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
+    Map<String, String> xFrameParams = new HashMap<>();
+    xFrameParams.put(X_FRAME_ENABLED,
+        String.valueOf(this.xFrameOptionIsEnabled));
+    xFrameParams.put(X_FRAME_VALUE,  this.xFrameOption.toString());
+    addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);
     final FilterInitializer[] initializers = getFilterInitializers(conf);
     if (initializers != null) {
       conf = new Configuration(conf);
@@ -469,21 +512,25 @@ public final class HttpServer2 implements FilterContainer {
                  Collections.<String, String> emptyMap(), new String[] { "/*" });
   }
 
-  @InterfaceAudience.Private
-  public static Connector createDefaultChannelConnector() {
-    SelectChannelConnector ret = new SelectChannelConnector();
-    ret.setLowResourceMaxIdleTime(10000);
-    ret.setAcceptQueueSize(128);
-    ret.setResolveNames(false);
-    ret.setUseDirectBuffers(false);
+  private static void configureChannelConnector(SelectChannelConnector c) {
+    c.setLowResourceMaxIdleTime(10000);
+    c.setAcceptQueueSize(128);
+    c.setResolveNames(false);
+    c.setUseDirectBuffers(false);
     if(Shell.WINDOWS) {
       // result of setting the SO_REUSEADDR flag is different on Windows
       // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
       // without this 2 NN's can start on the same machine and listen on
       // the same port with indeterminate routing of incoming requests to them
-      ret.setReuseAddress(false);
+      c.setReuseAddress(false);
     }
-    ret.setHeaderBufferSize(1024*64);
+    c.setHeaderBufferSize(1024*64);
+  }
+
+  @InterfaceAudience.Private
+  public static Connector createDefaultChannelConnector() {
+    SelectChannelConnector ret = new SelectChannelConnector();
+    configureChannelConnector(ret);
     return ret;
   }
 
@@ -1119,7 +1166,7 @@ public final class HttpServer2 implements FilterContainer {
    * sets X-FRAME-OPTIONS in the header to mitigate clickjacking attacks.
    */
   public static class QuotingInputFilter implements Filter {
-    private static final XFrameOption X_FRAME_OPTION = XFrameOption.SAMEORIGIN;
+
     private FilterConfig config;
 
     public static class RequestQuoter extends HttpServletRequestWrapper {
@@ -1239,7 +1286,11 @@ public final class HttpServer2 implements FilterContainer {
       } else if (mime.startsWith("application/xml")) {
         httpResponse.setContentType("text/xml; charset=utf-8");
       }
-      httpResponse.addHeader("X-FRAME-OPTIONS", X_FRAME_OPTION.toString());
+
+      if(Boolean.valueOf(this.config.getInitParameter(X_FRAME_ENABLED))) {
+        httpResponse.addHeader("X-FRAME-OPTIONS",
+            this.config.getInitParameter(X_FRAME_VALUE));
+      }
       chain.doFilter(quoted, httpResponse);
     }
 
@@ -1273,6 +1324,24 @@ public final class HttpServer2 implements FilterContainer {
     @Override
     public String toString() {
       return this.name;
+    }
+
+    /**
+     * We cannot use valueOf since the AllowFrom enum differs from its value
+     * Allow-From. This is a helper method that does exactly what valueof does,
+     * but allows us to handle the AllowFrom issue gracefully.
+     *
+     * @param value - String must be DENY, SAMEORIGIN or ALLOW-FROM.
+     * @return XFrameOption or throws IllegalException.
+     */
+    private static XFrameOption getEnum(String value) {
+      Preconditions.checkState(value != null && !value.isEmpty());
+      for (XFrameOption xoption : values()) {
+        if (value.equals(xoption.toString())) {
+          return xoption;
+        }
+      }
+      throw new IllegalArgumentException("Unexpected value in xFrameOption.");
     }
   }
 }

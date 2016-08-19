@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -66,6 +67,8 @@ extends AMRMClientAsync<T> {
   private volatile boolean keepRunning;
   private volatile float progress;
   
+  private volatile String collectorAddr;
+
   private volatile Throwable savedException;
 
   /**
@@ -324,6 +327,19 @@ extends AMRMClientAsync<T> {
             LOG.info("Interrupted while waiting for queue", ex);
             continue;
           }
+
+          String collectorAddress = response.getCollectorAddr();
+          TimelineClient timelineClient = client.getRegisteredTimelineClient();
+          if (timelineClient != null && collectorAddress != null
+              && !collectorAddress.isEmpty()) {
+            if (collectorAddr == null
+                || !collectorAddr.equals(collectorAddress)) {
+              collectorAddr = collectorAddress;
+              timelineClient.setTimelineServiceAddress(collectorAddress);
+              LOG.info("collectorAddress " + collectorAddress);
+            }
+          }
+
           List<NodeReport> updatedNodes = response.getUpdatedNodes();
           if (!updatedNodes.isEmpty()) {
             handler.onNodesUpdated(updatedNodes);
@@ -351,7 +367,6 @@ extends AMRMClientAsync<T> {
           if (!allocated.isEmpty()) {
             handler.onContainersAllocated(allocated);
           }
-
           progress = handler.getProgress();
         } catch (Throwable ex) {
           handler.onError(ex);

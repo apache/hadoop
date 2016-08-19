@@ -38,8 +38,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -103,7 +103,7 @@ public class UserGroupInformation {
    * @param immediate true if we should login without waiting for ticket window
    */
   @VisibleForTesting
-  static void setShouldRenewImmediatelyForTests(boolean immediate) {
+  public static void setShouldRenewImmediatelyForTests(boolean immediate) {
     shouldRenewImmediatelyForTests = immediate;
   }
 
@@ -339,7 +339,7 @@ public class UserGroupInformation {
   
   @InterfaceAudience.Private
   @VisibleForTesting
-  static void reset() {
+  public static void reset() {
     authenticationMethod = null;
     conf = null;
     groups = null;
@@ -637,7 +637,33 @@ public class UserGroupInformation {
     this.isKeytab = KerberosUtil.hasKerberosKeyTab(subject);
     this.isKrbTkt = KerberosUtil.hasKerberosTicket(subject);
   }
-  
+
+  /**
+   * Copies the Subject of this UGI and creates a new UGI with the new subject.
+   * This can be used to add credentials (e.g. tokens) to different copies of
+   * the same UGI, allowing multiple users with different tokens to reuse the
+   * UGI without re-authenticating with Kerberos.
+   * @return clone of the UGI with a new subject.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public UserGroupInformation copySubjectAndUgi() {
+    Subject subj = getSubject();
+    // The ctor will set other fields automatically from the principals.
+    return new UserGroupInformation(new Subject(false, subj.getPrincipals(),
+        cloneCredentials(subj.getPublicCredentials()),
+        cloneCredentials(subj.getPrivateCredentials())));
+  }
+
+  private static Set<Object> cloneCredentials(Set<Object> old) {
+    Set<Object> set = new HashSet<>();
+    // Make sure Hadoop credentials objects do not reuse the maps.
+    for (Object o : old) {
+      set.add(o instanceof Credentials ? new Credentials((Credentials)o) : o);
+    }
+    return set;
+  }
+
   /**
    * checks if logged in using kerberos
    * @return true if the subject logged via keytab or has a Kerberos TGT
@@ -1484,11 +1510,11 @@ public class UserGroupInformation {
   }
 
   public String getPrimaryGroupName() throws IOException {
-    String[] groups = getGroupNames();
-    if (groups.length == 0) {
+    List<String> groups = getGroups();
+    if (groups.isEmpty()) {
       throw new IOException("There is no primary group for UGI " + this);
     }
-    return groups[0];
+    return groups.get(0);
   }
 
   /**
@@ -1601,26 +1627,35 @@ public class UserGroupInformation {
   }
 
   /**
+   * Get the group names for this user. {@ #getGroups(String)} is less
+   * expensive alternative when checking for a contained element.
+   * @return the list of users with the primary group first. If the command
+   *    fails, it returns an empty list.
+   */
+  public String[] getGroupNames() {
+    List<String> groups = getGroups();
+    return groups.toArray(new String[groups.size()]);
+  }
+
+  /**
    * Get the group names for this user.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
    */
-  public synchronized String[] getGroupNames() {
+  public List<String> getGroups() {
     ensureInitialized();
     try {
-      Set<String> result = new LinkedHashSet<String>
-        (groups.getGroups(getShortUserName()));
-      return result.toArray(new String[result.size()]);
+      return groups.getGroups(getShortUserName());
     } catch (IOException ie) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Failed to get groups for user " + getShortUserName()
             + " by " + ie);
         LOG.trace("TRACE", ie);
       }
-      return StringUtils.emptyStringArray;
+      return Collections.emptyList();
     }
   }
-  
+
   /**
    * Return the username.
    */

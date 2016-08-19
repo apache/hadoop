@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -99,7 +100,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.hamcrest.CoreMatchers;
@@ -111,15 +111,17 @@ import org.junit.Test;
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
   private static final String INVALID_JAVA_HOME = "/no/jvm/here";
-  protected Context distContext = new NMContext(new NMContainerTokenSecretManager(
-    conf), new NMTokenSecretManagerInNM(), null,
-    new ApplicationACLsManager(conf), new NMNullStateStoreService(), false) {
-    public int getHttpPort() {
-      return HTTP_PORT;
-    };
-    public NodeId getNodeId() {
-      return NodeId.newInstance("ahost", 1234);
-    };
+  private Context distContext =
+      new NMContext(new NMContainerTokenSecretManager(conf),
+          new NMTokenSecretManagerInNM(), null,
+          new ApplicationACLsManager(conf), new NMNullStateStoreService(),
+          false, conf) {
+        public int getHttpPort() {
+          return HTTP_PORT;
+        };
+        public NodeId getNodeId() {
+          return NodeId.newInstance("ahost", 1234);
+        };
   };
 
   public TestContainerLaunch() throws UnsupportedFileSystemException {
@@ -407,7 +409,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testPrependDistcache() throws Exception {
 
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
@@ -454,6 +456,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         "target/test-dir");
     Path pwd = new Path(testDir);
     List<Path> appDirs = new ArrayList<Path>();
+    List<String> userLocalDirs = new ArrayList<>();
     List<String> containerLogs = new ArrayList<String>();
 
     Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
@@ -464,8 +467,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     Path nmp = new Path(testDir);
 
-    launch.sanitizeEnv(
-      userSetEnv, pwd, appDirs, containerLogs, resources, nmp);
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp);
 
     List<String> result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -483,8 +486,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     launch = new ContainerLaunch(distContext, conf,
         dispatcher, exec, null, container, dirsHandler, containerManager);
 
-    launch.sanitizeEnv(
-      userSetEnv, pwd, appDirs, containerLogs, resources, nmp);
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp);
 
     result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -1127,7 +1130,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     String callCmd = "@call ";
     
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);
@@ -1175,7 +1178,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   @Test (timeout = 10000)
   public void testWindowsShellScriptBuilderEnv() throws IOException {
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);
@@ -1200,7 +1203,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     String mkDirCmd = "@if not exist \"\" mkdir \"\"";
 
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
 
     // The tests are built on assuming 8191 max command line length
     assertEquals(8191, Shell.WINDOWS_MAX_SHELL_LENGTH);
@@ -1223,7 +1226,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   @Test (timeout = 10000)
   public void testWindowsShellScriptBuilderLink() throws IOException {
     // Test is only relevant on Windows
-    Assume.assumeTrue(Shell.WINDOWS);
+    assumeWindows();
     String linkCmd = "@" + Shell.getWinUtilsPath() + " symlink \"\" \"\"";
 
     // The tests are built on assuming 8191 max command line length

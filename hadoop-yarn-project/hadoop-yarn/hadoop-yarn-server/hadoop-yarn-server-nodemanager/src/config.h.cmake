@@ -18,8 +18,26 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+/* custom configs */
+
 #cmakedefine HADOOP_CONF_DIR "@HADOOP_CONF_DIR@"
 
-#cmakedefine HAVE_FCLOSEALL "@HAVE_FCLOSEALL@"
+#cmakedefine HADOOP_CONF_DIR_IS_ABS "@HADOOP_CONF_DIR_IS_ABS@"
+
+/* specific functions */
+
+#cmakedefine HAVE_CANONICALIZE_FILE_NAME @HAVE_CANONICALIZE_FILE_NAME@
+#cmakedefine HAVE_FCHMODAT @HAVE_FCHMODAT@
+#cmakedefine HAVE_FCLOSEALL @HAVE_FCLOSEALL@
+#cmakedefine HAVE_FDOPENDIR @HAVE_FDOPENDIR@
+#cmakedefine HAVE_FSTATAT @HAVE_FSTATAT@
+#cmakedefine HAVE_OPENAT @HAVE_OPENAT@
+#cmakedefine HAVE_SYSCTL @HAVE_SYSCTL@
+#cmakedefine HAVE_UNLINKAT @HAVE_UNLINKAT@
+
+
+/* specific headers */
+
+#cmakedefine HAVE_SYS_SYSCTL_H @HAVE_SYS_SYSCTL_H@
 
 #endif

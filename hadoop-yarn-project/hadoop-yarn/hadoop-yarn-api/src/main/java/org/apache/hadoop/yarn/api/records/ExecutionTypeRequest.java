@@ -31,12 +31,19 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @Public
 @Evolving
-public abstract class ExecutionTypeRequest {
+public abstract class ExecutionTypeRequest
+    implements Comparable<ExecutionTypeRequest> {
 
   @Public
   @Evolving
   public static ExecutionTypeRequest newInstance() {
     return newInstance(ExecutionType.GUARANTEED, false);
+  }
+
+  @Public
+  @Evolving
+  public static ExecutionTypeRequest newInstance(ExecutionType execType) {
+    return newInstance(execType, false);
   }
 
   @Public

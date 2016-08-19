@@ -967,6 +967,34 @@ public interface MRJobConfig {
           128;
 
   /**
+   * The maximum number of resources a map reduce job is allowed to submit for
+   * localization via files, libjars, archives, and jobjar command line
+   * arguments and through the distributed cache. If set to 0 the limit is
+   * ignored.
+   */
+  String MAX_RESOURCES = "mapreduce.job.cache.limit.max-resources";
+  int MAX_RESOURCES_DEFAULT = 0;
+
+  /**
+   * The maximum size (in MB) a map reduce job is allowed to submit for
+   * localization via files, libjars, archives, and jobjar command line
+   * arguments and through the distributed cache. If set to 0 the limit is
+   * ignored.
+   */
+  String MAX_RESOURCES_MB = "mapreduce.job.cache.limit.max-resources-mb";
+  long MAX_RESOURCES_MB_DEFAULT = 0;
+
+  /**
+   * The maximum size (in MB) of a single resource a map reduce job is allow to
+   * submit for localization via files, libjars, archives, and jobjar command
+   * line arguments and through the distributed cache. If set to 0 the limit is
+   * ignored.
+   */
+  String MAX_SINGLE_RESOURCE_MB =
+      "mapreduce.job.cache.limit.max-single-resource-mb";
+  long MAX_SINGLE_RESOURCE_MB_DEFAULT = 0;
+
+  /**
    * Number of OPPORTUNISTIC Containers per 100 containers that will be
    * requested by the MRAppMaster. The Default value is 0, which implies all
    * maps will be guaranteed. A value of 100 means all maps will be requested
@@ -977,4 +1005,9 @@ public interface MRJobConfig {
   public static final String MR_NUM_OPPORTUNISTIC_MAPS_PER_100 =
       "mapreduce.job.num-opportunistic-maps-per-100";
   public static final int DEFAULT_MR_NUM_OPPORTUNISTIC_MAPS_PER_100 = 0;
+
+  /**
+   * A comma-separated list of properties whose value will be redacted.
+   */
+  String MR_JOB_REDACTED_PROPERTIES = "mapreduce.job.redacted-properties";
 }

@@ -22,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.Reader;
-
 import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
@@ -31,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
-
+import org.codehaus.jackson.map.ObjectReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 
 /**
@@ -48,6 +47,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 @InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
 public final class CombinedHostsFileReader {
+  private static final ObjectReader READER =
+      new ObjectMapper().reader(DatanodeAdminProperties.class);
+  private static final JsonFactory JSON_FACTORY = new JsonFactory();
+
   private CombinedHostsFileReader() {
   }
 
@@ -60,12 +63,10 @@ public final class CombinedHostsFileReader {
   public static Set<DatanodeAdminProperties>
       readFile(final String hostsFile) throws IOException {
     HashSet<DatanodeAdminProperties> allDNs = new HashSet<>();
-    ObjectMapper mapper = new ObjectMapper();
     try (Reader input =
          new InputStreamReader(new FileInputStream(hostsFile), "UTF-8")) {
       Iterator<DatanodeAdminProperties> iterator =
-          mapper.readValues(new JsonFactory().createJsonParser(input),
-              DatanodeAdminProperties.class);
+          READER.readValues(JSON_FACTORY.createJsonParser(input));
       while (iterator.hasNext()) {
         DatanodeAdminProperties properties = iterator.next();
         allDNs.add(properties);

@@ -145,6 +145,10 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
       high = distribution.length-1;
     else
       high = (int)Math.ceil((double)current.fileSize / step);
+
+    if (high >= distribution.length) {
+      high = distribution.length - 1;
+    }
     distribution[high]++;
     if(totalFiles % 1000000 == 1)
       System.out.println("Files processed: " + totalFiles

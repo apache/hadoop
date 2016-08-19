@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-project</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -49,6 +49,9 @@
     <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
 
     <kafka.version>0.8.2.1</kafka.version>
+    <hbase.version>1.1.3</hbase.version>
+    <phoenix.version>4.7.0-HBase-1.1</phoenix.version>
+    <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
     <commons-daemon.version>1.0.13</commons-daemon.version>
@@ -65,7 +68,7 @@
     <avro.version>1.7.4</avro.version>
 
     <!-- jersey version -->
-    <jersey.version>1.9</jersey.version>
+    <jersey.version>1.19</jersey.version>
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
@@ -84,6 +87,7 @@
     <findbugs.version>3.0.0</findbugs.version>
 
     <tomcat.version>6.0.44</tomcat.version>
+    <guice.version>4.0</guice.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -292,6 +296,25 @@
         <type>test-jar</type>
       </dependency>
 
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+          <version>${project.version}</version>
+          <type>test-jar</type>
+      </dependency>
+
      <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
@@ -453,14 +476,14 @@
         <version>1.4.1</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-csv</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
         <groupId>xmlenc</groupId>
         <artifactId>xmlenc</artifactId>
         <version>0.52</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-httpclient</groupId>
-        <artifactId>commons-httpclient</artifactId>
-        <version>3.1</version>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -504,6 +527,11 @@
         <version>${jetty.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty-sslengine</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.tomcat.embed</groupId>
         <artifactId>tomcat-embed-core</artifactId>
         <version>7.0.55</version>
@@ -537,13 +565,18 @@
       </dependency>
 
       <dependency>
-        <groupId>asm</groupId>
+        <groupId>org.ow2.asm</groupId>
         <artifactId>asm</artifactId>
-        <version>3.2</version>
+        <version>5.0.4</version>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
         <artifactId>jersey-core</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-servlet</artifactId>
         <version>${jersey.version}</version>
       </dependency>
       <dependency>
@@ -566,19 +599,19 @@
       <dependency>
         <groupId>com.google.inject</groupId>
         <artifactId>guice</artifactId>
-        <version>3.0</version>
+        <version>${guice.version}</version>
       </dependency>
       
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib</artifactId>
-        <version>2.2</version>
+        <version>3.2.0</version>
       </dependency>
 
       <dependency>
         <groupId>com.google.inject.extensions</groupId>
         <artifactId>guice-servlet</artifactId>
-        <version>3.0</version>
+        <version>${guice.version}</version>
       </dependency>
 
       <dependency>
@@ -602,7 +635,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
-        <version>3.6.2.Final</version>
+        <version>3.10.5.Final</version>
       </dependency>
 
       <dependency>
@@ -946,7 +979,17 @@
       <dependency>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-http-servlet</artifactId>
-        <version>2.1.2</version>
+        <version>2.2.21</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.grizzly</groupId>
+        <artifactId>grizzly-http</artifactId>
+        <version>2.2.21</version>
+      </dependency>
+      <dependency>
+        <groupId>org.glassfish.grizzly</groupId>
+        <artifactId>grizzly-http-server</artifactId>
+        <version>2.2.21</version>
       </dependency>
 
       <dependency>
@@ -958,7 +1001,7 @@
       <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>azure-storage</artifactId>
-        <version>2.2.0</version>
+        <version>4.2.0</version>
      </dependency>
 
      <dependency>
@@ -1006,19 +1049,113 @@
           </exclusion>
         </exclusions>
       </dependency>
-
-        <dependency>
-            <groupId>org.skyscreamer</groupId>
-            <artifactId>jsonassert</artifactId>
-            <version>1.3.0</version>
+      <dependency>
+        <groupId>org.skyscreamer</groupId>
+        <artifactId>jsonassert</artifactId>
+        <version>1.3.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <version>${hbase.version}</version>
+        <exclusions>
+          <exclusion>
+            <artifactId>jdk.tools</artifactId>
+            <groupId>jdk.tools</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-common</artifactId>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+        <classifier>tests</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-client</artifactId>
+        <version>${hbase.version}</version>
+        <exclusions>
+          <!-- exclude jdk.tools (1.7) as we're not managing it -->
+          <exclusion>
+            <groupId>jdk.tools</groupId>
+            <artifactId>jdk.tools</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-server</artifactId>
+        <version>${hbase.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-server</artifactId>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+        <classifier>tests</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.phoenix</groupId>
+        <artifactId>phoenix-core</artifactId>
+        <version>${phoenix.version}</version>
+        <exclusions>
+          <!-- Exclude jline from here -->
+          <exclusion>
+            <artifactId>jline</artifactId>
+            <groupId>jline</groupId>
+          </exclusion>
+          <exclusion>
+            <artifactId>joda-time</artifactId>
+            <groupId>joda-time</groupId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.phoenix</groupId>
+        <artifactId>phoenix-core</artifactId>
+        <type>test-jar</type>
+        <version>${phoenix.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-it</artifactId>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+        <classifier>tests</classifier>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-testing-util</artifactId>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+        <optional>true</optional>
+        <exclusions>
+          <exclusion>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minicluster</artifactId>
+          </exclusion>
+          <exclusion>
+            <artifactId>jdk.tools</artifactId>
+            <groupId>jdk.tools</groupId>
+          </exclusion>
+        </exclusions>
         </dependency>
-
         <dependency>
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-simplekdc</artifactId>
           <version>1.0.0-RC2</version>
         </dependency>
-
     </dependencies>
   </dependencyManagement>
 
@@ -1144,6 +1281,13 @@
             <resourceBundle>org.apache.hadoop:hadoop-build-tools:${project.version}</resourceBundle>
           </resourceBundles>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-build-tools</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <goals>
@@ -1230,8 +1374,34 @@
             <configuration>
               <rules>
                 <DependencyConvergence>
-                  <uniqueVersions>true</uniqueVersions> 
+                  <uniqueVersions>true</uniqueVersions>
                 </DependencyConvergence>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>cglib:cglib:</exclude>
+                    <exclude>com.sun.jersey:*</exclude>
+                    <exclude>com.sun.jersey.contribs:*</exclude>
+                    <exclude>com.sun.jersey.jersey-test-framework:*</exclude>
+                    <exclude>com.google.inject:guice</exclude>
+                    <exclude>org.ow2.asm:asm</exclude>
+                  </excludes>
+                  <includes>
+                    <!-- for JDK 8 support -->
+                    <include>cglib:cglib:3.2.0</include>
+                    <include>com.google.inject:guice:4.0</include>
+                    <include>com.sun.jersey:jersey-core:1.19</include>
+                    <include>com.sun.jersey:jersey-servlet:1.19</include>
+                    <include>com.sun.jersey:jersey-json:1.19</include>
+                    <include>com.sun.jersey:jersey-server:1.19</include>
+                    <include>com.sun.jersey:jersey-client:1.19</include>
+                    <include>com.sun.jersey:jersey-grizzly2:1.19</include>
+                    <include>com.sun.jersey:jersey-grizzly2-servlet:1.19</include>
+                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-core:1.19</include>
+                    <include>com.sun.jersey.jersey-test-framework:jersey-test-framework-grizzly2:1.19</include>
+                    <include>com.sun.jersey.contribs:jersey-guice:1.19</include>
+                    <include>org.ow2.asm:asm:5.0.0</include>
+                  </includes>
+                </bannedDependencies>
               </rules>
             </configuration>
             <goals>

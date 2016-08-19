@@ -555,7 +555,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + NAME + " <name> [-owner <owner>] " +
           "[-group <group>] [-mode <mode>] [-limit <limit>] " +
-          "[-maxTtl <maxTtl>]" +
+          "[-defaultReplication <defaultReplication>] [-maxTtl <maxTtl>]" +
           "]\n";
     }
 
@@ -575,6 +575,9 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<limit>", "The maximum number of bytes that can be " +
           "cached by directives in this pool, in aggregate. By default, " +
           "no limit is set.");
+      listing.addRow("<defaultReplication>", "The default replication " +
+          "number for cache directive in the pool. " +
+          "If not set, the replication is set to 1");
       listing.addRow("<maxTtl>", "The maximum allowed time-to-live for " +
           "directives being added to the pool. This can be specified in " +
           "seconds, minutes, hours, and days, e.g. 120s, 30m, 4h, 2d. " +
@@ -612,6 +615,12 @@ public class CacheAdmin extends Configured implements Tool {
       Long limit = AdminHelper.parseLimitString(limitString);
       if (limit != null) {
         info.setLimit(limit);
+      }
+      String replicationString = StringUtils.
+              popOptionWithArgument("-defaultReplication", args);
+      if (replicationString != null) {
+        short defaultReplication = Short.parseShort(replicationString);
+        info.setDefaultReplication(defaultReplication);
       }
       String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
       try {
@@ -654,7 +663,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + getName() + " <name> [-owner <owner>] " +
           "[-group <group>] [-mode <mode>] [-limit <limit>] " +
-          "[-maxTtl <maxTtl>]]\n";
+          "[-defaultReplication <defaultReplication>] [-maxTtl <maxTtl>]]\n";
     }
 
     @Override
@@ -667,6 +676,8 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<mode>", "Unix-style permissions of the pool in octal.");
       listing.addRow("<limit>", "Maximum number of bytes that can be cached " +
           "by this pool.");
+      listing.addRow("<defaultReplication>", "Default replication num for " +
+          "directives in this pool");
       listing.addRow("<maxTtl>", "The maximum allowed time-to-live for " +
           "directives being added to the pool.");
 
@@ -686,6 +697,12 @@ public class CacheAdmin extends Configured implements Tool {
           null : Integer.parseInt(modeString, 8);
       String limitString = StringUtils.popOptionWithArgument("-limit", args);
       Long limit = AdminHelper.parseLimitString(limitString);
+      String replicationString =
+              StringUtils.popOptionWithArgument("-defaultReplication", args);
+      Short defaultReplication = null;
+      if (replicationString != null) {
+        defaultReplication = Short.parseShort(replicationString);
+      }
       String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
       Long maxTtl;
       try {
@@ -725,6 +742,10 @@ public class CacheAdmin extends Configured implements Tool {
         info.setLimit(limit);
         changed = true;
       }
+      if (defaultReplication != null) {
+        info.setDefaultReplication(defaultReplication);
+        changed = true;
+      }
       if (maxTtl != null) {
         info.setMaxRelativeExpiryMs(maxTtl);
         changed = true;
@@ -758,6 +779,10 @@ public class CacheAdmin extends Configured implements Tool {
       if (limit != null) {
         System.out.print(prefix + "limit " + limit);
         prefix = " and ";
+      }
+      if (defaultReplication != null) {
+        System.out.println(prefix + "replication " + defaultReplication);
+        prefix = " replication ";
       }
       if (maxTtl != null) {
         System.out.print(prefix + "max time-to-live " + maxTtlString);
@@ -854,7 +879,8 @@ public class CacheAdmin extends Configured implements Tool {
           addField("GROUP", Justification.LEFT).
           addField("MODE", Justification.LEFT).
           addField("LIMIT", Justification.RIGHT).
-          addField("MAXTTL", Justification.RIGHT);
+          addField("MAXTTL", Justification.RIGHT).
+          addField("DEFAULT_REPLICATION", Justification.RIGHT);
       if (printStats) {
         builder.
             addField("BYTES_NEEDED", Justification.RIGHT).
@@ -895,6 +921,8 @@ public class CacheAdmin extends Configured implements Tool {
               }
             }
             row.add(maxTtlString);
+            row.add("" + info.getDefaultReplication());
+
             if (printStats) {
               CachePoolStats stats = entry.getStats();
               row.add(Long.toString(stats.getBytesNeeded()));

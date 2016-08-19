@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -325,6 +326,36 @@ public class TestDataNodeMetrics {
       MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
       blocksReplicated = getLongCounter("BlocksReplicated", rbNew);
       assertEquals("blocks replicated counter incremented", 1, blocksReplicated);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testDatanodeActiveXceiversCount() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      long dataNodeActiveXceiversCount = MetricsAsserts.getIntGauge(
+              "DataNodeActiveXceiversCount", rb);
+      assertEquals(dataNodeActiveXceiversCount, 0);
+
+      Path path = new Path("/counter.txt");
+      DFSTestUtil.createFile(fs, path, 204800000, (short) 3, Time
+              .monotonicNow());
+
+      MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
+      dataNodeActiveXceiversCount = MetricsAsserts.getIntGauge(
+              "DataNodeActiveXceiversCount", rbNew);
+      assertTrue(dataNodeActiveXceiversCount >= 0);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

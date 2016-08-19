@@ -56,7 +56,7 @@ public class TestBinaryTokenFile {
 
   private static final String KEY_SECURITY_TOKEN_FILE_NAME = "key-security-token-file";
   private static final String DELEGATION_TOKEN_KEY = "Hdfs";
-  
+
   // my sleep class
   static class MySleepMapper extends SleepJob.SleepMapper {
     /**
@@ -67,7 +67,7 @@ public class TestBinaryTokenFile {
     throws IOException, InterruptedException {
       // get context token storage:
       final Credentials contextCredentials = context.getCredentials();
-      
+
       final Collection<Token<? extends TokenIdentifier>> contextTokenCollection = contextCredentials.getAllTokens();
       for (Token<? extends TokenIdentifier> t : contextTokenCollection) {
         System.out.println("Context token: [" + t + "]");
@@ -77,17 +77,17 @@ public class TestBinaryTokenFile {
         throw new RuntimeException("Exactly 2 tokens are expected in the contextTokenCollection: " +
         		"one job token and one delegation token, but was found " + contextTokenCollection.size() + " tokens.");
       }
-      
+
       final Token<? extends TokenIdentifier> dt = contextCredentials.getToken(new Text(DELEGATION_TOKEN_KEY));
       if (dt == null) {
         throw new RuntimeException("Token for key ["+DELEGATION_TOKEN_KEY+"] not found in the job context.");
       }
-      
+
       String tokenFile0 = context.getConfiguration().get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
       if (tokenFile0 != null) {
         throw new RuntimeException("Token file key ["+MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY+"] found in the configuration. It should have been removed from the configuration.");
       }
-      
+
       final String tokenFile = context.getConfiguration().get(KEY_SECURITY_TOKEN_FILE_NAME);
       if (tokenFile == null) {
         throw new RuntimeException("Token file key ["+KEY_SECURITY_TOKEN_FILE_NAME+"] not found in the job configuration.");
@@ -99,7 +99,8 @@ public class TestBinaryTokenFile {
       if (binaryTokenCollection.size() != 1) {
         throw new RuntimeException("The token collection read from file ["+tokenFile+"] must have size = 1.");
       }
-      final Token<? extends TokenIdentifier> binTok = binaryTokenCollection.iterator().next(); 
+      final Token<? extends TokenIdentifier> binTok = binaryTokenCollection
+          .iterator().next();
       System.out.println("The token read from binary file: t = [" + binTok + "]");
       // Verify that dt is same as the token in the file:
       if (!dt.equals(binTok)) {
@@ -107,7 +108,7 @@ public class TestBinaryTokenFile {
               "Delegation token in job is not same as the token passed in file:"
                   + " tokenInFile=[" + binTok + "], dt=[" + dt + "].");
       }
-      
+
       // Now test the user tokens.
       final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       // Print all the UGI tokens for diagnostic purposes:
@@ -115,7 +116,7 @@ public class TestBinaryTokenFile {
       for (Token<? extends TokenIdentifier> t: ugiTokenCollection) {
         System.out.println("UGI token: [" + t + "]");
       }
-      final Token<? extends TokenIdentifier> ugiToken 
+      final Token<? extends TokenIdentifier> ugiToken
         = ugi.getCredentials().getToken(new Text(DELEGATION_TOKEN_KEY));
       if (ugiToken == null) {
         throw new RuntimeException("Token for key ["+DELEGATION_TOKEN_KEY+"] not found among the UGI tokens.");
@@ -125,27 +126,27 @@ public class TestBinaryTokenFile {
               "UGI token is not same as the token passed in binary file:"
                   + " tokenInBinFile=[" + binTok + "], ugiTok=[" + ugiToken + "].");
       }
-      
+
       super.map(key, value, context);
     }
   }
-  
+
   class MySleepJob extends SleepJob {
     @Override
-    public Job createJob(int numMapper, int numReducer, 
-        long mapSleepTime, int mapSleepCount, 
-        long reduceSleepTime, int reduceSleepCount) 
+    public Job createJob(int numMapper, int numReducer,
+        long mapSleepTime, int mapSleepCount,
+        long reduceSleepTime, int reduceSleepCount)
     throws IOException {
       Job job =  super.createJob(numMapper, numReducer,
-           mapSleepTime, mapSleepCount, 
+           mapSleepTime, mapSleepCount,
           reduceSleepTime, reduceSleepCount);
-      
+
       job.setMapperClass(MySleepMapper.class);
       //Populate tokens here because security is disabled.
       setupBinaryTokenFile(job);
       return job;
     }
-    
+
     private void setupBinaryTokenFile(Job job) {
     // Credentials in the job will not have delegation tokens
     // because security is disabled. Fetch delegation tokens
@@ -161,40 +162,41 @@ public class TestBinaryTokenFile {
           binaryTokenFileName.toString());
     }
   }
-  
+
   private static MiniMRYarnCluster mrCluster;
   private static MiniDFSCluster dfsCluster;
-  
-  private static final Path TEST_DIR = 
+
+  private static final Path TEST_DIR =
     new Path(System.getProperty("test.build.data","/tmp"));
   private static final Path binaryTokenFileName = new Path(TEST_DIR, "tokenFile.binary");
-  
-  private static final int numSlaves = 1; // num of data nodes
+
+  private static final int NUMWORKERS = 1; // num of data nodes
   private static final int noOfNMs = 1;
-  
+
   private static Path p1;
-  
+
   @BeforeClass
   public static void setUp() throws Exception {
     final Configuration conf = new Configuration();
-    
+
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     conf.set(YarnConfiguration.RM_PRINCIPAL, "jt_id/" + SecurityUtil.HOSTNAME_PATTERN + "@APACHE.ORG");
-    
+
     final MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
     builder.checkExitOnShutdown(true);
-    builder.numDataNodes(numSlaves);
+    builder.numDataNodes(NUMWORKERS);
     builder.format(true);
     builder.racks(null);
     dfsCluster = builder.build();
-    
+
     mrCluster = new MiniMRYarnCluster(TestBinaryTokenFile.class.getName(), noOfNMs);
     mrCluster.init(conf);
     mrCluster.start();
 
-    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads(); 
-    
-    FileSystem fs = dfsCluster.getFileSystem(); 
+    NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem())
+        .startThreads();
+
+    FileSystem fs = dfsCluster.getFileSystem();
     p1 = new Path("file1");
     p1 = fs.makeQualified(p1);
   }
@@ -240,13 +242,13 @@ public class TestBinaryTokenFile {
   @Test
   public void testBinaryTokenFile() throws IOException {
     Configuration conf = mrCluster.getConfig();
-    
+
     // provide namenodes names for the job to get the delegation tokens for
     final String nnUri = dfsCluster.getURI(0).toString();
     conf.set(MRJobConfig.JOB_NAMENODES, nnUri + "," + nnUri);
-    
+
     // using argument to pass the file name
-    final String[] args = { 
+    final String[] args = {
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
         };
     int res = -1;

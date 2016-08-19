@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -866,7 +867,7 @@ public class FairScheduler extends
     FSSchedulerNode node = getFSSchedulerNode(container.getNodeId());
 
     if (rmContainer.getState() == RMContainerState.RESERVED) {
-      application.unreserve(rmContainer.getReservedPriority(), node);
+      application.unreserve(rmContainer.getReservedSchedulerKey(), node);
     } else {
       application.containerCompleted(rmContainer, containerStatus, event);
       node.releaseContainer(container);
@@ -1573,7 +1574,37 @@ public class FairScheduler extends
         allocConf = queueInfo;
         allocConf.getDefaultSchedulingPolicy().initialize(getClusterResource());
         queueMgr.updateAllocationConfiguration(allocConf);
+        applyChildDefaults();
         maxRunningEnforcer.updateRunnabilityOnReload();
+      }
+    }
+  }
+
+  /**
+   * After reloading the allocation config, the max resource settings for any
+   * ad hoc queues will be missing. This method goes through the queue manager's
+   * queue list and adds back the max resources settings for any ad hoc queues.
+   * Note that the new max resource settings will be based on the new config.
+   * The old settings are lost.
+   */
+  private void applyChildDefaults() {
+    Collection<FSQueue> queues = queueMgr.getQueues();
+    Set<String> configuredLeafQueues =
+        allocConf.getConfiguredQueues().get(FSQueueType.LEAF);
+    Set<String> configuredParentQueues =
+        allocConf.getConfiguredQueues().get(FSQueueType.PARENT);
+
+    for (FSQueue queue : queues) {
+      // If the queue is ad hoc and not root, apply the child defaults
+      if ((queue.getParent() != null) &&
+          !configuredLeafQueues.contains(queue.getName()) &&
+          !configuredParentQueues.contains(queue.getName())) {
+        Resource max =
+            allocConf.getMaxChildResources(queue.getParent().getName());
+
+        if (max != null) {
+          allocConf.setMaxResources(queue.getName(), max);
+        }
       }
     }
   }

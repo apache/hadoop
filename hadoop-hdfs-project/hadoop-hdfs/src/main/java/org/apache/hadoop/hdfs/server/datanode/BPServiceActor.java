@@ -26,9 +26,13 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -58,6 +62,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
@@ -99,6 +104,9 @@ class BPServiceActor implements Runnable {
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
+  private final SortedSet<Integer> blockReportSizes =
+      Collections.synchronizedSortedSet(new TreeSet<>());
+  private final int maxDataLength;
 
   private final IncrementalBlockReportManager ibrManager;
 
@@ -120,6 +128,8 @@ class BPServiceActor implements Runnable {
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval);
+    // get the value of maxDataLength.
+    this.maxDataLength = dnConf.getMaxDataLength();
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -138,6 +148,10 @@ class BPServiceActor implements Runnable {
         || runningState == BPServiceActor.RunningState.CONNECTING;
   }
 
+  String getRunningState() {
+    return runningState.toString();
+  }
+
   @Override
   public String toString() {
     return bpos.toString() + " service to " + nnAddr;
@@ -145,6 +159,24 @@ class BPServiceActor implements Runnable {
   
   InetSocketAddress getNNSocketAddress() {
     return nnAddr;
+  }
+
+  private String getNameNodeAddress() {
+    return NetUtils.getHostPortString(getNNSocketAddress());
+  }
+
+  Map<String, String> getActorInfoMap() {
+    final Map<String, String> info = new HashMap<String, String>();
+    info.put("NamenodeAddress", getNameNodeAddress());
+    info.put("BlockPoolID", bpos.getBlockPoolId());
+    info.put("ActorState", getRunningState());
+    info.put("LastHeartbeat",
+        String.valueOf(getScheduler().getLastHearbeatTime()));
+    info.put("LastBlockReport",
+        String.valueOf(getScheduler().getLastBlockReportTime()));
+    info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
+    info.put("maxDataLength", String.valueOf(maxDataLength));
+    return info;
   }
 
   private final CountDownLatch initialRegistrationComplete;
@@ -283,6 +315,14 @@ class BPServiceActor implements Runnable {
     }
   }
 
+  private int getMaxBlockReportSize() {
+    int maxBlockReportSize = 0;
+    if (!blockReportSizes.isEmpty()) {
+      maxBlockReportSize = blockReportSizes.last();
+    }
+    return maxBlockReportSize;
+  }
+
   private long generateUniqueBlockReportId() {
     // Initialize the block report ID the first time through.
     // Note that 0 is used on the NN to indicate "uninitialized", so we should
@@ -331,12 +371,18 @@ class BPServiceActor implements Runnable {
     boolean success = false;
     long brSendStartTime = monotonicNow();
     long reportId = generateUniqueBlockReportId();
+    boolean useBlocksBuffer =
+        bpRegistration.getNamespaceInfo().isCapabilitySupported(
+            NamespaceInfo.Capability.STORAGE_BLOCK_REPORT_BUFFERS);
+    blockReportSizes.clear();
     try {
       if (totalBlockCount < dnConf.blockReportSplitThreshold) {
         // Below split threshold, send all reports in a single message.
         DatanodeCommand cmd = bpNamenode.blockReport(
             bpRegistration, bpos.getBlockPoolId(), reports,
               new BlockReportContext(1, 0, reportId, fullBrLeaseId, true));
+        blockReportSizes.add(
+            calculateBlockReportPBSize(useBlocksBuffer, reports));
         numRPCs = 1;
         numReportsSent = reports.length;
         if (cmd != null) {
@@ -350,6 +396,8 @@ class BPServiceActor implements Runnable {
               bpRegistration, bpos.getBlockPoolId(), singleReport,
               new BlockReportContext(reports.length, r, reportId,
                   fullBrLeaseId, true));
+          blockReportSizes.add(
+              calculateBlockReportPBSize(useBlocksBuffer, singleReport));
           numReportsSent++;
           numRPCs++;
           if (cmd != null) {
@@ -379,6 +427,7 @@ class BPServiceActor implements Runnable {
                   (nCmds + " commands: " + Joiner.on("; ").join(cmds)))) +
           ".");
     }
+    scheduler.updateLastBlockReportTime(monotonicNow());
     scheduler.scheduleNextBlockReport();
     return cmds.size() == 0 ? null : cmds;
   }
@@ -414,7 +463,22 @@ class BPServiceActor implements Runnable {
     }
     return cmd;
   }
-  
+
+  private int calculateBlockReportPBSize(
+      boolean useBlocksBuffer, StorageBlockReport[] reports) {
+    int reportSize = 0;
+
+    for (StorageBlockReport r : reports) {
+      if (useBlocksBuffer) {
+        reportSize += r.getBlocks().getBlocksBuffer().size();
+      } else {
+        // each block costs 10 bytes in PB because of uint64
+        reportSize += 10 * r.getBlocks().getBlockListAsLongs().length;
+      }
+    }
+    return reportSize;
+  }
+
   HeartbeatResponse sendHeartBeat(boolean requestBlockReportLease)
       throws IOException {
     scheduler.scheduleNextHeartbeat();
@@ -425,6 +489,7 @@ class BPServiceActor implements Runnable {
                 " storage reports from service actor: " + this);
     }
     
+    scheduler.updateLastHeartbeatTime(monotonicNow());
     VolumeFailureSummary volumeFailureSummary = dn.getFSDataset()
         .getVolumeFailureSummary();
     int numFailedVolumes = volumeFailureSummary != null ?
@@ -625,18 +690,23 @@ class BPServiceActor implements Runnable {
           return;
         }
         LOG.warn("RemoteException in offerService", re);
-        try {
-          long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-        }
+        sleepAfterException();
       } catch (IOException e) {
         LOG.warn("IOException in offerService", e);
+        sleepAfterException();
       }
       processQueueMessages();
     } // while (shouldRun())
   } // offerService
+
+  private void sleepAfterException() {
+    try {
+      long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
+      Thread.sleep(sleepTime);
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+    }
+  }
 
   /**
    * Register one bp with the corresponding NameNode
@@ -996,6 +1066,12 @@ class BPServiceActor implements Runnable {
     volatile long nextLifelineTime = monotonicNow();
 
     @VisibleForTesting
+    volatile long lastBlockReportTime = monotonicNow();
+
+    @VisibleForTesting
+    volatile long lastHeartbeatTime = monotonicNow();
+
+    @VisibleForTesting
     boolean resetBlockReportTime = true;
 
     private final AtomicBoolean forceFullBlockReport =
@@ -1031,6 +1107,22 @@ class BPServiceActor implements Runnable {
       nextHeartbeatTime = monotonicNow() + heartbeatIntervalMs;
       scheduleNextLifeline(nextHeartbeatTime);
       return nextHeartbeatTime;
+    }
+
+    void updateLastHeartbeatTime(long heartbeatTime) {
+      lastHeartbeatTime = heartbeatTime;
+    }
+
+    void updateLastBlockReportTime(long blockReportTime) {
+      lastBlockReportTime = blockReportTime;
+    }
+
+    long getLastHearbeatTime() {
+      return (monotonicNow() - lastHeartbeatTime)/1000;
+    }
+
+    long getLastBlockReportTime() {
+      return (monotonicNow() - lastBlockReportTime)/1000;
     }
 
     long scheduleNextLifeline(long baseTime) {

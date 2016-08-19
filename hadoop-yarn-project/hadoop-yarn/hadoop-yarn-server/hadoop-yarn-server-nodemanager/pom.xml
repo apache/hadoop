@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <name>Apache Hadoop YARN NodeManager</name>
 
   <properties>
@@ -269,6 +269,18 @@
           </systemPropertyVariables>
           <excludes>
             <exclude>**/TestFSDownload.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>src/main/native/container-executor/impl/compat/fstatat.h</exclude>
+            <exclude>src/main/native/container-executor/impl/compat/openat.h</exclude>
+            <exclude>src/main/native/container-executor/impl/compat/unlinkat.h</exclude>
           </excludes>
         </configuration>
       </plugin>

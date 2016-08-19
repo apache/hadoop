@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -91,7 +91,7 @@ public class TestDataNodeVolumeFailureToleration {
    */
   @Test
   public void testValidVolumesAtStartup() throws Exception {
-    assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
+    assumeNotWindows();
 
     // Make sure no DNs are running.
     cluster.shutdownDataNodes();
@@ -139,7 +139,7 @@ public class TestDataNodeVolumeFailureToleration {
    */
   @Test
   public void testConfigureMinValidVolumes() throws Exception {
-    assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
+    assumeNotWindows();
 
     // Bring up two additional datanodes that need both of their volumes
     // functioning in order to stay up.
@@ -218,7 +218,7 @@ public class TestDataNodeVolumeFailureToleration {
   private void testVolumeConfig(int volumesTolerated, int volumesFailed,
       boolean expectedBPServiceState, boolean manageDfsDirs)
       throws IOException, InterruptedException {
-    assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
+    assumeNotWindows();
     final int dnIndex = 0;
     // Fail the current directory since invalid storage directory perms
     // get fixed up automatically on datanode startup.
@@ -272,7 +272,7 @@ public class TestDataNodeVolumeFailureToleration {
    */
   @Test
   public void testFailedVolumeOnStartupIsCounted() throws Exception {
-    assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
+    assumeNotWindows();
     final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
     ).getDatanodeManager();
     long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);

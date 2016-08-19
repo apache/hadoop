@@ -32,12 +32,14 @@ HADOOP_CLIENT_OPTS="-Xmx1g -Dhadoop.socks.server=localhost:4000" hadoop fs -ls /
 
 will increase the memory and send this command via a SOCKS proxy server.
 
-### `HADOOP_USER_CLASSPATH`
+### `HADOOP_CLASSPATH`
+
+  NOTE: Site-wide settings should be configured via a shellprofile entry and permanent user-wide settings should be configured via ${HOME}/.hadooprc using the `hadoop_add_classpath` function. See below for more information.
 
 The Apache Hadoop scripts have the capability to inject more content into the classpath of the running command by setting this environment variable.  It should be a colon delimited list of directories, files, or wildcard locations.
 
 ```bash
-HADOOP_USER_CLASSPATH=${HOME}/lib/myjars/*.jar hadoop classpath
+HADOOP_CLASSPATH=${HOME}/lib/myjars/*.jar hadoop classpath
 ```
 
 A user can provides hints to the location of the paths via the `HADOOP_USER_CLASSPATH_FIRST` variable.  Setting this to any value will tell the system to try and push these paths near the front.
@@ -53,8 +55,6 @@ For example:
 # my custom Apache Hadoop settings!
 #
 
-HADOOP_USER_CLASSPATH=${HOME}/hadoopjars/*
-HADOOP_USER_CLASSPATH_FIRST=yes
 HADOOP_CLIENT_OPTS="-Xmx1g"
 ```
 

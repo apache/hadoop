@@ -51,8 +51,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An {@link AuthenticationHandler} that implements Kerberos SPNEGO mechanism
@@ -79,9 +77,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Evolving
 public abstract class DelegationTokenAuthenticationHandler
     implements AuthenticationHandler {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DelegationTokenAuthenticationHandler.class);
 
   protected static final String TYPE_POSTFIX = "-dt";
 
@@ -184,7 +179,8 @@ public abstract class DelegationTokenAuthenticationHandler
       if (dtOp.getHttpMethod().equals(request.getMethod())) {
         boolean doManagement;
         if (dtOp.requiresKerberosCredentials() && token == null) {
-          token = authenticate(request, response);
+          // Don't authenticate via DT for DT ops.
+          token = authHandler.authenticate(request, response);
           if (token == null) {
             requestContinues = false;
             doManagement = false;
@@ -332,8 +328,6 @@ public abstract class DelegationTokenAuthenticationHandler
       throws IOException, AuthenticationException {
     AuthenticationToken token;
     String delegationParam = getDelegationToken(request);
-    LOG.debug("Authenticating with delegationParam: {}, query string: {}",
-        delegationParam, request.getQueryString());
     if (delegationParam != null) {
       try {
         Token<AbstractDelegationTokenIdentifier> dt = new Token();

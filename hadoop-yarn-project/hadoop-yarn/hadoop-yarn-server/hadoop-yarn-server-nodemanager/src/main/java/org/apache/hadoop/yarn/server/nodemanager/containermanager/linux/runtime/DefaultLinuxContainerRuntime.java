@@ -31,20 +31,34 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
 import java.util.List;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
 
+/**
+ * This class is a {@link ContainerRuntime} implementation that uses the
+ * native {@code container-executor} binary via a
+ * {@link PrivilegedOperationExecutor} instance to launch processes using the
+ * standard process model.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
-  private static final Log LOG = LogFactory
-      .getLog(DefaultLinuxContainerRuntime.class);
-  private Configuration conf;
+  private static final Log LOG =
+      LogFactory.getLog(DefaultLinuxContainerRuntime.class);
   private final PrivilegedOperationExecutor privilegedOperationExecutor;
+  private Configuration conf;
 
+  /**
+   * Create an instance using the given {@link PrivilegedOperationExecutor}
+   * instance for performing operations.
+   *
+   * @param privilegedOperationExecutor the {@link PrivilegedOperationExecutor}
+   * instance
+   */
   public DefaultLinuxContainerRuntime(PrivilegedOperationExecutor
       privilegedOperationExecutor) {
     this.privilegedOperationExecutor = privilegedOperationExecutor;

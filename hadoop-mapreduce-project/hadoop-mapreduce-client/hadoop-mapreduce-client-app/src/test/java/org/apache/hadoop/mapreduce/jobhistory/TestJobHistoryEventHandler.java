@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -51,8 +52,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.util.JobHistoryEventUtils;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.MRAppMaster.RunningAppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
@@ -64,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -369,6 +374,74 @@ public class TestJobHistoryEventHandler {
     }
   }
 
+  @Test
+  public void testPropertyRedactionForJHS() throws Exception {
+    final Configuration conf = new Configuration();
+
+    String sensitivePropertyName = "aws.fake.credentials.name";
+    String sensitivePropertyValue = "aws.fake.credentials.val";
+    conf.set(sensitivePropertyName, sensitivePropertyValue);
+    conf.set(MRJobConfig.MR_JOB_REDACTED_PROPERTIES,
+        sensitivePropertyName);
+    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        dfsCluster.getURI().toString());
+    final TestParams params = new TestParams();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, params.dfsWorkDir);
+
+    final JHEvenHandlerForTest jheh =
+        new JHEvenHandlerForTest(params.mockAppContext, 0, false);
+
+    try {
+      jheh.init(conf);
+      jheh.start();
+      handleEvent(jheh, new JobHistoryEvent(params.jobId,
+          new AMStartedEvent(params.appAttemptId, 200, params.containerId,
+              "nmhost", 3000, 4000, -1)));
+      handleEvent(jheh, new JobHistoryEvent(params.jobId,
+          new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(
+              params.jobId), 0, 0, 0, JobStateInternal.FAILED.toString())));
+
+      // verify the value of the sensitive property in job.xml is restored.
+      Assert.assertEquals(sensitivePropertyName + " is modified.",
+          conf.get(sensitivePropertyName), sensitivePropertyValue);
+
+      // load the job_conf.xml in JHS directory and verify property redaction.
+      Path jhsJobConfFile = getJobConfInIntermediateDoneDir(conf, params.jobId);
+      Assert.assertTrue("The job_conf.xml file is not in the JHS directory",
+          FileContext.getFileContext(conf).util().exists(jhsJobConfFile));
+      Configuration jhsJobConf = new Configuration();
+
+      try (InputStream input = FileSystem.get(conf).open(jhsJobConfFile)) {
+        jhsJobConf.addResource(input);
+        Assert.assertEquals(
+            sensitivePropertyName + " is not redacted in HDFS.",
+            MRJobConfUtil.REDACTION_REPLACEMENT_VAL,
+            jhsJobConf.get(sensitivePropertyName));
+      }
+    } finally {
+      jheh.stop();
+      purgeHdfsHistoryIntermediateDoneDirectory(conf);
+    }
+  }
+
+  private static Path getJobConfInIntermediateDoneDir(Configuration conf,
+      JobId jobId) throws IOException {
+    Path userDoneDir = new Path(
+        JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf));
+    Path doneDirPrefix =
+        FileContext.getFileContext(conf).makeQualified(userDoneDir);
+    return new Path(
+        doneDirPrefix, JobHistoryUtils.getIntermediateConfFileName(jobId));
+  }
+
+  private void purgeHdfsHistoryIntermediateDoneDirectory(Configuration conf)
+      throws IOException {
+    FileSystem fs = FileSystem.get(dfsCluster.getConfiguration(0));
+    String intermDoneDirPrefix =
+        JobHistoryUtils.getConfiguredHistoryIntermediateDoneDirPrefix(conf);
+    fs.delete(new Path(intermDoneDirPrefix), true);
+  }
+
   @Test (timeout=50000)
   public void testDefaultFsIsUsedForHistory() throws Exception {
     // Create default configuration pointing to the minicluster
@@ -410,6 +483,7 @@ public class TestJobHistoryEventHandler {
           localFileSystem.exists(new Path(t.dfsWorkDir)));
     } finally {
       jheh.stop();
+      purgeHdfsHistoryIntermediateDoneDirectory(conf);
     }
   }
 
@@ -485,7 +559,7 @@ public class TestJobHistoryEventHandler {
   // stored to the Timeline store
   @Test (timeout=50000)
   public void testTimelineEventHandling() throws Exception {
-    TestParams t = new TestParams(false);
+    TestParams t = new TestParams(RunningAppContext.class, false);
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     MiniYARNCluster yarnCluster = null;
@@ -669,7 +743,7 @@ public class TestJobHistoryEventHandler {
     group2.addCounter("MARTHA_JONES", "Martha Jones", 3);
     group2.addCounter("DONNA_NOBLE", "Donna Noble", 2);
     group2.addCounter("ROSE_TYLER", "Rose Tyler", 1);
-    JsonNode jsonNode = jheh.countersToJSON(counters);
+    JsonNode jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     String jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     String expected = "[{\"NAME\":\"COMPANIONS\",\"DISPLAY_NAME\":\"Companions "
         + "of the Doctor\",\"COUNTERS\":[{\"NAME\":\"AMY_POND\",\"DISPLAY_NAME\""
@@ -692,19 +766,19 @@ public class TestJobHistoryEventHandler {
   public void testCountersToJSONEmpty() throws Exception {
     JobHistoryEventHandler jheh = new JobHistoryEventHandler(null, 0);
     Counters counters = null;
-    JsonNode jsonNode = jheh.countersToJSON(counters);
+    JsonNode jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     String jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     String expected = "[]";
     Assert.assertEquals(expected, jsonStr);
 
     counters = new Counters();
-    jsonNode = jheh.countersToJSON(counters);
+    jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     expected = "[]";
     Assert.assertEquals(expected, jsonStr);
 
     counters.addGroup("DOCTORS", "Incarnations of the Doctor");
-    jsonNode = jheh.countersToJSON(counters);
+    jsonNode = JobHistoryEventUtils.countersToJSON(counters);
     jsonStr = new ObjectMapper().writeValueAsString(jsonNode);
     expected = "[{\"NAME\":\"DOCTORS\",\"DISPLAY_NAME\":\"Incarnations of the "
         + "Doctor\",\"COUNTERS\":[]}]";
@@ -740,20 +814,29 @@ public class TestJobHistoryEventHandler {
     }
   }
 
-  private AppContext mockAppContext(ApplicationId appId, boolean isLastAMRetry) {
-    JobId jobId = TypeConverter.toYarn(TypeConverter.fromYarn(appId));
-    AppContext mockContext = mock(AppContext.class);
+  private Job mockJob() {
     Job mockJob = mock(Job.class);
     when(mockJob.getAllCounters()).thenReturn(new Counters());
     when(mockJob.getTotalMaps()).thenReturn(10);
     when(mockJob.getTotalReduces()).thenReturn(10);
     when(mockJob.getName()).thenReturn("mockjob");
+    return mockJob;
+  }
+
+  private AppContext mockAppContext(Class<? extends AppContext> contextClass,
+      ApplicationId appId, boolean isLastAMRetry) {
+    JobId jobId = TypeConverter.toYarn(TypeConverter.fromYarn(appId));
+    AppContext mockContext = mock(contextClass);
+    Job mockJob = mockJob();
     when(mockContext.getJob(jobId)).thenReturn(mockJob);
     when(mockContext.getApplicationID()).thenReturn(appId);
     when(mockContext.isLastAMRetry()).thenReturn(isLastAMRetry);
+    if (mockContext instanceof RunningAppContext) {
+      when(((RunningAppContext)mockContext).getTimelineClient()).
+          thenReturn(TimelineClient.createTimelineClient());
+    }
     return mockContext;
   }
-
 
   private class TestParams {
     boolean isLastAMRetry;
@@ -769,11 +852,15 @@ public class TestJobHistoryEventHandler {
     AppContext mockAppContext;
 
     public TestParams() {
-      this(false);
+      this(AppContext.class, false);
     }
     public TestParams(boolean isLastAMRetry) {
+      this(AppContext.class, isLastAMRetry);
+    }
+    public TestParams(Class<? extends AppContext> contextClass,
+        boolean isLastAMRetry) {
       this.isLastAMRetry = isLastAMRetry;
-      mockAppContext = mockAppContext(appId, this.isLastAMRetry);
+      mockAppContext = mockAppContext(contextClass, appId, this.isLastAMRetry);
     }
   }
 

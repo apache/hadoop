@@ -20,12 +20,14 @@ package org.apache.hadoop.hdfs.client;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collection;
 import java.util.EnumSet;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -411,6 +413,39 @@ public class HdfsAdmin {
   public void setStoragePolicy(final Path src, final String policyName)
       throws IOException {
     dfs.setStoragePolicy(src, policyName);
+  }
+
+  /**
+   * Unset the storage policy set for a given file or directory.
+   *
+   * @param src file or directory path.
+   * @throws IOException
+   */
+  public void unsetStoragePolicy(final Path src) throws IOException {
+    dfs.unsetStoragePolicy(src);
+  }
+
+  /**
+   * Query the effective storage policy ID for the given file or directory.
+   *
+   * @param src file or directory path.
+   * @return storage policy for the given file or directory.
+   * @throws IOException
+   */
+  public BlockStoragePolicySpi getStoragePolicy(final Path src)
+      throws IOException {
+    return dfs.getStoragePolicy(src);
+  }
+
+  /**
+   * Retrieve all the storage policies supported by HDFS file system.
+   *
+   * @return all storage policies supported by HDFS file system.
+   * @throws IOException
+   */
+  public Collection<? extends BlockStoragePolicySpi> getAllStoragePolicies()
+      throws IOException {
+    return dfs.getAllStoragePolicies();
   }
 
   /**

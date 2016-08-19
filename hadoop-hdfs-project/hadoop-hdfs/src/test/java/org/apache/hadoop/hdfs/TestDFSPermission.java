@@ -566,11 +566,12 @@ public class TestDFSPermission {
       fs.exists(nfpath);
       fail("The exists call should have failed.");
     } catch (AccessControlException e) {
-      assertTrue("Permission denied messages must carry file path",
+      assertFalse("Permission denied messages must not carry full file path,"
+              + "since the user does not have permission on /p4: "
+              + e.getMessage(),
           e.getMessage().contains(fpath.getName()));
-      assertFalse("Permission denied messages should not specify existing_file"
-              + " is not a directory, since the user does not have permission"
-              + " on /p4",
+      assertFalse("Permission denied messages must not specify /p4"
+          + " is not a directory: " + e.getMessage(),
           e.getMessage().contains("is not a directory"));
     }
   }

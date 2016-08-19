@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.junit.Test;
@@ -51,6 +50,8 @@ public class TestS3ADirectoryPerformance extends S3AScaleTestBase {
     int files = scale;
     MetricDiff metadataRequests = new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
     MetricDiff listRequests = new MetricDiff(fs, OBJECT_LIST_REQUESTS);
+    MetricDiff listContinueRequests =
+        new MetricDiff(fs, OBJECT_CONTINUE_LIST_REQUESTS);
     MetricDiff listStatusCalls = new MetricDiff(fs, INVOCATION_LIST_FILES);
     MetricDiff getFileStatusCalls =
         new MetricDiff(fs, INVOCATION_GET_FILE_STATUS);
@@ -69,34 +70,29 @@ public class TestS3ADirectoryPerformance extends S3AScaleTestBase {
     printThenReset(LOG,
         metadataRequests,
         listRequests,
+        listContinueRequests,
         listStatusCalls,
         getFileStatusCalls);
 
+    describe("Listing files via treewalk");
     try {
       // Scan the directory via an explicit tree walk.
       // This is the baseline for any listing speedups.
-      MetricDiff treewalkMetadataRequests =
-          new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
-      MetricDiff treewalkListRequests = new MetricDiff(fs,
-          OBJECT_LIST_REQUESTS);
-      MetricDiff treewalkListStatusCalls = new MetricDiff(fs,
-          INVOCATION_LIST_FILES);
-      MetricDiff treewalkGetFileStatusCalls =
-          new MetricDiff(fs, INVOCATION_GET_FILE_STATUS);
       NanoTimer treeWalkTimer = new NanoTimer();
       TreeScanResults treewalkResults = treeWalk(fs, listDir);
-      treeWalkTimer.end("List status via treewalk");
+      treeWalkTimer.end("List status via treewalk of %s", created);
 
-      print(LOG,
-          treewalkMetadataRequests,
-          treewalkListRequests,
-          treewalkListStatusCalls,
-          treewalkGetFileStatusCalls);
+      printThenReset(LOG,
+          metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
       assertEquals("Files found in listFiles(recursive=true) " +
               " created=" + created + " listed=" + treewalkResults,
           created.getFileCount(), treewalkResults.getFileCount());
 
-
+      describe("Listing files via listFiles(recursive=true)");
       // listFiles() does the recursion internally
       NanoTimer listFilesRecursiveTimer = new NanoTimer();
 
@@ -108,31 +104,33 @@ public class TestS3ADirectoryPerformance extends S3AScaleTestBase {
           " created=" + created  + " listed=" + listFilesResults,
           created.getFileCount(), listFilesResults.getFileCount());
 
-      treewalkListRequests.assertDiffEquals(listRequests);
-      printThenReset(LOG,
-          metadataRequests, listRequests,
-          listStatusCalls, getFileStatusCalls);
-
-      NanoTimer globStatusTimer = new NanoTimer();
-      FileStatus[] globStatusFiles = fs.globStatus(listDir);
-      globStatusTimer.end("Time to globStatus() %s", globStatusTimer);
-      LOG.info("Time for glob status {} entries: {}",
-          globStatusFiles.length,
-          toHuman(createTimer.duration()));
-      printThenReset(LOG,
+      // only two list operations should have taken place
+      print(LOG,
           metadataRequests,
           listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
+      assertEquals(listRequests.toString(), 2, listRequests.diff());
+      reset(metadataRequests,
+          listRequests,
+          listContinueRequests,
           listStatusCalls,
           getFileStatusCalls);
 
+
     } finally {
+      describe("deletion");
       // deletion at the end of the run
       NanoTimer deleteTimer = new NanoTimer();
       fs.delete(listDir, true);
       deleteTimer.end("Deleting directory tree");
       printThenReset(LOG,
-          metadataRequests, listRequests,
-          listStatusCalls, getFileStatusCalls);
+          metadataRequests,
+          listRequests,
+          listContinueRequests,
+          listStatusCalls,
+          getFileStatusCalls);
     }
   }
 

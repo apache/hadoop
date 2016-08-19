@@ -17,7 +17,6 @@
  */
 
 package org.apache.hadoop.minikdc;
-import org.apache.commons.io.Charsets;
 import org.apache.kerby.kerberos.kerb.KrbException;
 import org.apache.kerby.kerberos.kerb.server.KdcConfigKey;
 import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
@@ -31,6 +30,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
@@ -95,7 +95,8 @@ public class MiniKdc {
     Properties userConf = new Properties();
     InputStreamReader r = null;
     try {
-      r = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8);
+      r = new InputStreamReader(new FileInputStream(file),
+          StandardCharsets.UTF_8);
       userConf.load(r);
     } finally {
       if (r != null) {
@@ -147,6 +148,7 @@ public class MiniKdc {
   public static final String KDC_PORT = "kdc.port";
   public static final String INSTANCE = "instance";
   public static final String MAX_TICKET_LIFETIME = "max.ticket.lifetime";
+  public static final String MIN_TICKET_LIFETIME = "min.ticket.lifetime";
   public static final String MAX_RENEWABLE_LIFETIME = "max.renewable.lifetime";
   public static final String TRANSPORT = "transport";
   public static final String DEBUG = "debug";
@@ -280,7 +282,7 @@ public class MiniKdc {
     simpleKdc.init();
     resetDefaultRealm();
     simpleKdc.start();
-    LOG.info("MiniKdc stated.");
+    LOG.info("MiniKdc started.");
   }
 
   private void resetDefaultRealm() throws IOException {
@@ -320,6 +322,14 @@ public class MiniKdc {
             conf.getProperty(INSTANCE));
     if (conf.getProperty(DEBUG) != null) {
       krb5Debug = getAndSet(SUN_SECURITY_KRB5_DEBUG, conf.getProperty(DEBUG));
+    }
+    if (conf.getProperty(MIN_TICKET_LIFETIME) != null) {
+      simpleKdc.getKdcConfig().setLong(KdcConfigKey.MINIMUM_TICKET_LIFETIME,
+          Long.parseLong(conf.getProperty(MIN_TICKET_LIFETIME)));
+    }
+    if (conf.getProperty(MAX_TICKET_LIFETIME) != null) {
+      simpleKdc.getKdcConfig().setLong(KdcConfigKey.MAXIMUM_TICKET_LIFETIME,
+          Long.parseLong(conf.getProperty(MiniKdc.MAX_TICKET_LIFETIME)));
     }
   }
 

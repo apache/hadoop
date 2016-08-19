@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 
 import java.io.IOException;
@@ -39,12 +38,11 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src), true);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getLatestSnapshotId();
@@ -65,12 +63,11 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src), true);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getLatestSnapshotId();
@@ -90,12 +87,11 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src), true);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getLatestSnapshotId();
@@ -115,12 +111,11 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       unprotectedRemoveAcl(fsd, iip);
     } finally {
@@ -135,13 +130,12 @@ class FSDirAclOp {
       throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       List<AclEntry> newAcl = unprotectedSetAcl(fsd, src, aclSpec, false);
       fsd.getEditLog().logSetAcl(src, newAcl);
@@ -155,18 +149,15 @@ class FSDirAclOp {
       FSDirectory fsd, String src) throws IOException {
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
-    String srcs = FSDirectory.normalizePath(src);
     fsd.readLock();
     try {
+      INodesInPath iip = fsd.resolvePath(pc, src);
+      src = iip.getPath();
       // There is no real inode for the path ending in ".snapshot", so return a
       // non-null, unpopulated AclStatus.  This is similar to getFileInfo.
-      if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR) &&
-          fsd.getINode4DotSnapshot(srcs) != null) {
+      if (iip.isDotSnapshotDir() && fsd.getINode4DotSnapshot(iip) != null) {
         return new AclStatus.Builder().owner("").group("").build();
       }
-      INodesInPath iip = fsd.getINodesInPath(srcs, true);
       if (fsd.isPermissionEnabled()) {
         fsd.checkTraverse(pc, iip);
       }

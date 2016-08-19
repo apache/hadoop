@@ -23,6 +23,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * All the constants used with the {@link S3AFileSystem}.
+ *
+ * Some of the strings are marked as {@code Unstable}. This means
+ * that they may be unsupported in future; at which point they will be marked
+ * as deprecated and simply ignored.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -78,6 +82,14 @@ public final class Constants {
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
+  // socket send buffer to be used in Amazon client
+  public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
+  public static final int DEFAULT_SOCKET_SEND_BUFFER = 8 * 1024;
+
+  // socket send buffer to be used in Amazon client
+  public static final String SOCKET_RECV_BUFFER = "fs.s3a.socket.recv.buffer";
+  public static final int DEFAULT_SOCKET_RECV_BUFFER = 8 * 1024;
+
   // number of records to get while paging through a directory listing
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";
   public static final int DEFAULT_MAX_PAGING_KEYS = 5000;
@@ -116,8 +128,8 @@ public final class Constants {
   public static final String FAST_BUFFER_SIZE = "fs.s3a.fast.buffer.size";
   public static final int DEFAULT_FAST_BUFFER_SIZE = 1048576; //1MB
 
-  // private | public-read | public-read-write | authenticated-read | 
-  // log-delivery-write | bucket-owner-read | bucket-owner-full-control
+  // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
+  // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl
   public static final String CANNED_ACL = "fs.s3a.acl.default";
   public static final String DEFAULT_CANNED_ACL = "";
 
@@ -154,4 +166,36 @@ public final class Constants {
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
+
+  /**
+   * Which input strategy to use for buffering, seeking and similar when
+   * reading data.
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String INPUT_FADVISE =
+      "fs.s3a.experimental.input.fadvise";
+
+  /**
+   * General input. Some seeks, some reads.
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String INPUT_FADV_NORMAL = "normal";
+
+  /**
+   * Optimized for sequential access.
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String INPUT_FADV_SEQUENTIAL = "sequential";
+
+  /**
+   * Optimized purely for random seek+read/positionedRead operations;
+   * The performance of sequential IO may be reduced in exchange for
+   * more efficient {@code seek()} operations.
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String INPUT_FADV_RANDOM = "random";
 }

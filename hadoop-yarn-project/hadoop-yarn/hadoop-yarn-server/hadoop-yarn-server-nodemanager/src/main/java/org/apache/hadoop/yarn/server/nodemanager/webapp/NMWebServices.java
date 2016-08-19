@@ -53,9 +53,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerLogsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -194,7 +194,69 @@ public class NMWebServices {
         .toString(), webapp.name(), hsr.getRemoteUser());
 
   }
-  
+
+  /**
+   * Returns log file's name as well as current file size for a container.
+   *
+   * @param hsr
+   *    HttpServletRequest
+   * @param containerIdStr
+   *    The container ID
+   * @return
+   *    The log file's name and current file size
+   */
+  @GET
+  @Path("/containers/{containerid}/logs")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public ContainerLogsInfo getContainerLogsInfo(@javax.ws.rs.core.Context
+      HttpServletRequest hsr,
+      @PathParam("containerid") String containerIdStr) {
+    ContainerId containerId = null;
+    init();
+    try {
+      containerId = ContainerId.fromString(containerIdStr);
+    } catch (Exception e) {
+      throw new BadRequestException("invalid container id, " + containerIdStr);
+    }
+    try {
+      return new ContainerLogsInfo(this.nmContext, containerId,
+          hsr.getRemoteUser());
+    } catch (YarnException ex) {
+      throw new WebApplicationException(ex);
+    }
+  }
+
+  /**
+   * Returns the contents of a container's log file in plain text.
+   *
+   * Only works for containers that are still in the NodeManager's memory, so
+   * logs are no longer available after the corresponding application is no
+   * longer running.
+   *
+   * @param containerIdStr
+   *    The container ID
+   * @param filename
+   *    The name of the log file
+   * @param format
+   *    The content type
+   * @param size
+   *    the size of the log file
+   * @return
+   *    The contents of the container's log file
+   */
+  @GET
+  @Path("/containers/{containerid}/logs/{filename}")
+  @Produces({ MediaType.TEXT_PLAIN })
+  @Public
+  @Unstable
+  public Response getContainerLogFile(
+      @PathParam("containerid") String containerIdStr,
+      @PathParam("filename") String filename,
+      @QueryParam("format") String format,
+      @QueryParam("size") String size) {
+    return getLogs(containerIdStr, filename, format, size);
+  }
+
   /**
    * Returns the contents of a container's log file in plain text. 
    *
@@ -264,20 +326,18 @@ public class NMWebServices {
             byte[] buf = new byte[bufferSize];
             long toSkip = 0;
             long totalBytesToRead = fileLength;
+            long skipAfterRead = 0;
             if (bytes < 0) {
               long absBytes = Math.abs(bytes);
               if (absBytes < fileLength) {
                 toSkip = fileLength - absBytes;
                 totalBytesToRead = absBytes;
               }
-              long skippedBytes = fis.skip(toSkip);
-              if (skippedBytes != toSkip) {
-                throw new IOException("The bytes were skipped are different "
-                    + "from the caller requested");
-              }
+              org.apache.hadoop.io.IOUtils.skipFully(fis, toSkip);
             } else {
               if (bytes < fileLength) {
                 totalBytesToRead = bytes;
+                skipAfterRead = fileLength - bytes;
               }
             }
 
@@ -295,6 +355,7 @@ public class NMWebServices {
                   : (int) pendingRead;
               len = fis.read(buf, 0, toRead);
             }
+            org.apache.hadoop.io.IOUtils.skipFully(fis, skipAfterRead);
             os.flush();
           } finally {
             IOUtils.closeQuietly(fis);

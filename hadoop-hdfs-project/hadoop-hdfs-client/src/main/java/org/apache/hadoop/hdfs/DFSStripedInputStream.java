@@ -35,12 +35,12 @@ import static org.apache.hadoop.hdfs.util.StripedBlockUtil.AlignedStripe;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunk;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
 
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
-import org.apache.hadoop.util.DirectBufferPool;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -139,7 +139,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
   }
 
-  private static final DirectBufferPool bufferPool = new DirectBufferPool();
+  private static final ByteBufferPool BUFFER_POOL = new ElasticByteBufferPool();
 
   private final BlockReaderInfo[] blockReaders;
   private final int cellSize;
@@ -194,9 +194,14 @@ public class DFSStripedInputStream extends DFSInputStream {
     }
   }
 
+  private boolean useDirectBuffer() {
+    return decoder.preferDirectBuffer();
+  }
+
   private void resetCurStripeBuffer() {
     if (curStripeBuf == null) {
-      curStripeBuf = bufferPool.getBuffer(cellSize * dataBlkNum);
+      curStripeBuf = BUFFER_POOL.getBuffer(useDirectBuffer(),
+          cellSize * dataBlkNum);
     }
     curStripeBuf.clear();
     curStripeRange = new StripeRange(0, 0);
@@ -204,7 +209,8 @@ public class DFSStripedInputStream extends DFSInputStream {
 
   private ByteBuffer getParityBuffer() {
     if (parityBuf == null) {
-      parityBuf = bufferPool.getBuffer(cellSize * parityBlkNum);
+      parityBuf = BUFFER_POOL.getBuffer(useDirectBuffer(),
+          cellSize * parityBlkNum);
     }
     parityBuf.clear();
     return parityBuf;
@@ -235,11 +241,11 @@ public class DFSStripedInputStream extends DFSInputStream {
   public synchronized void close() throws IOException {
     super.close();
     if (curStripeBuf != null) {
-      bufferPool.returnBuffer(curStripeBuf);
+      BUFFER_POOL.putBuffer(curStripeBuf);
       curStripeBuf = null;
     }
     if (parityBuf != null) {
-      bufferPool.returnBuffer(parityBuf);
+      BUFFER_POOL.putBuffer(parityBuf);
       parityBuf = null;
     }
   }

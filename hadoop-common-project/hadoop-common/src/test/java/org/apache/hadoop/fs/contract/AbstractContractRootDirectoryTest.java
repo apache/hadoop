@@ -19,16 +19,21 @@
 package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.fs.FileStatus;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toList;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
 
 /**
  * This class does things to the root directory.
@@ -109,6 +114,8 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
 
   @Test
   public void testCreateFileOverRoot() throws Throwable {
+    //extra sanity checks here to avoid support calls about complete loss of data
+    skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
     byte[] dataset = dataset(1024, ' ', 'z');
     try {
@@ -123,7 +130,6 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
 
   @Test
   public void testListEmptyRootDirectory() throws IOException {
-    //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     FileSystem fs = getFileSystem();
     Path root = new Path("/");
@@ -133,5 +139,41 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     }
     assertEquals("listStatus on empty root-directory returned a non-empty list",
         0, fs.listStatus(root).length);
+    assertFalse("listFiles(/, false).hasNext",
+        fs.listFiles(root, false).hasNext());
+    assertFalse("listFiles(/, true).hasNext",
+        fs.listFiles(root, true).hasNext());
+    assertFalse("listLocatedStatus(/).hasNext",
+        fs.listLocatedStatus(root).hasNext());
+    assertIsDirectory(root);
   }
+
+  @Test
+  public void testSimpleRootListing() throws IOException {
+    describe("test the nonrecursive root listing calls");
+    FileSystem fs = getFileSystem();
+    Path root = new Path("/");
+    FileStatus[] statuses = fs.listStatus(root);
+    List<LocatedFileStatus> locatedStatusList = toList(
+        fs.listLocatedStatus(root));
+    assertEquals(statuses.length, locatedStatusList.size());
+    List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
+    assertTrue(fileList.size() <= statuses.length);
+  }
+
+  @Test
+  public void testRecursiveRootListing() throws IOException {
+    describe("test a recursive root directory listing");
+    FileSystem fs = getFileSystem();
+    Path root = new Path("/");
+    ContractTestUtils.TreeScanResults
+        listing = new ContractTestUtils.TreeScanResults(
+        fs.listFiles(root, true));
+    describe("verifying consistency with treewalk's files");
+    ContractTestUtils.TreeScanResults treeWalk = treeWalk(fs, root);
+    treeWalk.assertFieldsEquivalent("files", listing,
+        treeWalk.getFiles(),
+        listing.getFiles());
+  }
+
 }

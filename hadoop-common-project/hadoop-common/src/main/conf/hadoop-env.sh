@@ -115,29 +115,34 @@ esac
 #
 # A note about classpaths.
 #
-# The classpath is configured such that entries are stripped prior
-# to handing to Java based either upon duplication or non-existence.
-# Wildcards and/or directories are *NOT* expanded as the
-# de-duplication is fairly simple.  So if two directories are in
-# the classpath that both contain awesome-methods-1.0.jar,
-# awesome-methods-1.0.jar will still be seen by java.  But if
-# the classpath specifically has awesome-methods-1.0.jar from the
-# same directory listed twice, the last one will be removed.
-#
+# By default, Apache Hadoop overrides Java's CLASSPATH
+# environment variable.  It is configured such
+# that it sarts out blank with new entries added after passing
+# a series of checks (file/dir exists, not already listed aka
+# de-deduplication).  During de-depulication, wildcards and/or
+# directories are *NOT* expanded to keep it simple. Therefore,
+# if the computed classpath has two specific mentions of
+# awesome-methods-1.0.jar, only the first one added will be seen.
+# If two directories are in the classpath that both contain
+# awesome-methods-1.0.jar, then Java will pick up both versions.
 
-# An additional, custom CLASSPATH.  This is really meant for
-# end users, but as an administrator, one might want to push
-# something extra in here too, such as the jar to the topology
-# method.  Just be sure to append to the existing HADOOP_USER_CLASSPATH
-# so end users have a way to add stuff.
-# export HADOOP_USER_CLASSPATH="/some/cool/path/on/your/machine"
+# An additional, custom CLASSPATH. Site-wide configs should be
+# handled via the shellprofile functionality, utilizing the
+# hadoop_add_classpath function for greater control and much
+# harder for apps/end-users to accidentally override.
+# Similarly, end users should utilize ${HOME}/.hadooprc .
+# This variable should ideally only be used as a short-cut,
+# interactive way for temporary additions on the command line.
+# export HADOOP_CLASSPATH="/some/cool/path/on/your/machine"
 
-# Should HADOOP_USER_CLASSPATH be first in the official CLASSPATH?
+# Should HADOOP_CLASSPATH be first in the official CLASSPATH?
 # export HADOOP_USER_CLASSPATH_FIRST="yes"
 
-# If HADOOP_USE_CLIENT_CLASSLOADER is set, HADOOP_CLASSPATH along with the main
-# jar are handled by a separate isolated client classloader. If it is set,
-# HADOOP_USER_CLASSPATH_FIRST is ignored. Can be defined by doing
+# If HADOOP_USE_CLIENT_CLASSLOADER is set, the classpath along
+# with the main jar are handled by a separate isolated
+# client classloader when 'hadoop jar', 'yarn jar', or 'mapred job'
+# is utilized. If it is set, HADOOP_CLASSPATH and
+# HADOOP_USER_CLASSPATH_FIRST are ignored.
 # export HADOOP_USE_CLIENT_CLASSLOADER=true
 
 # HADOOP_CLIENT_CLASSLOADER_SYSTEM_CLASSES overrides the default definition of
@@ -169,8 +174,8 @@ esac
 # export HADOOP_SSH_PARALLEL=10
 
 # Filename which contains all of the hosts for any remote execution
-# helper scripts # such as slaves.sh, start-dfs.sh, etc.
-# export HADOOP_SLAVES="${HADOOP_CONF_DIR}/slaves"
+# helper scripts # such as workers.sh, start-dfs.sh, etc.
+# export HADOOP_WORKERS="${HADOOP_CONF_DIR}/workers"
 
 ###
 # Options for all daemons

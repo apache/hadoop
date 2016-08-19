@@ -64,15 +64,15 @@ class FSDirRenameOp {
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
 
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     HdfsFileStatus resultingStat = null;
-    src = fsd.resolvePath(pc, src, srcComponents);
-    dst = fsd.resolvePath(pc, dst, dstComponents);
+    // Rename does not operate on link targets
+    // Do not resolveLink when checking permissions of src and dst
+    INodesInPath srcIIP = fsd.resolvePathForWrite(pc, src, false);
+    INodesInPath dstIIP = fsd.resolvePathForWrite(pc, dst, false);
     @SuppressWarnings("deprecation")
-    final boolean status = renameTo(fsd, pc, src, dst, logRetryCache);
+    final boolean status = renameTo(fsd, pc, srcIIP, dstIIP, logRetryCache);
     if (status) {
-      INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
+      dstIIP = fsd.getINodesInPath(dstIIP.getPath(), false);
       resultingStat = fsd.getAuditFileInfo(dstIIP);
     }
     return new RenameOldResult(status, resultingStat);
@@ -239,12 +239,9 @@ class FSDirRenameOp {
     }
     final FSPermissionChecker pc = fsd.getPermissionChecker();
 
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    src = fsd.resolvePath(pc, src, srcComponents);
-    dst = fsd.resolvePath(pc, dst, dstComponents);
-    renameTo(fsd, pc, src, dst, collectedBlocks, logRetryCache, options);
+    // returns resolved path
+    dst = renameTo(fsd, pc, src, dst, collectedBlocks, logRetryCache, options);
     INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
     HdfsFileStatus resultingStat = fsd.getAuditFileInfo(dstIIP);
 
@@ -256,11 +253,13 @@ class FSDirRenameOp {
    * @see {@link #unprotectedRenameTo(FSDirectory, String, String, INodesInPath,
    * INodesInPath, long, BlocksMapUpdateInfo, Options.Rename...)}
    */
-  static void renameTo(FSDirectory fsd, FSPermissionChecker pc, String src,
+  static String renameTo(FSDirectory fsd, FSPermissionChecker pc, String src,
       String dst, BlocksMapUpdateInfo collectedBlocks, boolean logRetryCache,
       Options.Rename... options) throws IOException {
-    final INodesInPath srcIIP = fsd.getINodesInPath4Write(src, false);
-    final INodesInPath dstIIP = fsd.getINodesInPath4Write(dst, false);
+    final INodesInPath srcIIP = fsd.resolvePathForWrite(pc, src, false);
+    final INodesInPath dstIIP = fsd.resolvePathForWrite(pc, dst, false);
+    src = srcIIP.getPath();
+    dst = dstIIP.getPath();
     if (fsd.isPermissionEnabled()) {
       // Rename does not operate on link targets
       // Do not resolveLink when checking permissions of src and dst
@@ -287,6 +286,7 @@ class FSDirRenameOp {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logRename(src, dst, mtime, logRetryCache, options);
+    return dst;
   }
 
   /**
@@ -446,16 +446,17 @@ class FSDirRenameOp {
   @Deprecated
   @SuppressWarnings("deprecation")
   private static boolean renameTo(FSDirectory fsd, FSPermissionChecker pc,
-      String src, String dst, boolean logRetryCache) throws IOException {
-    // Rename does not operate on link targets
-    // Do not resolveLink when checking permissions of src and dst
-    // Check write access to parent of src
-    final INodesInPath srcIIP = fsd.getINodesInPath4Write(src, false);
+      INodesInPath srcIIP, INodesInPath dstIIP, boolean logRetryCache)
+          throws IOException {
+    String src = srcIIP.getPath();
+    String dst = dstIIP.getPath();
     // Note: We should not be doing this.  This is move() not renameTo().
-    final String actualDst = fsd.isDir(dst) ?
-        dst + Path.SEPARATOR + new Path(src).getName() : dst;
-    final INodesInPath dstIIP = fsd.getINodesInPath4Write(actualDst, false);
+    if (fsd.isDir(dst)) {
+      dstIIP = INodesInPath.append(dstIIP, null, srcIIP.getLastLocalName());
+    }
+    final String actualDst = dstIIP.getPath();
     if (fsd.isPermissionEnabled()) {
+      // Check write access to parent of src
       fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
           false);
       // Check write access to ancestor of dst

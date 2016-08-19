@@ -83,8 +83,6 @@ final class CoderUtil {
 
   /**
    * Initialize the output buffers with ZERO bytes.
-   * @param buffers
-   * @param dataLen
    */
   static void resetOutputBuffers(ByteBuffer[] buffers, int dataLen) {
     for (ByteBuffer buffer : buffers) {
@@ -94,8 +92,6 @@ final class CoderUtil {
 
   /**
    * Initialize the output buffers with ZERO bytes.
-   * @param buffers
-   * @param dataLen
    */
   static void resetOutputBuffers(byte[][] buffers, int[] offsets,
                                  int dataLen) {
@@ -127,10 +123,6 @@ final class CoderUtil {
 
   /**
    * Clone an input bytes array as direct ByteBuffer.
-   * @param input
-   * @param len
-   * @param offset
-   * @return direct ByteBuffer
    */
   static ByteBuffer cloneAsDirectByteBuffer(byte[] input, int offset, int len) {
     if (input == null) { // an input can be null, if erased or not to read
@@ -166,10 +158,6 @@ final class CoderUtil {
    * @return the first valid input
    */
   static <T> T findFirstValidInput(T[] inputs) {
-    if (inputs.length > 0 && inputs[0] != null) {
-      return inputs[0];
-    }
-
     for (T input : inputs) {
       if (input != null) {
         return input;

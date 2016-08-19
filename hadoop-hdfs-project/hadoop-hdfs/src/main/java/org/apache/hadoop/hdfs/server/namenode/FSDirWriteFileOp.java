@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -33,6 +32,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -119,26 +118,10 @@ class FSDirWriteFileOp {
   static void abandonBlock(
       FSDirectory fsd, FSPermissionChecker pc, ExtendedBlock b, long fileId,
       String src, String holder) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
-
-    final INode inode;
-    final INodesInPath iip;
-    if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
-      // Older clients may not have given us an inode ID to work with.
-      // In this case, we have to try to resolve the path and hope it
-      // hasn't changed or been deleted since the file was opened for write.
-      iip = fsd.getINodesInPath(src, true);
-      inode = iip.getLastINode();
-    } else {
-      inode = fsd.getInode(fileId);
-      iip = INodesInPath.fromINode(inode);
-      if (inode != null) {
-        src = iip.getPath();
-      }
-    }
+    final INodesInPath iip = fsd.resolvePath(pc, src, fileId);
+    src = iip.getPath();
     FSNamesystem fsn = fsd.getFSNamesystem();
-    final INodeFile file = fsn.checkLease(src, holder, inode, fileId);
+    final INodeFile file = fsn.checkLease(iip, holder, fileId);
     Preconditions.checkState(file.isUnderConstruction());
     if (file.isStriped()) {
       return; // do not abandon block for striped file
@@ -185,9 +168,8 @@ class FSDirWriteFileOp {
     String clientMachine;
     final boolean isStriped;
 
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsn.dir.resolvePath(pc, src, pathComponents);
-    FileState fileState = analyzeFileState(fsn, src, fileId, clientName,
+    INodesInPath iip = fsn.dir.resolvePath(pc, src, fileId);
+    FileState fileState = analyzeFileState(fsn, iip, fileId, clientName,
                                            previous, onRetryBlock);
     if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
       // This is a retry. No need to generate new locations.
@@ -245,7 +227,8 @@ class FSDirWriteFileOp {
     // Run the full analysis again, since things could have changed
     // while chooseTarget() was executing.
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
-    FileState fileState = analyzeFileState(fsn, src, fileId, clientName,
+    INodesInPath iip = fsn.dir.resolvePath(null, src, fileId);
+    FileState fileState = analyzeFileState(fsn, iip, fileId, clientName,
                                            previous, onRetryBlock);
     final INodeFile pendingFile = fileState.inode;
     src = fileState.path;
@@ -359,9 +342,8 @@ class FSDirWriteFileOp {
 
     boolean isRawPath = FSDirectory.isReservedRawName(src);
     FSDirectory fsd = fsn.getFSDirectory();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
-    INodesInPath iip = fsd.getINodesInPath4Write(src);
+    INodesInPath iip = fsd.resolvePathForWrite(pc, src);
+    src = iip.getPath();
 
     // Verify that the destination does not exist as a directory already.
     final INode inode = iip.getLastINode();
@@ -469,10 +451,8 @@ class FSDirWriteFileOp {
       FSPermissionChecker pc, String src,
       CryptoProtocolVersion[] supportedVersions)
       throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSDirectory fsd = fsn.getFSDirectory();
-    src = fsd.resolvePath(pc, src, pathComponents);
-    INodesInPath iip = fsd.getINodesInPath4Write(src);
+    INodesInPath iip = fsd.resolvePathForWrite(pc, src);
     // Nothing to do if the path is not within an EZ
     final EncryptionZone zone = FSDirEncryptionZoneOp.getEZForPath(fsd, iip);
     if (zone == null) {
@@ -610,7 +590,7 @@ class FSDirWriteFileOp {
       }
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
           modTime, modTime, replication, preferredBlockSize, ecPolicy != null);
-      newNode.setLocalName(localName.getBytes(Charsets.UTF_8));
+      newNode.setLocalName(DFSUtil.string2Bytes(localName));
       newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode);
     } finally {
@@ -629,11 +609,11 @@ class FSDirWriteFileOp {
   }
 
   private static FileState analyzeFileState(
-      FSNamesystem fsn, String src, long fileId, String clientName,
+      FSNamesystem fsn, INodesInPath iip, long fileId, String clientName,
       ExtendedBlock previous, LocatedBlock[] onRetryBlock)
       throws IOException {
     assert fsn.hasReadLock();
-
+    String src = iip.getPath();
     checkBlock(fsn, previous);
     onRetryBlock[0] = null;
     fsn.checkNameNodeSafeMode("Cannot add block to " + src);
@@ -642,24 +622,7 @@ class FSDirWriteFileOp {
     fsn.checkFsObjectLimit();
 
     Block previousBlock = ExtendedBlock.getLocalBlock(previous);
-    final INode inode;
-    final INodesInPath iip;
-    if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
-      // Older clients may not have given us an inode ID to work with.
-      // In this case, we have to try to resolve the path and hope it
-      // hasn't changed or been deleted since the file was opened for write.
-      iip = fsn.dir.getINodesInPath4Write(src);
-      inode = iip.getLastINode();
-    } else {
-      // Newer clients pass the inode ID, so we can just get the inode
-      // directly.
-      inode = fsn.dir.getInode(fileId);
-      iip = INodesInPath.fromINode(inode);
-      if (inode != null) {
-        src = iip.getPath();
-      }
-    }
-    final INodeFile file = fsn.checkLease(src, clientName, inode, fileId);
+    final INodeFile file = fsn.checkLease(iip, clientName, fileId);
     BlockInfo lastBlockInFile = file.getLastBlock();
     if (!Block.matchingIdAndGenStamp(previousBlock, lastBlockInFile)) {
       // The block that the client claims is the current last block
@@ -738,34 +701,22 @@ class FSDirWriteFileOp {
                                         src + " for " + holder);
     }
     checkBlock(fsn, last);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsn.dir.resolvePath(pc, src, pathComponents);
-    return completeFileInternal(fsn, src, holder,
+    INodesInPath iip = fsn.dir.resolvePath(pc, src, fileId);
+    return completeFileInternal(fsn, iip, holder,
         ExtendedBlock.getLocalBlock(last), fileId);
   }
 
   private static boolean completeFileInternal(
-      FSNamesystem fsn, String src, String holder, Block last, long fileId)
+      FSNamesystem fsn, INodesInPath iip,
+      String holder, Block last, long fileId)
       throws IOException {
     assert fsn.hasWriteLock();
+    final String src = iip.getPath();
     final INodeFile pendingFile;
-    final INodesInPath iip;
     INode inode = null;
     try {
-      if (fileId == HdfsConstants.GRANDFATHER_INODE_ID) {
-        // Older clients may not have given us an inode ID to work with.
-        // In this case, we have to try to resolve the path and hope it
-        // hasn't changed or been deleted since the file was opened for write.
-        iip = fsn.dir.getINodesInPath(src, true);
-        inode = iip.getLastINode();
-      } else {
-        inode = fsn.dir.getInode(fileId);
-        iip = INodesInPath.fromINode(inode);
-        if (inode != null) {
-          src = iip.getPath();
-        }
-      }
-      pendingFile = fsn.checkLease(src, holder, inode, fileId);
+      inode = iip.getLastINode();
+      pendingFile = fsn.checkLease(iip, holder, fileId);
     } catch (LeaseExpiredException lee) {
       if (inode != null && inode.isFile() &&
           !inode.asFile().isUnderConstruction()) {

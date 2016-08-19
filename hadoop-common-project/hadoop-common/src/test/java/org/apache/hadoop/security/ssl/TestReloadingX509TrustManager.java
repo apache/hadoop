@@ -19,6 +19,10 @@ package org.apache.hadoop.security.ssl;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+
+import com.google.common.base.Supplier;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -30,11 +34,13 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.createTrustStore;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateCertificate;
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.generateKeyPair;
+import static org.junit.Assert.assertFalse;
 
 public class TestReloadingX509TrustManager {
 
@@ -43,6 +49,8 @@ public class TestReloadingX509TrustManager {
 
   private X509Certificate cert1;
   private X509Certificate cert2;
+  private final LogCapturer reloaderLog = LogCapturer.captureLogs(
+      ReloadingX509TrustManager.LOG);
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -80,7 +88,7 @@ public class TestReloadingX509TrustManager {
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testReload() throws Exception {
     KeyPair kp = generateKeyPair("RSA");
     cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");
@@ -88,7 +96,7 @@ public class TestReloadingX509TrustManager {
     String truststoreLocation = BASEDIR + "/testreload.jks";
     createTrustStore(truststoreLocation, "password", "cert1", cert1);
 
-    ReloadingX509TrustManager tm =
+    final ReloadingX509TrustManager tm =
       new ReloadingX509TrustManager("jks", truststoreLocation, "password", 10);
     try {
       tm.init();
@@ -103,19 +111,18 @@ public class TestReloadingX509TrustManager {
       certs.put("cert2", cert2);
       createTrustStore(truststoreLocation, "password", certs);
 
-      // and wait to be sure reload has taken place
-      assertEquals(10, tm.getReloadInterval());
-
-      // Wait so that the file modification time is different
-      Thread.sleep((tm.getReloadInterval() + 200));
-
-      assertEquals(2, tm.getAcceptedIssuers().length);
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return tm.getAcceptedIssuers().length == 2;
+        }
+      }, (int) tm.getReloadInterval(), 10000);
     } finally {
       tm.destroy();
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testReloadMissingTrustStore() throws Exception {
     KeyPair kp = generateKeyPair("RSA");
     cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");
@@ -129,19 +136,22 @@ public class TestReloadingX509TrustManager {
       tm.init();
       assertEquals(1, tm.getAcceptedIssuers().length);
       X509Certificate cert = tm.getAcceptedIssuers()[0];
+
+      assertFalse(reloaderLog.getOutput().contains(
+          ReloadingX509TrustManager.RELOAD_ERROR_MESSAGE));
       new File(truststoreLocation).delete();
 
-      // Wait so that the file modification time is different
-      Thread.sleep((tm.getReloadInterval() + 200));
+      waitForFailedReloadAtLeastOnce((int) tm.getReloadInterval());
 
       assertEquals(1, tm.getAcceptedIssuers().length);
       assertEquals(cert, tm.getAcceptedIssuers()[0]);
     } finally {
+      reloaderLog.stopCapturing();
       tm.destroy();
     }
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testReloadCorruptTrustStore() throws Exception {
     KeyPair kp = generateKeyPair("RSA");
     cert1 = generateCertificate("CN=Cert1", kp, 30, "SHA1withRSA");
@@ -154,22 +164,39 @@ public class TestReloadingX509TrustManager {
     try {
       tm.init();
       assertEquals(1, tm.getAcceptedIssuers().length);
-      X509Certificate cert = tm.getAcceptedIssuers()[0];
+      final X509Certificate cert = tm.getAcceptedIssuers()[0];
 
+      // Wait so that the file modification time is different
+      Thread.sleep((tm.getReloadInterval() + 1000));
+
+      assertFalse(reloaderLog.getOutput().contains(
+          ReloadingX509TrustManager.RELOAD_ERROR_MESSAGE));
       OutputStream os = new FileOutputStream(truststoreLocation);
       os.write(1);
       os.close();
-      new File(truststoreLocation).setLastModified(System.currentTimeMillis() -
-                                                   1000);
 
-      // Wait so that the file modification time is different
-      Thread.sleep((tm.getReloadInterval() + 200));
+      waitForFailedReloadAtLeastOnce((int) tm.getReloadInterval());
 
       assertEquals(1, tm.getAcceptedIssuers().length);
       assertEquals(cert, tm.getAcceptedIssuers()[0]);
     } finally {
+      reloaderLog.stopCapturing();
       tm.destroy();
     }
+  }
+
+  /**Wait for the reloader thread to load the configurations at least once
+   * by probing the log of the thread if the reload fails.
+   */
+  private void waitForFailedReloadAtLeastOnce(int reloadInterval)
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return reloaderLog.getOutput().contains(
+            ReloadingX509TrustManager.RELOAD_ERROR_MESSAGE);
+      }
+    }, reloadInterval, 10 * 1000);
   }
 
 }

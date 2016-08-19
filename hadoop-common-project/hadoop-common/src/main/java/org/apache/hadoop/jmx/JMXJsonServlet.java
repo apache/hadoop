@@ -147,7 +147,16 @@ public class JMXJsonServlet extends HttpServlet {
     return HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
         request, response);
   }
-  
+
+  /**
+   * Disable TRACE method to avoid TRACE vulnerability.
+   */
+  @Override
+  protected void doTrace(HttpServletRequest req, HttpServletResponse resp)
+      throws ServletException, IOException {
+    resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+  }
+
   /**
    * Process a GET request for the specified resource.
    * 

@@ -62,7 +62,7 @@ else
   "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
       --daemon start \
-      --slaves \
+      --workers \
       --hostnames "${RMHOSTS}" \
       resourcemanager
 fi
@@ -71,7 +71,7 @@ fi
 echo "Starting nodemanagers"
 "${HADOOP_YARN_HOME}/bin/yarn" \
     --config "${HADOOP_CONF_DIR}" \
-    --slaves \
+    --workers \
     --daemon start \
     nodemanager
 
@@ -80,7 +80,7 @@ PROXYSERVER=$("${HADOOP_HDFS_HOME}/bin/hdfs" getconf -confKey  yarn.web-proxy.ad
 if [[ -n ${PROXYSERVER} ]]; then
   "${HADOOP_YARN_HOME}/bin/yarn" \
       --config "${HADOOP_CONF_DIR}" \
-      --slaves \
+      --workers \
       --hostnames "${PROXYSERVER}" \
       --daemon start \
       proxyserver

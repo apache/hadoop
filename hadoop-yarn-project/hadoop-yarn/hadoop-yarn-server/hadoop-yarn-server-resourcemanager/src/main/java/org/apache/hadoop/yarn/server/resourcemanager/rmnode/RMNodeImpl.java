@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -124,6 +125,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private String healthReport;
   private long lastHealthReportTime;
   private String nodeManagerVersion;
+  private Integer decommissioningTimeout;
 
   private long timeStamp;
   /* Aggregated resource utilization for the containers. */
@@ -179,7 +181,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                                            NodeState,
                                            RMNodeEventType,
                                            RMNodeEvent>(NodeState.NEW)
-
       //Transitions from NEW state
       .addTransition(NodeState.NEW, NodeState.RUNNING,
           RMNodeEventType.STARTED, new AddNodeTransition())
@@ -265,6 +266,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.DECOMMISSIONING, NodeState.REBOOTED,
           RMNodeEventType.REBOOTING,
           new DeactivateNodeTransition(NodeState.REBOOTED))
+      .addTransition(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONING,
+         RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+         new AddContainersToBeRemovedFromNMTransition())
 
       .addTransition(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONING,
           RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
@@ -633,7 +637,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       } catch (InvalidStateTransitionException e) {
         LOG.error("Can't handle this event at current state", e);
         LOG.error("Invalid event " + event.getType() + 
-            " on Node  " + this.nodeId);
+            " on Node  " + this.nodeId + " oldState " + oldState);
       }
       if (oldState != getState()) {
         LOG.info(nodeId + " Node Transitioned from " + oldState + " to "
@@ -665,6 +669,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       break;
     case SHUTDOWN:
       metrics.decrNumShutdownNMs();
+      break;
+    case DECOMMISSIONING:
+      metrics.decrDecommissioningNMs();
       break;
     default:
       LOG.debug("Unexpected previous node state");
@@ -711,6 +718,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       break;
     case DECOMMISSIONING:
       metrics.decrDecommissioningNMs();
+      break;
+    case DECOMMISSIONED:
+      metrics.decrDecommisionedNMs();
       break;
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
@@ -1087,9 +1097,26 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      Integer timeout = null;
+      if (RMNodeDecommissioningEvent.class.isInstance(event)) {
+        RMNodeDecommissioningEvent e = ((RMNodeDecommissioningEvent) event);
+        timeout = e.getDecommissioningTimeout();
+      }
+      // Pick up possible updates on decommissioningTimeout.
+      if (rmNode.getState() == NodeState.DECOMMISSIONING) {
+        if (!Objects.equals(rmNode.getDecommissioningTimeout(), timeout)) {
+          LOG.info("Update " + rmNode.getNodeID() +
+                   " DecommissioningTimeout to be " + timeout);
+          rmNode.decommissioningTimeout = timeout;
+        } else {
+          LOG.info(rmNode.getNodeID() + " is already DECOMMISSIONING");
+        }
+        return;
+      }
       LOG.info("Put Node " + rmNode.nodeId + " in DECOMMISSIONING.");
       // Update NM metrics during graceful decommissioning.
       rmNode.updateMetricsForGracefulDecommission(initState, finalState);
+      rmNode.decommissioningTimeout = timeout;
       if (rmNode.originalTotalCapability == null){
         rmNode.originalTotalCapability =
             Resources.clone(rmNode.totalCapability);
@@ -1155,24 +1182,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           reportNodeUnusable(rmNode, NodeState.UNHEALTHY);
           return NodeState.UNHEALTHY;
         }
-      }
-      if (isNodeDecommissioning) {
-        List<ApplicationId> runningApps = rmNode.getRunningApps();
-
-        List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
-
-        // no running (and keeping alive) app on this node, get it
-        // decommissioned.
-        // TODO may need to check no container is being scheduled on this node
-        // as well.
-        if ((runningApps == null || runningApps.size() == 0)
-            && (keepAliveApps == null || keepAliveApps.size() == 0)) {
-          RMNodeImpl.deactivateNode(rmNode, NodeState.DECOMMISSIONED);
-          return NodeState.DECOMMISSIONED;
-        }
-
-        // TODO (in YARN-3223) if node in decommissioning, get node resource
-        // updated if container get finished (keep available resource to be 0)
       }
 
       rmNode.handleContainerStatus(statusEvent.getContainers());
@@ -1471,5 +1480,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @Override
   public void setUntrackedTimeStamp(long ts) {
     this.timeStamp = ts;
+  }
+
+  @Override
+  public Integer getDecommissioningTimeout() {
+    return decommissioningTimeout;
   }
 }

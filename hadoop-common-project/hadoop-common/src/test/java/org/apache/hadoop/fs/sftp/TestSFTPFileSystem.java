@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Shell;
 
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.NamedFactory;
@@ -48,8 +47,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 public class TestSFTPFileSystem {
 
@@ -99,7 +98,7 @@ public class TestSFTPFileSystem {
   @BeforeClass
   public static void setUp() throws Exception {
     // skip all tests if running on Windows
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
 
     startSshdServer();
 

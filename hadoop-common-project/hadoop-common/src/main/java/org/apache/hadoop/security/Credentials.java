@@ -29,13 +29,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -95,10 +95,24 @@ public class Credentials implements Writable {
    * @param t the token object
    */
   public void addToken(Text alias, Token<? extends TokenIdentifier> t) {
-    if (t != null) {
-      tokenMap.put(alias, t);
-    } else {
+    if (t == null) {
       LOG.warn("Null token ignored for " + alias);
+    } else if (tokenMap.put(alias, t) != null) {
+      // Update private tokens
+      Map<Text, Token<? extends TokenIdentifier>> tokensToAdd =
+          new HashMap<>();
+      for (Map.Entry<Text, Token<? extends TokenIdentifier>> e :
+          tokenMap.entrySet()) {
+        Token<? extends TokenIdentifier> token = e.getValue();
+        if (token instanceof Token.PrivateToken &&
+            ((Token.PrivateToken) token).getPublicService().equals(alias)) {
+          Token<? extends TokenIdentifier> privateToken =
+              new Token.PrivateToken<>(t);
+          privateToken.setService(token.getService());
+          tokensToAdd.put(e.getKey(), privateToken);
+        }
+      }
+      tokenMap.putAll(tokensToAdd);
     }
   }
 
@@ -228,7 +242,7 @@ public class Credentials implements Writable {
   }
 
   private static final byte[] TOKEN_STORAGE_MAGIC =
-      "HDTS".getBytes(Charsets.UTF_8);
+      "HDTS".getBytes(StandardCharsets.UTF_8);
   private static final byte TOKEN_STORAGE_VERSION = 1;
 
   /**
@@ -397,7 +411,7 @@ public class Credentials implements Writable {
     for(Map.Entry<Text, Token<?>> token: other.tokenMap.entrySet()){
       Text key = token.getKey();
       if (!tokenMap.containsKey(key) || overwrite) {
-        tokenMap.put(key, token.getValue());
+        addToken(key, token.getValue());
       }
     }
   }

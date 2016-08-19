@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -53,24 +52,23 @@ import static org.apache.hadoop.util.Time.now;
 class FSDirStatAndListingOp {
   static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
       byte[] startAfter, boolean needLocation) throws IOException {
-    byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(srcArg);
-    final String startAfterString = new String(startAfter, Charsets.UTF_8);
+    final String startAfterString = DFSUtil.bytes2String(startAfter);
     String src = null;
 
+    final INodesInPath iip;
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
-      src = fsd.resolvePath(pc, srcArg, pathComponents);
+      iip = fsd.resolvePath(pc, srcArg);
+      src = iip.getPath();
     } else {
-      src = FSDirectory.resolvePath(srcArg, pathComponents, fsd);
+      src = FSDirectory.resolvePath(srcArg, fsd);
+      iip = fsd.getINodesInPath(src, true);
     }
 
     // Get file name when startAfter is an INodePath
     if (FSDirectory.isReservedName(startAfterString)) {
-      byte[][] startAfterComponents = FSDirectory
-          .getPathComponentsForReservedPath(startAfterString);
       try {
-        String tmp = FSDirectory.resolvePath(src, startAfterComponents, fsd);
+        String tmp = FSDirectory.resolvePath(startAfterString, fsd);
         byte[][] regularPath = INode.getPathComponents(tmp);
         startAfter = regularPath[regularPath.length - 1];
       } catch (IOException e) {
@@ -80,7 +78,6 @@ class FSDirStatAndListingOp {
       }
     }
 
-    final INodesInPath iip = fsd.getINodesInPath(src, true);
     boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
@@ -111,14 +108,13 @@ class FSDirStatAndListingOp {
     if (!DFSUtil.isValidName(src)) {
       throw new InvalidPathException("Invalid file name: " + src);
     }
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
-      src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath(src, resolveLink);
+      final INodesInPath iip = fsd.resolvePath(pc, srcArg, resolveLink);
+      src = iip.getPath();
       fsd.checkPermission(pc, iip, false, null, null, null, null, false);
     } else {
-      src = FSDirectory.resolvePath(src, pathComponents, fsd);
+      src = FSDirectory.resolvePath(srcArg, fsd);
     }
     return getFileInfo(fsd, src, FSDirectory.isReservedRawName(srcArg),
                        resolveLink);
@@ -129,9 +125,7 @@ class FSDirStatAndListingOp {
    */
   static boolean isFileClosed(FSDirectory fsd, String src) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath(src, true);
+    final INodesInPath iip = fsd.resolvePath(pc, src);
     if (fsd.isPermissionEnabled()) {
       fsd.checkTraverse(pc, iip);
     }
@@ -140,10 +134,8 @@ class FSDirStatAndListingOp {
 
   static ContentSummary getContentSummary(
       FSDirectory fsd, String src) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath(src, false);
+    final INodesInPath iip = fsd.resolvePath(pc, src, false);
     if (fsd.isPermissionEnabled()) {
       fsd.checkPermission(pc, iip, false, null, null, null,
           FsAction.READ_EXECUTE);
@@ -165,12 +157,11 @@ class FSDirStatAndListingOp {
         "Negative length is not supported. File: " + src);
     CacheManager cm = fsd.getFSNamesystem().getCacheManager();
     BlockManager bm = fsd.getBlockManager();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean isReservedName = FSDirectory.isReservedRawName(src);
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath(src, true);
+      final INodesInPath iip = fsd.resolvePath(pc, src);
+      src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
@@ -399,24 +390,20 @@ class FSDirStatAndListingOp {
   static HdfsFileStatus getFileInfo(
       FSDirectory fsd, String src, boolean resolveLink, boolean isRawPath)
     throws IOException {
-    String srcs = FSDirectory.normalizePath(src);
-    if (FSDirectory.isExactReservedName(src)) {
-      return FSDirectory.DOT_RESERVED_STATUS;
-    }
-
-    if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
-      if (fsd.getINode4DotSnapshot(srcs) != null) {
-        return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-            HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-            HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, null);
-      }
-      return null;
-    }
-
     fsd.readLock();
     try {
-      final INodesInPath iip = fsd.getINodesInPath(srcs, resolveLink);
-      return getFileInfo(fsd, src, iip, isRawPath, true);
+      HdfsFileStatus status = null;
+      final INodesInPath iip = fsd.getINodesInPath(src, resolveLink);
+      if (FSDirectory.isExactReservedName(iip.getPathComponents())) {
+        status = FSDirectory.DOT_RESERVED_STATUS;
+      } else if (iip.isDotSnapshotDir()) {
+        if (fsd.getINode4DotSnapshot(iip) != null) {
+          status = FSDirectory.DOT_SNAPSHOT_DIR_STATUS;
+        }
+      } else {
+        status = getFileInfo(fsd, src, iip, isRawPath, true);
+      }
+      return status;
     } finally {
       fsd.readUnlock();
     }
@@ -629,13 +616,11 @@ class FSDirStatAndListingOp {
 
   static QuotaUsage getQuotaUsage(
       FSDirectory fsd, String src) throws IOException {
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip;
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      iip = fsd.getINodesInPath(src, false);
+      iip = fsd.resolvePath(pc, src, false);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPermission(pc, iip, false, null, null, null,
             FsAction.READ_EXECUTE);

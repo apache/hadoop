@@ -15,50 +15,162 @@
 Apache Hadoop ${project.version}
 ================================
 
-Apache Hadoop ${project.version} consists of significant
-improvements over the previous stable release (hadoop-1.x).
+Apache Hadoop ${project.version} incorporates a number of significant
+enhancements over the previous major release line (hadoop-2.x).
 
-Here is a short overview of the improvments to both HDFS and MapReduce.
+This is an alpha release to facilitate testing and the collection of
+feedback from downstream application developers and users. There are
+no guarantees regarding API stability or quality.
 
-* HDFS Federation
+Overview
+========
 
-    In order to scale the name service horizontally, federation uses
-    multiple independent Namenodes/Namespaces. The Namenodes are
-    federated, that is, the Namenodes are independent and don't require
-    coordination with each other. The datanodes are used as common storage
-    for blocks by all the Namenodes. Each datanode registers with all the
-    Namenodes in the cluster. Datanodes send periodic heartbeats and block
-    reports and handles commands from the Namenodes.
+Users are encouraged to read the full set of release notes.
+This page provides an overview of the major changes.
 
-    More details are available in the
-    [HDFS Federation](./hadoop-project-dist/hadoop-hdfs/Federation.html)
-    document.
+Minimum required Java version increased from Java 7 to Java 8
+------------------
 
-* MapReduce NextGen aka YARN aka MRv2
+All Hadoop JARs are now compiled targeting a runtime version of Java 8.
+Users still using Java 7 or below must upgrade to Java 8.
 
-    The new architecture introduced in hadoop-0.23, divides the two major
-    functions of the JobTracker: resource management and job life-cycle
-    management into separate components.
-    
-    The new ResourceManager manages the global assignment of compute
-    resources to applications and the per-application
-    ApplicationMaster manages the application‚ scheduling and
-    coordination.
+Support for erasure encoding in HDFS
+------------------
 
-    An application is either a single job in the sense of classic
-    MapReduce jobs or a DAG of such jobs.
+Erasure coding is a method for durably storing data with significant space
+savings compared to replication. Standard encodings like Reed-Solomon (10,4)
+have a 1.4x space overhead, compared to the 3x overhead of standard HDFS
+replication.
 
-    The ResourceManager and per-machine NodeManager daemon, which
-    manages the user processes on that machine, form the computation
-    fabric.
+Since erasure coding imposes additional overhead during reconstruction
+and performs mostly remote reads, it has traditionally been used for
+storing colder, less frequently accessed data. Users should consider
+the network and CPU overheads of erasure coding when deploying this
+feature.
 
-    The per-application ApplicationMaster is, in effect, a framework
-    specific library and is tasked with negotiating resources from the
-    ResourceManager and working with the NodeManager(s) to execute and
-    monitor the tasks.
+More details are available in the
+[HDFS Erasure Coding](./hadoop-project-dist/hadoop-hdfs/HDFSErasureCoding.html)
+documentation.
 
-    More details are available in the
-    [YARN](./hadoop-yarn/hadoop-yarn-site/YARN.html) document.
+YARN Timeline Service v.2
+-------------------
+
+We are introducing an early preview (alpha 1) of a major revision of YARN
+Timeline Service: v.2. YARN Timeline Service v.2 addresses two major
+challenges: improving scalability and reliability of Timeline Service, and
+enhancing usability by introducing flows and aggregation.
+
+YARN Timeline Service v.2 alpha 1 is provided so that users and developers
+can test it and provide feedback and suggestions for making it a ready
+replacement for Timeline Service v.1.x. It should be used only in a test
+capacity. Most importantly, security is not enabled. Do not set up or use
+Timeline Service v.2 until security is implemented if security is a
+critical requirement.
+
+More details are available in the
+[YARN Timeline Service v.2](./hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html)
+documentation.
+
+Shell script rewrite
+-------------------
+
+The Hadoop shell scripts have been rewritten to fix many long-standing
+bugs and include some new features.  While an eye has been kept towards
+compatibility, some changes may break existing installations.
+
+Incompatible changes are documented in the release notes, with related
+discussion on [HADOOP-9902](https://issues.apache.org/jira/browse/HADOOP-9902).
+
+More details are available in the
+[Unix Shell Guide](./hadoop-project-dist/hadoop-common/UnixShellGuide.html)
+documentation. Power users will also be pleased by the
+[Unix Shell API](./hadoop-project-dist/hadoop-common/UnixShellAPI.html)
+documentation, which describes much of the new functionality, particularly
+related to extensibility.
+
+MapReduce task-level native optimization
+--------------------
+
+MapReduce has added support for a native implementation of the map output
+collector. For shuffle-intensive jobs, this can lead to a performance
+improvement of 30% or more.
+
+See the release notes for
+[MAPREDUCE-2841](https://issues.apache.org/jira/browse/MAPREDUCE-2841)
+for more detail.
+
+Support for more than 2 NameNodes.
+--------------------
+
+The initial implementation of HDFS NameNode high-availability provided
+for a single active NameNode and a single Standby NameNode. By replicating
+edits to a quorum of three JournalNodes, this architecture is able to
+tolerate the failure of any one node in the system.
+
+However, some deployments require higher degrees of fault-tolerance.
+This is enabled by this new feature, which allows users to run multiple
+standby NameNodes. For instance, by configuring three NameNodes and
+five JournalNodes, the cluster is able to tolerate the failure of two
+nodes rather than just one.
+
+The [HDFS high-availability documentation](./hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html)
+has been updated with instructions on how to configure more than two
+NameNodes.
+
+Default ports of multiple services have been changed.
+------------------------
+
+Previously, the default ports of multiple Hadoop services were in the
+Linux ephemeral port range (32768-61000). This meant that at startup,
+services would sometimes fail to bind to the port due to a conflict
+with another application.
+
+These conflicting ports have been moved out of the ephemeral range,
+affecting the NameNode, Secondary NameNode, DataNode, and KMS. Our
+documentation has been updated appropriately, but see the release
+notes for [HDFS-9427](https://issues.apache.org/jira/browse/HDFS-9427) and
+[HADOOP-12811](https://issues.apache.org/jira/browse/HADOOP-12811)
+for a list of port changes.
+
+Support for Microsoft Azure Data Lake filesystem connector
+---------------------
+
+Hadoop now supports integration with Microsoft Azure Data Lake as
+an alternative Hadoop-compatible filesystem.
+
+Intra-datanode balancer
+-------------------
+
+A single DataNode manages multiple disks. During normal write operation,
+disks will be filled up evenly. However, adding or replacing disks can
+lead to significant skew within a DataNode. This situation is not handled
+by the existing HDFS balancer, which concerns itself with inter-, not intra-,
+DN skew.
+
+This situation is handled by the new intra-DataNode balancing
+functionality, which is invoked via the `hdfs diskbalancer` CLI.
+See the disk balancer section in the
+[HDFS Commands Guide](./hadoop-project-dist/hadoop-hdfs/HDFSCommands.html)
+for more information.
+
+Reworked daemon and task heap management
+---------------------
+
+A series of changes have been made to heap management for Hadoop daemons
+as well as MapReduce tasks.
+
+[HADOOP-10950](https://issues.apache.org/jira/browse/HADOOP-10950) introduces
+new methods for configuring daemon heap sizes.
+Notably, auto-tuning is now possible based on the memory size of the host,
+and the `HADOOP_HEAPSIZE` variable has been deprecated.
+See the full release notes of HADOOP-10950 for more detail.
+
+[MAPREDUCE-5785](https://issues.apache.org/jira/browse/MAPREDUCE-5785)
+simplifies the configuration of map and reduce task
+heap sizes, so the desired heap size no longer needs to be specified
+in both the task configuration and as a Java option.
+Existing configs that already specify both are not affected by this change.
+See the full release notes of MAPREDUCE-5785 for more details.
 
 Getting Started
 ===============

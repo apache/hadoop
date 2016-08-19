@@ -47,6 +47,8 @@ import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -61,13 +63,10 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 /**
@@ -76,7 +75,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  *
  *   /ws/v1/history/mapreduce/jobs/{jobid}/conf
  */
-public class TestHsWebServicesJobConf extends JerseyTest {
+public class TestHsWebServicesJobConf extends JerseyTestBase {
 
   private static Configuration conf = new Configuration();
   private static HistoryContext appContext;
@@ -85,7 +84,8 @@ public class TestHsWebServicesJobConf extends JerseyTest {
   private static File testConfDir = new File("target",
       TestHsWebServicesJobConf.class.getSimpleName() + "confDir");
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
+
     @Override
     protected void configureServlets() {
 
@@ -127,14 +127,11 @@ public class TestHsWebServicesJobConf extends JerseyTest {
 
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  };
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
@@ -142,7 +139,8 @@ public class TestHsWebServicesJobConf extends JerseyTest {
   public void setUp() throws Exception {
     super.setUp();
     testConfDir.mkdir();
-
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @AfterClass

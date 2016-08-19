@@ -396,8 +396,7 @@ public final class CacheManager {
     if (pool.getLimit() == CachePoolInfo.LIMIT_UNLIMITED) {
       return;
     }
-    if (pool.getBytesNeeded() + (stats.getBytesNeeded() * replication) > pool
-        .getLimit()) {
+    if (pool.getBytesNeeded() + stats.getBytesNeeded() > pool.getLimit()) {
       throw new InvalidRequestException("Caching path " + path + " of size "
           + stats.getBytesNeeded() / replication + " bytes at replication "
           + replication + " would exceed pool " + pool.getPoolName()
@@ -441,7 +440,7 @@ public final class CacheManager {
       }
     }
     return new CacheDirectiveStats.Builder()
-        .setBytesNeeded(requestedBytes)
+        .setBytesNeeded(requestedBytes * replication)
         .setFilesCached(requestedFiles)
         .build();
   }
@@ -523,7 +522,8 @@ public final class CacheManager {
       CachePool pool = getCachePool(validatePoolName(info));
       checkWritePermission(pc, pool);
       String path = validatePath(info);
-      short replication = validateReplication(info, (short)1);
+      short replication = validateReplication(
+              info, pool.getDefaultReplication());
       long expiryTime = validateExpiryTime(info, pool.getMaxRelativeExpiryMs());
       // Do quota validation if required
       if (!flags.contains(CacheFlag.FORCE)) {
@@ -826,6 +826,13 @@ public final class CacheManager {
         // New limit changes stats, need to set needs refresh
         setNeedsRescan();
       }
+      if (info.getDefaultReplication() != null) {
+        final short defaultReplication = info.getDefaultReplication();
+        pool.setDefaultReplication(defaultReplication);
+        bld.append(prefix).append("set default replication to "
+            + defaultReplication);
+        prefix = "; ";
+      }
       if (info.getMaxRelativeExpiryMs() != null) {
         final Long maxRelativeExpiry = info.getMaxRelativeExpiryMs();
         pool.setMaxRelativeExpiryMs(maxRelativeExpiry);
@@ -1082,6 +1089,10 @@ public final class CacheManager {
 
       if (p.hasMode())
         info.setMode(new FsPermission((short) p.getMode()));
+
+      if (p.hasDefaultReplication()) {
+        info.setDefaultReplication((short) p.getDefaultReplication());
+      }
 
       if (p.hasLimit())
         info.setLimit(p.getLimit());

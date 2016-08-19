@@ -83,7 +83,7 @@ static void flush_and_close_log_files() {
     fclose(LOGFILE);
     LOGFILE = NULL;
   }
-  
+
 if (ERRORFILE != NULL) {
     fflush(ERRORFILE);
     fclose(ERRORFILE);
@@ -96,19 +96,27 @@ in case of validation failures. Also sets up configuration / group information e
 This function is to be called in every invocation of container-executor, irrespective
 of whether an explicit checksetup operation is requested. */
 
-static void assert_valid_setup(char *current_executable) {
-  char *executable_file = get_executable();
+static void assert_valid_setup(char *argv0) {
+  int ret;
+  char *executable_file = get_executable(argv0);
+  if (!executable_file) {
+    fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
+    flush_and_close_log_files();
+    exit(-1);
+  }
 
   char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
-  char *conf_file = resolve_config_path(orig_conf_file, current_executable);
+  char *conf_file = resolve_config_path(orig_conf_file, executable_file);
 
   if (conf_file == NULL) {
+    free(executable_file);
     fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
 
   if (check_configuration_permissions(conf_file) != 0) {
+    free(executable_file);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
@@ -118,28 +126,42 @@ static void assert_valid_setup(char *current_executable) {
   // look up the node manager group in the config file
   char *nm_group = get_nodemanager_group();
   if (nm_group == NULL) {
+    free(executable_file);
     fprintf(ERRORFILE, "Can't get configured value for %s.\n", NM_GROUP_KEY);
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   struct group *group_info = getgrnam(nm_group);
   if (group_info == NULL) {
+    free(executable_file);
     fprintf(ERRORFILE, "Can't get group information for %s - %s.\n", nm_group,
             strerror(errno));
     flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   set_nm_uid(getuid(), group_info->gr_gid);
-  // if we are running from a setuid executable, make the real uid root
-  setuid(0);
-  // set the real and effective group id to the node manager group
-  setgid(group_info->gr_gid);
+  /*
+   * if we are running from a setuid executable, make the real uid root
+   * we're going to ignore this result just in case we aren't.
+   */
+  ret=setuid(0);
+
+  /*
+   * set the real and effective group id to the node manager group
+   * we're going to ignore this result just in case we aren't
+   */
+  ret=setgid(group_info->gr_gid);
+
+  /* make the unused var warning to away */
+  ret++;
 
   if (check_executor_permissions(executable_file) != 0) {
+    free(executable_file);
     fprintf(ERRORFILE, "Invalid permissions on container-executor binary.\n");
     flush_and_close_log_files();
     exit(INVALID_CONTAINER_EXEC_PERMISSIONS);
   }
+  free(executable_file);
 }
 
 

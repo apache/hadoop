@@ -337,7 +337,7 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup resource requirements
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(
+    capability.setMemorySize(
         conf.getInt(
             MRJobConfig.MR_AM_VMEM_MB, MRJobConfig.DEFAULT_MR_AM_VMEM_MB
             )

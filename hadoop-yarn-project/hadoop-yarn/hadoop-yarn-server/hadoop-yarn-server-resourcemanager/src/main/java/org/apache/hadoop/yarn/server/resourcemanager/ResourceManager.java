@@ -18,7 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
+import java.security.PrivilegedExceptionAction;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
@@ -65,7 +74,10 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.NoOpSystemMetricPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV1Publisher;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Publisher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMDelegatedNodeLabelsUpdater;
@@ -95,6 +107,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
@@ -103,22 +116,13 @@ import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
-import java.security.PrivilegedExceptionAction;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -298,8 +302,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(rmApplicationHistoryWriter);
     rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
 
-    SystemMetricsPublisher systemMetricsPublisher = createSystemMetricsPublisher();
-    addService(systemMetricsPublisher);
+    // initialize the RM timeline collector first so that the system metrics
+    // publisher can bind to it
+    if (YarnConfiguration.timelineServiceV2Enabled(this.conf)) {
+      RMTimelineCollectorManager timelineCollectorManager =
+          createRMTimelineCollectorManager();
+      addService(timelineCollectorManager);
+      rmContext.setRMTimelineCollectorManager(timelineCollectorManager);
+    }
+
+    SystemMetricsPublisher systemMetricsPublisher =
+        createSystemMetricsPublisher();
+    addIfService(systemMetricsPublisher);
     rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
 
     super.serviceInit(this.conf);
@@ -449,8 +463,30 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMApplicationHistoryWriter();
   }
 
+  private RMTimelineCollectorManager createRMTimelineCollectorManager() {
+    return new RMTimelineCollectorManager(rmContext);
+  }
+
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
-    return new SystemMetricsPublisher(); 
+    SystemMetricsPublisher publisher;
+    if (YarnConfiguration.timelineServiceEnabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+        // we're dealing with the v.2.x publisher
+        LOG.info("system metrics publisher with the timeline service V2 is " +
+            "configured");
+        publisher = new TimelineServiceV2Publisher(rmContext);
+      } else {
+        // we're dealing with the v.1.x publisher
+        LOG.info("system metrics publisher with the timeline service V1 is " +
+            "configured");
+        publisher = new TimelineServiceV1Publisher();
+      }
+    } else {
+      LOG.info("TimelineServicePublisher is not configured");
+      publisher = new NoOpSystemMetricPublisher();
+    }
+    return publisher;
   }
 
   // sanity check for configurations
@@ -1140,24 +1176,27 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
-    if (this.rmContext.getYarnConfiguration().getBoolean(
-        YarnConfiguration.DIST_SCHEDULING_ENABLED,
-        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
-      DistributedSchedulingService distributedSchedulingService = new
-          DistributedSchedulingService(this.rmContext, scheduler);
-      EventDispatcher distSchedulerEventDispatcher =
-          new EventDispatcher(distributedSchedulingService,
-              DistributedSchedulingService.class.getName());
-      // Add an event dispoatcher for the DistributedSchedulingService
-      // to handle node updates/additions and removals.
+    Configuration config = this.rmContext.getYarnConfiguration();
+    if (YarnConfiguration.isOpportunisticContainerAllocationEnabled(config)
+        || YarnConfiguration.isDistSchedulingEnabled(config)) {
+      OpportunisticContainerAllocatorAMService
+          oppContainerAllocatingAMService =
+          new OpportunisticContainerAllocatorAMService(this.rmContext,
+              scheduler);
+      EventDispatcher oppContainerAllocEventDispatcher =
+          new EventDispatcher(oppContainerAllocatingAMService,
+              OpportunisticContainerAllocatorAMService.class.getName());
+      // Add an event dispatcher for the
+      // OpportunisticContainerAllocatorAMService to handle node
+      // updates/additions and removals.
       // Since the SchedulerEvent is currently a super set of theses,
       // we register interest for it..
-      addService(distSchedulerEventDispatcher);
+      addService(oppContainerAllocEventDispatcher);
       rmDispatcher.register(SchedulerEventType.class,
-          distSchedulerEventDispatcher);
+          oppContainerAllocEventDispatcher);
       this.rmContext.setContainerQueueLimitCalculator(
-          distributedSchedulingService.getNodeManagerQueueLimitCalculator());
-      return distributedSchedulingService;
+          oppContainerAllocatingAMService.getNodeManagerQueueLimitCalculator());
+      return oppContainerAllocatingAMService;
     }
     return new ApplicationMasterService(this.rmContext, scheduler);
   }

@@ -26,7 +26,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -935,13 +934,13 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * @param f the file name to open
-   * @param permission
+   * @param permission file permission
    * @param overwrite if a file with this name already exists, then if true,
    *   the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
+   * @param blockSize block size
+   * @param progress the progress reporter
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
@@ -957,12 +956,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Create an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
    * @param f the file name to open
-   * @param permission
+   * @param permission file permission
    * @param flags {@link CreateFlag}s to use for this stream.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
+   * @param blockSize block size
+   * @param progress the progress reporter
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
@@ -981,12 +980,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Create an FSDataOutputStream at the indicated Path with a custom
    * checksum option
    * @param f the file name to open
-   * @param permission
+   * @param permission file permission
    * @param flags {@link CreateFlag}s to use for this stream.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
+   * @param blockSize block size
+   * @param progress the progress reporter
    * @param checksumOpt checksum parameter. If null, the values
    *        found in conf will be used.
    * @throws IOException
@@ -1095,8 +1094,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
+   * @param blockSize block size
+   * @param progress the progress reporter
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
@@ -1113,13 +1112,13 @@ public abstract class FileSystem extends Configured implements Closeable {
    * reporting. Same as create(), except fails if parent directory doesn't
    * already exist.
    * @param f the file name to open
-   * @param permission
+   * @param permission file permission
    * @param overwrite if a file with this name already exists, then if true,
    * the file will be overwritten, and if false an error will be thrown.
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
+   * @param blockSize block size
+   * @param progress the progress reporter
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
@@ -1137,12 +1136,12 @@ public abstract class FileSystem extends Configured implements Closeable {
     * reporting. Same as create(), except fails if parent directory doesn't
     * already exist.
     * @param f the file name to open
-    * @param permission
+    * @param permission file permission
     * @param flags {@link CreateFlag}s to use for this stream.
     * @param bufferSize the size of the buffer to be used.
     * @param replication required block replication for the file.
-    * @param blockSize
-    * @param progress
+    * @param blockSize block size
+    * @param progress the progress reporter
     * @throws IOException
     * @see #setPermission(Path, FsPermission)
     */
@@ -1882,7 +1881,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Set the current working directory for the given file system. All relative
    * paths will be resolved relative to it.
    * 
-   * @param new_dir
+   * @param new_dir Path of new working directory
    */
   public abstract void setWorkingDirectory(Path new_dir);
     
@@ -2221,12 +2220,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     FsPermission perm = stat.getPermission();
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user = ugi.getShortUserName();
-    List<String> groups = Arrays.asList(ugi.getGroupNames());
     if (user.equals(stat.getOwner())) {
       if (perm.getUserAction().implies(mode)) {
         return;
       }
-    } else if (groups.contains(stat.getGroup())) {
+    } else if (ugi.getGroups().contains(stat.getGroup())) {
       if (perm.getGroupAction().implies(mode)) {
         return;
       }
@@ -2326,7 +2324,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Set the verify checksum flag. This is only applicable if the 
    * corresponding FileSystem supports checksum. By default doesn't do anything.
-   * @param verifyChecksum
+   * @param verifyChecksum Verify checksum flag
    */
   public void setVerifyChecksum(boolean verifyChecksum) {
     //doesn't do anything
@@ -2335,7 +2333,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   /**
    * Set the write checksum flag. This is only applicable if the 
    * corresponding FileSystem supports checksum. By default doesn't do anything.
-   * @param writeChecksum
+   * @param writeChecksum Write checsum flag
    */
   public void setWriteChecksum(boolean writeChecksum) {
     //doesn't do anything
@@ -2371,8 +2369,8 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Set permission of a path.
-   * @param p
-   * @param permission
+   * @param p The path
+   * @param permission permission
    */
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
@@ -2592,7 +2590,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Refer to the HDFS extended attributes user documentation for details.
    *
    * @param path Path to get extended attributes
-   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @return Map describing the XAttrs of the file or directory
    * @throws IOException
    */
   public Map<String, byte[]> getXAttrs(Path path) throws IOException {
@@ -2609,7 +2607,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * @param path Path to get extended attributes
    * @param names XAttr names.
-   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @return Map describing the XAttrs of the file or directory
    * @throws IOException
    */
   public Map<String, byte[]> getXAttrs(Path path, List<String> names)
@@ -3522,7 +3520,7 @@ public abstract class FileSystem extends Configured implements Closeable {
      * In order to reset, we add up all the thread-local statistics data, and
      * set rootData to the negative of that.
      *
-     * This may seem like a counterintuitive way to reset the statsitics.  Why
+     * This may seem like a counterintuitive way to reset the statistics.  Why
      * can't we just zero out all the thread-local data?  Well, thread-local
      * data can only be modified by the thread that owns it.  If we tried to
      * modify the thread-local data from this thread, our modification might get
@@ -3619,8 +3617,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Reset all statistics for all file systems
    */
   public static synchronized void clearStatistics() {
-    for(Statistics stat: statisticsTable.values()) {
-      stat.reset();
+    final Iterator<StorageStatistics> iterator =
+        GlobalStorageStatistics.INSTANCE.iterator();
+    while (iterator.hasNext()) {
+      final StorageStatistics statistics = iterator.next();
+      statistics.reset();
     }
   }
 

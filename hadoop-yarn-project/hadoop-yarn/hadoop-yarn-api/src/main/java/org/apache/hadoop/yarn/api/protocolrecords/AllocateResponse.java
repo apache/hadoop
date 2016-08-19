@@ -128,6 +128,25 @@ public abstract class AllocateResponse {
     return response;
   }
 
+  @Public
+  @Unstable
+  public static AllocateResponse newInstance(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
+      PreemptionMessage preempt, List<NMToken> nmTokens, Token amRMToken,
+      List<Container> increasedContainers,
+      List<Container> decreasedContainers,
+      String collectorAddr) {
+    AllocateResponse response =
+        newInstance(responseId, completedContainers, allocatedContainers,
+          updatedNodes, availResources, command, numClusterNodes, preempt,
+          nmTokens, increasedContainers, decreasedContainers);
+    response.setAMRMToken(amRMToken);
+    response.setCollectorAddr(collectorAddr);
+    return response;
+  }
+
   /**
    * If the <code>ResourceManager</code> needs the
    * <code>ApplicationMaster</code> to take some action then it will send an
@@ -260,6 +279,7 @@ public abstract class AllocateResponse {
    * AM will receive one NMToken per NM irrespective of the number of containers
    * issued on same NM. AM is expected to store these tokens until issued a
    * new token for the same NM.
+   * @return list of NMTokens required for communicating with NM
    */
   @Public
   @Stable
@@ -272,6 +292,7 @@ public abstract class AllocateResponse {
   /**
    * Get the list of newly increased containers by
    * <code>ResourceManager</code>.
+   * @return list of newly increased containers
    */
   @Public
   @Unstable
@@ -289,6 +310,7 @@ public abstract class AllocateResponse {
   /**
    * Get the list of newly decreased containers by
    * <code>ResourceManager</code>.
+   * @return the list of newly decreased containers
    */
   @Public
   @Unstable
@@ -328,4 +350,18 @@ public abstract class AllocateResponse {
   @Private
   @Unstable
   public abstract void setApplicationPriority(Priority priority);
+
+  /**
+   * The address of collector that belong to this app
+   *
+   * @return The address of collector that belong to this attempt
+   */
+  @Public
+  @Unstable
+  public abstract String getCollectorAddr();
+
+  @Private
+  @Unstable
+  public abstract void setCollectorAddr(String collectorAddr);
+
 }

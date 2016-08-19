@@ -167,6 +167,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceChangeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerRetryContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ExecutionTypeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
@@ -201,6 +202,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceChangeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
@@ -1350,5 +1352,11 @@ public class TestPBImplRecords {
   public void testCheckForDecommissioningNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(CheckForDecommissioningNodesResponsePBImpl.class,
         CheckForDecommissioningNodesResponseProto.class);
+  }
+
+  @Test
+  public void testExecutionTypeRequestPBImpl() throws Exception {
+    validatePBImplRecord(ExecutionTypeRequestPBImpl.class,
+        ExecutionTypeRequestProto.class);
   }
 }

@@ -15,6 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/* FreeBSD protects the getline() prototype. See getline(3) for more */
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
+
 #include <pwd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -96,7 +102,7 @@ extern FILE *LOGFILE;
 extern FILE *ERRORFILE;
 
 // get the executable's filename
-char* get_executable();
+char* get_executable(char *argv0);
 
 //function used to load the configurations present in the secure config
 void read_executor_config(const char* file_name);
@@ -177,7 +183,7 @@ int signal_container_as_user(const char *user, int pid, int sig);
 // delete a directory (or file) recursively as the user. The directory
 // could optionally be relative to the baseDir set of directories (if the same
 // directory appears on multiple disk volumes, the disk volumes should be passed
-// as the baseDirs). If baseDirs is not specified, then dir_to_be_deleted is 
+// as the baseDirs). If baseDirs is not specified, then dir_to_be_deleted is
 // assumed as the absolute path
 int delete_as_user(const char *user,
                    const char *dir_to_be_deleted,
@@ -273,3 +279,13 @@ int traffic_control_read_stats(char *command_file);
  * Run a docker command passing the command file as an argument
  */
 int run_docker(const char *command_file);
+
+/**
+ * Function to prepare the container directories.
+ * It creates the container work and log directories.
+ */
+int create_container_directories(const char* user, const char *app_id,
+                     const char *container_id, char* const* local_dir,
+                     char* const* log_dir, const char *work_dir);
+
+int create_log_dirs(const char *app_id, char * const * log_dirs);

@@ -64,21 +64,16 @@ public class TestMiniDFSCluster {
   public void testClusterWithoutSystemProperties() throws Throwable {
     String oldPrp = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
     System.clearProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
-    MiniDFSCluster cluster = null;
-    try {
-      Configuration conf = new HdfsConfiguration();
-      File testDataCluster1 = new File(testDataPath, CLUSTER_1);
-      String c1Path = testDataCluster1.getAbsolutePath();
-      conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c1Path);
-      cluster = new MiniDFSCluster.Builder(conf).build();
+    Configuration conf = new HdfsConfiguration();
+    File testDataCluster1 = new File(testDataPath, CLUSTER_1);
+    String c1Path = testDataCluster1.getAbsolutePath();
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c1Path);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()){
       assertEquals(new File(c1Path + "/data"),
           new File(cluster.getDataDirectory()));
     } finally {
       if (oldPrp != null) {
         System.setProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA, oldPrp);
-      }
-      if (cluster != null) {
-        cluster.shutdown();
       }
     }
   }
@@ -110,15 +105,12 @@ public class TestMiniDFSCluster {
     File testDataCluster5 = new File(testDataPath, CLUSTER_5);
     String c5Path = testDataCluster5.getAbsolutePath();
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c5Path);
-    MiniDFSCluster cluster5 = new MiniDFSCluster.Builder(conf)
-      .numDataNodes(1)
-      .checkDataNodeHostConfig(true)
-      .build();
-    try {
+    try (MiniDFSCluster cluster5 = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1)
+        .checkDataNodeHostConfig(true)
+        .build()) {
       assertEquals("DataNode hostname config not respected", "MYHOST",
           cluster5.getDataNodes().get(0).getDatanodeId().getHostName());
-    } finally {
-      MiniDFSCluster.shutdownCluster(cluster5);
     }
   }
 
@@ -128,9 +120,8 @@ public class TestMiniDFSCluster {
     StorageType[][] storageType = new StorageType[][] {
         {StorageType.DISK, StorageType.ARCHIVE}, {StorageType.DISK},
         {StorageType.ARCHIVE}};
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(3).storageTypes(storageType).build();
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).storageTypes(storageType).build()) {
       cluster.waitActive();
       ArrayList<DataNode> dataNodes = cluster.getDataNodes();
       // Check the number of directory in DN's
@@ -138,17 +129,14 @@ public class TestMiniDFSCluster {
         assertEquals(DataNode.getStorageLocations(dataNodes.get(i).getConf())
             .size(), storageType[i].length);
       }
-    } finally {
-      MiniDFSCluster.shutdownCluster(cluster);
     }
   }
 
   @Test
   public void testClusterNoStorageTypeSetForDatanodes() throws IOException {
     final Configuration conf = new HdfsConfiguration();
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(3).build();
-    try {
+    try (final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).build()) {
       cluster.waitActive();
       ArrayList<DataNode> dataNodes = cluster.getDataNodes();
       // Check the number of directory in DN's
@@ -156,20 +144,17 @@ public class TestMiniDFSCluster {
         assertEquals(DataNode.getStorageLocations(datanode.getConf()).size(),
             2);
       }
-    } finally {
-      MiniDFSCluster.shutdownCluster(cluster);
     }
   }
 
   @Test
   public void testSetUpFederatedCluster() throws Exception {
     Configuration conf = new Configuration();
-    MiniDFSCluster  cluster =
-            new MiniDFSCluster.Builder(conf).nnTopology(
-                    MiniDFSNNTopology.simpleHAFederatedTopology(2))
-                .numDataNodes(2)
-                .build();
-    try {
+
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf)
+            .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
+            .numDataNodes(2).build()) {
       cluster.waitActive();
       cluster.transitionToActive(1);
       cluster.transitionToActive(3);
@@ -201,8 +186,6 @@ public class TestMiniDFSCluster {
             DFSUtil.addKeySuffixes(
             DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1")));
       }
-    } finally {
-      MiniDFSCluster.shutdownCluster(cluster);
     }
   }
 }

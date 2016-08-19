@@ -73,6 +73,11 @@ public final class CachePool {
   private long limit;
 
   /**
+   * Default replication num for CacheDirective in this pool.
+   */
+  private short defaultReplication;
+
+  /**
    * Maximum duration that a CacheDirective in this pool remains valid,
    * in milliseconds.
    */
@@ -123,11 +128,15 @@ public final class CachePool {
         FsPermission.getCachePoolDefault() : info.getMode();
     long limit = info.getLimit() == null ?
         CachePoolInfo.DEFAULT_LIMIT : info.getLimit();
+    short defaultReplication = info.getDefaultReplication() == null ?
+        CachePoolInfo.DEFAULT_REPLICATION_NUM :
+        info.getDefaultReplication();
     long maxRelativeExpiry = info.getMaxRelativeExpiryMs() == null ?
         CachePoolInfo.DEFAULT_MAX_RELATIVE_EXPIRY :
         info.getMaxRelativeExpiryMs();
     return new CachePool(info.getPoolName(),
-        ownerName, groupName, mode, limit, maxRelativeExpiry);
+        ownerName, groupName, mode, limit,
+        defaultReplication, maxRelativeExpiry);
   }
 
   /**
@@ -137,11 +146,13 @@ public final class CachePool {
   static CachePool createFromInfo(CachePoolInfo info) {
     return new CachePool(info.getPoolName(),
         info.getOwnerName(), info.getGroupName(),
-        info.getMode(), info.getLimit(), info.getMaxRelativeExpiryMs());
+        info.getMode(), info.getLimit(),
+        info.getDefaultReplication(), info.getMaxRelativeExpiryMs());
   }
 
   CachePool(String poolName, String ownerName, String groupName,
-      FsPermission mode, long limit, long maxRelativeExpiry) {
+      FsPermission mode, long limit,
+      short defaultReplication, long maxRelativeExpiry) {
     Preconditions.checkNotNull(poolName);
     Preconditions.checkNotNull(ownerName);
     Preconditions.checkNotNull(groupName);
@@ -151,6 +162,7 @@ public final class CachePool {
     this.groupName = groupName;
     this.mode = new FsPermission(mode);
     this.limit = limit;
+    this.defaultReplication = defaultReplication;
     this.maxRelativeExpiryMs = maxRelativeExpiry;
   }
 
@@ -194,6 +206,14 @@ public final class CachePool {
     return this;
   }
 
+  public short getDefaultReplication() {
+    return defaultReplication;
+  }
+
+  public void setDefaultReplication(short replication) {
+    this.defaultReplication = replication;
+  }
+
   public long getMaxRelativeExpiryMs() {
     return maxRelativeExpiryMs;
   }
@@ -221,6 +241,7 @@ public final class CachePool {
         setGroupName(groupName).
         setMode(new FsPermission(mode)).
         setLimit(limit).
+        setDefaultReplication(defaultReplication).
         setMaxRelativeExpiryMs(maxRelativeExpiryMs);
   }
 
@@ -314,6 +335,7 @@ public final class CachePool {
         append(", groupName:").append(groupName).
         append(", mode:").append(mode).
         append(", limit:").append(limit).
+        append(", defaultReplication").append(defaultReplication).
         append(", maxRelativeExpiryMs:").append(maxRelativeExpiryMs).
         append(" }").toString();
   }

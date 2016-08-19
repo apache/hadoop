@@ -28,6 +28,7 @@ import java.util.ServiceLoader;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * A factory to create a list of CredentialProvider based on the path given in a
@@ -38,14 +39,15 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceStability.Unstable
 public abstract class CredentialProviderFactory {
   public static final String CREDENTIAL_PROVIDER_PATH =
-      "hadoop.security.credential.provider.path";
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 
   public abstract CredentialProvider createProvider(URI providerName,
                                              Configuration conf
                                              ) throws IOException;
 
   private static final ServiceLoader<CredentialProviderFactory> serviceLoader =
-      ServiceLoader.load(CredentialProviderFactory.class);
+      ServiceLoader.load(CredentialProviderFactory.class,
+          CredentialProviderFactory.class.getClassLoader());
 
   public static List<CredentialProvider> getProviders(Configuration conf
                                                ) throws IOException {

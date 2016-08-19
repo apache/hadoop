@@ -15979,6 +15979,26 @@
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*The storage type specific quota is cleared when -storageType option is specified.( )*</expected-output>
         </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*Available storageTypes are( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*- RAM_DISK( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*- DISK( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*- SSD( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*- ARCHIVE( )*</expected-output>
+        </comparator>
       </comparators>
     </test>
 

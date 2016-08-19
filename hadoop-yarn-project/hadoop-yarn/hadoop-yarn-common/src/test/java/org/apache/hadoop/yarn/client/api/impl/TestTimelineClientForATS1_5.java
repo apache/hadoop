@@ -208,8 +208,8 @@ public class TestTimelineClientForATS1_5 {
             new FileSystemTimelineWriter(conf, authUgi, client, resURI) {
               public ClientResponse doPostingObject(Object object, String path) {
                 ClientResponse response = mock(ClientResponse.class);
-                when(response.getClientResponseStatus()).thenReturn(
-                  ClientResponse.Status.OK);
+                when(response.getStatusInfo()).thenReturn(
+                    ClientResponse.Status.OK);
                 return response;
               }
             };

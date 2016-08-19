@@ -76,6 +76,7 @@ public class DNConf {
   final int socketKeepaliveTimeout;
   private final int transferSocketSendBufferSize;
   private final int transferSocketRecvBufferSize;
+  private final boolean tcpNoDelay;
 
   final boolean transferToAllowed;
   final boolean dropCacheBehindWrites;
@@ -116,6 +117,7 @@ public class DNConf {
 
   private final int volFailuresTolerated;
   private final int volsConfigured;
+  private final int maxDataLength;
 
   public DNConf(Configuration conf) {
     this.conf = conf;
@@ -132,6 +134,9 @@ public class DNConf {
     this.transferSocketRecvBufferSize = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_KEY,
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT);
+    this.tcpNoDelay = conf.getBoolean(
+        DFSConfigKeys.DFS_DATA_TRANSFER_SERVER_TCPNODELAY,
+        DFSConfigKeys.DFS_DATA_TRANSFER_SERVER_TCPNODELAY_DEFAULT);
 
     /* Based on results on different platforms, we might need set the default
      * to false on some of them. */
@@ -145,6 +150,8 @@ public class DNConf {
     readaheadLength = conf.getLong(
         HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY,
         HdfsClientConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+    maxDataLength = conf.getInt(DFSConfigKeys.IPC_MAXIMUM_DATA_LENGTH,
+        DFSConfigKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     dropCacheBehindWrites = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY,
         DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_DEFAULT);
@@ -361,6 +368,10 @@ public class DNConf {
     return transferSocketSendBufferSize;
   }
 
+  public boolean getDataTransferServerTcpNoDelay() {
+    return tcpNoDelay;
+  }
+
   public long getBpReadyTimeout() {
     return bpReadyTimeout;
   }
@@ -380,5 +391,9 @@ public class DNConf {
 
   public int getVolsConfigured() {
     return volsConfigured;
+  }
+
+  int getMaxDataLength() {
+    return maxDataLength;
   }
 }

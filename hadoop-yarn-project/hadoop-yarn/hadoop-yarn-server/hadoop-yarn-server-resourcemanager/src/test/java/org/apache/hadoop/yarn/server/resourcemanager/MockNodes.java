@@ -57,8 +57,7 @@ public class MockNodes {
         if (j == (nodesPerRack - 1)) {
           // One unhealthy node per rack.
           list.add(nodeInfo(i, perNode, NodeState.UNHEALTHY));
-        }
-        if (j == 0) {
+        } else if (j == 0) {
           // One node with label
           list.add(nodeInfo(i, perNode, NodeState.RUNNING, ImmutableSet.of("x")));
         } else {
@@ -83,19 +82,19 @@ public class MockNodes {
 
   public static Resource newResource(int mem) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory(mem);
+    rs.setMemorySize(mem);
     return rs;
   }
 
   public static Resource newUsedResource(Resource total) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory((int)(Math.random() * total.getMemorySize()));
+    rs.setMemorySize((int)(Math.random() * total.getMemorySize()));
     return rs;
   }
 
   public static Resource newAvailResource(Resource total, Resource used) {
     Resource rs = recordFactory.newRecordInstance(Resource.class);
-    rs.setMemory(total.getMemorySize() - used.getMemorySize());
+    rs.setMemorySize(total.getMemorySize() - used.getMemorySize());
     return rs;
   }
 
@@ -272,6 +271,11 @@ public class MockNodes {
 
     @Override
     public void setUntrackedTimeStamp(long timeStamp) {
+    }
+
+    @Override
+    public Integer getDecommissioningTimeout() {
+      return null;
     }
   };
 

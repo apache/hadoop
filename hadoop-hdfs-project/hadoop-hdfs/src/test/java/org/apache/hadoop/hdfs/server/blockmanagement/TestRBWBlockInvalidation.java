@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -70,7 +69,7 @@ public class TestRBWBlockInvalidation {
       throws IOException, InterruptedException {
     // This test cannot pass on Windows due to file locking enforcement.  It will
     // reject the attempt to delete the block file from the RBW folder.
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
 
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 2);

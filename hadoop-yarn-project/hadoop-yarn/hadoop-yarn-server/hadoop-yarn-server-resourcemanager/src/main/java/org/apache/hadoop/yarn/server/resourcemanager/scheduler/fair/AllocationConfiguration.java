@@ -46,6 +46,8 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   // Maximum amount of resources per queue
   @VisibleForTesting
   final Map<String, Resource> maxQueueResources;
+  // Maximum amount of resources for each queue's ad hoc children
+  private final Map<String, Resource> maxChildQueueResources;
   // Sharing weights for each queue
   private final Map<String, ResourceWeights> queueWeights;
   
@@ -107,6 +109,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources,
+      Map<String, Resource> maxChildQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
       Map<String, ResourceWeights> queueWeights,
       Map<String, Float> queueMaxAMShares, int userMaxAppsDefault,
@@ -126,6 +129,7 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
       Set<String> nonPreemptableQueues) {
     this.minQueueResources = minQueueResources;
     this.maxQueueResources = maxQueueResources;
+    this.maxChildQueueResources = maxChildQueueResources;
     this.queueMaxApps = queueMaxApps;
     this.userMaxApps = userMaxApps;
     this.queueMaxAMShares = queueMaxAMShares;
@@ -149,31 +153,32 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   }
   
   public AllocationConfiguration(Configuration conf) {
-    minQueueResources = new HashMap<String, Resource>();
-    maxQueueResources = new HashMap<String, Resource>();
-    queueWeights = new HashMap<String, ResourceWeights>();
-    queueMaxApps = new HashMap<String, Integer>();
-    userMaxApps = new HashMap<String, Integer>();
-    queueMaxAMShares = new HashMap<String, Float>();
+    minQueueResources = new HashMap<>();
+    maxChildQueueResources = new HashMap<>();
+    maxQueueResources = new HashMap<>();
+    queueWeights = new HashMap<>();
+    queueMaxApps = new HashMap<>();
+    userMaxApps = new HashMap<>();
+    queueMaxAMShares = new HashMap<>();
     userMaxAppsDefault = Integer.MAX_VALUE;
     queueMaxAppsDefault = Integer.MAX_VALUE;
     queueMaxResourcesDefault = Resources.unbounded();
     queueMaxAMShareDefault = 0.5f;
-    queueAcls = new HashMap<String, Map<QueueACL, AccessControlList>>();
-    resAcls = new HashMap<String, Map<ReservationACL, AccessControlList>>();
-    minSharePreemptionTimeouts = new HashMap<String, Long>();
-    fairSharePreemptionTimeouts = new HashMap<String, Long>();
-    fairSharePreemptionThresholds = new HashMap<String, Float>();
-    schedulingPolicies = new HashMap<String, SchedulingPolicy>();
+    queueAcls = new HashMap<>();
+    resAcls = new HashMap<>();
+    minSharePreemptionTimeouts = new HashMap<>();
+    fairSharePreemptionTimeouts = new HashMap<>();
+    fairSharePreemptionThresholds = new HashMap<>();
+    schedulingPolicies = new HashMap<>();
     defaultSchedulingPolicy = SchedulingPolicy.DEFAULT_POLICY;
     reservableQueues = new HashSet<>();
-    configuredQueues = new HashMap<FSQueueType, Set<String>>();
+    configuredQueues = new HashMap<>();
     for (FSQueueType queueType : FSQueueType.values()) {
-      configuredQueues.put(queueType, new HashSet<String>());
+      configuredQueues.put(queueType, new HashSet<>());
     }
-    placementPolicy = QueuePlacementPolicy.fromConfiguration(conf,
-        configuredQueues);
-    nonPreemptableQueues = new HashSet<String>();
+    placementPolicy =
+        QueuePlacementPolicy.fromConfiguration(conf, configuredQueues);
+    nonPreemptableQueues = new HashSet<>();
   }
   
   /**
@@ -263,7 +268,10 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
 
   /**
    * Get the minimum resource allocation for the given queue.
-   * @return the cap set on this queue, or 0 if not set.
+   *
+   * @param queue the target queue's name
+   * @return the min allocation on this queue or {@link Resources#none}
+   * if not set
    */
   public Resource getMinResources(String queue) {
     Resource minQueueResource = minQueueResources.get(queue);
@@ -271,14 +279,26 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   }
 
   /**
-   * Get the maximum resource allocation for the given queue.
-   * @return the cap set on this queue, or Integer.MAX_VALUE if not set.
+   * Set the maximum resource allocation for the given queue.
+   *
+   * @param queue the target queue
+   * @param maxResource the maximum resource allocation
    */
+  void setMaxResources(String queue, Resource maxResource) {
+    maxQueueResources.put(queue, maxResource);
+  }
 
-  public Resource getMaxResources(String queueName) {
-    Resource maxQueueResource = maxQueueResources.get(queueName);
+  /**
+   * Get the maximum resource allocation for the given queue. If the max in not
+   * set, return the larger of the min and the default max.
+   *
+   * @param queue the target queue's name
+   * @return the max allocation on this queue
+   */
+  public Resource getMaxResources(String queue) {
+    Resource maxQueueResource = maxQueueResources.get(queue);
     if (maxQueueResource == null) {
-      Resource minQueueResource = minQueueResources.get(queueName);
+      Resource minQueueResource = minQueueResources.get(queue);
       if (minQueueResource != null &&
           Resources.greaterThan(RESOURCE_CALCULATOR, Resources.unbounded(),
           minQueueResource, queueMaxResourcesDefault)) {
@@ -291,6 +311,27 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     }
   }
   
+  /**
+   * Get the maximum resource allocation for children of the given queue.
+   *
+   * @param queue the target queue's name
+   * @return the max allocation on this queue or null if not set
+   */
+  public Resource getMaxChildResources(String queue) {
+    return maxChildQueueResources.get(queue);
+  }
+
+  /**
+   * Set the maximum resource allocation for the children of the given queue.
+   * Use of this method is primarily intended for testing purposes.
+   *
+   * @param queue the target queue
+   * @param maxResource the maximum resource allocation
+   */
+  void setMaxChildResources(String queue, Resource maxResource) {
+    maxChildQueueResources.put(queue, maxResource);
+  }
+
   public boolean hasAccess(String queueName, QueueACL acl,
       UserGroupInformation user) {
     int lastPeriodIndex = queueName.length();

@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -71,6 +72,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
@@ -80,9 +82,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.timeout;
@@ -253,6 +253,27 @@ public class TestDataNodeHotSwapVolumes {
       fail("Should throw IOException: empty inputs.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("No directory is specified.", e);
+    }
+  }
+
+  @Test
+  public void testParseStorageTypeChanges() throws IOException {
+    startDFSCluster(1, 1);
+    DataNode dn = cluster.getDataNodes().get(0);
+    Configuration conf = dn.getConf();
+    List<StorageLocation> oldLocations = DataNode.getStorageLocations(conf);
+
+    // Change storage type of an existing StorageLocation
+    String newLoc = String.format("[%s]%s", StorageType.SSD,
+        oldLocations.get(1).getUri());
+    String newDataDirs = oldLocations.get(0).toString() + "," + newLoc;
+
+    try {
+      dn.parseChangedVolumes(newDataDirs);
+      fail("should throw IOE because storage type changes.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Changing storage type is not allowed", e);
     }
   }
 
@@ -763,7 +784,7 @@ public class TestDataNodeHotSwapVolumes {
       ReconfigurationException {
     // The test uses DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
 
     startDFSCluster(1, 2);
     createFile(new Path("/test"), 32, (short)2);

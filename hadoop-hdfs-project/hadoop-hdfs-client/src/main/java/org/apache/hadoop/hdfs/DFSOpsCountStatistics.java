@@ -18,8 +18,10 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -37,55 +39,63 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DFSOpsCountStatistics extends StorageStatistics {
 
-  /** This is for counting file system operations. */
+  /** This is for counting distributed file system operations. */
   public enum OpType {
-    ALLOW_SNAPSHOT("allowSnapshot"),
-    APPEND("append"),
-    CONCAT("concat"),
-    COPY_FROM_LOCAL_FILE("copyFromLocalFile"),
-    CREATE("create"),
-    CREATE_NON_RECURSIVE("createNonRecursive"),
-    CREATE_SNAPSHOT("createSnapshot"),
-    CREATE_SYM_LINK("createSymlink"),
-    DELETE("delete"),
-    DELETE_SNAPSHOT("deleteSnapshot"),
-    DISALLOW_SNAPSHOT("disallowSnapshot"),
-    EXISTS("exists"),
-    GET_BYTES_WITH_FUTURE_GS("getBytesWithFutureGenerationStamps"),
-    GET_CONTENT_SUMMARY("getContentSummary"),
-    GET_FILE_BLOCK_LOCATIONS("getFileBlockLocations"),
-    GET_FILE_CHECKSUM("getFileChecksum"),
-    GET_FILE_LINK_STATUS("getFileLinkStatus"),
-    GET_FILE_STATUS("getFileStatus"),
-    GET_LINK_TARGET("getLinkTarget"),
-    GET_QUOTA_USAGE("getQuotaUsage"),
-    GET_STATUS("getStatus"),
-    GET_STORAGE_POLICIES("getStoragePolicies"),
-    GET_STORAGE_POLICY("getStoragePolicy"),
-    GET_XATTR("getXAttr"),
-    LIST_LOCATED_STATUS("listLocatedStatus"),
-    LIST_STATUS("listStatus"),
-    MKDIRS("mkdirs"),
-    MODIFY_ACL_ENTRIES("modifyAclEntries"),
-    OPEN("open"),
-    PRIMITIVE_CREATE("primitiveCreate"),
-    PRIMITIVE_MKDIR("primitiveMkdir"),
-    REMOVE_ACL("removeAcl"),
-    REMOVE_ACL_ENTRIES("removeAclEntries"),
-    REMOVE_DEFAULT_ACL("removeDefaultAcl"),
-    REMOVE_XATTR("removeXAttr"),
-    RENAME("rename"),
-    RENAME_SNAPSHOT("renameSnapshot"),
-    RESOLVE_LINK("resolveLink"),
-    SET_ACL("setAcl"),
-    SET_OWNER("setOwner"),
-    SET_PERMISSION("setPermission"),
-    SET_REPLICATION("setReplication"),
-    SET_STORAGE_POLICY("setStoragePolicy"),
-    SET_TIMES("setTimes"),
-    SET_XATTR("setXAttr"),
-    TRUNCATE("truncate"),
-    UNSET_STORAGE_POLICY("unsetStoragePolicy");
+    ALLOW_SNAPSHOT("op_allow_snapshot"),
+    APPEND(CommonStatisticNames.OP_APPEND),
+    CONCAT("op_concat"),
+    COPY_FROM_LOCAL_FILE(CommonStatisticNames.OP_COPY_FROM_LOCAL_FILE),
+    CREATE(CommonStatisticNames.OP_CREATE),
+    CREATE_NON_RECURSIVE(CommonStatisticNames.OP_CREATE_NON_RECURSIVE),
+    CREATE_SNAPSHOT("op_create_snapshot"),
+    CREATE_SYM_LINK("op_create_symlink"),
+    DELETE(CommonStatisticNames.OP_DELETE),
+    DELETE_SNAPSHOT("op_delete_snapshot"),
+    DISALLOW_SNAPSHOT("op_disallow_snapshot"),
+    EXISTS(CommonStatisticNames.OP_EXISTS),
+    GET_BYTES_WITH_FUTURE_GS("op_get_bytes_with_future_generation_stamps"),
+    GET_CONTENT_SUMMARY(CommonStatisticNames.OP_GET_CONTENT_SUMMARY),
+    GET_FILE_BLOCK_LOCATIONS("op_get_file_block_locations"),
+    GET_FILE_CHECKSUM(CommonStatisticNames.OP_GET_FILE_CHECKSUM),
+    GET_FILE_LINK_STATUS("op_get_file_link_status"),
+    GET_FILE_STATUS(CommonStatisticNames.OP_GET_FILE_STATUS),
+    GET_LINK_TARGET("op_get_link_target"),
+    GET_QUOTA_USAGE("op_get_quota_usage"),
+    GET_STATUS(CommonStatisticNames.OP_GET_STATUS),
+    GET_STORAGE_POLICIES("op_get_storage_policies"),
+    GET_STORAGE_POLICY("op_get_storage_policy"),
+    GET_XATTR("op_get_xattr"),
+    LIST_LOCATED_STATUS(CommonStatisticNames.OP_LIST_LOCATED_STATUS),
+    LIST_STATUS(CommonStatisticNames.OP_LIST_STATUS),
+    MKDIRS(CommonStatisticNames.OP_MKDIRS),
+    MODIFY_ACL_ENTRIES(CommonStatisticNames.OP_MODIFY_ACL_ENTRIES),
+    OPEN(CommonStatisticNames.OP_OPEN),
+    PRIMITIVE_CREATE("op_primitive_create"),
+    PRIMITIVE_MKDIR("op_primitive_mkdir"),
+    REMOVE_ACL(CommonStatisticNames.OP_REMOVE_ACL),
+    REMOVE_ACL_ENTRIES(CommonStatisticNames.OP_REMOVE_ACL_ENTRIES),
+    REMOVE_DEFAULT_ACL(CommonStatisticNames.OP_REMOVE_DEFAULT_ACL),
+    REMOVE_XATTR("op_remove_xattr"),
+    RENAME(CommonStatisticNames.OP_RENAME),
+    RENAME_SNAPSHOT("op_rename_snapshot"),
+    RESOLVE_LINK("op_resolve_link"),
+    SET_ACL(CommonStatisticNames.OP_SET_ACL),
+    SET_OWNER(CommonStatisticNames.OP_SET_OWNER),
+    SET_PERMISSION(CommonStatisticNames.OP_SET_PERMISSION),
+    SET_REPLICATION("op_set_replication"),
+    SET_STORAGE_POLICY("op_set_storagePolicy"),
+    SET_TIMES(CommonStatisticNames.OP_SET_TIMES),
+    SET_XATTR("op_set_xattr"),
+    TRUNCATE(CommonStatisticNames.OP_TRUNCATE),
+    UNSET_STORAGE_POLICY("op_unset_storage_policy");
+
+    private static final Map<String, OpType> SYMBOL_MAP =
+        new HashMap<>(OpType.values().length);
+    static {
+      for (OpType opType : values()) {
+        SYMBOL_MAP.put(opType.getSymbol(), opType);
+      }
+    }
 
     private final String symbol;
 
@@ -98,14 +108,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     }
 
     public static OpType fromSymbol(String symbol) {
-      if (symbol != null) {
-        for (OpType opType : values()) {
-          if (opType.getSymbol().equals(symbol)) {
-            return opType;
-          }
-        }
-      }
-      return null;
+      return SYMBOL_MAP.get(symbol);
     }
   }
 
@@ -139,13 +142,19 @@ public class DFSOpsCountStatistics extends StorageStatistics {
         throw new NoSuchElementException();
       }
       final Entry<OpType, AtomicLong> entry = iterator.next();
-      return new LongStatistic(entry.getKey().name(), entry.getValue().get());
+      return new LongStatistic(entry.getKey().getSymbol(),
+          entry.getValue().get());
     }
 
     @Override
     public void remove() {
       throw new UnsupportedOperationException();
     }
+  }
+
+  @Override
+  public String getScheme() {
+    return HdfsConstants.HDFS_URI_SCHEME;
   }
 
   @Override
@@ -161,7 +170,14 @@ public class DFSOpsCountStatistics extends StorageStatistics {
 
   @Override
   public boolean isTracked(String key) {
-    return OpType.fromSymbol(key) == null;
+    return OpType.fromSymbol(key) != null;
+  }
+
+  @Override
+  public void reset() {
+    for (AtomicLong count : opsCount.values()) {
+      count.set(0);
+    }
   }
 
 }

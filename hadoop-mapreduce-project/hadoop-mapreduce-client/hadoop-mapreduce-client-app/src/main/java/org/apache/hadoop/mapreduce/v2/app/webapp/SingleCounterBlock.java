@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -51,6 +52,7 @@ public class SingleCounterBlock extends HtmlBlock {
   protected TreeMap<String, Long> values = new TreeMap<String, Long>(); 
   protected Job job;
   protected Task task;
+  private TaskType counterType;
   
   @Inject SingleCounterBlock(AppContext appCtx, ViewContext ctx) {
     super(ctx);
@@ -101,6 +103,13 @@ public class SingleCounterBlock extends HtmlBlock {
     JobId jobID = null;
     TaskId taskID = null;
     String tid = $(TASK_ID);
+    if ($(TITLE).contains("MAPS")) {
+      counterType = TaskType.MAP;
+    } else if ($(TITLE).contains("REDUCES")) {
+      counterType = TaskType.REDUCE;
+    } else {
+      counterType = null;
+    }
     if (!tid.isEmpty()) {
       taskID = MRApps.toTaskID(tid);
       jobID = taskID.getJobId();
@@ -152,7 +161,10 @@ public class SingleCounterBlock extends HtmlBlock {
           value = c.getValue();
         }
       }
-      values.put(MRApps.toString(entry.getKey()), value);
+      if (counterType == null ||
+              counterType == entry.getValue().getType()) {
+        values.put(MRApps.toString(entry.getKey()), value);
+      }
     }
   }
 }

@@ -93,6 +93,8 @@ public class Client implements AutoCloseable {
 
   private static final ThreadLocal<Integer> callId = new ThreadLocal<Integer>();
   private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
+  private static final ThreadLocal<Object> EXTERNAL_CALL_HANDLER
+      = new ThreadLocal<>();
   private static final ThreadLocal<AsyncGet<? extends Writable, IOException>>
       ASYNC_RPC_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Boolean> asynchronousMode =
@@ -111,13 +113,15 @@ public class Client implements AutoCloseable {
   }
 
   /** Set call id and retry count for the next call. */
-  public static void setCallIdAndRetryCount(int cid, int rc) {
+  public static void setCallIdAndRetryCount(int cid, int rc,
+                                            Object externalHandler) {
     Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
     Preconditions.checkState(callId.get() == null);
     Preconditions.checkArgument(rc != RpcConstants.INVALID_RETRY_COUNT);
 
     callId.set(cid);
     retryCount.set(rc);
+    EXTERNAL_CALL_HANDLER.set(externalHandler);
   }
 
   private ConcurrentMap<ConnectionId, Connection> connections =
@@ -333,6 +337,7 @@ public class Client implements AutoCloseable {
     IOException error;          // exception, null if success
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
     boolean done;               // true when call is done
+    private final Object externalHandler;
 
     private Call(RPC.RpcKind rpcKind, Writable param) {
       this.rpcKind = rpcKind;
@@ -352,6 +357,8 @@ public class Client implements AutoCloseable {
       } else {
         this.retry = rc;
       }
+
+      this.externalHandler = EXTERNAL_CALL_HANDLER.get();
     }
 
     @Override
@@ -364,6 +371,12 @@ public class Client implements AutoCloseable {
     protected synchronized void callComplete() {
       this.done = true;
       notify();                                 // notify caller
+
+      if (externalHandler != null) {
+        synchronized (externalHandler) {
+          externalHandler.notify();
+        }
+      }
     }
 
     /** Set the exception when there is an error.

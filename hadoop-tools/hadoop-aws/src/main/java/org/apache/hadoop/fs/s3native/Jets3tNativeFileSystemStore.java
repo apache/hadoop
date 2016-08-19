@@ -37,8 +37,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.s3.S3Credentials;
-import org.apache.hadoop.fs.s3.S3Exception;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.jets3t.service.S3Service;

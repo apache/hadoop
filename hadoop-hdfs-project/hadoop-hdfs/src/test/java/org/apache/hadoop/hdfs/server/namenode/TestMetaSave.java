@@ -162,6 +162,7 @@ public class TestMetaSave {
       //skip 2 lines to reach HDFS-9033 scenario.
       line = reader.readLine();
       line = reader.readLine();
+      assertTrue(line.contains("blk"));
       // skip 1 line for Corrupt Blocks section.
       line = reader.readLine();
       line = reader.readLine();

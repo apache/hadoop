@@ -22,7 +22,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -273,7 +272,7 @@ public class SecureIOUtils {
             UserGroupInformation.createRemoteUser(expectedOwner);
         final String adminsGroupString = "Administrators";
         success = owner.equals(adminsGroupString)
-            && Arrays.asList(ugi.getGroupNames()).contains(adminsGroupString);
+            && ugi.getGroups().contains(adminsGroupString);
       } else {
         success = false;
       }

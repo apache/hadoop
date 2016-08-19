@@ -155,6 +155,7 @@ message OpBlockGroupChecksumProto {
   repeated hadoop.common.TokenProto blockTokens = 3;
   required ErasureCodingPolicyProto ecPolicy = 4;
   repeated uint32 blockIndices = 5;
+  required uint64 requestedNumBytes = 6;
 }
 
 /**

@@ -64,7 +64,7 @@ if not defined YARN_CONF_DIR (
 @rem
 
 if "%1" == "--hosts" (
-  set YARN_SLAVES=%YARN_CONF_DIR%\%2
+  set YARN_WORKERS=%YARN_CONF_DIR%\%2
   shift
   shift
 )

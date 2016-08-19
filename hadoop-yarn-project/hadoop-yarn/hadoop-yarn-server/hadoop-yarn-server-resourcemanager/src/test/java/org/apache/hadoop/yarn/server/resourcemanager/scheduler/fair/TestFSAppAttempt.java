@@ -38,7 +38,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
@@ -63,8 +66,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
   @Test
   public void testDelayScheduling() {
     FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
-    Priority prio = Mockito.mock(Priority.class);
-    Mockito.when(prio.getPriority()).thenReturn(1);
+    Priority pri = Mockito.mock(Priority.class);
+    SchedulerRequestKey prio = TestUtils.toSchedulerKey(pri);
+    Mockito.when(pri.getPriority()).thenReturn(1);
     double nodeLocalityThreshold = .5;
     double rackLocalityThreshold = .6;
 
@@ -122,8 +126,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
   public void testDelaySchedulingForContinuousScheduling()
           throws InterruptedException {
     FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue("queue", true);
-    Priority prio = Mockito.mock(Priority.class);
-    Mockito.when(prio.getPriority()).thenReturn(1);
+    Priority pri = Mockito.mock(Priority.class);
+    SchedulerRequestKey prio = TestUtils.toSchedulerKey(pri);
+    Mockito.when(pri.getPriority()).thenReturn(1);
 
     ControlledClock clock = new ControlledClock();
     scheduler.setClock(clock);
@@ -180,8 +185,9 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
    */
   public void testLocalityLevelWithoutDelays() {
     FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
-    Priority prio = Mockito.mock(Priority.class);
-    Mockito.when(prio.getPriority()).thenReturn(1);
+    Priority pri = Mockito.mock(Priority.class);
+    SchedulerRequestKey prio = TestUtils.toSchedulerKey(pri);
+    Mockito.when(pri.getPriority()).thenReturn(1);
 
     RMContext rmContext = resourceManager.getRMContext();
     ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);

@@ -23,8 +23,6 @@ import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.SleepJob.SleepInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -46,15 +44,19 @@ public class TimelineServicePerformance extends Configured implements Tool {
     System.err.println(
         "Usage: [-m <maps>] number of mappers (default: " + NUM_MAPS_DEFAULT +
             ")\n" +
-        "     [-v] timeline service version\n" +
-        "     [-mtype <mapper type in integer>]\n" +
-        "          1. simple entity write mapper (default)\n" +
+        "     [-v] timeline service version (default: " +
+            TIMELINE_SERVICE_VERSION_1 + ")\n" +
+        "          1. version 1.x\n" +
+        "          2. version 2.x\n" +
+        "     [-mtype <mapper type in integer>] (default: " +
+            SIMPLE_ENTITY_WRITER + ")\n" +
+        "          1. simple entity write mapper\n" +
         "          2. jobhistory files replay mapper\n" +
         "     [-s <(KBs)test>] number of KB per put (mtype=1, default: " +
-             SimpleEntityWriterV1.KBS_SENT_DEFAULT + " KB)\n" +
+             SimpleEntityWriterConstants.KBS_SENT_DEFAULT + " KB)\n" +
         "     [-t] package sending iterations per mapper (mtype=1, default: " +
-             SimpleEntityWriterV1.TEST_TIMES_DEFAULT + ")\n" +
-        "     [-d <path>] root path of job history files (mtype=2)\n" +
+             SimpleEntityWriterConstants.TEST_TIMES_DEFAULT + ")\n" +
+        "     [-d <path>] hdfs root path of job history files (mtype=2)\n" +
         "     [-r <replay mode>] (mtype=2)\n" +
         "          1. write all entities for a job in one put (default)\n" +
         "          2. write one entity at a time\n");
@@ -78,8 +80,7 @@ public class TimelineServicePerformance extends Configured implements Tool {
       try {
         if ("-v".equals(args[i])) {
           timeline_service_version = Integer.parseInt(args[++i]);
-        }
-        if ("-m".equals(args[i])) {
+        } else if ("-m".equals(args[i])) {
           if (Integer.parseInt(args[++i]) > 0) {
             job.getConfiguration()
                 .setInt(MRJobConfig.NUM_MAPS, Integer.parseInt(args[i]));
@@ -88,11 +89,12 @@ public class TimelineServicePerformance extends Configured implements Tool {
           mapperType = Integer.parseInt(args[++i]);
         } else if ("-s".equals(args[i])) {
           if (Integer.parseInt(args[++i]) > 0) {
-            conf.setInt(SimpleEntityWriterV1.KBS_SENT, Integer.parseInt(args[i]));
+            conf.setInt(SimpleEntityWriterConstants.KBS_SENT,
+                Integer.parseInt(args[i]));
           }
         } else if ("-t".equals(args[i])) {
           if (Integer.parseInt(args[++i]) > 0) {
-            conf.setInt(SimpleEntityWriterV1.TEST_TIMES,
+            conf.setInt(SimpleEntityWriterConstants.TEST_TIMES,
                 Integer.parseInt(args[i]));
           }
         } else if ("-d".equals(args[i])) {
@@ -113,28 +115,41 @@ public class TimelineServicePerformance extends Configured implements Tool {
     }
 
     // handle mapper-specific settings
-    switch (timeline_service_version) {
-    case TIMELINE_SERVICE_VERSION_1:
-    default:
-      switch (mapperType) {
-      case JOB_HISTORY_FILE_REPLAY_MAPPER:
-        job.setMapperClass(JobHistoryFileReplayMapperV1.class);
-        String processingPath =
-            conf.get(JobHistoryFileReplayHelper.PROCESSING_PATH);
-        if (processingPath == null || processingPath.isEmpty()) {
-          System.out.println("processing path is missing while mtype = 2");
-          return printUsage() == 0;
-        }
+    switch (mapperType) {
+    case JOB_HISTORY_FILE_REPLAY_MAPPER:
+      String processingPath =
+          conf.get(JobHistoryFileReplayHelper.PROCESSING_PATH);
+      if (processingPath == null || processingPath.isEmpty()) {
+        System.out.println("processing path is missing while mtype = 2");
+        return printUsage() == 0;
+      }
+      switch (timeline_service_version) {
+      case TIMELINE_SERVICE_VERSION_2:
+        job.setMapperClass(JobHistoryFileReplayMapperV2.class);
         break;
-      case SIMPLE_ENTITY_WRITER:
+      case TIMELINE_SERVICE_VERSION_1:
       default:
-        job.setMapperClass(SimpleEntityWriterV1.class);
-        // use the current timestamp as the "run id" of the test: this will
-        // be used as simulating the cluster timestamp for apps
-        conf.setLong(SimpleEntityWriterV1.TIMELINE_SERVICE_PERFORMANCE_RUN_ID,
-          System.currentTimeMillis());
+        job.setMapperClass(JobHistoryFileReplayMapperV1.class);
         break;
       }
+      break;
+    case SIMPLE_ENTITY_WRITER:
+    default:
+      // use the current timestamp as the "run id" of the test: this will
+      // be used as simulating the cluster timestamp for apps
+      conf.setLong(
+          SimpleEntityWriterConstants.TIMELINE_SERVICE_PERFORMANCE_RUN_ID,
+          System.currentTimeMillis());
+      switch (timeline_service_version) {
+      case TIMELINE_SERVICE_VERSION_2:
+        job.setMapperClass(SimpleEntityWriterV2.class);
+        break;
+      case TIMELINE_SERVICE_VERSION_1:
+      default:
+        job.setMapperClass(SimpleEntityWriterV1.class);
+        break;
+      }
+      break;
     }
     return true;
   }
@@ -164,25 +179,46 @@ public class TimelineServicePerformance extends Configured implements Tool {
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
     int ret = job.waitForCompletion(true) ? 0 : 1;
-    org.apache.hadoop.mapreduce.Counters counters = job.getCounters();
-    long writetime =
-        counters.findCounter(PerfCounters.TIMELINE_SERVICE_WRITE_TIME).getValue();
-    long writecounts =
-        counters.findCounter(PerfCounters.TIMELINE_SERVICE_WRITE_COUNTER).getValue();
-    long writesize =
-        counters.findCounter(PerfCounters.TIMELINE_SERVICE_WRITE_KBS).getValue();
-    double transacrate = writecounts * 1000 / (double)writetime;
-    double iorate = writesize * 1000 / (double)writetime;
-    int numMaps =
-        Integer.parseInt(job.getConfiguration().get(MRJobConfig.NUM_MAPS));
+    if (job.isSuccessful()) {
+      org.apache.hadoop.mapreduce.Counters counters = job.getCounters();
+      long writecounts =
+          counters.findCounter(
+              PerfCounters.TIMELINE_SERVICE_WRITE_COUNTER).getValue();
+      long writefailures =
+          counters.findCounter(
+              PerfCounters.TIMELINE_SERVICE_WRITE_FAILURES).getValue();
+      if (writefailures > 0 && writefailures == writecounts) {
+        // see if we have a complete failure to write
+        System.out.println("Job failed: all writes failed!");
+      } else {
+        long writetime =
+            counters.findCounter(
+                PerfCounters.TIMELINE_SERVICE_WRITE_TIME).getValue();
+        long writesize =
+            counters.findCounter(
+                PerfCounters.TIMELINE_SERVICE_WRITE_KBS).getValue();
+        if (writetime == 0L) {
+          // see if write time is zero (normally shouldn't happen)
+          System.out.println("Job failed: write time is 0!");
+        } else {
+          double transacrate = writecounts * 1000 / (double)writetime;
+          double iorate = writesize * 1000 / (double)writetime;
+          int numMaps =
+              Integer.parseInt(
+                  job.getConfiguration().get(MRJobConfig.NUM_MAPS));
 
-    System.out.println("TRANSACTION RATE (per mapper): " + transacrate +
-        " ops/s");
-    System.out.println("IO RATE (per mapper): " + iorate + " KB/s");
+          System.out.println("TRANSACTION RATE (per mapper): " + transacrate +
+              " ops/s");
+          System.out.println("IO RATE (per mapper): " + iorate + " KB/s");
 
-    System.out.println("TRANSACTION RATE (total): " + transacrate*numMaps +
-        " ops/s");
-    System.out.println("IO RATE (total): " + iorate*numMaps + " KB/s");
+          System.out.println("TRANSACTION RATE (total): " +
+              transacrate*numMaps + " ops/s");
+          System.out.println("IO RATE (total): " + iorate*numMaps + " KB/s");
+        }
+      }
+    } else {
+      System.out.println("Job failed: " + job.getStatus().getFailureInfo());
+    }
 
     return ret;
   }

@@ -739,11 +739,15 @@ class DataXceiver extends Receiver implements Runnable {
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
+
+          DataNodeFaultInjector.get().failMirrorConnection();
+
           int timeoutValue = dnConf.socketTimeout +
               (HdfsConstants.READ_TIMEOUT_EXTENSION * targets.length);
           int writeTimeout = dnConf.socketWriteTimeout +
               (HdfsConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
+          mirrorSock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setKeepAlive(true);
           if (dnConf.getTransferSocketSendBufferSize() > 0) {
@@ -961,7 +965,7 @@ class DataXceiver extends Receiver implements Runnable {
 
   @Override
   public void blockGroupChecksum(final StripedBlockInfo stripedBlockInfo,
-                                 final Token<BlockTokenIdentifier> blockToken)
+      final Token<BlockTokenIdentifier> blockToken, long requestedNumBytes)
       throws IOException {
     updateCurrentThreadName("Getting checksum for block group" +
         stripedBlockInfo.getBlock());
@@ -970,7 +974,8 @@ class DataXceiver extends Receiver implements Runnable {
         Op.BLOCK_GROUP_CHECKSUM, BlockTokenIdentifier.AccessMode.READ);
 
     AbstractBlockChecksumComputer maker =
-        new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo);
+        new BlockGroupNonStripedChecksumComputer(datanode, stripedBlockInfo,
+            requestedNumBytes);
 
     try {
       maker.compute();
@@ -1114,6 +1119,7 @@ class DataXceiver extends Receiver implements Runnable {
         InetSocketAddress proxyAddr = NetUtils.createSocketAddr(dnAddr);
         proxySock = datanode.newSocket();
         NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
+        proxySock.setTcpNoDelay(dnConf.getDataTransferServerTcpNoDelay());
         proxySock.setSoTimeout(dnConf.socketTimeout);
         proxySock.setKeepAlive(true);
 

@@ -72,6 +72,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.DiskValidator;
+import org.apache.hadoop.util.DiskValidatorFactory;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
@@ -168,6 +170,7 @@ public class ResourceLocalizationService extends CompositeService
   private DirsChangeListener localDirsChangeListener;
   private DirsChangeListener logDirsChangeListener;
   private Context nmContext;
+  private DiskValidator diskValidator;
 
   /**
    * Map of LocalResourceTrackers keyed by username, for private
@@ -247,6 +250,10 @@ public class ResourceLocalizationService extends CompositeService
         "Failed to initialize LocalizationService", e);
     }
 
+    diskValidator = DiskValidatorFactory.getInstance(
+        conf.get(YarnConfiguration.DISK_VALIDATOR));
+    LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
+        " is loaded.");
     cacheTargetSize =
       conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_TARGET_SIZE_MB, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_TARGET_SIZE_MB) << 20;
     cacheCleanupPeriod =
@@ -835,7 +842,13 @@ public class ResourceLocalizationService extends CompositeService
                 publicRsrc.getPathForLocalization(key, publicRootPath,
                     delService);
             if (!publicDirDestPath.getParent().equals(publicRootPath)) {
-              DiskChecker.checkDir(new File(publicDirDestPath.toUri().getPath()));
+              if (diskValidator != null) {
+                diskValidator.checkStatus(
+                    new File(publicDirDestPath.toUri().getPath()));
+              } else {
+                throw new DiskChecker.DiskErrorException(
+                    "Disk Validator is null!");
+              }
             }
 
             // explicitly synchronize pending here to avoid future task
@@ -1221,8 +1234,10 @@ public class ResourceLocalizationService extends CompositeService
         tokenOut =
             lfs.create(nmPrivateCTokensPath, EnumSet.of(CREATE, OVERWRITE));
         LOG.info("Writing credentials to the nmPrivate file "
-            + nmPrivateCTokensPath.toString() + ". Credentials list: ");
+            + nmPrivateCTokensPath.toString());
         if (LOG.isDebugEnabled()) {
+          LOG.debug("Credentials list in " + nmPrivateCTokensPath.toString()
+              + ": ");
           for (Token<? extends TokenIdentifier> tk : credentials
               .getAllTokens()) {
             LOG.debug(tk + " : " + buildTokenFingerprint(tk));

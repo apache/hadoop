@@ -123,7 +123,7 @@ public class TestAmFilter {
   /**
    * Test AmIpFilter
    */
-  @Test(timeout = 1000)
+  @Test(timeout = 10000)
   @SuppressWarnings("deprecation")
   public void testFilter() throws Exception {
     Map<String, String> params = new HashMap<String, String>();

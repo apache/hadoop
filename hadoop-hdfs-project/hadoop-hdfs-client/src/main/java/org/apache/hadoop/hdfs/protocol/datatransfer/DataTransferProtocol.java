@@ -94,6 +94,11 @@ public interface DataTransferProtocol {
    * @param minBytesRcvd minimum number of bytes received.
    * @param maxBytesRcvd maximum number of bytes received.
    * @param latestGenerationStamp the latest generation stamp of the block.
+   * @param requestedChecksum the requested checksum mechanism
+   * @param cachingStrategy the caching strategy
+   * @param allowLazyPersist hint to the DataNode that the block can be
+   *                         allocated on transient storage i.e. memory and
+   *                         written to disk lazily
    * @param pinning whether to pin the block, so Balancer won't move it.
    * @param targetPinnings whether to pin the block on target datanode
    */
@@ -207,8 +212,11 @@ public interface DataTransferProtocol {
    *
    * @param stripedBlockInfo a striped block info.
    * @param blockToken security token for accessing the block.
+   * @param requestedNumBytes requested number of bytes in the block group
+   *                          to compute the checksum.
    * @throws IOException
    */
   void blockGroupChecksum(StripedBlockInfo stripedBlockInfo,
-          Token<BlockTokenIdentifier> blockToken) throws IOException;
+          Token<BlockTokenIdentifier> blockToken,
+          long requestedNumBytes) throws IOException;
 }

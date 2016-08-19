@@ -91,6 +91,8 @@ public class TestMROpportunisticMaps {
       Configuration conf = new Configuration();
       // Start the mini-MR and mini-DFS clusters
       conf.setBoolean(YarnConfiguration.AMRM_PROXY_ENABLED, true);
+      conf.setBoolean(YarnConfiguration.
+          OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
       conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
       conf.setBoolean(YarnConfiguration.NM_CONTAINER_QUEUING_ENABLED, true);
       dfsCluster = new MiniDFSCluster.Builder(conf)

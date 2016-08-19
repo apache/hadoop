@@ -182,6 +182,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       "fs.azure.atomic.rename.dir";
 
   /**
+   * Configuration key to enable flat listing of blobs. This config is useful
+   * only if listing depth is AZURE_UNBOUNDED_DEPTH.
+   */
+  public static final String KEY_ENABLE_FLAT_LISTING = "fs.azure.flatlist.enable";
+
+  /**
    * The set of directories where we should apply atomic folder rename
    * synchronized with createNonRecursive.
    */
@@ -224,6 +230,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   private static final int STORAGE_CONNECTION_TIMEOUT_DEFAULT = 90;
 
+  /**
+   * Enable flat listing of blobs as default option. This is useful only if
+   * listing depth is AZURE_UNBOUNDED_DEPTH.
+   */
+  public static final boolean DEFAULT_ENABLE_FLAT_LISTING = false;
 
   /**
    * MEMBER VARIABLES
@@ -1614,15 +1625,17 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @param includeMetadata
    *          if set, the listed items will have their metadata populated
    *          already.
-   * 
+   * @param useFlatBlobListing
+   *          if set the list is flat, otherwise it is hierarchical.
+   *
    * @returns blobItems : iterable collection of blob items.
    * @throws URISyntaxException
    * 
    */
-  private Iterable<ListBlobItem> listRootBlobs(boolean includeMetadata)
-      throws StorageException, URISyntaxException {
+  private Iterable<ListBlobItem> listRootBlobs(boolean includeMetadata,
+      boolean useFlatBlobListing) throws StorageException, URISyntaxException {
     return rootDirectory.listBlobs(
-        null, false,
+        null, useFlatBlobListing,
         includeMetadata ?
             EnumSet.of(BlobListingDetails.METADATA) :
               EnumSet.noneOf(BlobListingDetails.class),
@@ -1642,16 +1655,18 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * @param includeMetadata
    *          if set, the listed items will have their metadata populated
    *          already.
+   * @param useFlatBlobListing
+   *          if set the list is flat, otherwise it is hierarchical.
    * 
    * @returns blobItems : iterable collection of blob items.
    * @throws URISyntaxException
    * 
    */
-  private Iterable<ListBlobItem> listRootBlobs(String aPrefix,
-      boolean includeMetadata) throws StorageException, URISyntaxException {
+  private Iterable<ListBlobItem> listRootBlobs(String aPrefix, boolean includeMetadata,
+      boolean useFlatBlobListing) throws StorageException, URISyntaxException {
 
     Iterable<ListBlobItem> list = rootDirectory.listBlobs(aPrefix,
-        false,
+        useFlatBlobListing,
         includeMetadata ?
             EnumSet.of(BlobListingDetails.METADATA) :
               EnumSet.noneOf(BlobListingDetails.class),
@@ -2049,11 +2064,19 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         prefix += PATH_DELIMITER;
       }
 
+      // Enable flat listing option only if depth is unbounded and config
+      // KEY_ENABLE_FLAT_LISTING is enabled.
+      boolean enableFlatListing = false;
+      if (maxListingDepth < 0 && sessionConfiguration.getBoolean(
+        KEY_ENABLE_FLAT_LISTING, DEFAULT_ENABLE_FLAT_LISTING)) {
+        enableFlatListing = true;
+      }
+
       Iterable<ListBlobItem> objects;
       if (prefix.equals("/")) {
-        objects = listRootBlobs(true);
+        objects = listRootBlobs(true, enableFlatListing);
       } else {
-        objects = listRootBlobs(prefix, true);
+        objects = listRootBlobs(prefix, true, enableFlatListing);
       }
 
       ArrayList<FileMetadata> fileMetadata = new ArrayList<FileMetadata>();
@@ -2121,10 +2144,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
             fileMetadata.add(directoryMetadata);
           }
 
-          // Currently at a depth of one, decrement the listing depth for
-          // sub-directories.
-          buildUpList(directory, fileMetadata, maxListingCount,
-              maxListingDepth - 1);
+          if (!enableFlatListing) {
+            // Currently at a depth of one, decrement the listing depth for
+            // sub-directories.
+            buildUpList(directory, fileMetadata, maxListingCount,
+                maxListingDepth - 1);
+          }
         }
       }
       // Note: Original code indicated that this may be a hack.
@@ -2632,7 +2657,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       }
       // Get all blob items with the given prefix from the container and delete
       // them.
-      Iterable<ListBlobItem> objects = listRootBlobs(prefix, false);
+      Iterable<ListBlobItem> objects = listRootBlobs(prefix, false, false);
       for (ListBlobItem blobItem : objects) {
         ((CloudBlob) blobItem).delete(DeleteSnapshotsOption.NONE, null, null,
             getInstrumentedContext());

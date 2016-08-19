@@ -51,7 +51,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.DiskValidator;
+import org.apache.hadoop.util.DiskValidatorFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -69,7 +70,6 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHe
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -99,6 +99,7 @@ public class ContainerLocalizer {
   private final RecordFactory recordFactory;
   private final Map<LocalResource,Future<Path>> pendingResources;
   private final String appCacheDirContextName;
+  private final DiskValidator diskValidator;
 
   public ContainerLocalizer(FileContext lfs, String user, String appId,
       String localizerId, List<Path> localDirs,
@@ -115,7 +116,11 @@ public class ContainerLocalizer {
     this.localDirs = localDirs;
     this.localizerId = localizerId;
     this.recordFactory = recordFactory;
-    this.conf = new Configuration();
+    this.conf = new YarnConfiguration();
+    this.diskValidator = DiskValidatorFactory.getInstance(
+        conf.get(YarnConfiguration.DISK_VALIDATOR));
+    LOG.info("Disk Validator: " + YarnConfiguration.DISK_VALIDATOR +
+        " is loaded.");
     this.appCacheDirContextName = String.format(APPCACHE_CTXT_FMT, appId);
     this.pendingResources = new HashMap<LocalResource,Future<Path>>();
   }
@@ -199,7 +204,7 @@ public class ContainerLocalizer {
 
   Callable<Path> download(Path path, LocalResource rsrc,
       UserGroupInformation ugi) throws IOException {
-    DiskChecker.checkDir(new File(path.toUri().getRawPath()));
+    diskValidator.checkStatus(new File(path.toUri().getRawPath()));
     return new FSDownload(lfs, ugi, conf, path, rsrc);
   }
 

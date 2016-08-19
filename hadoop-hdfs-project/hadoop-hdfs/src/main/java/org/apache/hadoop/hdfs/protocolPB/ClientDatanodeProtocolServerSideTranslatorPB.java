@@ -47,9 +47,17 @@ import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.Start
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.StartReconfigurationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.TriggerBlockReportResponseProto;
-
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.SubmitDiskBalancerPlanRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.SubmitDiskBalancerPlanResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.CancelPlanRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.CancelPlanResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.QueryPlanStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.QueryPlanStatusResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DiskBalancerSettingRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DiskBalancerSettingResponseProto;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
 
 /**
  * Implementation for protobuf service that forwards requests
@@ -231,5 +239,88 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     }
     return GetBalancerBandwidthResponseProto.newBuilder()
         .setBandwidth(bandwidth).build();
+  }
+
+  /**
+   * Submit a disk balancer plan for execution.
+   * @param controller  - RpcController
+   * @param request   - Request
+   * @return   Response
+   * @throws ServiceException
+   */
+  @Override
+  public SubmitDiskBalancerPlanResponseProto submitDiskBalancerPlan(
+      RpcController controller, SubmitDiskBalancerPlanRequestProto request)
+      throws ServiceException {
+    try {
+      impl.submitDiskBalancerPlan(request.getPlanID(),
+          request.hasPlanVersion() ? request.getPlanVersion() : 1,
+          request.hasPlanFile() ? request.getPlanFile() : "",
+          request.getPlan(),
+          request.hasIgnoreDateCheck() ? request.getIgnoreDateCheck() : false);
+      SubmitDiskBalancerPlanResponseProto response =
+          SubmitDiskBalancerPlanResponseProto.newBuilder()
+              .build();
+      return response;
+    } catch(Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Cancel an executing plan.
+   * @param controller - RpcController
+   * @param request  - Request
+   * @return Response.
+   * @throws ServiceException
+   */
+  @Override
+  public CancelPlanResponseProto cancelDiskBalancerPlan(
+      RpcController controller, CancelPlanRequestProto request)
+      throws ServiceException {
+    try {
+      impl.cancelDiskBalancePlan(request.getPlanID());
+      return CancelPlanResponseProto.newBuilder().build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Gets the status of an executing Plan.
+   */
+  @Override
+  public QueryPlanStatusResponseProto queryDiskBalancerPlan(
+      RpcController controller, QueryPlanStatusRequestProto request)
+      throws ServiceException {
+    try {
+      DiskBalancerWorkStatus result = impl.queryDiskBalancerPlan();
+      return QueryPlanStatusResponseProto
+          .newBuilder()
+          .setResult(result.getResult().getIntResult())
+          .setPlanID(result.getPlanID())
+          .setPlanFile(result.getPlanFile())
+          .setCurrentStatus(result.currentStateString())
+          .build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Returns a run-time setting from diskbalancer like Bandwidth.
+   */
+  @Override
+  public DiskBalancerSettingResponseProto getDiskBalancerSetting(
+      RpcController controller, DiskBalancerSettingRequestProto request)
+      throws ServiceException {
+    try {
+      String val = impl.getDiskBalancerSetting(request.getKey());
+      return DiskBalancerSettingResponseProto.newBuilder()
+          .setValue(val)
+          .build();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
   }
 }

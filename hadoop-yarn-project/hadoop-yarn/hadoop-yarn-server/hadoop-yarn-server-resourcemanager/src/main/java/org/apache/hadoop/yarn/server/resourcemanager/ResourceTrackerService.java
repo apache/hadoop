@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -68,6 +69,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppCollectorUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -111,6 +113,8 @@ public class ResourceTrackerService extends AbstractService implements
   private int minAllocMb;
   private int minAllocVcores;
 
+  private DecommissioningNodesWatcher decommissioningWatcher;
+
   private boolean isDistributedNodeLabelsConf;
   private boolean isDelegatedCentralizedNodeLabelsConf;
   private DynamicResourceConfiguration drConf;
@@ -129,6 +133,7 @@ public class ResourceTrackerService extends AbstractService implements
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
+    this.decommissioningWatcher = new DecommissioningNodesWatcher(rmContext);
   }
 
   @Override
@@ -168,6 +173,7 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     loadDynamicResourceConfiguration(conf);
+    decommissioningWatcher.init(conf);
     super.serviceInit(conf);
   }
 
@@ -336,7 +342,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Check if this node is a 'valid' node
-    if (!this.nodesListManager.isValidNode(host)) {
+    if (!this.nodesListManager.isValidNode(host) &&
+        !isNodeInDecommissioning(nodeId)) {
       String message =
           "Disallowed NodeManager from  " + host
               + ", Sending SHUTDOWN signal to the NodeManager.";
@@ -491,6 +498,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     // Send ping
     this.nmLivelinessMonitor.receivedPing(nodeId);
+    this.decommissioningWatcher.update(rmNode, remoteNodeStatus);
 
     // 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
     NodeHeartbeatResponse lastNodeHeartbeatResponse = rmNode.getLastNodeHeartBeatResponse();
@@ -513,6 +521,30 @@ public class ResourceTrackerService extends AbstractService implements
           message);
     }
 
+    boolean timelineV2Enabled =
+        YarnConfiguration.timelineServiceV2Enabled(getConfig());
+    if (timelineV2Enabled) {
+      // Check & update collectors info from request.
+      // TODO make sure it won't have race condition issue for AM failed over
+      // case that the older registration could possible override the newer
+      // one.
+      updateAppCollectorsMap(request);
+    }
+
+    // Evaluate whether a DECOMMISSIONING node is ready to be DECOMMISSIONED.
+    if (rmNode.getState() == NodeState.DECOMMISSIONING &&
+        decommissioningWatcher.checkReadyToBeDecommissioned(
+            rmNode.getNodeID())) {
+      String message = "DECOMMISSIONING " + nodeId +
+          " is ready to be decommissioned";
+      LOG.info(message);
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
+      this.nmLivelinessMonitor.unregister(nodeId);
+      return YarnServerBuilderUtils.newNodeHeartbeatResponse(
+          NodeAction.SHUTDOWN, message);
+    }
+
     // Heartbeat response
     NodeHeartbeatResponse nodeHeartBeatResponse = YarnServerBuilderUtils
         .newNodeHeartbeatResponse(lastNodeHeartbeatResponse.
@@ -528,6 +560,12 @@ public class ResourceTrackerService extends AbstractService implements
         rmContext.getSystemCredentialsForApps();
     if (!systemCredentials.isEmpty()) {
       nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
+    }
+
+    if (timelineV2Enabled) {
+      // Return collectors' map that NM needs to know
+      setAppCollectorsMapToResponse(rmNode.getRunningApps(),
+          nodeHeartBeatResponse);
     }
 
     // 4. Send status to RMNode, saving the latest response.
@@ -571,6 +609,56 @@ public class ResourceTrackerService extends AbstractService implements
               .createContainerQueuingLimit());
     }
     return nodeHeartBeatResponse;
+  }
+
+  private void setAppCollectorsMapToResponse(
+      List<ApplicationId> runningApps, NodeHeartbeatResponse response) {
+    Map<ApplicationId, String> liveAppCollectorsMap = new
+        HashMap<ApplicationId, String>();
+    Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
+    // Set collectors for all running apps on this node.
+    for (ApplicationId appId : runningApps) {
+      String appCollectorAddr = rmApps.get(appId).getCollectorAddr();
+      if (appCollectorAddr != null) {
+        liveAppCollectorsMap.put(appId, appCollectorAddr);
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Collector for applicaton: " + appId +
+              " hasn't registered yet!");
+        }
+      }
+    }
+    response.setAppCollectorsMap(liveAppCollectorsMap);
+  }
+
+  private void updateAppCollectorsMap(NodeHeartbeatRequest request) {
+    Map<ApplicationId, String> registeredCollectorsMap =
+        request.getRegisteredCollectors();
+    if (registeredCollectorsMap != null
+        && !registeredCollectorsMap.isEmpty()) {
+      Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
+      for (Map.Entry<ApplicationId, String> entry:
+          registeredCollectorsMap.entrySet()) {
+        ApplicationId appId = entry.getKey();
+        String collectorAddr = entry.getValue();
+        if (collectorAddr != null && !collectorAddr.isEmpty()) {
+          RMApp rmApp = rmApps.get(appId);
+          if (rmApp == null) {
+            LOG.warn("Cannot update collector info because application ID: " +
+                appId + " is not found in RMContext!");
+          } else {
+            String previousCollectorAddr = rmApp.getCollectorAddr();
+            if (previousCollectorAddr == null
+                || !previousCollectorAddr.equals(collectorAddr)) {
+              // sending collector update event.
+              RMAppCollectorUpdateEvent event =
+                  new RMAppCollectorUpdateEvent(appId, collectorAddr);
+              rmContext.getDispatcher().getEventHandler().handle(event);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**

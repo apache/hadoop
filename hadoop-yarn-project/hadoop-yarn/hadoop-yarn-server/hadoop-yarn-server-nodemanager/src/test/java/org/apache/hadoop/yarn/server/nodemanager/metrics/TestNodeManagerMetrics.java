@@ -33,16 +33,16 @@ public class TestNodeManagerMetrics {
     DefaultMetricsSystem.initialize("NodeManager");
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
     Resource total = Records.newRecord(Resource.class);
-    total.setMemory(8*GiB);
+    total.setMemorySize(8*GiB);
     total.setVirtualCores(16);
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(512); //512MiB
+    resource.setMemorySize(512); //512MiB
     resource.setVirtualCores(2);
     Resource largerResource = Records.newRecord(Resource.class);
-    largerResource.setMemory(1024);
+    largerResource.setMemorySize(1024);
     largerResource.setVirtualCores(2);
     Resource smallerResource = Records.newRecord(Resource.class);
-    smallerResource.setMemory(256);
+    smallerResource.setMemorySize(256);
     smallerResource.setVirtualCores(1);
 
     metrics.addResource(total);

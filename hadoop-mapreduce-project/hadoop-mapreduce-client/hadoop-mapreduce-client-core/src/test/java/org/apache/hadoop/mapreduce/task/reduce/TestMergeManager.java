@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MROutputFiles;
 import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 import org.junit.Assert;
 import org.junit.Test;
@@ -288,5 +289,29 @@ public class TestMergeManager {
     final long maxInMemReduce = mgr.getMaxInMemReduceLimit();
     assertTrue("Large in-memory reduce area unusable: " + maxInMemReduce,
         maxInMemReduce > Integer.MAX_VALUE);
+    assertEquals("maxSingleShuffleLimit to be capped at Integer.MAX_VALUE",
+        Integer.MAX_VALUE, mgr.maxSingleShuffleLimit);
+    verifyReservedMapOutputType(mgr, 10L, "MEMORY");
+    verifyReservedMapOutputType(mgr, 1L + Integer.MAX_VALUE, "DISK");
+  }
+
+  private void verifyReservedMapOutputType(MergeManagerImpl<Text, Text> mgr,
+      long size, String expectedShuffleMode) throws IOException {
+    final TaskAttemptID mapId = TaskAttemptID.forName("attempt_0_1_m_1_1");
+    final MapOutput<Text, Text> mapOutput = mgr.reserve(mapId, size, 1);
+    assertEquals("Shuffled bytes: " + size, expectedShuffleMode,
+        mapOutput.getDescription());
+    mgr.unreserve(size);
+  }
+
+  @Test
+  public void testZeroShuffleMemoryLimitPercent() throws Exception {
+    final JobConf jobConf = new JobConf();
+    jobConf.setFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT, 0.0f);
+    final MergeManagerImpl<Text, Text> mgr =
+        new MergeManagerImpl<>(null, jobConf, mock(LocalFileSystem.class),
+            null, null, null, null, null, null, null, null, null, null,
+            new MROutputFiles());
+    verifyReservedMapOutputType(mgr, 10L, "DISK");
   }
 }

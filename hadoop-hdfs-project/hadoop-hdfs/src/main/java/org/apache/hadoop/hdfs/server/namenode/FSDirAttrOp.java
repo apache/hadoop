@@ -57,12 +57,11 @@ public class FSDirAttrOp {
       throw new InvalidPathException(src);
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       unprotectedSetPermission(fsd, src, permission);
     } finally {
@@ -79,18 +78,17 @@ public class FSDirAttrOp {
       throw new InvalidPathException(src);
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       fsd.checkOwner(pc, iip);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
           throw new AccessControlException("Non-super user cannot change owner");
         }
-        if (group != null && !pc.containsGroup(group)) {
+        if (group != null && !pc.isMemberOfGroup(group)) {
           throw new AccessControlException("User does not belong to " + group);
         }
       }
@@ -106,13 +104,12 @@ public class FSDirAttrOp {
       FSDirectory fsd, String src, long mtime, long atime)
       throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       // Write access is required to set access and modification times
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
@@ -139,11 +136,10 @@ public class FSDirAttrOp {
     bm.verifyReplication(src, replication, null);
     final boolean isFile;
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      final INodesInPath iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
@@ -187,11 +183,10 @@ public class FSDirAttrOp {
           DFS_STORAGE_POLICY_ENABLED_KEY));
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = FSDirectory.resolvePath(src, pathComponents, fsd);
+      src = FSDirectory.resolvePath(src, fsd);
       iip = fsd.getINodesInPath4Write(src);
 
       if (fsd.isPermissionEnabled()) {
@@ -214,12 +209,9 @@ public class FSDirAttrOp {
   static BlockStoragePolicy getStoragePolicy(FSDirectory fsd, BlockManager bm,
       String path) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(path);
     fsd.readLock();
     try {
-      path = fsd.resolvePath(pc, path, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath(path, false);
+      final INodesInPath iip = fsd.resolvePath(pc, path, false);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
       }
@@ -237,11 +229,10 @@ public class FSDirAttrOp {
   static long getPreferredBlockSize(FSDirectory fsd, String src)
       throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     fsd.readLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath(src, false);
+      final INodesInPath iip = fsd.resolvePath(pc, src, false);
+      src = iip.getPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkTraverse(pc, iip);
       }

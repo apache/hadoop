@@ -300,12 +300,36 @@ public class MRApps extends Apps {
         for (URI u: withLinks) {
           Path p = new Path(u);
           FileSystem remoteFS = p.getFileSystem(conf);
+          String name = p.getName();
+          String wildcard = null;
+
+          // If the path is wildcarded, resolve its parent directory instead
+          if (name.equals(DistributedCache.WILDCARD)) {
+            wildcard = name;
+            p = p.getParent();
+          }
+
           p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
               remoteFS.getWorkingDirectory()));
-          String name = (null == u.getFragment())
-              ? p.getName() : u.getFragment();
+
+          if ((wildcard != null) && (u.getFragment() != null)) {
+            throw new IOException("Invalid path URI: " + p + " - cannot "
+                + "contain both a URI fragment and a wildcard");
+          } else if (wildcard != null) {
+            name = p.getName() + Path.SEPARATOR + wildcard;
+          } else if (u.getFragment() != null) {
+            name = u.getFragment();
+          }
+
+          // If it's not a JAR, add it to the link lookup.
           if (!StringUtils.toLowerCase(name).endsWith(".jar")) {
-            linkLookup.put(p, name);
+            String old = linkLookup.put(p, name);
+
+            if ((old != null) && !name.equals(old)) {
+              LOG.warn("The same path is included more than once "
+                  + "with different links or wildcards: " + p + " [" +
+                  name + ", " + old + "]");
+            }
           }
         }
       }
@@ -559,16 +583,42 @@ public class MRApps extends Apps {
         URI u = uris[i];
         Path p = new Path(u);
         FileSystem remoteFS = p.getFileSystem(conf);
+        String linkName = null;
+
+        if (p.getName().equals(DistributedCache.WILDCARD)) {
+          p = p.getParent();
+          linkName = p.getName() + Path.SEPARATOR + DistributedCache.WILDCARD;
+        }
+
         p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
             remoteFS.getWorkingDirectory()));
-        // Add URI fragment or just the filename
-        Path name = new Path((null == u.getFragment())
-          ? p.getName()
-          : u.getFragment());
-        if (name.isAbsolute()) {
-          throw new IllegalArgumentException("Resource name must be relative");
+
+        // If there's no wildcard, try using the fragment for the link
+        if (linkName == null) {
+          linkName = u.getFragment();
+
+          // Because we don't know what's in the fragment, we have to handle
+          // it with care.
+          if (linkName != null) {
+            Path linkPath = new Path(linkName);
+
+            if (linkPath.isAbsolute()) {
+              throw new IllegalArgumentException("Resource name must be "
+                  + "relative");
+            }
+
+            linkName = linkPath.toUri().getPath();
+          }
+        } else if (u.getFragment() != null) {
+          throw new IllegalArgumentException("Invalid path URI: " + p +
+              " - cannot contain both a URI fragment and a wildcard");
         }
-        String linkName = name.toUri().getPath();
+
+        // If there's no wildcard or fragment, just link to the file name
+        if (linkName == null) {
+          linkName = p.getName();
+        }
+
         LocalResource orig = localResources.get(linkName);
         if(orig != null && !orig.getResource().equals(URL.fromURI(p.toUri()))) {
           throw new InvalidJobConfException(

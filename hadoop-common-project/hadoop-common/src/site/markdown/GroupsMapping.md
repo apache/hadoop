@@ -63,6 +63,10 @@ Caching/Negative caching
 --------
 Since the group mapping resolution relies on external mechanisms, the NameNode performance may be impacted. To reduce the impact due to repeated lookups, Hadoop caches the groups returned by the service provider. The cache invalidate is configurable via `hadoop.security.groups.cache.secs`, and the default is 300 seconds.
 
+With the default caching implementation, after `hadoop.security.groups.cache.secs` when the cache entry expires, the next thread to request group membership will query the group mapping service provider to lookup the current groups for the user. While this lookup is running, the thread that initiated it will block, while any other threads requesting groups for the same user will retrieve the previously cached values. If the refresh fails, the thread performing the refresh will throw an exception and the process will repeat for the next thread that requests a lookup for that value. If the lookup repeatedly fails, and the cache is not updated, after `hadoop.security.groups.cache.secs * 10` seconds the cached entry will be evicted and all threads will block until a successful reload is performed.
+
+To avoid any threads blocking when the cached entry expires, set `hadoop.security.groups.cache.background.reload` to true. This enables a small thread pool of `hadoop.security.groups.cache.background.reload.threads` threads having 3 threads by default. With this setting, when the cache is queried for an expired entry, the expired result is returned immediately and a task is queued to refresh the cache in the background. If the background refresh fails a new refresh operation will be queued by the next request to the cache, until `hadoop.security.groups.cache.secs * 10` when the cached entry will be evicted and all threads will block for that user until a successful reload occurs.
+
 To avoid spamming NameNode with unknown users, Hadoop employs negative caching so that if the result of the lookup is empty, return an empty group directly instead of performing more group mapping queries,
 The cache invalidation is configurable via `hadoop.security.groups.negative-cache.secs`. The default is 30 seconds, so if group mapping service providers returns no group for a user, no lookup will be performed for the same user within 30 seconds.
 
@@ -95,8 +99,10 @@ If the LDAP server supports POSIX group semantics (RFC-2307), Hadoop can perform
 
 ### SSL ###
 To secure the connection, the implementation supports LDAP over SSL (LDAPS). SSL is enable by setting `hadoop.security.group.mapping.ldap.ssl` to `true`.
-In addition, specify the path to the keystore file for SSL connection in `hadoop.security.group.mapping.ldap.ssl.keystore` and keystore password in `hadoop.security.group.mapping.ldap.ssl.keystore.password`.
-Alternatively, store the keystore password in a file, and point `hadoop.security.group.mapping.ldap.ssl.keystore.password.file` to that file. For security purposes, this file should be readable only by the Unix user running the daemons.
+In addition, specify the path to the keystore file for SSL connection in `hadoop.security.group.mapping.ldap.ssl.keystore` and keystore password in `hadoop.security.group.mapping.ldap.ssl.keystore.password`, at the same time, make sure `hadoop.security.credential.clear-text-fallback` is true.
+Alternatively, store the keystore password in a file, and point `hadoop.security.group.mapping.ldap.ssl.keystore.password.file` to that file.
+For security purposes, this file should be readable only by the Unix user running the daemons, and for preventing recursive dependency, this file should be a local file.
+The first approach aka using `hadoop.security.group.mapping.ldap.ssl.keystore.password` is highly discouraged because it exposes the password in the configuration file.
 
 ### Low latency group mapping resolution ###
 Typically, Hadoop resolves a user's group names by making two LDAP queries: the first query gets the user object, and the second query uses the user's Distinguished Name to find the groups.

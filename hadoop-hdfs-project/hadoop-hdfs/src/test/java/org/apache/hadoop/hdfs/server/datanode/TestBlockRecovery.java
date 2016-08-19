@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -725,7 +726,7 @@ public class TestBlockRecovery {
             final RecoveringBlock recoveringBlock = new RecoveringBlock(
                 block.getBlock(), locations, block.getBlock()
                     .getGenerationStamp() + 1);
-            synchronized (dataNode.data) {
+            try(AutoCloseableLock lock = dataNode.data.acquireDatasetLock()) {
               Thread.sleep(2000);
               dataNode.initReplicaRecovery(recoveringBlock);
             }

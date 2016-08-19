@@ -447,7 +447,8 @@
   <name>mapreduce.reduce.shuffle.memory.limit.percent</name>
   <value>0.25</value>
   <description>Expert: Maximum percentage of the in-memory limit that a
-  single shuffle can consume</description>
+  single shuffle can consume. Range of valid values is [0.0, 1.0]. If the value
+  is 0.0 map outputs are shuffled directly to disk.</description>
 </property>
 
 <property>
@@ -842,6 +843,24 @@
     </description>
   </property>
 
+  <property>
+    <name>mapreduce.client.libjars.wildcard</name>
+    <value>true</value>
+    <description>
+        Whether the libjars cache files should be localized using
+        a wildcarded directory instead of naming each archive independently.
+        Using wildcards reduces the space needed for storing the job
+        information in the case of a highly available resource manager
+        configuration.
+        This propery should only be set to false for specific
+        jobs which are highly sensitive to the details of the archive
+        localization.  Having this property set to true will cause the archives
+        to all be localized to the same local cache location.  If false, each
+        archive will be localized to its own local cache location.  In both
+        cases a symbolic link will be created to every archive from the job's
+        working directory.
+    </description>
+  </property>
 
   <property>
     <name>mapreduce.task.profile</name>
@@ -1897,6 +1916,36 @@
 </property>
 
 <property>
+  <name>mapreduce.job.cache.limit.max-resources</name>
+  <value>0</value>
+  <description>The maximum number of resources a map reduce job is allowed to
+    submit for localization via files, libjars, archives, and jobjar command
+    line arguments and through the distributed cache. If set to 0 the limit is
+    ignored.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.cache.limit.max-resources-mb</name>
+  <value>0</value>
+  <description>The maximum size (in MB) a map reduce job is allowed to submit
+    for localization via files, libjars, archives, and jobjar command line
+    arguments and through the distributed cache. If set to 0 the limit is
+    ignored.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.cache.limit.max-single-resource-mb</name>
+  <value>0</value>
+  <description>The maximum size (in MB) of a single resource a map reduce job
+    is allow to submit for localization via files, libjars, archives, and
+    jobjar command line arguments and through the distributed cache. If set to
+    0 the limit is ignored.
+  </description>
+</property>
+
+<property>
   <description>
     Value of the xframe-options
   </description>
@@ -1904,4 +1953,21 @@
   <value>SAMEORIGIN</value>
 </property>
 
+<property>
+  <description>
+    The maximum number of tasks that a job can have so that the Job History
+    Server will fully parse its associated job history file and load it into
+    memory. A value of -1 (default) will allow all jobs to be loaded.
+  </description>
+  <name>mapreduce.jobhistory.loadedjob.tasks.max</name>
+  <value>-1</value>
+</property>
+
+<property>
+  <description>
+    The list of job configuration properties whose value will be redacted.
+  </description>
+  <name>mapreduce.job.redacted-properties</name>
+  <value></value>
+</property>
 </configuration>

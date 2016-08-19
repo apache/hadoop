@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.Matcher;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -386,7 +387,19 @@ public class Mover {
         }
         LocatedBlock lb = lbs.get(i);
         if (lb.isStriped()) {
-          types = policy.chooseStorageTypes((short) lb.getLocations().length);
+          if (ErasureCodingPolicyManager
+              .checkStoragePolicySuitableForECStripedMode(policyId)) {
+            types = policy.chooseStorageTypes((short) lb.getLocations().length);
+          } else {
+            // Currently we support only limited policies (HOT, COLD, ALLSSD)
+            // for EC striped mode files.
+            // Mover tool will ignore to move the blocks if the storage policy
+            // is not in EC Striped mode supported policies
+            LOG.warn("The storage policy " + policy.getName()
+                + " is not suitable for Striped EC files. "
+                + "So, Ignoring to move the blocks");
+            return;
+          }
         }
         final StorageTypeDiff diff = new StorageTypeDiff(types,
             lb.getStorageTypes());

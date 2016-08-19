@@ -609,6 +609,8 @@ public class Balancer {
       if (!runDuringUpgrade && nnc.isUpgrading()) {
         System.err.println("Balancer exiting as upgrade is not finalized, "
             + "please finalize the HDFS upgrade before running the balancer.");
+        LOG.error("Balancer exiting as upgrade is not finalized, "
+            + "please finalize the HDFS upgrade before running the balancer.");
         return newResult(ExitStatus.UNFINALIZED_UPGRADE, bytesLeftToMove, -1);
       }
 

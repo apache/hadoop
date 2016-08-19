@@ -459,7 +459,11 @@ public final class FSImageFormatProtobuf {
           this, summary, context, context.getSourceNamesystem());
 
       snapshotSaver.serializeSnapshotSection(sectionOutputStream);
-      snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
+      // Skip snapshot-related sections when there is no snapshot.
+      if (context.getSourceNamesystem().getSnapshotManager()
+          .getNumSnapshots() > 0) {
+        snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
+      }
       snapshotSaver.serializeINodeReferenceSection(sectionOutputStream);
     }
 

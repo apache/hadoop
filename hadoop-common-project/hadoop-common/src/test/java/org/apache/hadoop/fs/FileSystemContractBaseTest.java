@@ -172,7 +172,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   }
 
   public void testMkdirsWithUmask() throws Exception {
-    if (fs.getScheme().equals("s3") || fs.getScheme().equals("s3n")) {
+    if (fs.getScheme().equals("s3n")) {
       // skip permission tests for S3FileSystem until HDFS-1333 is fixed.
       return;
     }

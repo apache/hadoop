@@ -29,6 +29,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ApplicationClassLoader;
+import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -43,7 +46,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -51,10 +57,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 
 import static org.apache.hadoop.yarn.server.timeline.EntityGroupFSTimelineStore.AppState;
 import static org.junit.Assert.assertEquals;
@@ -62,7 +64,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
 
@@ -92,11 +93,13 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   private static Path testDoneDirPath;
   private static String mainEntityLogFileName;
 
-  private EntityGroupFSTimelineStoreForTest store;
+  private EntityGroupFSTimelineStore store;
   private TimelineEntity entityNew;
 
   @Rule
   public TestName currTestName = new TestName();
+  private File rootDir;
+  private File testJar;
 
   @BeforeClass
   public static void setupClass() throws Exception {
@@ -142,8 +145,27 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
       createTestFiles(appId, attemotDirPath);
     }
 
-    store = new EntityGroupFSTimelineStoreForTest();
+    store = new EntityGroupFSTimelineStore();
     if (currTestName.getMethodName().contains("Plugin")) {
+      rootDir = GenericTestUtils.getTestDir(getClass()
+          .getSimpleName());
+      if (!rootDir.exists()) {
+        rootDir.mkdirs();
+      }
+      testJar = null;
+      testJar = JarFinder.makeClassLoaderTestJar(this.getClass(), rootDir,
+          "test-runjar.jar", 2048,
+          EntityGroupPlugInForTest.class.getName());
+      config.set(
+          YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSPATH,
+          testJar.getAbsolutePath());
+      // add "-org.apache.hadoop." as system classes
+      String systemClasses = "-org.apache.hadoop." + "," +
+          ApplicationClassLoader.SYSTEM_CLASSES_DEFAULT;
+      config.set(
+          YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_SYSTEM_CLASSES,
+          systemClasses);
+
       config.set(YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES,
           EntityGroupPlugInForTest.class.getName());
     }
@@ -157,6 +179,10 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     store.stop();
     for (ApplicationId appId : sampleAppIds) {
       fs.delete(getTestRootPath(appId.toString()), true);
+    }
+    if (testJar != null) {
+      testJar.delete();
+      rootDir.delete();
     }
   }
 
@@ -302,13 +328,28 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     assertEquals(EntityGroupPlugInForTest.class.getName(),
         store.getConfig().get(
             YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES));
+    List<TimelineEntityGroupPlugin> currPlugins = store.getPlugins();
+    for (TimelineEntityGroupPlugin plugin : currPlugins) {
+      ClassLoader pluginClassLoader = plugin.getClass().getClassLoader();
+      assertTrue("Should set up ApplicationClassLoader",
+          pluginClassLoader instanceof ApplicationClassLoader);
+      URL[] paths = ((URLClassLoader) pluginClassLoader).getURLs();
+      boolean foundJAR = false;
+      for (URL path : paths) {
+        if (path.toString().contains(testJar.getAbsolutePath())) {
+          foundJAR = true;
+        }
+      }
+      assertTrue("Not found path " + testJar.getAbsolutePath()
+          + " for plugin " + plugin.getClass().getName(), foundJAR);
+    }
     // Load data and cache item, prepare timeline store by making a cache item
     EntityGroupFSTimelineStore.AppLogs appLogs =
         store.new AppLogs(mainTestAppId, mainTestAppDirPath,
         AppState.COMPLETED);
     EntityCacheItem cacheItem = new EntityCacheItem(
         EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
-        config, fs);
+        config);
     cacheItem.setAppLogs(appLogs);
     store.setCachedLogs(
         EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
@@ -329,8 +370,6 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
         UserGroupInformation.getLoginUser());
     assertNotNull(entity3);
     assertEquals(entityNew.getStartTime(), entity3.getStartTime());
-    assertEquals(1, cacheItem.getRefCount());
-    assertEquals(1, EntityCacheItem.getActiveStores());
     // Verify multiple entities read
     NameValuePair primaryFilter = new NameValuePair(
         EntityGroupPlugInForTest.APP_ID_FILTER_NAME, mainTestAppId.toString());
@@ -344,74 +383,6 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // Verify metrics
     assertEquals(numEntityReadBefore + 2L, detailLogEntityRead.value());
     assertEquals(cacheRefreshBefore + 1L, cacheRefresh.lastStat().numSamples());
-  }
-
-  @Test(timeout = 90000L)
-  public void testMultiplePluginRead() throws Exception {
-    Thread mainThread = Thread.currentThread();
-    mainThread.setName("testMain");
-    // Verify precondition
-    assertEquals(EntityGroupPlugInForTest.class.getName(),
-        store.getConfig().get(
-            YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES));
-    // Prepare timeline store by making cache items
-    EntityGroupFSTimelineStore.AppLogs appLogs =
-        store.new AppLogs(mainTestAppId, mainTestAppDirPath,
-            AppState.COMPLETED);
-    final EntityCacheItem cacheItem = new EntityCacheItem(
-        EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
-        config, fs);
-
-    cacheItem.setAppLogs(appLogs);
-    store.setCachedLogs(
-        EntityGroupPlugInForTest.getStandardTimelineGroupId(mainTestAppId),
-        cacheItem);
-
-    // Launch the blocking read call in a future
-    ExecutorService threadExecutor = Executors.newSingleThreadExecutor();
-    FutureTask<TimelineEntity> blockingReader =
-        new FutureTask<>(new Callable<TimelineEntity>() {
-          public TimelineEntity call() throws Exception {
-            Thread currThread = Thread.currentThread();
-            currThread.setName("blockingReader");
-            return store.getEntityBlocking(mainTestAppId.toString(), "type_3",
-                EnumSet.allOf(TimelineReader.Field.class));
-          }});
-    threadExecutor.execute(blockingReader);
-    try {
-      while (!store.testCacheReferenced) {
-        Thread.sleep(300);
-      }
-    } catch (InterruptedException e) {
-      fail("Interrupted on exception " + e);
-    }
-    // Try refill the cache after the first cache item is referenced
-    for (ApplicationId appId : sampleAppIds) {
-      // Skip the first appId since it's already in cache
-      if (appId.equals(mainTestAppId)) {
-        continue;
-      }
-      EntityGroupFSTimelineStore.AppLogs currAppLog =
-          store.new AppLogs(appId, getTestRootPath(appId.toString()),
-              AppState.COMPLETED);
-      EntityCacheItem item = new EntityCacheItem(
-          EntityGroupPlugInForTest.getStandardTimelineGroupId(appId),
-          config, fs);
-      item.setAppLogs(currAppLog);
-      store.setCachedLogs(
-          EntityGroupPlugInForTest.getStandardTimelineGroupId(appId),
-          item);
-    }
-    // At this time, the cache item of the blocking reader should be evicted.
-    assertEquals(1, cacheItem.getRefCount());
-    store.testCanProceed = true;
-    TimelineEntity entity3 = blockingReader.get();
-
-    assertNotNull(entity3);
-    assertEquals(entityNew.getStartTime(), entity3.getStartTime());
-    assertEquals(0, cacheItem.getRefCount());
-
-    threadExecutor.shutdownNow();
   }
 
   @Test
@@ -471,39 +442,5 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
 
   private static String getAttemptDirName(ApplicationId appId) {
     return ApplicationAttemptId.appAttemptIdStrPrefix + appId.toString() + "_1";
-  }
-
-  private static class EntityGroupFSTimelineStoreForTest
-      extends EntityGroupFSTimelineStore {
-    // Flags used for the concurrent testing environment
-    private volatile boolean testCanProceed = false;
-    private volatile boolean testCacheReferenced = false;
-
-    TimelineEntity getEntityBlocking(String entityId, String entityType,
-        EnumSet<Field> fieldsToRetrieve) throws IOException {
-      List<EntityCacheItem> relatedCacheItems = new ArrayList<>();
-      List<TimelineStore> stores = getTimelineStoresForRead(entityId,
-          entityType, relatedCacheItems);
-
-      testCacheReferenced = true;
-      try {
-        while (!testCanProceed) {
-          Thread.sleep(1000);
-        }
-      } catch (InterruptedException e) {
-        fail("Interrupted " + e);
-      }
-
-      for (TimelineStore store : stores) {
-        TimelineEntity e =
-            store.getEntity(entityId, entityType, fieldsToRetrieve);
-        if (e != null) {
-          tryReleaseCacheItems(relatedCacheItems);
-          return e;
-        }
-      }
-      tryReleaseCacheItems(relatedCacheItems);
-      return null;
-    }
   }
 }

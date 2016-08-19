@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -226,5 +227,10 @@ public class KMSAudit {
 
   public void shutdown() {
     executor.shutdownNow();
+  }
+
+  @VisibleForTesting
+  void evictCacheForTesting() {
+    cache.invalidateAll();
   }
 }

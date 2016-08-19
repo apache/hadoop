@@ -17,7 +17,6 @@
 <property><!--Loaded from job.xml--><name>hadoop.http.authentication.kerberos.keytab</name><value>${user.home}/hadoop.keytab</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.keytab</name><value>/etc/krb5.keytab</value></property>
 <property><!--Loaded from job.xml--><name>io.seqfile.sorter.recordlimit</name><value>1000000</value></property>
-<property><!--Loaded from job.xml--><name>s3.blocksize</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.io.sort.factor</name><value>10</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.disk-health-checker.interval-ms</name><value>120000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.working.dir</name><value>hdfs://localhost:8021/user/user</value></property>
@@ -27,12 +26,10 @@
 <property><!--Loaded from job.xml--><name>dfs.namenode.delegation.token.renew-interval</name><value>86400000</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.resource.memory-mb</name><value>8192</value></property>
 <property><!--Loaded from job.xml--><name>io.map.index.interval</name><value>128</value></property>
-<property><!--Loaded from job.xml--><name>s3.client-write-packet-size</name><value>65536</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.http-address</name><value>0.0.0.0:9870</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.files.preserve.failedtasks</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.reduce.class</name><value>org.apache.hadoop.mapreduce.SleepJob$SleepReducer</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.hdfs.configuration.version</name><value>1</value></property>
-<property><!--Loaded from job.xml--><name>s3.replication</name><value>3</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.balance.bandwidthPerSec</name><value>1048576</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.shuffle.connect.timeout</name><value>180000</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.aux-services</name><value>mapreduce.shuffle</value></property>
@@ -105,7 +102,7 @@
 <property><!--Loaded from job.xml--><name>mapreduce.job.maxtaskfailures.per.tracker</name><value>4</value></property>
 <property><!--Loaded from job.xml--><name>ipc.client.connection.maxidletime</name><value>10000</value></property>
 <property><!--Loaded from job.xml--><name>dfs.blockreport.intervalMsec</name><value>21600000</value></property>
-<property><!--Loaded from job.xml--><name>fs.s3.sleepTimeSeconds</name><value>10</value></property>
+<property><!--Loaded from job.xml--><name>fs.s3n.sleepTimeSeconds</name><value>10</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.replication.considerLoad</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>dfs.client.block.write.retries</name><value>3</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.proxyuser.user.groups</name><value>users</value></property>
@@ -117,7 +114,6 @@
 <property><!--Loaded from job.xml--><name>ipc.client.tcpnodelay</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.output.value.class</name><value>org.apache.hadoop.io.NullWritable</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.accesstime.precision</name><value>3600000</value></property>
-<property><!--Loaded from job.xml--><name>s3.stream-buffer-size</name><value>4096</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.tasktracker.maxblacklists</name><value>4</value></property>
 <property><!--Loaded from Unknown--><name>rpc.engine.com.google.protobuf.BlockingService</name><value>org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.jvm.numtasks</name><value>1</value></property>
@@ -136,7 +132,7 @@
 <property><!--Loaded from job.xml--><name>kfs.stream-buffer-size</name><value>4096</value></property>
 <property><!--Loaded from job.xml--><name>fs.har.impl</name><value>org.apache.hadoop.fs.HarFileSystem</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.security.authentication</name><value>simple</value></property>
-<property><!--Loaded from job.xml--><name>fs.s3.buffer.dir</name><value>${hadoop.tmp.dir}/s3</value></property>
+<property><!--Loaded from job.xml--><name>fs.s3n.buffer.dir</name><value>${hadoop.tmp.dir}/s3n</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.taskscheduler</name><value>org.apache.hadoop.mapred.JobQueueTaskScheduler</value></property>
 <property><!--Loaded from job.xml--><name>yarn.app.mapreduce.am.job.task.listener.thread-count</name><value>30</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.reduces</name><value>1</value></property>
@@ -205,7 +201,7 @@
 <property><!--Loaded from job.xml--><name>mapreduce.job.dir</name><value>/tmp/hadoop-yarn/staging/user/.staging/job_1329348432655_0001</value></property>
 <property><!--Loaded from job.xml--><name>io.map.index.skip</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>net.topology.node.switch.mapping.impl</name><value>org.apache.hadoop.net.ScriptBasedMapping</value></property>
-<property><!--Loaded from job.xml--><name>fs.s3.maxRetries</name><value>4</value></property>
+<property><!--Loaded from job.xml--><name>fs.s3n.maxRetries</name><value>4</value></property>
 <property><!--Loaded from job.xml--><name>s3native.client-write-packet-size</name><value>65536</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.amliveliness-monitor.interval-ms</name><value>1000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.speculative</name><value>false</value></property>
@@ -263,11 +259,9 @@
 <property><!--Loaded from job.xml--><name>ipc.client.idlethreshold</name><value>4000</value></property>
 <property><!--Loaded from job.xml--><name>ipc.server.tcpnodelay</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>ftp.bytes-per-checksum</name><value>512</value></property>
-<property><!--Loaded from job.xml--><name>s3.bytes-per-checksum</name><value>512</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.speculative.slowtaskthreshold</name><value>1.0</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.localizer.cache.target-size-mb</name><value>1</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.remote-app-log-dir</name><value>/tmp/logs</value></property>
-<property><!--Loaded from job.xml--><name>fs.s3.block.size</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.queuename</name><value>default</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.sleepjob.reduce.sleep.time</name><value>1</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.rpc.protection</name><value>authentication</value></property>
@@ -321,7 +315,6 @@
 <property><!--Loaded from job.xml--><name>dfs.datanode.address</name><value>0.0.0.0:9866</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.skip.maxrecords</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.https.address</name><value>0.0.0.0:9865</value></property>
-<property><!--Loaded from job.xml--><name>fs.s3.impl</name><value>org.apache.hadoop.fs.s3.S3FileSystem</value></property>
 <property><!--Loaded from job.xml--><name>file.replication</name><value>1</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.resource-tracker.address</name><value>0.0.0.0:8025</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.restart.recover</name><value>false</value></property>

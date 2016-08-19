@@ -368,11 +368,11 @@ public class TestNNStorageRetentionManager {
         public Void answer(InvocationOnMock invocation) throws Throwable {
           Object[] args = invocation.getArguments();
           journalSet.selectInputStreams((Collection<EditLogInputStream>)args[0],
-              (Long)args[1], (Boolean)args[2]);
+              (Long)args[1], (Boolean)args[2], (Boolean)args[3]);
           return null;
         }
       }).when(mockLog).selectInputStreams(Mockito.anyCollection(),
-          Mockito.anyLong(), Mockito.anyBoolean());
+          Mockito.anyLong(), Mockito.anyBoolean(), Mockito.anyBoolean());
       return mockLog;
     }
   }

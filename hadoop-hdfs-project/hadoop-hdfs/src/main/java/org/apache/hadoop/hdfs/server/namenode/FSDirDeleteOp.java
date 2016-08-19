@@ -97,10 +97,9 @@ class FSDirDeleteOp {
       throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
-    src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath4Write(src, false);
+    final INodesInPath iip = fsd.resolvePathForWrite(pc, src, false);
+    src = iip.getPath();
     if (!recursive && fsd.isNonEmptyDirectory(iip)) {
       throw new PathIsNotEmptyDirectoryException(src + " is non empty");
     }
@@ -109,7 +108,7 @@ class FSDirDeleteOp {
                           FsAction.ALL, true);
     }
     if (recursive && fsd.isNonEmptyDirectory(iip)) {
-      checkProtectedDescendants(fsd, fsd.normalizePath(src));
+      checkProtectedDescendants(fsd, src);
     }
 
     return deleteInternal(fsn, src, iip, logRetryCache);

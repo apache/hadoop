@@ -199,6 +199,9 @@ public abstract class AllocateRequest {
   /**
    * Get the list of container resource increase requests being sent by the
    * <code>ApplicationMaster</code>.
+   * @return the list of {@link ContainerResourceChangeRequest}
+   *         being sent by the
+   *         <code>ApplicationMaster</code>.
    */
   @Public
   @Unstable
@@ -207,7 +210,9 @@ public abstract class AllocateRequest {
   /**
    * Set the list of container resource increase requests to inform the
    * <code>ResourceManager</code> about the containers whose resources need
-   * to be increased.
+   *         to be increased.
+   * @param increaseRequests list of
+   *        {@link ContainerResourceChangeRequest}
    */
   @Public
   @Unstable
@@ -217,6 +222,9 @@ public abstract class AllocateRequest {
   /**
    * Get the list of container resource decrease requests being sent by the
    * <code>ApplicationMaster</code>.
+   * @return list of {@link ContainerResourceChangeRequest}
+   *         being sent by the
+   *         <code>ApplicationMaster</code>.
    */
   @Public
   @Unstable
@@ -226,6 +234,8 @@ public abstract class AllocateRequest {
    * Set the list of container resource decrease requests to inform the
    * <code>ResourceManager</code> about the containers whose resources need
    * to be decreased.
+   * @param decreaseRequests list of
+   *        {@link ContainerResourceChangeRequest}
    */
   @Public
   @Unstable

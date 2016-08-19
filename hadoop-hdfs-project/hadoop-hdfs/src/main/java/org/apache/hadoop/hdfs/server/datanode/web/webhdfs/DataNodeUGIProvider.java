@@ -61,6 +61,13 @@ public class DataNodeUGIProvider {
     }
   }
 
+  @VisibleForTesting
+  void clearCache() throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      params.delegationToken().decodeIdentifier().clearCache();
+    }
+  }
+
   UserGroupInformation ugi() throws IOException {
     UserGroupInformation ugi;
 

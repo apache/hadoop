@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.util.Shell;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
 
-import static org.junit.Assume.assumeTrue;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 
 public class TestSymlinkLocalFSFileContext extends TestSymlinkLocalFS {
 
@@ -34,7 +33,7 @@ public class TestSymlinkLocalFSFileContext extends TestSymlinkLocalFS {
 
   @Override
   public void testRenameFileWithDestParentSymlink() throws IOException {
-    assumeTrue(!Shell.WINDOWS);
+    assumeNotWindows();
     super.testRenameFileWithDestParentSymlink();
   }
 }

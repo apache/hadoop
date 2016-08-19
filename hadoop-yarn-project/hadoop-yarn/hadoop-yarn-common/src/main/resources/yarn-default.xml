@@ -784,10 +784,28 @@
 
   <property>
     <description>The setting that controls whether yarn system metrics is
-    published on the timeline server or not by RM.</description>
+    published to the Timeline server (version one) or not, by RM.
+    This configuration is now deprecated in favor of
+    yarn.system-metrics-publisher.enabled.</description>
     <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
     <value>false</value>
   </property>
+
+  <property>
+    <description>The setting that controls whether yarn system metrics is
+    published on the Timeline service or not by RM And NM.</description>
+    <name>yarn.system-metrics-publisher.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The setting that controls whether yarn container events are
+    published to the timeline service or not by RM. This configuration setting
+    is for ATS V2.</description>
+    <name>yarn.rm.system-metrics-publisher.emit-container-events</name>
+    <value>false</value>
+  </property>
+
 
   <property>
     <description>Number of worker threads that send the yarn system metrics
@@ -966,6 +984,12 @@
     <value>20</value>
   </property>
 
+    <property>
+    <description>Number of threads collector service uses.</description>
+    <name>yarn.nodemanager.collector-service.thread-count</name>
+    <value>5</value>
+  </property>
+
   <property>
     <description>Number of threads used in cleanup.</description>
     <name>yarn.nodemanager.delete.thread-count</name>
@@ -1039,6 +1063,13 @@
     <description>Address where the localizer IPC is.</description>
     <name>yarn.nodemanager.localizer.address</name>
     <value>${yarn.nodemanager.hostname}:8040</value>
+  </property>
+
+
+  <property>
+    <description>Address where the collector service IPC is.</description>
+    <name>yarn.nodemanager.collector-service.address</name>
+    <value>${yarn.nodemanager.hostname}:8048</value>
   </property>
 
   <property>
@@ -1857,7 +1888,7 @@
     <description>Indicate what is the current version of the running
     timeline service. For example, if "yarn.timeline-service.version" is 1.5,
     and "yarn.timeline-service.enabled" is true, it means the cluster will and
-    should bring up the timeline service v.1.5.
+    should bring up the timeline service v.1.5 (and nothing else).
     On the client side, if the client uses the same version of timeline service,
     it should succeed. If the client chooses to use a smaller version in spite of this,
     then depending on how robust the compatibility story is between versions,
@@ -2084,6 +2115,15 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.timeline-service.entity-group-fs-store.group-id-plugin-classpath</name>
+    <value></value>
+    <description>
+      Classpath for all plugins defined in
+      yarn.timeline-service.entity-group-fs-store.group-id-plugin-classes.
+    </description>
+  </property>
+
    <property>
      <name>yarn.timeline-service.entity-group-fs-store.summary-store</name>
      <description>Summary storage for ATS v1.5</description>
@@ -2128,6 +2168,17 @@
   </property>
 
   <property>
+    <name>yarn.timeline-service.entity-group-fs-store.app-cache-size</name>
+    <description>
+      Size of the reader cache for ATS v1.5 reader. This value controls how many
+      entity groups the ATS v1.5 server should cache. If the number of active
+      read entity groups is greater than the number of caches items, some reads
+      may return empty data. This value must be greater than 0.
+    </description>
+    <value>10</value>
+  </property>
+
+  <property>
     <name>yarn.timeline-service.client.fd-flush-interval-secs</name>
     <description>
       Flush interval for ATS v1.5 writer. This value controls how frequent
@@ -2156,6 +2207,23 @@
     <value>300</value>
   </property>
 
+  <!-- Timeline Service v2 Configuration -->
+  <property>
+    <name>yarn.timeline-service.writer.class</name>
+    <description>
+      Storage implementation ATS v2 will use for the TimelineWriter service.
+    </description>
+    <value>org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl</value>
+  </property>
+
+  <property>
+    <name>yarn.timeline-service.reader.class</name>
+    <description>
+      Storage implementation ATS v2 will use for the TimelineReader service.
+    </description>
+    <value>org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl</value>
+  </property>
+
   <property>
     <name>yarn.timeline-service.client.internal-timers-ttl-secs</name>
     <description>
@@ -2164,6 +2232,41 @@
       be close.
     </description>
     <value>420</value>
+  </property>
+
+  <property>
+    <description>The setting that controls how often the timeline collector
+    flushes the timeline writer.</description>
+    <name>yarn.timeline-service.writer.flush-interval-seconds</name>
+    <value>60</value>
+  </property>
+
+  <property>
+    <description>Time period till which the application collector will be alive
+     in NM, after the  application master container finishes.</description>
+    <name>yarn.timeline-service.app-collector.linger-period.ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>Time line V2 client tries to merge these many number of
+    async entities (if available) and then call the REST ATS V2 API to submit.
+    </description>
+    <name>yarn.timeline-service.timeline-client.number-of-async-entities-to-merge</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    The setting that controls how long the final value
+    of a metric of a completed app is retained before merging into
+    the flow sum. Up to this time after an application is completed
+    out-of-order values that arrive can be recognized and discarded at the
+    cost of increased storage.
+    </description>
+    <name>yarn.timeline-service.hbase.coprocessor.app-final-value-retention-milliseconds
+    </name>
+    <value>259200000</value>
   </property>
 
   <!--  Shared Cache Configuration -->
@@ -2483,6 +2586,24 @@
   </property>
 
   <property>
+    <description>
+    Timeout in seconds for YARN node graceful decommission.
+    This is the maximal time to wait for running containers and applications to complete
+    before transition a DECOMMISSIONING node into DECOMMISSIONED.
+    </description>
+    <name>yarn.resourcemanager.nodemanager-graceful-decommission-timeout-secs</name>
+    <value>3600</value>
+  </property>
+
+  <property>
+    <description>
+    Timeout in seconds of DecommissioningNodesWatcher internal polling.
+    </description>
+    <name>yarn.resourcemanager.decommissioning-nodes-watcher.poll-interval-secs</name>
+    <value>20</value>
+  </property>
+
+  <property>
     <description>The Node Label script to run. Script output Line starting with
      "NODE_PARTITION:" will be considered as Node Label Partition. In case of
      multiple lines have this pattern, then last one will be considered
@@ -2615,10 +2736,10 @@
 
   <property>
     <description>
-    Enable/Disable AMRMProxyService in the node manager. This service is used to intercept
-    calls from the application masters to the resource manager.
+    Enable/Disable AMRMProxyService in the node manager. This service is used to
+    intercept calls from the application masters to the resource manager.
     </description>
-    <name>yarn.nodemanager.amrmproxy.enable</name>
+    <name>yarn.nodemanager.amrmproxy.enabled</name>
     <value>false</value>
   </property>
 
@@ -2640,11 +2761,151 @@
 
   <property>
     <description>
-    The comma separated list of class names that implement the RequestInterceptor interface. This is used by the
-    AMRMProxyService to create the request processing pipeline for applications.
+    The comma separated list of class names that implement the
+    RequestInterceptor interface. This is used by the AMRMProxyService to create
+    the request processing pipeline for applications.
     </description>
     <name>yarn.nodemanager.amrmproxy.interceptor-class.pipeline</name>
     <value>org.apache.hadoop.yarn.server.nodemanager.amrmproxy.DefaultRequestInterceptor</value>
+  </property>
+
+  <property>
+    <description>
+    Setting that controls whether distributed scheduling is enabled.
+    </description>
+    <name>yarn.distributed-scheduling.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Setting that controls whether opportunistic container allocation
+      is enabled.
+    </description>
+    <name>yarn.opportunistic-container-allocation.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Minimum memory (in MB) used for allocating an opportunistic container.
+    </description>
+    <name>yarn.opportunistic-containers.min-memory-mb</name>
+    <value>512</value>
+  </property>
+
+  <property>
+    <description>
+      Minimum virtual CPU cores used for allocating an opportunistic container.
+    </description>
+    <name>yarn.opportunistic-containers.min-vcores</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+    Maximum memory (in MB) used for allocating an opportunistic container.
+    </description>
+    <name>yarn.opportunistic-containers.max-memory-mb</name>
+    <value>2048</value>
+  </property>
+
+  <property>
+    <description>
+    Maximum virtual CPU cores used for allocating an opportunistic container.
+    </description>
+    <name>yarn.opportunistic-containers.max-vcores</name>
+    <value>4</value>
+  </property>
+
+  <property>
+    <description>
+    Incremental memory (in MB) used for allocating an opportunistic container.
+    </description>
+    <name>yarn.opportunistic-containers.incr-memory-mb</name>
+    <value>512</value>
+  </property>
+
+  <property>
+    <description>
+    Incremental virtual CPU cores used for allocating an opportunistic
+      container.
+    </description>
+    <name>yarn.opportunistic-containers.incr-vcores</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+    Container token expiry for opportunistic containers.
+    </description>
+    <name>yarn.opportunistic-containers.container-token-expiry-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>
+    Number of nodes to be used by the Opportunistic Container Allocator for
+    dispatching containers during container allocation.
+    </description>
+    <name>yarn.opportunistic-container-allocation.nodes-used</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    Frequency for computing least loaded NMs.
+    </description>
+    <name>yarn.nm-container-queuing.sorting-nodes-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+    Comparator for determining node load for Distributed Scheduling.
+    </description>
+    <name>yarn.nm-container-queuing.load-comparator</name>
+    <value>QUEUE_LENGTH</value>
+  </property>
+
+  <property>
+    <description>
+    Value of standard deviation used for calculation of queue limit thresholds.
+    </description>
+    <name>yarn.nm-container-queuing.queue-limit-stdev</name>
+    <value>1.0f</value>
+  </property>
+
+  <property>
+    <description>
+    Min length of container queue at NodeManager.
+    </description>
+    <name>yarn.nm-container-queuing.min-queue-length</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+    Max length of container queue at NodeManager.
+    </description>
+    <name>yarn.nm-container-queuing.max-queue-length</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>
+    Min queue wait time for a container at a NodeManager.
+    </description>
+    <name>yarn.nm-container-queuing.min-queue-wait-time-ms</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+    Max queue wait time for a container queue at a NodeManager.
+    </description>
+    <name>yarn.nm-container-queuing.max-queue-wait-time-ms</name>
+    <value>10</value>
   </property>
 
   <property>
@@ -2732,6 +2993,14 @@
 
   <property>
     <description>
+      The name of disk validator.
+    </description>
+    <name>yarn.nodemanager.disk-validator</name>
+    <value>basic</value>
+  </property>
+
+  <property>
+  <description>
       Enable the CSRF filter for the timeline service web app
     </description>
     <name>yarn.timeline-service.webapp.rest-csrf.enabled</name>

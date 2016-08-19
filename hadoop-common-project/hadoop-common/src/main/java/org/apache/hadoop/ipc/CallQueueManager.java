@@ -72,8 +72,8 @@ public class CallQueueManager<E> {
     this.clientBackOffEnabled = clientBackOffEnabled;
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
     this.takeRef = new AtomicReference<BlockingQueue<E>>(bq);
-    LOG.info("Using callQueue: " + backingClass + " scheduler: " +
-        schedulerClass);
+    LOG.info("Using callQueue: " + backingClass + " queueCapacity: " +
+        maxQueueSize + " scheduler: " + schedulerClass);
   }
 
   private static <T extends RpcScheduler> T createScheduler(

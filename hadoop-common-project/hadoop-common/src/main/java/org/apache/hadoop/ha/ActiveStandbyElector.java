@@ -667,13 +667,13 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   /**
    * Get a new zookeeper client instance. protected so that test class can
-   * inherit and pass in a mock object for zookeeper
+   * inherit and mock out the zookeeper instance
    * 
    * @return new zookeeper client instance
    * @throws IOException
    * @throws KeeperException zookeeper connectionloss exception
    */
-  protected synchronized ZooKeeper getNewZooKeeper() throws IOException,
+  protected synchronized ZooKeeper connectToZooKeeper() throws IOException,
       KeeperException {
     
     // Unfortunately, the ZooKeeper constructor connects to ZooKeeper and
@@ -682,7 +682,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     // we construct the watcher first, and have it block any events it receives
     // before we can set its ZooKeeper reference.
     watcher = new WatcherWithClientRef();
-    ZooKeeper zk = new ZooKeeper(zkHostPort, zkSessionTimeout, watcher);
+    ZooKeeper zk = createZooKeeper();
     watcher.setZooKeeperRef(zk);
 
     // Wait for the asynchronous success/failure. This may throw an exception
@@ -693,6 +693,17 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       zk.addAuthInfo(auth.getScheme(), auth.getAuth());
     }
     return zk;
+  }
+
+  /**
+   * Get a new zookeeper client instance. protected so that test class can
+   * inherit and pass in a mock object for zookeeper
+   *
+   * @return new zookeeper client instance
+   * @throws IOException
+   */
+  protected ZooKeeper createZooKeeper() throws IOException {
+    return new ZooKeeper(zkHostPort, zkSessionTimeout, watcher);
   }
 
   private void fatalError(String errorMessage) {
@@ -830,7 +841,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       zkClient = null;
       watcher = null;
     }
-    zkClient = getNewZooKeeper();
+    zkClient = connectToZooKeeper();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created new connection for " + this);
     }

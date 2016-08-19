@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.shell;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -126,9 +127,7 @@ public class TestPathData {
 
   @Test (timeout = 5000)
   public void testToFileRawWindowsPaths() throws Exception {
-    if (!Path.WINDOWS) {
-      return;
-    }
+    assumeWindows();
 
     // Can we handle raw Windows paths? The files need not exist for
     // these tests to succeed.
@@ -155,9 +154,7 @@ public class TestPathData {
 
   @Test (timeout = 5000)
   public void testInvalidWindowsPath() throws Exception {
-    if (!Path.WINDOWS) {
-      return;
-    }
+    assumeWindows();
 
     // Verify that the following invalid paths are rejected.
     String [] winPaths = {

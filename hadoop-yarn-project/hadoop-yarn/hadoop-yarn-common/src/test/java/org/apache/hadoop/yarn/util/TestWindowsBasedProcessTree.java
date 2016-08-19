@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.assertTrue;
 
 public class TestWindowsBasedProcessTree {
@@ -45,10 +45,7 @@ public class TestWindowsBasedProcessTree {
   @Test (timeout = 30000)
   @SuppressWarnings("deprecation")
   public void tree() {
-    if( !Shell.WINDOWS) {
-      LOG.info("Platform not Windows. Not testing");
-      return;      
-    }
+    assumeWindows();
     assertTrue("WindowsBasedProcessTree should be available on Windows", 
                WindowsBasedProcessTree.isAvailable());
     ControlledClock testClock = new ControlledClock();

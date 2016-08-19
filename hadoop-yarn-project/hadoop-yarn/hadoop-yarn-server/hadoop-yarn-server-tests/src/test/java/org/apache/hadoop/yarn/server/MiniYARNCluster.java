@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.Shell;
@@ -96,16 +97,20 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
+ * <p>
  * Embedded Yarn minicluster for testcases that need to interact with a cluster.
- * <p/>
+ * </p>
+ * <p>
  * In a real cluster, resource request matching is done using the hostname, and
  * by default Yarn minicluster works in the exact same way as a real cluster.
- * <p/>
- * If a testcase needs to use multiple nodes and exercise resource request 
+ * </p>
+ * <p>
+ * If a testcase needs to use multiple nodes and exercise resource request
  * matching to a specific node, then the property 
- * {@YarnConfiguration.RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} should be set
- * <code>true</code> in the configuration used to initialize the minicluster.
- * <p/>
+ * {@value org.apache.hadoop.yarn.conf.YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME}
+ * should be set <code>true</code> in the configuration used to initialize
+ * the minicluster.
+ * </p>
  * With this property set to <code>true</code>, the matching will be done using
  * the <code>hostname:port</code> of the namenodes. In such case, the AM must
  * do resource request using <code>hostname:port</code> as the location.
@@ -540,6 +545,8 @@ public class MiniYARNCluster extends CompositeService {
           MiniYARNCluster.getHostname() + ":0");
       config.set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
           MiniYARNCluster.getHostname() + ":0");
+      config.set(YarnConfiguration.NM_COLLECTOR_SERVICE_ADDRESS,
+          MiniYARNCluster.getHostname() + ":0");
       WebAppUtils
           .setNMWebAppHostNameAndPort(config,
               MiniYARNCluster.getHostname(), 0);
@@ -733,8 +740,9 @@ public class MiniYARNCluster extends CompositeService {
    * @param timeout Time to wait (sleeps in 10 ms intervals) in milliseconds.
    * @return true if all NodeManagers connect to the (Active)
    * ResourceManager, false otherwise.
-   * @throws YarnException
-   * @throws InterruptedException
+   * @throws YarnException if there is no active RM
+   * @throws InterruptedException if any thread has interrupted
+   * the current thread
    */
   public boolean waitForNodeManagersToConnect(long timeout)
       throws YarnException, InterruptedException {
@@ -777,8 +785,8 @@ public class MiniYARNCluster extends CompositeService {
       if (!useFixedPorts) {
         String hostname = MiniYARNCluster.getHostname();
         conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS, hostname + ":0");
-        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, hostname
-            + ":0");
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+            hostname + ":" + ServerSocketUtil.getPort(9188, 10));
       }
       appHistoryServer.init(conf);
       super.serviceInit(conf);

@@ -16,12 +16,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha2-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop YARN</name>
 
@@ -54,7 +54,7 @@
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
-            <exclude>conf/slaves</exclude>
+            <exclude>conf/workers</exclude>
             <exclude>conf/container-executor.cfg</exclude>
             <exclude>dev-support/jdiff/**</exclude>
           </excludes>

@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
@@ -109,6 +110,7 @@ public class MockRM extends ResourceManager {
   static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
   private static final int SECOND = 1000;
   private static final int TIMEOUT_MS_FOR_ATTEMPT = 40 * SECOND;
+  private static final int TIMEOUT_MS_FOR_APP_REMOVED = 40 * SECOND;
   private static final int TIMEOUT_MS_FOR_CONTAINER_AND_NODE = 10 * SECOND;
   private static final int WAIT_MS_PER_LOOP = 10;
 
@@ -453,7 +455,7 @@ public class MockRM extends ResourceManager {
       Map<ApplicationAccessType, String> acls, String queue, String amLabel)
       throws Exception {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(masterMemory);
+    resource.setMemorySize(masterMemory);
     Priority priority = Priority.newInstance(0);
     return submitApp(resource, name, user, acls, false, queue,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
@@ -506,7 +508,7 @@ public class MockRM extends ResourceManager {
       int maxAppAttempts, Credentials ts, String appType,
       boolean waitForAccepted, boolean keepContainers) throws Exception {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(masterMemory);
+    resource.setMemorySize(masterMemory);
     return submitApp(resource, name, user, acls, unmanaged, queue,
         maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
         false, null, 0, null, true, Priority.newInstance(0));
@@ -515,7 +517,7 @@ public class MockRM extends ResourceManager {
   public RMApp submitApp(int masterMemory, long attemptFailuresValidityInterval)
       throws Exception {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(masterMemory);
+    resource.setMemorySize(masterMemory);
     Priority priority = Priority.newInstance(0);
     return submitApp(resource, "", UserGroupInformation.getCurrentUser()
       .getShortUserName(), null, false, null,
@@ -530,7 +532,7 @@ public class MockRM extends ResourceManager {
       boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
       ApplicationId applicationId) throws Exception {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(masterMemory);
+    resource.setMemorySize(masterMemory);
     Priority priority = Priority.newInstance(0);
     return submitApp(resource, name, user, acls, unmanaged, queue,
       maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
@@ -540,7 +542,7 @@ public class MockRM extends ResourceManager {
   public RMApp submitApp(int masterMemory,
       LogAggregationContext logAggregationContext) throws Exception {
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(masterMemory);
+    resource.setMemorySize(masterMemory);
     Priority priority = Priority.newInstance(0);
     return submitApp(resource, "", UserGroupInformation.getCurrentUser()
       .getShortUserName(), null, false, null,
@@ -611,12 +613,12 @@ public class MockRM extends ResourceManager {
       sub.setLogAggregationContext(logAggregationContext);
     }
     sub.setCancelTokensWhenComplete(cancelTokensWhenComplete);
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY, capability, 1);
     if (amLabel != null && !amLabel.isEmpty()) {
-      ResourceRequest amResourceRequest = ResourceRequest.newInstance(
-          Priority.newInstance(0), ResourceRequest.ANY, capability, 1);
       amResourceRequest.setNodeLabelExpression(amLabel.trim());
-      sub.setAMContainerResourceRequest(amResourceRequest);
     }
+    sub.setAMContainerResourceRequest(amResourceRequest);
     req.setApplicationSubmissionContext(sub);
     UserGroupInformation fakeUser =
       UserGroupInformation.createUserForTesting(user, new String[] {"someGroup"});
@@ -707,6 +709,9 @@ public class MockRM extends ResourceManager {
   public void waitForState(NodeId nodeId, NodeState finalState)
       throws InterruptedException {
     RMNode node = getRMContext().getRMNodes().get(nodeId);
+    if (node == null) {
+      node = getRMContext().getInactiveRMNodes().get(nodeId);
+    }
     Assert.assertNotNull("node shouldn't be null", node);
     int timeWaiting = 0;
     while (!finalState.equals(node.getState())) {
@@ -720,9 +725,15 @@ public class MockRM extends ResourceManager {
       timeWaiting += WAIT_MS_PER_LOOP;
     }
 
-    System.out.println("Node State is : " + node.getState());
+    System.out.println("Node " + nodeId + " State is : " + node.getState());
     Assert.assertEquals("Node state is not correct (timedout)", finalState,
         node.getState());
+  }
+
+  public void sendNodeEvent(MockNM nm, RMNodeEventType event) throws Exception {
+    RMNodeImpl node = (RMNodeImpl)
+        getRMContext().getRMNodes().get(nm.getNodeId());
+    node.handle(new RMNodeEvent(nm.getNodeId(), event));
   }
 
   public KillApplicationResponse killApp(ApplicationId appId) throws Exception {
@@ -739,7 +750,12 @@ public class MockRM extends ResourceManager {
     return client.failApplicationAttempt(req);
   }
 
-  // from AMLauncher
+  /**
+   * recommend to use launchAM, or use sendAMLaunched like:
+   * 1, wait RMAppAttempt scheduled
+   * 2, send node heartbeat
+   * 3, sendAMLaunched
+   */
   public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId)
       throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);
@@ -813,9 +829,10 @@ public class MockRM extends ResourceManager {
   @Override
   protected ApplicationMasterService createApplicationMasterService() {
     if (this.rmContext.getYarnConfiguration().getBoolean(
-        YarnConfiguration.DIST_SCHEDULING_ENABLED,
-        YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT)) {
-      return new DistributedSchedulingService(getRMContext(), scheduler) {
+        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED,
+        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED_DEFAULT)) {
+      return new OpportunisticContainerAllocatorAMService(getRMContext(),
+          scheduler) {
         @Override
         protected void serviceStart() {
           // override to not start rpc handler
@@ -937,6 +954,10 @@ public class MockRM extends ResourceManager {
         rm.getResourceScheduler()).getApplicationAttempt(attemptId));
   }
 
+  /**
+   * NOTE: nm.nodeHeartbeat is explicitly invoked,
+   * don't invoke it before calling launchAM
+   */
   public static MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
     RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
@@ -1011,5 +1032,45 @@ public class MockRM extends ResourceManager {
     SignalContainerRequest req =
         SignalContainerRequest.newInstance(containerId, command);
     client.signalToContainer(req);
+  }
+
+
+  /**
+   * Wait until an app removed from scheduler.
+   * The timeout is 40 seconds.
+   * @param appId the id of an app
+   * @throws InterruptedException
+   *         if interrupted while waiting for app removed
+   */
+  public void waitForAppRemovedFromScheduler(ApplicationId appId)
+      throws InterruptedException {
+    waitForAppRemovedFromScheduler(appId, TIMEOUT_MS_FOR_APP_REMOVED);
+  }
+
+  /**
+   * Wait until an app is removed from scheduler.
+   * @param appId the id of an app
+   * @param timeoutMsecs the length of timeout in milliseconds
+   * @throws InterruptedException
+   *         if interrupted while waiting for app removed
+   */
+  public void waitForAppRemovedFromScheduler(ApplicationId appId,
+      long timeoutMsecs) throws InterruptedException {
+    int timeWaiting = 0;
+
+    Map<ApplicationId, SchedulerApplication> apps  =
+        ((AbstractYarnScheduler) getResourceScheduler())
+            .getSchedulerApplications();
+    while (apps.containsKey(appId)) {
+      if (timeWaiting >= timeoutMsecs) {
+        break;
+      }
+      LOG.info("wait for app removed, " + appId);
+      Thread.sleep(WAIT_MS_PER_LOOP);
+      timeWaiting += WAIT_MS_PER_LOOP;
+    }
+    Assert.assertTrue("app is not removed from scheduler (timeout).",
+        !apps.containsKey(appId));
+    LOG.info("app is removed from scheduler, " + appId);
   }
 }

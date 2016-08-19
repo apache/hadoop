@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -33,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -45,7 +47,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -59,8 +63,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientResponse.Status;
@@ -76,7 +78,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   
   private static final int CONTAINER_MB = 1024;
 
-  private Injector injector = Guice.createInjector(new ServletModule() {
+  private static class WebServletModule extends ServletModule {
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
@@ -91,20 +93,19 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
     }
-  });
+  }
 
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
+  static {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule()));
   }
 
   public TestRMWebServicesApps() {
@@ -350,7 +351,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not empty",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -369,7 +371,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not empty",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -388,7 +391,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       fail("should have thrown exception on invalid state query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -425,7 +428,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       fail("should have thrown exception on invalid state query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -484,7 +487,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not null",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -503,7 +507,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       fail("should have thrown exception on invalid state query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -660,7 +664,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
-    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    assertEquals("apps is not empty",
+        new JSONObject().toString(), json.get("apps").toString());
     rm.stop();
   }
 
@@ -1070,7 +1075,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           .path("appstatistics")
           .queryParam("applicationTypes", "MAPREDUCE,OTHER")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
@@ -1117,7 +1122,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       response = r.path("ws").path("v1").path("cluster")
           .path("appstatistics").queryParam("states", "wrong_state")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
@@ -1145,6 +1150,30 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     amNodeManager.nodeHeartbeat(true);
     testSingleAppsHelper(app1.getApplicationId().toString(), app1,
         MediaType.APPLICATION_JSON);
+    rm.stop();
+  }
+
+  @Test
+  public void testUnmarshalAppInfo() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
+    amNodeManager.nodeHeartbeat(true);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").path(app1.getApplicationId().toString())
+        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+
+    AppInfo appInfo = response.getEntity(AppInfo.class);
+
+    // Check only a few values; all are validated in testSingleApp.
+    assertEquals(app1.getApplicationId().toString(), appInfo.getAppId());
+    assertEquals(app1.getName(), appInfo.getName());
+    assertEquals(app1.createApplicationState(), appInfo.getState());
+    assertEquals(app1.getAMResourceRequest().getCapability().getMemorySize(),
+        appInfo.getAllocatedMB());
+
     rm.stop();
   }
 
@@ -1185,7 +1214,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -1223,7 +1252,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
 
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -1280,10 +1309,10 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     rm.stop();
   }
 
-  public void verifyAppsXML(NodeList nodes, RMApp app) throws JSONException,
-      Exception {
+  public void verifyAppsXML(NodeList nodes, RMApp app)
+      throws JSONException, Exception {
 
-     for (int i = 0; i < nodes.getLength(); i++) {
+    for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
       verifyAppInfoGeneric(app,
@@ -1316,7 +1345,28 @@ public class TestRMWebServicesApps extends JerseyTestBase {
           WebServicesTestUtils.getXmlString(element, "logAggregationStatus"),
           WebServicesTestUtils.getXmlBoolean(element, "unmanagedApplication"),
           WebServicesTestUtils.getXmlString(element, "appNodeLabelExpression"),
-          WebServicesTestUtils.getXmlString(element, "amNodeLabelExpression"));
+          WebServicesTestUtils.getXmlString(element, "amNodeLabelExpression"),
+          WebServicesTestUtils.getXmlString(element, "amRPCAddress"));
+
+      assertEquals(element.getElementsByTagName("resourceRequests").getLength(),
+          1);
+      Element resourceRequests =
+          (Element) element.getElementsByTagName("resourceRequests").item(0);
+      Element capability =
+          (Element) resourceRequests.getElementsByTagName("capability").item(0);
+
+      verifyResourceRequestsGeneric(app,
+          WebServicesTestUtils.getXmlString(resourceRequests,
+              "nodeLabelExpression"),
+          WebServicesTestUtils.getXmlInt(resourceRequests, "numContainers"),
+          WebServicesTestUtils.getXmlBoolean(resourceRequests, "relaxLocality"),
+          WebServicesTestUtils.getXmlInt(resourceRequests, "priority"),
+          WebServicesTestUtils.getXmlString(resourceRequests, "resourceName"),
+          WebServicesTestUtils.getXmlLong(capability, "memory"),
+          WebServicesTestUtils.getXmlLong(capability, "vCores"),
+          WebServicesTestUtils.getXmlString(resourceRequests, "executionType"),
+          WebServicesTestUtils.getXmlBoolean(resourceRequests,
+              "enforceExecutionType"));
     }
   }
 
@@ -1335,9 +1385,14 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       expectedNumberOfElements++;
       amNodeLabelExpression = info.getString("amNodeLabelExpression");
     }
+    String amRPCAddress = null;
+    if (AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt())
+        != null) {
+      expectedNumberOfElements++;
+      amRPCAddress = info.getString("amRPCAddress");
+    }
     assertEquals("incorrect number of elements", expectedNumberOfElements,
         info.length());
-
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
         info.getString("queue"), info.getInt("priority"),
@@ -1357,7 +1412,10 @@ public class TestRMWebServicesApps extends JerseyTestBase {
         info.getString("logAggregationStatus"),
         info.getBoolean("unmanagedApplication"),
         appNodeLabelExpression,
-        amNodeLabelExpression);
+        amNodeLabelExpression,
+        amRPCAddress);
+
+    verifyResourceRequests(info.getJSONArray("resourceRequests"), app);
   }
 
   public void verifyAppInfoGeneric(RMApp app, String id, String user,
@@ -1370,9 +1428,8 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       int preemptedResourceMB, int preemptedResourceVCores,
       int numNonAMContainerPreempted, int numAMContainerPreempted,
       String logAggregationStatus, boolean unmanagedApplication,
-      String appNodeLabelExpression, String amNodeLabelExpression)
-      throws JSONException,
-      Exception {
+      String appNodeLabelExpression, String amNodeLabelExpression,
+      String amRPCAddress) throws JSONException, Exception {
 
     WebServicesTestUtils.checkStringMatch("id", app.getApplicationId()
         .toString(), id);
@@ -1433,6 +1490,52 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("unmanagedApplication doesn't match",
         app.getAMResourceRequest().getNodeLabelExpression(),
         amNodeLabelExpression);
+    assertEquals("amRPCAddress",
+        AppInfo.getAmRPCAddressFromRMAppAttempt(app.getCurrentAppAttempt()),
+        amRPCAddress);
+  }
+
+  public void verifyResourceRequests(JSONArray resourceRequest, RMApp app)
+      throws JSONException {
+    JSONObject requestInfo = resourceRequest.getJSONObject(0);
+    verifyResourceRequestsGeneric(app,
+        requestInfo.getString("nodeLabelExpression"),
+        requestInfo.getInt("numContainers"),
+        requestInfo.getBoolean("relaxLocality"), requestInfo.getInt("priority"),
+        requestInfo.getString("resourceName"),
+        requestInfo.getJSONObject("capability").getLong("memory"),
+        requestInfo.getJSONObject("capability").getLong("vCores"),
+        requestInfo.getJSONObject("executionTypeRequest")
+            .getString("executionType"),
+        requestInfo.getJSONObject("executionTypeRequest")
+            .getBoolean("enforceExecutionType"));
+  }
+
+  public void verifyResourceRequestsGeneric(RMApp app,
+      String nodeLabelExpression, int numContainers, boolean relaxLocality,
+      int priority, String resourceName, long memory, long vCores,
+      String executionType, boolean enforceExecutionType) {
+    ResourceRequest request = app.getAMResourceRequest();
+    assertEquals("nodeLabelExpression doesn't match",
+        request.getNodeLabelExpression(), nodeLabelExpression);
+    assertEquals("numContainers doesn't match", request.getNumContainers(),
+        numContainers);
+    assertEquals("relaxLocality doesn't match", request.getRelaxLocality(),
+        relaxLocality);
+    assertEquals("priority does not match", request.getPriority().getPriority(),
+        priority);
+    assertEquals("resourceName does not match", request.getResourceName(),
+        resourceName);
+    assertEquals("memory does not match",
+        request.getCapability().getMemorySize(), memory);
+    assertEquals("vCores does not match",
+        request.getCapability().getVirtualCores(), vCores);
+    assertEquals("executionType does not match",
+        request.getExecutionTypeRequest().getExecutionType().name(),
+        executionType);
+    assertEquals("enforceExecutionType does not match",
+        request.getExecutionTypeRequest().getEnforceExecutionType(),
+        enforceExecutionType);
   }
 
   @Test
@@ -1515,7 +1618,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -1554,7 +1657,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -1592,7 +1695,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
-      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
 
       JSONObject msg = response.getEntity(JSONObject.class);

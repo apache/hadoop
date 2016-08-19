@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.io.ByteBufferPool;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
@@ -102,6 +104,7 @@ abstract class StripedReconstructor {
   private final ErasureCodingPolicy ecPolicy;
   private RawErasureDecoder decoder;
   private final ExtendedBlock blockGroup;
+  private static final ByteBufferPool BUFFER_POOL = new ElasticByteBufferPool();
 
   // position in striped internal block
   private long positionInBlock;
@@ -139,8 +142,16 @@ abstract class StripedReconstructor {
    */
   abstract void reconstruct() throws IOException;
 
+  boolean useDirectBuffer() {
+    return decoder.preferDirectBuffer();
+  }
+
   ByteBuffer allocateBuffer(int length) {
-    return ByteBuffer.allocate(length);
+    return BUFFER_POOL.getBuffer(useDirectBuffer(), length);
+  }
+
+  void freeBuffer(ByteBuffer buffer) {
+    BUFFER_POOL.putBuffer(buffer);
   }
 
   ExtendedBlock getBlock(int i) {

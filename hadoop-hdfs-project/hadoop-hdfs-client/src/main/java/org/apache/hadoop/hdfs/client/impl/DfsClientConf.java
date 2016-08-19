@@ -63,10 +63,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSF
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
@@ -582,7 +580,6 @@ public class DfsClientConf {
     private final int socketCacheCapacity;
     private final long socketCacheExpiry;
 
-    private final boolean useLegacyBlockReader;
     private final boolean useLegacyBlockReaderLocal;
     private final String domainSocketPath;
     private final boolean skipShortCircuitChecksums;
@@ -610,9 +607,6 @@ public class DfsClientConf {
           DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY,
           DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT);
 
-      useLegacyBlockReader = conf.getBoolean(
-          DFS_CLIENT_USE_LEGACY_BLOCKREADER,
-          DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
       useLegacyBlockReaderLocal = conf.getBoolean(
           DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
           DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT);
@@ -699,12 +693,6 @@ public class DfsClientConf {
 
     public boolean isDomainSocketDataTraffic() {
       return domainSocketDataTraffic;
-    }
-    /**
-     * @return the useLegacyBlockReader
-     */
-    public boolean isUseLegacyBlockReader() {
-      return useLegacyBlockReader;
     }
 
     /**

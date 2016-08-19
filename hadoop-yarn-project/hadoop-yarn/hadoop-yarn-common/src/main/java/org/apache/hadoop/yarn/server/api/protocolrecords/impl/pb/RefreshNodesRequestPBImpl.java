@@ -31,7 +31,6 @@ import com.google.protobuf.TextFormat;
 @Private
 @Unstable
 public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
-
   RefreshNodesRequestProto proto = RefreshNodesRequestProto.getDefaultInstance();
   RefreshNodesRequestProto.Builder builder = null;
   boolean viaProto = false;
@@ -106,6 +105,22 @@ public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
   public synchronized DecommissionType getDecommissionType() {
     RefreshNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
     return convertFromProtoFormat(p.getDecommissionType());
+  }
+
+  @Override
+  public synchronized void setDecommissionTimeout(Integer timeout) {
+    maybeInitBuilder();
+    if (timeout != null) {
+      builder.setDecommissionTimeout(timeout);
+    } else {
+      builder.clearDecommissionTimeout();
+    }
+  }
+
+  @Override
+  public synchronized Integer getDecommissionTimeout() {
+    RefreshNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.hasDecommissionTimeout()? p.getDecommissionTimeout() : null;
   }
 
   private DecommissionType convertFromProtoFormat(DecommissionTypeProto p) {

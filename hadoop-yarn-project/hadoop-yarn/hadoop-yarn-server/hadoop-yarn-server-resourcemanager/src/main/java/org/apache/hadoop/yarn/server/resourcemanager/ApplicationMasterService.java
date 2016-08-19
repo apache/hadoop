@@ -151,7 +151,10 @@ public class ApplicationMasterService extends AbstractService implements
         SaslRpcServer.AuthMethod.TOKEN.toString());
     this.server = getServer(rpc, serverConf, masterServiceAddress,
         this.rmContext.getAMRMTokenSecretManager());
-    
+    // TODO more exceptions could be added later.
+    this.server.addTerseExceptions(
+        ApplicationMasterNotRegisteredException.class);
+
     // Enable service authorization?
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
@@ -308,6 +311,11 @@ public class ApplicationMasterService extends AbstractService implements
 
     RMApp rmApp =
         rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
+
+    // Remove collector address when app get finished.
+    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+      rmApp.removeCollectorAddr();
+    }
     // checking whether the app exits in RMStateStore at first not to throw
     // ApplicationDoesNotExistInCacheException before and after
     // RM work-preserving restart.
@@ -411,11 +419,6 @@ public class ApplicationMasterService extends AbstractService implements
         String message =
             "AM is not registered for known application attempt: " + appAttemptId
                 + " or RM had restarted after AM registered . AM should re-register.";
-        LOG.info(message);
-        RMAuditLogger.logFailure(
-          this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
-            .getUser(), AuditConstants.AM_ALLOCATE, "",
-          "ApplicationMasterService", message, applicationId, appAttemptId);
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
@@ -573,6 +576,12 @@ public class ApplicationMasterService extends AbstractService implements
       allocateResponse.setDecreasedContainers(allocation.getDecreasedContainers());
 
       allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
+
+      // add collector address for this application
+      if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+        allocateResponse.setCollectorAddr(
+            this.rmContext.getRMApps().get(applicationId).getCollectorAddr());
+      }
 
       // add preemption to the allocateResponse message (if any)
       allocateResponse

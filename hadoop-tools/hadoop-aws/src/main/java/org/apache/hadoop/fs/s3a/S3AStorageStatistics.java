@@ -76,13 +76,19 @@ public class S3AStorageStatistics extends StorageStatistics {
         throw new NoSuchElementException();
       }
       final Map.Entry<Statistic, AtomicLong> entry = iterator.next();
-      return new LongStatistic(entry.getKey().name(), entry.getValue().get());
+      return new LongStatistic(entry.getKey().getSymbol(),
+          entry.getValue().get());
     }
 
     @Override
     public void remove() {
       throw new UnsupportedOperationException();
     }
+  }
+
+  @Override
+  public String getScheme() {
+    return "s3a";
   }
 
   @Override
@@ -98,7 +104,14 @@ public class S3AStorageStatistics extends StorageStatistics {
 
   @Override
   public boolean isTracked(String key) {
-    return Statistic.fromSymbol(key) == null;
+    return Statistic.fromSymbol(key) != null;
+  }
+
+  @Override
+  public void reset() {
+    for (AtomicLong value : opsCount.values()) {
+      value.set(0);
+    }
   }
 
 }

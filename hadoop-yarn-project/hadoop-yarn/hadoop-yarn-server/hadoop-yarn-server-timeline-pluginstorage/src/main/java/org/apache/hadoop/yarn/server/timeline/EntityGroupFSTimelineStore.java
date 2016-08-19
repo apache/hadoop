@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.util.ApplicationClassLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -48,7 +49,6 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -58,7 +58,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.MalformedURLException;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -176,15 +181,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
               TimelineEntityGroupId groupId = eldest.getKey();
               LOG.debug("Evicting {} due to space limitations", groupId);
               EntityCacheItem cacheItem = eldest.getValue();
-              int activeStores = EntityCacheItem.getActiveStores();
-              if (activeStores > appCacheMaxSize * CACHE_ITEM_OVERFLOW_FACTOR) {
-                LOG.debug("Force release cache {} since {} stores are active",
-                    groupId, activeStores);
-                cacheItem.forceRelease();
-              } else {
-                LOG.debug("Try release cache {}", groupId);
-                cacheItem.tryRelease();
-              }
+              LOG.debug("Force release cache {}.", groupId);
+              cacheItem.forceRelease();
               if (cacheItem.getAppLogs().isDone()) {
                 appIdLogMap.remove(groupId.getApplicationId());
               }
@@ -217,25 +215,46 @@ public class EntityGroupFSTimelineStore extends CompositeService
       throws RuntimeException {
     Collection<String> pluginNames = conf.getTrimmedStringCollection(
         YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES);
+
+    String pluginClasspath = conf.getTrimmed(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSPATH);
+    String[] systemClasses = conf.getTrimmedStrings(
+        YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_SYSTEM_CLASSES);
+
     List<TimelineEntityGroupPlugin> pluginList
         = new LinkedList<TimelineEntityGroupPlugin>();
-    Exception caught = null;
+    ClassLoader customClassLoader = null;
+    if (pluginClasspath != null && pluginClasspath.length() > 0) {
+      try {
+        customClassLoader = createPluginClassLoader(pluginClasspath,
+            systemClasses);
+      } catch (IOException ioe) {
+        LOG.warn("Error loading classloader", ioe);
+      }
+    }
     for (final String name : pluginNames) {
       LOG.debug("Trying to load plugin class {}", name);
       TimelineEntityGroupPlugin cacheIdPlugin = null;
+
       try {
-        Class<?> clazz = conf.getClassByName(name);
-        cacheIdPlugin =
-            (TimelineEntityGroupPlugin) ReflectionUtils.newInstance(
-                clazz, conf);
+        if (customClassLoader != null) {
+          LOG.debug("Load plugin {} with classpath: {}", name, pluginClasspath);
+          Class<?> clazz = Class.forName(name, true, customClassLoader);
+          Class<? extends TimelineEntityGroupPlugin> sClass = clazz.asSubclass(
+              TimelineEntityGroupPlugin.class);
+          cacheIdPlugin = ReflectionUtils.newInstance(sClass, conf);
+        } else {
+          LOG.debug("Load plugin class with system classpath");
+          Class<?> clazz = conf.getClassByName(name);
+          cacheIdPlugin =
+              (TimelineEntityGroupPlugin) ReflectionUtils.newInstance(
+                  clazz, conf);
+        }
       } catch (Exception e) {
         LOG.warn("Error loading plugin " + name, e);
-        caught = e;
+        throw new RuntimeException("No class defined for " + name, e);
       }
 
-      if (cacheIdPlugin == null) {
-        throw new RuntimeException("No class defined for " + name, caught);
-      }
       LOG.info("Load plugin class {}", cacheIdPlugin.getClass().getName());
       pluginList.add(cacheIdPlugin);
     }
@@ -489,6 +508,29 @@ public class EntityGroupFSTimelineStore extends CompositeService
     return appId;
   }
 
+  private static ClassLoader createPluginClassLoader(
+      final String appClasspath, final String[] systemClasses)
+      throws IOException {
+    try {
+      return AccessController.doPrivileged(
+        new PrivilegedExceptionAction<ClassLoader>() {
+          @Override
+          public ClassLoader run() throws MalformedURLException {
+            return new ApplicationClassLoader(appClasspath,
+                EntityGroupFSTimelineStore.class.getClassLoader(),
+                Arrays.asList(systemClasses));
+          }
+        }
+      );
+    } catch (PrivilegedActionException e) {
+      Throwable t = e.getCause();
+      if (t instanceof MalformedURLException) {
+        throw (MalformedURLException) t;
+      }
+      throw new IOException(e);
+    }
+  }
+
   private Path getActiveAppPath(ApplicationId appId) {
     return new Path(activeRootPath, appId.toString());
   }
@@ -529,6 +571,15 @@ public class EntityGroupFSTimelineStore extends CompositeService
   @VisibleForTesting
   protected AppState getAppState(ApplicationId appId) throws IOException {
     return getAppState(appId, yarnClient);
+  }
+
+  /**
+   * Get all plugins for tests.
+   * @return all plugins
+   */
+  @VisibleForTesting
+  List<TimelineEntityGroupPlugin> getPlugins() {
+    return cacheIdPlugins;
   }
 
   /**
@@ -716,8 +767,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
       summaryLogs.add(log);
     }
 
-    private void addDetailLog(String attemptDirName, String filename,
-        String owner) {
+    private synchronized void addDetailLog(String attemptDirName,
+        String filename, String owner) {
       for (LogInfo log : detailLogs) {
         if (log.getFilename().equals(filename)
             && log.getAttemptDirName().equals(attemptDirName)) {
@@ -725,6 +776,30 @@ public class EntityGroupFSTimelineStore extends CompositeService
         }
       }
       detailLogs.add(new EntityLogInfo(attemptDirName, filename, owner));
+    }
+
+    synchronized void loadDetailLog(TimelineDataManager tdm,
+        TimelineEntityGroupId groupId) throws IOException {
+      List<LogInfo> removeList = new ArrayList<>();
+      for (LogInfo log : detailLogs) {
+        LOG.debug("Try refresh logs for {}", log.getFilename());
+        // Only refresh the log that matches the cache id
+        if (log.matchesGroupId(groupId)) {
+          Path dirPath = getAppDirPath();
+          if (fs.exists(log.getPath(dirPath))) {
+            LOG.debug("Refresh logs for cache id {}", groupId);
+            log.parseForStore(tdm, dirPath, isDone(),
+                jsonFactory, objMapper, fs);
+          } else {
+            // The log may have been removed, remove the log
+            removeList.add(log);
+            LOG.info(
+                "File {} no longer exists, removing it from log list",
+                log.getPath(dirPath));
+          }
+        }
+      }
+      detailLogs.removeAll(removeList);
     }
 
     public synchronized void moveToDone() throws IOException {
@@ -838,7 +913,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
   @InterfaceAudience.Private
   @VisibleForTesting
   void setCachedLogs(TimelineEntityGroupId groupId, EntityCacheItem cacheItem) {
-    cacheItem.incrRefs();
     cachedLogs.put(groupId, cacheItem);
   }
 
@@ -915,14 +989,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
       cacheItem = this.cachedLogs.get(groupId);
       if (cacheItem == null) {
         LOG.debug("Set up new cache item for id {}", groupId);
-        cacheItem = new EntityCacheItem(groupId, getConfig(), fs);
+        cacheItem = new EntityCacheItem(groupId, getConfig());
         AppLogs appLogs = getAndSetAppLogs(groupId.getApplicationId());
         if (appLogs != null) {
           LOG.debug("Set applogs {} for group id {}", appLogs, groupId);
           cacheItem.setAppLogs(appLogs);
           this.cachedLogs.put(groupId, cacheItem);
-          // Add the reference by the cache
-          cacheItem.incrRefs();
         } else {
           LOG.warn("AppLogs for groupId {} is set to null!", groupId);
         }
@@ -932,21 +1004,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
     if (cacheItem.getAppLogs() != null) {
       AppLogs appLogs = cacheItem.getAppLogs();
       LOG.debug("try refresh cache {} {}", groupId, appLogs.getAppId());
-      // Add the reference by the store
-      cacheItem.incrRefs();
       cacheItems.add(cacheItem);
-      store = cacheItem.refreshCache(aclManager, jsonFactory, objMapper,
-          metrics);
+      store = cacheItem.refreshCache(aclManager, metrics);
     } else {
       LOG.warn("AppLogs for group id {} is null", groupId);
     }
     return store;
-  }
-
-  protected void tryReleaseCacheItems(List<EntityCacheItem> relatedCacheItems) {
-    for (EntityCacheItem item : relatedCacheItems) {
-      item.tryRelease();
-    }
   }
 
   @Override
@@ -968,7 +1031,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
         returnEntities.addEntities(entities.getEntities());
       }
     }
-    tryReleaseCacheItems(relatedCacheItems);
     return returnEntities;
   }
 
@@ -985,12 +1047,10 @@ public class EntityGroupFSTimelineStore extends CompositeService
       TimelineEntity e =
           store.getEntity(entityId, entityType, fieldsToRetrieve);
       if (e != null) {
-        tryReleaseCacheItems(relatedCacheItems);
         return e;
       }
     }
     LOG.debug("getEntity: Found nothing");
-    tryReleaseCacheItems(relatedCacheItems);
     return null;
   }
 
@@ -1018,7 +1078,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
         }
       }
     }
-    tryReleaseCacheItems(relatedCacheItems);
     return returnEvents;
   }
 

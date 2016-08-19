@@ -24,8 +24,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.junit.Rule;
 import org.junit.Test;
@@ -107,6 +113,47 @@ public class TestLeaseManager {
 
     lm.removeLease("holder2", stubInodeFile(2)); // Remove existing
     assertThat(lm.countPath(), is(1L));
+  }
+
+  /**
+   * Make sure the lease is restored even if only the inode has the record.
+   */
+  @Test
+  public void testLeaseRestorationOnRestart() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+          .numDataNodes(1).build();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      // Create an empty file
+      String path = "/testLeaseRestorationOnRestart";
+      FSDataOutputStream out = dfs.create(new Path(path));
+
+      // Remove the lease from the lease manager, but leave it in the inode.
+      FSDirectory dir = cluster.getNamesystem().getFSDirectory();
+      INodeFile file = dir.getINode(path).asFile();
+      cluster.getNamesystem().leaseManager.removeLease(
+          file.getFileUnderConstructionFeature().getClientName(), file);
+
+      // Save a fsimage.
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace(0,0);
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      // Restart the namenode.
+      cluster.restartNameNode(true);
+
+      // Check whether the lease manager has the lease
+      dir = cluster.getNamesystem().getFSDirectory();
+      file = dir.getINode(path).asFile();
+      assertTrue("Lease should exist.",
+          cluster.getNamesystem().leaseManager.getLease(file) != null);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 
   private static FSNamesystem makeMockFsNameSystem() {

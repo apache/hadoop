@@ -458,15 +458,23 @@ public class HistoryFileManager extends AbstractService {
 
     /**
      * Parse a job from the JobHistoryFile, if the underlying file is not going
-     * to be deleted.
+     * to be deleted and the number of tasks associated with the job is not
+     * greater than maxTasksForLoadedJob.
      * 
-     * @return the Job or null if the underlying file was deleted.
+     * @return null if the underlying job history file was deleted, or
+     *         an {@link UnparsedJob} object representing a partially parsed job
+     *           if the job tasks exceeds the configured maximum, or
+     *         a {@link CompletedJob} representing a fully parsed job.
      * @throws IOException
-     *           if there is an error trying to read the file.
+     *           if there is an error trying to read the file if parsed.
      */
     public synchronized Job loadJob() throws IOException {
-      return new CompletedJob(conf, jobIndexInfo.getJobId(), historyFile,
-          false, jobIndexInfo.getUser(), this, aclsMgr);
+      if(isOversized()) {
+        return new UnparsedJob(maxTasksForLoadedJob, jobIndexInfo, this);
+      } else {
+        return new CompletedJob(conf, jobIndexInfo.getJobId(), historyFile,
+            false, jobIndexInfo.getUser(), this, aclsMgr);
+      }
     }
 
     /**
@@ -504,6 +512,12 @@ public class HistoryFileManager extends AbstractService {
       jobConf.addResource(fc.open(confFile), confFile.toString());
       return jobConf;
     }
+
+    private boolean isOversized() {
+      final int totalTasks = jobIndexInfo.getNumReduces() +
+          jobIndexInfo.getNumMaps();
+      return (maxTasksForLoadedJob > 0) && (totalTasks > maxTasksForLoadedJob);
+    }
   }
 
   private SerialNumberIndex serialNumberIndex = null;
@@ -536,7 +550,12 @@ public class HistoryFileManager extends AbstractService {
   @VisibleForTesting
   protected ThreadPoolExecutor moveToDoneExecutor = null;
   private long maxHistoryAge = 0;
-  
+
+  /**
+   * The maximum number of tasks allowed for a job to be loaded.
+   */
+  private int maxTasksForLoadedJob = -1;
+
   public HistoryFileManager() {
     super(HistoryFileManager.class.getName());
   }
@@ -554,6 +573,10 @@ public class HistoryFileManager extends AbstractService {
         JHAdminConfig.MR_HISTORY_MAX_START_WAIT_TIME,
         JHAdminConfig.DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME);
     createHistoryDirs(SystemClock.getInstance(), 10 * 1000, maxFSWaitTime);
+
+    maxTasksForLoadedJob = conf.getInt(
+        JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX,
+        JHAdminConfig.DEFAULT_MR_HS_LOADED_JOBS_TASKS_MAX);
 
     this.aclsMgr = new JobACLsManager(conf);
 

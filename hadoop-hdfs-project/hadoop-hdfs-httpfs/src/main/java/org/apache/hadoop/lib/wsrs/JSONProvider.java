@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.json.simple.JSONStreamAware;
 
@@ -34,6 +33,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
@@ -56,7 +56,8 @@ public class JSONProvider implements MessageBodyWriter<JSONStreamAware> {
   public void writeTo(JSONStreamAware jsonStreamAware, Class<?> aClass, Type type, Annotation[] annotations,
                       MediaType mediaType, MultivaluedMap<String, Object> stringObjectMultivaluedMap,
                       OutputStream outputStream) throws IOException, WebApplicationException {
-    Writer writer = new OutputStreamWriter(outputStream, Charsets.UTF_8);
+    Writer writer =
+        new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
     jsonStreamAware.writeJSONString(writer);
     writer.write(ENTER);
     writer.flush();

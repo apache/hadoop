@@ -140,7 +140,8 @@ public class TestAggregatedLogFormat {
     final int ch = filler;
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    LogWriter logWriter = new LogWriter(conf, remoteAppLogFile, ugi);
+    LogWriter logWriter = new LogWriter(new Configuration(), remoteAppLogFile,
+        ugi);
 
     LogKey logKey = new LogKey(testContainerId);
     LogValue logValue =
@@ -258,7 +259,7 @@ public class TestAggregatedLogFormat {
               .currentTimeMillis())).length() : 0)
             + ("\nLogLength:" + numChars).length()
             + "\nLog Contents:\n".length() + numChars + "\n".length()
-            + "End of LogType:stdout\n".length();
+            + "\nEnd of LogType:stdout\n".length();
     Assert.assertTrue("LogType not matched", s.contains("LogType:stdout"));
     Assert.assertTrue("log file:stderr should not be aggregated.", !s.contains("LogType:stderr"));
     Assert.assertTrue("log file:logs should not be aggregated.", !s.contains("LogType:logs"));

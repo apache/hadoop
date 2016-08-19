@@ -367,7 +367,7 @@ public class TestAsyncIPC {
       Call createCall(RpcKind rpcKind, Writable rpcRequest) {
         // Set different call id and retry count for the next call
         Client.setCallIdAndRetryCount(Client.nextCallId(),
-            TestIPC.RANDOM.nextInt(255));
+            TestIPC.RANDOM.nextInt(255), null);
 
         final Call call = super.createCall(rpcKind, rpcRequest);
 
@@ -421,7 +421,7 @@ public class TestAsyncIPC {
     final int retryCount = 255;
     // Override client to store the call id
     final Client client = new Client(LongWritable.class, conf);
-    Client.setCallIdAndRetryCount(Client.nextCallId(), retryCount);
+    Client.setCallIdAndRetryCount(Client.nextCallId(), retryCount, null);
 
     // Attach a listener that tracks every call ID received by the server.
     final TestServer server = new TestIPC.TestServer(1, false, conf);

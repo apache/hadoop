@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azure;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
@@ -26,7 +27,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,9 +38,7 @@ public class TestShellDecryptionKeyProvider {
 
   @Test
   public void testScriptPathNotSpecified() throws Exception {
-    if (!Shell.WINDOWS) {
-      return;
-    }
+    assumeWindows();
     ShellDecryptionKeyProvider provider = new ShellDecryptionKeyProvider();
     Configuration conf = new Configuration();
     String account = "testacct";
@@ -58,9 +56,7 @@ public class TestShellDecryptionKeyProvider {
 
   @Test
   public void testValidScript() throws Exception {
-    if (!Shell.WINDOWS) {
-      return;
-    }
+    assumeWindows();
     String expectedResult = "decretedKey";
 
     // Create a simple script which echoes the given key plus the given

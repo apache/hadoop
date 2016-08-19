@@ -167,8 +167,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     Assert.assertEquals(2, nodes.size());
   }
 
-  private void triggerSchedulingAttempt() {
-    mockClock.tickMsec(
+  private void triggerSchedulingAttempt() throws InterruptedException {
+    Thread.sleep(
         2 * scheduler.getConf().getContinuousSchedulingSleepMs());
   }
 }

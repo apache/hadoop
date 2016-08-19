@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -26,7 +27,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
@@ -82,7 +83,7 @@ public class TestDataNodeVolumeFailureReporting {
   public void setUp() throws Exception {
     // These tests use DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
-    assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     // Allow a single volume failure (there are two volumes)
     initCluster(1, 2, 1);
   }
@@ -478,6 +479,25 @@ public class TestDataNodeVolumeFailureReporting {
         (1*dnCapacity), WAIT_FOR_HEARTBEATS);
     checkAggregateFailuresAtNameNode(false, 1);
     checkFailuresAtNameNode(dm, dns.get(0), false, dn1Vol1.getAbsolutePath());
+  }
+
+  @Test
+  public void testAutoFormatEmptyBlockPoolDirectory() throws Exception {
+    // remove the version file
+    DataNode dn = cluster.getDataNodes().get(0);
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    BlockPoolSliceStorage bps = dn.getStorage().getBPStorage(bpid);
+    Storage.StorageDirectory dir = bps.getStorageDir(0);
+    File current = dir.getCurrentDir();
+
+    File currentVersion = new File(current, "VERSION");
+    currentVersion.delete();
+    // restart the data node
+    assertTrue(cluster.restartDataNodes(true));
+    // the DN should tolerate one volume failure.
+    cluster.waitActive();
+    assertFalse("DataNode should not reformat if VERSION is missing",
+        currentVersion.exists());
   }
 
   /**

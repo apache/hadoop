@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -65,7 +66,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -586,9 +586,7 @@ public class TestYARNRunner {
     // the Windows behavior is different and this test currently doesn't really
     // apply
     // MAPREDUCE-6588 should revisit this test
-    if (Shell.WINDOWS) {
-      return;
-    }
+    assumeNotWindows();
 
     final String ADMIN_LIB_PATH = "foo";
     final String USER_LIB_PATH = "bar";

@@ -42,7 +42,7 @@ public class TestClientBlockVerification {
   static LocatedBlock testBlock = null;
 
   static {
-    GenericTestUtils.setLogLevel(BlockReaderRemote2.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockReaderRemote.LOG, Level.ALL);
   }
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -58,7 +58,7 @@ public class TestClientBlockVerification {
    */
   @Test
   public void testBlockVerification() throws Exception {
-    BlockReaderRemote2 reader = (BlockReaderRemote2)spy(
+    BlockReaderRemote reader = (BlockReaderRemote)spy(
         util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024));
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024, true);
     verify(reader).sendReadResult(Status.CHECKSUM_OK);
@@ -70,7 +70,7 @@ public class TestClientBlockVerification {
    */
   @Test
   public void testIncompleteRead() throws Exception {
-    BlockReaderRemote2 reader = (BlockReaderRemote2)spy(
+    BlockReaderRemote reader = (BlockReaderRemote)spy(
         util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024));
     util.readAndCheckEOS(reader, FILE_SIZE_K / 2 * 1024, false);
 
@@ -88,7 +88,7 @@ public class TestClientBlockVerification {
   @Test
   public void testCompletePartialRead() throws Exception {
     // Ask for half the file
-    BlockReaderRemote2 reader = (BlockReaderRemote2)spy(
+    BlockReaderRemote reader = (BlockReaderRemote)spy(
         util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024 / 2));
     // And read half the file
     util.readAndCheckEOS(reader, FILE_SIZE_K * 1024 / 2, true);
@@ -108,7 +108,7 @@ public class TestClientBlockVerification {
       for (int length : lengths) {
         DFSClient.LOG.info("Testing startOffset = " + startOffset + " and " +
                            " len=" + length);
-        BlockReaderRemote2 reader = (BlockReaderRemote2)spy(
+        BlockReaderRemote reader = (BlockReaderRemote)spy(
             util.getBlockReader(testBlock, startOffset, length));
         util.readAndCheckEOS(reader, length, true);
         verify(reader).sendReadResult(Status.CHECKSUM_OK);

@@ -151,7 +151,7 @@ if "%1" == "--loglevel" (
 
   set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
      application applicationattempt container node queue logs daemonlog historyserver ^
-     timelineserver classpath
+     timelineserver timelinereader classpath
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
   )
@@ -242,6 +242,12 @@ goto :eof
   )
   goto :eof
 
+:timelinereader
+  set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
+  set CLASS=org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer
+  set YARN_OPTS=%YARN_OPTS% %YARN_TIMELINEREADER_OPTS%
+  goto :eof
+
 :nodemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\nm-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.nodemanager.NodeManager
@@ -312,6 +318,7 @@ goto :eof
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
   @echo   timelineserver       run the timeline server
+  @echo   timelinereader       run the timeline reader server
   @echo   rmadmin              admin tools
   @echo   version              print the version
   @echo   jar ^<jar^>          run a jar file

@@ -31,10 +31,12 @@ import java.io.IOException;
 @InterfaceStability.Evolving
 public class WindowsGetSpaceUsed extends CachingGetSpaceUsed {
 
-
   public WindowsGetSpaceUsed(CachingGetSpaceUsed.Builder builder)
       throws IOException {
-    super(builder.getPath(), builder.getInterval(), builder.getInitialUsed());
+    super(builder.getPath(),
+        builder.getInterval(),
+        builder.getJitter(),
+        builder.getInitialUsed());
   }
 
   /**

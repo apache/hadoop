@@ -78,6 +78,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -2053,7 +2054,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   protected char[] getPasswordFromConfig(String name) {
     char[] pass = null;
-    if (getBoolean(CredentialProvider.CLEAR_TEXT_FALLBACK, true)) {
+    if (getBoolean(CredentialProvider.CLEAR_TEXT_FALLBACK,
+        CommonConfigurationKeysPublic.
+            HADOOP_SECURITY_CREDENTIAL_CLEAR_TEXT_FALLBACK_DEFAULT)) {
       String passStr = get(name);
       if (passStr != null) {
         pass = passStr.toCharArray();

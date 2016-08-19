@@ -14,6 +14,8 @@
 
 # Extending the File System specification and its tests
 
+<!-- MACRO{toc|fromDepth=1|toDepth=2} -->
+
 The FileSystem specification is incomplete. It doesn't cover all operations or
 even interfaces and classes in the FileSystem APIs. There may
 be some minor issues with those that it does cover, such

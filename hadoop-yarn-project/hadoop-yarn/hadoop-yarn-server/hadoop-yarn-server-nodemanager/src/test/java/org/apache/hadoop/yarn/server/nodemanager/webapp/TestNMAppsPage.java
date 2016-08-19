@@ -63,7 +63,7 @@ public class TestNMAppsPage {
     final NMContext nmcontext = new NMContext(
         new NMContainerTokenSecretManager(conf), new NMTokenSecretManagerInNM(),
         null, new ApplicationACLsManager(conf), new NMNullStateStoreService(),
-        false);
+        false, conf);
     Injector injector = WebAppTests.createMockInjector(NMContext.class,
         nmcontext, new Module() {
           @Override

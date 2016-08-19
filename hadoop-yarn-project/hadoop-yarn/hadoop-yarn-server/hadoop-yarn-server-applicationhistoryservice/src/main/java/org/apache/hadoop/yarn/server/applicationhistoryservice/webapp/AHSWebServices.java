@@ -76,7 +76,7 @@ import com.google.inject.Singleton;
 public class AHSWebServices extends WebServices {
 
   private static final String NM_DOWNLOAD_URI_STR =
-      "/ws/v1/node/containerlogs";
+      "/ws/v1/node/containers";
   private static final Joiner JOINER = Joiner.on("");
   private static final Joiner DOT_JOINER = Joiner.on(". ");
   private final Configuration conf;
@@ -256,7 +256,7 @@ public class AHSWebServices extends WebServices {
     String nodeId = containerInfo.getNodeId();
     if (isRunningState(appInfo.getAppState())) {
       String nodeHttpAddress = containerInfo.getNodeHttpAddress();
-      String uri = "/" + containerId.toString() + "/" + filename;
+      String uri = "/" + containerId.toString() + "/logs/" + filename;
       String resURI = JOINER.join(nodeHttpAddress, NM_DOWNLOAD_URI_STR, uri);
       String query = req.getQueryString();
       if (query != null && !query.isEmpty()) {
@@ -404,20 +404,19 @@ public class AHSWebServices extends WebServices {
 
                     long toSkip = 0;
                     long totalBytesToRead = fileLength;
+                    long skipAfterRead = 0;
                     if (bytes < 0) {
                       long absBytes = Math.abs(bytes);
                       if (absBytes < fileLength) {
                         toSkip = fileLength - absBytes;
                         totalBytesToRead = absBytes;
                       }
-                      long skippedBytes = valueStream.skip(toSkip);
-                      if (skippedBytes != toSkip) {
-                        throw new IOException("The bytes were skipped are "
-                            + "different from the caller requested");
-                      }
+                      org.apache.hadoop.io.IOUtils.skipFully(
+                          valueStream, toSkip);
                     } else {
                       if (bytes < fileLength) {
                         totalBytesToRead = bytes;
+                        skipAfterRead = fileLength - bytes;
                       }
                     }
 
@@ -435,6 +434,8 @@ public class AHSWebServices extends WebServices {
                           : (int) pendingRead;
                       len = valueStream.read(buf, 0, toRead);
                     }
+                    org.apache.hadoop.io.IOUtils.skipFully(
+                        valueStream, skipAfterRead);
                     sb = new StringBuilder();
                     sb.append("\nEnd of LogType:" + fileType + "\n");
                     b = sb.toString().getBytes(Charset.forName("UTF-8"));

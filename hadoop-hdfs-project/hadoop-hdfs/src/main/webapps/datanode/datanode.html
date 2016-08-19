@@ -1,0 +1,131 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=9" />
+<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+<title>DataNode Information</title>
+</head>
+<body>
+
+<header class="navbar navbar-inverse bs-docs-nav" role="banner">
+<div class="container">
+  <div class="navbar-header">
+    <div class="navbar-brand">Hadoop</div>
+  </div>
+
+  <ul class="nav navbar-nav" id="ui-tabs">
+    <li><a href="#tab-overview">Overview</a></li>
+    <li class="dropdown">
+      <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+      <ul class="dropdown-menu">
+        <li><a href="logs">Logs</a></li>
+      </ul>
+    </li>
+  </ul>
+</div>
+</header>
+
+<div class="container">
+
+<div id="alert-panel">
+  <div class="alert alert-danger">
+    <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+    <div class="alert-body" id="alert-panel-body"></div>
+  </div>
+</div>
+
+<div class="tab-content">
+  <div class="tab-pane" id="tab-overview"></div>
+</div>
+
+<div class="row">
+  <hr />
+  <div class="col-xs-2"><p>Hadoop, {release-year-token}.</p></div>
+</div>
+</div>
+
+<script type="text/x-dust-template" id="tmpl-dn">
+{#dn}
+<div class="page-header"><h1>DataNode on <small>{HostName}:{DataPort}</small></h1></div>
+<table class="table table-bordered table-striped">
+  <tr><th>Cluster ID:</th><td>{ClusterId}</td></tr>
+  <tr><th>Version:</th><td>{Version}</td></tr>
+</table>
+{/dn}
+
+<div class="page-header"><h1>Block Pools</h1></div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Namenode Address</th>
+      <th>Block Pool ID</th>
+      <th>Actor State</th>
+      <th>Last Heartbeat</th>
+      <th>Last Block Report</th>
+      <th>Last Block Report Size (Max Size)</th>
+    </tr>
+  </thead>
+  {#dn.BPServiceActorInfo}
+    <tr>
+      <td>{NamenodeAddress}</td>
+      <td>{BlockPoolID}</td>
+      <td>{ActorState}</td>
+      <td>{LastHeartbeat}s</td>
+      <td>{#helper_relative_time value="{LastBlockReport}"/}</td>
+      <td>{maxBlockReportSize|fmt_bytes} ({maxDataLength|fmt_bytes})</td>
+    </tr>
+  {/dn.BPServiceActorInfo}
+</table>
+
+<div class="page-header"><h1>Volume Information</h1></div>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Directory</th>
+      <th>Capacity Used</th>
+      <th>Capacity Left</th>
+      <th>Capacity Reserved</th>
+      <th>Reserved Space for Replicas</th>
+      <th>Blocks</th>
+    </tr>
+  </thead>
+  {#dn.VolumeInfo}
+    <tr>
+      <td>{name}</td>
+      <td>{usedSpace|fmt_bytes}</td>
+      <td>{freeSpace|fmt_bytes}</td>
+      <td>{reservedSpace|fmt_bytes}</td>
+      <td>{reservedSpaceForReplicas|fmt_bytes}</td>
+      <td>{numBlocks}</td>
+    </tr>
+  {/dn.VolumeInfo}
+</script>
+
+<script type="text/javascript" src="/static/jquery-1.10.2.min.js"></script>
+<script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/moment.min.js"></script>
+<script type="text/javascript" src="/static/dust-full-2.0.0.min.js"></script>
+<script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js"></script>
+<script type="text/javascript" src="/static/dfs-dust.js"></script>
+<script type="text/javascript" src="dn.js"></script>
+
+</body>
+</html>

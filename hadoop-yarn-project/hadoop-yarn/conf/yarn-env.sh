@@ -76,7 +76,7 @@
 #export YARN_NODEMANAGER_OPTS=
 
 ###
-# TimeLineServer specifc parameters
+# TimeLineServer specific parameters
 ###
 
 # Specify the max heapsize for the timelineserver.  If no units are
@@ -93,6 +93,18 @@
 # See ResourceManager for some examples
 #
 #export YARN_TIMELINESERVER_OPTS=
+
+###
+# TimeLineReader specific parameters
+###
+
+# Specify the JVM options to be used when starting the TimeLineReader.
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_TIMELINEREADER_OPTS=
 
 ###
 # Web App Proxy Server specifc parameters

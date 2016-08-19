@@ -23,6 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -44,8 +46,11 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ReloadingX509TrustManager
   implements X509TrustManager, Runnable {
 
-  private static final Log LOG =
-    LogFactory.getLog(ReloadingX509TrustManager.class);
+  @VisibleForTesting
+  static final Log LOG = LogFactory.getLog(ReloadingX509TrustManager.class);
+  @VisibleForTesting
+  static final String RELOAD_ERROR_MESSAGE =
+      "Could not load truststore (keep using existing one) : ";
 
   private String type;
   private File file;
@@ -160,10 +165,10 @@ public final class ReloadingX509TrustManager
   throws IOException, GeneralSecurityException {
     X509TrustManager trustManager = null;
     KeyStore ks = KeyStore.getInstance(type);
-    lastLoaded = file.lastModified();
     FileInputStream in = new FileInputStream(file);
     try {
       ks.load(in, password.toCharArray());
+      lastLoaded = file.lastModified();
       LOG.debug("Loaded truststore '" + file + "'");
     } finally {
       in.close();
@@ -194,8 +199,7 @@ public final class ReloadingX509TrustManager
         try {
           trustManagerRef.set(loadTrustManager());
         } catch (Exception ex) {
-          LOG.warn("Could not load truststore (keep using existing one) : " +
-                   ex.toString(), ex);
+          LOG.warn(RELOAD_ERROR_MESSAGE + ex.toString(), ex);
         }
       }
     }

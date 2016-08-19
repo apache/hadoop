@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -25,21 +26,32 @@ import java.util.Map;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import com.google.common.base.Supplier;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mortbay.util.ajax.JSON;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Class for testing {@link DataNodeMXBean} implementation
  */
 public class TestDataNodeMXBean {
+
+  public static final Log LOG = LogFactory.getLog(TestDataNodeMXBean.class);
+
   @Test
   public void testDataNodeMXBean() throws Exception {
     Configuration conf = new Configuration();
@@ -84,6 +96,10 @@ public class TestDataNodeMXBean {
       int xceiverCount = (Integer)mbs.getAttribute(mxbeanName,
           "XceiverCount");
       Assert.assertEquals(datanode.getXceiverCount(), xceiverCount);
+
+      String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
+          "BPServiceActorInfo");
+      Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
@@ -91,6 +107,48 @@ public class TestDataNodeMXBean {
   
   private static String replaceDigits(final String s) {
     return s.replaceAll("[0-9]+", "_DIGITS_");
+  }
+
+  @Test
+  public void testDataNodeMXBeanBlockSize() throws Exception {
+    Configuration conf = new Configuration();
+
+    try(MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).build()) {
+      DataNode dn = cluster.getDataNodes().get(0);
+      for (int i = 0; i < 100; i++) {
+        DFSTestUtil.writeFile(
+            cluster.getFileSystem(),
+            new Path("/foo" + String.valueOf(i) + ".txt"), "test content");
+      }
+      DataNodeTestUtils.triggerBlockReport(dn);
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=DataNodeInfo");
+      String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
+          "BPServiceActorInfo");
+      Assert.assertEquals(dn.getBPServiceActorInfo(), bpActorInfo);
+      LOG.info("bpActorInfo is " + bpActorInfo);
+      TypeReference<ArrayList<Map<String, String>>> typeRef
+          = new TypeReference<ArrayList<Map<String, String>>>() {};
+      ArrayList<Map<String, String>> bpActorInfoList =
+          new ObjectMapper().readValue(bpActorInfo, typeRef);
+      int maxDataLength =
+          Integer.valueOf(bpActorInfoList.get(0).get("maxDataLength"));
+      int confMaxDataLength = dn.getConf().getInt(
+          CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
+          CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
+      int maxBlockReportSize =
+          Integer.valueOf(bpActorInfoList.get(0).get("maxBlockReportSize"));
+      LOG.info("maxDataLength is " + maxDataLength);
+      LOG.info("maxBlockReportSize is " + maxBlockReportSize);
+      assertTrue("maxBlockReportSize should be greater than zero",
+          maxBlockReportSize > 0);
+      assertEquals("maxDataLength should be exactly "
+          + "the same value of ipc.maximum.data.length",
+          confMaxDataLength,
+          maxDataLength);
+    }
   }
 
   @Test
@@ -115,10 +173,18 @@ public class TestDataNodeMXBean {
       cluster.waitActive();
       assertEquals("After restart DN", 5, getTotalNumBlocks(mbs, mxbeanName));
       fs.delete(new Path("/tmp.txt1"), true);
-      // Wait till replica gets deleted on disk.
-      Thread.sleep(5000);
-      assertEquals("After delete one file", 4,
-              getTotalNumBlocks(mbs, mxbeanName));
+      // The total numBlocks should be updated after one file is deleted
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            return getTotalNumBlocks(mbs, mxbeanName) == 4;
+          } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+          }
+        }
+      }, 100, 30000);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -127,7 +193,7 @@ public class TestDataNodeMXBean {
   }
 
   @SuppressWarnings("unchecked")
-  int getTotalNumBlocks(MBeanServer mbs, ObjectName mxbeanName)
+  private int getTotalNumBlocks(MBeanServer mbs, ObjectName mxbeanName)
           throws Exception {
     int totalBlocks = 0;
     String volumeInfo = (String) mbs.getAttribute(mxbeanName, "VolumeInfo");

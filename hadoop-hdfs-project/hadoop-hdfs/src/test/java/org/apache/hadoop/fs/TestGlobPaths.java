@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -495,7 +495,7 @@ public class TestGlobPaths {
   public void pTestEscape() throws IOException {
     // Skip the test case on Windows because backslash will be treated as a
     // path separator instead of an escaping character on Windows.
-    org.junit.Assume.assumeTrue(!Path.WINDOWS);
+    assumeNotWindows();
     try {
       String [] files = new String[] {USER_DIR+"/ab\\[c.d"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/ab\\[c.d", files);

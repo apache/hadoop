@@ -178,17 +178,6 @@ public abstract class SchedulingPolicy {
       Resource usage, Resource fairShare);
 
   /**
-   * Check if a leaf queue's AM resource usage over its limit under this policy
-   *
-   * @param usage {@link Resource} the resource used by application masters
-   * @param maxAMResource {@link Resource} the maximum allowed resource for
-   *                                      application masters
-   * @return true if AM resource usage is over the limit
-   */
-  public abstract boolean checkIfAMResourceUsageOverLimit(
-      Resource usage, Resource maxAMResource);
-
-  /**
    * Get headroom by calculating the min of <code>clusterAvailable</code> and
    * (<code>queueFairShare</code> - <code>queueUsage</code>) resources that are
    * applicable to this policy. For eg if only memory then leave other

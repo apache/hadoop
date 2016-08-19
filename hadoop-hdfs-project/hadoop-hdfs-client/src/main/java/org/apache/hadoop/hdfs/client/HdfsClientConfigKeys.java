@@ -97,9 +97,6 @@ public interface HdfsClientConfigKeys {
   int     DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT = 3;
   String  DFS_CLIENT_CONTEXT = "dfs.client.context";
   String  DFS_CLIENT_CONTEXT_DEFAULT = "default";
-  String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
-      "dfs.client.use.legacy.blockreader";
-  boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT = false;
   String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
       "dfs.client.use.legacy.blockreader.local";
   boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT = false;

@@ -36,6 +36,7 @@
       {"name": "nn",      "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"},
       {"name": "nnstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
       {"name": "fs",      "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState"},
+      {"name": "fsn",     "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystem"},
       {"name": "blockstats",      "url": "/jmx?qry=Hadoop:service=NameNode,name=BlockStats"},
       {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"}
     ];
@@ -210,6 +211,15 @@
         for (var i = 0, e = nodes.length; i < e; ++i) {
           var n = nodes[i];
           n.usedPercentage = Math.round((n.used + n.nonDfsUsedSpace) * 1.0 / n.capacity * 100);
+
+          var addr = n.infoSecureAddr;
+          var position = addr.lastIndexOf(":");
+          var port = addr.substring(position + 1, addr.length);
+          n.secureMode = "off";
+          if (port != 0) {
+            n.secureMode = "on";
+          }
+
           if (n.adminState === "In Service") {
             n.state = "alive";
           } else if (nodes[i].adminState === "Decommission In Progress") {
@@ -248,6 +258,7 @@
           $('#table-datanodes').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
             'columns': [
+              { 'orderDataType': 'ng-value', 'searchable': true },
               { 'orderDataType': 'ng-value', 'searchable': true },
               { 'orderDataType': 'ng-value', 'type': 'numeric' },
               { 'orderDataType': 'ng-value', 'type': 'numeric' },

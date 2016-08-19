@@ -586,9 +586,9 @@ public class TestShortCircuitLocalRead {
   }
 
   @Test(timeout=60000)
-  public void testReadWithRemoteBlockReader()
+  public void testReadWithRemoteBlockReader2()
       throws IOException, InterruptedException {
-    doTestShortCircuitReadWithRemoteBlockReader(true, 3 * blockSize + 100,
+    doTestShortCircuitReadWithRemoteBlockReader2(3 * blockSize + 100,
         getCurrentUser(), 0, false);
   }
 
@@ -597,13 +597,11 @@ public class TestShortCircuitLocalRead {
    * through BlockReaderRemote
    * @throws IOException
   */
-  public void doTestShortCircuitReadWithRemoteBlockReader(
-      boolean ignoreChecksum, int size, String shortCircuitUser,
+  public void doTestShortCircuitReadWithRemoteBlockReader2(
+      int size, String shortCircuitUser,
       int readOffset, boolean shortCircuitFails)
       throws IOException, InterruptedException {
     Configuration conf = new Configuration();
-    conf.setBoolean(
-        HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
@@ -624,9 +622,9 @@ public class TestShortCircuitLocalRead {
     try {
       checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, 
           conf, shortCircuitFails);
-      //BlockReaderRemote have unsupported method read(ByteBuffer bf)
-      assertTrue(
-          "BlockReaderRemote unsupported method read(ByteBuffer bf) error",
+      //BlockReaderRemote2 have unsupported method read(ByteBuffer bf)
+      assertFalse(
+          "BlockReaderRemote2 unsupported method read(ByteBuffer bf) error",
           checkUnsupportedMethod(fs, file1, fileData, readOffset));
     } catch(IOException e) {
       throw new IOException(

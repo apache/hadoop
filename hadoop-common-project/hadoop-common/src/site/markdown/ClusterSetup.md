@@ -27,7 +27,7 @@ This document does not cover advanced topics such as [Security](./SecureMode.htm
 Prerequisites
 -------------
 
-* Install Java. See the [Hadoop Wiki](http://wiki.apache.org/hadoop/HadoopJavaVersions) for known good versions. 
+* Install Java. See the [Hadoop Wiki](http://wiki.apache.org/hadoop/HadoopJavaVersions) for known good versions.
 * Download a stable version of Hadoop from Apache mirrors.
 
 Installation
@@ -37,7 +37,7 @@ Installing a Hadoop cluster typically involves unpacking the software on all the
 
 Typically one machine in the cluster is designated as the NameNode and another machine the as ResourceManager, exclusively. These are the masters. Other services (such as Web App Proxy Server and MapReduce Job History server) are usually run either on dedicated hardware or on shared infrastrucutre, depending upon the load.
 
-The rest of the machines in the cluster act as both DataNode and NodeManager. These are the slaves.
+The rest of the machines in the cluster act as both DataNode and NodeManager. These are the workers.
 
 Configuring Hadoop in Non-Secure Mode
 -------------------------------------
@@ -216,12 +216,12 @@ The health checker script is not supposed to give ERROR if only some of the loca
 Slaves File
 -----------
 
-List all slave hostnames or IP addresses in your `etc/hadoop/slaves` file, one per line. Helper scripts (described below) will use the `etc/hadoop/slaves` file to run commands on many hosts at once. It is not used for any of the Java-based Hadoop configuration. In order to use this functionality, ssh trusts (via either passphraseless ssh or some other means, such as Kerberos) must be established for the accounts used to run Hadoop.
+List all worker hostnames or IP addresses in your `etc/hadoop/workers` file, one per line. Helper scripts (described below) will use the `etc/hadoop/workers` file to run commands on many hosts at once. It is not used for any of the Java-based Hadoop configuration. In order to use this functionality, ssh trusts (via either passphraseless ssh or some other means, such as Kerberos) must be established for the accounts used to run Hadoop.
 
 Hadoop Rack Awareness
 ---------------------
 
-Many Hadoop components are rack-aware and take advantage of the network topology for performance and safety. Hadoop daemons obtain the rack information of the slaves in the cluster by invoking an administrator configured module. See the [Rack Awareness](./RackAwareness.html) documentation for more specific information.
+Many Hadoop components are rack-aware and take advantage of the network topology for performance and safety. Hadoop daemons obtain the rack information of the workers in the cluster by invoking an administrator configured module. See the [Rack Awareness](./RackAwareness.html) documentation for more specific information.
 
 It is highly recommended configuring rack awareness prior to starting HDFS.
 
@@ -253,7 +253,7 @@ Start a HDFS DataNode with the following command on each designated node as *hdf
 
     [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon start datanode
 
-If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the HDFS processes can be started with a utility script. As *hdfs*:
+If `etc/hadoop/workers` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the HDFS processes can be started with a utility script. As *hdfs*:
 
     [hdfs]$ $HADOOP_HOME/sbin/start-dfs.sh
 
@@ -269,7 +269,7 @@ Start a standalone WebAppProxy server. Run on the WebAppProxy server as *yarn*. 
 
     [yarn]$ $HADOOP_HOME/bin/yarn --daemon start proxyserver
 
-If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the YARN processes can be started with a utility script. As *yarn*:
+If `etc/hadoop/workers` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the YARN processes can be started with a utility script. As *yarn*:
 
     [yarn]$ $HADOOP_HOME/sbin/start-yarn.sh
 
@@ -287,7 +287,7 @@ Run a script to stop a DataNode as *hdfs*:
 
     [hdfs]$ $HADOOP_HOME/bin/hdfs --daemon stop datanode
 
-If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the HDFS processes may be stopped with a utility script. As *hdfs*:
+If `etc/hadoop/workers` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the HDFS processes may be stopped with a utility script. As *hdfs*:
 
     [hdfs]$ $HADOOP_HOME/sbin/stop-dfs.sh
 
@@ -295,11 +295,11 @@ Stop the ResourceManager with the following command, run on the designated Resou
 
     [yarn]$ $HADOOP_HOME/bin/yarn --daemon stop resourcemanager
 
-Run a script to stop a NodeManager on a slave as *yarn*:
+Run a script to stop a NodeManager on a worker as *yarn*:
 
     [yarn]$ $HADOOP_HOME/bin/yarn --daemon stop nodemanager
 
-If `etc/hadoop/slaves` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the YARN processes can be stopped with a utility script. As *yarn*:
+If `etc/hadoop/workers` and ssh trusted access is configured (see [Single Node Setup](./SingleCluster.html)), all of the YARN processes can be stopped with a utility script. As *yarn*:
 
     [yarn]$ $HADOOP_HOME/sbin/stop-yarn.sh
 

@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.webapp;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -51,19 +49,6 @@ import static org.junit.Assert.assertTrue;
 public class TestRMWithXFSFilter extends JerseyTestBase {
 
   private static MockRM rm;
-
-  private Injector injector;
-
-  /**
-   *
-   */
-  public class GuiceServletConfig extends GuiceServletContextListener {
-
-    @Override
-    protected Injector getInjector() {
-      return injector;
-    }
-  }
 
   @Before
   @Override
@@ -103,7 +88,7 @@ public class TestRMWithXFSFilter extends JerseyTestBase {
 
   protected void createInjector(final String headerValue,
       final boolean explicitlyDisabled) {
-    injector = Guice.createInjector(new ServletModule() {
+    GuiceServletConfig.setInjector(Guice.createInjector(new ServletModule() {
       @Override
       protected void configureServlets() {
         bind(JAXBContextResolver.class);
@@ -127,7 +112,7 @@ public class TestRMWithXFSFilter extends JerseyTestBase {
 
         filter("/*").through(xfsFilter, initParams);
       }
-    });
+    }));
   }
 
   @Test

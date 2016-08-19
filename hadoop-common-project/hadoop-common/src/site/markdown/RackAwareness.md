@@ -22,7 +22,7 @@ will use rack awareness for fault tolerance by placing one block
 replica on a different rack. This provides data availability in the
 event of a network switch failure or partition within the cluster.
 
-Hadoop master daemons obtain the rack id of the cluster slaves by
+Hadoop master daemons obtain the rack id of the cluster workers by
 invoking either an external script or java class as specified by
 configuration files. Using either the java class or external script
 for topology, output must adhere to the java
@@ -40,7 +40,7 @@ in the configuration file. An example, NetworkTopology.java, is
 included with the hadoop distribution and can be customized by the
 Hadoop administrator. Using a Java class instead of an external script
 has a performance benefit in that Hadoop doesn't need to fork an
-external process when a new slave node registers itself.
+external process when a new worker node registers itself.
 
 If implementing an external script, it will be specified with the
 **net.topology.script.file.name** parameter in the configuration

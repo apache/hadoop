@@ -22,11 +22,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,6 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -323,20 +322,36 @@ public class StringUtils {
   }
 
   /**
-   * Formats time in ms and appends difference (finishTime - startTime) 
+   * Formats time in ms and appends difference (finishTime - startTime)
    * as returned by formatTimeDiff().
-   * If finish time is 0, empty string is returned, if start time is 0 
-   * then difference is not appended to return value. 
+   * If finish time is 0, empty string is returned, if start time is 0
+   * then difference is not appended to return value.
+   *
    * @param dateFormat date format to use
-   * @param finishTime fnish time
-   * @param startTime start time
-   * @return formatted value. 
+   * @param finishTime finish time
+   * @param startTime  start time
+   * @return formatted value.
    */
-  public static String getFormattedTimeWithDiff(DateFormat dateFormat, 
-                                                long finishTime, long startTime){
+  public static String getFormattedTimeWithDiff(FastDateFormat dateFormat,
+      long finishTime, long startTime) {
+    String formattedFinishTime = dateFormat.format(finishTime);
+    return getFormattedTimeWithDiff(formattedFinishTime, finishTime, startTime);
+  }
+  /**
+   * Formats time in ms and appends difference (finishTime - startTime)
+   * as returned by formatTimeDiff().
+   * If finish time is 0, empty string is returned, if start time is 0
+   * then difference is not appended to return value.
+   * @param formattedFinishTime formattedFinishTime to use
+   * @param finishTime finish time
+   * @param startTime start time
+   * @return formatted value.
+   */
+  public static String getFormattedTimeWithDiff(String formattedFinishTime,
+      long finishTime, long startTime){
     StringBuilder buf = new StringBuilder();
     if (0 != finishTime) {
-      buf.append(dateFormat.format(new Date(finishTime)));
+      buf.append(formattedFinishTime);
       if (0 != startTime){
         buf.append(" (" + formatTimeDiff(finishTime , startTime) + ")");
       }

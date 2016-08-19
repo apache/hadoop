@@ -96,10 +96,10 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param other the token to clone
    */
   public Token(Token<T> other) {
-    this.identifier = other.identifier;
-    this.password = other.password;
-    this.kind = other.kind;
-    this.service = other.service;
+    this.identifier = other.identifier.clone();
+    this.password = other.password.clone();
+    this.kind = new Text(other.kind);
+    this.service = new Text(other.service);
   }
 
   public Token<T> copyToken() {
@@ -230,8 +230,37 @@ public class Token<T extends TokenIdentifier> implements Writable {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static class PrivateToken<T extends TokenIdentifier> extends Token<T> {
+    final private Text publicService;
+
     public PrivateToken(Token<T> token) {
       super(token);
+      publicService = new Text(token.getService());
+    }
+
+    public Text getPublicService() {
+      return publicService;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      if (!super.equals(o)) {
+        return false;
+      }
+      PrivateToken<?> that = (PrivateToken<?>) o;
+      return publicService.equals(that.publicService);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = super.hashCode();
+      result = 31 * result + publicService.hashCode();
+      return result;
     }
   }
 

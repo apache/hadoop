@@ -28,10 +28,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 
 import java.util.Map;
 
+/**
+ * This class is a {@link ContainerRuntime} implementation that delegates all
+ * operations to either a {@link DefaultLinuxContainerRuntime} instance or a
+ * {@link DockerLinuxContainerRuntime} instance, depending on whether the
+ * {@link DockerLinuxContainerRuntime} instance believes the operation to be
+ * requesting a Docker container.
+ *
+ * @see DockerLinuxContainerRuntime#isDockerContainerRequested
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
@@ -63,8 +73,8 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       runtime = defaultLinuxContainerRuntime;
     }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Using container runtime: " + runtime.getClass()
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Using container runtime: " + runtime.getClass()
           .getSimpleName());
     }
 

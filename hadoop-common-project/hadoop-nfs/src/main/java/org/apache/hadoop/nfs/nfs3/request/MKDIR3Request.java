@@ -18,8 +18,8 @@
 package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
@@ -55,8 +55,8 @@ public class MKDIR3Request extends RequestWithHandle {
   @Override
   public void serialize(XDR xdr) {
     handle.serialize(xdr);
-    xdr.writeInt(name.getBytes(Charsets.UTF_8).length);
-    xdr.writeFixedOpaque(name.getBytes(Charsets.UTF_8));
+    xdr.writeInt(name.getBytes(StandardCharsets.UTF_8).length);
+    xdr.writeFixedOpaque(name.getBytes(StandardCharsets.UTF_8));
     objAttr.serialize(xdr);
   }
 }

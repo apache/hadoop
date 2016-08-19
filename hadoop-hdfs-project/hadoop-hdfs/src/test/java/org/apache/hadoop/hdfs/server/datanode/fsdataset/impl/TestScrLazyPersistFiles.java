@@ -42,6 +42,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -61,8 +62,8 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
 
   @Before
   public void before() {
-    Assume.assumeThat(NativeCodeLoader.isNativeCodeLoaded() && !Path.WINDOWS,
-        equalTo(true));
+    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    assumeNotWindows();
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
 
     final long osPageSize = NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();

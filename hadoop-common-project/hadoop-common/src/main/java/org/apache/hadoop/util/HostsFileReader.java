@@ -19,18 +19,29 @@
 package org.apache.hadoop.util;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.Map;
 
-import org.apache.commons.io.Charsets;
-import org.apache.commons.logging.LogFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 // Keeps track of which datanodes/tasktrackers are allowed to connect to the 
 // namenode/jobtracker.
@@ -38,7 +49,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public class HostsFileReader {
   private Set<String> includes;
-  private Set<String> excludes;
+  // exclude host list with optional timeout.
+  // If the value is null, it indicates default timeout.
+  private Map<String, Integer> excludes;
   private String includesFile;
   private String excludesFile;
   private WriteLock writeLock;
@@ -49,7 +62,7 @@ public class HostsFileReader {
   public HostsFileReader(String inFile, 
                          String exFile) throws IOException {
     includes = new HashSet<String>();
-    excludes = new HashSet<String>();
+    excludes = new HashMap<String, Integer>();
     includesFile = inFile;
     excludesFile = exFile;
     ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -62,7 +75,7 @@ public class HostsFileReader {
   public HostsFileReader(String includesFile, InputStream inFileInputStream,
       String excludesFile, InputStream exFileInputStream) throws IOException {
     includes = new HashSet<String>();
-    excludes = new HashSet<String>();
+    excludes = new HashMap<String, Integer>();
     this.includesFile = includesFile;
     this.excludesFile = excludesFile;
     ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -85,7 +98,7 @@ public class HostsFileReader {
     BufferedReader reader = null;
     try {
       reader = new BufferedReader(
-          new InputStreamReader(fileInputStream, Charsets.UTF_8));
+          new InputStreamReader(fileInputStream, StandardCharsets.UTF_8));
       String line;
       while ((line = reader.readLine()) != null) {
         String[] nodes = line.split("[ \t\n\f\r]+");
@@ -121,6 +134,73 @@ public class HostsFileReader {
     }
   }
 
+  public static void readFileToMap(String type,
+      String filename, Map<String, Integer> map) throws IOException {
+    File file = new File(filename);
+    FileInputStream fis = new FileInputStream(file);
+    readFileToMapWithFileInputStream(type, filename, fis, map);
+  }
+
+  public static void readFileToMapWithFileInputStream(String type,
+      String filename, InputStream inputStream, Map<String, Integer> map)
+          throws IOException {
+    // The input file could be either simple text or XML.
+    boolean xmlInput = filename.toLowerCase().endsWith(".xml");
+    if (xmlInput) {
+      readXmlFileToMapWithFileInputStream(type, filename, inputStream, map);
+    } else {
+      HashSet<String> nodes = new HashSet<String>();
+      readFileToSetWithFileInputStream(type, filename, inputStream, nodes);
+      for (String node : nodes) {
+        map.put(node, null);
+      }
+    }
+  }
+
+  public static void readXmlFileToMapWithFileInputStream(String type,
+      String filename, InputStream fileInputStream, Map<String, Integer> map)
+          throws IOException {
+    Document dom;
+    DocumentBuilderFactory builder = DocumentBuilderFactory.newInstance();
+    try {
+      DocumentBuilder db = builder.newDocumentBuilder();
+      dom = db.parse(fileInputStream);
+      // Examples:
+      // <host><name>host1</name></host>
+      // <host><name>host2</name><timeout>123</timeout></host>
+      // <host><name>host3</name><timeout>-1</timeout></host>
+      // <host><name>host4, host5,host6</name><timeout>1800</timeout></host>
+      Element doc = dom.getDocumentElement();
+      NodeList nodes = doc.getElementsByTagName("host");
+      for (int i = 0; i < nodes.getLength(); i++) {
+        Node node = nodes.item(i);
+        if (node.getNodeType() == Node.ELEMENT_NODE) {
+          Element e= (Element) node;
+          // Support both single host and comma-separated list of hosts.
+          String v = readFirstTagValue(e, "name");
+          String[] hosts = StringUtils.getTrimmedStrings(v);
+          String str = readFirstTagValue(e, "timeout");
+          Integer timeout = (str == null)? null : Integer.parseInt(str);
+          for (String host : hosts) {
+            map.put(host, timeout);
+            LOG.info("Adding a node \"" + host + "\" to the list of "
+                + type + " hosts from " + filename);
+          }
+        }
+      }
+    } catch (IOException|SAXException|ParserConfigurationException e) {
+      LOG.fatal("error parsing " + filename, e);
+      throw new RuntimeException(e);
+    } finally {
+      fileInputStream.close();
+    }
+  }
+
+  static String readFirstTagValue(Element e, String tag) {
+    NodeList nodes = e.getElementsByTagName(tag);
+    return (nodes.getLength() == 0)? null : nodes.item(0).getTextContent();
+  }
+
   public void refresh(String includeFiles, String excludeFiles)
       throws IOException {
     LOG.info("Refreshing hosts (include/exclude) list");
@@ -129,7 +209,7 @@ public class HostsFileReader {
       // update instance variables
       updateFileNames(includeFiles, excludeFiles);
       Set<String> newIncludes = new HashSet<String>();
-      Set<String> newExcludes = new HashSet<String>();
+      Map<String, Integer> newExcludes = new HashMap<String, Integer>();
       boolean switchIncludes = false;
       boolean switchExcludes = false;
       if (includeFiles != null && !includeFiles.isEmpty()) {
@@ -137,7 +217,7 @@ public class HostsFileReader {
         switchIncludes = true;
       }
       if (excludeFiles != null && !excludeFiles.isEmpty()) {
-        readFileToSet("excluded", excludeFiles, newExcludes);
+        readFileToMap("excluded", excludeFiles, newExcludes);
         switchExcludes = true;
       }
 
@@ -161,7 +241,7 @@ public class HostsFileReader {
     this.writeLock.lock();
     try {
       Set<String> newIncludes = new HashSet<String>();
-      Set<String> newExcludes = new HashSet<String>();
+      Map<String, Integer> newExcludes = new HashMap<String, Integer>();
       boolean switchIncludes = false;
       boolean switchExcludes = false;
       if (inFileInputStream != null) {
@@ -170,7 +250,7 @@ public class HostsFileReader {
         switchIncludes = true;
       }
       if (exFileInputStream != null) {
-        readFileToSetWithFileInputStream("excluded", excludesFile,
+        readFileToMapWithFileInputStream("excluded", excludesFile,
             exFileInputStream, newExcludes);
         switchExcludes = true;
       }
@@ -199,7 +279,7 @@ public class HostsFileReader {
   public Set<String> getExcludedHosts() {
     this.readLock.lock();
     try {
-      return excludes;
+      return excludes.keySet();
     } finally {
       this.readLock.unlock();
     }
@@ -209,7 +289,18 @@ public class HostsFileReader {
     this.readLock.lock();
     try {
       includes.addAll(this.includes);
-      excludes.addAll(this.excludes);
+      excludes.addAll(this.excludes.keySet());
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void getHostDetails(Set<String> includeHosts,
+                             Map<String, Integer> excludeHosts) {
+    this.readLock.lock();
+    try {
+      includeHosts.addAll(this.includes);
+      excludeHosts.putAll(this.excludes);
     } finally {
       this.readLock.unlock();
     }

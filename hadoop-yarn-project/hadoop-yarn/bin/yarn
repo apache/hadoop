@@ -26,10 +26,10 @@ function hadoop_usage
 {
   hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
   hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
-  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in slave mode"
+  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in worker mode"
   hadoop_add_option "--loglevel level" "set the log4j level for this command"
-  hadoop_add_option "--hosts filename" "list of hosts to use in slave mode"
-  hadoop_add_option "--slaves" "turn on slave mode"
+  hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
+  hadoop_add_option "--workers" "turn on worker mode"
 
   hadoop_add_subcommand "application" "prints application(s) report/kill application"
   hadoop_add_subcommand "applicationattempt" "prints applicationattempt(s) report"
@@ -41,13 +41,14 @@ function hadoop_usage
   hadoop_add_subcommand "jar <jar>" "run a jar file"
   hadoop_add_subcommand "logs" "dump container logs"
   hadoop_add_subcommand "node" "prints node report(s)"
-  hadoop_add_subcommand "nodemanager" "run a nodemanager on each slave"
+  hadoop_add_subcommand "nodemanager" "run a nodemanager on each worker"
   hadoop_add_subcommand "proxyserver" "run the web app proxy server"
   hadoop_add_subcommand "queue" "prints queue information"
   hadoop_add_subcommand "resourcemanager" "run the ResourceManager"
   hadoop_add_subcommand "rmadmin" "admin tools"
   hadoop_add_subcommand "scmadmin" "SharedCacheManager admin tools"
   hadoop_add_subcommand "sharedcachemanager" "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "timelinereader" "run the timeline reader server"
   hadoop_add_subcommand "timelineserver" "run the timeline server"
   hadoop_add_subcommand "top" "view cluster information"
   hadoop_add_subcommand "version" "print the version"
@@ -171,6 +172,12 @@ function yarncmd_case
       hadoop_debug "Append YARN_SHAREDCACHEMANAGER_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${YARN_SHAREDCACHEMANAGER_OPTS}"
     ;;
+    timelinereader)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
+      hadoop_debug "Append YARN_TIMELINEREADER_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_TIMELINEREADER_OPTS}"
+    ;;
     timelineserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
@@ -266,8 +273,8 @@ fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
 
-if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
-  hadoop_common_slave_mode_execute "${HADOOP_YARN_HOME}/bin/yarn" "${HADOOP_USER_PARAMS[@]}"
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_YARN_HOME}/bin/yarn" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 

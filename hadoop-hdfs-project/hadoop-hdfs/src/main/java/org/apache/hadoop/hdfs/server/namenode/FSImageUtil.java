@@ -21,9 +21,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
@@ -34,7 +34,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 @InterfaceAudience.Private
 public final class FSImageUtil {
   public static final byte[] MAGIC_HEADER =
-      "HDFSIMG1".getBytes(Charsets.UTF_8);
+      "HDFSIMG1".getBytes(StandardCharsets.UTF_8);
   public static final int FILE_VERSION = 1;
 
   public static boolean checkFileFormat(RandomAccessFile file)

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,11 +40,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -60,8 +59,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class AppSchedulingInfo {
   
   private static final Log LOG = LogFactory.getLog(AppSchedulingInfo.class);
-  private static final Comparator<Priority> COMPARATOR =
-      new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator();
   private static final int EPOCH_BIT_SHIFT = 40;
 
   private final ApplicationId applicationId;
@@ -82,10 +79,10 @@ public class AppSchedulingInfo {
 
   private Set<String> requestedPartitions = new HashSet<>();
 
-  final Set<Priority> priorities = new TreeSet<>(COMPARATOR);
-  final Map<Priority, Map<String, ResourceRequest>> resourceRequestMap =
-      new ConcurrentHashMap<>();
-  final Map<NodeId, Map<Priority, Map<ContainerId,
+  final Set<SchedulerRequestKey> schedulerKeys = new TreeSet<>();
+  final Map<SchedulerRequestKey, Map<String, ResourceRequest>>
+      resourceRequestMap = new ConcurrentHashMap<>();
+  final Map<NodeId, Map<SchedulerRequestKey, Map<ContainerId,
       SchedContainerChangeRequest>>> containerIncreaseRequestMap =
       new ConcurrentHashMap<>();
 
@@ -97,8 +94,8 @@ public class AppSchedulingInfo {
     this.queue = queue;
     this.user = user;
     this.activeUsersManager = activeUsersManager;
-    this.containerIdCounter =
-        new AtomicLong(epoch << EPOCH_BIT_SHIFT);
+    this.containerIdCounter = new AtomicLong(
+        epoch << ResourceManager.EPOCH_BIT_SHIFT);
     this.appResourceUsage = appResourceUsage;
   }
 
@@ -134,22 +131,23 @@ public class AppSchedulingInfo {
    * Clear any pending requests from this application.
    */
   private synchronized void clearRequests() {
-    priorities.clear();
+    schedulerKeys.clear();
     resourceRequestMap.clear();
     LOG.info("Application " + applicationId + " requests cleared");
   }
 
   public synchronized boolean hasIncreaseRequest(NodeId nodeId) {
-    Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
-        containerIncreaseRequestMap.get(nodeId);
+    Map<SchedulerRequestKey, Map<ContainerId, SchedContainerChangeRequest>>
+        requestsOnNode = containerIncreaseRequestMap.get(nodeId);
     return requestsOnNode == null ? false : requestsOnNode.size() > 0;
   }
-  
+
   public synchronized Map<ContainerId, SchedContainerChangeRequest>
-      getIncreaseRequests(NodeId nodeId, Priority priority) {
-    Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
-        containerIncreaseRequestMap.get(nodeId);
-    return requestsOnNode == null ? null : requestsOnNode.get(priority);
+      getIncreaseRequests(NodeId nodeId, SchedulerRequestKey schedulerKey) {
+    Map<SchedulerRequestKey, Map<ContainerId, SchedContainerChangeRequest>>
+        requestsOnNode = containerIncreaseRequestMap.get(nodeId);
+    return requestsOnNode == null ? null : requestsOnNode.get(
+        schedulerKey);
   }
 
   /**
@@ -175,15 +173,17 @@ public class AppSchedulingInfo {
       }
       NodeId nodeId = r.getRMContainer().getAllocatedNode();
 
-      Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
-          containerIncreaseRequestMap.get(nodeId);
+      Map<SchedulerRequestKey, Map<ContainerId, SchedContainerChangeRequest>>
+          requestsOnNode = containerIncreaseRequestMap.get(nodeId);
       if (null == requestsOnNode) {
         requestsOnNode = new TreeMap<>();
         containerIncreaseRequestMap.put(nodeId, requestsOnNode);
       }
 
       SchedContainerChangeRequest prevChangeRequest =
-          getIncreaseRequest(nodeId, r.getPriority(), r.getContainerId());
+          getIncreaseRequest(nodeId,
+              r.getRMContainer().getAllocatedSchedulerKey(),
+              r.getContainerId());
       if (null != prevChangeRequest) {
         if (Resources.equals(prevChangeRequest.getTargetCapacity(),
             r.getTargetCapacity())) {
@@ -192,7 +192,8 @@ public class AppSchedulingInfo {
         }
 
         // remove the old one, as we will use the new one going forward
-        removeIncreaseRequest(nodeId, prevChangeRequest.getPriority(),
+        removeIncreaseRequest(nodeId,
+            prevChangeRequest.getRMContainer().getAllocatedSchedulerKey(),
             prevChangeRequest.getContainerId());
       }
 
@@ -219,21 +220,22 @@ public class AppSchedulingInfo {
    */
   private void insertIncreaseRequest(SchedContainerChangeRequest request) {
     NodeId nodeId = request.getNodeId();
-    Priority priority = request.getPriority();
+    SchedulerRequestKey schedulerKey =
+        request.getRMContainer().getAllocatedSchedulerKey();
     ContainerId containerId = request.getContainerId();
     
-    Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
-        containerIncreaseRequestMap.get(nodeId);
+    Map<SchedulerRequestKey, Map<ContainerId, SchedContainerChangeRequest>>
+        requestsOnNode = containerIncreaseRequestMap.get(nodeId);
     if (null == requestsOnNode) {
       requestsOnNode = new HashMap<>();
       containerIncreaseRequestMap.put(nodeId, requestsOnNode);
     }
 
     Map<ContainerId, SchedContainerChangeRequest> requestsOnNodeWithPriority =
-        requestsOnNode.get(priority);
+        requestsOnNode.get(schedulerKey);
     if (null == requestsOnNodeWithPriority) {
       requestsOnNodeWithPriority = new TreeMap<>();
-      requestsOnNode.put(priority, requestsOnNodeWithPriority);
+      requestsOnNode.put(schedulerKey, requestsOnNodeWithPriority);
     }
 
     requestsOnNodeWithPriority.put(containerId, request);
@@ -249,20 +251,20 @@ public class AppSchedulingInfo {
           + " delta=" + delta);
     }
     
-    // update priorities
-    priorities.add(priority);
+    // update Scheduler Keys
+    schedulerKeys.add(schedulerKey);
   }
   
-  public synchronized boolean removeIncreaseRequest(NodeId nodeId, Priority priority,
-      ContainerId containerId) {
-    Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
-        containerIncreaseRequestMap.get(nodeId);
+  public synchronized boolean removeIncreaseRequest(NodeId nodeId,
+      SchedulerRequestKey schedulerKey, ContainerId containerId) {
+    Map<SchedulerRequestKey, Map<ContainerId, SchedContainerChangeRequest>>
+        requestsOnNode = containerIncreaseRequestMap.get(nodeId);
     if (null == requestsOnNode) {
       return false;
     }
 
     Map<ContainerId, SchedContainerChangeRequest> requestsOnNodeWithPriority =
-        requestsOnNode.get(priority);
+        requestsOnNode.get(schedulerKey);
     if (null == requestsOnNodeWithPriority) {
       return false;
     }
@@ -272,7 +274,7 @@ public class AppSchedulingInfo {
     
     // remove hierarchies if it becomes empty
     if (requestsOnNodeWithPriority.isEmpty()) {
-      requestsOnNode.remove(priority);
+      requestsOnNode.remove(schedulerKey);
     }
     if (requestsOnNode.isEmpty()) {
       containerIncreaseRequestMap.remove(nodeId);
@@ -296,15 +298,15 @@ public class AppSchedulingInfo {
   }
   
   public SchedContainerChangeRequest getIncreaseRequest(NodeId nodeId,
-      Priority priority, ContainerId containerId) {
-    Map<Priority, Map<ContainerId, SchedContainerChangeRequest>> requestsOnNode =
-        containerIncreaseRequestMap.get(nodeId);
+      SchedulerRequestKey schedulerKey, ContainerId containerId) {
+    Map<SchedulerRequestKey, Map<ContainerId, SchedContainerChangeRequest>>
+        requestsOnNode = containerIncreaseRequestMap.get(nodeId);
     if (null == requestsOnNode) {
       return null;
     }
 
     Map<ContainerId, SchedContainerChangeRequest> requestsOnNodeWithPriority =
-        requestsOnNode.get(priority);
+        requestsOnNode.get(schedulerKey);
     return requestsOnNodeWithPriority == null ? null
         : requestsOnNodeWithPriority.get(containerId);
   }
@@ -328,17 +330,18 @@ public class AppSchedulingInfo {
 
     // Update resource requests
     for (ResourceRequest request : requests) {
-      Priority priority = request.getPriority();
+      SchedulerRequestKey schedulerKey = SchedulerRequestKey.create(request);
       String resourceName = request.getResourceName();
 
       // Update node labels if required
       updateNodeLabels(request);
 
-      Map<String, ResourceRequest> asks = this.resourceRequestMap.get(priority);
+      Map<String, ResourceRequest> asks =
+          this.resourceRequestMap.get(schedulerKey);
       if (asks == null) {
         asks = new ConcurrentHashMap<>();
-        this.resourceRequestMap.put(priority, asks);
-        this.priorities.add(priority);
+        this.resourceRequestMap.put(schedulerKey, asks);
+        this.schedulerKeys.add(schedulerKey);
       }
 
       // Increment number of containers if recovering preempted resources
@@ -405,11 +408,11 @@ public class AppSchedulingInfo {
   }
 
   private void updateNodeLabels(ResourceRequest request) {
-    Priority priority = request.getPriority();
+    SchedulerRequestKey schedulerKey = SchedulerRequestKey.create(request);
     String resourceName = request.getResourceName();
     if (resourceName.equals(ResourceRequest.ANY)) {
       ResourceRequest previousAnyRequest =
-          getResourceRequest(priority, resourceName);
+          getResourceRequest(schedulerKey, resourceName);
 
       // When there is change in ANY request label expression, we should
       // update label for all resource requests already added of same
@@ -417,7 +420,7 @@ public class AppSchedulingInfo {
       if ((null == previousAnyRequest)
           || hasRequestLabelChanged(previousAnyRequest, request)) {
         Map<String, ResourceRequest> resourceRequest =
-            getResourceRequests(priority);
+            getResourceRequests(schedulerKey);
         if (resourceRequest != null) {
           for (ResourceRequest r : resourceRequest.values()) {
             if (!r.getResourceName().equals(ResourceRequest.ANY)) {
@@ -428,7 +431,7 @@ public class AppSchedulingInfo {
       }
     } else {
       ResourceRequest anyRequest =
-          getResourceRequest(priority, ResourceRequest.ANY);
+          getResourceRequest(schedulerKey, ResourceRequest.ANY);
       if (anyRequest != null) {
         request.setNodeLabelExpression(anyRequest.getNodeLabelExpression());
       }
@@ -501,13 +504,13 @@ public class AppSchedulingInfo {
     return userBlacklistChanged.getAndSet(false);
   }
 
-  public synchronized Collection<Priority> getPriorities() {
-    return priorities;
+  public synchronized Collection<SchedulerRequestKey> getSchedulerKeys() {
+    return schedulerKeys;
   }
 
   public synchronized Map<String, ResourceRequest> getResourceRequests(
-      Priority priority) {
-    return resourceRequestMap.get(priority);
+      SchedulerRequestKey schedulerKey) {
+    return resourceRequestMap.get(schedulerKey);
   }
 
   public synchronized List<ResourceRequest> getAllResourceRequests() {
@@ -518,14 +521,16 @@ public class AppSchedulingInfo {
     return ret;
   }
 
-  public synchronized ResourceRequest getResourceRequest(Priority priority,
-      String resourceName) {
-    Map<String, ResourceRequest> nodeRequests = resourceRequestMap.get(priority);
+  public synchronized ResourceRequest getResourceRequest(
+      SchedulerRequestKey schedulerKey, String resourceName) {
+    Map<String, ResourceRequest> nodeRequests =
+        resourceRequestMap.get(schedulerKey);
     return (nodeRequests == null) ? null : nodeRequests.get(resourceName);
   }
 
-  public synchronized Resource getResource(Priority priority) {
-    ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
+  public synchronized Resource getResource(SchedulerRequestKey schedulerKey) {
+    ResourceRequest request =
+        getResourceRequest(schedulerKey, ResourceRequest.ANY);
     return (request == null) ? null : request.getCapability();
   }
 
@@ -555,7 +560,8 @@ public class AppSchedulingInfo {
   public synchronized void increaseContainer(
       SchedContainerChangeRequest increaseRequest) {
     NodeId nodeId = increaseRequest.getNodeId();
-    Priority priority = increaseRequest.getPriority();
+    SchedulerRequestKey schedulerKey =
+        increaseRequest.getRMContainer().getAllocatedSchedulerKey();
     ContainerId containerId = increaseRequest.getContainerId();
     Resource deltaCapacity = increaseRequest.getDeltaCapacity();
 
@@ -568,7 +574,7 @@ public class AppSchedulingInfo {
     // Set queue metrics
     queue.getMetrics().allocateResources(user, deltaCapacity);
     // remove the increase request from pending increase request map
-    removeIncreaseRequest(nodeId, priority, containerId);
+    removeIncreaseRequest(nodeId, schedulerKey, containerId);
     // update usage
     appResourceUsage.incUsed(increaseRequest.getNodePartition(), deltaCapacity);
   }
@@ -591,19 +597,25 @@ public class AppSchedulingInfo {
     // update usage
     appResourceUsage.decUsed(decreaseRequest.getNodePartition(), absDelta);
   }
-  
+
   /**
    * Resources have been allocated to this application by the resource
    * scheduler. Track them.
+   * @param type Node Type
+   * @param node SchedulerNode
+   * @param schedulerKey SchedulerRequestKey
+   * @param request ResourceRequest
+   * @param containerAllocated Container Allocated
+   * @return List of ResourceRequests
    */
   public synchronized List<ResourceRequest> allocate(NodeType type,
-      SchedulerNode node, Priority priority, ResourceRequest request,
-      Container containerAllocated) {
+      SchedulerNode node, SchedulerRequestKey schedulerKey,
+      ResourceRequest request, Container containerAllocated) {
     List<ResourceRequest> resourceRequests = new ArrayList<>();
     if (type == NodeType.NODE_LOCAL) {
-      allocateNodeLocal(node, priority, request, resourceRequests);
+      allocateNodeLocal(node, schedulerKey, request, resourceRequests);
     } else if (type == NodeType.RACK_LOCAL) {
-      allocateRackLocal(node, priority, request, resourceRequests);
+      allocateRackLocal(node, schedulerKey, request, resourceRequests);
     } else {
       allocateOffSwitch(request, resourceRequests);
     }
@@ -633,16 +645,16 @@ public class AppSchedulingInfo {
    * application.
    */
   private synchronized void allocateNodeLocal(SchedulerNode node,
-      Priority priority, ResourceRequest nodeLocalRequest,
+      SchedulerRequestKey schedulerKey, ResourceRequest nodeLocalRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
-    decResourceRequest(node.getNodeName(), priority, nodeLocalRequest);
+    decResourceRequest(node.getNodeName(), schedulerKey, nodeLocalRequest);
 
-    ResourceRequest rackLocalRequest = resourceRequestMap.get(priority).get(
+    ResourceRequest rackLocalRequest = resourceRequestMap.get(schedulerKey).get(
         node.getRackName());
-    decResourceRequest(node.getRackName(), priority, rackLocalRequest);
+    decResourceRequest(node.getRackName(), schedulerKey, rackLocalRequest);
 
-    ResourceRequest offRackRequest = resourceRequestMap.get(priority).get(
+    ResourceRequest offRackRequest = resourceRequestMap.get(schedulerKey).get(
         ResourceRequest.ANY);
     decrementOutstanding(offRackRequest);
 
@@ -652,11 +664,11 @@ public class AppSchedulingInfo {
     resourceRequests.add(cloneResourceRequest(offRackRequest));
   }
 
-  private void decResourceRequest(String resourceName, Priority priority,
-      ResourceRequest request) {
+  private void decResourceRequest(String resourceName,
+      SchedulerRequestKey schedulerKey, ResourceRequest request) {
     request.setNumContainers(request.getNumContainers() - 1);
     if (request.getNumContainers() == 0) {
-      resourceRequestMap.get(priority).remove(resourceName);
+      resourceRequestMap.get(schedulerKey).remove(resourceName);
     }
   }
 
@@ -665,12 +677,12 @@ public class AppSchedulingInfo {
    * application.
    */
   private synchronized void allocateRackLocal(SchedulerNode node,
-      Priority priority, ResourceRequest rackLocalRequest,
+      SchedulerRequestKey schedulerKey, ResourceRequest rackLocalRequest,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
-    decResourceRequest(node.getRackName(), priority, rackLocalRequest);
+    decResourceRequest(node.getRackName(), schedulerKey, rackLocalRequest);
     
-    ResourceRequest offRackRequest = resourceRequestMap.get(priority).get(
+    ResourceRequest offRackRequest = resourceRequestMap.get(schedulerKey).get(
         ResourceRequest.ANY);
     decrementOutstanding(offRackRequest);
 
@@ -712,8 +724,9 @@ public class AppSchedulingInfo {
   
   private synchronized void checkForDeactivation() {
     boolean deactivate = true;
-    for (Priority priority : getPriorities()) {
-      ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
+    for (SchedulerRequestKey schedulerKey : getSchedulerKeys()) {
+      ResourceRequest request =
+          getResourceRequest(schedulerKey, ResourceRequest.ANY);
       if (request != null) {
         if (request.getNumContainers() > 0) {
           deactivate = false;

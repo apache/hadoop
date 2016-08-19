@@ -53,12 +53,11 @@ class FSDirSymlinkOp {
     }
 
     FSPermissionChecker pc = fsn.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(link);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      link = fsd.resolvePath(pc, link, pathComponents);
-      iip = fsd.getINodesInPath4Write(link, false);
+      iip = fsd.resolvePathForWrite(pc, link, false);
+      link = iip.getPath();
       if (!createParent) {
         fsd.verifyParentDir(iip, link);
       }

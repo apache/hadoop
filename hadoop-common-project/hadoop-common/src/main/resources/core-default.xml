@@ -166,6 +166,28 @@
 </property>
 
 <property>
+  <name>hadoop.security.groups.cache.background.reload</name>
+  <value>false</value>
+  <description>
+    Whether to reload expired user->group mappings using a background thread
+    pool. If set to true, a pool of
+    hadoop.security.groups.cache.background.reload.threads is created to
+    update the cache in the background.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.groups.cache.background.reload.threads</name>
+  <value>3</value>
+  <description>
+    Only relevant if hadoop.security.groups.cache.background.reload is true.
+    Controls the number of concurrent background user->group cache entry
+    refreshes. Pending refresh requests beyond this value are queued and
+    processed when a thread is free.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.group.mapping.ldap.connection.timeout.ms</name>
   <value>60000</value>
   <description>
@@ -219,10 +241,52 @@
   <name>hadoop.security.group.mapping.ldap.ssl.keystore.password.file</name>
   <value></value>
   <description>
-    The path to a file containing the password of the LDAP SSL keystore.
+    The path to a file containing the password of the LDAP SSL keystore. If
+    the password is not configured in credential providers and the property
+    hadoop.security.group.mapping.ldap.ssl.keystore.password is not set,
+    LDAPGroupsMapping reads password from the file.
 
     IMPORTANT: This file should be readable only by the Unix user running
-    the daemons.
+    the daemons and should be a local file.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl.keystore.password</name>
+  <value></value>
+  <description>
+    The password of the LDAP SSL keystore. this property name is used as an
+    alias to get the password from credential providers. If the password can
+    not be found and hadoop.security.credential.clear-text-fallback is true
+    LDAPGroupsMapping uses the value of this property for password.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credential.clear-text-fallback</name>
+  <value>true</value>
+  <description>
+    true or false to indicate whether or not to fall back to storing credential
+    password as clear text. The default value is true. This property only works
+    when the password can't not be found from credential providers.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credential.provider.path</name>
+  <value></value>
+  <description>
+    A comma-separated list of URLs that indicates the type and
+    location of a list of providers that should be consulted.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.credstore.java-keystore-provider.password-file</name>
+  <value></value>
+  <description>
+    The path to a file containing the custom password for all keystores
+    that may be configured in the provider path.
   </description>
 </property>
 
@@ -239,10 +303,24 @@
   <name>hadoop.security.group.mapping.ldap.bind.password.file</name>
   <value></value>
   <description>
-    The path to a file containing the password of the bind user.
+    The path to a file containing the password of the bind user. If
+    the password is not configured in credential providers and the property
+    hadoop.security.group.mapping.ldap.bind.password is not set,
+    LDAPGroupsMapping reads password from the file.
 
     IMPORTANT: This file should be readable only by the Unix user running
-    the daemons.
+    the daemons and should be a local file.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value></value>
+  <description>
+    The password of the bind user. this property name is used as an
+    alias to get the password from credential providers. If the password can
+    not be found and hadoop.security.credential.clear-text-fallback is true
+    LDAPGroupsMapping uses the value of this property for password.
   </description>
 </property>
 
@@ -421,6 +499,16 @@
       hadoop.rpc.protection is used while determining the QOP used for the 
       connection. If a class is specified, then the QOP values returned by 
       the class will be used while determining the QOP used for the connection.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.sensitive-config-keys</name>
+  <value>password$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
+  <description>A comma-separated list of regular expressions to match against
+      configuration keys that should be redacted where appropriate, for
+      example, when logging modified properties during a reconfiguration,
+      private credentials should not be logged.
   </description>
 </property>
 
@@ -687,32 +775,16 @@
 </property>
 
 <property>
-  <name>fs.s3.awsAccessKeyId</name>
-  <description>AWS access key ID used by S3 block file system.</description>
-</property>
-
-<property>
-  <name>fs.s3.awsSecretAccessKey</name>
-  <description>AWS secret key used by S3 block file system.</description>
-</property>
-
-<property>
-  <name>fs.s3.block.size</name>
-  <value>67108864</value>
-  <description>Block size to use when writing files to S3.</description>
-</property>
-
-<property>
-  <name>fs.s3.buffer.dir</name>
-  <value>${hadoop.tmp.dir}/s3</value>
-  <description>Determines where on the local filesystem the s3:/s3n: filesystem
+  <name>fs.s3n.buffer.dir</name>
+  <value>${hadoop.tmp.dir}/s3n</value>
+  <description>Determines where on the local filesystem the s3n:// filesystem
   should store files before sending them to S3
   (or after retrieving them from S3).
   </description>
 </property>
 
 <property>
-  <name>fs.s3.maxRetries</name>
+  <name>fs.s3n.maxRetries</name>
   <value>4</value>
   <description>The maximum number of retries for reading or writing files to S3, 
   before we signal failure to the application.
@@ -720,7 +792,7 @@
 </property>
 
 <property>
-  <name>fs.s3.sleepTimeSeconds</name>
+  <name>fs.s3n.sleepTimeSeconds</name>
   <value>10</value>
   <description>The number of seconds to sleep between each S3 retry.
   </description>
@@ -845,6 +917,7 @@
 
 <property>
   <name>fs.s3a.path.style.access</name>
+  <value>false</value>
   <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
     Useful for S3A-compliant storage providers as it removes the need to set up DNS for virtual hosting.
   </description>
@@ -901,6 +974,18 @@
 </property>
 
 <property>
+  <name>fs.s3a.socket.send.buffer</name>
+  <value>8192</value>
+  <description>Socket send buffer hint to amazon connector. Represented in bytes.</description>
+</property>
+
+<property>
+  <name>fs.s3a.socket.recv.buffer</name>
+  <value>8192</value>
+  <description>Socket receive buffer hint to amazon connector. Represented in bytes.</description>
+</property>
+
+<property>
   <name>fs.s3a.paging.maximum</name>
   <value>5000</value>
   <description>How many keys to request from S3 when doing 
@@ -954,9 +1039,9 @@
 
 <property>
   <name>fs.s3a.acl.default</name>
-  <description>Set a canned ACL for newly created and copied objects. Value may be private, 
-     public-read, public-read-write, authenticated-read, log-delivery-write, 
-     bucket-owner-read, or bucket-owner-full-control.</description>
+  <description>Set a canned ACL for newly created and copied objects. Value may be Private,
+      PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
+      or BucketOwnerFullControl.</description>
 </property>
 
 <property>
@@ -1351,42 +1436,6 @@
 <property>
   <name>file.replication</name>
   <value>1</value>
-  <description>Replication factor</description>
-</property>
-
-<!-- s3 File System -->
-
-<property>
-  <name>s3.stream-buffer-size</name>
-  <value>4096</value>
-  <description>The size of buffer to stream files.
-  The size of this buffer should probably be a multiple of hardware
-  page size (4096 on Intel x86), and it determines how much data is
-  buffered during read and write operations.</description>
-</property>
-
-<property>
-  <name>s3.bytes-per-checksum</name>
-  <value>512</value>
-  <description>The number of bytes per checksum.  Must not be larger than
-  s3.stream-buffer-size</description>
-</property>
-
-<property>
-  <name>s3.client-write-packet-size</name>
-  <value>65536</value>
-  <description>Packet size for clients to write</description>
-</property>
-
-<property>
-  <name>s3.blocksize</name>
-  <value>67108864</value>
-  <description>Block size</description>
-</property>
-
-<property>
-  <name>s3.replication</name>
-  <value>3</value>
   <description>Replication factor</description>
 </property>
 
@@ -2284,6 +2333,34 @@
   <property>
     <name>fs.AbstractFileSystem.adl.impl</name>
     <value>org.apache.hadoop.fs.adl.Adl</value>
+  </property>
+
+  <property>
+    <name>hadoop.caller.context.enabled</name>
+    <value>false</value>
+    <description>When the feature is enabled, additional fields are written into
+      name-node audit log records for auditing coarse granularity operations.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.caller.context.max.size</name>
+    <value>128</value>
+    <description>The maximum bytes a caller context string can have. If the
+      passed caller context is longer than this maximum bytes, client will
+      truncate it before sending to server. Note that the server may have a
+      different maximum size, and will truncate the caller context to the
+      maximum size it allows.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.caller.context.signature.max.size</name>
+    <value>40</value>
+    <description>
+      The caller's signature (optional) is for offline validation. If the
+      signature exceeds the maximum allowed bytes in server, the caller context
+      will be abandoned, in which case the caller context will not be recorded
+      in audit logs.
+    </description>
   </property>
 
 </configuration>

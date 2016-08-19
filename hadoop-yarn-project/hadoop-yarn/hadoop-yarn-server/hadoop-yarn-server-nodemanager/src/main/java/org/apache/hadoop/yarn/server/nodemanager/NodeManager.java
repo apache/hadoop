@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
+import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -71,9 +72,10 @@ import org.apache.hadoop.yarn.server.nodemanager.nodelabels.ScriptBasedNodeLabel
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMLeveldbStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
-import org.apache.hadoop.yarn.server.nodemanager.scheduler.OpportunisticContainerAllocator;
+import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
@@ -98,6 +100,8 @@ public class NodeManager extends CompositeService
   private Context context;
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
+  // the NM collector service is set only if the timeline service v.2 is enabled
+  private NMCollectorService nmCollectorService;
   private NodeStatusUpdater nodeStatusUpdater;
   private NodeResourceMonitor nodeResourceMonitor;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook;
@@ -183,6 +187,10 @@ public class NodeManager extends CompositeService
     }
   }
 
+  protected NMCollectorService createNMCollectorService(Context ctxt) {
+    return new NMCollectorService(ctxt);
+  }
+
   protected WebServer createWebServer(Context nmContext,
       ResourceView resourceView, ApplicationACLsManager aclsManager,
       LocalDirsHandlerService dirsHandler) {
@@ -196,9 +204,10 @@ public class NodeManager extends CompositeService
   protected NMContext createNMContext(
       NMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInNM nmTokenSecretManager,
-      NMStateStoreService stateStore, boolean isDistSchedulerEnabled) {
+      NMStateStoreService stateStore, boolean isDistSchedulerEnabled,
+      Configuration conf) {
     return new NMContext(containerTokenSecretManager, nmTokenSecretManager,
-        dirsHandler, aclsManager, stateStore, isDistSchedulerEnabled);
+        dirsHandler, aclsManager, stateStore, isDistSchedulerEnabled, conf);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -287,7 +296,14 @@ public class NodeManager extends CompositeService
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
 
-    initAndStartRecoveryStore(conf);
+    try {
+      initAndStartRecoveryStore(conf);
+    } catch (IOException e) {
+      String recoveryDirName = conf.get(YarnConfiguration.NM_RECOVERY_DIR);
+      throw new
+          YarnRuntimeException("Unable to initialize recovery directory at "
+              + recoveryDirName, e);
+    }
 
     NMContainerTokenSecretManager containerTokenSecretManager =
         new NMContainerTokenSecretManager(conf, nmStore);
@@ -320,11 +336,12 @@ public class NodeManager extends CompositeService
     addService(nodeHealthChecker);
 
     boolean isDistSchedulingEnabled =
-        conf.getBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED,
+        conf.getBoolean(YarnConfiguration.
+            OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED,
             YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT);
 
     this.context = createNMContext(containerTokenSecretManager,
-        nmTokenSecretManager, nmStore, isDistSchedulingEnabled);
+        nmTokenSecretManager, nmStore, isDistSchedulingEnabled, conf);
 
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
@@ -354,8 +371,8 @@ public class NodeManager extends CompositeService
     ((NMContext) context).setWebServer(webServer);
 
     ((NMContext) context).setQueueableContainerAllocator(
-        new OpportunisticContainerAllocator(nodeStatusUpdater, context,
-            webServer.getPort()));
+        new OpportunisticContainerAllocator(
+            context.getContainerTokenSecretManager(), webServer.getPort()));
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     dispatcher.register(NodeManagerEventType.class, this);
@@ -366,6 +383,11 @@ public class NodeManager extends CompositeService
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     DefaultMetricsSystem.initialize("NodeManager");
+
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      this.nmCollectorService = createNMCollectorService(context);
+      addService(nmCollectorService);
+    }
 
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
@@ -450,6 +472,9 @@ public class NodeManager extends CompositeService
   public static class NMContext implements Context {
 
     private NodeId nodeId = null;
+
+    private Configuration conf = null;
+
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
 
@@ -458,6 +483,8 @@ public class NodeManager extends CompositeService
 
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
+
+    private Map<ApplicationId, String> registeredCollectors;
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -483,10 +510,16 @@ public class NodeManager extends CompositeService
 
     private final QueuingContext queuingContext;
 
+    private NMTimelinePublisher nmTimelinePublisher;
+
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
-        NMStateStoreService stateStore, boolean isDistSchedulingEnabled) {
+        NMStateStoreService stateStore, boolean isDistSchedulingEnabled,
+        Configuration conf) {
+      if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+        this.registeredCollectors = new ConcurrentHashMap<>();
+      }
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
       this.dirsHandler = dirsHandler;
@@ -499,6 +532,7 @@ public class NodeManager extends CompositeService
           LogAggregationReport>();
       this.queuingContext = new QueuingNMContext();
       this.isDistSchedulingEnabled = isDistSchedulingEnabled;
+      this.conf = conf;
     }
 
     /**
@@ -517,6 +551,11 @@ public class NodeManager extends CompositeService
     @Override
     public ConcurrentMap<ApplicationId, Application> getApplications() {
       return this.applications;
+    }
+
+    @Override
+    public Configuration getConf() {
+      return this.conf;
     }
 
     @Override
@@ -638,6 +677,31 @@ public class NodeManager extends CompositeService
     public OpportunisticContainerAllocator getContainerAllocator() {
       return containerAllocator;
     }
+
+    @Override
+    public Map<ApplicationId, String> getRegisteredCollectors() {
+      return this.registeredCollectors;
+    }
+
+    public void addRegisteredCollectors(
+        Map<ApplicationId, String> newRegisteredCollectors) {
+      if (registeredCollectors != null) {
+        this.registeredCollectors.putAll(newRegisteredCollectors);
+      } else {
+        LOG.warn("collectors are added when the registered collectors are " +
+            "initialized");
+      }
+    }
+
+    @Override
+    public void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher) {
+      this.nmTimelinePublisher = nmMetricsPublisher;
+    }
+
+    @Override
+    public NMTimelinePublisher getNMTimelinePublisher() {
+      return nmTimelinePublisher;
+    }
   }
 
   /**
@@ -737,9 +801,22 @@ public class NodeManager extends CompositeService
     return this.context;
   }
 
+  /**
+   * Returns the NM collector service. It should be used only for testing
+   * purposes.
+   *
+   * @return the NM collector service, or null if the timeline service v.2 is
+   * not enabled
+   */
+  @VisibleForTesting
+  NMCollectorService getNMCollectorService() {
+    return this.nmCollectorService;
+  }
+
   public static void main(String[] args) throws IOException {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
+    @SuppressWarnings("resource")
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     new GenericOptionsParser(conf, args);

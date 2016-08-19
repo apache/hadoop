@@ -1143,7 +1143,7 @@ public class TestDelegationTokenRenewer {
 
     // submit app1 with a token, set cancelTokenWhenComplete to false;
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(200);
+    resource.setMemorySize(200);
     RMApp app1 = rm.submitApp(resource, "name", "user", null, false, null, 2,
         credentials, null, true, false, false, null, 0, null, false, null);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
@@ -1205,7 +1205,7 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(Renewer.cancelled);
 
     Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(200);
+    resource.setMemorySize(200);
     RMApp app1 =
         rm.submitApp(resource, "name", "user", null, false, null, 2, credentials,
           null, true, false, false, null, 0, null, true, null);
@@ -1254,6 +1254,9 @@ public class TestDelegationTokenRenewer {
     Assert.assertTrue(dttr.referringAppIds.isEmpty());
     Assert.assertTrue(dttr.isTimerCancelled());
     Assert.assertTrue(Renewer.cancelled);
+
+    // make sure the token also has been removed from appTokens
+    Assert.assertFalse(renewer.getDelegationTokens().contains(token1));
   }
 
 }

@@ -19,11 +19,11 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 
-import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
@@ -853,7 +853,7 @@ public class SequenceFile {
       try {                                       
         MessageDigest digester = MessageDigest.getInstance("MD5");
         long time = Time.now();
-        digester.update((new UID()+"@"+time).getBytes(Charsets.UTF_8));
+        digester.update((new UID()+"@"+time).getBytes(StandardCharsets.UTF_8));
         sync = digester.digest();
       } catch (Exception e) {
         throw new RuntimeException(e);

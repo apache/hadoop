@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FileSystemTestWrapper;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
@@ -25,7 +31,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.util.EnumSet;
 import java.util.Random;
 import com.google.common.collect.ImmutableList;
 
@@ -619,6 +628,56 @@ public class TestNameNodeMetrics {
       assertGauge("NumFilesUnderConstruction", 0L, getMetrics(NS_METRICS));
     } finally {
       fs1.close();
+    }
+  }
+
+  @Test
+  public void testGenerateEDEKTime() throws IOException,
+      NoSuchAlgorithmException {
+    //Create new MiniDFSCluster with EncryptionZone configurations
+    Configuration conf = new HdfsConfiguration();
+    FileSystemTestHelper fsHelper = new FileSystemTestHelper();
+    // Set up java key store
+    String testRoot = fsHelper.getTestRootDir();
+    File testRootDir = new File(testRoot).getAbsoluteFile();
+    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" +
+        new Path(testRootDir.toString(), "test.jks").toUri());
+    conf.setBoolean(DFSConfigKeys
+        .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
+        2);
+
+    try (MiniDFSCluster clusterEDEK = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+
+      DistributedFileSystem fsEDEK =
+          clusterEDEK.getFileSystem();
+      FileSystemTestWrapper fsWrapper = new FileSystemTestWrapper(
+          fsEDEK);
+      HdfsAdmin dfsAdmin = new HdfsAdmin(clusterEDEK.getURI(),
+          conf);
+      fsEDEK.getClient().setKeyProvider(
+          clusterEDEK.getNameNode().getNamesystem()
+              .getProvider());
+
+      String testKey = "test_key";
+      DFSTestUtil.createKey(testKey, clusterEDEK, conf);
+
+      final Path zoneParent = new Path("/zones");
+      final Path zone1 = new Path(zoneParent, "zone1");
+      fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
+      dfsAdmin.createEncryptionZone(zone1, "test_key", EnumSet.of(
+          CreateEncryptionZoneFlag.NO_TRASH));
+
+      MetricsRecordBuilder rb = getMetrics(NN_METRICS);
+
+      for (int i = 0; i < 3; i++) {
+        Path filePath = new Path("/zones/zone1/testfile-" + i);
+        DFSTestUtil.createFile(fsEDEK, filePath, 1024, (short) 3, 1L);
+
+        assertQuantileGauges("GenerateEDEKTime1s", rb);
+      }
     }
   }
 }

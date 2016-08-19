@@ -18,8 +18,8 @@
 package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
@@ -57,6 +57,7 @@ public class LINK3Request extends RequestWithHandle {
     handle.serialize(xdr);
     fromDirHandle.serialize(xdr);
     xdr.writeInt(fromName.length());
-    xdr.writeFixedOpaque(fromName.getBytes(Charsets.UTF_8), fromName.length());
+    xdr.writeFixedOpaque(fromName.getBytes(StandardCharsets.UTF_8),
+        fromName.length());
   }
 }

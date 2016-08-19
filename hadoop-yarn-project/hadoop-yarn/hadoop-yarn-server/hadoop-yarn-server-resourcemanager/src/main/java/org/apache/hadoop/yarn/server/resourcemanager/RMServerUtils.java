@@ -70,10 +70,11 @@ public class RMServerUtils {
 
   public static List<RMNode> queryRMNodes(RMContext context,
       EnumSet<NodeState> acceptedStates) {
-    // nodes contains nodes that are NEW, RUNNING OR UNHEALTHY
+    // nodes contains nodes that are NEW, RUNNING, UNHEALTHY or DECOMMISSIONING.
     ArrayList<RMNode> results = new ArrayList<RMNode>();
     if (acceptedStates.contains(NodeState.NEW) ||
         acceptedStates.contains(NodeState.RUNNING) ||
+        acceptedStates.contains(NodeState.DECOMMISSIONING) ||
         acceptedStates.contains(NodeState.UNHEALTHY)) {
       for (RMNode rmNode : context.getRMNodes().values()) {
         if (acceptedStates.contains(rmNode.getState())) {

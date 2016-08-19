@@ -398,7 +398,7 @@ public class TestFileJournalManager {
     FileJournalManager.matchEditLogs(badDir);
   }
   
-  private static EditLogInputStream getJournalInputStream(JournalManager jm,
+  private static EditLogInputStream getJournalInputStream(FileJournalManager jm,
       long txId, boolean inProgressOk) throws IOException {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,

@@ -19,8 +19,9 @@ package org.apache.hadoop.oncrpc.security;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.commons.io.Charsets;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.oncrpc.XDR;
 
 /** Credential used by AUTH_SYS */
@@ -63,6 +64,11 @@ public class CredentialsSys extends Credentials {
     return mAuxGIDs;
   }
 
+  @VisibleForTesting
+  int getStamp() {
+    return mStamp;
+  }
+
   public void setGID(int gid) {
     this.mGID = gid;
   }
@@ -73,6 +79,11 @@ public class CredentialsSys extends Credentials {
 
   public void setStamp(int stamp) {
     this.mStamp = stamp;
+  }
+
+  @VisibleForTesting
+  void setHostName(String hostname) {
+    this.mHostName = hostname;
   }
 
   @Override
@@ -93,8 +104,14 @@ public class CredentialsSys extends Credentials {
 
   @Override
   public void write(XDR xdr) {
+    int padding = 0;
+    // Ensure there are padding bytes if hostname is not a multiple of 4.
+    padding = 4 - (mHostName.getBytes(StandardCharsets.UTF_8).length % 4);
+    // padding bytes is zero if hostname is already a multiple of 4.
+    padding = padding % 4;
     // mStamp + mHostName.length + mHostName + mUID + mGID + mAuxGIDs.count
-    mCredentialsLength = 20 + mHostName.getBytes(Charsets.UTF_8).length;
+    mCredentialsLength = 20 + mHostName.getBytes(StandardCharsets.UTF_8).length;
+    mCredentialsLength = mCredentialsLength + padding;
     // mAuxGIDs
     if (mAuxGIDs != null && mAuxGIDs.length > 0) {
       mCredentialsLength += mAuxGIDs.length * 4;

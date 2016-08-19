@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
@@ -82,6 +84,7 @@ public class AppInfo {
   protected long elapsedTime;
   protected String amContainerLogs;
   protected String amHostHttpAddress;
+  private String amRPCAddress;
   protected long allocatedMB;
   protected long allocatedVCores;
   protected int runningContainers;
@@ -96,7 +99,10 @@ public class AppInfo {
   protected int numNonAMContainerPreempted;
   protected int numAMContainerPreempted;
 
-  protected List<ResourceRequest> resourceRequests;
+  // list of resource requests
+  @XmlElement(name = "resourceRequests")
+  private List<ResourceRequestInfo> resourceRequests =
+      new ArrayList<ResourceRequestInfo>();
 
   protected LogAggregationStatus logAggregationStatus;
   protected boolean unmanagedApplication;
@@ -168,7 +174,9 @@ public class AppInfo {
                 masterContainer.getId().toString(), app.getUser());
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
           }
-          
+
+          this.amRPCAddress = getAmRPCAddressFromRMAppAttempt(attempt);
+
           ApplicationResourceUsageReport resourceReport = attempt
               .getApplicationResourceUsageReport();
           if (resourceReport != null) {
@@ -179,8 +187,16 @@ public class AppInfo {
             queueUsagePercentage = resourceReport.getQueueUsagePercentage();
             clusterUsagePercentage = resourceReport.getClusterUsagePercentage();
           }
-          resourceRequests = rm.getRMContext().getScheduler()
+
+          List<ResourceRequest> resourceRequestsRaw = rm.getRMContext()
+              .getScheduler()
               .getPendingResourceRequestsForAttempt(attempt.getAppAttemptId());
+
+          if (resourceRequestsRaw != null) {
+            for (ResourceRequest req : resourceRequestsRaw) {
+              resourceRequests.add(new ResourceRequestInfo(req));
+            }
+          }
         }
       }
 
@@ -281,6 +297,22 @@ public class AppInfo {
     return this.amHostHttpAddress;
   }
 
+  public String getAmRPCAddress() {
+    return amRPCAddress;
+  }
+
+  static public String getAmRPCAddressFromRMAppAttempt(RMAppAttempt attempt) {
+    String amRPCAddress = null;
+    if (attempt != null) {
+      String amHost = attempt.getHost();
+      int amRpcPort = attempt.getRpcPort();
+      if (!"N/A".equals(amHost) && amRpcPort != -1) {
+        amRPCAddress = amHost + ":" + amRpcPort;
+      }
+    }
+    return amRPCAddress;
+  }
+
   public boolean amContainerLogsExist() {
     return this.amContainerLogsExist;
   }
@@ -333,7 +365,7 @@ public class AppInfo {
     return vcoreSeconds;
   }
 
-  public List<ResourceRequest> getResourceRequests() {
+  public List<ResourceRequestInfo> getResourceRequests() {
     return this.resourceRequests;
   }
 

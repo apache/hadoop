@@ -26,6 +26,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -255,9 +256,9 @@ public class TestRMAdminCLI {
   }
 
   @Test
-  public void testRefreshNodesWithGracefulTimeout() throws Exception {
+  public void testRefreshNodesGracefulBeforeTimeout() throws Exception {
     // graceful decommission before timeout
-    String[] args = { "-refreshNodes", "-g", "1" };
+    String[] args = {"-refreshNodes", "-g", "1", "-client"};
     CheckForDecommissioningNodesResponse response = Records
         .newRecord(CheckForDecommissioningNodesResponse.class);
     HashSet<NodeId> decomNodes = new HashSet<NodeId>();
@@ -266,31 +267,88 @@ public class TestRMAdminCLI {
         CheckForDecommissioningNodesRequest.class))).thenReturn(response);
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshNodes(
-        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL));
+        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL, 1));
+    verify(admin, never()).refreshNodes(
+        RefreshNodesRequest.newInstance(DecommissionType.FORCEFUL));
+  }
 
+  @Test
+  public void testRefreshNodesGracefulHitTimeout() throws Exception {
     // Forceful decommission when timeout occurs
-    String[] focefulDecomArgs = { "-refreshNodes", "-g", "1" };
-    decomNodes = new HashSet<NodeId>();
+    String[] forcefulDecomArgs = {"-refreshNodes", "-g", "1", "-client"};
+    HashSet<NodeId> decomNodes = new HashSet<NodeId>();
+    CheckForDecommissioningNodesResponse response = Records
+        .newRecord(CheckForDecommissioningNodesResponse.class);
     response.setDecommissioningNodes(decomNodes);
     decomNodes.add(NodeId.newInstance("node1", 100));
     response.setDecommissioningNodes(decomNodes);
     when(admin.checkForDecommissioningNodes(any(
         CheckForDecommissioningNodesRequest.class))).thenReturn(response);
-    assertEquals(0, rmAdminCLI.run(focefulDecomArgs));
+    assertEquals(0, rmAdminCLI.run(forcefulDecomArgs));
     verify(admin).refreshNodes(
         RefreshNodesRequest.newInstance(DecommissionType.FORCEFUL));
+  }
 
+  @Test
+  public void testRefreshNodesGracefulInfiniteTimeout() throws Exception {
+    String[] infiniteTimeoutArgs = {"-refreshNodes", "-g", "-1", "-client"};
+    testRefreshNodesGracefulInfiniteTimeout(infiniteTimeoutArgs);
+  }
+
+  @Test
+  public void testRefreshNodesGracefulNoTimeout() throws Exception {
+    // no timeout (infinite timeout)
+    String[] noTimeoutArgs = {"-refreshNodes", "-g", "-client"};
+    testRefreshNodesGracefulInfiniteTimeout(noTimeoutArgs);
+  }
+
+  private void testRefreshNodesGracefulInfiniteTimeout(String[] args)
+      throws Exception {
+    when(admin.checkForDecommissioningNodes(any(
+        CheckForDecommissioningNodesRequest.class))).thenAnswer(
+        new Answer<CheckForDecommissioningNodesResponse>() {
+            private int count = 5;
+            @Override
+            public CheckForDecommissioningNodesResponse answer(
+                InvocationOnMock invocationOnMock) throws Throwable {
+              CheckForDecommissioningNodesResponse response = Records
+                  .newRecord(CheckForDecommissioningNodesResponse.class);
+              HashSet<NodeId> decomNodes = new HashSet<NodeId>();
+              count--;
+              if (count <= 0) {
+                response.setDecommissioningNodes(decomNodes);
+                return response;
+              } else {
+                decomNodes.add(NodeId.newInstance("node1", 100));
+                response.setDecommissioningNodes(decomNodes);
+                return response;
+              }
+            }
+          });
+    assertEquals(0, rmAdminCLI.run(args));
+    verify(admin, atLeastOnce()).refreshNodes(
+        RefreshNodesRequest.newInstance(DecommissionType.GRACEFUL, -1));
+    verify(admin, never()).refreshNodes(
+        RefreshNodesRequest.newInstance(DecommissionType.FORCEFUL));
+  }
+
+  @Test
+  public void testRefreshNodesGracefulInvalidArgs() throws Exception {
     // invalid graceful timeout parameter
-    String[] invalidArgs = { "-refreshNodes", "-ginvalid", "invalid" };
+    String[] invalidArgs = {"-refreshNodes", "-ginvalid", "invalid", "-client"};
     assertEquals(-1, rmAdminCLI.run(invalidArgs));
 
     // invalid timeout
-    String[] invalidTimeoutArgs = { "-refreshNodes", "-g", "invalid" };
+    String[] invalidTimeoutArgs = {"-refreshNodes", "-g", "invalid", "-client"};
     assertEquals(-1, rmAdminCLI.run(invalidTimeoutArgs));
 
     // negative timeout
-    String[] negativeTimeoutArgs = { "-refreshNodes", "-g", "-1000" };
+    String[] negativeTimeoutArgs = {"-refreshNodes", "-g", "-1000", "-client"};
     assertEquals(-1, rmAdminCLI.run(negativeTimeoutArgs));
+
+    // invalid tracking mode
+    String[] invalidTrackingArgs = {"-refreshNodes", "-g", "1", "-foo"};
+    assertEquals(-1, rmAdminCLI.run(invalidTrackingArgs));
   }
 
   @Test(timeout=500)
@@ -403,9 +461,10 @@ public class TestRMAdminCLI {
       assertTrue(dataOut
           .toString()
           .contains(
-              "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in " +
-              "seconds]]] [-refreshNodesResources] [-refreshSuperUserGroups" +
-              "Configuration] [-refreshUserToGroupsMappings] " +
+              "yarn rmadmin [-refreshQueues] [-refreshNodes "+
+              "[-g|graceful [timeout in seconds] -client|server]] " +
+              "[-refreshNodesResources] [-refresh" +
+              "SuperUserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup " +
               "[username]] [-addToClusterNodeLabels " +
               "<\"label1(exclusive=true),label2(exclusive=false),label3\">] " +
@@ -423,8 +482,9 @@ public class TestRMAdminCLI {
       assertTrue(dataOut
           .toString()
           .contains(
-              "-refreshNodes [-g [timeout in seconds]]: Refresh the hosts information at the " +
-              "ResourceManager."));
+              "-refreshNodes [-g|graceful [timeout in seconds]" +
+              " -client|server]: " +
+              "Refresh the hosts information at the ResourceManager."));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -456,7 +516,8 @@ public class TestRMAdminCLI {
       testError(new String[] { "-help", "-refreshQueues" },
           "Usage: yarn rmadmin [-refreshQueues]", dataErr, 0);
       testError(new String[] { "-help", "-refreshNodes" },
-          "Usage: yarn rmadmin [-refreshNodes [-g [timeout in seconds]]]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshNodes [-g|graceful " +
+          "[timeout in seconds] -client|server]]", dataErr, 0);
       testError(new String[] { "-help", "-refreshNodesResources" },
           "Usage: yarn rmadmin [-refreshNodesResources]", dataErr, 0);
       testError(new String[] { "-help", "-refreshUserToGroupsMappings" },
@@ -495,7 +556,8 @@ public class TestRMAdminCLI {
       assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
       oldOutPrintStream.println(dataOut);
       String expectedHelpMsg = 
-          "yarn rmadmin [-refreshQueues] [-refreshNodes [-g [timeout in seconds]]] "
+          "yarn rmadmin [-refreshQueues] [-refreshNodes [-g|graceful "
+              + "[timeout in seconds] -client|server]] "
               + "[-refreshNodesResources] [-refreshSuperUserGroupsConfiguration] "
               + "[-refreshUserToGroupsMappings] "
               + "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup"

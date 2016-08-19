@@ -561,6 +561,8 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected void serviceStop() throws Exception {
+      // Make sure that all containers are started before starting shutdown
+      syncBarrier.await(10000, TimeUnit.MILLISECONDS);
       System.out.println("Called stooppppp");
       super.serviceStop();
       isStopped = true;
@@ -1215,6 +1217,7 @@ public class TestNodeStatusUpdater {
         BuilderUtils.newContainerToken(containerId, "host", 1234, "user",
             BuilderUtils.newResource(1024, 1), 0, 123,
             "password".getBytes(), 0);
+
     Container completedContainer = new ContainerImpl(conf, null,
         null, null, null,
         BuilderUtils.newContainerTokenIdentifier(containerToken),
@@ -1704,9 +1707,10 @@ public class TestNodeStatusUpdater {
       protected NMContext createNMContext(
           NMContainerTokenSecretManager containerTokenSecretManager,
           NMTokenSecretManagerInNM nmTokenSecretManager,
-          NMStateStoreService store, boolean isDistributedSchedulingEnabled) {
+          NMStateStoreService store, boolean isDistributedSchedulingEnabled,
+          Configuration config) {
         return new MyNMContext(containerTokenSecretManager,
-          nmTokenSecretManager);
+          nmTokenSecretManager, config);
       }
     };
 
@@ -1755,6 +1759,9 @@ public class TestNodeStatusUpdater {
         new File("start_file.txt"), port);
 
     try {
+      // Wait until we start stopping
+      syncBarrier.await(10000, TimeUnit.MILLISECONDS);
+      // Wait until we finish stopping
       syncBarrier.await(10000, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
     }
@@ -1937,9 +1944,9 @@ public class TestNodeStatusUpdater {
 
     public MyNMContext(
         NMContainerTokenSecretManager containerTokenSecretManager,
-        NMTokenSecretManagerInNM nmTokenSecretManager) {
+        NMTokenSecretManagerInNM nmTokenSecretManager, Configuration conf) {
       super(containerTokenSecretManager, nmTokenSecretManager, null, null,
-          new NMNullStateStoreService(), false);
+          new NMNullStateStoreService(), false, conf);
     }
 
     @Override

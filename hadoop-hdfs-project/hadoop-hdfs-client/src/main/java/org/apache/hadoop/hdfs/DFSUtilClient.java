@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.SignedBytes;
-import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -71,6 +70,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
@@ -82,6 +82,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
 
@@ -89,11 +91,21 @@ public class DFSUtilClient {
   public static final byte[] EMPTY_BYTES = {};
   private static final Logger LOG = LoggerFactory.getLogger(
       DFSUtilClient.class);
+
+  // Using the charset canonical name for String/byte[] conversions is much
+  // more efficient due to use of cached encoders/decoders.
+  private static final String UTF8_CSN = StandardCharsets.UTF_8.name();
+
   /**
    * Converts a string to a byte array using UTF8 encoding.
    */
   public static byte[] string2Bytes(String str) {
-    return str.getBytes(Charsets.UTF_8);
+    try {
+      return str.getBytes(UTF8_CSN);
+    } catch (UnsupportedEncodingException e) {
+      // should never happen!
+      throw new IllegalArgumentException("UTF8 decoding is not supported", e);
+    }
   }
 
   /**
@@ -279,13 +291,13 @@ public class DFSUtilClient {
    * @param length The number of bytes to decode
    * @return The decoded string
    */
-  private static String bytes2String(byte[] bytes, int offset, int length) {
+  static String bytes2String(byte[] bytes, int offset, int length) {
     try {
-      return new String(bytes, offset, length, "UTF8");
-    } catch(UnsupportedEncodingException e) {
-      assert false : "UTF8 encoding is not supported ";
+      return new String(bytes, offset, length, UTF8_CSN);
+    } catch (UnsupportedEncodingException e) {
+      // should never happen!
+      throw new IllegalArgumentException("UTF8 encoding is not supported", e);
     }
-    return null;
   }
 
   /**
@@ -735,6 +747,7 @@ public class DFSUtilClient {
       String dnAddr = dn.getXferAddr(connectToDnViaHostname);
       LOG.debug("Connecting to datanode {}", dnAddr);
       NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
+      sock.setTcpNoDelay(getClientDataTransferTcpNoDelay(conf));
       sock.setSoTimeout(timeout);
 
       OutputStream unbufOut = NetUtils.getOutputStream(sock);
@@ -755,5 +768,11 @@ public class DFSUtilClient {
         IOUtils.closeSocket(sock);
       }
     }
+  }
+
+  private static boolean getClientDataTransferTcpNoDelay(Configuration conf) {
+    return conf.getBoolean(
+        DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY,
+        DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT);
   }
 }

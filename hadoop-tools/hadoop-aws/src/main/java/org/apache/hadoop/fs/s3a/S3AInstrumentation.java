@@ -67,6 +67,8 @@ public class S3AInstrumentation {
   private final MutableCounterLong streamReadOperations;
   private final MutableCounterLong streamReadFullyOperations;
   private final MutableCounterLong streamReadsIncomplete;
+  private final MutableCounterLong streamBytesReadInClose;
+  private final MutableCounterLong streamBytesDiscardedInAbort;
   private final MutableCounterLong ignoredErrors;
 
   private final MutableCounterLong numberOfFilesCreated;
@@ -75,7 +77,8 @@ public class S3AInstrumentation {
   private final MutableCounterLong numberOfFilesDeleted;
   private final MutableCounterLong numberOfDirectoriesCreated;
   private final MutableCounterLong numberOfDirectoriesDeleted;
-  private final Map<String, MutableCounterLong> streamMetrics = new HashMap<>();
+  private final Map<String, MutableCounterLong> streamMetrics =
+      new HashMap<>(30);
 
   private static final Statistic[] COUNTERS_TO_CREATE = {
       INVOCATION_COPY_FROM_LOCAL_FILE,
@@ -92,6 +95,7 @@ public class S3AInstrumentation {
       OBJECT_COPY_REQUESTS,
       OBJECT_DELETE_REQUESTS,
       OBJECT_LIST_REQUESTS,
+      OBJECT_CONTINUE_LIST_REQUESTS,
       OBJECT_METADATA_REQUESTS,
       OBJECT_MULTIPART_UPLOAD_ABORTED,
       OBJECT_PUT_BYTES,
@@ -125,6 +129,8 @@ public class S3AInstrumentation {
         streamCounter(STREAM_READ_FULLY_OPERATIONS);
     streamReadsIncomplete =
         streamCounter(STREAM_READ_OPERATIONS_INCOMPLETE);
+    streamBytesReadInClose = streamCounter(STREAM_CLOSE_BYTES_READ);
+    streamBytesDiscardedInAbort = streamCounter(STREAM_ABORT_BYTES_DISCARDED);
     numberOfFilesCreated = counter(FILES_CREATED);
     numberOfFilesCopied = counter(FILES_COPIED);
     bytesOfFilesCopied = counter(FILES_COPIED_BYTES);
@@ -362,6 +368,8 @@ public class S3AInstrumentation {
     streamReadOperations.incr(statistics.readOperations);
     streamReadFullyOperations.incr(statistics.readFullyOperations);
     streamReadsIncomplete.incr(statistics.readsIncomplete);
+    streamBytesReadInClose.incr(statistics.bytesReadInClose);
+    streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort);
   }
 
   /**
@@ -386,6 +394,8 @@ public class S3AInstrumentation {
     public long readOperations;
     public long readFullyOperations;
     public long readsIncomplete;
+    public long bytesReadInClose;
+    public long bytesDiscardedInAbort;
 
     private InputStreamStatistics() {
     }
@@ -426,13 +436,18 @@ public class S3AInstrumentation {
      * The inner stream was closed.
      * @param abortedConnection flag to indicate the stream was aborted,
      * rather than closed cleanly
+     * @param remainingInCurrentRequest the number of bytes remaining in
+     * the current request.
      */
-    public void streamClose(boolean abortedConnection) {
+    public void streamClose(boolean abortedConnection,
+        long remainingInCurrentRequest) {
       closeOperations++;
       if (abortedConnection) {
         this.aborted++;
+        bytesDiscardedInAbort += remainingInCurrentRequest;
       } else {
         closed++;
+        bytesReadInClose += remainingInCurrentRequest;
       }
     }
 
@@ -522,6 +537,8 @@ public class S3AInstrumentation {
       sb.append(", ReadOperations=").append(readOperations);
       sb.append(", ReadFullyOperations=").append(readFullyOperations);
       sb.append(", ReadsIncomplete=").append(readsIncomplete);
+      sb.append(", BytesReadInClose=").append(bytesReadInClose);
+      sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
       sb.append('}');
       return sb.toString();
     }

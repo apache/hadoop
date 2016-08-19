@@ -175,4 +175,10 @@ public interface RMNode {
   long getUntrackedTimeStamp();
 
   void setUntrackedTimeStamp(long timeStamp);
+  /*
+   * Optional decommissioning timeout in second
+   * (null indicates default timeout).
+   * @return the decommissioning timeout in second.
+   */
+  Integer getDecommissioningTimeout();
 }

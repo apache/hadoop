@@ -49,6 +49,7 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.io.output.WriterOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -787,20 +788,19 @@ public class AggregatedLogFormat {
 
       long toSkip = 0;
       long totalBytesToRead = fileLength;
+      long skipAfterRead = 0;
       if (bytes < 0) {
         long absBytes = Math.abs(bytes);
         if (absBytes < fileLength) {
           toSkip = fileLength - absBytes;
           totalBytesToRead = absBytes;
         }
-        long skippedBytes = valueStream.skip(toSkip);
-        if (skippedBytes != toSkip) {
-          throw new IOException("The bytes were skipped are "
-              + "different from the caller requested");
-        }
+        org.apache.hadoop.io.IOUtils.skipFully(
+            valueStream, toSkip);
       } else {
         if (bytes < fileLength) {
           totalBytesToRead = bytes;
+          skipAfterRead = fileLength - bytes;
         }
       }
 
@@ -818,7 +818,9 @@ public class AggregatedLogFormat {
                   pendingRead > buf.length ? buf.length : (int) pendingRead;
         len = valueStream.read(buf, 0, toRead);
       }
-      out.println("End of LogType:" + fileType);
+      org.apache.hadoop.io.IOUtils.skipFully(
+          valueStream, skipAfterRead);
+      out.println("\nEnd of LogType:" + fileType);
       out.println("");
     }
 
@@ -913,20 +915,19 @@ public class AggregatedLogFormat {
 
         long toSkip = 0;
         long totalBytesToRead = fileLength;
+        long skipAfterRead = 0;
         if (bytes < 0) {
           long absBytes = Math.abs(bytes);
           if (absBytes < fileLength) {
             toSkip = fileLength - absBytes;
             totalBytesToRead = absBytes;
           }
-          long skippedBytes = valueStream.skip(toSkip);
-          if (skippedBytes != toSkip) {
-            throw new IOException("The bytes were skipped are "
-                + "different from the caller requested");
-          }
+          org.apache.hadoop.io.IOUtils.skipFully(
+              valueStream, toSkip);
         } else {
           if (bytes < fileLength) {
             totalBytesToRead = bytes;
+            skipAfterRead = fileLength - bytes;
           }
         }
 
@@ -942,7 +943,9 @@ public class AggregatedLogFormat {
           toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
           len = valueStream.read(buf, 0, toRead);
         }
-        out.println("End of LogType:" + fileType);
+        org.apache.hadoop.io.IOUtils.skipFully(
+            valueStream, skipAfterRead);
+        out.println("\nEnd of LogType:" + fileType);
         out.println("");
         return 0;
       } else {
@@ -957,25 +960,21 @@ public class AggregatedLogFormat {
     }
 
     @Private
-    public static String readContainerMetaDataAndSkipData(
+    public static Pair<String, String> readContainerMetaDataAndSkipData(
         DataInputStream valueStream, PrintStream out) throws IOException {
 
       String fileType = valueStream.readUTF();
       String fileLengthStr = valueStream.readUTF();
       long fileLength = Long.parseLong(fileLengthStr);
-      if (out != null) {
-        out.print("LogType:");
-        out.println(fileType);
-        out.print("LogLength:");
-        out.println(fileLengthStr);
-      }
+      Pair<String, String> logMeta = new Pair<String, String>(
+          fileType, fileLengthStr);
       long totalSkipped = 0;
       long currSkipped = 0;
       while (currSkipped != -1 && totalSkipped < fileLength) {
         currSkipped = valueStream.skip(fileLength - totalSkipped);
         totalSkipped += currSkipped;
       }
-      return fileType;
+      return logMeta;
     }
 
     public void close() {

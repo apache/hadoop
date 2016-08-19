@@ -27,16 +27,21 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -102,6 +107,17 @@ public class EditLogTailer {
   private final long logRollPeriodMs;
 
   /**
+   * The timeout in milliseconds of calling rollEdits RPC to Active NN.
+   * @see HDFS-4176.
+   */
+  private final long rollEditsTimeoutMs;
+
+  /**
+   * The executor to run roll edit RPC call in a daemon thread.
+   */
+  private final ExecutorService rollEditsRpcExecutor;
+
+  /**
    * How often the Standby should check if there are new finalized segment(s)
    * available to be read from.
    */
@@ -116,6 +132,11 @@ public class EditLogTailer {
    * maximum number of retries we should give each of the remote namenodes before giving up
    */
   private int maxRetries;
+
+  /**
+   * Whether the tailer should tail the in-progress edit log segments.
+   */
+  private final boolean inProgressOk;
 
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
@@ -154,6 +175,13 @@ public class EditLogTailer {
     sleepTimeMs = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT) * 1000;
 
+    rollEditsTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT) * 1000;
+
+    rollEditsRpcExecutor = Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder().setDaemon(true).build());
+
     maxRetries = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY,
       DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
     if (maxRetries <= 0) {
@@ -163,6 +191,10 @@ public class EditLogTailer {
           DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT);
       maxRetries = DFSConfigKeys.DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT;
     }
+
+    inProgressOk = conf.getBoolean(
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
 
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
@@ -177,6 +209,7 @@ public class EditLogTailer {
   }
   
   public void stop() throws IOException {
+    rollEditsRpcExecutor.shutdown();
     tailerThread.setShouldRun(false);
     tailerThread.interrupt();
     try {
@@ -196,7 +229,7 @@ public class EditLogTailer {
   public void setEditLog(FSEditLog editLog) {
     this.editLog = editLog;
   }
-  
+
   public void catchupDuringFailover() throws IOException {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
@@ -236,7 +269,8 @@ public class EditLogTailer {
       }
       Collection<EditLogInputStream> streams;
       try {
-        streams = editLog.selectInputStreams(lastTxnId + 1, 0, null, false);
+        streams = editLog.selectInputStreams(lastTxnId + 1, 0,
+            null, inProgressOk, true);
       } catch (IOException ioe) {
         // This is acceptable. If we try to tail edits in the middle of an edits
         // log roll, i.e. the last one has been finalized but the new inprogress
@@ -290,30 +324,50 @@ public class EditLogTailer {
   }
 
   /**
+   * NameNodeProxy factory method.
+   * @return a Callable to roll logs on remote NameNode.
+   */
+  @VisibleForTesting
+  Callable<Void> getNameNodeProxy() {
+    return new MultipleNameNodeProxy<Void>() {
+      @Override
+      protected Void doWork() throws IOException {
+        cachedActiveProxy.rollEditLog();
+        return null;
+      }
+    };
+  }
+
+  /**
    * Trigger the active node to roll its logs.
    */
-  private void triggerActiveLogRoll() {
+  @VisibleForTesting
+  void triggerActiveLogRoll() {
     LOG.info("Triggering log roll on remote NameNode");
+    Future<Void> future = null;
     try {
-      new MultipleNameNodeProxy<Void>() {
-        @Override
-        protected Void doWork() throws IOException {
-          cachedActiveProxy.rollEditLog();
-          return null;
-        }
-      }.call();
+      future = rollEditsRpcExecutor.submit(getNameNodeProxy());
+      future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
       lastRollTriggerTxId = lastLoadedTxnId;
-    } catch (IOException ioe) {
-      if (ioe instanceof RemoteException) {
-        ioe = ((RemoteException)ioe).unwrapRemoteException();
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RemoteException) {
+        IOException ioe = ((RemoteException) cause).unwrapRemoteException();
         if (ioe instanceof StandbyException) {
           LOG.info("Skipping log roll. Remote node is not in Active state: " +
               ioe.getMessage().split("\n")[0]);
           return;
         }
       }
-
-      LOG.warn("Unable to trigger a roll of the active NN", ioe);
+      LOG.warn("Unable to trigger a roll of the active NN", e);
+    } catch (TimeoutException e) {
+      if (future != null) {
+        future.cancel(true);
+      }
+      LOG.warn(String.format(
+          "Unable to finish rolling edits in %d ms", rollEditsTimeoutMs));
+    } catch (InterruptedException e) {
+      LOG.warn("Unable to trigger a roll of the active NN", e);
     }
   }
 
@@ -416,11 +470,11 @@ public class EditLogTailer {
     protected abstract T doWork() throws IOException;
 
     public T call() throws IOException {
+      // reset the loop count on success
+      nnLoopCount = 0;
       while ((cachedActiveProxy = getActiveNodeProxy()) != null) {
         try {
           T ret = doWork();
-          // reset the loop count on success
-          nnLoopCount = 0;
           return ret;
         } catch (RemoteException e) {
           Throwable cause = e.unwrapRemoteException(StandbyException.class);

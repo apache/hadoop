@@ -728,6 +728,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int DFS_HA_TAILEDITS_PERIOD_DEFAULT = 60; // 1m
   public static final String DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_KEY = "dfs.ha.tail-edits.namenode-retries";
   public static final int DFS_HA_TAILEDITS_ALL_NAMESNODES_RETRY_DEFAULT = 3;
+  public static final String  DFS_HA_TAILEDITS_INPROGRESS_KEY =
+          "dfs.ha.tail-edits.in-progress";
+  public static final boolean DFS_HA_TAILEDITS_INPROGRESS_DEFAULT = false;
+  public static final String DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY =
+      "dfs.ha.tail-edits.rolledits.timeout";
+  public static final int DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT = 60; // 1m
   public static final String DFS_HA_LOGROLL_RPC_TIMEOUT_KEY = "dfs.ha.log-roll.rpc.timeout";
   public static final int DFS_HA_LOGROLL_RPC_TIMEOUT_DEFAULT = 20000; // 20s
   public static final String DFS_HA_FENCE_METHODS_KEY = "dfs.ha.fencing.methods";
@@ -741,6 +747,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Security-related configs
   public static final String DFS_ENCRYPT_DATA_TRANSFER_KEY = "dfs.encrypt.data.transfer";
   public static final boolean DFS_ENCRYPT_DATA_TRANSFER_DEFAULT = false;
+  public static final String DFS_XFRAME_OPTION_ENABLED = "dfs.xframe.enabled";
+  public static final boolean DFS_XFRAME_OPTION_ENABLED_DEFAULT = true;
+
+  public static final String DFS_XFRAME_OPTION_VALUE = "dfs.xframe.value";
+  public static final String DFS_XFRAME_OPTION_VALUE_DEFAULT = "SAMEORIGIN";
+
   @Deprecated
   public static final String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY =
       HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY;
@@ -929,6 +941,36 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int
       DFS_DATANODE_TRANSFER_SOCKET_RECV_BUFFER_SIZE_DEFAULT =
       HdfsConstants.DEFAULT_DATA_SOCKET_SIZE;
+
+  public static final String
+      DFS_DATA_TRANSFER_SERVER_TCPNODELAY =
+      "dfs.data.transfer.server.tcpnodelay";
+  public static final boolean
+      DFS_DATA_TRANSFER_SERVER_TCPNODELAY_DEFAULT = true;
+
+  // Disk Balancer Keys
+  public static final String DFS_DISK_BALANCER_ENABLED =
+      "dfs.disk.balancer.enabled";
+  public static final boolean DFS_DISK_BALANCER_ENABLED_DEFAULT = false;
+
+  public static final String DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT =
+      "dfs.disk.balancer.max.disk.throughputInMBperSec";
+  public static final int DFS_DISK_BALANCER_MAX_DISK_THROUGHPUT_DEFAULT =
+      10;
+
+  public static final String DFS_DISK_BALANCER_MAX_DISK_ERRORS =
+      "dfs.disk.balancer.max.disk.errors";
+  public static final int DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT = 5;
+
+
+  public static final String DFS_DISK_BALANCER_BLOCK_TOLERANCE =
+      "dfs.disk.balancer.block.tolerance.percent";
+  public static final int DFS_DISK_BALANCER_BLOCK_TOLERANCE_DEFAULT = 5;
+
+  public static final String DFS_DISK_BALANCER_PLAN_THRESHOLD =
+      "dfs.disk.balancer.plan.threshold.percent";
+  public static final int DFS_DISK_BALANCER_PLAN_THRESHOLD_DEFAULT = 10;
+
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated
@@ -1238,12 +1280,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT =
       HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 
-  @Deprecated
-  public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADER =
-      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
-  @Deprecated
-  public static final boolean DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT =
-      HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
   @Deprecated
   public static final String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
       HdfsClientConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL;

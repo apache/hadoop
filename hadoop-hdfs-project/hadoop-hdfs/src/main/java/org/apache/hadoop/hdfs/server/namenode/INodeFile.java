@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -496,9 +497,25 @@ public class INodeFile extends INodeWithAdditionalFields
   public byte getStoragePolicyID() {
     byte id = getLocalStoragePolicyID();
     if (id == BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
-      return this.getParent() != null ?
+      id = this.getParent() != null ?
           this.getParent().getStoragePolicyID() : id;
     }
+
+    // For Striped EC files, we support only suitable policies. Current
+    // supported policies are HOT, COLD, ALL_SSD.
+    // If the file was set with any other policies, then we just treat policy as
+    // BLOCK_STORAGE_POLICY_ID_UNSPECIFIED.
+    if (isStriped() && id != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED
+        && !ErasureCodingPolicyManager
+            .checkStoragePolicySuitableForECStripedMode(id)) {
+      id = HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("The current effective storage policy id : " + id
+            + " is not suitable for striped mode EC file : " + getName()
+            + ". So, just returning unspecified storage policy id");
+      }
+    }
+
     return id;
   }
 

@@ -18,7 +18,7 @@
   <parent>
     <artifactId>hadoop-main</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha2-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-build-tools</artifactId>
@@ -29,6 +29,19 @@
     <failIfNoTests>false</failIfNoTests>
   </properties>
   <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/target/extra-resources</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>LICENSE.txt</include>
+          <include>NOTICE.txt</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -37,17 +50,46 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+      <!-- copy L&N files to target/extra-resources -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-resources</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.basedir}/target/extra-resources</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>../</directory>
+                  <includes>
+                    <include>LICENSE.txt</include>
+                    <include>NOTICE.txt</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- add entries for L&N files to remote-resources.xml in jar file -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
         <executions>
           <execution>
+            <phase>process-resources</phase>
             <goals>
               <goal>bundle</goal>
             </goals>
           </execution>
         </executions>
         <configuration>
+          <resourcesDirectory>${project.build.outputDirectory}</resourcesDirectory>
           <includes>
             <include>META-INF/LICENSE.txt</include>
             <include>META-INF/NOTICE.txt</include>

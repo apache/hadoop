@@ -26,10 +26,10 @@ function hadoop_usage
 {
   hadoop_add_option "--buildpaths" "attempt to add class files from build tree"
   hadoop_add_option "--daemon (start|status|stop)" "operate on a daemon"
-  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in slave mode"
+  hadoop_add_option "--hostnames list[,of,host,names]" "hosts to use in worker mode"
   hadoop_add_option "--loglevel level" "set the log4j level for this command"
-  hadoop_add_option "--hosts filename" "list of hosts to use in slave mode"
-  hadoop_add_option "--slaves" "turn on slave mode"
+  hadoop_add_option "--hosts filename" "list of hosts to use in worker mode"
+  hadoop_add_option "--workers" "turn on worker mode"
 
   hadoop_add_subcommand "balancer" "run a cluster balancing utility"
   hadoop_add_subcommand "cacheadmin" "configure the HDFS cache"
@@ -39,6 +39,7 @@ function hadoop_usage
   hadoop_add_subcommand "debug" "run a Debug Admin to execute HDFS debug commands"
   hadoop_add_subcommand "dfs" "run a filesystem command on the file system"
   hadoop_add_subcommand "dfsadmin" "run a DFS admin client"
+  hadoop_add_subcommand "diskbalancer" "Distributes data evenly among disks on a given node"
   hadoop_add_subcommand "envvars" "display computed Hadoop environment variables"
   hadoop_add_subcommand "erasurecode" "run a HDFS ErasureCoding CLI"
   hadoop_add_subcommand "fetchdt" "fetch a delegation token from the NameNode"
@@ -124,6 +125,11 @@ function hdfscmd_case
     ;;
     dfsadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
+      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+    ;;
+    diskbalancer)
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancer
       hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
@@ -295,8 +301,8 @@ fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
 
-if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
-  hadoop_common_slave_mode_execute "${HADOOP_HDFS_HOME}/bin/hdfs" "${HADOOP_USER_PARAMS[@]}"
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_HDFS_HOME}/bin/hdfs" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 

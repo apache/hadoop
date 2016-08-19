@@ -80,16 +80,7 @@ public class KerberosName {
    */
   private static List<Rule> rules;
 
-  private static String defaultRealm;
-
-  static {
-    try {
-      defaultRealm = KerberosUtil.getDefaultRealm();
-    } catch (Exception ke) {
-        LOG.debug("Kerberos krb5 configuration not found, setting default realm to empty");
-        defaultRealm="";
-    }
-  }
+  private static String defaultRealm = null;
 
   @VisibleForTesting
   public static void resetDefaultRealm() {
@@ -124,9 +115,18 @@ public class KerberosName {
 
   /**
    * Get the configured default realm.
+   * Used syncronized method here, because double-check locking is overhead.
    * @return the default realm from the krb5.conf
    */
-  public String getDefaultRealm() {
+  public static synchronized String getDefaultRealm() {
+    if (defaultRealm == null) {
+      try {
+        defaultRealm = KerberosUtil.getDefaultRealm();
+      } catch (Exception ke) {
+        LOG.debug("Kerberos krb5 configuration not found, setting default realm to empty");
+        defaultRealm = "";
+      }
+    }
     return defaultRealm;
   }
 
@@ -309,7 +309,7 @@ public class KerberosName {
     String apply(String[] params) throws IOException {
       String result = null;
       if (isDefault) {
-        if (defaultRealm.equals(params[0])) {
+        if (getDefaultRealm().equals(params[0])) {
           result = params[1];
         }
       } else if (params.length - 1 == numOfComponents) {
