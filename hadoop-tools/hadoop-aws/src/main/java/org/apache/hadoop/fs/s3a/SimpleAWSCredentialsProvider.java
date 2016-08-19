@@ -18,23 +18,24 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.IOException;
-import java.net.URI;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ProviderUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import java.io.IOException;
+import java.net.URI;
+
+import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
 
 /**
- * Support session credentials for authenticating with AWS.
+ * Support simple credentials for authenticating with AWS.
+ * Keys generated in URLs are not supported.
  *
  * Please note that users may reference this class name from configuration
  * property fs.s3a.aws.credentials.provider.  Therefore, changing the class name
@@ -42,22 +43,20 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
+public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
 
   public static final String NAME
-      = "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider";
+      = "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider";
   private String accessKey;
   private String secretKey;
-  private String sessionToken;
   private IOException lookupIOE;
 
-  public TemporaryAWSCredentialsProvider(URI uri, Configuration conf) {
+  public SimpleAWSCredentialsProvider(URI uri, Configuration conf) {
     try {
       Configuration c = ProviderUtils.excludeIncompatibleCredentialProviders(
           conf, S3AFileSystem.class);
       this.accessKey = S3AUtils.lookupPassword(c, ACCESS_KEY, null);
       this.secretKey = S3AUtils.lookupPassword(c, SECRET_KEY, null);
-      this.sessionToken = S3AUtils.lookupPassword(c, SESSION_TOKEN, null);
     } catch (IOException e) {
       lookupIOE = e;
     }
@@ -69,9 +68,8 @@ public class TemporaryAWSCredentialsProvider implements AWSCredentialsProvider {
       throw new CredentialInitializationException(lookupIOE.toString(),
           lookupIOE);
     }
-    if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)
-        && !StringUtils.isEmpty(sessionToken)) {
-      return new BasicSessionCredentials(accessKey, secretKey, sessionToken);
+    if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)) {
+      return new BasicAWSCredentials(accessKey, secretKey);
     }
     throw new CredentialInitializationException(
         "Access key, secret key or session token is unset");

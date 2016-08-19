@@ -50,7 +50,9 @@ public class TestS3A {
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestPath(),true);
+    if (fc != null) {
+      fc.delete(getTestPath(), true);
+    }
   }
 
   protected Path getTestPath() {

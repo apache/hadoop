@@ -63,7 +63,9 @@ public abstract class FileContextUtilBase {
 
   @After
   public void tearDown() throws Exception {
-    fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
+    if (fc != null) {
+      fc.delete(fileContextTestHelper.getTestRootPath(fc), true);
+    }
   }
   
   @Test

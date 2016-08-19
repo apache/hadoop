@@ -29,15 +29,15 @@ import org.apache.hadoop.classification.InterfaceStability;
  * BasicAWSCredentialsProvider supports static configuration of access key ID
  * and secret access key for use with the AWS SDK.
  *
- * Please note that users may reference this class name from configuration
- * property fs.s3a.aws.credentials.provider.  Therefore, changing the class name
- * would be a backward-incompatible change.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class BasicAWSCredentialsProvider implements AWSCredentialsProvider {
+  public static final String NAME
+      = "org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider";
   private final String accessKey;
   private final String secretKey;
+
 
   public BasicAWSCredentialsProvider(String accessKey, String secretKey) {
     this.accessKey = accessKey;
