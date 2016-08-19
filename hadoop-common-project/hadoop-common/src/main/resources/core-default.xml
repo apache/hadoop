@@ -877,22 +877,27 @@
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
   <description>
-    Class name of a credentials provider that implements
-    com.amazonaws.auth.AWSCredentialsProvider.  Omit if using access/secret keys
-    or another authentication mechanism.  The specified class must provide an
-    accessible constructor accepting java.net.URI and
-    org.apache.hadoop.conf.Configuration, or an accessible default constructor.
+    Comma-separated class names of credential provider classes which implement
+    com.amazonaws.auth.AWSCredentialsProvider.
+
+    These are loaded and queried in sequence for a valid set of credentials.
+    Each listed class must provide either an accessible constructor accepting
+    java.net.URI and org.apache.hadoop.conf.Configuration, or an accessible
+    default constructor.
+
     Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
     anonymous access to a publicly accessible S3 bucket without any credentials.
     Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases.  It can be useful
+    security and therefore is unsuitable for most use cases. It can be useful
     for accessing public data sets without requiring AWS credentials.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.session.token</name>
-  <description>The session token used with temporary credentials. Used only with provider org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider.</description>
+  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
+    as one of the providers.
+  </description>
 </property>
 
 <property>

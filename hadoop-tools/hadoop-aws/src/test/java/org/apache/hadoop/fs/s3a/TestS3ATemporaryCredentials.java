@@ -55,8 +55,8 @@ public class TestS3ATemporaryCredentials extends AbstractFSContractTestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestS3ATemporaryCredentials.class);
 
-  private static final String PROVIDER_CLASS =
-      "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider";
+  private static final String PROVIDER_CLASS
+      = TemporaryAWSCredentialsProvider.NAME;
 
   private static final long TEST_FILE_SIZE = 1024;
 

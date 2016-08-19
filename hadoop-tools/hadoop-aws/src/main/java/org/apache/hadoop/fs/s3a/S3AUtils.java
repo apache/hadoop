@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.lang.StringUtils;
@@ -29,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
+import org.slf4j.Logger;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -40,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
 
 /**
@@ -48,6 +53,14 @@ import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public final class S3AUtils {
+
+  /** Reuse the S3AFileSystem log. */
+  private static final Logger LOG = S3AFileSystem.LOG;
+  static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
+  static final String INSTANTIATION_EXCEPTION
+      = "instantiation exception";
+  static final String NOT_AWS_PROVIDER =
+      "does not implement AWSCredentialsProvider";
 
   private S3AUtils() {
   }
@@ -244,6 +257,85 @@ public final class S3AUtils {
   }
 
   /**
+   * Create the AWS credentials from the providers and the URI.
+   * @param binding Binding URI, may contain user:pass login details
+   * @param conf filesystem configuration
+   * @param fsURI fS URI —after any login details have been stripped.
+   * @return a credentials provider list
+   * @throws IOException Problems loading the providers (including reading
+   * secrets from credential files).
+   */
+  public static AWSCredentialProviderList createAWSCredentialProviderSet(
+      URI binding,
+      Configuration conf,
+      URI fsURI) throws IOException {
+    AWSCredentialProviderList credentials = new AWSCredentialProviderList();
+
+    Class<?>[] awsClasses;
+    try {
+      awsClasses = conf.getClasses(AWS_CREDENTIALS_PROVIDER);
+    } catch (RuntimeException e) {
+      Throwable c = e.getCause() != null ? e.getCause() : e;
+      throw new IOException("From option " + AWS_CREDENTIALS_PROVIDER +
+          ' ' + c, c);
+    }
+    if (awsClasses.length == 0) {
+      S3xLoginHelper.Login creds = getAWSAccessKeys(binding, conf);
+      credentials.add(new BasicAWSCredentialsProvider(
+              creds.getUser(), creds.getPassword()));
+      credentials.add(new EnvironmentVariableCredentialsProvider());
+      credentials.add(new InstanceProfileCredentialsProvider());
+    } else {
+      for (Class<?> aClass : awsClasses) {
+        credentials.add(createAWSCredentialProvider(conf,
+            aClass,
+            fsURI));
+      }
+    }
+    return credentials;
+  }
+
+  /**
+   * Create an AWS credential provider.
+   * @param conf configuration
+   * @param credClass credential class
+   * @param uri URI of the FS
+   * @return the instantiated class
+   * @throws IOException on any instantiation failure.
+   */
+  static AWSCredentialsProvider createAWSCredentialProvider(
+      Configuration conf,
+      Class<?> credClass,
+      URI uri) throws IOException {
+    AWSCredentialsProvider credentials;
+    String className = credClass.getName();
+    if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
+      throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
+    }
+    try {
+      LOG.debug("Credential provider class is {}", className);
+      try {
+        credentials =
+            (AWSCredentialsProvider) credClass.getDeclaredConstructor(
+                URI.class, Configuration.class).newInstance(uri, conf);
+      } catch (NoSuchMethodException | SecurityException e) {
+        credentials =
+            (AWSCredentialsProvider) credClass.getDeclaredConstructor()
+                .newInstance();
+      }
+    } catch (NoSuchMethodException | SecurityException e) {
+      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
+          +".  A class specified in %s must provide an accessible constructor "
+          + "accepting URI and Configuration, or an accessible default "
+          + "constructor.", className, AWS_CREDENTIALS_PROVIDER), e);
+    } catch (ReflectiveOperationException | IllegalArgumentException e) {
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
+    }
+    LOG.debug("Using {} for {}.", credentials, uri);
+    return credentials;
+  }
+
+  /**
    * Return the access key and secret for S3 API use.
    * Credentials may exist in configuration, within credential providers
    * or indicated in the UserInfo of the name URI param.
@@ -263,21 +355,40 @@ public final class S3AUtils {
     return new S3xLoginHelper.Login(accessKey, secretKey);
   }
 
-  private static String getPassword(Configuration conf, String key, String val)
+  /**
+   * Get a password from a configuration, or, if a value is passed in,
+   * pick that up instead.
+   * @param conf configuration
+   * @param key key to look up
+   * @param val current value: if non empty this is used instead of
+   * querying the configuration.
+   * @return a password or "".
+   * @throws IOException on any problem
+   */
+  static String getPassword(Configuration conf, String key, String val)
       throws IOException {
-    if (StringUtils.isEmpty(val)) {
-      try {
-        final char[] pass = conf.getPassword(key);
-        if (pass != null) {
-          return (new String(pass)).trim();
-        } else {
-          return "";
-        }
-      } catch (IOException ioe) {
-        throw new IOException("Cannot find password option " + key, ioe);
-      }
-    } else {
-      return val;
+    return StringUtils.isEmpty(val)
+        ? lookupPassword(conf, key, "")
+        : val;
+  }
+
+  /**
+   * Get a password from a configuration/configured credential providers.
+   * @param conf configuration
+   * @param key key to look up
+   * @param defVal value to return if there is no password
+   * @return a password or the value in {@code defVal}
+   * @throws IOException on any problem
+   */
+  static String lookupPassword(Configuration conf, String key, String defVal)
+      throws IOException {
+    try {
+      final char[] pass = conf.getPassword(key);
+      return pass != null ?
+          new String(pass).trim()
+          : defVal;
+    } catch (IOException ioe) {
+      throw new IOException("Cannot find password option " + key, ioe);
     }
   }
 

@@ -32,14 +32,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSCredentialsProviderChain;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -151,7 +148,7 @@ public class S3AFileSystem extends FileSystem {
       bucket = name.getHost();
 
       AWSCredentialsProvider credentials =
-          getAWSCredentialsProvider(name, conf);
+          createAWSCredentialProviderSet(name, conf, uri);
 
       ClientConfiguration awsConf = new ClientConfiguration();
       awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
@@ -408,57 +405,6 @@ public class S3AFileSystem extends FileSystem {
         }
       }
     }
-  }
-
-  /**
-   * Create the standard credential provider, or load in one explicitly
-   * identified in the configuration.
-   * @param binding the S3 binding/bucket.
-   * @param conf configuration
-   * @return a credential provider
-   * @throws IOException on any problem. Class construction issues may be
-   * nested inside the IOE.
-   */
-  private AWSCredentialsProvider getAWSCredentialsProvider(URI binding,
-      Configuration conf) throws IOException {
-    AWSCredentialsProvider credentials;
-
-    String className = conf.getTrimmed(AWS_CREDENTIALS_PROVIDER);
-    if (StringUtils.isEmpty(className)) {
-      S3xLoginHelper.Login creds = getAWSAccessKeys(binding, conf);
-      credentials = new AWSCredentialsProviderChain(
-          new BasicAWSCredentialsProvider(
-              creds.getUser(), creds.getPassword()),
-          new InstanceProfileCredentialsProvider(),
-          new EnvironmentVariableCredentialsProvider());
-
-    } else {
-      try {
-        LOG.debug("Credential provider class is {}", className);
-        Class<?> credClass = Class.forName(className);
-        try {
-          credentials =
-              (AWSCredentialsProvider)credClass.getDeclaredConstructor(
-                  URI.class, Configuration.class).newInstance(this.uri, conf);
-        } catch (NoSuchMethodException | SecurityException e) {
-          credentials =
-              (AWSCredentialsProvider)credClass.getDeclaredConstructor()
-                  .newInstance();
-        }
-      } catch (ClassNotFoundException e) {
-        throw new IOException(className + " not found.", e);
-      } catch (NoSuchMethodException | SecurityException e) {
-        throw new IOException(String.format("%s constructor exception.  A "
-            + "class specified in %s must provide an accessible constructor "
-            + "accepting URI and Configuration, or an accessible default "
-            + "constructor.", className, AWS_CREDENTIALS_PROVIDER), e);
-      } catch (ReflectiveOperationException | IllegalArgumentException e) {
-        throw new IOException(className + " instantiation exception.", e);
-      }
-      LOG.debug("Using {} for {}.", credentials, this.uri);
-    }
-
-    return credentials;
   }
 
   /**

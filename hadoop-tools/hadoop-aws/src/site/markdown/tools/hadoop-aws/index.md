@@ -276,84 +276,53 @@ one where patches for functionality and performance are very welcome.
 * `httpclient` jar.
 * Jackson `jackson-core`, `jackson-annotations`, `jackson-databind` jars.
 
+### S3A Authentication methods
+
+S3A supports multiple authentication mechanisms, and can be configured as to
+which mechanisms to use, and the order to use them. Custom implementations
+of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+
 ### Authentication properties
 
     <property>
       <name>fs.s3a.access.key</name>
-      <description>AWS access key ID. Omit for IAM role-based or provider-based authentication.</description>
+      <description>AWS access key ID.
+       Omit for IAM role-based or provider-based authentication.</description>
     </property>
 
     <property>
       <name>fs.s3a.secret.key</name>
-      <description>AWS secret key. Omit for IAM role-based or provider-based authentication.</description>
+      <description>AWS secret key.
+       Omit for IAM role-based or provider-based authentication.</description>
     </property>
 
     <property>
       <name>fs.s3a.aws.credentials.provider</name>
       <description>
-        Class name of a credentials provider that implements
-        com.amazonaws.auth.AWSCredentialsProvider.  Omit if using access/secret keys
-        or another authentication mechanism.  The specified class must provide an
-        accessible constructor accepting java.net.URI and
-        org.apache.hadoop.conf.Configuration, or an accessible default constructor.
+        Comma-separated class names of credential provider classes which implement
+        com.amazonaws.auth.AWSCredentialsProvider.
+
+        These are loaded and queried in sequence for a valid set of credentials.
+        Each listed class must provide either an accessible constructor accepting
+        java.net.URI and org.apache.hadoop.conf.Configuration, or an accessible
+        default constructor.
+
         Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
         anonymous access to a publicly accessible S3 bucket without any credentials.
         Please note that allowing anonymous access to an S3 bucket compromises
-        security and therefore is unsuitable for most use cases.  It can be useful
+        security and therefore is unsuitable for most use cases. It can be useful
         for accessing public data sets without requiring AWS credentials.
       </description>
     </property>
 
     <property>
       <name>fs.s3a.session.token</name>
-      <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider as the providers.</description>
+      <description>
+        Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
+        as one of the providers.
+      </description>
     </property>
 
-#### Authentication methods
-
-The standard way to authenticate is with an access key and secret key using the
-properties above. You can also avoid configuring credentials if the EC2
-instances in your cluster are configured with IAM instance profiles that grant
-the appropriate S3 access.
-
-A temporary set of credentials can also be obtained from Amazon STS; these
-consist of an access key, a secret key, and a session token. To use these
-temporary credentials you must include the `aws-java-sdk-sts` JAR in your
-classpath (consult the POM for the current version) and set the
-`TemporaryAWSCredentialsProvider` class as the provider. The session key
-must be set in the property `fs.s3a.session.token` —and the access and secret
-key properties to those of this temporary session.
-
-    <property>
-      <name>fs.s3a.aws.credentials.provider</name>
-      <value>org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider</value>
-    </property>
-
-    <property>
-      <name>fs.s3a.access.key</name>
-      <value>SESSION-ACCESS-KEY</value>
-    </property>
-
-    <property>
-      <name>fs.s3a.secret.key</name>
-      <value>SESSION-SECRET-KEY</value>
-    </property>
-
-    <property>
-      <name>fs.s3a.session.token</name>
-      <value>SECRET-SESSION-TOKEN</value>
-    </property>
-
-#### Protecting the AWS Credentials in S3A
-
-To protect the access/secret keys from prying eyes, it is recommended that you
-use either IAM role-based authentication (such as EC2 instance profile) or
-the credential provider framework securely storing them and accessing them
-through configuration. The following describes using the latter for AWS
-credentials in S3AFileSystem.
-
-For additional reading on the credential provider API see:
-[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
 #### Authenticating via environment variables
 
@@ -366,48 +335,275 @@ export AWS_ACCESS_KEY_ID=my.aws.key
 export AWS_SECRET_ACCESS_KEY=my.secret.key
 ```
 
+If the environment variable `AWS_SESSION_TOKEN` is set, session authentication
+using "Temporary Security Credentials" is enabled; the Key ID and secret key
+must be set to the credentials for that specific sesssion.
+
+```
+export AWS_SESSION_TOKEN=SECRET-SESSION-TOKEN
+export AWS_ACCESS_KEY_ID=SESSION-ACCESS-KEY
+export AWS_SECRET_ACCESS_KEY=SESSION-SECRET-KEY
+```
+
 These environment variables can be used to set the authentication credentials
-instead of properties in the Hadoop configuration. *Important:* these
-environment variables are not propagated from client to server when
+instead of properties in the Hadoop configuration.
+
+*Important:*
+These environment variables are not propagated from client to server when
 YARN applications are launched. That is: having the AWS environment variables
 set when an application is launched will not permit the launched application
 to access S3 resources. The environment variables must (somehow) be set
 on the hosts/processes where the work is executed.
 
-##### End to End Steps for Distcp and S3 with Credential Providers
 
-###### provision
+#### Changing Authentication Providers
 
-```
-% hadoop credential create fs.s3a.access.key -value 123
-    -provider localjceks://file/home/lmccay/aws.jceks
+The standard way to authenticate is with an access key and secret key using the
+properties in the configuration file.
+
+The S3A client follows the following authentication chain:
+
+1. If login details were provided in the filesystem URI, a warning is printed
+and then the username and password extracted for the AWS key and secret respectively.
+1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
+XML configuration.
+1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
+are then looked for.
+1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
+ retrieve credentials published to EC2 VMs.
+
+S3A can be configured to obtain client authentication providers from classes
+which integrate with the AWS SDK by implementing the `com.amazonaws.auth.AWSCredentialsProvider`
+Interface. This is done by listing the implementation classes, in order of
+preference, in the configuration option `fs.s3a.aws.credentials.provider`.
+
+*Important*: AWS Credential Providers are distinct from _Hadoop Credential Providers_.
+As will be covered later, Hadoop Credential Providers allow passwords and other secrets
+to be stored and transferred more securely than in XML configuration files.
+AWS Credential Providers are classes which can be used by the Amazon AWS SDK to
+obtain an AWS login from a different source in the system, including environment
+variables, JVM properties and configuration files.
+
+There are three AWS Credential Providers inside the `hadoop-aws` JAR:
+
+| classname | description |
+|-----------|-------------|
+| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`| Session Credentials |
+| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`| Simple name/secret credentials |
+| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`| Anonymous Login |
+
+There are also many in the Amazon SDKs, in particular two which are automatically
+set up in the authentication chain:
+
+| classname | description |
+|-----------|-------------|
+| `com.amazonaws.auth.InstanceProfileCredentialsProvider`| EC2 Metadata Credentials |
+| `com.amazonaws.auth.EnvironmentVariableCredentialsProvider`| AWS Environment Variables |
+
+
+*Session Credentials with `TemporaryAWSCredentialsProvider`*
+
+[Temporary Security Credentials](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
+can be obtained from the Amazon Security Token Service; these
+consist of an access key, a secret key, and a session token.
+
+To authenticate with these:
+
+1. Declare `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider` as the
+provider.
+1. Set the session key in the property `fs.s3a.session.token`,
+and the access and secret key properties to those of this temporary session.
+
+Example:
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider</value>
+</property>
+
+<property>
+  <name>fs.s3a.access.key</name>
+  <value>SESSION-ACCESS-KEY</value>
+</property>
+
+<property>
+  <name>fs.s3a.secret.key</name>
+  <value>SESSION-SECRET-KEY</value>
+</property>
+
+<property>
+  <name>fs.s3a.session.token</name>
+  <value>SECRET-SESSION-TOKEN</value>
+</property>
 ```
 
-```
-% hadoop credential create fs.s3a.secret.key -value 456
-    -provider localjceks://file/home/lmccay/aws.jceks
+The lifetime of session credentials are fixed when the credentials
+are issued; once they expire the application will no longer be able to
+authenticate to AWS.
+
+*Anonymous Login with `AnonymousAWSCredentialsProvider`*
+
+Specifying `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider` allows
+anonymous access to a publicly accessible S3 bucket without any credentials.
+It can be useful for accessing public data sets without requiring AWS credentials.
+
+```xml
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
+</property>
 ```
 
-###### configure core-site.xml or command line system property
+Once this is done, there's no need to supply any credentials
+in the Hadoop configuration or via environment variables.
 
+This option can be used to verify that an object store does
+not permit unauthenticated access: that is, if an attempt to list
+a bucket is made using the anonymous credentials, it should fail —unless
+explicitly opened up for broader access.
+
+```bash
+hadoop fs -ls \
+ -D fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider \
+ s3a://landsat-pds/
 ```
+
+1. Allowing anonymous access to an S3 bucket compromises
+security and therefore is unsuitable for most use cases.
+
+1. If a list of credential providers is given in `fs.s3a.aws.credentials.provider`,
+then the Anonymous Credential provider *must* come last. If not, credential
+providers listed after it will be ignored.
+
+*Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
+
+This is is the standard credential provider, which
+supports the secret key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
+values. It does not support authentication with logins credentials declared
+in the URLs.
+
+    <property>
+      <name>fs.s3a.aws.credentials.provider</name>
+      <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+    </property>
+
+Apart from its lack of support of user:password details being included in filesystem
+URLs (a dangerous practise that is strongly discouraged), this provider acts
+exactly at the basic authenticator used in the default authentication chain.
+
+This means that the default S3A authentication chain can be defined as
+
+    <property>
+      <name>fs.s3a.aws.credentials.provider</name>
+      <value>
+      org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
+      com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+      com.amazonaws.auth.InstanceProfileCredentialsProvider
+      </value>
+    </property>
+
+
+#### Protecting the AWS Credentials
+
+To protect the access/secret keys from prying eyes, it is recommended that you
+use either IAM role-based authentication (such as EC2 instance profile) or
+the credential provider framework securely storing them and accessing them
+through configuration. The following describes using the latter for AWS
+credentials in the S3A FileSystem.
+
+
+##### Storing secrets with Hadoop Credential Providers
+
+The Hadoop Credential Provider Framework allows secure "Credential Providers"
+to keep secrets outside Hadoop configuration files, storing them in encrypted
+files in local or Hadoop filesystems, and including them in requests.
+
+The S3A configuration options with sensitive data
+(`fs.s3a.secret.key`, `fs.s3a.access.key` and `fs.s3a.session.token`) can
+have their data saved to a binary file stored, with the values being read in
+when the S3A filesystem URL is used for data access. The reference to this
+credential provider is all that is passed as a direct configuration option.
+
+For additional reading on the Hadoop Credential Provider API see:
+[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+
+
+###### Create a credential file
+
+A credential file can be created on any Hadoop filesystem; when creating one on HDFS or
+a Unix filesystem the permissions are automatically set to keep the file
+private to the reader —though as directory permissions are not touched,
+users should verify that the directory containing the file is readable only by
+the current user.
+
+
+```bash
+hadoop credential create fs.s3a.access.key -value 123 \
+    -provider jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks
+
+hadoop credential create fs.s3a.secret.key -value 456 \
+    -provider jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks
+```
+
+A credential file can be listed, to see what entries are kept inside it
+
+```bash
+hadoop credential list -provider jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks
+
+Listing aliases for CredentialProvider: jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks
+fs.s3a.secret.key
+fs.s3a.access.key
+```
+At this point, the credentials are ready for use.
+
+###### Configure the `hadoop.security.credential.provider.path` property
+
+The URL to the provider must be set in the configuration property
+`hadoop.security.credential.provider.path`, either on the command line or
+in XML configuration files.
+
+```xml
 <property>
   <name>hadoop.security.credential.provider.path</name>
-  <value>localjceks://file/home/lmccay/aws.jceks</value>
+  <value>jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks</value>
   <description>Path to interrogate for protected credentials.</description>
 </property>
 ```
-###### distcp
+
+Because this property only supplies the path to the secrets file, the configuration
+option itself is no longer a sensitive item.
+
+###### Using the credentials
+
+Once the provider is set in the Hadoop configuration, hadoop commands
+work exactly as if the secrets were in an XML file.
+
+```bash
+
+hadoop distcp \
+    hdfs://nn1.example.com:9001/user/backup/007020615 s3a://glacier1/
+
+hadoop fs -ls s3a://glacier1/
 
 ```
-% hadoop distcp
-    [-D hadoop.security.credential.provider.path=localjceks://file/home/lmccay/aws.jceks]
-    hdfs://hostname:9001/user/lmccay/007020615 s3a://lmccay/
+
+The path to the provider can also be set on the command line:
+
+```bash
+hadoop distcp \
+    -D hadoop.security.credential.provider.path=jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks \
+    hdfs://nn1.example.com:9001/user/backup/007020615 s3a://glacier1/
+
+hadoop fs \
+  -D hadoop.security.credential.provider.path=jceks://hdfs@nn1.example.com:9001/user/backup/s3.jceks \
+  -ls s3a://glacier1/
+
 ```
 
-NOTE: You may optionally add the provider path property to the distcp command line instead of
-added job specific configuration to a generic core­site.xml. The square brackets above illustrate
-this capability.
+Because the provider path is not itself a sensitive secret, there is no risk
+from placing its declaration on the command line.
+
 
 ### Other properties
 
@@ -824,7 +1020,7 @@ the classpath.
 ### `ClassNotFoundException: com.amazonaws.services.s3.AmazonS3Client`
 
 (or other `com.amazonaws` class.)
-`
+
 This means that one or more of the `aws-*-sdk` JARs are missing. Add them.
 
 ### Missing method in AWS class
@@ -851,21 +1047,15 @@ classpath. All Jackson JARs on the classpath *must* be of the same version.
 
 ### Authentication failure
 
-One authentication problem is caused by classpath mismatch; see the joda time
-issue above.
-
-Otherwise, the general cause is: you have the wrong credentials —or somehow
+The general cause is: you have the wrong credentials —or somehow
 the credentials were not readable on the host attempting to read or write
 the S3 Bucket.
 
-There's not much that Hadoop can do/does for diagnostics here,
-though enabling debug logging for the package `org.apache.hadoop.fs.s3a`
-can help.
+There's not much that Hadoop can do for diagnostics here.
+Enabling debug logging for the package `org.apache.hadoop.fs.s3a`
+can help somewhat.
 
-There is also some logging in the AWS libraries which provide some extra details.
-In particular, the setting the log `com.amazonaws.auth.AWSCredentialsProviderChain`
-to log at DEBUG level will mean the invidual reasons for the (chained)
-authentication clients to fail will be printed.
+Most common: there's an error in the key or secret.
 
 Otherwise, try to use the AWS command line tools with the same credentials.
 If you set the environment variables, you can take advantage of S3A's support
@@ -873,15 +1063,38 @@ of environment-variable authentication by attempting to use the `hdfs fs` comman
 to read or write data on S3. That is: comment out the `fs.s3a` secrets and rely on
 the environment variables.
 
+### Authentication failure when using URLs with embedded secrets
+
+If using the (strongly discouraged) mechanism of including the
+AWS Key and secret in a URL, then both "+" and "/" symbols need
+to encoded in the URL. As many AWS secrets include these characters,
+encoding problems are not uncommon.
+
+| symbol | encoded  value|
+|-----------|-------------|
+| `+` | `%2B` |
+| `/` | `%2F` |
+
+
+That is, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
+be represented as
+
+```
+s3a://user1:a%2Bb%2Fc@bucket
+```
+
+This technique is only needed when placing secrets in the URL. Again,
+this is something users are strongly advised against using.
+
 ### Authentication failures running on Java 8u60+
 
 A change in the Java 8 JVM broke some of the `toString()` string generation
-of Joda Time 2.8.0, which stopped the amazon s3 client from being able to
+of Joda Time 2.8.0, which stopped the Amazon S3 client from being able to
 generate authentication headers suitable for validation by S3.
 
 Fix: make sure that the version of Joda Time is 2.8.1 or later.
 
-### "Bad Request" exception when working with AWS S3 Frankfurt, Seoul, or elsewhere
+### "Bad Request" exception when working with AWS S3 Frankfurt, Seoul, or other "V4" endpoint
 
 
 S3 Frankfurt and Seoul *only* support
@@ -923,11 +1136,13 @@ ls: doesBucketExist on frankfurt-new: com.amazonaws.services.s3.model.AmazonS3Ex
 ```
 
 This happens when trying to work with any S3 service which only supports the
-"V4" signing API —and he client is configured to use the default S3A service
+"V4" signing API —but the client is configured to use the default S3A service
 endpoint.
 
 The S3A client needs to be given the endpoint to use via the `fs.s3a.endpoint`
 property.
+
+As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 
 ```xml
 <property>
