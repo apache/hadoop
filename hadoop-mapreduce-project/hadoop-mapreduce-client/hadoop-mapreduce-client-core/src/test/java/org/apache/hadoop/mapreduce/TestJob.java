@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -52,6 +53,41 @@ public class TestJob {
         new TaskCompletionEvent[0]);
     Job job = Job.getInstance(cluster, status, new JobConf());
     Assert.assertNotNull(job.toString());
+  }
+
+  @Test
+  public void testUnexpectedJobStatus() throws Exception {
+    Cluster cluster = mock(Cluster.class);
+    JobID jobid = new JobID("1014873536921", 6);
+    ClientProtocol clientProtocol = mock(ClientProtocol.class);
+    when(cluster.getClient()).thenReturn(clientProtocol);
+    JobStatus status = new JobStatus(jobid, 0f, 0f, 0f, 0f,
+        State.RUNNING, JobPriority.DEFAULT, "root",
+        "testUnexpectedJobStatus", "job file", "tracking URL");
+    when(clientProtocol.getJobStatus(jobid)).thenReturn(status);
+    Job job = Job.getInstance(cluster, status, new JobConf());
+
+    // ensurer job status is RUNNING
+    Assert.assertNotNull(job.getStatus());
+    Assert.assertTrue(job.getStatus().getState() == State.RUNNING);
+
+    // when updating job status, job client could not retrieve
+    // job status, and status reset to null
+    when(clientProtocol.getJobStatus(jobid)).thenReturn(null);
+
+    try {
+      job.updateStatus();
+    } catch (IOException e) {
+      Assert.assertTrue(e != null
+          && e.getMessage().contains("Job status not available"));
+    }
+
+    try {
+      ControlledJob cj = new ControlledJob(job, null);
+      Assert.assertNotNull(cj.toString());
+    } catch (NullPointerException e) {
+      Assert.fail("job API fails with NPE");
+    }
   }
 
   @Test
