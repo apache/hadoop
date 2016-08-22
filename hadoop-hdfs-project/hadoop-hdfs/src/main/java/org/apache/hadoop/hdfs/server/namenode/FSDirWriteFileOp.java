@@ -340,6 +340,7 @@ class FSDirWriteFileOp {
       version = ezInfo.protocolVersion;
     }
 
+    boolean isRawPath = FSDirectory.isReservedRawName(src);
     FSDirectory fsd = fsn.getFSDirectory();
     INodesInPath iip = fsd.resolvePathForWrite(pc, src);
     src = iip.getPath();
@@ -443,7 +444,7 @@ class FSDirWriteFileOp {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: added " +
           src + " inode " + newNode.getId() + " " + holder);
     }
-    return FSDirStatAndListingOp.getFileInfo(fsd, iip);
+    return FSDirStatAndListingOp.getFileInfo(fsd, src, false, isRawPath);
   }
 
   static EncryptionKeyInfo getEncryptionKeyInfo(FSNamesystem fsn,
