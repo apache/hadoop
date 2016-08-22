@@ -73,7 +73,7 @@ public class AgentResource extends AbstractSliderResource {
   }
 
   @POST
-  @Path("/{agent_name: [a-zA-Z][a-zA-Z_0-9]*}/register")
+  @Path("/{agent_name: [a-zA-Z][a-zA-Z0-9_-]*}/register")
   @Consumes({MediaType.APPLICATION_JSON})
   @Produces({MediaType.APPLICATION_JSON})
   public RegistrationResponse register(Register registration,
@@ -87,7 +87,7 @@ public class AgentResource extends AbstractSliderResource {
   }
 
   @POST
-  @Path("/{agent_name: [a-zA-Z][a-zA-Z_0-9]*}/heartbeat")
+  @Path("/{agent_name: [a-zA-Z][a-zA-Z0-9_-]*}/heartbeat")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces({MediaType.APPLICATION_JSON})
   public HeartBeatResponse heartbeat(HeartBeat message,
