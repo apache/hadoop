@@ -312,6 +312,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `SendDataPacketBlockedOnNetworkNanosAvgTime` | Average waiting time of sending packets in nanoseconds |
 | `SendDataPacketTransferNanosNumOps` | Total number of sending packets |
 | `SendDataPacketTransferNanosAvgTime` | Average transfer time of sending packets in nanoseconds |
+| `BPServiceActorInfo` | The information about a block pool service actor |
 
 yarn context
 ============

@@ -80,6 +80,7 @@
       <th>Actor State</th>
       <th>Last Heartbeat</th>
       <th>Last Block Report</th>
+      <th>Last Block Report Size (Max Size)</th>
     </tr>
   </thead>
   {#dn.BPServiceActorInfo}
@@ -89,6 +90,7 @@
       <td>{ActorState}</td>
       <td>{LastHeartbeat}s</td>
       <td>{#helper_relative_time value="{LastBlockReport}"/}</td>
+      <td>{maxBlockReportSize|fmt_bytes} ({maxDataLength|fmt_bytes})</td>
     </tr>
   {/dn.BPServiceActorInfo}
 </table>
