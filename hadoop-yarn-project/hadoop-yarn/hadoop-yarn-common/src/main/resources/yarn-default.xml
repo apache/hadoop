@@ -2690,6 +2690,13 @@
   <!-- Federation Configuration -->
   <property>
     <description>
+      Flag to indicate whether the RM is participating in Federation or not.
+    </description>
+    <name>yarn.federation.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <description>
       Machine list file to be loaded by the FederationSubCluster Resolver
     </description>
     <name>yarn.federation.machine-list</name>
