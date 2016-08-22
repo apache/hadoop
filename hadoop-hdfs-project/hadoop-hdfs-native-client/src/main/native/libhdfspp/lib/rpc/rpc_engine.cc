@@ -291,39 +291,33 @@ void RpcEngine::RpcCommsError(
 
   optional<RetryAction> head_action = optional<RetryAction>();
 
-  //We are talking to the Standby NN, let's talk to the active one instead.
-  if(ha_persisted_info_ && status.get_server_exception_type() == Status::kStandbyException) {
-    LOG_INFO(kRPC, << "Received StandbyException.  Failing over.");
-    head_action = RetryAction::failover(std::max(0,options_.rpc_retry_delay_ms));
-  } else {
-    // Filter out anything with too many retries already
-    for (auto it = pendingRequests.begin(); it < pendingRequests.end();) {
-      auto req = *it;
+  // Filter out anything with too many retries already
+  for (auto it = pendingRequests.begin(); it < pendingRequests.end();) {
+    auto req = *it;
 
-      LOG_DEBUG(kRPC, << req->GetDebugString());
+    LOG_DEBUG(kRPC, << req->GetDebugString());
 
-      RetryAction retry = RetryAction::fail(""); // Default to fail
+    RetryAction retry = RetryAction::fail(""); // Default to fail
 
-      if (retry_policy()) {
-        retry = retry_policy()->ShouldRetry(status, req->IncrementRetryCount(), req->get_failover_count(), true);
+    if (retry_policy()) {
+      retry = retry_policy()->ShouldRetry(status, req->IncrementRetryCount(), req->get_failover_count(), true);
+    }
+
+    if (retry.action == RetryAction::FAIL) {
+      // If we've exceeded the maximum retry, take the latest error and pass it
+      //    on.  There might be a good argument for caching the first error
+      //    rather than the last one, that gets messy
+
+      io_service().post([req, status]() {
+        req->OnResponseArrived(nullptr, status);  // Never call back while holding a lock
+      });
+      it = pendingRequests.erase(it);
+    } else {
+      if (!head_action) {
+        head_action = retry;
       }
 
-      if (retry.action == RetryAction::FAIL) {
-        // If we've exceeded the maximum retry, take the latest error and pass it
-        //    on.  There might be a good argument for caching the first error
-        //    rather than the last one, that gets messy
-
-        io_service().post([req, status]() {
-          req->OnResponseArrived(nullptr, status);  // Never call back while holding a lock
-        });
-        it = pendingRequests.erase(it);
-      } else {
-        if (!head_action) {
-          head_action = retry;
-        }
-
-        ++it;
-      }
+      ++it;
     }
   }
 

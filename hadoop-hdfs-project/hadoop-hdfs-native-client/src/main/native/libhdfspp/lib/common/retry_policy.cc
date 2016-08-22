@@ -56,20 +56,21 @@ RetryAction FixedDelayWithFailover::ShouldRetry(const Status &s, uint64_t retrie
   (void)isIdempotentOrAtMostOnce;
   LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry(retries=" << retries << ", failovers=" << failovers << ")");
 
-  if(s.code() == ::asio::error::timed_out && failovers < max_failover_retries_) {
+  if(failovers < max_failover_retries_ && (s.code() == ::asio::error::timed_out || s.get_server_exception_type() == Status::kStandbyException) )
+  {
     // Try connecting to another NN in case this one keeps timing out
     // Can add the backoff wait specified by dfs.client.failover.sleep.base.millis here
     return RetryAction::failover(delay_);
   }
 
-  if(retries < max_retries_) {
-    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries < max_retries_");
+  if(retries < max_retries_ && failovers < max_failover_retries_) {
+    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries < max_retries_ && failovers < max_failover_retries_");
     return RetryAction::retry(delay_);
   } else if (retries >= max_retries_ && failovers < max_failover_retries_) {
     LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries >= max_retries_ && failovers < max_failover_retries_");
     return RetryAction::failover(delay_);
-  } else if (retries >= max_retries_ && failovers == max_failover_retries_) {
-    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries >= max_retries_ && failovers == max_failover_retries_");
+  } else if (retries <= max_retries_ && failovers == max_failover_retries_) {
+    LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry: retries <= max_retries_ && failovers == max_failover_retries_");
     // 1 last retry on new connection
     return RetryAction::retry(delay_);
   }
