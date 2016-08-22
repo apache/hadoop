@@ -25,6 +25,10 @@ Release 2.7.5 - UNRELEASED
     HDFS-9107. Prevent NN's unrecoverable death spiral after full GC (Daryn
     Sharp via Colin P. McCabe)
 
+    HDFS-10738. Fix
+    TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
+    test failure. (Rakesh R via kihwal)
+
 Release 2.7.4 - 2017-08-04
 
   INCOMPATIBLE CHANGES
