@@ -69,6 +69,7 @@ public interface AgentKeys {
   String AGENT_MAIN_SCRIPT = "agent/main.py";
 
   String APP_DEF = "application.def";
+  String APP_DEF_ORIGINAL = "application.def.original";
   String ADDON_PREFIX = "application.addon.";
   String ADDONS = "application.addons";
   String AGENT_VERSION = "agent.version";
@@ -104,6 +105,8 @@ public interface AgentKeys {
   String KEY_CONTAINER_LAUNCH_DELAY = "container.launch.delay.sec";
   String TEST_RELAX_VERIFICATION = "test.relax.validation";
   String AM_CONFIG_GENERATION = "am.config.generation";
+
+  String DEFAULT_METAINFO_MAP_KEY = "DEFAULT_KEY";
 }
 
 

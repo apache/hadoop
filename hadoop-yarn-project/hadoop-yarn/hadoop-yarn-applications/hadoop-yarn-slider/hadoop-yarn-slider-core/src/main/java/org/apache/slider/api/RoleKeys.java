@@ -35,6 +35,11 @@ public interface RoleKeys {
   String ROLE_GROUP = "role.group";
 
   /**
+   * The prefix of a role: {@value}
+   */
+  String ROLE_PREFIX = "role.prefix";
+
+  /**
    * Status report: number actually granted : {@value} 
    */
   String ROLE_ACTUAL_INSTANCES = "role.actual.instances";

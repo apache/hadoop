@@ -20,6 +20,9 @@ package org.apache.slider.server.appmaster;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheckRegistry;
+import com.codahale.metrics.jvm.GarbageCollectorMetricSet;
+import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
+import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 
@@ -879,7 +882,8 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       Configuration providerConf =
         providerService.loadProviderConfigurationInformation(confDir);
 
-      providerService.initializeApplicationConfiguration(instanceDefinition, fs);
+      providerService.initializeApplicationConfiguration(instanceDefinition,
+          fs, null);
 
       providerService.validateApplicationConfiguration(instanceDefinition,
           confDir,

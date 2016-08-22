@@ -18,6 +18,8 @@
 
 package org.apache.slider.providers.agent;
 
+import org.apache.slider.common.tools.SliderUtils;
+import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.providers.agent.application.metadata.CommandOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,8 +27,11 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.slider.api.RoleKeys.ROLE_PREFIX;
 
 /**
  * Stores the command dependency order for all components in a service. <commandOrder>
@@ -39,13 +44,36 @@ public class ComponentCommandOrder {
   private static char SPLIT_CHAR = '-';
   Map<Command, Map<String, List<ComponentState>>> dependencies =
       new HashMap<Command, Map<String, List<ComponentState>>>();
+  Map<String, Collection<String>> prefixRoleMap = new HashMap<>();
+  Map<String, String> rolePrefixMap = new HashMap<>();
 
-  public ComponentCommandOrder(List<CommandOrder> commandOrders) {
+  public ComponentCommandOrder() {}
+
+  public ComponentCommandOrder(List<CommandOrder> commandOrders,
+      ConfTreeOperations resources) {
+    mergeCommandOrders(commandOrders, resources);
+  }
+
+  void mergeCommandOrders(List<CommandOrder> commandOrders,
+      ConfTreeOperations resources) {
+    for (String component : resources.getComponentNames()) {
+      String prefix = SliderUtils.trimPrefix(
+          resources.getComponentOpt(component, ROLE_PREFIX, null));
+      if (prefix != null) {
+        rolePrefixMap.put(component, prefix);
+        if (!prefixRoleMap.containsKey(prefix)) {
+          prefixRoleMap.put(prefix, new HashSet<String>());
+        }
+        prefixRoleMap.get(prefix).add(component);
+      }
+    }
     if (commandOrders != null && commandOrders.size() > 0) {
       for (CommandOrder commandOrder : commandOrders) {
-        ComponentCommand componentCmd = getComponentCommand(commandOrder.getCommand());
+        ComponentCommand componentCmd = getComponentCommand(
+            commandOrder.getCommand(), resources);
         String requires = commandOrder.getRequires();
-        List<ComponentState> requiredStates = parseRequiredStates(requires);
+        List<ComponentState> requiredStates = parseRequiredStates(requires,
+            resources);
         if (requiredStates.size() > 0) {
           Map<String, List<ComponentState>> compDep = dependencies.get(componentCmd.command);
           if (compDep == null) {
@@ -65,7 +93,8 @@ public class ComponentCommandOrder {
     }
   }
 
-  private List<ComponentState> parseRequiredStates(String requires) {
+  private List<ComponentState> parseRequiredStates(String requires,
+      ConfTreeOperations resources) {
     if (requires == null || requires.length() < 2) {
       throw new IllegalArgumentException("Input cannot be null and must contain component and state.");
     }
@@ -73,13 +102,14 @@ public class ComponentCommandOrder {
     String[] componentStates = requires.split(",");
     List<ComponentState> retList = new ArrayList<ComponentState>();
     for (String componentStateStr : componentStates) {
-      retList.add(getComponentState(componentStateStr));
+      retList.add(getComponentState(componentStateStr, resources));
     }
 
     return retList;
   }
 
-  private ComponentCommand getComponentCommand(String compCmdStr) {
+  private ComponentCommand getComponentCommand(String compCmdStr,
+      ConfTreeOperations resources) {
     if (compCmdStr == null || compCmdStr.trim().length() < 2) {
       throw new IllegalArgumentException("Input cannot be null and must contain component and command.");
     }
@@ -92,6 +122,11 @@ public class ComponentCommandOrder {
     String compStr = compCmdStr.substring(0, splitIndex);
     String cmdStr = compCmdStr.substring(splitIndex + 1);
 
+    if (resources.getComponent(compStr) == null && !prefixRoleMap.containsKey(compStr)) {
+      throw new IllegalArgumentException("Component " + compStr + " specified" +
+          " in command order does not exist");
+    }
+
     Command cmd = Command.valueOf(cmdStr);
 
     if (cmd != Command.START) {
@@ -100,7 +135,8 @@ public class ComponentCommandOrder {
     return new ComponentCommand(compStr, cmd);
   }
 
-  private ComponentState getComponentState(String compStStr) {
+  private ComponentState getComponentState(String compStStr,
+      ConfTreeOperations resources) {
     if (compStStr == null || compStStr.trim().length() < 2) {
       throw new IllegalArgumentException("Input cannot be null.");
     }
@@ -113,6 +149,11 @@ public class ComponentCommandOrder {
     String compStr = compStStr.substring(0, splitIndex);
     String stateStr = compStStr.substring(splitIndex + 1);
 
+    if (resources.getComponent(compStr) == null && !prefixRoleMap.containsKey(compStr)) {
+      throw new IllegalArgumentException("Component " + compStr + " specified" +
+          " in command order does not exist");
+    }
+
     State state = State.valueOf(stateStr);
     if (state != State.STARTED && state != State.INSTALLED) {
       throw new IllegalArgumentException("Dependency order can only be specified against STARTED/INSTALLED.");
@@ -123,40 +164,43 @@ public class ComponentCommandOrder {
   // dependency is still on component level, but not package level
   // so use component name to check dependency, not component-package
   public boolean canExecute(String component, Command command, Collection<ComponentInstanceState> currentStates) {
-    boolean canExecute = true;
-    if (dependencies.containsKey(command) && dependencies.get(command).containsKey(component)) {
-      List<ComponentState> required = dependencies.get(command).get(component);
-      for (ComponentState stateToMatch : required) {
-        for (ComponentInstanceState currState : currentStates) {
-          log.debug("Checking schedule {} {} against dependency {} is {}",
-                    component, command, currState.getComponentName(), currState.getState());
-          if (currState.getComponentName().equals(stateToMatch.componentName)) {
-            if (currState.getState() != stateToMatch.state) {
-              if (stateToMatch.state == State.STARTED) {
+    if (!dependencies.containsKey(command)) {
+      return true;
+    }
+    List<ComponentState> required = new ArrayList<>();
+    if (dependencies.get(command).containsKey(component)) {
+      required.addAll(dependencies.get(command).get(component));
+    }
+    String prefix = rolePrefixMap.get(component);
+    if (prefix != null && dependencies.get(command).containsKey(prefix)) {
+      required.addAll(dependencies.get(command).get(prefix));
+    }
+
+    for (ComponentState stateToMatch : required) {
+      for (ComponentInstanceState currState : currentStates) {
+        log.debug("Checking schedule {} {} against dependency {} is {}",
+            component, command, currState.getComponentName(), currState.getState());
+        if (currState.getComponentName().equals(stateToMatch.componentName) ||
+            (prefixRoleMap.containsKey(stateToMatch.componentName) &&
+                prefixRoleMap.get(stateToMatch.componentName).contains(currState.getComponentName()))) {
+          if (currState.getState() != stateToMatch.state) {
+            if (stateToMatch.state == State.STARTED) {
+              log.info("Cannot schedule {} {} as dependency {} is {}",
+                  component, command, currState.getComponentName(), currState.getState());
+              return false;
+            } else {
+              //state is INSTALLED
+              if (currState.getState() != State.STARTING && currState.getState() != State.STARTED) {
                 log.info("Cannot schedule {} {} as dependency {} is {}",
-                         component, command, currState.getComponentName(), currState.getState());
-                canExecute = false;
-              } else {
-                //state is INSTALLED
-                if (currState.getState() != State.STARTING && currState.getState() != State.STARTED) {
-                  log.info("Cannot schedule {} {} as dependency {} is {}",
-                           component, command, currState.getComponentName(), currState.getState());
-                  canExecute = false;
-                }
+                    component, command, currState.getComponentName(), currState.getState());
+                return false;
               }
             }
           }
-          if (!canExecute) {
-            break;
-          }
-        }
-        if (!canExecute) {
-          break;
         }
       }
     }
-
-    return canExecute;
+    return true;
   }
 
   static class ComponentState {

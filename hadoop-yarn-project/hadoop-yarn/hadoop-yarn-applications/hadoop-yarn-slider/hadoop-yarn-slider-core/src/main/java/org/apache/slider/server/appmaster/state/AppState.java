@@ -1818,6 +1818,11 @@ public class AppState {
         SliderUtils.mergeMapsIgnoreDuplicateKeys(cd.getRole(rolename),
             groupOptions.options);
       }
+      String prefix = instanceDefinition.getAppConfOperations()
+          .getComponentOpt(role.getGroup(), ROLE_PREFIX, null);
+      if (SliderUtils.isSet(prefix)) {
+        cd.setRoleOpt(rolename, ROLE_PREFIX, SliderUtils.trimPrefix(prefix));
+      }
       List<String> instances = instanceMap.get(rolename);
       int nodeCount = instances != null ? instances.size(): 0;
       cd.setRoleOpt(rolename, COMPONENT_INSTANCES,

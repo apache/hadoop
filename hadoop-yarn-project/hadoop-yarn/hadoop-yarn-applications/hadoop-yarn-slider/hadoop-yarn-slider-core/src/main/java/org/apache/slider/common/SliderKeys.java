@@ -70,6 +70,19 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String APP_TYPE = "org-apache-slider";
 
   /**
+   * Key for component type. This MUST NOT be set in app_config/global {@value}
+   */
+  String COMPONENT_TYPE_KEY = "site.global.component_type";
+  /**
+   * A component type for an external app that has been predefined using the
+   * slider build command
+   */
+  String COMPONENT_TYPE_EXTERNAL_APP = "external_app";
+  String COMPONENT_SEPARATOR = "-";
+  String[] COMPONENT_KEYS_TO_SKIP = {"zookeeper.", "env.MALLOC_ARENA_MAX",
+      "site.fs.", "site.dfs."};
+
+  /**
    * Key for application version. This must be set in app_config/global {@value}
    */
   String APP_VERSION = "site.global.app_version";

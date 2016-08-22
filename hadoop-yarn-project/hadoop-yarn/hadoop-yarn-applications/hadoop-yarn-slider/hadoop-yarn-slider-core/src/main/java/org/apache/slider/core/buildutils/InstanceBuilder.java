@@ -25,7 +25,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.slider.api.InternalKeys;
 import org.apache.slider.api.OptionKeys;
+import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.StatusKeys;
+import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.SliderXmlConfKeys;
 import org.apache.slider.common.tools.CoreFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
@@ -42,11 +44,17 @@ import org.apache.slider.core.persist.LockAcquireFailedException;
 import org.apache.slider.core.persist.LockHeldAction;
 import org.apache.slider.core.zk.ZKPathBuilder;
 import org.apache.slider.core.zk.ZookeeperUtils;
+import org.apache.slider.providers.agent.AgentKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static org.apache.slider.api.InternalKeys.INTERNAL_ADDONS_DIR_PATH;
 import static org.apache.slider.api.InternalKeys.INTERNAL_APPDEF_DIR_PATH;
@@ -61,6 +69,12 @@ import static org.apache.slider.api.OptionKeys.INTERNAL_SNAPSHOT_CONF_PATH;
 import static org.apache.slider.api.OptionKeys.ZOOKEEPER_HOSTS;
 import static org.apache.slider.api.OptionKeys.ZOOKEEPER_PATH;
 import static org.apache.slider.api.OptionKeys.ZOOKEEPER_QUORUM;
+import static org.apache.slider.api.RoleKeys.ROLE_PREFIX;
+import static org.apache.slider.common.SliderKeys.COMPONENT_AM;
+import static org.apache.slider.common.SliderKeys.COMPONENT_SEPARATOR;
+import static org.apache.slider.common.SliderKeys.COMPONENT_TYPE_EXTERNAL_APP;
+import static org.apache.slider.common.SliderKeys.COMPONENT_TYPE_KEY;
+import static org.apache.slider.common.tools.SliderUtils.isClusternameValid;
 
 /**
  * Build up the instance of a cluster.
@@ -72,6 +86,8 @@ public class InstanceBuilder {
   private final CoreFileSystem coreFS;
   private final InstancePaths instancePaths;
   private AggregateConf instanceDescription;
+  private Map<String, Path> externalAppDefs = new HashMap<>();
+  private TreeSet<Integer> priorities = new TreeSet<>();
 
   private static final Logger log =
     LoggerFactory.getLogger(InstanceBuilder.class);
@@ -244,6 +260,192 @@ public class InstanceBuilder {
   }
 
 
+  private Set<String> getExternalComponents(ConfTreeOperations ops)
+      throws BadConfigException {
+    Set<String> externalComponents = new HashSet<>();
+    if (ops.getGlobalOptions().containsKey(COMPONENT_TYPE_KEY)) {
+      throw new BadConfigException(COMPONENT_TYPE_KEY + " must be " +
+          "specified per-component, not in global");
+    }
+
+    for (Entry<String, Map<String, String>> entry : ops.getComponents()
+        .entrySet()) {
+      if (COMPONENT_AM.equals(entry.getKey())) {
+        continue;
+      }
+      Map<String, String> options = entry.getValue();
+      if (COMPONENT_TYPE_EXTERNAL_APP.equals(options.get(COMPONENT_TYPE_KEY))) {
+        externalComponents.add(entry.getKey());
+      }
+    }
+    return externalComponents;
+  }
+
+  private void mergeExternalComponent(ConfTreeOperations ops,
+      ConfTreeOperations externalOps, String externalComponent,
+      Integer priority) throws BadConfigException {
+    for (String subComponent : externalOps.getComponentNames()) {
+      if (COMPONENT_AM.equals(subComponent)) {
+        continue;
+      }
+      String prefix = externalComponent + COMPONENT_SEPARATOR;
+      log.debug("Merging options for {} into {}", subComponent,
+          prefix + subComponent);
+      MapOperations subComponentOps = ops.getOrAddComponent(
+          prefix + subComponent);
+      if (priority == null) {
+        SliderUtils.mergeMaps(subComponentOps,
+            ops.getComponent(externalComponent).options);
+        subComponentOps.remove(COMPONENT_TYPE_KEY);
+      }
+
+      SliderUtils.mergeMapsIgnoreDuplicateKeysAndPrefixes(subComponentOps,
+          externalOps.getComponent(subComponent),
+          SliderKeys.COMPONENT_KEYS_TO_SKIP);
+
+      // add prefix to existing prefix
+      String existingPrefix = subComponentOps.get(ROLE_PREFIX);
+      if (existingPrefix != null) {
+        if (!subComponent.startsWith(existingPrefix)) {
+          throw new BadConfigException("Bad prefix " + existingPrefix +
+              " for subcomponent " + subComponent + " of " + externalComponent);
+        }
+        prefix = prefix + existingPrefix;
+      }
+      subComponentOps.set(ROLE_PREFIX, prefix);
+
+      // adjust priority
+      if (priority != null) {
+        subComponentOps.put(ResourceKeys.COMPONENT_PRIORITY,
+            Integer.toString(priority));
+        priorities.add(priority);
+        priority++;
+      }
+    }
+  }
+
+  private int getNextPriority() {
+    if (priorities.isEmpty()) {
+      return 1;
+    } else {
+      return priorities.last() + 1;
+    }
+  }
+
+  public void resolve()
+      throws BadConfigException, IOException, BadClusterStateException {
+    ConfTreeOperations appConf = instanceDescription.getAppConfOperations();
+    ConfTreeOperations resources = instanceDescription.getResourceOperations();
+
+    for (Entry<String, Map<String, String>> entry : resources.getComponents()
+        .entrySet()) {
+      if (COMPONENT_AM.equals(entry.getKey())) {
+        continue;
+      }
+      if (entry.getValue().containsKey(ResourceKeys.COMPONENT_PRIORITY)) {
+        priorities.add(Integer.parseInt(entry.getValue().get(
+            ResourceKeys.COMPONENT_PRIORITY)));
+      }
+    }
+
+    Set<String> externalComponents = getExternalComponents(appConf);
+    if (!externalComponents.isEmpty()) {
+      log.info("Found external components {}", externalComponents);
+    }
+
+    for (String component : externalComponents) {
+      if (!isClusternameValid(component)) {
+        throw new BadConfigException(component + " is not a valid external " +
+            "component");
+      }
+      Path componentClusterDir = coreFS.buildClusterDirPath(component);
+      try {
+        coreFS.verifyPathExists(componentClusterDir);
+      } catch (IOException e) {
+        throw new BadConfigException("external component " + component +
+            " doesn't exist");
+      }
+      AggregateConf componentConf = new AggregateConf();
+      ConfPersister persister = new ConfPersister(coreFS, componentClusterDir);
+      try {
+        persister.load(componentConf);
+      } catch (Exception e) {
+        throw new BadConfigException("Couldn't read configuration for " +
+            "external component " + component);
+      }
+
+      ConfTreeOperations componentAppConf = componentConf.getAppConfOperations();
+      String externalAppDef = componentAppConf.get(AgentKeys.APP_DEF);
+      if (SliderUtils.isSet(externalAppDef)) {
+        Path newAppDef = new Path(coreFS.buildAppDefDirPath(clustername),
+            component + "_" + SliderKeys.DEFAULT_APP_PKG);
+        componentAppConf.set(AgentKeys.APP_DEF, newAppDef);
+        componentAppConf.append(AgentKeys.APP_DEF_ORIGINAL, externalAppDef);
+        log.info("Copying external appdef {} to {} for {}", externalAppDef,
+            newAppDef, component);
+        externalAppDefs.put(externalAppDef, newAppDef);
+        externalAppDef = newAppDef.toString();
+      }
+
+      for (String rcomp : componentConf.getResourceOperations()
+          .getComponentNames()) {
+        if (COMPONENT_AM.equals(rcomp)) {
+          continue;
+        }
+        log.debug("Adding component {} to appConf for {}", rcomp, component);
+        componentAppConf.getOrAddComponent(rcomp);
+      }
+      componentConf.resolve();
+
+      for (String rcomp : componentConf.getResourceOperations()
+          .getComponentNames()) {
+        if (COMPONENT_AM.equals(rcomp)) {
+          continue;
+        }
+        String componentAppDef = componentAppConf.getComponentOpt(
+            rcomp, AgentKeys.APP_DEF, null);
+        if (SliderUtils.isUnset(componentAppDef) ||
+            componentAppDef.equals(externalAppDef)) {
+          continue;
+        }
+        if (externalAppDefs.containsKey(componentAppDef)) {
+          log.info("Using external appdef {} for {}",
+              externalAppDefs.get(componentAppDef), rcomp);
+        } else {
+          String existingPrefix = componentAppConf.getComponentOpt(rcomp,
+              ROLE_PREFIX, null);
+          if (SliderUtils.isUnset(existingPrefix)) {
+            existingPrefix = "";
+          } else {
+            existingPrefix = COMPONENT_SEPARATOR + SliderUtils.trimPrefix(
+                existingPrefix);
+          }
+          Path newAppDef = new Path(coreFS.buildAppDefDirPath(clustername),
+              component + existingPrefix + "_" + SliderKeys.DEFAULT_APP_PKG);
+          externalAppDefs.put(componentAppDef, newAppDef);
+          log.info("Copying external appdef {} to {} for {}", componentAppDef,
+              newAppDef, component + COMPONENT_SEPARATOR + rcomp);
+        }
+        componentAppConf.setComponentOpt(rcomp, AgentKeys.APP_DEF,
+            externalAppDefs.get(componentAppDef).toString());
+        componentAppConf.appendComponentOpt(rcomp,
+            AgentKeys.APP_DEF_ORIGINAL, componentAppDef);
+      }
+      Set<Path> newAppDefs = new HashSet<>();
+      newAppDefs.addAll(externalAppDefs.values());
+      if (newAppDefs.size() != externalAppDefs.size()) {
+        throw new IllegalStateException("Values repeat in external appdefs "
+            + externalAppDefs);
+      }
+      log.info("External appdefs after {}: {}", component, externalAppDefs);
+
+      mergeExternalComponent(appConf, componentAppConf, component, null);
+      mergeExternalComponent(resources, componentConf.getResourceOperations(),
+          component, getNextPriority());
+    }
+  }
+
+
   /**
    * Persist this
    * @param appconfdir conf dir
@@ -266,6 +468,9 @@ public class InstanceBuilder {
       action = new ConfDirSnapshotAction(appconfdir);
     }
     persister.save(instanceDescription, action);
+    for (Entry<String, Path> appDef : externalAppDefs.entrySet()) {
+      SliderUtils.copy(conf, new Path(appDef.getKey()), appDef.getValue());
+    }
   }
 
   /**
