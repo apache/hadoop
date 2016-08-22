@@ -2561,6 +2561,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final String FEDERATION_PREFIX = YARN_PREFIX + "federation.";
 
+  public static final String FEDERATION_ENABLED = FEDERATION_PREFIX + "enabled";
+  public static final boolean DEFAULT_FEDERATION_ENABLED = false;
+
+  public static final String FEDERATION_FAILOVER_ENABLED =
+      FEDERATION_PREFIX + "failover.enabled";
+  public static final boolean DEFAULT_FEDERATION_FAILOVER_ENABLED = true;
+
+  public static final String FEDERATION_SUBCLUSTER_ID =
+      FEDERATION_PREFIX + "sub-cluster.id";
+
   public static final String FEDERATION_STATESTORE_CLIENT_CLASS =
       FEDERATION_PREFIX + "state-store.class";
 

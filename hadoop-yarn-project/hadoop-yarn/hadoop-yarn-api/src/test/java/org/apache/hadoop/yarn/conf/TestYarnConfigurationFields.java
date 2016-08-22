@@ -71,6 +71,10 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     // Federation default configs to be ignored
     configurationPropsToSkipCompare
         .add(YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.FEDERATION_SUBCLUSTER_ID);
+    configurationPropsToSkipCompare
+        .add(YarnConfiguration.FEDERATION_FAILOVER_ENABLED);
 
     // Ignore blacklisting nodes for AM failures feature since it is still a
     // "work in progress"
