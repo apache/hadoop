@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
+import com.google.common.base.Supplier;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -37,6 +38,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -44,12 +46,18 @@ import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.fail;
 
-import org.junit.Test;
 
 public class TestZKDelegationTokenSecretManager {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestZKDelegationTokenSecretManager.class);
 
   private static final int TEST_RETRIES = 2;
 
@@ -60,6 +68,9 @@ public class TestZKDelegationTokenSecretManager {
   private static final long DAY_IN_SECS = 86400;
 
   private TestingServer zkServer;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() throws Exception {
@@ -382,4 +393,84 @@ public class TestZKDelegationTokenSecretManager {
     }
   }
 
+  @SuppressWarnings({ "unchecked" })
+  @Test
+  public void testNodesLoadedAfterRestart() throws Exception {
+    final String connectString = zkServer.getConnectString();
+    final Configuration conf = getSecretConf(connectString);
+    final int removeScan = 1;
+    // Set the remove scan interval to remove expired tokens
+    conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, removeScan);
+    // Set the update interval to trigger background thread to run. The thread
+    // is hard-coded to sleep at least 5 seconds.
+    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, 5);
+    // Set token expire time to 5 seconds.
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, 5);
+
+    DelegationTokenManager tm =
+        new DelegationTokenManager(conf, new Text("bla"));
+    tm.init();
+    Token<DelegationTokenIdentifier> token =
+        (Token<DelegationTokenIdentifier>) tm
+            .createToken(UserGroupInformation.getCurrentUser(), "good");
+    Assert.assertNotNull(token);
+    Token<DelegationTokenIdentifier> cancelled =
+        (Token<DelegationTokenIdentifier>) tm
+            .createToken(UserGroupInformation.getCurrentUser(), "cancelled");
+    Assert.assertNotNull(cancelled);
+    tm.verifyToken(token);
+    tm.verifyToken(cancelled);
+
+    // Cancel one token, verify it's gone
+    tm.cancelToken(cancelled, "cancelled");
+    final AbstractDelegationTokenSecretManager sm =
+        tm.getDelegationTokenSecretManager();
+    final ZKDelegationTokenSecretManager zksm =
+        (ZKDelegationTokenSecretManager) sm;
+    final AbstractDelegationTokenIdentifier idCancelled =
+        sm.decodeTokenIdentifier(cancelled);
+    LOG.info("Waiting for the cancelled token to be removed");
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
+            zksm.getTokenInfo(idCancelled);
+        return dtinfo == null;
+      }
+    }, 100, 5000);
+
+    // Fake a restart which launches a new tm
+    tm.destroy();
+    tm = new DelegationTokenManager(conf, new Text("bla"));
+    tm.init();
+    final AbstractDelegationTokenSecretManager smNew =
+        tm.getDelegationTokenSecretManager();
+    final ZKDelegationTokenSecretManager zksmNew =
+        (ZKDelegationTokenSecretManager) smNew;
+
+    // The cancelled token should be gone, and not loaded.
+    AbstractDelegationTokenIdentifier id =
+        smNew.decodeTokenIdentifier(cancelled);
+    AbstractDelegationTokenSecretManager.DelegationTokenInformation dtinfo =
+        zksmNew.getTokenInfo(id);
+    Assert.assertNull("canceled dt should be gone!", dtinfo);
+
+    // The good token should be loaded on startup, and removed after expiry.
+    id = smNew.decodeTokenIdentifier(token);
+    dtinfo = zksmNew.getTokenInfoFromMemory(id);
+    Assert.assertNotNull("good dt should be in memory!", dtinfo);
+
+    // Wait for the good token to expire.
+    Thread.sleep(5000);
+    final ZKDelegationTokenSecretManager zksm1 = zksmNew;
+    final AbstractDelegationTokenIdentifier id1 = id;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LOG.info("Waiting for the expired token to be removed...");
+        return zksm1.getTokenInfo(id1) == null;
+      }
+    }, 1000, 5000);
+  }
 }
