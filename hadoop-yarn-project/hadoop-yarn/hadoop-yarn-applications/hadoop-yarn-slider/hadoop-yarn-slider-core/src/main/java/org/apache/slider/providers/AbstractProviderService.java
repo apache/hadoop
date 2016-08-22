@@ -169,7 +169,8 @@ public abstract class AbstractProviderService
    */
   @Override
   public void initializeApplicationConfiguration(
-      AggregateConf instanceDefinition, SliderFileSystem fileSystem)
+      AggregateConf instanceDefinition, SliderFileSystem fileSystem,
+      String roleGroup)
       throws IOException, SliderException {
   }
 

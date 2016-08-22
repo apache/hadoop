@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.common.tools.SliderUtils;
+import org.apache.slider.core.conf.ConfTreeOperations;
 import org.apache.slider.core.exceptions.BadConfigException;
 import org.apache.slider.providers.agent.application.metadata.AbstractMetainfoParser;
 import org.apache.slider.providers.agent.application.metadata.AddonPackageMetainfoParser;
@@ -34,6 +35,8 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+
+import static org.apache.slider.api.RoleKeys.ROLE_PREFIX;
 
 /**
  *
@@ -130,5 +133,18 @@ public class AgentUtils {
     }
 
     return new DefaultConfigParser().parse(configStream);
+  }
+
+  static String getMetainfoComponentName(String roleGroup,
+      ConfTreeOperations appConf) throws BadConfigException {
+    String prefix = appConf.getComponentOpt(roleGroup, ROLE_PREFIX, null);
+    if (prefix == null) {
+      return roleGroup;
+    }
+    if (!roleGroup.startsWith(prefix)) {
+      throw new BadConfigException("Component " + roleGroup + " doesn't start" +
+          " with prefix " + prefix);
+    }
+    return roleGroup.substring(prefix.length());
   }
 }

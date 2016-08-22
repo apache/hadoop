@@ -214,6 +214,23 @@ public class ConfTreeOperations {
   public String get(String key) {
     return globalOptions.get(key);
   }
+  /**
+   * append to a global option
+   * @param key key
+   * @return value
+   *
+   */
+  public String append(String key, String value) {
+    if (SliderUtils.isUnset(value)) {
+      return null;
+    }
+    if (globalOptions.containsKey(key)) {
+      globalOptions.put(key, globalOptions.get(key) + "," + value);
+    } else {
+      globalOptions.put(key, value);
+    }
+    return globalOptions.get(key);
+  }
 
   /**
    * Propagate all global keys matching a prefix
@@ -257,6 +274,17 @@ public class ConfTreeOperations {
                                             Map<String, String> map,
                                             String prefix,
                                             boolean overwrite) {
+    boolean needsMerge = false;
+    for (Map.Entry<String, String> entry : map.entrySet()) {
+      String key = entry.getKey();
+      if (key.startsWith(prefix)) {
+        needsMerge = true;
+        break;
+      }
+    }
+    if (!needsMerge) {
+      return;
+    }
     MapOperations comp = getOrAddComponent(component);
     comp.mergeMapPrefixedKeys(map,prefix, overwrite);
   }
@@ -474,4 +502,26 @@ public class ConfTreeOperations {
     setComponentOpt(role, option, Long.toString(val));
   }
 
+  /**
+   * append to a component option
+   * @param key key
+   * @return value
+   *
+   */
+  public String appendComponentOpt(String role, String key, String value) {
+    if (SliderUtils.isUnset(value)) {
+      return null;
+    }
+    MapOperations roleopts = getComponent(role);
+    if (roleopts == null) {
+      return null;
+    }
+
+    if (roleopts.containsKey(key)) {
+      roleopts.put(key, roleopts.get(key) + "," + value);
+    } else {
+      roleopts.put(key, value);
+    }
+    return roleopts.get(key);
+  }
 }
