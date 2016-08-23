@@ -23,6 +23,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10763. Open files can leak permanently due to inconsistent
     lease update (kihwal)
 
+    HDFS-9745. TestSecureNNWithQJM#testSecureMode sometimes fails with
+    timeouts (Xiao Chen via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
