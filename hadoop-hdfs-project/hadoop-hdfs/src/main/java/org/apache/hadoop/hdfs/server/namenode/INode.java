@@ -428,8 +428,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public final ContentSummary computeAndConvertContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
-    ContentCounts counts = computeContentSummary(snapshotId, summary)
-        .getCounts();
+    computeContentSummary(snapshotId, summary);
+    final ContentCounts counts = summary.getCounts();
+    final ContentCounts snapshotCounts = summary.getSnapshotCounts();
     final QuotaCounts q = getQuotaCounts();
     return new ContentSummary.Builder().
         length(counts.getLength()).
@@ -440,6 +441,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
         spaceQuota(q.getStorageSpace()).
         typeConsumed(counts.getTypeSpaces()).
         typeQuota(q.getTypeSpaces().asArray()).
+        snapshotLength(snapshotCounts.getLength()).
+        snapshotFileCount(snapshotCounts.getFileCount()).
+        snapshotDirectoryCount(snapshotCounts.getDirectoryCount()).
+        snapshotSpaceConsumed(snapshotCounts.getStoragespace()).
         build();
   }
 

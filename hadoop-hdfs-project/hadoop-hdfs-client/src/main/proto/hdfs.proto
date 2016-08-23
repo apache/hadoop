@@ -138,6 +138,10 @@ message ContentSummaryProto {
   required uint64 spaceConsumed = 5;
   required uint64 spaceQuota = 6;
   optional StorageTypeQuotaInfosProto typeQuotaInfos = 7;
+  optional uint64 snapshotLength = 8;
+  optional uint64 snapshotFileCount = 9;
+  optional uint64 snapshotDirectoryCount = 10;
+  optional uint64 snapshotSpaceConsumed = 11;
 }
 
 /**
