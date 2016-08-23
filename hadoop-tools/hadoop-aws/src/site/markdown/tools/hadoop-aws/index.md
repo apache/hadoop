@@ -1319,11 +1319,18 @@ works with S3 to something lower. See [AWS documentation](http://docs.aws.amazon
 
 ## Testing the S3 filesystem clients
 
-Due to eventual consistency, tests may fail without reason. Transient
-failures, which no longer occur upon rerunning the test, should thus be ignored.
+This module includes both unit tests, which can run in isolation without
+connecting to the S3 service, and integration tests, which require a working
+connection to S3 to interact with a bucket.  Unit test suites follow the naming
+convention `Test*.java`.  Integration tests follow the naming convention
+`ITest*.java`.
 
-To test the S3* filesystem clients, you need to provide two files
-which pass in authentication details to the test runner
+Due to eventual consistency, integration tests may fail without reason.
+Transient failures, which no longer occur upon rerunning the test, should thus
+be ignored.
+
+To integration test the S3* filesystem clients, you need to provide two files
+which pass in authentication details to the test runner.
 
 1. `auth-keys.xml`
 1. `core-site.xml`
@@ -1343,7 +1350,8 @@ need to apply a specific, non-default property change during the tests.
 
 The presence of this file triggers the testing of the S3 classes.
 
-Without this file, *none of the tests in this module will be executed*
+Without this file, *none of the integration tests in this module will be
+executed*.
 
 The XML file must contain all the ID/key information needed to connect
 each of the filesystem clients to the object stores, and a URL for
@@ -1496,23 +1504,50 @@ source code tree, it is not going to get accidentally committed.
 
 After completing the configuration, execute the test run through Maven.
 
-    mvn clean test
+    mvn clean verify
 
-It's also possible to execute multiple test suites in parallel by enabling the
-`parallel-tests` Maven profile.  The tests spend most of their time blocked on
-network I/O with the S3 service, so running in parallel tends to complete full
-test runs faster.
+It's also possible to execute multiple test suites in parallel by passing the
+`parallel-tests` property on the command line.  The tests spend most of their
+time blocked on network I/O with the S3 service, so running in parallel tends to
+complete full test runs faster.
 
-    mvn -Pparallel-tests clean test
+    mvn -Dparallel-tests clean verify
 
 Some tests must run with exclusive access to the S3 bucket, so even with the
-`parallel-tests` profile enabled, several test suites will run in serial in a
-separate Maven execution step after the parallel tests.
+`parallel-tests` property, several test suites will run in serial in a separate
+Maven execution step after the parallel tests.
 
-By default, the `parallel-tests` profile runs 4 test suites concurrently.  This
-can be tuned by passing the `testsThreadCount` argument.
+By default, `parallel-tests` runs 4 test suites concurrently.  This can be tuned
+by passing the `testsThreadCount` property.
 
-    mvn -Pparallel-tests -DtestsThreadCount=8 clean test
+    mvn -Dparallel-tests -DtestsThreadCount=8 clean verify
+
+To run just unit tests, which do not require S3 connectivity or AWS credentials,
+use any of the above invocations, but switch the goal to `test` instead of
+`verify`.
+
+    mvn clean test
+
+    mvn -Dparallel-tests clean test
+
+    mvn -Dparallel-tests -DtestsThreadCount=8 clean test
+
+To run only a specific named subset of tests, pass the `test` property for unit
+tests or the `it.test` property for integration tests.
+
+    mvn clean test -Dtest=TestS3AInputPolicies
+
+    mvn clean verify -Dit.test=ITestS3AFileContextStatistics
+
+    mvn clean verify -Dtest=TestS3A* -Dit.test=ITestS3A*
+
+Note that when running a specific subset of tests, the patterns passed in `test`
+and `it.test` override the configuration of which tests need to run in isolation
+in a separate serial phase (mentioned above).  This can cause unpredictable
+results, so the recommendation is to avoid passing `parallel-tests` in
+combination with `test` or `it.test`.  If you know that you are specifying only
+tests that can run safely in parallel, then it will work.  For wide patterns,
+like `ITestS3A*` shown above, it may cause unpredictable test failures.
 
 ### Testing against different regions
 
