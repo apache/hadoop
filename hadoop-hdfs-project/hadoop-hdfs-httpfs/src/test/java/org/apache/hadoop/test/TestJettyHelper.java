@@ -24,14 +24,14 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.net.UnknownHostException;
 
-import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
+import org.apache.hadoop.security.ssl.SslSelectChannelConnectorSecure;
 import org.junit.Test;
 import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.SslSocketConnector;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
 
 public class TestJettyHelper implements MethodRule {
   private boolean ssl;
@@ -93,7 +93,7 @@ public class TestJettyHelper implements MethodRule {
         server.getConnectors()[0].setHost(host);
         server.getConnectors()[0].setPort(port);
       } else {
-        SslSocketConnector c = new SslSocketConnectorSecure();
+        SslSelectChannelConnector c = new SslSelectChannelConnectorSecure();
         c.setHost(host);
         c.setPort(port);
         c.setNeedClientAuth(false);
