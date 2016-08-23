@@ -14,6 +14,11 @@
 .settings
 target
 build
+
+# External tool builders
+*/.externalToolBuilders
+*/maven-eclipse.xml
+
 hadoop-common-project/hadoop-kms/downloads/
 hadoop-hdfs-project/hadoop-hdfs/downloads
 hadoop-hdfs-project/hadoop-hdfs-httpfs/downloads
