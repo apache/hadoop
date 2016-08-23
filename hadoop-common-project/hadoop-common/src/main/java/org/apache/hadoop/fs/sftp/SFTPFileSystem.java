@@ -77,7 +77,6 @@ public class SFTPFileSystem extends FileSystem {
       "Can't make directory for path \"%s\" under \"%s\".";
   public static final String E_DIR_NOTEMPTY = "Directory: %s is not empty.";
   public static final String E_FILE_CHECK_FAILED = "File check failed";
-  public static final String E_NOT_SUPPORTED = "Not supported";
   public static final String E_SPATH_NOTEXIST = "Source path %s does not exist";
   public static final String E_DPATH_EXIST =
       "Destination path %s already exist, cannot rename!";
@@ -578,7 +577,8 @@ public class SFTPFileSystem extends FileSystem {
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress)
       throws IOException {
-    throw new IOException(E_NOT_SUPPORTED);
+    throw new UnsupportedOperationException("Append is not supported "
+        + "by SFTPFileSystem");
   }
 
   /*

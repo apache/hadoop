@@ -633,7 +633,8 @@ public class S3AFileSystem extends FileSystem {
    */
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
-    throw new IOException("Not supported");
+    throw new UnsupportedOperationException("Append is not supported "
+        + "by S3AFileSystem");
   }
 
 

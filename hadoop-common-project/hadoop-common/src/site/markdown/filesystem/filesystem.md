@@ -611,7 +611,7 @@ this precondition fails.
 
 ### `FSDataOutputStream append(Path p, int bufferSize, Progressable progress)`
 
-Implementations MAY throw `UnsupportedOperationException`.
+Implementations without a compliant call SHOULD throw `UnsupportedOperationException`.
 
 #### Preconditions
 
@@ -630,7 +630,7 @@ by appending data to the existing list.
 
 ### `FSDataInputStream open(Path f, int bufferSize)`
 
-Implementations MAY throw `UnsupportedOperationException`.
+Implementations without a compliant call SHOULD throw `UnsupportedOperationException`.
 
 #### Preconditions
 
@@ -944,7 +944,7 @@ to the `DFSFileSystem` implementation is an ongoing matter for debate.
 Joins multiple blocks together to create a single file. This
 is a little-used operation currently implemented only by HDFS.
 
-Implementations MAY throw `UnsupportedOperationException`
+Implementations without a compliant call SHOULD throw `UnsupportedOperationException`.
 
 #### Preconditions
 
@@ -989,7 +989,7 @@ from specification.
 
 Truncate file `p` to the specified `newLength`.
 
-Implementations MAY throw `UnsupportedOperationException`.
+Implementations without a compliant call SHOULD throw `UnsupportedOperationException`.
 
 #### Preconditions
 

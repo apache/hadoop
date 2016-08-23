@@ -297,7 +297,8 @@ public abstract class ChecksumFs extends FilterFs {
 
   @Override
   public boolean truncate(Path f, long newLength) throws IOException {
-    throw new IOException("Not supported");
+    throw new UnsupportedOperationException("Truncate is not supported "
+        + "by ChecksumFs");
   }
 
   /**
