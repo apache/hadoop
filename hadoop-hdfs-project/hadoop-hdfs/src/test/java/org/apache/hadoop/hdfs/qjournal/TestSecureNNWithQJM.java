@@ -78,7 +78,7 @@ public class TestSecureNNWithQJM {
   private MiniJournalCluster mjc;
 
   @Rule
-  public Timeout timeout = new Timeout(30000);
+  public Timeout timeout = new Timeout(180000);
 
   @BeforeClass
   public static void init() throws Exception {
