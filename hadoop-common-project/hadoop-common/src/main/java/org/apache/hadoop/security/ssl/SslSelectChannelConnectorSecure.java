@@ -18,41 +18,41 @@
 
 package org.apache.hadoop.security.ssl;
 
-import org.mortbay.jetty.security.SslSocketConnector;
-
-import javax.net.ssl.SSLServerSocket;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.util.ArrayList;
 
+import javax.net.ssl.SSLEngine;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
+
 /**
- * This subclass of the Jetty SslSocketConnector exists solely to control
- * the TLS protocol versions allowed.  This is fallout from the POODLE
- * vulnerability (CVE-2014-3566), which requires that SSLv3 be disabled.
+ * This subclass of the Jetty SslSelectChannelConnector exists solely to
+ * control the TLS protocol versions allowed.  This is fallout from the
+ * POODLE vulnerability (CVE-2014-3566), which requires that SSLv3 be disabled.
  * Only TLS 1.0 and later protocols are allowed.
  */
-public class SslSocketConnectorSecure extends SslSocketConnector {
+@InterfaceAudience.Private
+public class SslSelectChannelConnectorSecure extends SslSelectChannelConnector {
 
-  public SslSocketConnectorSecure() {
+  public SslSelectChannelConnectorSecure() {
     super();
   }
 
   /**
-   * Create a new ServerSocket that will not accept SSLv3 connections,
-   * but will accept TLSv1.x connections.
+   * Disable SSLv3 protocol.
    */
-  protected ServerSocket newServerSocket(String host, int port,int backlog)
-          throws IOException {
-    SSLServerSocket socket = (SSLServerSocket)
-            super.newServerSocket(host, port, backlog);
+  @Override
+  protected SSLEngine createSSLEngine() throws IOException {
+    SSLEngine engine = super.createSSLEngine();
     ArrayList<String> nonSSLProtocols = new ArrayList<String>();
-    for (String p : socket.getEnabledProtocols()) {
+    for (String p : engine.getEnabledProtocols()) {
       if (!p.contains("SSLv3")) {
         nonSSLProtocols.add(p);
       }
     }
-    socket.setEnabledProtocols(nonSSLProtocols.toArray(
-            new String[nonSSLProtocols.size()]));
-    return socket;
+    engine.setEnabledProtocols(nonSSLProtocols.toArray(
+        new String[nonSSLProtocols.size()]));
+    return engine;
   }
 }
