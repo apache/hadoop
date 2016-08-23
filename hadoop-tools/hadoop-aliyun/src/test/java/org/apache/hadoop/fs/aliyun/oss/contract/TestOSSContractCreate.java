@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.aliyun.oss.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 /**
  * OSS contract creating tests.
@@ -33,9 +32,4 @@ public class TestOSSContractCreate extends AbstractContractCreateTest {
     return new OSSContract(conf);
   }
 
-  @Override
-  public void testOverwriteEmptyDirectory() throws Throwable {
-    ContractTestUtils.skip(
-        "blobstores can't distinguish empty directories from files");
-  }
 }

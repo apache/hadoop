@@ -63,6 +63,8 @@ import com.aliyun.oss.model.ObjectMetadata;
 import com.aliyun.oss.model.PartETag;
 import com.aliyun.oss.model.UploadPartCopyRequest;
 import com.aliyun.oss.model.UploadPartCopyResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of {@link FileSystem} for <a href="https://oss.aliyun.com">
@@ -70,6 +72,8 @@ import com.aliyun.oss.model.UploadPartCopyResult;
  */
 public class AliyunOSSFileSystem extends FileSystem {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AliyunOSSFileSystem.class);
   private URI uri;
   private Path workingDir;
   private OSSClient ossClient;
@@ -101,9 +105,24 @@ public class AliyunOSSFileSystem extends FileSystem {
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     String key = pathToKey(path);
+    FileStatus status = null;
 
-    if (!overwrite && exists(path)) {
-      throw new FileAlreadyExistsException(path + " already exists");
+    try {
+      // get the status or throw a FNFE
+      status = getFileStatus(path);
+
+      // if the thread reaches here, there is something at the path
+      if (status.isDirectory()) {
+        // path references a directory
+        throw new FileAlreadyExistsException(path + " is a directory");
+      }
+      if (!overwrite) {
+        // path references a file and overwrite is disabled
+        throw new FileAlreadyExistsException(path + " already exists");
+      }
+      LOG.debug("Overwriting file {}", path);
+    } catch (FileNotFoundException e) {
+      // this means the file is not found
     }
 
     return new FSDataOutputStream(new AliyunOSSOutputStream(getConf(),
@@ -540,7 +559,7 @@ public class AliyunOSSFileSystem extends FileSystem {
   /**
    * Used to create an empty file that represents an empty directory.
    *
-   * @param bucketName the bucket this directory belongs to
+   * @param bucket the bucket this directory belongs to
    * @param objectName directory path
    * @return true if directory successfully created
    * @throws IOException
