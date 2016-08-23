@@ -314,6 +314,31 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
+   * Get a report (ApplicationReport) of Applications matching the given
+   * application types, application states and application tags in the cluster.
+   * </p>
+   *
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationReport(ApplicationId)}.
+   * </p>
+   *
+   * @param applicationTypes set of application types you are interested in
+   * @param applicationStates set of application states you are interested in
+   * @param applicationTags set of application tags you are interested in
+   * @return a list of reports of applications
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationReport> getApplications(
+      Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates,
+      Set<String> applicationTags) throws YarnException,
+      IOException;
+
+  /**
+   * <p>
    * Get a report (ApplicationReport) of Applications matching the given users,
    * queues, application types and application states in the cluster. If any of
    * the params is set to null, it is not used when filtering.
