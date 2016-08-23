@@ -56,7 +56,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
-import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
+import org.apache.hadoop.security.ssl.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
@@ -78,7 +78,7 @@ import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.handler.HandlerCollection;
 import org.mortbay.jetty.handler.RequestLogHandler;
 import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSocketConnector;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.jetty.servlet.AbstractSessionManager;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
@@ -333,29 +333,7 @@ public final class HttpServer2 implements FilterContainer {
         if ("http".equals(scheme)) {
           listener = HttpServer2.createDefaultChannelConnector();
         } else if ("https".equals(scheme)) {
-          SslSocketConnector c = new SslSocketConnectorSecure();
-          c.setHeaderBufferSize(1024*64);
-          c.setNeedClientAuth(needsClientAuth);
-          c.setKeyPassword(keyPassword);
-
-          if (keyStore != null) {
-            c.setKeystore(keyStore);
-            c.setKeystoreType(keyStoreType);
-            c.setPassword(keyStorePassword);
-          }
-
-          if (trustStore != null) {
-            c.setTruststore(trustStore);
-            c.setTruststoreType(trustStoreType);
-            c.setTrustPassword(trustStorePassword);
-          }
-
-          if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
-            c.setExcludeCipherSuites(excludeCiphers.split(","));
-            LOG.info("Excluded Cipher List:" + excludeCiphers);
-          }
-
-          listener = c;
+          listener = createHttpsChannelConnector();
 
         } else {
           throw new HadoopIllegalArgumentException(
@@ -367,6 +345,32 @@ public final class HttpServer2 implements FilterContainer {
       }
       server.loadListeners();
       return server;
+    }
+
+    private Connector createHttpsChannelConnector() {
+      SslSelectChannelConnector c = new SslSelectChannelConnectorSecure();
+      configureChannelConnector(c);
+
+      c.setNeedClientAuth(needsClientAuth);
+      c.setKeyPassword(keyPassword);
+
+      if (keyStore != null) {
+        c.setKeystore(keyStore);
+        c.setKeystoreType(keyStoreType);
+        c.setPassword(keyStorePassword);
+      }
+
+      if (trustStore != null) {
+        c.setTruststore(trustStore);
+        c.setTruststoreType(trustStoreType);
+        c.setTrustPassword(trustStorePassword);
+      }
+
+      if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
+        c.setExcludeCipherSuites(excludeCiphers.split(","));
+        LOG.info("Excluded Cipher List:" + excludeCiphers);
+      }
+      return c;
     }
   }
 
@@ -541,21 +545,25 @@ public final class HttpServer2 implements FilterContainer {
     }
   }
 
-  @InterfaceAudience.Private
-  public static Connector createDefaultChannelConnector() {
-    SelectChannelConnector ret = new SelectChannelConnectorWithSafeStartup();
-    ret.setLowResourceMaxIdleTime(10000);
-    ret.setAcceptQueueSize(128);
-    ret.setResolveNames(false);
-    ret.setUseDirectBuffers(false);
+  private static void configureChannelConnector(SelectChannelConnector c) {
+    c.setLowResourceMaxIdleTime(10000);
+    c.setAcceptQueueSize(128);
+    c.setResolveNames(false);
+    c.setUseDirectBuffers(false);
     if(Shell.WINDOWS) {
       // result of setting the SO_REUSEADDR flag is different on Windows
       // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
       // without this 2 NN's can start on the same machine and listen on
       // the same port with indeterminate routing of incoming requests to them
-      ret.setReuseAddress(false);
+      c.setReuseAddress(false);
     }
-    ret.setHeaderBufferSize(1024*64);
+    c.setHeaderBufferSize(1024*64);
+  }
+
+  @InterfaceAudience.Private
+  public static Connector createDefaultChannelConnector() {
+    SelectChannelConnector ret = new SelectChannelConnectorWithSafeStartup();
+    configureChannelConnector(ret);
     return ret;
   }
 
