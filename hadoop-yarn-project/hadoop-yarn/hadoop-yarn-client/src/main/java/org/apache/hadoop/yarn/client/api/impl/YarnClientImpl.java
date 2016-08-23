@@ -505,6 +505,17 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
+  public List<ApplicationReport> getApplications(Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates,
+      Set<String> applicationTags) throws YarnException, IOException {
+    GetApplicationsRequest request =
+        GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
+    request.setApplicationTags(applicationTags);
+    GetApplicationsResponse response = rmClient.getApplications(request);
+    return response.getApplicationList();
+  }
+
+  @Override
   public List<ApplicationReport> getApplications(Set<String> queues,
       Set<String> users, Set<String> applicationTypes,
       EnumSet<YarnApplicationState> applicationStates) throws YarnException,
