@@ -31,8 +31,9 @@ public final class Constants {
       "fs.oss.credentials.provider";
 
   // OSS access verification
-  public static final String ACCESS_KEY = "fs.oss.access.key";
-  public static final String SECRET_KEY = "fs.oss.secret.key";
+  public static final String ACCESS_KEY = "fs.oss.accessKeyId";
+  public static final String SECRET_KEY = "fs.oss.accessKeySecret";
+  public static final String SECURITY_TOKEN = "fs.oss.securityToken";
 
   // Number of simultaneous connections to oss
   public static final String MAXIMUM_CONNECTIONS_KEY =
