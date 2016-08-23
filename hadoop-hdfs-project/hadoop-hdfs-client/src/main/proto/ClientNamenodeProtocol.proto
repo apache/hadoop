@@ -245,6 +245,7 @@ message Rename2RequestProto {
   required string src = 1;
   required string dst = 2;
   required bool overwriteDest = 3;
+  optional bool moveToTrash = 4;
 }
 
 message Rename2ResponseProto { // void response
