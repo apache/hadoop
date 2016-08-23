@@ -601,4 +601,23 @@ public class TestOfflineImageViewer {
             "FileDistribution", "-maxSize", "23", "-step", "4"});
     assertEquals(0, status);
   }
+
+  @Test
+  public void testOfflineImageViewerMaxSizeAndStepOptions() throws Exception {
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    try {
+      System.setOut(out);
+      // Add the -h option to make the test only for option parsing,
+      // and don't need to do the following operations.
+      OfflineImageViewer.main(new String[] {"-i", "-", "-o", "-", "-p",
+          "FileDistribution", "-maxSize", "512", "-step", "8", "-h"});
+      Assert.assertFalse(bytes.toString().contains(
+          "Error parsing command-line options: "));
+    } finally {
+      System.setOut(oldOut);
+      IOUtils.closeStream(out);
+    }
+  }
 }
