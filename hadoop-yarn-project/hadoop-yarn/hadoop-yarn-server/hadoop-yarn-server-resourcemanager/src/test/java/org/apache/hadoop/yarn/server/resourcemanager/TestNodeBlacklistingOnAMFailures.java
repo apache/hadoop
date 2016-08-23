@@ -68,6 +68,9 @@ public class TestNodeBlacklistingOnAMFailures {
     MockRM rm = startRM(conf, dispatcher);
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
 
+    // Register 5 nodes, so that we can blacklist atleast one if AM container
+    // is failed. As per calculation it will be like, 5nodes * 0.2 (default)=1.
+    // First register 2 nodes, and after AM lauched register 3 more nodes.
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm.getResourceTrackerService());
     nm1.registerNode();
@@ -92,6 +95,19 @@ public class TestNodeBlacklistingOnAMFailures {
       currentNode = nm2;
       otherNode = nm1;
     }
+
+    // register 3 nodes now
+    MockNM nm3 =
+        new MockNM("127.0.0.3:2345", 8000, rm.getResourceTrackerService());
+    nm3.registerNode();
+
+    MockNM nm4 =
+        new MockNM("127.0.0.4:2345", 8000, rm.getResourceTrackerService());
+    nm4.registerNode();
+
+    MockNM nm5 =
+        new MockNM("127.0.0.5:2345", 8000, rm.getResourceTrackerService());
+    nm5.registerNode();
 
     // Set the exist status to INVALID so that we can verify that the system
     // automatically blacklisting the node
