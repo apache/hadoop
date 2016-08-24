@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -52,7 +53,6 @@ import static org.apache.hadoop.util.Time.now;
 class FSDirStatAndListingOp {
   static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
       byte[] startAfter, boolean needLocation) throws IOException {
-    final String startAfterString = DFSUtil.bytes2String(startAfter);
     String src = null;
 
     final INodesInPath iip;
@@ -65,16 +65,20 @@ class FSDirStatAndListingOp {
       iip = fsd.getINodesInPath(src, true);
     }
 
-    // Get file name when startAfter is an INodePath
-    if (FSDirectory.isReservedName(startAfterString)) {
-      try {
-        String tmp = FSDirectory.resolvePath(startAfterString, fsd);
-        byte[][] regularPath = INode.getPathComponents(tmp);
-        startAfter = regularPath[regularPath.length - 1];
-      } catch (IOException e) {
-        // Possibly the inode is deleted
-        throw new DirectoryListingStartAfterNotFoundException(
-            "Can't find startAfter " + startAfterString);
+    // Get file name when startAfter is an INodePath.  This is not the
+    // common case so avoid any unnecessary processing unless required.
+    if (startAfter.length > 0 && startAfter[0] == Path.SEPARATOR_CHAR) {
+      final String startAfterString = DFSUtil.bytes2String(startAfter);
+      if (FSDirectory.isReservedName(startAfterString)) {
+        try {
+          byte[][] components = INode.getPathComponents(startAfterString);
+          components = FSDirectory.resolveComponents(components, fsd);
+          startAfter = components[components.length - 1];
+        } catch (IOException e) {
+          // Possibly the inode is deleted
+          throw new DirectoryListingStartAfterNotFoundException(
+              "Can't find startAfter " + startAfterString);
+        }
       }
     }
 
