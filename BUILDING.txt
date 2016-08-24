@@ -130,7 +130,7 @@ Maven build goals:
   * Use -Psrc to create a project source TAR.GZ
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
   * Use -Preleasedocs to include the changelog and release docs (requires Internet connectivity)
-  * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity, and it is for dev use only)
+  * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
 
  Snappy build options:
 

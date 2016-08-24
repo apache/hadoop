@@ -17,27 +17,31 @@
 
 Hadoop: YARN-UI V2
 =================
-*This is a WIP project, nobody should use it in production.*
 
 Prerequisites
 -------------
 
-You will need the following things properly installed on your computer.
+If you run RM locally in your computer for test purpose, you need the following things properly installed.
 
-* Install Node.js with NPM: https://nodejs.org/download/
-* After Node.js installed, install bower: `npm install -g bower`.
-* Install Ember-cli: `npm install -g ember-cli`
+- Install Node.js with NPM: https://nodejs.org/download
+- After Node.js installed, install `corsproxy`: `npm install -g corsproxy`.
 
-BUILD
-----
-* Please refer to BUILDING.txt in the top directory and pass -Pyarn-ui to build UI-related code
-* Execute `mvn test -Pyarn-ui` to run unit tests
 
-Try it
-------
+Configurations
+-------------
 
-* Packaging and deploying Hadoop in this branch
-* In `hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/app/config.js`, change `timelineWebUrl` and `rmWebUrl` to your YARN RM/Timeline server web address. 
-* If you are running YARN RM in your localhost, you should update `localBaseUrl` to `localhost:1337/`, install `npm install -g corsproxy` and run `corsproxy` to avoid CORS errors. More details: `https://www.npmjs.com/package/corsproxy`. 
-* Run `ember serve` under `hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/`
-* Visit your app at [http://localhost:4200](http://localhost:4200).
+*In yarn-site.xml*
+
+| Configuration Property | Description |
+|:---- |:---- |
+| `yarn.resourcemanager.webapp.ui2.enable` | In the server side it indicates whether the new YARN-UI v2 is enabled or not. Defaults to `false`. |
+| `yarn.resourcemanager.webapp.ui2.address` | Specify the address of ResourceManager and port which host YARN-UI v2, defaults to `localhost:8288`. |
+
+*In $HADOOP_PREFIX/share/hadoop/yarn/webapps/rm/config/configs.env*
+
+- Update timelineWebAddress and rmWebAddress to the actual addresses run resource manager and timeline server
+- If you run RM locally in you computer just for test purpose, you need to keep `corsproxy` running. Otherwise, you need to set `localBaseAddress` to empty.
+
+Use it
+-------------
+Open your browser, go to `rm-address:8288` and try it!
