@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
@@ -106,27 +107,30 @@ class FsUsage extends FsCommand {
   /** show disk usage */
   public static class Du extends FsUsage {
     public static final String NAME = "du";
-    public static final String USAGE = "[-s] [-h] <path> ...";
+    public static final String USAGE = "[-s] [-h] [-x] <path> ...";
     public static final String DESCRIPTION =
-    "Show the amount of space, in bytes, used by the files that " +
-    "match the specified file pattern. The following flags are optional:\n" +
-    "-s: Rather than showing the size of each individual file that" +
-    " matches the pattern, shows the total (summary) size.\n" +
-    "-h: Formats the sizes of files in a human-readable fashion" +
-    " rather than a number of bytes.\n\n" +
-    "Note that, even without the -s option, this only shows size summaries " +
-    "one level deep into a directory.\n\n" +
-    "The output is in the form \n" + 
-    "\tsize\tname(full path)\n"; 
+        "Show the amount of space, in bytes, used by the files that match " +
+            "the specified file pattern. The following flags are optional:\n" +
+            "-s: Rather than showing the size of each individual file that" +
+            " matches the pattern, shows the total (summary) size.\n" +
+            "-h: Formats the sizes of files in a human-readable fashion" +
+            " rather than a number of bytes.\n" +
+            "-x: Excludes snapshots from being counted.\n\n" +
+            "Note that, even without the -s option, this only shows size " +
+            "summaries one level deep into a directory.\n\n" +
+            "The output is in the form \n" +
+            "\tsize\tname(full path)\n";
 
     protected boolean summary = false;
-    
+    private boolean excludeSnapshots = false;
+
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s");
+      CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "h", "s", "x");
       cf.parse(args);
       humanReadable = cf.getOpt("h");
       summary = cf.getOpt("s");
+      excludeSnapshots = cf.getOpt("x");
       if (args.isEmpty()) args.add(Path.CUR_DIR);
     }
 
@@ -144,11 +148,10 @@ class FsUsage extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      long length;
-      if (item.stat.isDirectory()) {
-        length = item.fs.getContentSummary(item.path).getLength();
-      } else {
-        length = item.stat.getLen();
+      ContentSummary contentSummary = item.fs.getContentSummary(item.path);
+      long length = contentSummary.getLength();
+      if (excludeSnapshots) {
+        length -= contentSummary.getSnapshotLength();
       }
       usagesTable.addRow(formatSize(length), item);
     }

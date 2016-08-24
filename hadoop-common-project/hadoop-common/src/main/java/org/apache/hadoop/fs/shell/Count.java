@@ -51,6 +51,8 @@ public class Count extends FsCommand {
   private static final String OPTION_HUMAN = "h";
   private static final String OPTION_HEADER = "v";
   private static final String OPTION_TYPE = "t";
+  // exclude snapshots from calculation. Only work on default columns.
+  private static final String OPTION_EXCLUDE_SNAPSHOT = "x";
   //return the quota, namespace count and disk space usage.
   private static final String OPTION_QUOTA_AND_USAGE = "u";
 
@@ -58,7 +60,8 @@ public class Count extends FsCommand {
   public static final String USAGE =
       "[-" + OPTION_QUOTA + "] [-" + OPTION_HUMAN + "] [-" + OPTION_HEADER
           + "] [-" + OPTION_TYPE + " [<storage type>]] [-" +
-          OPTION_QUOTA_AND_USAGE + "] <path> ...";
+          OPTION_QUOTA_AND_USAGE + "] [-" + OPTION_EXCLUDE_SNAPSHOT
+          + "] <path> ...";
   public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
           "that match the specified file pattern.  The output columns are:\n" +
@@ -72,6 +75,8 @@ public class Count extends FsCommand {
           "The -" + OPTION_HUMAN +
           " option shows file sizes in human readable format.\n" +
           "The -" + OPTION_HEADER + " option displays a header line.\n" +
+          "The -" + OPTION_EXCLUDE_SNAPSHOT + " option excludes snapshots " +
+          "from being calculated. \n" +
           "The -" + OPTION_TYPE + " option displays quota by storage types.\n" +
           "It must be used with -" + OPTION_QUOTA + " option.\n" +
           "If a comma-separated list of storage types is given after the -" +
@@ -87,6 +92,7 @@ public class Count extends FsCommand {
   private boolean showQuotabyType;
   private List<StorageType> storageTypes = null;
   private boolean showQuotasAndUsageOnly;
+  private boolean excludeSnapshots;
 
   /** Constructor */
   public Count() {}
@@ -106,7 +112,8 @@ public class Count extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args) {
     CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE,
-        OPTION_QUOTA, OPTION_HUMAN, OPTION_HEADER, OPTION_QUOTA_AND_USAGE);
+        OPTION_QUOTA, OPTION_HUMAN, OPTION_HEADER, OPTION_QUOTA_AND_USAGE,
+        OPTION_EXCLUDE_SNAPSHOT);
     cf.addOptionWithValue(OPTION_TYPE);
     cf.parse(args);
     if (args.isEmpty()) { // default path is the current working directory
@@ -115,6 +122,7 @@ public class Count extends FsCommand {
     showQuotas = cf.getOpt(OPTION_QUOTA);
     humanReadable = cf.getOpt(OPTION_HUMAN);
     showQuotasAndUsageOnly = cf.getOpt(OPTION_QUOTA_AND_USAGE);
+    excludeSnapshots = cf.getOpt(OPTION_EXCLUDE_SNAPSHOT);
 
     if (showQuotas || showQuotasAndUsageOnly) {
       String types = cf.getOptValue(OPTION_TYPE);
@@ -124,6 +132,11 @@ public class Count extends FsCommand {
         storageTypes = getAndCheckStorageTypes(types);
       } else {
         showQuotabyType = false;
+      }
+      if (excludeSnapshots) {
+        out.println(OPTION_QUOTA + " or " + OPTION_QUOTA_AND_USAGE + " option "
+            + "is given, the -x option is ignored.");
+        excludeSnapshots = false;
       }
     }
 
@@ -163,7 +176,8 @@ public class Count extends FsCommand {
           storageTypes) + src);
     } else {
       ContentSummary summary = src.fs.getContentSummary(src.path);
-      out.println(summary.toString(showQuotas, isHumanReadable()) + src);
+      out.println(summary.
+          toString(showQuotas, isHumanReadable(), excludeSnapshots) + src);
     }
   }
 
