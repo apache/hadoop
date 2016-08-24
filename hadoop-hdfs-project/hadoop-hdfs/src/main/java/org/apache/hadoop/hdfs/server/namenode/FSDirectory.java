@@ -531,21 +531,24 @@ public class FSDirectory implements Closeable {
    * @throws FileNotFoundException
    * @throws AccessControlException
    */
-  INodesInPath resolvePath(FSPermissionChecker pc, String src)
+  @VisibleForTesting
+  public INodesInPath resolvePath(FSPermissionChecker pc, String src)
       throws UnresolvedLinkException, FileNotFoundException,
       AccessControlException {
     return resolvePath(pc, src, true);
   }
 
-  INodesInPath resolvePath(FSPermissionChecker pc, String src,
+  @VisibleForTesting
+  public INodesInPath resolvePath(FSPermissionChecker pc, String src,
       boolean resolveLink) throws UnresolvedLinkException,
   FileNotFoundException, AccessControlException {
     byte[][] components = INode.getPathComponents(src);
-    if (isPermissionEnabled && pc != null && isReservedRawName(components)) {
+    boolean isRaw = isReservedRawName(components);
+    if (isPermissionEnabled && pc != null && isRaw) {
       pc.checkSuperuserPrivilege();
     }
     components = resolveComponents(components, this);
-    return INodesInPath.resolve(rootDir, components, resolveLink);
+    return INodesInPath.resolve(rootDir, components, isRaw, resolveLink);
   }
 
   INodesInPath resolvePathForWrite(FSPermissionChecker pc, String src)
@@ -1662,8 +1665,7 @@ public class FSDirectory implements Closeable {
   HdfsFileStatus getAuditFileInfo(INodesInPath iip)
       throws IOException {
     return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
-        ? FSDirStatAndListingOp.getFileInfo(this, iip.getPath(), iip, false,
-            false) : null;
+        ? FSDirStatAndListingOp.getFileInfo(this, iip, false) : null;
   }
 
   /**
