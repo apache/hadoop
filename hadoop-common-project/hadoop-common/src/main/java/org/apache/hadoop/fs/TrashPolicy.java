@@ -42,7 +42,9 @@ public abstract class TrashPolicy extends Configured {
    * @param conf the configuration to be used
    * @param fs the filesystem to be used
    * @param home the home directory
+   * @deprecated Use {@link #initialize(Configuration, FileSystem)} instead.
    */
+  @Deprecated
   public abstract void initialize(Configuration conf, FileSystem fs, Path home);
 
   /**
@@ -116,7 +118,9 @@ public abstract class TrashPolicy extends Configured {
    * @param fs the file system to be used
    * @param home the home directory
    * @return an instance of TrashPolicy
+   * @deprecated Use {@link #getInstance(Configuration, FileSystem)} instead.
    */
+  @Deprecated
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
