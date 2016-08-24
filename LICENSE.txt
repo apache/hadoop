@@ -2315,35 +2315,53 @@ jamon-runtime 2.3.1
      Your choice of the MPL or the alternative licenses, if any, specified
      by the Initial Developer in the file described in Exhibit A.
 
-For Apache Hadoop YARN Web UI component: hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/
----------------------------------------------------------------------
-The Apache Hadoop YARN Web UI component bundles the following files under the MIT License:
-
- - ember v2.2.0 (http://emberjs.com/) - Copyright (c) 2014 Yehuda Katz, Tom Dale and Ember.js contributors
- - ember-data v2.1.0 (https://github.com/emberjs/data) - Copyright (C) 2011-2014 Tilde, Inc. and contributors, Portions Copyright (C) 2011 LivingSocial Inc.
- - ember-resolver v2.0.3 (https://github.com/ember-cli/ember-resolver) - Copyright (c) 2013 Stefan Penner and Ember App Kit Contributors
- - bootstrap v3.3.6 (http://getbootstrap.com) - Copyright (c) 2011-2014 Twitter, Inc
- - jquery v2.1.4 (http://jquery.org) - Copyright 2005, 2014 jQuery Foundation and other contributors
- - jquery-ui v1.11.4 (http://jqueryui.com/) - Copyright 2014 jQuery Foundation and other contributors
- - datatables v1.10.8 (https://datatables.net/)
- - moment v2.10.6 (http://momentjs.com/) - Copyright (c) 2011-2015 Tim Wood, Iskren Chernev, Moment.js contributors
- - em-helpers v0.5.8 (https://github.com/sreenaths/em-helpers)
- - ember-array-contains-helper v1.0.2 (https://github.com/bmeurant/ember-array-contains-helper)
- - ember-cli-app-version v0.5.8 (https://github.com/EmberSherpa/ember-cli-app-version) - Authored by Taras Mankovski <tarasm@gmail.com>
- - ember-cli-babel v5.1.6 (https://github.com/babel/ember-cli-babel) - Authored by Stefan Penner <stefan.penner@gmail.com>
- - ember-cli-content-security-policy v0.4.0 (https://github.com/rwjblue/ember-cli-content-security-policy)
- - ember-cli-dependency-checker v1.2.0 (https://github.com/quaertym/ember-cli-dependency-checker) - Authored by Emre Unal
- - ember-cli-htmlbars v1.0.2 (https://github.com/ember-cli/ember-cli-htmlbars) - Authored by Robert Jackson <me@rwjblue.com>
- - ember-cli-htmlbars-inline-precompile v0.3.1 (https://github.com/pangratz/ember-cli-htmlbars-inline-precompile) - Authored by Clemens Müller <cmueller.418@gmail.com>
- - ember-cli-ic-ajax v0.2.1 (https://github.com/rwjblue/ember-cli-ic-ajax) - Authored by Robert Jackson <me@rwjblue.com>
- - ember-cli-inject-live-reload v1.4.0 (https://github.com/rwjblue/ember-cli-inject-live-reload) - Authored by Robert Jackson <me@rwjblue.com>
- - ember-cli-qunit v1.2.1 (https://github.com/ember-cli/ember-cli-qunit) - Authored by Robert Jackson <me@rwjblue.com>
- - ember-cli-release v0.2.8 (https://github.com/lytics/ember-cli-release) - Authored by Robert Jackson <me@rwjblue.com>
- - ember-cli-sri v1.2.1 (https://github.com/jonathanKingston/ember-cli-sri) - Authored by Jonathan Kingston
- - ember-cli-uglify v1.2.0 (github.com/ember-cli/ember-cli-uglify) - Authored by Robert Jackson <me@rwjblue.com>
- - ember-d3 v0.1.0 (https://github.com/brzpegasus/ember-d3) - Authored by Estelle DeBlois
- - ember-truth-helpers v1.2.0 (https://github.com/jmurphyau/ember-truth-helpers)
- - select2 v4.0.0 (https://select2.github.io/)
+The binary distribution of this product bundles these dependencies under the
+following license:
+bootstrap v3.3.6
+broccoli-asset-rev v2.4.2
+broccoli-funnel v1.0.1
+datatables v1.10.8
+em-helpers v0.5.13
+em-table v0.1.6
+ember v2.2.0
+ember-array-contains-helper v1.0.2
+ember-bootstrap v0.5.1
+ember-cli v1.13.13
+ember-cli-app-version v1.0.0
+ember-cli-babel v5.1.6
+ember-cli-content-security-policy v0.4.0
+ember-cli-dependency-checker v1.2.0
+ember-cli-htmlbars v1.0.2
+ember-cli-htmlbars-inline-precompile v0.3.1
+ember-cli-ic-ajax v0.2.1
+ember-cli-inject-live-reload v1.4.0
+ember-cli-jquery-ui v0.0.20
+ember-cli-qunit v1.2.1
+ember-cli-release v0.2.8
+ember-cli-shims v0.0.6
+ember-cli-sri v1.2.1
+ember-cli-test-loader v0.2.1
+ember-cli-uglify v1.2.0
+ember-d3 v0.1.0
+ember-data v2.1.0
+ember-disable-proxy-controllers v1.0.1
+ember-export-application-global v1.0.5
+ember-load-initializers v0.1.7
+ember-qunit v0.4.16
+ember-qunit-notifications v0.1.0
+ember-resolver v2.0.3
+ember-spin-spinner v0.2.3
+ember-truth-helpers v1.2.0
+jquery v2.1.4
+jquery-ui v1.11.4
+loader.js v3.3.0
+momentjs v2.10.6
+qunit v1.19.0
+select2 v4.0.0
+snippet-ss v1.11.0
+spin.js v2.3.2
+-------------------------------------------------------------------------------
+The MIT License (MIT)
 
 All rights reserved.
 
@@ -2364,12 +2382,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-----
-The Apache Hadoop YARN Web UI component bundles the following files under the BSD License:
 
+The binary distribution of this product bundles these dependencies under the
+following license:
+D3 v3.5.6
+--------------------------------------------------------------------------------
 (3-clause BSD license)
- - D3 v3.5.6 (http://d3js.org/) - Copyright (c) 2010-2014, Michael Bostock
-
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
