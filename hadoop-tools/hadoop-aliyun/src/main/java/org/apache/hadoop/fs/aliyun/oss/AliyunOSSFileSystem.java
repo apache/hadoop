@@ -71,7 +71,6 @@ import org.slf4j.LoggerFactory;
  * Aliyun OSS</a>, used to access OSS blob system in a filesystem style.
  */
 public class AliyunOSSFileSystem extends FileSystem {
-
   private static final Logger LOG =
       LoggerFactory.getLogger(AliyunOSSFileSystem.class);
   private URI uri;
@@ -560,18 +559,18 @@ public class AliyunOSSFileSystem extends FileSystem {
    * Used to create an empty file that represents an empty directory.
    *
    * @param bucket the bucket this directory belongs to
-   * @param objectName directory path
+   * @param key directory path
    * @return true if directory successfully created
    * @throws IOException
    */
-  private boolean mkdir(final String bucket, final String objectName)
+  private boolean mkdir(final String bucket, final String key)
       throws IOException {
-    String dirName = objectName;
+    String dirName = key;
     ObjectMetadata dirMeta = new ObjectMetadata();
     byte[] buffer = new byte[0];
     ByteArrayInputStream in = new ByteArrayInputStream(buffer);
     dirMeta.setContentLength(0);
-    if (!objectName.endsWith("/")) {
+    if (!key.endsWith("/")) {
       dirName += "/";
     }
     try {

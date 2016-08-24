@@ -68,4 +68,23 @@ public class TestOSSOutputStream {
   public void testMultiPartUpload() throws IOException {
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 6 * 1024 * 1024);
   }
+
+  @Test
+  public void testMultiPartUploadLimit() throws IOException {
+    long partSize1 = AliyunOSSUtils.calculatePartSize(10 * 1024, 100 * 1024);
+    assert(10 * 1024 / partSize1 < Constants.MULTIPART_UPLOAD_PART_NUM_LIMIT);
+
+    long partSize2 = AliyunOSSUtils.calculatePartSize(200 * 1024, 100 * 1024);
+    assert(200 * 1024 / partSize2 < Constants.MULTIPART_UPLOAD_PART_NUM_LIMIT);
+
+    long partSize3 = AliyunOSSUtils.calculatePartSize(10000 * 100 * 1024,
+        100 * 1024);
+    assert(10000 * 100 * 1024 / partSize3
+        < Constants.MULTIPART_UPLOAD_PART_NUM_LIMIT);
+
+    long partSize4 = AliyunOSSUtils.calculatePartSize(10001 * 100 * 1024,
+        100 * 1024);
+    assert(10001 * 100 * 1024 / partSize4
+        < Constants.MULTIPART_UPLOAD_PART_NUM_LIMIT);
+  }
 }

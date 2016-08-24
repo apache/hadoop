@@ -79,7 +79,7 @@ public final class Constants {
       "fs.oss.multipart.upload.size";
 
   public static final long MULTIPART_UPLOAD_SIZE_DEFAULT = 10 * 1024 * 1024;
-  public static final int MULTIPART_UPLOAD_PART_NUM_LIMIT = 1000;
+  public static final int MULTIPART_UPLOAD_PART_NUM_LIMIT = 10000;
 
   // Minimum size in bytes before we start a multipart uploads or copy
   public static final String MIN_MULTIPART_UPLOAD_THRESHOLD_KEY =
@@ -107,5 +107,7 @@ public final class Constants {
   public static final String FS_OSS_BLOCK_SIZE_KEY = "fs.oss.block.size";
   public static final int FS_OSS_BLOCK_SIZE_DEFAULT = 64 * 1024 * 1024;
   public static final String FS_OSS = "oss";
+
+  public static final long MIN_MULTIPART_UPLOAD_PART_SIZE = 100 * 1024L;
 
 }

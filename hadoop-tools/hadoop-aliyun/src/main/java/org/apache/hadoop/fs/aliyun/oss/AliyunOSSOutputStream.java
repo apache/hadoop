@@ -84,6 +84,9 @@ public class AliyunOSSOutputStream extends OutputStream {
 
     partSize = conf.getLong(MULTIPART_UPLOAD_SIZE_KEY,
         MULTIPART_UPLOAD_SIZE_DEFAULT);
+    if (partSize < MIN_MULTIPART_UPLOAD_PART_SIZE) {
+      partSize = MIN_MULTIPART_UPLOAD_PART_SIZE;
+    }
     partSizeThreshold = conf.getLong(MIN_MULTIPART_UPLOAD_THRESHOLD_KEY,
         MIN_MULTIPART_UPLOAD_THRESHOLD_DEFAULT);
 
@@ -151,6 +154,12 @@ public class AliyunOSSOutputStream extends OutputStream {
   private void multipartUploadObject() throws IOException {
     File object = tmpFile.getAbsoluteFile();
     long dataLen = object.length();
+    long realPartSize = AliyunOSSUtils.calculatePartSize(dataLen, partSize);
+    int partNum = (int)(dataLen / realPartSize);
+    if (dataLen % realPartSize != 0) {
+      partNum += 1;
+    }
+
     InitiateMultipartUploadRequest initiateMultipartUploadRequest =
         new InitiateMultipartUploadRequest(bucketName, key);
     ObjectMetadata meta = new ObjectMetadata();
@@ -161,14 +170,6 @@ public class AliyunOSSOutputStream extends OutputStream {
     initiateMultipartUploadRequest.setObjectMetadata(meta);
     InitiateMultipartUploadResult initiateMultipartUploadResult =
         ossClient.initiateMultipartUpload(initiateMultipartUploadRequest);
-    int partNum = (int)(dataLen / partSize);
-    if (dataLen % partSize != 0) {
-      partNum += 1;
-    }
-    if (partNum > MULTIPART_UPLOAD_PART_NUM_LIMIT) {
-      throw new IOException("Number of parts " + partNum + " should not be " +
-          "bigger than limit " + MULTIPART_UPLOAD_PART_NUM_LIMIT);
-    }
     List<PartETag> partETags = new ArrayList<PartETag>();
     String uploadId = initiateMultipartUploadResult.getUploadId();
 
@@ -177,10 +178,10 @@ public class AliyunOSSOutputStream extends OutputStream {
         // TODO: Optimize this, avoid opening the object multiple times
         FileInputStream fis = new FileInputStream(object);
         try {
-          long skipBytes = partSize * i;
+          long skipBytes = realPartSize * i;
           AliyunOSSUtils.skipFully(fis, skipBytes);
-          long size = (partSize < dataLen - skipBytes) ?
-              partSize : dataLen - skipBytes;
+          long size = (realPartSize < dataLen - skipBytes) ?
+              realPartSize : dataLen - skipBytes;
           UploadPartRequest uploadPartRequest = new UploadPartRequest();
           uploadPartRequest.setBucketName(bucketName);
           uploadPartRequest.setKey(key);

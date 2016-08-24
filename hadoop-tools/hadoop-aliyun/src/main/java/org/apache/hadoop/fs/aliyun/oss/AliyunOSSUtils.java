@@ -28,6 +28,8 @@ import java.util.Objects;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_NUM_LIMIT;
+
 /**
  * Utility methods for Aliyun OSS code.
  */
@@ -171,5 +173,18 @@ final public class AliyunOSSUtils {
       throw new IOException("Failed to skip " + n + " bytes, possibly due " +
               "to EOF.");
     }
+  }
+
+  /**
+   * Calculate a proper size of multipart piece. If <code>minPartSize</code>
+   * is too small, the number of multipart pieces may exceed the limit of
+   * {@link Constants#MULTIPART_UPLOAD_PART_NUM_LIMIT}.
+   * @param contentLength the size of file.
+   * @param minPartSize the minimum size of multipart piece.
+   * @return a revisional size of multipart piece.
+     */
+  public static long calculatePartSize(long contentLength, long minPartSize) {
+    long tmpPartSize = contentLength / MULTIPART_UPLOAD_PART_NUM_LIMIT + 1;
+    return Math.max(minPartSize, tmpPartSize);
   }
 }
