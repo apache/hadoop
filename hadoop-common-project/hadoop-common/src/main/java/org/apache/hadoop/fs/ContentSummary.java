@@ -34,6 +34,11 @@ public class ContentSummary extends QuotaUsage implements Writable{
   private long length;
   private long fileCount;
   private long directoryCount;
+  // These fields are to track the snapshot-related portion of the values.
+  private long snapshotLength;
+  private long snapshotFileCount;
+  private long snapshotDirectoryCount;
+  private long snapshotSpaceConsumed;
 
   /** We don't use generics. Instead override spaceConsumed and other methods
       in order to keep backward compatibility. */
@@ -53,6 +58,26 @@ public class ContentSummary extends QuotaUsage implements Writable{
 
     public Builder directoryCount(long directoryCount) {
       this.directoryCount = directoryCount;
+      return this;
+    }
+
+    public Builder snapshotLength(long snapshotLength) {
+      this.snapshotLength = snapshotLength;
+      return this;
+    }
+
+    public Builder snapshotFileCount(long snapshotFileCount) {
+      this.snapshotFileCount = snapshotFileCount;
+      return this;
+    }
+
+    public Builder snapshotDirectoryCount(long snapshotDirectoryCount) {
+      this.snapshotDirectoryCount = snapshotDirectoryCount;
+      return this;
+    }
+
+    public Builder snapshotSpaceConsumed(long snapshotSpaceConsumed) {
+      this.snapshotSpaceConsumed = snapshotSpaceConsumed;
       return this;
     }
 
@@ -107,6 +132,10 @@ public class ContentSummary extends QuotaUsage implements Writable{
     private long length;
     private long fileCount;
     private long directoryCount;
+    private long snapshotLength;
+    private long snapshotFileCount;
+    private long snapshotDirectoryCount;
+    private long snapshotSpaceConsumed;
   }
 
   /** Constructor deprecated by ContentSummary.Builder*/
@@ -142,16 +171,36 @@ public class ContentSummary extends QuotaUsage implements Writable{
     this.length = builder.length;
     this.fileCount = builder.fileCount;
     this.directoryCount = builder.directoryCount;
+    this.snapshotLength = builder.snapshotLength;
+    this.snapshotFileCount = builder.snapshotFileCount;
+    this.snapshotDirectoryCount = builder.snapshotDirectoryCount;
+    this.snapshotSpaceConsumed = builder.snapshotSpaceConsumed;
   }
 
   /** @return the length */
   public long getLength() {return length;}
 
+  public long getSnapshotLength() {
+    return snapshotLength;
+  }
+
   /** @return the directory count */
   public long getDirectoryCount() {return directoryCount;}
 
+  public long getSnapshotDirectoryCount() {
+    return snapshotDirectoryCount;
+  }
+
   /** @return the file count */
   public long getFileCount() {return fileCount;}
+
+  public long getSnapshotFileCount() {
+    return snapshotFileCount;
+  }
+
+  public long getSnapshotSpaceConsumed() {
+    return snapshotSpaceConsumed;
+  }
 
   @Override
   @InterfaceAudience.Private
@@ -180,9 +229,14 @@ public class ContentSummary extends QuotaUsage implements Writable{
     if (this == to) {
       return true;
     } else if (to instanceof ContentSummary) {
-      return getLength() == ((ContentSummary) to).getLength() &&
-          getFileCount() == ((ContentSummary) to).getFileCount() &&
-          getDirectoryCount() == ((ContentSummary) to).getDirectoryCount() &&
+      ContentSummary right = (ContentSummary) to;
+      return getLength() == right.getLength() &&
+          getFileCount() == right.getFileCount() &&
+          getDirectoryCount() == right.getDirectoryCount() &&
+          getSnapshotLength() == right.getSnapshotLength() &&
+          getSnapshotFileCount() == right.getSnapshotFileCount() &&
+          getSnapshotDirectoryCount() == right.getSnapshotDirectoryCount() &&
+          getSnapshotSpaceConsumed() == right.getSnapshotSpaceConsumed() &&
           super.equals(to);
     } else {
       return super.equals(to);
@@ -191,7 +245,9 @@ public class ContentSummary extends QuotaUsage implements Writable{
 
   @Override
   public int hashCode() {
-    long result = getLength() ^ getFileCount() ^ getDirectoryCount();
+    long result = getLength() ^ getFileCount() ^ getDirectoryCount()
+        ^ getSnapshotLength() ^ getSnapshotFileCount()
+        ^ getSnapshotDirectoryCount() ^ getSnapshotSpaceConsumed();
     return ((int) result) ^ super.hashCode();
   }
 
@@ -255,15 +311,14 @@ public class ContentSummary extends QuotaUsage implements Writable{
    * @param qOption a flag indicating if quota needs to be printed or not
    * @return the string representation of the object
   */
+  @Override
   public String toString(boolean qOption) {
     return toString(qOption, false);
   }
 
   /** Return the string representation of the object in the output format.
-   * if qOption is false, output directory count, file count, and content size;
-   * if qOption is true, output quota and remaining quota as well.
-   * if hOption is false file sizes are returned in bytes
-   * if hOption is true file sizes are returned in human readable 
+   * For description of the options,
+   * @see #toString(boolean, boolean, boolean, boolean, List)
    * 
    * @param qOption a flag indicating if quota needs to be printed or not
    * @param hOption a flag indicating if human readable output if to be used
@@ -273,10 +328,24 @@ public class ContentSummary extends QuotaUsage implements Writable{
     return toString(qOption, hOption, false, null);
   }
 
+  /** Return the string representation of the object in the output format.
+   * For description of the options,
+   * @see #toString(boolean, boolean, boolean, boolean, List)
+   *
+   * @param qOption a flag indicating if quota needs to be printed or not
+   * @param hOption a flag indicating if human readable output is to be used
+   * @param xOption a flag indicating if calculation from snapshots is to be
+   *                included in the output
+   * @return the string representation of the object
+   */
+  public String toString(boolean qOption, boolean hOption, boolean xOption) {
+    return toString(qOption, hOption, false, xOption, null);
+  }
+
   /**
    * Return the string representation of the object in the output format.
-   * if tOption is true, display the quota by storage types,
-   * Otherwise, same logic with #toString(boolean,boolean)
+   * For description of the options,
+   * @see #toString(boolean, boolean, boolean, boolean, List)
    *
    * @param qOption a flag indicating if quota needs to be printed or not
    * @param hOption a flag indicating if human readable output if to be used
@@ -286,6 +355,29 @@ public class ContentSummary extends QuotaUsage implements Writable{
    */
   public String toString(boolean qOption, boolean hOption,
                          boolean tOption, List<StorageType> types) {
+    return toString(qOption, hOption, tOption, false, types);
+  }
+
+  /** Return the string representation of the object in the output format.
+   * if qOption is false, output directory count, file count, and content size;
+   * if qOption is true, output quota and remaining quota as well.
+   * if hOption is false, file sizes are returned in bytes
+   * if hOption is true, file sizes are returned in human readable
+   * if tOption is true, display the quota by storage types
+   * if tOption is false, same logic with #toString(boolean,boolean)
+   * if xOption is false, output includes the calculation from snapshots
+   * if xOption is true, output excludes the calculation from snapshots
+   *
+   * @param qOption a flag indicating if quota needs to be printed or not
+   * @param hOption a flag indicating if human readable output is to be used
+   * @param tOption a flag indicating if display quota by storage types
+   * @param xOption a flag indicating if calculation from snapshots is to be
+   *                included in the output
+   * @param types Storage types to display
+   * @return the string representation of the object
+   */
+  public String toString(boolean qOption, boolean hOption, boolean tOption,
+      boolean xOption, List<StorageType> types) {
     String prefix = "";
 
     if (tOption) {
@@ -296,10 +388,17 @@ public class ContentSummary extends QuotaUsage implements Writable{
       prefix = getQuotaUsage(hOption);
     }
 
-    return prefix + String.format(SUMMARY_FORMAT,
-        formatSize(directoryCount, hOption),
-        formatSize(fileCount, hOption),
-        formatSize(length, hOption));
+    if (xOption) {
+      return prefix + String.format(SUMMARY_FORMAT,
+          formatSize(directoryCount - snapshotDirectoryCount, hOption),
+          formatSize(fileCount - snapshotFileCount, hOption),
+          formatSize(length - snapshotLength, hOption));
+    } else {
+      return prefix + String.format(SUMMARY_FORMAT,
+          formatSize(directoryCount, hOption),
+          formatSize(fileCount, hOption),
+          formatSize(length, hOption));
+    }
   }
 
   /**

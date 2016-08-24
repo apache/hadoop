@@ -1364,6 +1364,10 @@ public class PBHelperClient {
     builder.length(cs.getLength()).
         fileCount(cs.getFileCount()).
         directoryCount(cs.getDirectoryCount()).
+        snapshotLength(cs.getSnapshotLength()).
+        snapshotFileCount(cs.getSnapshotFileCount()).
+        snapshotDirectoryCount(cs.getSnapshotDirectoryCount()).
+        snapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         quota(cs.getQuota()).
         spaceConsumed(cs.getSpaceConsumed()).
         spaceQuota(cs.getSpaceQuota());
@@ -1958,6 +1962,10 @@ public class PBHelperClient {
     builder.setLength(cs.getLength()).
         setFileCount(cs.getFileCount()).
         setDirectoryCount(cs.getDirectoryCount()).
+        setSnapshotLength(cs.getSnapshotLength()).
+        setSnapshotFileCount(cs.getSnapshotFileCount()).
+        setSnapshotDirectoryCount(cs.getSnapshotDirectoryCount()).
+        setSnapshotSpaceConsumed(cs.getSnapshotSpaceConsumed()).
         setQuota(cs.getQuota()).
         setSpaceConsumed(cs.getSpaceConsumed()).
         setSpaceQuota(cs.getSpaceQuota());

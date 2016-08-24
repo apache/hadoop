@@ -447,7 +447,7 @@ public class TestCount {
     Count count = new Count();
     String actual = count.getUsage();
     String expected =
-        "-count [-q] [-h] [-v] [-t [<storage type>]] [-u] <path> ...";
+        "-count [-q] [-h] [-v] [-t [<storage type>]] [-u] [-x] <path> ...";
     assertEquals("Count.getUsage", expected, actual);
   }
 
@@ -465,6 +465,7 @@ public class TestCount {
         + "      DIR_COUNT FILE_COUNT CONTENT_SIZE PATHNAME\n"
         + "The -h option shows file sizes in human readable format.\n"
         + "The -v option displays a header line.\n"
+        + "The -x option excludes snapshots from being calculated. \n"
         + "The -t option displays quota by storage types.\n"
         + "It must be used with -q option.\n"
         + "If a comma-separated list of storage types is given after the -t option, \n"
@@ -520,7 +521,7 @@ public class TestCount {
     }
 
     @Override
-    public String toString(boolean qOption, boolean hOption) {
+    public String toString(boolean qOption, boolean hOption, boolean xOption) {
       if (qOption) {
         if (hOption) {
           return (HUMAN + WITH_QUOTAS);

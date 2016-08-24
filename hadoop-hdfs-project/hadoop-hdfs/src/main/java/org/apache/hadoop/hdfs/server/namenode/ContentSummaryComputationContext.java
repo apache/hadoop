@@ -29,6 +29,7 @@ public class ContentSummaryComputationContext {
   private FSNamesystem fsn = null;
   private BlockStoragePolicySuite bsps = null;
   private ContentCounts counts = null;
+  private ContentCounts snapshotCounts = null;
   private long nextCountLimit = 0;
   private long limitPerRun = 0;
   private long yieldCount = 0;
@@ -51,6 +52,7 @@ public class ContentSummaryComputationContext {
     this.limitPerRun = limitPerRun;
     this.nextCountLimit = limitPerRun;
     this.counts = new ContentCounts.Builder().build();
+    this.snapshotCounts = new ContentCounts.Builder().build();
     this.sleepMilliSec = sleepMicroSec/1000;
     this.sleepNanoSec = (int)((sleepMicroSec%1000)*1000);
   }
@@ -123,6 +125,10 @@ public class ContentSummaryComputationContext {
   /** Get the content counts */
   public ContentCounts getCounts() {
     return counts;
+  }
+
+  public ContentCounts getSnapshotCounts() {
+    return snapshotCounts;
   }
 
   public BlockStoragePolicySuite getBlockStoragePolicySuite() {
