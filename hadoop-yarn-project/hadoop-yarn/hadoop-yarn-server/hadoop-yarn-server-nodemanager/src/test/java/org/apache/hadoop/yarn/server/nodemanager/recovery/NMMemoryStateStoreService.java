@@ -132,12 +132,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeContainerQueued(ContainerId containerId) throws IOException {
-    RecoveredContainerState rcs = getRecoveredContainerState(containerId);
-    rcs.status = RecoveredContainerStatus.QUEUED;
-  }
-
-  @Override
   public synchronized void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);

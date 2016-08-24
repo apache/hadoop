@@ -75,10 +75,6 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeContainerQueued(ContainerId containerId) throws IOException {
-  }
-
-  @Override
   public void storeContainerDiagnostics(ContainerId containerId,
       StringBuilder diagnostics) throws IOException {
   }

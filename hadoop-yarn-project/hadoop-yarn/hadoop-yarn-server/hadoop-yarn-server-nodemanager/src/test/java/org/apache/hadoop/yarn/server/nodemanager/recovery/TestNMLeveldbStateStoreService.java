@@ -280,18 +280,6 @@ public class TestNMLeveldbStateStoreService {
     // check whether the new container record is discarded
     assertEquals(1, recoveredContainers.size());
 
-    // queue the container, and verify recovered
-    stateStore.storeContainerQueued(containerId);
-    restartStateStore();
-    recoveredContainers = stateStore.loadContainersState();
-    assertEquals(1, recoveredContainers.size());
-    rcs = recoveredContainers.get(0);
-    assertEquals(RecoveredContainerStatus.QUEUED, rcs.getStatus());
-    assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
-    assertEquals(false, rcs.getKilled());
-    assertEquals(containerReq, rcs.getStartRequest());
-    assertTrue(rcs.getDiagnostics().isEmpty());
-
     // launch the container, add some diagnostics, and verify recovered
     StringBuilder diags = new StringBuilder();
     stateStore.storeContainerLaunched(containerId);

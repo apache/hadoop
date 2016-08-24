@@ -337,6 +337,7 @@ public class ContainerManagerImpl extends CompositeService implements
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
 
+  @SuppressWarnings("unchecked")
   private void recoverContainer(RecoveredContainerState rcs)
       throws IOException {
     StartContainerRequest req = rcs.getStartRequest();
@@ -351,7 +352,14 @@ public class ContainerManagerImpl extends CompositeService implements
         + " with exit code " + rcs.getExitCode());
 
     if (context.getApplications().containsKey(appId)) {
-      recoverActiveContainer(launchContext, token, rcs);
+      Credentials credentials =
+          YarnServerSecurityUtils.parseCredentials(launchContext);
+      Container container = new ContainerImpl(getConfig(), dispatcher,
+          req.getContainerLaunchContext(),
+          credentials, metrics, token, context, rcs);
+      context.getContainers().put(containerId, container);
+      dispatcher.getEventHandler().handle(
+          new ApplicationContainerInitEvent(container));
     } else {
       if (rcs.getStatus() != RecoveredContainerStatus.COMPLETED) {
         LOG.warn(containerId + " has no corresponding application!");
@@ -359,22 +367,6 @@ public class ContainerManagerImpl extends CompositeService implements
       LOG.info("Adding " + containerId + " to recently stopped containers");
       nodeStatusUpdater.addCompletedContainer(containerId);
     }
-  }
-
-  /**
-   * Recover a running container.
-   */
-  @SuppressWarnings("unchecked")
-  protected void recoverActiveContainer(
-      ContainerLaunchContext launchContext, ContainerTokenIdentifier token,
-      RecoveredContainerState rcs) throws IOException {
-    Credentials credentials = YarnServerSecurityUtils.parseCredentials(
-        launchContext);
-    Container container = new ContainerImpl(getConfig(), dispatcher,
-        launchContext, credentials, metrics, token, context, rcs);
-    context.getContainers().put(token.getContainerID(), container);
-    dispatcher.getEventHandler().handle(new ApplicationContainerInitEvent(
-        container));
   }
 
   private void waitForRecoveredContainers() throws InterruptedException {
