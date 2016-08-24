@@ -170,4 +170,14 @@
     </description>
   </property>
 
+  <property>
+    <name>hadoop.kms.audit.logger</name>
+    <value>org.apache.hadoop.crypto.key.kms.server.SimpleKMSAuditLogger</value>
+    <description>
+      The audit logger for KMS. It is a comma-separated list of KMSAuditLogger
+      class names. Default is the text-format SimpleKMSAuditLogger only.
+      If this is not configured, default will be used.
+    </description>
+  </property>
+
 </configuration>

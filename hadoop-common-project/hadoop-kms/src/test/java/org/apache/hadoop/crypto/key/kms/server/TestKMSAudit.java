@@ -21,9 +21,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KMS.KMSOp;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 import org.junit.After;
@@ -33,6 +36,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestKMSAudit {
 
@@ -66,8 +70,8 @@ public class TestKMSAudit {
     PropertyConfigurator.configure(Thread.currentThread().
         getContextClassLoader()
         .getResourceAsStream("log4j-kmsaudit.properties"));
-    this.kmsAudit =
-        new KMSAudit(KMSConfiguration.KMS_AUDIT_AGGREGATION_WINDOW_DEFAULT);
+    Configuration conf = new Configuration();
+    this.kmsAudit = new KMSAudit(conf);
   }
 
   @After
@@ -168,5 +172,37 @@ public class TestKMSAudit {
             + "UNAUTHORIZED\\[op=DECRYPT_EEK, key=k4, user=luser\\] "
             + "ERROR\\[user=luser\\] Method:'method' Exception:'testmsg'"
             + "UNAUTHENTICATED RemoteHost:remotehost Method:method URL:url ErrorMsg:'testmsg'"));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testInitAuditLoggers() throws Exception {
+    // Default should be the simple logger
+    List<KMSAuditLogger> loggers = (List<KMSAuditLogger>) Whitebox
+        .getInternalState(kmsAudit, "auditLoggers");
+    Assert.assertEquals(1, loggers.size());
+    Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
+
+    // Explicitly configure the simple logger. Duplicates are ignored.
+    final Configuration conf = new Configuration();
+    conf.set(KMSConfiguration.KMS_AUDIT_LOGGER_KEY,
+        SimpleKMSAuditLogger.class.getName() + ", "
+            + SimpleKMSAuditLogger.class.getName());
+    final KMSAudit audit = new KMSAudit(conf);
+    loggers =
+        (List<KMSAuditLogger>) Whitebox.getInternalState(audit, "auditLoggers");
+    Assert.assertEquals(1, loggers.size());
+    Assert.assertEquals(SimpleKMSAuditLogger.class, loggers.get(0).getClass());
+
+    // If any loggers unable to load, init should fail.
+    conf.set(KMSConfiguration.KMS_AUDIT_LOGGER_KEY,
+        SimpleKMSAuditLogger.class.getName() + ",unknown");
+    try {
+      new KMSAudit(conf);
+      Assert.fail("loggers configured but invalid, init should fail.");
+    } catch (Exception ex) {
+      GenericTestUtils
+          .assertExceptionContains(KMSConfiguration.KMS_AUDIT_LOGGER_KEY, ex);
+    }
   }
 }

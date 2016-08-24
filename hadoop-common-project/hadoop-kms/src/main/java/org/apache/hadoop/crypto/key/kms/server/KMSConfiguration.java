@@ -58,6 +58,10 @@ public class KMSConfiguration {
   // Delay for Audit logs that need aggregation
   public static final String KMS_AUDIT_AGGREGATION_WINDOW = CONFIG_PREFIX +
       "audit.aggregation.window.ms";
+
+  // KMS Audit logger classes to use
+  public static final String KMS_AUDIT_LOGGER_KEY = CONFIG_PREFIX +
+      "audit.logger";
   
   public static final boolean KEY_CACHE_ENABLE_DEFAULT = true;
   // 10 mins
