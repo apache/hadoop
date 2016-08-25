@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -52,6 +53,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -1190,35 +1192,27 @@ public class TestYarnClient {
     }
   }
 
-  private MiniYARNCluster setupMiniYARNCluster() {
+  private MiniYARNCluster setupMiniYARNCluster() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     ReservationSystemTestUtil.setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
     conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-    MiniYARNCluster cluster =
+    final MiniYARNCluster cluster =
         new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
 
     cluster.init(conf);
     cluster.start();
 
-    int attempts;
-    for (attempts = 10; attempts > 0; attempts--) {
-      if (cluster.getResourceManager().getRMContext().getReservationSystem()
-          .getPlan(ReservationSystemTestUtil.reservationQ).getTotalCapacity()
-          .getMemorySize() > 6000) {
-        break;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return cluster.getResourceManager().getRMContext()
+            .getReservationSystem()
+            .getPlan(ReservationSystemTestUtil.reservationQ)
+            .getTotalCapacity().getMemorySize() > 6000;
       }
-      try {
-        Thread.sleep(100);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-    }
-    if (attempts <= 0) {
-      Assert.fail("Exhausted attempts in checking if node capacity was "
-          + "added to the plan");
-    }
+    }, 10, 10000);
 
     return cluster;
   }
@@ -1250,7 +1244,7 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testCreateReservation() {
+  public void testCreateReservation() throws Exception {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -1293,7 +1287,7 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testUpdateReservation() {
+  public void testUpdateReservation() throws Exception {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -1335,7 +1329,7 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testListReservationsByReservationId() {
+  public void testListReservationsByReservationId() throws Exception{
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -1372,7 +1366,7 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testListReservationsByTimeInterval() {
+  public void testListReservationsByTimeInterval() throws Exception {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -1437,7 +1431,7 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testListReservationsByInvalidTimeInterval() {
+  public void testListReservationsByInvalidTimeInterval() throws Exception {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -1487,7 +1481,8 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testListReservationsByTimeIntervalContainingNoReservations() {
+  public void testListReservationsByTimeIntervalContainingNoReservations()
+      throws Exception {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
@@ -1577,7 +1572,7 @@ public class TestYarnClient {
   }
 
   @Test
-  public void testReservationDelete() {
+  public void testReservationDelete() throws Exception {
     MiniYARNCluster cluster = setupMiniYARNCluster();
     YarnClient client = setupYarnClient(cluster);
     try {
