@@ -695,7 +695,7 @@ function hadoop_connect_to_hosts
   #
   # User can specify hostnames or a file where the hostnames are (not both)
   if [[ -n "${HADOOP_WORKERS}" && -n "${HADOOP_WORKER_NAMES}" ]] ; then
-    hadoop_error "ERROR: Both HADOOP_WORKERS and HADOOP_WORKER_NAME were defined. Aborting."
+    hadoop_error "ERROR: Both HADOOP_WORKERS and HADOOP_WORKER_NAMES were defined. Aborting."
     exit 1
   elif [[ -z "${HADOOP_WORKER_NAMES}" ]]; then
     if [[ -n "${HADOOP_WORKERS}" ]]; then
