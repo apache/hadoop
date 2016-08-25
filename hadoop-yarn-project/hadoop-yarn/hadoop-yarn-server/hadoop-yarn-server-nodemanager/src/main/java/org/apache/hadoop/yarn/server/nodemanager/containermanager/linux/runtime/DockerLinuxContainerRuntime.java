@@ -447,7 +447,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network)
-        .setCapabilities(capabilities);
+        .setCapabilities(capabilities)
+        .addMountLocation("/sys/fs/cgroup", "/sys/fs/cgroup:ro", false);
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
 
     allDirs.addAll(filecacheDirs);
@@ -455,7 +456,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     allDirs.addAll(containerLogDirs);
     allDirs.addAll(userLocalDirs);
     for (String dir: allDirs) {
-      runCommand.addMountLocation(dir, dir);
+      runCommand.addMountLocation(dir, dir, true);
     }
 
     if (environment.containsKey(ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS)) {
@@ -470,7 +471,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           }
           String src = validateMount(dir[0], localizedResources);
           String dst = dir[1];
-          runCommand.addMountLocation(src, dst + ":ro");
+          runCommand.addMountLocation(src, dst + ":ro", true);
         }
       }
     }

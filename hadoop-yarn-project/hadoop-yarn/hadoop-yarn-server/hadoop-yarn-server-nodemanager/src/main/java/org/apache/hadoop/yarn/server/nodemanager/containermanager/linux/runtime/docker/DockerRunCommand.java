@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import org.apache.hadoop.util.StringUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -59,7 +60,11 @@ public class DockerRunCommand extends DockerCommand {
   }
 
   public DockerRunCommand addMountLocation(String sourcePath, String
-      destinationPath) {
+      destinationPath, boolean createSource) {
+    boolean sourceExists = new File(sourcePath).exists();
+    if (!sourceExists && !createSource) {
+      return this;
+    }
     super.addCommandArguments("-v", sourcePath + ":" + destinationPath);
     return this;
   }
