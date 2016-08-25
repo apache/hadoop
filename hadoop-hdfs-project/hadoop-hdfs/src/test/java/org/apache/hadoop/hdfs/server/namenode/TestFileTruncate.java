@@ -699,6 +699,9 @@ public class TestFileTruncate {
     assertEquals(newBlock.getBlock().getGenerationStamp(),
         oldBlock.getBlock().getGenerationStamp() + 1);
 
+    Thread.sleep(2000);
+    // trigger the second time BR to delete the corrupted replica if there's one
+    cluster.triggerBlockReports();
     // Wait replicas come to 3
     DFSTestUtil.waitReplication(fs, p, REPLICATION);
     // Old replica is disregarded and replaced with the truncated one
