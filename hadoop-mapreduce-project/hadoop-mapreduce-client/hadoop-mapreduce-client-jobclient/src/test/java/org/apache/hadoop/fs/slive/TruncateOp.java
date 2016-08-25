@@ -94,7 +94,7 @@ class TruncateOp extends Operation {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.NOT_FOUND, 1L));
       LOG.warn("Error with truncating", e);
-    } catch (IOException e) {
+    } catch (IOException | UnsupportedOperationException e) {
       out.add(new OperationOutput(OutputType.LONG, getType(),
           ReportWriter.FAILURES, 1L));
       LOG.warn("Error with truncating", e);
