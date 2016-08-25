@@ -35,7 +35,7 @@
     <node.executable>node</node.executable>
     <nodeVersion>v0.12.2</nodeVersion>
     <npmVersion>2.10.0</npmVersion>
-    <skipTests>false</skipTests>
+    <keep-ui-build-cache>false</keep-ui-build-cache>
   </properties>
 
   <build>
@@ -60,19 +60,20 @@
       </plugin>
 
       <plugin>
-         <artifactId>maven-clean-plugin</artifactId>
-         <version>3.0.0</version>
-         <configuration>
-            <followSymLinks>false</followSymLinks>
-            <filesets>
-               <fileset>
-                  <directory>${basedir}/src/main/webapp/bower_components</directory>
-               </fileset>
-               <fileset>
-                  <directory>${basedir}/src/main/webapp/node_modules</directory>
-               </fileset>
-            </filesets>
-         </configuration>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <skip>${keep-ui-build-cache}</skip>
+          <followSymLinks>false</followSymLinks>
+          <filesets>
+            <fileset>
+              <directory>${basedir}/src/main/webapp/bower_components</directory>
+            </fileset>
+            <fileset>
+              <directory>${basedir}/src/main/webapp/node_modules</directory>
+            </fileset>
+          </filesets>
+        </configuration>
       </plugin>
     </plugins>
   </build>
@@ -126,21 +127,6 @@
                 </configuration>
               </execution>
               <execution>
-                <phase>generate-sources</phase>
-                <id>bower --allow-root install</id>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <workingDirectory>${webappDir}</workingDirectory>
-                  <executable>bower</executable>
-                  <arguments>
-                    <argument>--allow-root</argument>
-                    <argument>install</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-              <execution>
                 <id>ember build</id>
                 <phase>generate-sources</phase>
                 <goals>
@@ -154,21 +140,6 @@
                     <argument>-prod</argument>
                     <argument>--output-path</argument>
                     <argument>${basedir}/target/dist</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-              <execution>
-                <id>ember test</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <skip>${skipTests}</skip>
-                  <workingDirectory>${webappDir}</workingDirectory>
-                  <executable>ember</executable>
-                  <arguments>
-                    <argument>test</argument>
                   </arguments>
                 </configuration>
               </execution>
