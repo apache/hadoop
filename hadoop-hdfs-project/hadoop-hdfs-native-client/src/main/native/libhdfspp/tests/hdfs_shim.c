@@ -492,6 +492,10 @@ int hdfsFreeBlockLocations(struct hdfsBlockLocations * locations) {
   return libhdfspp_hdfsFreeBlockLocations(locations);
 }
 
+hdfsFileInfo *hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t *numEntries) {
+  return (hdfsFileInfo *)libhdfspp_hdfsFind(fs->libhdfsppRep, path, name, numEntries);
+}
+
 int hdfsCreateSnapshot(hdfsFS fs, const char* path, const char* name) {
   return libhdfspp_hdfsCreateSnapshot(fs->libhdfsppRep, path, name);
 }

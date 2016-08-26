@@ -731,22 +731,21 @@ hdfsFileInfo *hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries) {
       if(!abs_path) {
         return nullptr;
       }
-      std::shared_ptr<std::vector<StatInfo>>  stat_infos;
-      Status stat = fs->get_impl()->GetListing(*abs_path, stat_infos);
+      std::vector<StatInfo> stat_infos;
+      Status stat = fs->get_impl()->GetListing(*abs_path, &stat_infos);
       if (!stat.ok()) {
         Error(stat);
         *numEntries = 0;
         return nullptr;
       }
-      //Existing API expects nullptr if size is 0
-      if(!stat_infos || stat_infos->size()==0){
+      if(stat_infos.empty()){
         *numEntries = 0;
         return nullptr;
       }
-      *numEntries = stat_infos->size();
-      hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos->size()];
-      for(std::vector<StatInfo>::size_type i = 0; i < stat_infos->size(); i++) {
-        StatInfoToHdfsFileInfo(&file_infos[i], stat_infos->at(i));
+      *numEntries = stat_infos.size();
+      hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos.size()];
+      for(std::vector<StatInfo>::size_type i = 0; i < stat_infos.size(); i++) {
+        StatInfoToHdfsFileInfo(&file_infos[i], stat_infos.at(i));
       }
 
       return file_infos;
@@ -785,7 +784,7 @@ int hdfsCreateDirectory(hdfsFS fs, const char* path) {
     }
     Status stat;
     //Use default permissions and set true for creating all non-existant parent directories
-    stat = fs->get_impl()->Mkdirs(*abs_path, NameNodeOperations::GetDefaultPermissionMask(), true);
+    stat = fs->get_impl()->Mkdirs(*abs_path, FileSystem::GetDefaultPermissionMask(), true);
     if (!stat.ok()) {
       return Error(stat);
     }
@@ -854,7 +853,7 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode){
       if(!abs_path) {
         return -1;
       }
-      Status stat = NameNodeOperations::CheckValidPermissionMask(mode);
+      Status stat = FileSystem::CheckValidPermissionMask(mode);
       if (!stat.ok()) {
         return Error(stat);
       }
@@ -893,6 +892,44 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
       return ReportException(e);
     } catch (...) {
       return ReportCaughtNonException();
+    }
+}
+
+hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t * numEntries){
+  try {
+      errno = 0;
+      if (!CheckSystem(fs)) {
+        *numEntries = 0;
+        return nullptr;
+      }
+
+      std::vector<StatInfo>  stat_infos;
+      Status stat = fs->get_impl()->Find(path, name, hdfs::FileSystem::GetDefaultFindMaxDepth(), &stat_infos);
+      if (!stat.ok()) {
+        Error(stat);
+        *numEntries = 0;
+        return nullptr;
+      }
+      //Existing API expects nullptr if size is 0
+      if(stat_infos.empty()){
+        *numEntries = 0;
+        return nullptr;
+      }
+      *numEntries = stat_infos.size();
+      hdfsFileInfo *file_infos = new hdfsFileInfo[stat_infos.size()];
+      for(std::vector<StatInfo>::size_type i = 0; i < stat_infos.size(); i++) {
+        StatInfoToHdfsFileInfo(&file_infos[i], stat_infos.at(i));
+      }
+
+      return file_infos;
+    } catch (const std::exception & e) {
+      ReportException(e);
+      *numEntries = 0;
+      return nullptr;
+    } catch (...) {
+      ReportCaughtNonException();
+      *numEntries = 0;
+      return nullptr;
     }
 }
 
@@ -1373,19 +1410,18 @@ HdfsConfiguration LoadDefault(ConfigurationLoader & loader)
   }
   else
   {
-    return loader.New<HdfsConfiguration>();
+    return loader.NewConfig<HdfsConfiguration>();
   }
 }
 
-hdfsBuilder::hdfsBuilder() : config(loader.New<HdfsConfiguration>())
+hdfsBuilder::hdfsBuilder() : config(loader.NewConfig<HdfsConfiguration>())
 {
   errno = 0;
-  loader.SetDefaultSearchPath();
   config = LoadDefault(loader);
 }
 
 hdfsBuilder::hdfsBuilder(const char * directory) :
-      config(loader.New<HdfsConfiguration>())
+      config(loader.NewConfig<HdfsConfiguration>())
 {
   errno = 0;
   loader.SetSearchPath(directory);

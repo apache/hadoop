@@ -163,6 +163,7 @@ add_subdirectory(third_party/uriparser2)
 add_subdirectory(lib)
 add_subdirectory(tests)
 add_subdirectory(examples)
+add_subdirectory(tools)
 
 # create an empty file; hadoop_add_dual_library wraps add_library which
 # requires at least one file as an argument

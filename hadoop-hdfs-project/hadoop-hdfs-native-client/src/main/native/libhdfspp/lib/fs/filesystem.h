@@ -94,9 +94,9 @@ public:
 
   void GetListing(
         const std::string &path,
-        const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> &handler) override;
+        const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler) override;
 
-  Status GetListing(const std::string &path, std::shared_ptr<std::vector<StatInfo>> &stat_infos) override;
+  Status GetListing(const std::string &path, std::vector<StatInfo> * stat_infos) override;
 
   virtual void GetBlockLocations(const std::string & path, uint64_t offset, uint64_t length,
     const std::function<void(const Status &, std::shared_ptr<FileBlockLocation> locations)> ) override;
@@ -115,14 +115,19 @@ public:
       const std::function<void(const Status &)> &handler) override;
   virtual Status Rename(const std::string &oldPath, const std::string &newPath) override;
 
-  virtual void SetPermission(const std::string & path,
-      uint16_t permissions, const std::function<void(const Status &)> &handler) override;
+  virtual void SetPermission(const std::string & path, uint16_t permissions,
+      const std::function<void(const Status &)> &handler) override;
   virtual Status SetPermission(const std::string & path, uint16_t permissions) override;
 
   virtual void SetOwner(const std::string & path, const std::string & username,
       const std::string & groupname, const std::function<void(const Status &)> &handler) override;
   virtual Status SetOwner(const std::string & path,
       const std::string & username, const std::string & groupname) override;
+
+  void Find(
+          const std::string &path, const std::string &name, const uint32_t maxdepth,
+          const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler) override;
+  Status Find(const std::string &path, const std::string &name, const uint32_t maxdepth, std::vector<StatInfo> * stat_infos) override;
 
   /*****************************************************************************
    *                    FILE SYSTEM SNAPSHOT FUNCTIONS
@@ -204,9 +209,58 @@ private:
    **/
   std::shared_ptr<LibhdfsEvents> event_handlers_;
 
-  void GetListingShim(const Status &stat, std::shared_ptr<std::vector<StatInfo>> &stat_infos, bool has_more,
-                      std::string path,
-                      const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> &handler);
+  void GetListingShim(const Status &stat, const std::vector<StatInfo> & stat_infos, bool has_more,
+              std::string path, const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler);
+
+  struct FindSharedState {
+    //Name pattern (can have wild-cards) to find
+    const std::string name;
+    //Maximum depth to recurse after the end of path is reached.
+    //Can be set to 0 for pure path globbing and ignoring name pattern entirely.
+    const uint32_t maxdepth;
+    //Vector of all sub-directories from the path argument (each can have wild-cards)
+    std::vector<std::string> dirs;
+    //Callback from Find
+    const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> handler;
+    //outstanding_requests is incremented once for every GetListing call.
+    std::atomic<uint64_t> outstanding_requests;
+    //Boolean needed to abort all recursion on error or on user command
+    std::atomic<bool> aborted;
+    //Shared variables will need protection with a lock
+    std::mutex lock;
+    FindSharedState(const std::string path_, const std::string name_, const uint32_t maxdepth_,
+                const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> handler_,
+                uint64_t outstanding_recuests_, bool aborted_)
+        : name(name_),
+          maxdepth(maxdepth_),
+          handler(handler_),
+          outstanding_requests(outstanding_recuests_),
+          aborted(aborted_),
+          lock() {
+      //Constructing the list of sub-directories
+      std::stringstream ss(path_);
+      if(path_.back() != '/'){
+        ss << "/";
+      }
+      for (std::string token; std::getline(ss, token, '/'); ) {
+        dirs.push_back(token);
+      }
+    }
+  };
+
+  struct FindOperationalState {
+    const std::string path;
+    const uint32_t depth;
+    const bool search_path;
+    FindOperationalState(const std::string path_, const uint32_t depth_, const bool search_path_)
+        : path(path_),
+          depth(depth_),
+          search_path(search_path_) {
+    }
+  };
+
+  void FindShim(const Status &stat, const std::vector<StatInfo> & stat_infos,
+                bool directory_has_more, std::shared_ptr<FindOperationalState> current_state, std::shared_ptr<FindSharedState> shared_state);
 
 };
 }

@@ -23,7 +23,7 @@ namespace hdfs {
 
 
 template<class T>
-T ConfigurationLoader::New() {
+T ConfigurationLoader::NewConfig() {
   return T();
 }
 

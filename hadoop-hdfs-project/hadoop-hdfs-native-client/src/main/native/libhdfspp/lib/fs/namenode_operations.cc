@@ -39,30 +39,6 @@ namespace hdfs {
  *                    NAMENODE OPERATIONS
  ****************************************************************************/
 
-uint16_t NameNodeOperations::GetDefaultPermissionMask() {
-  return 0755;
-}
-
-Status NameNodeOperations::CheckValidPermissionMask(uint16_t permissions) {
-  if (permissions > 01777) {
-    std::stringstream errormsg;
-    errormsg << "CheckValidPermissionMask: argument 'permissions' is " << std::oct
-        << std::showbase << permissions << " (should be between 0 and 01777)";
-    return Status::InvalidArgument(errormsg.str().c_str());
-  }
-  return Status::OK();
-}
-
-Status NameNodeOperations::CheckValidReplication(uint16_t replication) {
-  if (replication < 1 || replication > 512) {
-    std::stringstream errormsg;
-    errormsg << "CheckValidReplication: argument 'replication' is "
-        << replication << " (should be between 1 and 512)";
-    return Status::InvalidArgument(errormsg.str().c_str());
-  }
-  return Status::OK();
-}
-
 void NameNodeOperations::Connect(const std::string &cluster_name,
                                  const std::vector<ResolvedNamenodeInfo> &servers,
                                  std::function<void(const Status &)> &&handler) {
@@ -170,7 +146,7 @@ void NameNodeOperations::SetReplication(const std::string & path, int16_t replic
     handler(Status::InvalidArgument("SetReplication: argument 'path' cannot be empty"));
     return;
   }
-  Status replStatus = CheckValidReplication(replication);
+  Status replStatus = FileSystemImpl::CheckValidReplication(replication);
   if (!replStatus.ok()) {
     handler(replStatus);
     return;
@@ -252,7 +228,8 @@ void NameNodeOperations::GetFileInfo(const std::string & path,
       //   no fs in the protobuf.
       if(resp -> has_fs()){
           struct StatInfo stat_info;
-          stat_info.path=path;
+          stat_info.path = path;
+          stat_info.full_path = path;
           HdfsFileStatusProtoToStatInfo(stat_info, resp->fs());
           handler(stat, stat_info);
         } else {
@@ -290,7 +267,7 @@ void NameNodeOperations::GetFsStats(
 
 void NameNodeOperations::GetListing(
     const std::string & path,
-    std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> handler,
+    std::function<void(const Status &, const std::vector<StatInfo> &, bool)> handler,
     const std::string & start_after) {
   using ::hadoop::hdfs::GetListingRequestProto;
   using ::hadoop::hdfs::GetListingResponseProto;
@@ -300,8 +277,8 @@ void NameNodeOperations::GetListing(
       << "NameNodeOperations::GetListing(" << FMT_THIS_ADDR << ", path=" << path << ") called");
 
   if (path.empty()) {
-    std::shared_ptr<std::vector<StatInfo>> stat_infos;
-    handler(Status::InvalidArgument("GetListing: argument 'path' cannot be empty"), stat_infos, false);
+    std::vector<StatInfo> empty;
+    handler(Status::InvalidArgument("GetListing: argument 'path' cannot be empty"), empty, false);
     return;
   }
 
@@ -312,31 +289,26 @@ void NameNodeOperations::GetListing(
 
   auto resp = std::make_shared<GetListingResponseProto>();
 
-  namenode_.GetListing(
-      &req,
-      resp,
-      [resp, handler, path](const Status &stat) {
-        if (stat.ok()) {
-          if(resp -> has_dirlist()){
-            std::shared_ptr<std::vector<StatInfo>> stat_infos(new std::vector<StatInfo>);
-            for (::hadoop::hdfs::HdfsFileStatusProto const& fs : resp->dirlist().partiallisting()) {
-              StatInfo si;
-              si.path=fs.path();
-              HdfsFileStatusProtoToStatInfo(si, fs);
-              stat_infos->push_back(si);
-            }
-            handler(stat, stat_infos, resp->dirlist().remainingentries() > 0);
-          } else {
-            std::string errormsg = "No such file or directory: " + path;
-            Status statNew = Status::PathNotFound(errormsg.c_str());
-            std::shared_ptr<std::vector<StatInfo>> stat_infos;
-            handler(statNew, stat_infos, false);
-          }
-        } else {
-          std::shared_ptr<std::vector<StatInfo>> stat_infos;
-          handler(stat, stat_infos, false);
+  namenode_.GetListing(&req, resp, [resp, handler, path](const Status &stat) {
+    std::vector<StatInfo> stat_infos;
+    if (stat.ok()) {
+      if(resp -> has_dirlist()){
+        for (::hadoop::hdfs::HdfsFileStatusProto const& fs : resp->dirlist().partiallisting()) {
+          StatInfo si;
+          si.path = fs.path();
+          si.full_path = path + fs.path() + "/";
+          HdfsFileStatusProtoToStatInfo(si, fs);
+          stat_infos.push_back(si);
         }
-      });
+        handler(stat, stat_infos, resp->dirlist().remainingentries() > 0);
+      } else {
+        std::string errormsg = "No such file or directory: " + path;
+        handler(Status::PathNotFound(errormsg.c_str()), stat_infos, false);
+      }
+    } else {
+      handler(stat, stat_infos, false);
+    }
+  });
 }
 
 void NameNodeOperations::Mkdirs(const std::string & path, uint16_t permissions, bool createparent,
@@ -355,7 +327,7 @@ void NameNodeOperations::Mkdirs(const std::string & path, uint16_t permissions, 
   }
 
   MkdirsRequestProto req;
-  Status permStatus = CheckValidPermissionMask(permissions);
+  Status permStatus = FileSystemImpl::CheckValidPermissionMask(permissions);
   if (!permStatus.ok()) {
     handler(permStatus);
     return;
@@ -471,7 +443,7 @@ void NameNodeOperations::SetPermission(const std::string & path,
     handler(Status::InvalidArgument("SetPermission: argument 'path' cannot be empty"));
     return;
   }
-  Status permStatus = CheckValidPermissionMask(permissions);
+  Status permStatus = FileSystemImpl::CheckValidPermissionMask(permissions);
   if (!permStatus.ok()) {
     handler(permStatus);
     return;

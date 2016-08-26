@@ -30,7 +30,9 @@ TEST(HdfsConfigurationTest, TestDefaultOptions)
 {
   // Completely empty stream
   {
-    HdfsConfiguration empty_config = ConfigurationLoader().New<HdfsConfiguration>();
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    HdfsConfiguration empty_config = config_loader.NewConfig<HdfsConfiguration>();
     Options options = empty_config.GetOptions();
     EXPECT_EQ(Options::kDefaultRpcTimeout, options.rpc_timeout);
   }
@@ -49,8 +51,9 @@ TEST(HdfsConfigurationTest, TestSetOptions)
                        HdfsConfiguration::kIpcClientConnectTimeoutKey, 103,
                        HdfsConfiguration::kHadoopSecurityAuthenticationKey, HdfsConfiguration::kHadoopSecurityAuthentication_kerberos
             );
-
-    optional<HdfsConfiguration> config = ConfigurationLoader().Load<HdfsConfiguration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<HdfsConfiguration> config = config_loader.Load<HdfsConfiguration>(stream.str());
     EXPECT_TRUE(config && "Read stream");
     Options options = config->GetOptions();
 

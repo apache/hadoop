@@ -33,21 +33,27 @@ TEST(ConfigurationTest, TestDegenerateInputs) {
   /* Completely empty stream */
   {
     std::stringstream stream;
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>("");
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>("");
     EXPECT_FALSE(config && "Empty stream");
   }
 
   /* No values */
   {
     std::string data = "<configuration></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(data);
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(data);
     EXPECT_TRUE(config && "Blank config");
   }
 
   /* Extraneous values */
   {
     std::string data = "<configuration><spam></spam></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(data);
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(data);
     EXPECT_TRUE(config && "Extraneous values");
   }
 }
@@ -57,7 +63,9 @@ TEST(ConfigurationTest, TestBasicOperations) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -74,7 +82,9 @@ TEST(ConfigurationTest, TestBasicOperations) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     EXPECT_EQ("value1", config->GetWithDefault("KEY1", ""));
   }
@@ -83,7 +93,9 @@ TEST(ConfigurationTest, TestBasicOperations) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<std::string> value = config->Get("key1");
     EXPECT_TRUE((bool)value);
@@ -97,7 +109,9 @@ TEST(ConfigurationTest, TestCompactValues) {
     std::stringstream stream;
     stream << "<configuration><property name=\"key1\" "
               "value=\"value1\"/></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Compact value parse");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -108,7 +122,9 @@ TEST(ConfigurationTest, TestMultipleResources) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "value1");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -129,7 +145,9 @@ TEST(ConfigurationTest, TestStringResource) {
     simpleConfigStream(stream, "key1", "value1");
     std::string str = stream.str();
 
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -171,7 +189,9 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final>false</final></property></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -187,7 +207,9 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final>true</final></property></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -203,7 +225,9 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property name=\"key1\" value=\"value1\" "
               "final=\"false\"/></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -219,7 +243,9 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property name=\"key1\" value=\"value1\" "
               "final=\"true\"/></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -235,7 +261,9 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final>spam</final></property></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -251,7 +279,9 @@ TEST(ConfigurationTest, TestFinal) {
     std::stringstream stream;
     stream << "<configuration><property><name>key1</name><value>value1</"
               "value><final></final></property></configuration>";
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
 
@@ -271,7 +301,9 @@ TEST(ConfigurationTest, TestFileReads)
     TempFile tempFile;
     writeSimpleConfig(tempFile.filename, "key1", "value1");
 
-    optional<Configuration> config = ConfigurationLoader().LoadFromFile<Configuration>(tempFile.filename);
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempFile.filename);
     EXPECT_TRUE(config && "Parse first stream");
     EXPECT_EQ("value1", config->GetWithDefault("key1", ""));
   }
@@ -298,7 +330,9 @@ TEST(ConfigurationTest, TestFileReads)
   {
     TempDir tempDir;
 
-    optional<Configuration> config = ConfigurationLoader().LoadFromFile<Configuration>(tempDir.path);
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempDir.path);
     EXPECT_FALSE(config && "Add directory as file resource");
   }
 
@@ -359,7 +393,9 @@ TEST(ConfigurationTest, TestIntConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "1");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<int64_t> value = config->GetInt("key1");
     EXPECT_TRUE((bool)value);
@@ -398,7 +434,9 @@ TEST(ConfigurationTest, TestDoubleConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "1");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<double> value = config->GetDouble("key1");
     EXPECT_TRUE((bool)value);
@@ -441,7 +479,9 @@ TEST(ConfigurationTest, TestBoolConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "true");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<bool> value = config->GetBool("key1");
     EXPECT_TRUE((bool)value);
@@ -488,7 +528,9 @@ TEST(ConfigurationTest, TestUriConversions) {
   {
     std::stringstream stream;
     simpleConfigStream(stream, "key1", "hdfs:///");
-    optional<Configuration> config = ConfigurationLoader().Load<Configuration>(stream.str());
+    ConfigurationLoader config_loader;
+    config_loader.ClearSearchPath();
+    optional<Configuration> config = config_loader.Load<Configuration>(stream.str());
     EXPECT_TRUE(config && "Parse single value");
     optional<URI> value = config->GetUri("key1");
     EXPECT_TRUE((bool)value);

@@ -54,7 +54,9 @@ template <typename... Args>
 optional<Configuration> simpleConfig(Args... args) {
   std::stringstream stream;
   simpleConfigStream(stream, args...);
-  optional<Configuration> parse = ConfigurationLoader().Load<Configuration>(stream.str());
+  ConfigurationLoader config_loader;
+  config_loader.ClearSearchPath();
+  optional<Configuration> parse = config_loader.Load<Configuration>(stream.str());
   EXPECT_TRUE((bool)parse);
 
   return parse;

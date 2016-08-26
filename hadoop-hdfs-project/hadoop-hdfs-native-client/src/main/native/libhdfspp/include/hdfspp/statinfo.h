@@ -33,6 +33,7 @@ struct StatInfo {
 
   int                   file_type;
   ::std::string         path;
+  ::std::string         full_path;
   unsigned long int     length;
   unsigned long int     permissions;  //Octal number as in POSIX permissions; e.g. 0777
   ::std::string         owner;
