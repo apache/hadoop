@@ -3712,6 +3712,46 @@
 </property>
 
 <property>
+  <name>dfs.mover.keytab.enabled</name>
+  <value>false</value>
+  <description>
+    Set to true to enable login using a keytab for Kerberized Hadoop.
+  </description>
+</property>
+
+<property>
+  <name>dfs.mover.address</name>
+  <value>0.0.0.0:0</value>
+  <description>
+    The hostname used for a keytab based Kerberos login. Keytab based login
+    can be enabled with dfs.mover.keytab.enabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.mover.keytab.file</name>
+  <value></value>
+  <description>
+    The keytab file used by the Mover to login as its
+    service principal. The principal name is configured with
+    dfs.mover.kerberos.principal. Keytab based login can be
+    enabled with dfs.mover.keytab.enabled.
+  </description>
+</property>
+
+<property>
+  <name>dfs.mover.kerberos.principal</name>
+  <value></value>
+  <description>
+    The Mover principal. This is typically set to
+    mover/_HOST@REALM.TLD. The Mover will substitute _HOST with its
+    own fully qualified hostname at startup. The _HOST placeholder
+    allows using the same configuration setting on different servers.
+    Keytab based login can be enabled with dfs.mover.keytab.enabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.audit.log.async</name>
   <value>false</value>
   <description>

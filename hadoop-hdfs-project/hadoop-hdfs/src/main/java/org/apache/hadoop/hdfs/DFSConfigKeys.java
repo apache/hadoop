@@ -487,6 +487,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_MOVER_MOVERTHREADS_DEFAULT = 1000;
   public static final String  DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY = "dfs.mover.retry.max.attempts";
   public static final int     DFS_MOVER_RETRY_MAX_ATTEMPTS_DEFAULT = 10;
+  public static final String  DFS_MOVER_KEYTAB_ENABLED_KEY =
+      "dfs.mover.keytab.enabled";
+  public static final boolean DFS_MOVER_KEYTAB_ENABLED_DEFAULT = false;
+  public static final String  DFS_MOVER_ADDRESS_KEY = "dfs.mover.address";
+  public static final String  DFS_MOVER_ADDRESS_DEFAULT= "0.0.0.0:0";
+  public static final String  DFS_MOVER_KEYTAB_FILE_KEY =
+      "dfs.mover.keytab.file";
+  public static final String  DFS_MOVER_KERBEROS_PRINCIPAL_KEY =
+      "dfs.mover.kerberos.principal";
 
   public static final String  DFS_DATANODE_ADDRESS_KEY = "dfs.datanode.address";
   public static final int     DFS_DATANODE_DEFAULT_PORT = 9866;
