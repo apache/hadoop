@@ -79,31 +79,21 @@ function mapredcmd_case
     ;;
     hsadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     job)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.JobClient
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     pipes)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.pipes.Submitter
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.JobQueueClient
     ;;
     sampler)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.lib.InputSampler
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"
@@ -151,6 +141,8 @@ else
 fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
+
+hadoop_add_client_opts
 
 if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
   hadoop_common_slave_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"

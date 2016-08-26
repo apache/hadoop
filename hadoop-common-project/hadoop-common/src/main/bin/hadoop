@@ -161,10 +161,6 @@ function hadoopcmd_case
       fi
     ;;
   esac
-
-  # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 # This script runs the hadoop core commands.
@@ -204,6 +200,8 @@ else
 fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
+
+hadoop_add_client_opts
 
 if [[ ${HADOOP_WORKER_MODE} = true ]]; then
   hadoop_common_worker_mode_execute "${HADOOP_COMMON_HOME}/bin/hadoop" "${HADOOP_USER_PARAMS[@]}"

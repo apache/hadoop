@@ -306,6 +306,13 @@ function hadoop_bootstrap
   HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}
   HADOOP_TOOLS_LIB_JARS_DIR=${HADOOP_TOOLS_LIB_JARS_DIR:-"${HADOOP_TOOLS_DIR}/lib"}
 
+  # by default, whatever we are about to run doesn't support
+  # daemonization
+  HADOOP_SUBCMD_SUPPORTDAEMONIZATION=false
+
+  # shellcheck disable=SC2034
+  HADOOP_SUBCMD_SECURESERVICE=false
+
   # usage output set to zero
   hadoop_reset_usage
 
@@ -1227,6 +1234,20 @@ function hadoop_translate_cygwin_path
       #shellcheck disable=SC2016
       eval "$1"='$(cygpath -w "${!1}" 2>/dev/null)'
     fi
+  fi
+}
+
+## @description  Adds the HADOOP_CLIENT_OPTS variable to
+## @description  HADOOP_OPTS if HADOOP_SUBCMD_SUPPORTDAEMONIZATION is false
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+function hadoop_add_client_opts
+{
+  if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = false
+     || -z "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   fi
 }
 

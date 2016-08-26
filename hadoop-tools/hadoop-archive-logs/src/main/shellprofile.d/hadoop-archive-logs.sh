@@ -32,8 +32,6 @@ function mapred_subcommand_archive-logs
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.tools.HadoopArchiveLogs
   hadoop_add_to_classpath_tools hadoop-archive-logs
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 fi
