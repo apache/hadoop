@@ -48,12 +48,6 @@ public:
   engine_(io_service, options, client_name, user_name, protocol_name, protocol_version),
   namenode_(& engine_), options_(options) {}
 
-  static uint16_t GetDefaultPermissionMask();
-
-  static Status CheckValidPermissionMask(uint16_t permissions);
-
-  static Status CheckValidReplication(uint16_t replication);
-
   void Connect(const std::string &cluster_name,
                const std::vector<ResolvedNamenodeInfo> &servers,
                std::function<void(const Status &)> &&handler);
@@ -77,7 +71,7 @@ public:
 
   // start_after="" for initial call
   void GetListing(const std::string & path,
-        std::function<void(const Status &, std::shared_ptr<std::vector<StatInfo>>&, bool)> handler,
+        std::function<void(const Status &, const std::vector<StatInfo> &, bool)> handler,
         const std::string & start_after = "");
 
   void Mkdirs(const std::string & path, uint16_t permissions, bool createparent,

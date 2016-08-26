@@ -287,6 +287,20 @@ LIBHDFS_EXTERNAL
 int hdfsPreAttachFileMonitor(libhdfspp_file_event_callback handler, int64_t cookie);
 
 
+/**
+ * Finds file name on the file system. hdfsFreeFileInfo should be called to deallocate memory.
+ *
+ *  @param fs         The filesystem (required)
+ *  @param path       Path at which to begin search, can have wild cards  (must be non-blank)
+ *  @param name       Name to find, can have wild cards                   (must be non-blank)
+ *  @param numEntries Set to the number of files/directories in the result.
+ *  @return           Returns a dynamically-allocated array of hdfsFileInfo
+ *                    objects; NULL on error or empty result.
+ *                    errno is set to non-zero on error or zero on success.
+ **/
+hdfsFileInfo * hdfsFind(hdfsFS fs, const char* path, const char* name, uint32_t * numEntries);
+
+
 /*****************************************************************************
  *                    HDFS SNAPSHOT FUNCTIONS
  ****************************************************************************/

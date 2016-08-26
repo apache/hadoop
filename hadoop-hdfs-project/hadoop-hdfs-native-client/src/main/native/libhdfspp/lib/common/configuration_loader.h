@@ -27,9 +27,9 @@ namespace hdfs {
 class ConfigurationLoader {
 public:
   // Creates a new, empty Configuration object
-  //    T must be Configuration or a subclass
+  // T must be Configuration or a subclass
   template<class T>
-  T           New();
+  T NewConfig();
 
   /****************************************************************************
    *                    LOADING CONFIG FILES
@@ -78,6 +78,10 @@ public:
   /****************************************************************************
    *                    SEARCH PATH METHODS
    ***************************************************************************/
+
+  //Creates a configuration loader with the default search path ("$HADOOP_CONF_DIR" or "/etc/hadoop/conf").
+  //If you want to explicitly set the entire search path, call ClearSearchPath() first
+  ConfigurationLoader();
 
   // Sets the search path to the default search path (namely, "$HADOOP_CONF_DIR" or "/etc/hadoop/conf")
   void SetDefaultSearchPath();

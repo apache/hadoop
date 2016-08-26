@@ -16,6 +16,20 @@
 # limitations under the License.
 #
 
-add_subdirectory(cat)
-add_subdirectory(gendirs)
-add_subdirectory(find)
+# Default LIBHDFSPP_DIR to the default install location.  You can override
+#    it by add -DLIBHDFSPP_DIR=... to your cmake invocation
+set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
+
+include_directories( ${LIBHDFSPP_DIR}/include )
+link_directories( ${LIBHDFSPP_DIR}/lib )
+
+add_executable(find_cpp find.cpp)
+target_link_libraries(find_cpp hdfspp)
+
+# Several examples in different languages need to produce executables with
+# same names. To allow executables with same names we keep their CMake
+# names different, but specify their executable names as follows:
+set_target_properties( find_cpp
+    PROPERTIES
+    OUTPUT_NAME "find"
+)

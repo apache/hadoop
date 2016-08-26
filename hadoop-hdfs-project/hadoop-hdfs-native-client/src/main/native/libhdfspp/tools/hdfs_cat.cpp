@@ -17,65 +17,76 @@
   under the License.
 */
 
-/**
-   * Unix-like cat tool example.
-   *
-   * Reads the specified file from HDFS and outputs to stdout.
-   *
-   * Usage: cat /<path-to-file>
-   *
-   * Example: cat /dir/file
-   *
-   * @param path-to-file    Absolute path to the file to read.
-   *
-   **/
-
-#include "hdfspp/hdfspp.h"
-#include "common/hdfs_configuration.h"
-#include "common/configuration_loader.h"
-
 #include <google/protobuf/stubs/common.h>
+#include <unistd.h>
+#include "tools_common.h"
+
+void usage(){
+  std::cout << "Usage: hdfs_cat [OPTION] FILE"
+      << std::endl
+      << std::endl << "Concatenate FILE to standard output."
+      << std::endl
+      << std::endl << "  -h  display this help and exit"
+      << std::endl
+      << std::endl << "Examples:"
+      << std::endl << "hdfs_cat hdfs://localhost.localdomain:9433/dir/file"
+      << std::endl << "hdfs_cat /dir/file"
+      << std::endl;
+}
 
 #define BUF_SIZE 4096
 
 int main(int argc, char *argv[]) {
   if (argc != 2) {
-    std::cerr << "usage: cat /<path-to-file>" << std::endl;
+    usage();
     exit(EXIT_FAILURE);
   }
-  std::string path = argv[1];
 
-  hdfs::Options options;
-  //Setting the config path to the default: "$HADOOP_CONF_DIR" or "/etc/hadoop/conf"
-  hdfs::ConfigurationLoader loader;
-  //Loading default config files core-site.xml and hdfs-site.xml from the config path
-  hdfs::optional<hdfs::HdfsConfiguration> config = loader.LoadDefaultResources<hdfs::HdfsConfiguration>();
-  //TODO: HDFS-9539 - after this is resolved, valid config will always be returned.
-  if(config){
-    //Loading options from the config
-    options = config->GetOptions();
+  int input;
+
+  //Using GetOpt to read in the values
+  opterr = 0;
+  while ((input = getopt(argc, argv, "h")) != -1) {
+    switch (input)
+    {
+    case 'h':
+      usage();
+      exit(EXIT_SUCCESS);
+      break;
+    case '?':
+      if (isprint(optopt))
+        std::cerr << "Unknown option `-" << (char) optopt << "'." << std::endl;
+      else
+        std::cerr << "Unknown option character `" << (char) optopt << "'." << std::endl;
+      usage();
+      exit(EXIT_FAILURE);
+    default:
+      exit(EXIT_FAILURE);
+    }
   }
-  hdfs::IoService * io_service = hdfs::IoService::New();
-  //Wrapping fs into a shared pointer to guarantee deletion
-  std::shared_ptr<hdfs::FileSystem> fs(hdfs::FileSystem::New(io_service, "", options));
-  if (!fs) {
-    std::cerr << "Could not connect the file system." << std::endl;
+
+  std::string uri_path = argv[optind];
+
+  //Building a URI object from the given uri_path
+  hdfs::optional<hdfs::URI> uri = hdfs::URI::parse_from_string(uri_path);
+  if (!uri) {
+    std::cerr << "Malformed URI: " << uri_path << std::endl;
     exit(EXIT_FAILURE);
   }
-  hdfs::Status status = fs->ConnectToDefaultFs();
-  if (!status.ok()) {
-    if(!options.defaultFS.get_host().empty()){
-      std::cerr << "Error connecting to " << options.defaultFS << ". " << status.ToString() << std::endl;
-    } else {
-      std::cerr << "Error connecting to the cluster: defaultFS is empty. " << status.ToString() << std::endl;
-    }
+
+  //TODO: HDFS-9539 Currently options can be returned empty
+  hdfs::Options options = *hdfs::getOptions();
+
+  std::shared_ptr<hdfs::FileSystem> fs = hdfs::doConnect(uri.value(), options);
+  if (!fs) {
+    std::cerr << "Could not connect the file system. " << std::endl;
     exit(EXIT_FAILURE);
   }
 
   hdfs::FileHandle *file_raw = nullptr;
-  status = fs->Open(path, &file_raw);
+  hdfs::Status status = fs->Open(uri->get_path(), &file_raw);
   if (!status.ok()) {
-    std::cerr << "Could not open file " << path << ". " << status.ToString() << std::endl;
+    std::cerr << "Could not open file " << uri->get_path() << ". " << status.ToString() << std::endl;
     exit(EXIT_FAILURE);
   }
   //wrapping file_raw into a unique pointer to guarantee deletion

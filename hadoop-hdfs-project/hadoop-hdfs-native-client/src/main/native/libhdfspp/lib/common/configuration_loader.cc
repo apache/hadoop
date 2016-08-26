@@ -62,6 +62,12 @@ bool str_to_bool(const std::string& raw) {
   return false;
 }
 
+ConfigurationLoader::ConfigurationLoader() {
+  //In order to creates a configuration loader with the default search path
+  //("$HADOOP_CONF_DIR" or "/etc/hadoop/conf") we call SetDefaultSearchPath().
+  ConfigurationLoader::SetDefaultSearchPath();
+}
+
 void ConfigurationLoader::SetDefaultSearchPath() {
   // Try (in order, taking the first valid one):
   //    $HADOOP_CONF_DIR

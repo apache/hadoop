@@ -138,6 +138,18 @@ public:
  **/
 class FileSystem {
  public:
+  //Returns the default maximum depth for recursive Find tool
+  static uint32_t GetDefaultFindMaxDepth();
+
+  //Returns the default permission mask
+  static uint16_t GetDefaultPermissionMask();
+
+  //Checks if the given permission mask is valid
+  static Status CheckValidPermissionMask(uint16_t permissions);
+
+  //Checks if replication value is valid
+  static Status CheckValidReplication(uint16_t replication);
+
   /**
    * Create a new instance of the FileSystem object. The call
    * initializes the RPC connections to the NameNode and returns an
@@ -236,7 +248,7 @@ class FileSystem {
    *
    * The asynchronous method will return batches of files; the consumer must
    * return true if they want more files to be delivered.  The final bool
-   * parameter in the callback will be set to true if this is the final
+   * parameter in the callback will be set to false if this is the final
    * batch of files.
    *
    * The synchronous method will return all files in the directory.
@@ -245,9 +257,8 @@ class FileSystem {
    **/
   virtual void
   GetListing(const std::string &path,
-                  const std::function<bool(const Status &, std::shared_ptr<std::vector<StatInfo>> &, bool)> &handler) = 0;
-  virtual Status GetListing(const std::string &path,
-                            std::shared_ptr<std::vector<StatInfo>> & stat_infos) = 0;
+                  const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler) = 0;
+  virtual Status GetListing(const std::string &path, std::vector<StatInfo> * stat_infos) = 0;
 
   /**
    * Returns the locations of all known blocks for the indicated file (or part of it), or an error
@@ -297,8 +308,8 @@ class FileSystem {
    * @param path          the path to the file or directory
    * @param permissions   the bitmask to set it to (should be between 0 and 01777)
    */
-  virtual void SetPermission(const std::string & path,
-      uint16_t permissions, const std::function<void(const Status &)> &handler) = 0;
+  virtual void SetPermission(const std::string & path, uint16_t permissions,
+      const std::function<void(const Status &)> &handler) = 0;
   virtual Status SetPermission(const std::string & path, uint16_t permissions) = 0;
 
   /**
@@ -307,12 +318,34 @@ class FileSystem {
    * @param path      file path
    * @param username  If it is empty, the original username remains unchanged.
    * @param groupname If it is empty, the original groupname remains unchanged.
+   * @param recursive If true, the change will be propagated recursively.
    */
   virtual void SetOwner(const std::string & path, const std::string & username,
       const std::string & groupname, const std::function<void(const Status &)> &handler) = 0;
   virtual Status SetOwner(const std::string & path,
       const std::string & username, const std::string & groupname) = 0;
 
+  /**
+   * Finds all files matching the specified name recursively starting from the
+   * specified directory. Returns metadata for each of them.
+   *
+   * Example: Find("/dir?/tree*", "some?file*name")
+   *
+   * @param path       Absolute path at which to begin search, can have wild cards (must be non-blank)
+   * @param name       Name to find, can also have wild cards                      (must be non-blank)
+   *
+   * The asynchronous method will return batches of files; the consumer must
+   * return true if they want more files to be delivered.  The final bool
+   * parameter in the callback will be set to false if this is the final
+   * batch of files.
+   *
+   * The synchronous method will return matching files.
+   **/
+  virtual void
+  Find(const std::string &path, const std::string &name, const uint32_t maxdepth,
+                  const std::function<bool(const Status &, const std::vector<StatInfo> & , bool)> &handler) = 0;
+  virtual Status Find(const std::string &path, const std::string &name,
+                  const uint32_t maxdepth, std::vector<StatInfo> * stat_infos) = 0;
 
 
   /*****************************************************************************

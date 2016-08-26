@@ -23,9 +23,9 @@
    * Generates a directory tree with specified depth and fanout starting from
    * a given path. Generation is asynchronous.
    *
-   * Usage:   gendirs [hdfs://[<hostname>:<port>]]/<path-to-dir> <depth> <fanout>
+   * Usage:   gendirs /<path-to-dir> <depth> <fanout>
    *
-   * Example: gendirs hdfs://localhost.localdomain:9433/dir0 3 10
+   * Example: gendirs /dir0 3 10
    *
    * @param path-to-dir   Absolute path to the directory tree root where the
    *                      directory tree will be generated
@@ -37,99 +37,76 @@
    **/
 
 #include "hdfspp/hdfspp.h"
-#include "fs/namenode_operations.h"
 #include "common/hdfs_configuration.h"
 #include "common/configuration_loader.h"
-#include "common/uri.h"
 
-#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/stubs/common.h>
 #include <future>
 
-using namespace std;
-using namespace hdfs;
+#define DEFAULT_PERMISSIONS 0755
 
-#define SCHEME "hdfs"
-
-void GenerateDirectories (shared_ptr<FileSystem> fs, int depth, int level, int fanout, string path, vector<future<Status>> & futures) {
+void GenerateDirectories (std::shared_ptr<hdfs::FileSystem> fs, int depth, int level, int fanout, std::string path, std::vector<std::future<hdfs::Status>> & futures) {
   //Level contains our current depth in the directory tree
   if(level < depth) {
     for(int i = 0; i < fanout; i++){
       //Recursive calls to cover all possible paths from the root to the leave nodes
-      GenerateDirectories(fs, depth, level+1, fanout, path + "dir" + to_string(i) + "/", futures);
+      GenerateDirectories(fs, depth, level+1, fanout, path + "dir" + std::to_string(i) + "/", futures);
     }
   } else {
     //We have reached the leaf nodes and now start making calls to create directories
     //We make a promise which will be set when the call finishes and executes our handler
-    auto callstate = make_shared<promise<Status>>();
+    auto callstate = std::make_shared<std::promise<hdfs::Status>>();
     //Extract a future from this promise
-    future<Status> future(callstate->get_future());
+    std::future<hdfs::Status> future(callstate->get_future());
     //Save this future to the vector of futures which will be used to wait on all promises
     //after the whole recursion is done
-    futures.push_back(move(future));
+    futures.push_back(std::move(future));
     //Create a handler that will be executed when Mkdirs is done
-    auto handler = [callstate](const Status &s) {
+    auto handler = [callstate](const hdfs::Status &s) {
       callstate->set_value(s);
     };
     //Asynchronous call to create this directory along with all missing parent directories
-    fs->Mkdirs(path, NameNodeOperations::GetDefaultPermissionMask(), true, handler);
+    fs->Mkdirs(path, DEFAULT_PERMISSIONS, true, handler);
   }
 }
 
 int main(int argc, char *argv[]) {
   if (argc != 4) {
-    cerr << "usage: gendirs [hdfs://[<hostname>:<port>]]/<path-to-dir> <depth> <fanout>" << endl;
-    return 1;
+    std::cerr << "usage: gendirs /<path-to-dir> <depth> <fanout>" << std::endl;
+    exit(EXIT_FAILURE);
   }
 
-  optional<URI> uri;
-  const string uri_path = argv[1];
-  const int depth = stoi(argv[2]);
-  const int fanout = stoi(argv[3]);
+  std::string path = argv[1];
+  int depth = std::stoi(argv[2]);
+  int fanout = std::stoi(argv[3]);
 
-  //Separate check for scheme is required, otherwise common/uri.h library causes memory issues under valgrind
-  size_t scheme_end = uri_path.find("://");
-  if (scheme_end != string::npos) {
-    if(uri_path.substr(0, string(SCHEME).size()).compare(SCHEME) != 0) {
-      cerr << "Scheme " << uri_path.substr(0, scheme_end) << ":// is not supported" << endl;
-      return 1;
-    } else {
-      uri = URI::parse_from_string(uri_path);
-    }
-  }
-  if (!uri) {
-    cerr << "Malformed URI: " << uri_path << endl;
-    return 1;
-  }
-
-  ConfigurationLoader loader;
-  optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
-  const char * envHadoopConfDir = getenv("HADOOP_CONF_DIR");
-  if (envHadoopConfDir && (*envHadoopConfDir != 0) ) {
-    config = loader.OverlayResourceFile(*config, string(envHadoopConfDir) + "/core-site.xml");
-  }
-
-  Options options;
-  options.rpc_timeout = numeric_limits<int>::max();
+  hdfs::Options options;
+  //Setting the config path to the default: "$HADOOP_CONF_DIR" or "/etc/hadoop/conf"
+  hdfs::ConfigurationLoader loader;
+  //Loading default config files core-site.xml and hdfs-site.xml from the config path
+  hdfs::optional<hdfs::HdfsConfiguration> config = loader.LoadDefaultResources<hdfs::HdfsConfiguration>();
+  //TODO: HDFS-9539 - after this is resolved, valid config will always be returned.
   if(config){
+    //Loading options from the config
     options = config->GetOptions();
   }
-
-  IoService * io_service = IoService::New();
-
-  FileSystem *fs_raw = FileSystem::New(io_service, "", options);
-  if (!fs_raw) {
-    cerr << "Could not create FileSystem object" << endl;
-    return 1;
+  //TODO: HDFS-9539 - until then we increase the time-out to allow all recursive async calls to finish
+  options.rpc_timeout = std::numeric_limits<int>::max();
+  hdfs::IoService * io_service = hdfs::IoService::New();
+  //Wrapping fs into a unique pointer to guarantee deletion
+  std::shared_ptr<hdfs::FileSystem> fs(hdfs::FileSystem::New(io_service, "", options));
+  if (!fs) {
+    std::cerr << "Could not connect the file system." << std::endl;
+    exit(EXIT_FAILURE);
   }
-  //Wrapping fs_raw into a unique pointer to guarantee deletion
-  shared_ptr<FileSystem> fs(fs_raw);
-
-  //Get port from the uri, otherwise use the default port
-  string port = to_string(uri->get_port().value_or(8020));
-  Status stat = fs->Connect(uri->get_host(), port);
-  if (!stat.ok()) {
-    cerr << "Could not connect to " << uri->get_host() << ":" << port << endl;
-    return 1;
+  hdfs::Status status = fs->ConnectToDefaultFs();
+  if (!status.ok()) {
+    if(!options.defaultFS.get_host().empty()){
+      std::cerr << "Error connecting to " << options.defaultFS << ". " << status.ToString() << std::endl;
+    } else {
+      std::cerr << "Error connecting to the cluster: defaultFS is empty. " << status.ToString() << std::endl;
+    }
+    exit(EXIT_FAILURE);
   }
 
   /**
@@ -143,22 +120,23 @@ int main(int argc, char *argv[]) {
    * processed. After the whole recursion is complete we will need to wait until
    * all promises are set before we can exit.
    **/
-  vector<future<Status>> futures;
+  std::vector<std::future<hdfs::Status>> futures;
 
-  GenerateDirectories(fs, depth, 0, fanout, uri->get_path() + "/", futures);
+  GenerateDirectories(fs, depth, 0, fanout, path + "/", futures);
 
   /**
    * We are waiting here until all promises are set, and checking whether
    * the returned statuses contained any errors.
    **/
-  for(future<Status> &fs : futures){
-    Status stat = fs.get();
-    if (!stat.ok()) {
-      cerr << "Error: " << stat.ToString() << endl;
+  for(std::future<hdfs::Status> &fs : futures){
+    hdfs::Status status = fs.get();
+    if (!status.ok()) {
+      std::cerr << "Error: " << status.ToString() << std::endl;
+      exit(EXIT_FAILURE);
     }
   }
 
-  cout << "All done!" << endl;
+  std::cout << "All done!" << std::endl;
 
   // Clean up static data and prevent valgrind memory leaks
   google::protobuf::ShutdownProtobufLibrary();

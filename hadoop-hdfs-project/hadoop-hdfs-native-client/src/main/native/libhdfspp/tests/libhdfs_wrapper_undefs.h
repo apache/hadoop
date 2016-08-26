@@ -94,6 +94,7 @@
 #undef hdfsCancel
 #undef hdfsGetBlockLocations
 #undef hdfsFreeBlockLocations
+#undef hdfsFind
 #undef hdfsCreateSnapshot
 #undef hdfsDeleteSnapshot
 #undef hdfsAllowSnapshot
