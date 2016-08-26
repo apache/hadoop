@@ -30,6 +30,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.util.Collection;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
@@ -57,6 +58,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 
 public class TestFSNamesystem {
 
@@ -272,9 +274,16 @@ public class TestFSNamesystem {
     }
 
     latch.await();
-    Thread.sleep(10); // Lets all threads get BLOCKED
-    Assert.assertEquals("Expected number of blocked thread not found",
-                        threadCount, rwLock.getQueueLength());
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return (threadCount == rwLock.getQueueLength());
+        }
+      }, 10, 1000);
+    } catch (TimeoutException e) {
+      fail("Expected number of blocked thread not found");
+    }
   }
 
   /**
