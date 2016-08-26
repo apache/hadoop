@@ -65,7 +65,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
@@ -419,10 +418,10 @@ class FSDirWriteFileOp {
     }
     fsn.checkFsObjectLimit();
     INodeFile newNode = null;
-    Map.Entry<INodesInPath, String> parent = FSDirMkdirOp
-        .createAncestorDirectories(fsd, iip, permissions);
+    INodesInPath parent =
+        FSDirMkdirOp.createAncestorDirectories(fsd, iip, permissions);
     if (parent != null) {
-      iip = addFile(fsd, parent.getKey(), parent.getValue(), permissions,
+      iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
                     replication, blockSize, holder, clientMachine);
       newNode = iip != null ? iip.getLastINode().asFile() : null;
     }
@@ -572,7 +571,7 @@ class FSDirWriteFileOp {
    * @return the new INodesInPath instance that contains the new INode
    */
   private static INodesInPath addFile(
-      FSDirectory fsd, INodesInPath existing, String localName,
+      FSDirectory fsd, INodesInPath existing, byte[] localName,
       PermissionStatus permissions, short replication, long preferredBlockSize,
       String clientName, String clientMachine)
       throws IOException {
@@ -589,7 +588,7 @@ class FSDirWriteFileOp {
       }
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
           modTime, modTime, replication, preferredBlockSize, ecPolicy != null);
-      newNode.setLocalName(DFSUtil.string2Bytes(localName));
+      newNode.setLocalName(localName);
       newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode);
     } finally {
@@ -597,12 +596,13 @@ class FSDirWriteFileOp {
     }
     if (newiip == null) {
       NameNode.stateChangeLog.info("DIR* addFile: failed to add " +
-          existing.getPath() + "/" + localName);
+          existing.getPath() + "/" + DFSUtil.bytes2String(localName));
       return null;
     }
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* addFile: " + localName + " is added");
+      NameNode.stateChangeLog.debug("DIR* addFile: " +
+          DFSUtil.bytes2String(localName) + " is added");
     }
     return newiip;
   }
