@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -361,6 +360,10 @@ public class INodesInPath {
     return path;
   }
 
+  public byte[] getPathComponent(int i) {
+    return path[i];
+  }
+
   /** @return the full path in string form */
   public String getPath() {
     return DFSUtil.byteArray2PathString(path);
@@ -372,21 +375,6 @@ public class INodesInPath {
 
   public String getPath(int pos) {
     return DFSUtil.byteArray2PathString(path, 0, pos + 1); // it's a length...
-  }
-
-  /**
-   * @param offset start endpoint (inclusive)
-   * @param length number of path components
-   * @return sub-list of the path
-   */
-  public List<String> getPath(int offset, int length) {
-    Preconditions.checkArgument(offset >= 0 && length >= 0 && offset + length
-        <= path.length);
-    ImmutableList.Builder<String> components = ImmutableList.builder();
-    for (int i = offset; i < offset + length; i++) {
-      components.add(DFSUtil.bytes2String(path[i]));
-    }
-    return components.build();
   }
 
   public int length() {
@@ -429,22 +417,17 @@ public class INodesInPath {
   }
 
   /**
-   * @return a new INodesInPath instance that only contains exisitng INodes.
+   * @return a new INodesInPath instance that only contains existing INodes.
    * Note that this method only handles non-snapshot paths.
    */
   public INodesInPath getExistingINodes() {
     Preconditions.checkState(!isSnapshot());
-    int i = 0;
-    for (; i < inodes.length; i++) {
-      if (inodes[i] == null) {
-        break;
+    for (int i = inodes.length; i > 0; i--) {
+      if (inodes[i - 1] != null) {
+        return (i == inodes.length) ? this : getAncestorINodesInPath(i);
       }
     }
-    INode[] existing = new INode[i];
-    byte[][] existingPath = new byte[i][];
-    System.arraycopy(inodes, 0, existing, 0, i);
-    System.arraycopy(path, 0, existingPath, 0, i);
-    return new INodesInPath(existing, existingPath, isRaw, false, snapshotId);
+    return null;
   }
 
   /**
