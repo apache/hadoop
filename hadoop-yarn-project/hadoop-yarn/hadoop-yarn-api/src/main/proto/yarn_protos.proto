@@ -482,6 +482,7 @@ message ReservationDefinitionProto {
   optional int64 arrival = 2;
   optional int64 deadline = 3;
   optional string reservation_name = 4;
+  optional string recurrence_expression = 5 [default = "0"];
 }
 
 message ResourceAllocationRequestProto {
