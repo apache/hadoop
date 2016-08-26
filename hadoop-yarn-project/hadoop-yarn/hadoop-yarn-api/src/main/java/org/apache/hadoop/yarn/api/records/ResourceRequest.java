@@ -112,6 +112,10 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
       // Compare priority, host and capability
       int ret = r1.getPriority().compareTo(r2.getPriority());
       if (ret == 0) {
+        ret = Long.compare(
+            r1.getAllocationRequestId(), r2.getAllocationRequestId());
+      }
+      if (ret == 0) {
         String h1 = r1.getResourceName();
         String h2 = r2.getResourceName();
         ret = h1.compareTo(h2);
@@ -381,6 +385,7 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
     result = prime * result + ((hostName == null) ? 0 : hostName.hashCode());
     result = prime * result + getNumContainers();
     result = prime * result + ((priority == null) ? 0 : priority.hashCode());
+    result = prime * result + Long.valueOf(getAllocationRequestId()).hashCode();
     return result;
   }
 
@@ -422,6 +427,11 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         .equals(other.getExecutionTypeRequest().getExecutionType())) {
       return false;
     }
+
+    if (getAllocationRequestId() != other.getAllocationRequestId()) {
+      return false;
+    }
+
     if (getNodeLabelExpression() == null) {
       if (other.getNodeLabelExpression() != null) {
         return false;
@@ -452,7 +462,14 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
           int capabilityComparison =
               this.getCapability().compareTo(other.getCapability());
           if (capabilityComparison == 0) {
-            return this.getNumContainers() - other.getNumContainers();
+            int numContainerComparison =
+                this.getNumContainers() - other.getNumContainers();
+            if (numContainerComparison == 0) {
+              return Long.compare(getAllocationRequestId(),
+                  other.getAllocationRequestId());
+            } else {
+              return numContainerComparison;
+            }
           } else {
             return capabilityComparison;
           }

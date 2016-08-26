@@ -110,6 +110,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     final List<String> nodes;
     final List<String> racks;
     final Priority priority;
+    final long allocationRequestId;
     final boolean relaxLocality;
     final String nodeLabelsExpression;
     final ExecutionTypeRequest executionTypeRequest;
@@ -133,6 +134,31 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority) {
       this(capability, nodes, racks, priority, true, null);
+    }
+
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints and
+     * locality relaxation enabled.
+     *
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param allocationRequestId Allocation Request Id
+     */
+    @Public
+    @InterfaceStability.Evolving
+    public ContainerRequest(Resource capability, String[] nodes,
+        String[] racks, Priority priority, long allocationRequestId) {
+      this(capability, nodes, racks, priority, allocationRequestId, true, null,
+          ExecutionTypeRequest.newInstance());
     }
     
     /**
@@ -175,20 +201,20 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      * @param relaxLocality
      *          If true, containers for this request may be assigned on hosts
      *          and racks other than the ones explicitly requested.
-     * @param nodeLabelsExpression
-     *          Set node labels to allocate resource, now we only support
-     *          asking for only a single node label
+     * @param allocationRequestId Allocation Request Id
      */
-    public ContainerRequest(Resource capability, String[] nodes, String[] racks,
-        Priority priority, boolean relaxLocality, String nodeLabelsExpression) {
-      this(capability, nodes, racks, priority, relaxLocality,
-          nodeLabelsExpression,
-          ExecutionTypeRequest.newInstance());
+    @Public
+    @InterfaceStability.Evolving
+    public ContainerRequest(Resource capability, String[] nodes,
+        String[] racks, Priority priority, long allocationRequestId,
+        boolean relaxLocality) {
+      this(capability, nodes, racks, priority, allocationRequestId,
+          relaxLocality, null, ExecutionTypeRequest.newInstance());
     }
-          
+
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints.
-     * 
+     *
      * @param capability
      *          The {@link Resource} to be requested for each container.
      * @param nodes
@@ -206,11 +232,79 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      * @param nodeLabelsExpression
      *          Set node labels to allocate resource, now we only support
      *          asking for only a single node label
+     */
+    public ContainerRequest(Resource capability, String[] nodes, String[] racks,
+        Priority priority, boolean relaxLocality, String nodeLabelsExpression) {
+      this(capability, nodes, racks, priority, 0, relaxLocality,
+          nodeLabelsExpression,
+          ExecutionTypeRequest.newInstance());
+    }
+
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     *
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param allocationRequestId
+     *          The allocationRequestId of the request. To be used as a tracking
+     *          id to match Containers allocated against this request. Will
+     *          default to 0 if not specified.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     * @param nodeLabelsExpression
+     *          Set node labels to allocate resource, now we only support
+     *          asking for only a single node label
+     */
+    @Public
+    @InterfaceStability.Evolving
+    public ContainerRequest(Resource capability, String[] nodes, String[] racks,
+        Priority priority, long allocationRequestId, boolean relaxLocality,
+        String nodeLabelsExpression) {
+      this(capability, nodes, racks, priority, allocationRequestId,
+          relaxLocality, nodeLabelsExpression,
+          ExecutionTypeRequest.newInstance());
+    }
+          
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     * 
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param allocationRequestId
+     *          The allocationRequestId of the request. To be used as a tracking
+     *          id to match Containers allocated against this request. Will
+     *          default to 0 if not specified.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     * @param nodeLabelsExpression
+     *          Set node labels to allocate resource, now we only support
+     *          asking for only a single node label
      * @param executionTypeRequest
      *          Set the execution type of the container request.
      */
     public ContainerRequest(Resource capability, String[] nodes, String[] racks,
-        Priority priority, boolean relaxLocality, String nodeLabelsExpression,
+        Priority priority, long allocationRequestId, boolean relaxLocality,
+        String nodeLabelsExpression,
         ExecutionTypeRequest executionTypeRequest) {
       // Validate request
       Preconditions.checkArgument(capability != null,
@@ -223,6 +317,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
                   && (nodes == null || nodes.length == 0)),
               "Can't turn off locality relaxation on a " + 
               "request with no location constraints");
+      this.allocationRequestId = allocationRequestId;
       this.capability = capability;
       this.nodes = (nodes != null ? ImmutableList.copyOf(nodes) : null);
       this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
@@ -247,6 +342,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     public Priority getPriority() {
       return priority;
     }
+
+    public long getAllocationRequestId() {
+      return allocationRequestId;
+    }
     
     public boolean getRelaxLocality() {
       return relaxLocality;
@@ -264,6 +363,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       StringBuilder sb = new StringBuilder();
       sb.append("Capability[").append(capability).append("]");
       sb.append("Priority[").append(priority).append("]");
+      sb.append("AllocationRequestId[").append(allocationRequestId).append("]");
       sb.append("ExecutionTypeRequest[").append(executionTypeRequest)
           .append("]");
       return sb.toString();
@@ -390,6 +490,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * Each collection in the list contains requests with identical 
    * <code>Resource</code> size that fit in the given capability. In a 
    * collection, requests will be returned in the same order as they were added.
+   *
+   * NOTE: This API only matches Container requests that were created by the
+   * client WITHOUT the allocationRequestId being set.
+   *
    * @return Collection of request matching the parameters
    */
   @InterfaceStability.Evolving
@@ -407,7 +511,11 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * Each collection in the list contains requests with identical
    * <code>Resource</code> size that fit in the given capability. In a
    * collection, requests will be returned in the same order as they were added.
-   * specify an <code>ExecutionType</code> .
+   * specify an <code>ExecutionType</code>.
+   *
+   * NOTE: This API only matches Container requests that were created by the
+   * client WITHOUT the allocationRequestId being set.
+   *
    * @param priority Priority
    * @param resourceName Location
    * @param executionType ExecutionType
@@ -421,7 +529,23 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     throw new UnsupportedOperationException("The sub-class extending" +
         " AMRMClient is expected to implement this !!");
   }
-  
+
+  /**
+   * Get outstanding <code>ContainerRequest</code>s matching the given
+   * allocationRequestId. These ContainerRequests should have been added via
+   * <code>addContainerRequest</code> earlier in the lifecycle. For performance,
+   * the AMRMClient may return its internal collection directly without creating
+   * a copy. Users should not perform mutable operations on the return value.
+   *
+   * NOTE: This API only matches Container requests that were created by the
+   * client WITH the allocationRequestId being set to a non-default value.
+   *
+   * @param allocationRequestId Allocation Request Id
+   * @return Collection of request matching the parameters
+   */
+  @InterfaceStability.Evolving
+  public abstract Collection<T> getMatchingRequests(long allocationRequestId);
+
   /**
    * Update application's blacklist with addition or removal resources.
    * 

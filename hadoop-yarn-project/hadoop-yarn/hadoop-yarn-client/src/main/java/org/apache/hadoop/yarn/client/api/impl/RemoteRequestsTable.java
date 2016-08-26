@@ -264,15 +264,16 @@ class RemoteRequestsTable<T> implements Iterable<ResourceRequestInfo>{
   }
 
   @SuppressWarnings("unchecked")
-  ResourceRequestInfo addResourceRequest(Priority priority, String resourceName,
-      ExecutionTypeRequest execTypeReq, Resource capability, T req,
-      boolean relaxLocality, String labelExpression) {
+  ResourceRequestInfo addResourceRequest(Long allocationRequestId,
+      Priority priority, String resourceName, ExecutionTypeRequest execTypeReq,
+      Resource capability, T req, boolean relaxLocality,
+      String labelExpression) {
     ResourceRequestInfo resourceRequestInfo = get(priority, resourceName,
         execTypeReq.getExecutionType(), capability);
     if (resourceRequestInfo == null) {
       resourceRequestInfo =
-          new ResourceRequestInfo(priority, resourceName, capability,
-              relaxLocality);
+          new ResourceRequestInfo(allocationRequestId, priority, resourceName,
+              capability, relaxLocality);
       put(priority, resourceName, execTypeReq.getExecutionType(), capability,
           resourceRequestInfo);
     }

@@ -202,6 +202,10 @@ extends AbstractService {
   /**
    * Returns all matching ContainerRequests that match the given Priority,
    * ResourceName, ExecutionType and Capability.
+   *
+   * NOTE: This matches only requests that were made by the client WITHOUT the
+   * allocationRequestId specified.
+   *
    * @param priority Priority.
    * @param resourceName Location.
    * @param executionType ExecutionType.
@@ -213,6 +217,20 @@ extends AbstractService {
       Resource capability) {
     return client.getMatchingRequests(priority, resourceName,
         executionType, capability);
+  }
+
+  /**
+   * Returns all matching ContainerRequests that match the given
+   * AllocationRequestId.
+   *
+   * NOTE: This matches only requests that were made by the client WITH the
+   * allocationRequestId specified.
+   *
+   * @param allocationRequestId AllocationRequestId.
+   * @return All matching ContainerRequests
+   */
+  public Collection<T> getMatchingRequests(long allocationRequestId) {
+    return client.getMatchingRequests(allocationRequestId);
   }
   
   /**
