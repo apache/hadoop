@@ -26,6 +26,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9745. TestSecureNNWithQJM#testSecureMode sometimes fails with
     timeouts (Xiao Chen via jlowe)
 
+    HDFS-8915. TestFSNamesystem.testFSLockGetWaiterCount fails intermittently.
+    (Masatake Iwasaki via kihwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
