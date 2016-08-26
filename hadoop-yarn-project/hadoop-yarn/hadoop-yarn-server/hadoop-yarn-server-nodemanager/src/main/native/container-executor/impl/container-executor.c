@@ -439,7 +439,7 @@ char *concatenate(char *concat_pattern, char *return_path_name,
   for (j = 0; j < numArgs; j++) {
     arg = va_arg(ap, char*);
     if (arg == NULL) {
-      fprintf(LOGFILE, "One of the arguments passed for %s in null.\n",
+      fprintf(LOGFILE, "One of the arguments passed for %s is null.\n",
           return_path_name);
       return NULL;
     }
@@ -1926,6 +1926,58 @@ int delete_as_user(const char *user,
       ret = this_ret;
     }
   }
+  return ret;
+}
+
+/**
+ * List the files in the given directory as the user.
+ * user: the user listing the files
+ * target_dir: the directory from which to list files
+ */
+int list_as_user(const char *target_dir) {
+  int ret = 0;
+  struct stat sb;
+
+  if (stat(target_dir, &sb) != 0) {
+    // If directory doesn't exist or can't be accessed, error out
+    fprintf(LOGFILE, "Could not stat %s - %s\n", target_dir,
+        strerror(errno));
+    ret = -1;
+  } else if (!S_ISDIR(sb.st_mode)) {
+    // If it's not a directory, list it as the only file
+    printf("%s\n", target_dir);
+  } else {
+    DIR *dir = opendir(target_dir);
+
+    if (dir != NULL) {
+      struct dirent *file;
+
+      errno = 0;
+
+      do {
+        file = readdir(dir);
+
+        // Ignore the . and .. entries
+        if ((file != NULL) &&
+            (strcmp(".", file->d_name) != 0) &&
+            (strcmp("..", file->d_name) != 0)) {
+          printf("%s\n", file->d_name);
+        }
+      } while (file != NULL);
+
+      // If we ended the directory read early on an error, then error out
+      if (errno != 0) {
+        fprintf(LOGFILE, "Could not read directory %s - %s\n", target_dir,
+            strerror(errno));
+        ret = -1;
+      }
+    } else {
+      fprintf(LOGFILE, "Could not open directory %s - %s\n", target_dir,
+          strerror(errno));
+      ret = -1;
+    }
+  }
+
   return ret;
 }
 
