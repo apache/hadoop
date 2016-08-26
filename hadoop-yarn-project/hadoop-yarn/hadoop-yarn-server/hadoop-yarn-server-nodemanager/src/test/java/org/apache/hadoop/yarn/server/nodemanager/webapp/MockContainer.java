@@ -172,4 +172,9 @@ public class MockContainer implements Container {
   @Override
   public void setLogDir(String logDir) {
   }
+
+  @Override
+  public void setIpAndHost(String[] ipAndHost) {
+
+  }
 }

@@ -116,4 +116,10 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
 
     runtime.reapContainer(ctx);
   }
+
+  @Override
+  public String[] getIpAndHost(Container container) {
+    LinuxContainerRuntime runtime = pickContainerRuntime(container);
+    return runtime.getIpAndHost(container);
+  }
 }

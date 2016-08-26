@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,19 +28,22 @@ import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
-import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
+import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
-import com.google.common.base.Preconditions;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ContainersMonitorImpl extends AbstractService implements
     ContainersMonitor {
@@ -436,6 +436,17 @@ public class ContainersMonitorImpl extends AbstractService implements
                       .forContainer(containerId, containerMetricsPeriodMs,
                       containerMetricsUnregisterDelayMs);
                   usageMetrics.recordProcessId(pId);
+                }
+                Container container = context.getContainers().get(containerId);
+                String[] ipAndHost = containerExecutor.getIpAndHost(container);
+                if (ipAndHost != null && ipAndHost[0] != null
+                    && ipAndHost[1] != null) {
+                  container.setIpAndHost(ipAndHost);
+                  LOG.info(containerId + "'s ip = " + ipAndHost[0]
+                      + ", and hostname = " + ipAndHost[1]);
+                } else {
+                  LOG.info("Can not get both ip and hostname: " + Arrays
+                      .toString(ipAndHost));
                 }
               }
             }

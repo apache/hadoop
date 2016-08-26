@@ -67,6 +67,8 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   void setLogDir(String logDir);
 
+  void setIpAndHost(String[] ipAndHost);
+
   String toString();
 
 }

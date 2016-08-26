@@ -412,6 +412,13 @@ int change_user(uid_t user, gid_t group) {
   return 0;
 }
 
+char* check_docker_binary(char *docker_binary) {
+  if (docker_binary == NULL) {
+    return "docker";
+  }
+  return docker_binary;
+}
+
 /**
  * Utility function to concatenate argB to argA using the concat_pattern.
  */
@@ -1100,6 +1107,8 @@ char* parse_docker_command_file(const char* command_file) {
 int run_docker(const char *command_file) {
   char* docker_command = parse_docker_command_file(command_file);
   char* docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
+  docker_binary = check_docker_binary(docker_binary);
+
   char* docker_command_with_binary = calloc(sizeof(char), EXECUTOR_PATH_MAX);
   snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
   char **args = extract_values_delim(docker_command_with_binary, " ");
@@ -1265,9 +1274,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 
   char *docker_command = parse_docker_command_file(command_file);
   char *docker_binary = get_value(DOCKER_BINARY_KEY, &executor_cfg);
-  if (docker_binary == NULL) {
-    docker_binary = "docker";
-  }
+  docker_binary = check_docker_binary(docker_binary);
 
   fprintf(LOGFILE, "Creating script paths...\n");
   exit_code = create_script_paths(

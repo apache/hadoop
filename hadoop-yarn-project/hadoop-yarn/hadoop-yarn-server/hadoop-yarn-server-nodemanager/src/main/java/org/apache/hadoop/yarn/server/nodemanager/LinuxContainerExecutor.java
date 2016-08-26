@@ -524,6 +524,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
+  public String[] getIpAndHost(Container container) {
+    return linuxContainerRuntime.getIpAndHost(container);
+  }
+
+  @Override
   public int reacquireContainer(ContainerReacquisitionContext ctx)
       throws IOException, InterruptedException {
     ContainerId containerId = ctx.getContainerId();

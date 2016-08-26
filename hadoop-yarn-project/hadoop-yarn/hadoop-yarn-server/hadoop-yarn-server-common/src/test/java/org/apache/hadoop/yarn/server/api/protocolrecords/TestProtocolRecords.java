@@ -35,9 +35,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NMContainerStatusPBImpl;
 
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
@@ -160,5 +162,20 @@ public class TestProtocolRecords {
             .getQueuedContainersStatus().getEstimatedQueueWaitTime());
     Assert.assertEquals(321,
         pb.getNodeStatus().getQueuedContainersStatus().getWaitQueueLength());
+  }
+
+  @Test
+  public void testContainerStatus() {
+    ContainerStatus status = Records.newRecord(ContainerStatus.class);
+    List<String> ips = Arrays.asList("127.0.0.1", "139.5.25.2");
+    status.setIPs(ips);
+    status.setHost("locahost123");
+    ContainerStatusPBImpl pb =
+        new ContainerStatusPBImpl(((ContainerStatusPBImpl) status).getProto());
+    Assert.assertEquals(ips, pb.getIPs());
+    Assert.assertEquals("locahost123", pb.getHost());
+
+    status.setIPs(null);
+    Assert.assertNull(status.getIPs());
   }
 }
