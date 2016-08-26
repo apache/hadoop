@@ -72,7 +72,7 @@ public final class Constants {
 
   // Number of records to get while paging through a directory listing
   public static final String MAX_PAGING_KEYS_KEY = "fs.oss.paging.maximum";
-  public static final int MAX_PAGING_KEYS_DEFAULT = 500;
+  public static final int MAX_PAGING_KEYS_DEFAULT = 1000;
 
   // Size of each of or multipart pieces in bytes
   public static final String MULTIPART_UPLOAD_SIZE_KEY =
@@ -109,5 +109,6 @@ public final class Constants {
   public static final String FS_OSS = "oss";
 
   public static final long MIN_MULTIPART_UPLOAD_PART_SIZE = 100 * 1024L;
+  public static final int MAX_RETRIES = 10;
 
 }

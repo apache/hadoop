@@ -73,11 +73,6 @@ public class TestOSSFileSystemContract extends FileSystemContractBaseTest {
     // not supported
   }
 
-  /**
-   * Assert that root directory renames are not allowed.
-   *
-   * @throws Exception on failures
-   */
   @Override
   public void testRootDirAlwaysExists() throws Exception {
     //this will throw an exception if the path is not found
@@ -88,11 +83,6 @@ public class TestOSSFileSystemContract extends FileSystemContractBaseTest {
         fs.exists(super.path("/")));
   }
 
-  /**
-   * Assert that root directory renames are not allowed.
-   *
-   * @throws Exception on failures
-   */
   @Override
   public void testRenameRootDirForbidden() throws Exception {
     if (!renameSupported()) {

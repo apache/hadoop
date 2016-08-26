@@ -15,39 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.aliyun.oss.OSSTestUtils;
-import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+
+import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
- * The contract of OSS: only enabled if the test bucket is provided.
+ * Contract test suite covering Aliyun OSS integration with DistCp.
  */
-public class OSSContract extends AbstractBondedFSContract {
+public class TestOSSContractDispCp extends AbstractContractDistCpTest {
 
-  public static final String CONTRACT_XML = "contract/oss.xml";
-  public static final String CONTRACT_TEST_OSS_FS_NAME =
-      "fs.contract.test.fs.oss";
+  private static final long MULTIPART_SETTING = 8 * 1024 * 1024; // 8 MB
 
-  private static String testPath = OSSTestUtils.generateUniqueTestPath();
-
-  public OSSContract(Configuration conf) {
-    super(conf);
-    //insert the base features
-    addConfResource(CONTRACT_XML);
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration newConf = super.createConfiguration();
+    newConf.setLong(MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, MULTIPART_SETTING);
+    newConf.setLong(MULTIPART_UPLOAD_SIZE_KEY, MULTIPART_SETTING);
+    return newConf;
   }
 
   @Override
-  public String getScheme() {
-    return "oss";
-  }
-
-  @Override
-  public Path getTestPath() {
-    Path path = new Path(testPath);
-    return path;
+  protected OSSContract createContract(Configuration conf) {
+    return new OSSContract(conf);
   }
 }

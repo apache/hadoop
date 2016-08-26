@@ -20,142 +20,58 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URLDecoder;
-import java.util.Objects;
 
+import com.aliyun.oss.common.auth.CredentialsProvider;
+import com.aliyun.oss.common.auth.DefaultCredentialProvider;
+import com.aliyun.oss.common.auth.DefaultCredentials;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.ProviderUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_NUM_LIMIT;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY;
 
 /**
  * Utility methods for Aliyun OSS code.
  */
 final public class AliyunOSSUtils {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AliyunOSSUtils.class);
+
   private AliyunOSSUtils() {
   }
 
   /**
-   * User information includes user name and password.
-   */
-  static public class UserInfo {
-    private final String user;
-    private final String password;
-
-    public static final UserInfo EMPTY = new UserInfo("", "");
-
-    public UserInfo(String user, String password) {
-      this.user = user;
-      this.password = password;
-    }
-
-    /**
-     * Predicate to verify user information is set.
-     * @return true if the username is defined (not null, not empty).
-     */
-    public boolean hasLogin() {
-      return StringUtils.isNotEmpty(user);
-    }
-
-    /**
-     * Equality test matches user and password.
-     * @param o other object
-     * @return true if the objects are considered equivalent.
-     */
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      UserInfo that = (UserInfo) o;
-      return Objects.equals(user, that.user) &&
-          Objects.equals(password, that.password);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(user, password);
-    }
-
-    public String getUser() {
-      return user;
-    }
-
-    public String getPassword() {
-      return password;
-    }
-  }
-
-  /**
-   * Used to get password from configuration, if default value is not available.
+   * Used to get password from configuration.
+   *
    * @param conf configuration that contains password information
    * @param key the key of the password
-   * @param val the default value of the key
    * @return the value for the key
    * @throws IOException if failed to get password from configuration
    */
-  static public String getPassword(Configuration conf, String key, String val)
+  static public String getPassword(Configuration conf, String key)
       throws IOException {
-    if (StringUtils.isEmpty(val)) {
-      try {
-        final char[] pass = conf.getPassword(key);
-        if (pass != null) {
-          return (new String(pass)).trim();
-        } else {
-          return "";
-        }
-      } catch (IOException ioe) {
-        throw new IOException("Cannot find password option " + key, ioe);
-      }
-    } else {
-      return val;
-    }
-  }
-
-  /**
-   * Extract the user information details from a URI.
-   * @param name URI of the filesystem.
-   * @return a login tuple, possibly empty.
-   */
-  public static UserInfo extractLoginDetails(URI name) {
     try {
-      String authority = name.getAuthority();
-      if (authority == null) {
-        return UserInfo.EMPTY;
-      }
-      int loginIndex = authority.indexOf('@');
-      if (loginIndex < 0) {
-        // No user information
-        return UserInfo.EMPTY;
-      }
-      String login = authority.substring(0, loginIndex);
-      int loginSplit = login.indexOf(':');
-      if (loginSplit > 0) {
-        String user = login.substring(0, loginSplit);
-        String password = URLDecoder.decode(login.substring(loginSplit + 1),
-            "UTF-8");
-        return new UserInfo(user, password);
-      } else if (loginSplit == 0) {
-        // There is no user, just a password.
-        return UserInfo.EMPTY;
+      final char[] pass = conf.getPassword(key);
+      if (pass != null) {
+        return (new String(pass)).trim();
       } else {
-        return new UserInfo(login, "");
+        return "";
       }
-    } catch (UnsupportedEncodingException e) {
-      // This should never happen; translate it if it does.
-      throw new RuntimeException(e);
+    } catch (IOException ioe) {
+      throw new IOException("Cannot find password option " + key, ioe);
     }
   }
 
   /**
-   * Skips the requested number of bytes or fail if there are not enough left.
-   * This allows for the possibility that {@link InputStream#skip(long)} may not
-   * skip as many bytes as requested (most likely because of reaching EOF).
+   * Skip the requested number of bytes or fail if there are no enough bytes
+   * left. This allows for the possibility that {@link InputStream#skip(long)}
+   * may not skip as many bytes as requested (most likely because of reaching
+   * EOF).
+   *
    * @param is the input stream to skip.
    * @param n the number of bytes to skip.
    * @throws IOException thrown when skipped less number of bytes.
@@ -179,12 +95,69 @@ final public class AliyunOSSUtils {
    * Calculate a proper size of multipart piece. If <code>minPartSize</code>
    * is too small, the number of multipart pieces may exceed the limit of
    * {@link Constants#MULTIPART_UPLOAD_PART_NUM_LIMIT}.
+   *
    * @param contentLength the size of file.
    * @param minPartSize the minimum size of multipart piece.
    * @return a revisional size of multipart piece.
-     */
+   */
   public static long calculatePartSize(long contentLength, long minPartSize) {
     long tmpPartSize = contentLength / MULTIPART_UPLOAD_PART_NUM_LIMIT + 1;
     return Math.max(minPartSize, tmpPartSize);
+  }
+
+  /**
+   * Create credential provider specified by configuration, or create default
+   * credential provider if not specified.
+   *
+   * @param name the uri of the file system
+   * @param conf configuration
+   * @return a credential provider
+   * @throws IOException on any problem. Class construction issues may be
+   * nested inside the IOE.
+   */
+  public static CredentialsProvider getCredentialsProvider(URI name,
+      Configuration conf) throws IOException {
+    URI uri = java.net.URI.create(
+        name.getScheme() + "://" + name.getAuthority());
+    CredentialsProvider credentials;
+
+    String className = conf.getTrimmed(ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY);
+    if (StringUtils.isEmpty(className)) {
+      Configuration newConf =
+          ProviderUtils.excludeIncompatibleCredentialProviders(conf,
+              AliyunOSSFileSystem.class);
+      String accessKey =
+          AliyunOSSUtils.getPassword(newConf, ACCESS_KEY);
+      String secretKey =
+          AliyunOSSUtils.getPassword(newConf, SECRET_KEY);
+      credentials = new DefaultCredentialProvider(
+          new DefaultCredentials(accessKey, secretKey));
+    } else {
+      try {
+        LOG.debug("Credential provider class is:" + className);
+        Class<?> credClass = Class.forName(className);
+        try {
+          credentials =
+              (CredentialsProvider)credClass.getDeclaredConstructor(
+                  URI.class, Configuration.class).newInstance(uri, conf);
+        } catch (NoSuchMethodException | SecurityException e) {
+          credentials =
+              (CredentialsProvider)credClass.getDeclaredConstructor()
+              .newInstance();
+        }
+      } catch (ClassNotFoundException e) {
+        throw new IOException(className + " not found.", e);
+      } catch (NoSuchMethodException | SecurityException e) {
+        throw new IOException(String.format("%s constructor exception.  A " +
+            "class specified in %s must provide an accessible constructor " +
+            "accepting URI and Configuration, or an accessible default " +
+            "constructor.", className, ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY),
+            e);
+      } catch (ReflectiveOperationException | IllegalArgumentException e) {
+        throw new IOException(className + " instantiation exception.", e);
+      }
+    }
+
+    return credentials;
   }
 }
