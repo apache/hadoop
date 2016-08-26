@@ -52,7 +52,7 @@ public class FairSchedulerConfiguration extends Configuration {
    * multiple of increment allocation. Only container sizes above this are
    * allowed to reserve a node */
   public static final String
-      RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE =
+      RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE =
       YarnConfiguration.YARN_PREFIX +
           "scheduler.reservation-threshold.increment-multiple";
   public static final float
@@ -190,7 +190,7 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public float getReservationThresholdIncrementMultiple() {
     return getFloat(
-      RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+      RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE,
       DEFAULT_RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE);
   }
 
