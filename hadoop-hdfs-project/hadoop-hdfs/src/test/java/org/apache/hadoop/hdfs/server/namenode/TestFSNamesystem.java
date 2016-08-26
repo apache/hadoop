@@ -291,7 +291,10 @@ public class TestFSNamesystem {
    */
   @Test(timeout=45000)
   public void testFSLockLongHoldingReport() throws Exception {
+    final long writeLockReportingThreshold = 100L;
     Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
+        writeLockReportingThreshold);
     FSImage fsImage = Mockito.mock(FSImage.class);
     FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
     Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
@@ -302,32 +305,32 @@ public class TestFSNamesystem {
 
     // Don't report if the write lock is held for a short time
     fsn.writeLock();
-    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2);
+    Thread.sleep(writeLockReportingThreshold / 2);
     fsn.writeUnlock();
     assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
 
 
     // Report if the write lock is held for a long time
     fsn.writeLock();
-    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD + 100);
+    Thread.sleep(writeLockReportingThreshold + 10);
     logs.clearOutput();
     fsn.writeUnlock();
     assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
 
     // Report if the write lock is held (interruptibly) for a long time
     fsn.writeLockInterruptibly();
-    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD + 100);
+    Thread.sleep(writeLockReportingThreshold + 10);
     logs.clearOutput();
     fsn.writeUnlock();
     assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
 
     // Report if it's held for a long time when re-entering write lock
     fsn.writeLock();
-    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2 + 1);
+    Thread.sleep(writeLockReportingThreshold/ 2 + 1);
     fsn.writeLockInterruptibly();
-    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2 + 1);
+    Thread.sleep(writeLockReportingThreshold / 2 + 1);
     fsn.writeLock();
-    Thread.sleep(FSNamesystem.WRITELOCK_REPORTING_THRESHOLD / 2);
+    Thread.sleep(writeLockReportingThreshold / 2);
     logs.clearOutput();
     fsn.writeUnlock();
     assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
