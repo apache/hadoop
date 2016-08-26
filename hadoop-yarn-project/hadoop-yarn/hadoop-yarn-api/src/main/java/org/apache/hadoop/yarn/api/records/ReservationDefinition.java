@@ -37,13 +37,24 @@ public abstract class ReservationDefinition {
   @Public
   @Unstable
   public static ReservationDefinition newInstance(long arrival, long deadline,
-      ReservationRequests reservationRequests, String name) {
+      ReservationRequests reservationRequests, String name,
+      String recurrenceExpression) {
     ReservationDefinition rDefinition =
         Records.newRecord(ReservationDefinition.class);
     rDefinition.setArrival(arrival);
     rDefinition.setDeadline(deadline);
     rDefinition.setReservationRequests(reservationRequests);
     rDefinition.setReservationName(name);
+    rDefinition.setRecurrenceExpression(recurrenceExpression);
+    return rDefinition;
+  }
+
+  @Public
+  @Unstable
+  public static ReservationDefinition newInstance(long arrival, long deadline,
+      ReservationRequests reservationRequests, String name) {
+    ReservationDefinition rDefinition =
+        newInstance(arrival, deadline, reservationRequests, name, "0");
     return rDefinition;
   }
 
@@ -133,5 +144,41 @@ public abstract class ReservationDefinition {
   @Public
   @Evolving
   public abstract void setReservationName(String name);
+
+  /**
+   * Get the recurrence of this reservation representing the time period of
+   * the periodic job. Currently, only long values are supported. Later,
+   * support for regular expressions denoting arbitrary recurrence patterns
+   * (e.g., every Tuesday and Thursday) will be added.
+   * Recurrence is represented in milliseconds for periodic jobs.
+   * Recurrence is 0 for non-periodic jobs. Periodic jobs are valid until they
+   * are explicitly cancelled and have higher priority than non-periodic jobs
+   * (during initial placement and replanning). Periodic job allocations are
+   * consistent across runs (flexibility in allocation is leveraged only during
+   * initial placement, allocations remain consistent thereafter).
+   *
+   * @return recurrence of this reservation
+   */
+  @Public
+  @Evolving
+  public abstract String getRecurrenceExpression();
+
+  /**
+   * Set the recurrence of this reservation representing the time period of
+   * the periodic job. Currently, only long values are supported. Later,
+   * support for regular expressions denoting arbitrary recurrence patterns
+   * (e.g., every Tuesday and Thursday) will be added.
+   * Recurrence is represented in milliseconds for periodic jobs.
+   * Recurrence is 0 for non-periodic jobs. Periodic jobs are valid until they
+   * are explicitly cancelled and have higher priority than non-periodic jobs
+   * (during initial placement and replanning). Periodic job allocations are
+   * consistent across runs (flexibility in allocation is leveraged only during
+   * initial placement, allocations remain consistent thereafter).
+   *
+   * @param recurrenceExpression recurrence interval of this reservation
+   */
+  @Public
+  @Evolving
+  public abstract void setRecurrenceExpression(String recurrenceExpression);
 
 }
