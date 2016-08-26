@@ -36,4 +36,5 @@ service ContainerManagementProtocolService {
   rpc getContainerStatuses(GetContainerStatusesRequestProto) returns (GetContainerStatusesResponseProto);
   rpc increaseContainersResource(IncreaseContainersResourceRequestProto) returns (IncreaseContainersResourceResponseProto);
   rpc signalToContainer(SignalContainerRequestProto) returns (SignalContainerResponseProto);
+  rpc localize(ResourceLocalizationRequestProto) returns (ResourceLocalizationResponseProto);
 }

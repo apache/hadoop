@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -1433,6 +1435,14 @@ public class ContainerManagerImpl extends CompositeService implements
       SignalContainerRequest request) throws YarnException, IOException {
     internalSignalToContainer(request, "Application Master");
     return new SignalContainerResponsePBImpl();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public ResourceLocalizationResponse localize(
+      ResourceLocalizationRequest request) throws YarnException, IOException {
+
+    return ResourceLocalizationResponse.newInstance();
   }
 
   @SuppressWarnings("unchecked")

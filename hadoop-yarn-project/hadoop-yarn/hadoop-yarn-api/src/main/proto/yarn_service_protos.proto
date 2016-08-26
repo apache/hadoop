@@ -262,6 +262,13 @@ message StopContainerRequestProto {
 message StopContainerResponseProto {
 }
 
+message ResourceLocalizationRequestProto {
+  optional ContainerIdProto container_id = 1;
+  repeated StringLocalResourceMapProto local_resources = 2;
+}
+
+message ResourceLocalizationResponseProto {
+}
 
 //// bulk API records
 message StartContainersRequestProto {
