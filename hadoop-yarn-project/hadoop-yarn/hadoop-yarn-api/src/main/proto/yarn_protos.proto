@@ -524,6 +524,7 @@ message ContainerStatusProto {
   optional int32 exit_status = 4 [default = -1000];
   optional ResourceProto capability = 5;
   optional ExecutionTypeProto executionType = 6 [default = GUARANTEED];
+  repeated StringStringMapProto container_attributes = 7;
 }
 
 enum ContainerExitStatusProto {

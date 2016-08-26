@@ -47,4 +47,13 @@ public class TestDockerInspectCommand {
     assertEquals("inspect --format='{{.State.Status}}' foo",
         dockerInspectCommand.getCommandWithArguments());
   }
+
+  @Test
+  public void testGetIpAndHost() throws Exception {
+    dockerInspectCommand.getIpAndHost();
+    assertEquals(
+        "inspect --format='{{range(.NetworkSettings.Networks)}}{{.IPAddress}}"
+            + ",{{end}}{{.Config.Hostname}}' foo",
+        dockerInspectCommand.getCommandWithArguments());
+  }
 }

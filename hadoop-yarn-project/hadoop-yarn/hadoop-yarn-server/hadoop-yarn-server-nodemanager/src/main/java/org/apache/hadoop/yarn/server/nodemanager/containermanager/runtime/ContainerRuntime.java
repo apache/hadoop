@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
 /**
  * An abstraction for various container runtime implementations. Examples
@@ -73,4 +74,9 @@ public interface ContainerRuntime {
    */
   void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException;
+
+  /**
+   * Return the host and ip of the container
+   */
+  String[] getIpAndHost(Container container);
 }

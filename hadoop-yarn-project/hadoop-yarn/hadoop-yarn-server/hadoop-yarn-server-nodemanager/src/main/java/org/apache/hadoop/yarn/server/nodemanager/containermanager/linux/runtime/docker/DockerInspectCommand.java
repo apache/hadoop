@@ -38,4 +38,14 @@ public class DockerInspectCommand extends DockerCommand {
     super.addCommandArguments(containerName);
     return this;
   }
+
+  public DockerInspectCommand getIpAndHost() {
+    // Be sure to not use space in the argument, otherwise the
+    // extract_values_delim method in container-executor binary
+    // cannot parse the arguments correctly.
+    super.addCommandArguments("--format='{{range(.NetworkSettings.Networks)}}"
+        + "{{.IPAddress}},{{end}}{{.Config.Hostname}}'");
+    super.addCommandArguments(containerName);
+    return this;
+  }
 }

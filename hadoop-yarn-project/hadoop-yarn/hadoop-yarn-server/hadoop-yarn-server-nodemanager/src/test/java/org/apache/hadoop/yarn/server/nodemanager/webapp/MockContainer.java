@@ -174,7 +174,13 @@ public class MockContainer implements Container {
   public void setLogDir(String logDir) {
   }
 
+  @Override
   public Priority getPriority() {
     return Priority.UNDEFINED;
+  }
+
+  @Override
+  public void setIpAndHost(String[] ipAndHost) {
+
   }
 }

@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -624,6 +626,26 @@ public abstract class ContainerExecutor implements Configurable {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  // LinuxContainerExecutor overrides this method and behaves differently.
+  public String[] getIpAndHost(Container container) {
+    return getLocalIpAndHost(container);
+  }
+
+  // ipAndHost[0] contains ip.
+  // ipAndHost[1] contains hostname.
+  public static String[] getLocalIpAndHost(Container container) {
+    String[] ipAndHost = new String[2];
+    try {
+      InetAddress address = InetAddress.getLocalHost();
+      ipAndHost[0] = address.getHostAddress();
+      ipAndHost[1] = address.getHostName();
+    } catch (UnknownHostException e) {
+      LOG.error("Unable to get Local hostname and ip for " + container
+          .getContainerId(), e);
+    }
+    return ipAndHost;
   }
 
   /**

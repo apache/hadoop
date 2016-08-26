@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.util.List;
+
 /**
  * {@code ContainerStatus} represents the current status of a
  * {@code Container}.
@@ -151,4 +153,28 @@ public abstract class ContainerStatus {
   @Private
   @Unstable
   public abstract void setCapability(Resource capability);
+
+  /**
+   * Get all the IP addresses with which the container run.
+   * @return The IP address where the container runs.
+   */
+  @Public
+  @Unstable
+  public abstract List<String> getIPs();
+
+  @Private
+  @Unstable
+  public abstract void setIPs(List<String> ips);
+
+  /**
+   * Get the hostname where the container runs.
+   * @return The hostname where the container runs.
+   */
+  @Public
+  @Unstable
+  public abstract String getHost();
+
+  @Private
+  @Unstable
+  public abstract void setHost(String host);
 }

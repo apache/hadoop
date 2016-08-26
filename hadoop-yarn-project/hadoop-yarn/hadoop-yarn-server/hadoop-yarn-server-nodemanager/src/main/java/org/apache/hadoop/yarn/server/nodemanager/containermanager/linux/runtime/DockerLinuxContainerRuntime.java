@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerClient;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerInspectCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStopCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
@@ -592,5 +593,42 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
+  }
+
+
+  // ipAndHost[0] contains comma separated list of IPs
+  // ipAndHost[1] contains the hostname.
+  @Override
+  public String[] getIpAndHost(Container container) {
+    String containerId = container.getContainerId().toString();
+    DockerInspectCommand inspectCommand =
+        new DockerInspectCommand(containerId).getIpAndHost();
+    try {
+      String commandFile = dockerClient.writeCommandToTempFile(inspectCommand,
+          containerId);
+      PrivilegedOperation privOp = new PrivilegedOperation(
+          PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
+      privOp.appendArgs(commandFile);
+      String output = privilegedOperationExecutor
+          .executePrivilegedOperation(null, privOp, null,
+              container.getLaunchContext().getEnvironment(), true, false);
+      LOG.info("Docker inspect output for " + containerId + ": " + output);
+      int index = output.lastIndexOf(',');
+      if (index == -1) {
+        LOG.error("Incorrect format for ip and host");
+        return null;
+      }
+      String ips = output.substring(0, index).trim();
+      String host = output.substring(index+1).trim();
+      String[] ipAndHost = new String[2];
+      ipAndHost[0] = ips;
+      ipAndHost[1] = host;
+      return ipAndHost;
+    } catch (ContainerExecutionException e) {
+      LOG.error("Error when writing command to temp file", e);
+    } catch (PrivilegedOperationException e) {
+      LOG.error("Error when executing command.", e);
+    }
+    return null;
   }
 }
