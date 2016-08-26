@@ -152,8 +152,8 @@ fi
 
 hadoop_verify_user "${HADOOP_SUBCMD}"
 
-if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
-  hadoop_common_slave_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
