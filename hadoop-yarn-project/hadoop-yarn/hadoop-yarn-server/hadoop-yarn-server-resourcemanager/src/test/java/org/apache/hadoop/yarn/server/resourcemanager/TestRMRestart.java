@@ -2092,7 +2092,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       String nodeLabelExpression) {
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId, containerState,
+        NMContainerStatus.newInstance(containerId, 0, containerState,
             Resource.newInstance(1024, 1), "recover container", 0,
             Priority.newInstance(0), 0, nodeLabelExpression);
     return containerReport;

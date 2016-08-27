@@ -262,11 +262,12 @@ public class TestNMLeveldbStateStoreService {
         StartContainerRequest.newInstance(clc, containerToken);
 
     // store a container and verify recovered
-    stateStore.storeContainer(containerId, containerReq);
+    stateStore.storeContainer(containerId, 1, containerReq);
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
+    assertEquals(1, rcs.getVersion());
     assertEquals(RecoveredContainerStatus.REQUESTED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());
@@ -308,11 +309,13 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(diags.toString(), rcs.getDiagnostics());
 
     // increase the container size, and verify recovered
-    stateStore.storeContainerResourceChanged(containerId, Resource.newInstance(2468, 4));
+    stateStore.storeContainerResourceChanged(containerId, 2,
+        Resource.newInstance(2468, 4));
     restartStateStore();
     recoveredContainers = stateStore.loadContainersState();
     assertEquals(1, recoveredContainers.size());
     rcs = recoveredContainers.get(0);
+    assertEquals(2, rcs.getVersion());
     assertEquals(RecoveredContainerStatus.LAUNCHED, rcs.getStatus());
     assertEquals(ContainerExitStatus.INVALID, rcs.getExitCode());
     assertEquals(false, rcs.getKilled());

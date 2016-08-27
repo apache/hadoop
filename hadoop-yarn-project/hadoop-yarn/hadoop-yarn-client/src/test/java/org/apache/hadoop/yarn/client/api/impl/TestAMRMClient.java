@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
@@ -1061,33 +1062,20 @@ public class TestAMRMClient {
     Assert.assertEquals(2, amClientImpl.pendingChange.size());
     // as of now: container1 asks to decrease to (512, 1)
     //            container2 asks to increase to (2048, 1)
-    List<Container> decreasedContainers;
-    List<Container> increasedContainers;
-    int allocateAttempts = 0;
-    int decreased = 0;
-    int increased = 0;
-    while (allocateAttempts < 30) {
-      // send allocation requests
-      AllocateResponse allocResponse = amClient.allocate(0.1f);
-      decreasedContainers = allocResponse.getDecreasedContainers();
-      increasedContainers = allocResponse.getIncreasedContainers();
-      decreased += decreasedContainers.size();
-      increased += increasedContainers.size();
-      if (allocateAttempts == 0) {
-        // we should get decrease confirmation right away
-        Assert.assertEquals(1, decreased);
-        // After first allocate request check change size
-        Assert.assertEquals(0, amClientImpl.change.size());
-      } else if (increased == 1) {
-        break;
-      }
-      // increase request is served after next NM heart beat is received
-      // Sleeping and retrying allocate
-      sleep(20);
-      allocateAttempts++;
-    }
-    Assert.assertEquals(1, decreased);
-    Assert.assertEquals(1, increased);
+    // send allocation requests
+    AllocateResponse allocResponse = amClient.allocate(0.1f);
+    Assert.assertEquals(0, amClientImpl.change.size());
+    // we should get decrease confirmation right away
+    List<UpdatedContainer> updatedContainers =
+        allocResponse.getUpdatedContainers();
+    Assert.assertEquals(1, updatedContainers.size());
+    // we should get increase allocation after the next NM's heartbeat to RM
+    sleep(150);
+    // get allocations
+    allocResponse = amClient.allocate(0.1f);
+    updatedContainers =
+        allocResponse.getUpdatedContainers();
+    Assert.assertEquals(1, updatedContainers.size());
   }
 
   private void testAllocation(final AMRMClientImpl<ContainerRequest> amClient)

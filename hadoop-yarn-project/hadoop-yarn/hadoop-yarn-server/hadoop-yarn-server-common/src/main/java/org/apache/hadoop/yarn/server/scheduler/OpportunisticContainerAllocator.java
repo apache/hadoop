@@ -324,7 +324,7 @@ public class OpportunisticContainerAllocator {
     long currTime = System.currentTimeMillis();
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(
-            cId, nodeId.getHost() + ":" + nodeId.getPort(), userName,
+            cId, 0, nodeId.getHost() + ":" + nodeId.getPort(), userName,
             capability, currTime + appParams.containerTokenExpiryInterval,
             tokenSecretManager.getCurrentKey().getKeyId(), rmIdentifier,
             rr.getPriority(), currTime,

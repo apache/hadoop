@@ -70,7 +70,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeContainer(ContainerId containerId,
+  public void storeContainer(ContainerId containerId, int version,
       StartContainerRequest startRequest) throws IOException {
   }
 
@@ -90,7 +90,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerResourceChanged(ContainerId containerId,
-      Resource capability) throws IOException {
+      int version, Resource capability) throws IOException {
   }
 
   @Override

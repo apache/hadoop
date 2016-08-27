@@ -94,6 +94,7 @@ message ContainerProto {
   optional hadoop.common.TokenProto container_token = 6;
   optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
   optional int64 allocation_request_id = 8 [default = -1];
+  optional int32 version = 9 [default = 0];
 }
 
 message ContainerReportProto {
@@ -534,11 +535,6 @@ enum ContainerExitStatusProto {
   ABORTED = -100;
   DISKS_FAILED = -101;
 }
-
-message ContainerResourceChangeRequestProto {
-  optional ContainerIdProto container_id = 1;
-  optional ResourceProto capability = 2;
-} 
 
 message ContainerRetryContextProto {
   optional ContainerRetryPolicyProto retry_policy = 1 [default = NEVER_RETRY];

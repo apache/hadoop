@@ -530,6 +530,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       boolean newContainer, boolean increasedContainer) {
     Container container = rmContainer.getContainer();
     ContainerType containerType = ContainerType.TASK;
+    if (!newContainer) {
+      container.setVersion(container.getVersion() + 1);
+    }
     // The working knowledge is that masterContainer for AM is null as it
     // itself is the master container.
     if (isWaitingForAMContainer()) {
@@ -538,10 +541,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     try {
       // create container token and NMToken altogether.
       container.setContainerToken(rmContext.getContainerTokenSecretManager()
-          .createContainerToken(container.getId(), container.getNodeId(),
-              getUser(), container.getResource(), container.getPriority(),
-              rmContainer.getCreationTime(), this.logAggregationContext,
-              rmContainer.getNodeLabelExpression(), containerType));
+          .createContainerToken(container.getId(), container.getVersion(),
+              container.getNodeId(), getUser(), container.getResource(),
+              container.getPriority(), rmContainer.getCreationTime(),
+              this.logAggregationContext, rmContainer.getNodeLabelExpression(),
+              containerType));
       NMToken nmToken =
           rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);

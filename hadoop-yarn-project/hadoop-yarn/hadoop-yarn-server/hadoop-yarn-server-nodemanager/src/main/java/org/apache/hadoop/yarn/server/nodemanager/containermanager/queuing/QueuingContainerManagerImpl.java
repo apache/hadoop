@@ -128,7 +128,8 @@ public class QueuingContainerManagerImpl extends ContainerManagerImpl {
       startAllocatedContainer(allocatedContInfo);
     } else {
       ContainerId cIdToStart = containerTokenIdentifier.getContainerID();
-      this.context.getNMStateStore().storeContainer(cIdToStart, request);
+      this.context.getNMStateStore().storeContainer(cIdToStart,
+          containerTokenIdentifier.getVersion(), request);
       this.context.getNMStateStore().storeContainerQueued(cIdToStart);
       LOG.info("No available resources for container {} to start its execution "
           + "immediately.", cIdToStart);

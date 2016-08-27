@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
- * This is ContainerResourceChangeRequest in scheduler side, it contains some
+ * This is UpdateContainerRequest in scheduler side, it contains some
  * pointers to runtime objects like RMContainer, SchedulerNode, etc. This will
  * be easier for scheduler making decision.
  */
