@@ -411,4 +411,17 @@
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
   </Match>
 
+  <!-- It's OK to sync on an AtomicBoolean if you are using it for notifications -->
+  <Match>
+    <Class name="org.apache.hadoop.service.workflow.WorkflowForkedProcessService"/>
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
+  </Match>
+
+  <!-- Exceptions raised in output stream handling (usually from closed connections) are caught
+       and logged. -->
+  <Match>
+    <Class name="org.apache.hadoop.service.workflow.LongLivedProcess$ProcessStreamReader"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
 </FindBugsFilter>

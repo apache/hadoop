@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.slf4j.Logger;
 
 /**
  * This class contains a set of methods to work with services, especially
@@ -87,6 +88,27 @@ public final class ServiceOperations {
     return null;
   }
 
+  /**
+   * Stop a service; if it is null do nothing. Exceptions are caught and
+   * logged at warn level. (but not Throwables). This operation is intended to
+   * be used in cleanup operations
+   *
+   * @param log the log to warn at
+   * @param service a service; may be null
+   * @return any exception that was caught; null if none was.
+   * @see ServiceOperations#stopQuietly(Service)
+   */
+  public static Exception stopQuietly(Logger log, Service service) {
+    try {
+      stop(service);
+    } catch (Exception e) {
+      log.warn("When stopping the service {}: {}" ,  service.getName(), e, e);
+      return e;
+    }
+    return null;
+  }
+
+
 
   /**
    * Class to manage a list of {@link ServiceStateChangeListener} instances,
@@ -99,7 +121,7 @@ public final class ServiceOperations {
      * that it will never be null.
      */
     private final List<ServiceStateChangeListener> listeners =
-      new ArrayList<ServiceStateChangeListener>();
+        new ArrayList<>();
 
     /**
      * Thread-safe addition of a new listener to the end of a list.
