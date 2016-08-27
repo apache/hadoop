@@ -163,4 +163,26 @@ public abstract class Container implements Comparable<Container> {
   @Private
   @Unstable
   public abstract void setContainerToken(Token containerToken);
+
+  /**
+   * Get the version of this container. The version will be incremented when
+   * a container is updated.
+   *
+   * @return version of this container.
+   */
+  @Private
+  @Unstable
+  public int getVersion() {
+    return 0;
+  }
+
+  /**
+   * Set the version of this container.
+   * @param version of this container.
+   */
+  @Private
+  @Unstable
+  public void setVersion(int version) {
+    throw new UnsupportedOperationException();
+  }
 }

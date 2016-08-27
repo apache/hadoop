@@ -91,6 +91,7 @@ message ContainerProto {
   optional ResourceProto resource = 4;
   optional PriorityProto priority = 5;
   optional hadoop.common.TokenProto container_token = 6;
+  optional int32 version = 9 [default = 0];
 }
 
 message ContainerReportProto {
@@ -520,10 +521,6 @@ enum ContainerExitStatusProto {
   DISKS_FAILED = -101;
 }
 
-message ContainerResourceChangeRequestProto {
-  optional ContainerIdProto container_id = 1;
-  optional ResourceProto capability = 2;
-} 
 
 ////////////////////////////////////////////////////////////////////////
 ////// From common//////////////////////////////////////////////////////

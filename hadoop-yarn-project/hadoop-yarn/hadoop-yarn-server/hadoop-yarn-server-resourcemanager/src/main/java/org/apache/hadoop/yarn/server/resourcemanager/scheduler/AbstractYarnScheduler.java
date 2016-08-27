@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -52,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -468,6 +468,7 @@ public abstract class AbstractYarnScheduler
         Container.newInstance(status.getContainerId(), node.getNodeID(),
           node.getHttpAddress(), status.getAllocatedResource(),
           status.getPriority(), null);
+    container.setVersion(status.getVersion());
     ApplicationAttemptId attemptId =
         container.getId().getApplicationAttemptId();
     RMContainer rmContainer =
@@ -590,7 +591,7 @@ public abstract class AbstractYarnScheduler
   }
 
   protected void decreaseContainers(
-      List<ContainerResourceChangeRequest> decreaseRequests,
+      List<UpdateContainerRequest> decreaseRequests,
       SchedulerApplicationAttempt attempt) {
     if (null == decreaseRequests || decreaseRequests.isEmpty()) {
       return;
@@ -841,7 +842,7 @@ public abstract class AbstractYarnScheduler
   /**
    * Sanity check increase/decrease request, and return
    * SchedulerContainerResourceChangeRequest according to given
-   * ContainerResourceChangeRequest.
+   * UpdateContainerRequest.
    * 
    * <pre>
    * - Returns non-null value means validation succeeded
@@ -849,7 +850,7 @@ public abstract class AbstractYarnScheduler
    * </pre>
    */
   private SchedContainerChangeRequest createSchedContainerChangeRequest(
-      ContainerResourceChangeRequest request, boolean increase)
+      UpdateContainerRequest request, boolean increase)
       throws YarnException {
     ContainerId containerId = request.getContainerId();
     RMContainer rmContainer = getRMContainer(containerId);
@@ -868,11 +869,11 @@ public abstract class AbstractYarnScheduler
 
   protected List<SchedContainerChangeRequest>
       createSchedContainerChangeRequests(
-          List<ContainerResourceChangeRequest> changeRequests,
+          List<UpdateContainerRequest> changeRequests,
           boolean increase) {
     List<SchedContainerChangeRequest> schedulerChangeRequests =
         new ArrayList<SchedContainerChangeRequest>();
-    for (ContainerResourceChangeRequest r : changeRequests) {
+    for (UpdateContainerRequest r : changeRequests) {
       SchedContainerChangeRequest sr = null;
       try {
         sr = createSchedContainerChangeRequest(r, increase);

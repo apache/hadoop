@@ -104,6 +104,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final String CONTAINERS_KEY_PREFIX =
       "ContainerManager/containers/";
   private static final String CONTAINER_REQUEST_KEY_SUFFIX = "/request";
+  private static final String CONTAINER_VERSION_KEY_SUFFIX = "/version";
   private static final String CONTAINER_DIAGS_KEY_SUFFIX = "/diagnostics";
   private static final String CONTAINER_LAUNCHED_KEY_SUFFIX = "/launched";
   private static final String CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX =
@@ -233,6 +234,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       if (suffix.equals(CONTAINER_REQUEST_KEY_SUFFIX)) {
         rcs.startRequest = new StartContainerRequestPBImpl(
             StartContainerRequestProto.parseFrom(entry.getValue()));
+      } else if (suffix.equals(CONTAINER_VERSION_KEY_SUFFIX)) {
+        rcs.version = Integer.parseInt(asString(entry.getValue()));
       } else if (suffix.equals(CONTAINER_DIAGS_KEY_SUFFIX)) {
         rcs.diagnostics = asString(entry.getValue());
       } else if (suffix.equals(CONTAINER_LAUNCHED_KEY_SUFFIX)) {
@@ -255,13 +258,27 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeContainer(ContainerId containerId,
+  public void storeContainer(ContainerId containerId, int containerVersion,
       StartContainerRequest startRequest) throws IOException {
-    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("storeContainer: containerId= " + containerId
+          + ", startRequest= " + startRequest);
+    }
+    String keyRequest = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_REQUEST_KEY_SUFFIX;
+    String keyVersion = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_VERSION_KEY_SUFFIX;
     try {
-      db.put(bytes(key),
-        ((StartContainerRequestPBImpl) startRequest).getProto().toByteArray());
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        batch.put(bytes(keyRequest),
+            ((StartContainerRequestPBImpl) startRequest)
+                .getProto().toByteArray());
+        batch.put(bytes(keyVersion), bytes(Integer.toString(containerVersion)));
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
     } catch (DBException e) {
       throw new IOException(e);
     }
@@ -293,13 +310,27 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainerResourceChanged(ContainerId containerId,
-      Resource capability) throws IOException {
-    String key = CONTAINERS_KEY_PREFIX + containerId.toString()
+      int containerVersion, Resource capability) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("storeContainerResourceChanged: containerId=" + containerId
+          + ", capability=" + capability);
+    }
+
+    String keyResChng = CONTAINERS_KEY_PREFIX + containerId.toString()
         + CONTAINER_RESOURCE_CHANGED_KEY_SUFFIX;
+    String keyVersion = CONTAINERS_KEY_PREFIX + containerId.toString()
+        + CONTAINER_VERSION_KEY_SUFFIX;
     try {
-      // New value will overwrite old values for the same key
-      db.put(bytes(key),
-          ((ResourcePBImpl) capability).getProto().toByteArray());
+      WriteBatch batch = db.createWriteBatch();
+      try {
+        // New value will overwrite old values for the same key
+        batch.put(bytes(keyResChng),
+            ((ResourcePBImpl) capability).getProto().toByteArray());
+        batch.put(bytes(keyVersion), bytes(Integer.toString(containerVersion)));
+        db.write(batch);
+      } finally {
+        batch.close();
+      }
     } catch (DBException e) {
       throw new IOException(e);
     }

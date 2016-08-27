@@ -152,7 +152,7 @@ public class TestYARNTokenIdentifier {
     long creationTime = 1000;
     
     ContainerTokenIdentifier token = new ContainerTokenIdentifier(
-        containerID, hostName, appSubmitter, r, expiryTimeStamp, 
+        containerID, hostName, appSubmitter, r, expiryTimeStamp,
         masterKeyId, rmIdentifier, priority, creationTime);
     
     ContainerTokenIdentifier anotherToken = new ContainerTokenIdentifier();
@@ -385,7 +385,7 @@ public class TestYARNTokenIdentifier {
         anotherToken.getContainerType());
 
     token =
-        new ContainerTokenIdentifier(containerID, hostName, appSubmitter, r,
+        new ContainerTokenIdentifier(containerID, 0, hostName, appSubmitter, r,
             expiryTimeStamp, masterKeyId, rmIdentifier, priority, creationTime,
             null, CommonNodeLabelsManager.NO_LABEL, ContainerType.TASK);
 

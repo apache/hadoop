@@ -248,6 +248,18 @@ public class ContainerPBImpl extends Container {
     this.containerToken = containerToken;
   }
 
+  @Override
+  public int getVersion() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getVersion();
+  }
+
+  @Override
+  public void setVersion(int version) {
+    maybeInitBuilder();
+    builder.setVersion(version);
+  }
+
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
     return new ContainerIdPBImpl(p);
   }
@@ -292,6 +304,7 @@ public class ContainerPBImpl extends Container {
     StringBuilder sb = new StringBuilder();
     sb.append("Container: [");
     sb.append("ContainerId: ").append(getId()).append(", ");
+    sb.append("Version: ").append(getVersion()).append(", ");
     sb.append("NodeId: ").append(getNodeId()).append(", ");
     sb.append("NodeHttpAddress: ").append(getNodeHttpAddress()).append(", ");
     sb.append("Resource: ").append(getResource()).append(", ");

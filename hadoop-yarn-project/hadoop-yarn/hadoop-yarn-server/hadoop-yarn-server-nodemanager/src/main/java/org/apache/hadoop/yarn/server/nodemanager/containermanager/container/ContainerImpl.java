@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
@@ -78,7 +79,6 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -95,6 +95,7 @@ public class ContainerImpl implements Container {
   private final ContainerId containerId;
   private volatile Resource resource;
   private final String user;
+  private int version;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
   private boolean wasLaunched;
@@ -135,6 +136,7 @@ public class ContainerImpl implements Container {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
+    this.version = containerTokenIdentifier.getVersion();
     this.launchContext = launchContext;
     this.containerTokenIdentifier = containerTokenIdentifier;
     this.containerId = containerTokenIdentifier.getContainerID();
@@ -155,22 +157,22 @@ public class ContainerImpl implements Container {
   public ContainerImpl(Configuration conf, Dispatcher dispatcher,
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics,
-      ContainerTokenIdentifier containerTokenIdentifier,
-      RecoveredContainerStatus recoveredStatus, int exitCode,
-      String diagnostics, boolean wasKilled, Resource recoveredCapability,
-      Context context) {
+      ContainerTokenIdentifier containerTokenIdentifier, Context context,
+      RecoveredContainerState rcs) {
     this(conf, dispatcher, launchContext, creds, metrics,
         containerTokenIdentifier, context);
-    this.recoveredStatus = recoveredStatus;
-    this.exitCode = exitCode;
-    this.recoveredAsKilled = wasKilled;
+    this.recoveredStatus = rcs.getStatus();
+    this.exitCode = rcs.getExitCode();
+    this.recoveredAsKilled = rcs.getKilled();
     this.diagnostics.append(diagnostics);
+    Resource recoveredCapability = rcs.getCapability();
     if (recoveredCapability != null
         && !this.resource.equals(recoveredCapability)) {
       // resource capability had been updated before NM was down
       this.resource = Resource.newInstance(recoveredCapability.getMemorySize(),
           recoveredCapability.getVirtualCores());
     }
+    this.version = rcs.getVersion();
   }
 
   private static final ContainerDiagnosticsUpdateTransition UPDATE_DIAGNOSTICS_TRANSITION =
@@ -446,8 +448,8 @@ public class ContainerImpl implements Container {
   public NMContainerStatus getNMContainerStatus() {
     this.readLock.lock();
     try {
-      return NMContainerStatus.newInstance(this.containerId, getCurrentState(),
-          getResource(), diagnostics.toString(), exitCode,
+      return NMContainerStatus.newInstance(this.containerId, this.version,
+          getCurrentState(), getResource(), diagnostics.toString(), exitCode,
           containerTokenIdentifier.getPriority(),
           containerTokenIdentifier.getCreationTime(),
           containerTokenIdentifier.getNodeLabelExpression());

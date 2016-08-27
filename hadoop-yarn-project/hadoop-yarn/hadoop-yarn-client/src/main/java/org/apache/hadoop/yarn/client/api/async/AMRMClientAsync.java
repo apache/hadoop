@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.impl.AMRMClientAsyncImpl;
@@ -61,7 +63,7 @@ import com.google.common.annotations.VisibleForTesting;
  *     [run tasks on the containers]
  *   }
  *
- *   public void onContainersResourceChanged(List<Container> containers) {
+ *   public void onContainersUpdated(List<Container> containers) {
  *     [determine if resource allocation of containers have been increased in
  *      the ResourceManager, and if so, inform the NodeManagers to increase the
  *      resource monitor/enforcement on the containers]
@@ -374,8 +376,9 @@ extends AbstractService {
      * Called when the ResourceManager responds to a heartbeat with containers
      * whose resource allocation has been changed.
      */
-    public abstract void onContainersResourceChanged(
-        List<Container> containers);
+    @Public
+    @Unstable
+    public abstract void onContainersUpdated(List<UpdatedContainer> containers);
 
     /**
      * Called when the ResourceManager wants the ApplicationMaster to shutdown

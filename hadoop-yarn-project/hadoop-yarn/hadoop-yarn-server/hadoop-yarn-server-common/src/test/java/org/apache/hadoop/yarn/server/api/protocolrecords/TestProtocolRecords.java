@@ -55,7 +55,7 @@ public class TestProtocolRecords {
     Resource resource = Resource.newInstance(1000, 200);
 
     NMContainerStatus report =
-        NMContainerStatus.newInstance(containerId,
+        NMContainerStatus.newInstance(containerId, 0,
           ContainerState.COMPLETE, resource, "diagnostics",
           ContainerExitStatus.ABORTED, Priority.newInstance(10), 1234);
     NMContainerStatus reportProto =
@@ -79,7 +79,7 @@ public class TestProtocolRecords {
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
 
     NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId,
+        NMContainerStatus.newInstance(containerId, 0,
           ContainerState.RUNNING, Resource.newInstance(1024, 1), "diagnostics",
           0, Priority.newInstance(10), 1234);
     List<NMContainerStatus> reports = Arrays.asList(containerReport);

@@ -122,9 +122,10 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   public synchronized void storeContainer(ContainerId containerId,
-      StartContainerRequest startRequest) throws IOException {
+      int version, StartContainerRequest startRequest) throws IOException {
     RecoveredContainerState rcs = new RecoveredContainerState();
     rcs.startRequest = startRequest;
+    rcs.version = version;
     containerStates.put(containerId, rcs);
   }
 
@@ -147,9 +148,11 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
 
   @Override
   public synchronized void storeContainerResourceChanged(
-      ContainerId containerId, Resource capability) throws IOException {
+      ContainerId containerId, int version, Resource capability)
+      throws IOException {
     RecoveredContainerState rcs = getRecoveredContainerState(containerId);
     rcs.capability = capability;
+    rcs.version = version;
   }
 
   @Override

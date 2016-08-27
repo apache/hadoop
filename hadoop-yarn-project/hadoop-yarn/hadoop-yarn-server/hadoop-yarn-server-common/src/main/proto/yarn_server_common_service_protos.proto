@@ -101,6 +101,7 @@ message NMContainerStatusProto {
   optional int32 container_exit_status = 6;
   optional int64 creation_time = 7;
   optional string nodeLabelExpression = 8;
+  optional int32 version = 9;
 }
 
 message SCMUploaderNotifyRequestProto {
