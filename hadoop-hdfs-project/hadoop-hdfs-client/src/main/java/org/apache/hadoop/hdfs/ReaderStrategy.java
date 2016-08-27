@@ -181,7 +181,7 @@ class ByteBufferStrategy implements ReaderStrategy {
                            int length) throws IOException {
     ByteBuffer tmpBuf = readBuf.duplicate();
     tmpBuf.limit(tmpBuf.position() + length);
-    int nRead = blockReader.read(readBuf.slice());
+    int nRead = blockReader.read(tmpBuf);
     // Only when data are read, update the position
     if (nRead > 0) {
       readBuf.position(readBuf.position() + nRead);
