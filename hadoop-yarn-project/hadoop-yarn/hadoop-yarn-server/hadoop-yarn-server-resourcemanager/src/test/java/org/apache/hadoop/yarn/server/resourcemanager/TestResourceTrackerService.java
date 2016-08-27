@@ -1041,7 +1041,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NMContainerStatus report =
         NMContainerStatus.newInstance(
           ContainerId.newContainerId(
-            ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
+            ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1), 0,
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -1052,7 +1052,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-          ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
+          ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0), 0,
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -1064,7 +1064,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // Case 2.1: AppAttemptId is null
     report = NMContainerStatus.newInstance(
           ContainerId.newContainerId(
-            ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
+            ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1), 0,
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {
@@ -1079,7 +1079,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-      ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
+      ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0), 0,
       ContainerState.COMPLETE, Resource.newInstance(1024, 1),
       "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {

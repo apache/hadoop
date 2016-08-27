@@ -102,6 +102,7 @@ public class ContainerImpl implements Container {
   private final ContainerId containerId;
   private volatile Resource resource;
   private final String user;
+  private int version;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
   private final int diagnosticsMaxSize;
@@ -151,6 +152,7 @@ public class ContainerImpl implements Container {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
+    this.version = containerTokenIdentifier.getVersion();
     this.launchContext = launchContext;
     if (launchContext != null
         && launchContext.getContainerRetryContext() != null) {
@@ -221,6 +223,7 @@ public class ContainerImpl implements Container {
       this.resource = Resource.newInstance(recoveredCapability.getMemorySize(),
           recoveredCapability.getVirtualCores());
     }
+    this.version = rcs.getVersion();
     this.remainingRetryAttempts = rcs.getRemainingRetryAttempts();
     this.workDir = rcs.getWorkDir();
     this.logDir = rcs.getLogDir();
@@ -519,8 +522,8 @@ public class ContainerImpl implements Container {
   public NMContainerStatus getNMContainerStatus() {
     this.readLock.lock();
     try {
-      return NMContainerStatus.newInstance(this.containerId, getCurrentState(),
-          getResource(), diagnostics.toString(), exitCode,
+      return NMContainerStatus.newInstance(this.containerId, this.version,
+          getCurrentState(), getResource(), diagnostics.toString(), exitCode,
           containerTokenIdentifier.getPriority(),
           containerTokenIdentifier.getCreationTime(),
           containerTokenIdentifier.getNodeLabelExpression());

@@ -52,8 +52,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -63,6 +63,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
@@ -261,36 +263,10 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         new HashMap<>();
     try {
       synchronized (this) {
-        askList = new ArrayList<ResourceRequest>(ask.size());
-        for(ResourceRequest r : ask) {
-          // create a copy of ResourceRequest as we might change it while the 
-          // RPC layer is using it to send info across
-          ResourceRequest rr = ResourceRequest.newInstance(r.getPriority(),
-              r.getResourceName(), r.getCapability(), r.getNumContainers(),
-              r.getRelaxLocality(), r.getNodeLabelExpression(),
-              r.getExecutionTypeRequest());
-          rr.setAllocationRequestId(r.getAllocationRequestId());
-          askList.add(rr);
-        }
-        List<ContainerResourceChangeRequest> increaseList = new ArrayList<>();
-        List<ContainerResourceChangeRequest> decreaseList = new ArrayList<>();
+        askList = cloneAsks();
         // Save the current change for recovery
         oldChange.putAll(change);
-        for (Map.Entry<ContainerId, SimpleEntry<Container, Resource>> entry :
-            change.entrySet()) {
-          Container container = entry.getValue().getKey();
-          Resource original = container.getResource();
-          Resource target = entry.getValue().getValue();
-          if (Resources.fitsIn(target, original)) {
-            // This is a decrease request
-            decreaseList.add(ContainerResourceChangeRequest.newInstance(
-                container.getId(), target));
-          } else {
-            // This is an increase request
-            increaseList.add(ContainerResourceChangeRequest.newInstance(
-                container.getId(), target));
-          }
-        }
+        List<UpdateContainerRequest> updateList = createUpdateList();
         releaseList = new ArrayList<ContainerId>(release);
         // optimistically clear this collection assuming no RPC failure
         ask.clear();
@@ -306,8 +282,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         
         allocateRequest =
             AllocateRequest.newInstance(lastResponseId, progressIndicator,
-                askList, releaseList, blacklistRequest,
-                    increaseList, decreaseList);
+                askList, releaseList, blacklistRequest, updateList);
         // clear blacklistAdditions and blacklistRemovals before
         // unsynchronized part
         blacklistAdditions.clear();
@@ -358,9 +333,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         if (!pendingChange.isEmpty()) {
           List<ContainerStatus> completed =
               allocateResponse.getCompletedContainersStatuses();
-          List<Container> changed = new ArrayList<>();
-          changed.addAll(allocateResponse.getIncreasedContainers());
-          changed.addAll(allocateResponse.getDecreasedContainers());
+          List<UpdatedContainer> changed = new ArrayList<>();
+          changed.addAll(allocateResponse.getUpdatedContainers());
           // remove all pending change requests that belong to the completed
           // containers
           for (ContainerStatus status : completed) {
@@ -417,6 +391,40 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     return allocateResponse;
   }
 
+  private List<UpdateContainerRequest> createUpdateList() {
+    List<UpdateContainerRequest> updateList = new ArrayList<>();
+    for (Map.Entry<ContainerId, SimpleEntry<Container, Resource>> entry :
+        change.entrySet()) {
+      Resource targetCapability = entry.getValue().getValue();
+      Resource currCapability = entry.getValue().getKey().getResource();
+      int version = entry.getValue().getKey().getVersion();
+      ContainerUpdateType updateType =
+          ContainerUpdateType.INCREASE_RESOURCE;
+      if (Resources.fitsIn(targetCapability, currCapability)) {
+        updateType = ContainerUpdateType.DECREASE_RESOURCE;
+      }
+      updateList.add(
+          UpdateContainerRequest.newInstance(version, entry.getKey(),
+              updateType, targetCapability, null));
+    }
+    return updateList;
+  }
+
+  private List<ResourceRequest> cloneAsks() {
+    List<ResourceRequest> askList = new ArrayList<ResourceRequest>(ask.size());
+    for(ResourceRequest r : ask) {
+      // create a copy of ResourceRequest as we might change it while the
+      // RPC layer is using it to send info across
+      ResourceRequest rr = ResourceRequest.newInstance(r.getPriority(),
+          r.getResourceName(), r.getCapability(), r.getNumContainers(),
+          r.getRelaxLocality(), r.getNodeLabelExpression(),
+          r.getExecutionTypeRequest());
+      rr.setAllocationRequestId(r.getAllocationRequestId());
+      askList.add(rr);
+    }
+    return askList;
+  }
+
   protected void removePendingReleaseRequests(
       List<ContainerStatus> completedContainersStatuses) {
     for (ContainerStatus containerStatus : completedContainersStatuses) {
@@ -425,16 +433,16 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   }
 
   protected void removePendingChangeRequests(
-      List<Container> changedContainers) {
-    for (Container changedContainer : changedContainers) {
-      ContainerId containerId = changedContainer.getId();
+      List<UpdatedContainer> changedContainers) {
+    for (UpdatedContainer changedContainer : changedContainers) {
+      ContainerId containerId = changedContainer.getContainer().getId();
       if (pendingChange.get(containerId) == null) {
         continue;
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("RM has confirmed changed resource allocation for "
             + "container " + containerId + ". Current resource allocation:"
-            + changedContainer.getResource()
+            + changedContainer.getContainer().getResource()
             + ". Remove pending change request:"
             + pendingChange.get(containerId).getValue());
       }

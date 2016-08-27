@@ -289,13 +289,14 @@ public class TestContainerAllocation {
 
         @Override
         public Token createContainerToken(ContainerId containerId,
-            NodeId nodeId, String appSubmitter, Resource capability,
-            Priority priority, long createTime,
-            LogAggregationContext logAggregationContext, String nodeLabelExp, ContainerType containerType) {
+            int containerVersion, NodeId nodeId, String appSubmitter,
+            Resource capability, Priority priority, long createTime,
+            LogAggregationContext logAggregationContext, String nodeLabelExp,
+            ContainerType containerType) {
           numRetries++;
-          return super.createContainerToken(containerId, nodeId, appSubmitter,
-              capability, priority, createTime, logAggregationContext,
-              nodeLabelExp, containerType);
+          return super.createContainerToken(containerId, containerVersion,
+              nodeId, appSubmitter, capability, priority, createTime,
+              logAggregationContext, nodeLabelExp, containerType);
         }
       };
     }

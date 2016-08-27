@@ -963,7 +963,8 @@ public class ContainerManagerImpl extends CompositeService implements
               logAggregationContext));
         }
 
-        this.context.getNMStateStore().storeContainer(containerId, request);
+        this.context.getNMStateStore().storeContainer(containerId,
+            containerTokenIdentifier.getVersion(), request);
         dispatcher.getEventHandler().handle(
           new ApplicationContainerInitEvent(container));
 
@@ -1047,7 +1048,8 @@ public class ContainerManagerImpl extends CompositeService implements
           // an updated NMToken.
           updateNMTokenIdentifier(nmTokenIdentifier);
           Resource resource = containerTokenIdentifier.getResource();
-          changeContainerResourceInternal(containerId, resource, true);
+          changeContainerResourceInternal(containerId,
+              containerTokenIdentifier.getVersion(), resource, true);
           successfullyIncreasedContainers.add(containerId);
         } catch (YarnException | InvalidToken e) {
           failedContainers.put(containerId, SerializedException.newInstance(e));
@@ -1061,8 +1063,8 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @SuppressWarnings("unchecked")
-  private void changeContainerResourceInternal(
-      ContainerId containerId, Resource targetResource, boolean increase)
+  private void changeContainerResourceInternal(ContainerId containerId,
+      int containerVersion, Resource targetResource, boolean increase)
           throws YarnException, IOException {
     Container container = context.getContainers().get(containerId);
     // Check container existence
@@ -1129,7 +1131,7 @@ public class ContainerManagerImpl extends CompositeService implements
       if (!serviceStopped) {
         // Persist container resource change for recovery
         this.context.getNMStateStore().storeContainerResourceChanged(
-            containerId, targetResource);
+            containerId, containerVersion, targetResource);
         getContainersMonitor().handle(
             new ChangeMonitoringContainerResourceEvent(
                 containerId, targetResource));
@@ -1364,7 +1366,7 @@ public class ContainerManagerImpl extends CompositeService implements
           : containersDecreasedEvent.getContainersToDecrease()) {
         try {
           changeContainerResourceInternal(container.getId(),
-              container.getResource(), false);
+              container.getVersion(), container.getResource(), false);
         } catch (YarnException e) {
           LOG.error("Unable to decrease container resource", e);
         } catch (IOException e) {
