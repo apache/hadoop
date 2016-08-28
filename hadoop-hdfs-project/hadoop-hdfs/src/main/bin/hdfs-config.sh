@@ -26,7 +26,7 @@ function hadoop_subproject_init
       export HADOOP_HDFS_ENV_PROCESSED=true
     fi
   fi
-  
+
   # at some point in time, someone thought it would be a good idea to
   # create separate vars for every subproject.  *sigh*
   # let's perform some overrides and setup some defaults for bw compat
@@ -42,23 +42,31 @@ function hadoop_subproject_init
   hadoop_deprecate_envvar HADOOP_HDFS_NICENESS HADOOP_NICENESS
 
   hadoop_deprecate_envvar HADOOP_HDFS_STOP_TIMEOUT HADOOP_STOP_TIMEOUT
-  
+
   hadoop_deprecate_envvar HADOOP_HDFS_PID_DIR HADOOP_PID_DIR
 
   hadoop_deprecate_envvar HADOOP_HDFS_ROOT_LOGGER HADOOP_ROOT_LOGGER
 
   hadoop_deprecate_envvar HADOOP_HDFS_IDENT_STRING HADOOP_IDENT_STRING
-  
+
+  hadoop_deprecate_envvar HADOOP_DN_SECURE_EXTRA_OPTS HDFS_DATANODE_SECURE_EXTRA_OPTS
+
+  hadoop_deprecate_envvar HADOOP_NFS3_SECURE_EXTRA_OPTS HDFS_NFS3_SECURE_EXTRA_OPTS
+
+
   HADOOP_HDFS_HOME="${HADOOP_HDFS_HOME:-$HADOOP_HOME}"
-  
+
   # turn on the defaults
   export HDFS_AUDIT_LOGGER=${HDFS_AUDIT_LOGGER:-INFO,NullAppender}
-  export HADOOP_NAMENODE_OPTS=${HADOOP_NAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS"}
-  export HADOOP_SECONDARYNAMENODE_OPTS=${HADOOP_SECONDARYNAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS"}
-  export HADOOP_DATANODE_OPTS=${HADOOP_DATANODE_OPTS:-"-Dhadoop.security.logger=ERROR,RFAS"}
-  export HADOOP_DN_SECURE_EXTRA_OPTS=${HADOOP_DN_SECURE_EXTRA_OPTS:-"-jvm server"}
-  export HADOOP_NFS3_SECURE_EXTRA_OPTS=${HADOOP_NFS3_SECURE_EXTRA_OPTS:-"-jvm server"}
-  export HADOOP_PORTMAP_OPTS=${HADOOP_PORTMAP_OPTS:-"-Xmx512m"}
+  export HDFS_NAMENODE_OPTS=${HDFS_NAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS"}
+  export HDFS_SECONDARYNAMENODE_OPTS=${HDFS_SECONDARYNAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS"}
+  export HDFS_DATANODE_OPTS=${HDFS_DATANODE_OPTS:-"-Dhadoop.security.logger=ERROR,RFAS"}
+  export HDFS_PORTMAP_OPTS=${HDFS_PORTMAP_OPTS:-"-Xmx512m"}
+
+  # depending upon what is being used to start Java, these may need to be
+  # set empty. (thus no colon)
+  export HDFS_DATANODE_SECURE_EXTRA_OPTS=${HDFS_DATANODE_SECURE_EXTRA_OPTS-"-jvm server"}
+  export HDFS_NFS3_SECURE_EXTRA_OPTS=${HDFS_NFS3_SECURE_EXTRA_OPTS-"-jvm server"}
 }
 
 if [[ -z "${HADOOP_LIBEXEC_DIR}" ]]; then

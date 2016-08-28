@@ -2048,6 +2048,7 @@ function hadoop_subcommand_opts
     return 0
   fi
 }
+
 ## @description  Add custom (program)_(command)_SECURE_EXTRA_OPTS to HADOOP_OPTS.
 ## @description  This *does not* handle the pre-3.x deprecated cases
 ## @audience     public
