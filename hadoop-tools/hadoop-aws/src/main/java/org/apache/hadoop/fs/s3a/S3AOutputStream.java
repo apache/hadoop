@@ -45,13 +45,15 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AOutputStream extends OutputStream {
-  private OutputStream backupStream;
-  private File backupFile;
+  private final OutputStream backupStream;
+  private final File backupFile;
   private boolean closed;
-  private String key;
-  private Progressable progress;
-  private S3AFileSystem fs;
-  private LocalDirAllocator lDirAlloc;
+  private final String key;
+  private final Progressable progress;
+  private final long partSize;
+  private final long partSizeThreshold;
+  private final S3AFileSystem fs;
+  private final LocalDirAllocator lDirAlloc;
 
   public static final Logger LOG = S3AFileSystem.LOG;
 
@@ -62,11 +64,10 @@ public class S3AOutputStream extends OutputStream {
     this.progress = progress;
     this.fs = fs;
 
-    if (conf.get(BUFFER_DIR, null) != null) {
-      lDirAlloc = new LocalDirAllocator(BUFFER_DIR);
-    } else {
-      lDirAlloc = new LocalDirAllocator("${hadoop.tmp.dir}/s3a");
-    }
+    partSize = fs.getPartitionSize();
+    partSizeThreshold = fs.getMultiPartThreshold();
+
+    lDirAlloc = fs.getDirectoryAllocator();
 
     backupFile = lDirAlloc.createTmpFileForWrite("output-",
         LocalDirAllocator.SIZE_UNKNOWN, conf);

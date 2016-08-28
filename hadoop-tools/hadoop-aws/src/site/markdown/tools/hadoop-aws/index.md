@@ -1694,7 +1694,7 @@ tests or the `it.test` property for integration tests.
 
     mvn clean test -Dtest=TestS3AInputPolicies
 
-    mvn clean verify -Dit.test=ITestS3AFileContextStatistics
+    mvn clean verify -Dit.test=ITestS3AFileContextStatistics -Dtest=none
 
     mvn clean verify -Dtest=TestS3A* -Dit.test=ITestS3A*
 

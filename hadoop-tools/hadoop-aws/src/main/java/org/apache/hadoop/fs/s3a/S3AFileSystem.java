@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -117,6 +118,7 @@ public class S3AFileSystem extends FileSystem {
   private ExecutorService threadPoolExecutor;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
+  private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
@@ -218,6 +220,10 @@ public class S3AFileSystem extends FileSystem {
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
       fastUploadEnabled = getConf().getBoolean(FAST_UPLOAD,
           DEFAULT_FAST_UPLOAD);
+
+      String itemName = conf.get(BUFFER_DIR) != null
+          ? BUFFER_DIR : "hadoop.tmp.dir";
+      directoryAllocator = new LocalDirAllocator(itemName);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -341,6 +347,14 @@ public class S3AFileSystem extends FileSystem {
   @InterfaceStability.Unstable
   public S3AInputPolicy getInputPolicy() {
     return inputPolicy;
+  }
+
+  /**
+   * Round-robin directory allocator
+   * @return allocator of directories for output streams.
+   */
+  LocalDirAllocator getDirectoryAllocator() {
+    return directoryAllocator;
   }
 
   /**
