@@ -95,8 +95,7 @@ public final class Constants {
   // Comma separated list of directories
   public static final String BUFFER_DIR_KEY = "fs.oss.buffer.dir";
 
-  // private | public-read | public-read-write | authenticated-read |
-  // log-delivery-write | bucket-owner-read | bucket-owner-full-control
+  // private | public-read | public-read-write
   public static final String CANNED_ACL_KEY = "fs.oss.acl.default";
   public static final String CANNED_ACL_DEFAULT = "";
 
