@@ -109,7 +109,7 @@
   <p>
     The HDFS snapshot feature introduces a new reserved path name used to
     interact with snapshots: <tt>.snapshot</tt>. When upgrading from an
-    older version of HDFS, existing paths named <tt>.snapshot</tt> need
+    older version of HDFS which does not support snapshots, existing paths named <tt>.snapshot</tt> need
     to first be renamed or deleted to avoid conflicting with the reserved path.
     See the upgrade section in
     <a href="HdfsUserGuide.html#Upgrade_and_Rollback">the HDFS user guide</a>
