@@ -147,6 +147,9 @@ class BlockSender implements java.io.Closeable {
   /** The reference to the volume where the block is located */
   private FsVolumeReference volumeRef;
 
+  /** The replica of the block that is being read. */
+  private final Replica replica;
+
   // Cache-management related fields
   private final long readaheadLength;
 
@@ -229,7 +232,6 @@ class BlockSender implements java.io.Closeable {
             "If verifying checksum, currently must also send it.");
       }
       
-      final Replica replica;
       final long replicaVisibleLength;
       synchronized(datanode.data) { 
         replica = getReplica(block, datanode);
@@ -680,8 +682,12 @@ class BlockSender implements java.io.Closeable {
       checksum.update(buf, dOff, dLen);
       if (!checksum.compare(buf, cOff)) {
         long failedPos = offset + datalen - dLeft;
-        throw new ChecksumException("Checksum failed at " + failedPos,
-            failedPos);
+        StringBuilder replicaInfoString = new StringBuilder();
+        if (replica != null) {
+          replicaInfoString.append(" for replica: " + replica.toString());
+        }
+        throw new ChecksumException("Checksum failed at " + failedPos
+            + replicaInfoString, failedPos);
       }
       dLeft -= dLen;
       dOff += dLen;
