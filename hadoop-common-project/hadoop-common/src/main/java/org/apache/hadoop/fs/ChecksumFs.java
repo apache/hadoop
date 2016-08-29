@@ -179,7 +179,6 @@ public abstract class ChecksumFs extends FilterFs {
                new ChecksumFSInputChecker(fs, file)) {
         checker.seek(position);
         nread = checker.read(b, off, len);
-        checker.close();
       }
       return nread;
     }
