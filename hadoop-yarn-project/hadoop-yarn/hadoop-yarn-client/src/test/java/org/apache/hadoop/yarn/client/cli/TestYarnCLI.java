@@ -313,34 +313,17 @@ public class TestYarnCLI {
         new OutputStreamWriter(baos, "UTF-8");
     PrintWriter pw = new PrintWriter(stream);
     pw.println("Total number of containers :3");
-    pw.print("                  Container-Id");
-    pw.print("\t          Start Time");
-    pw.print("\t         Finish Time");
-    pw.print("\t               State");
-    pw.print("\t                Host");
-    pw.print("\t   Node Http Address");
-    pw.println("\t                            LOG-URL");
-    pw.print(" container_1234_0005_01_000001");
-    pw.print("\t"+dateFormat.format(new Date(time1)));
-    pw.print("\t"+dateFormat.format(new Date(time2)));
-    pw.print("\t            COMPLETE");
-    pw.print("\t           host:1234");
-    pw.print("\t    http://host:2345");
-    pw.println("\t                             logURL");
-    pw.print(" container_1234_0005_01_000002");
-    pw.print("\t"+dateFormat.format(new Date(time1)));
-    pw.print("\t"+dateFormat.format(new Date(time2)));
-    pw.print("\t            COMPLETE");
-    pw.print("\t           host:1234");
-    pw.print("\t    http://host:2345");
-    pw.println("\t                             logURL");
-    pw.print(" container_1234_0005_01_000003");
-    pw.print("\t"+dateFormat.format(new Date(time1)));
-    pw.print("\t                 N/A");
-    pw.print("\t             RUNNING");
-    pw.print("\t           host:1234");
-    pw.print("\t    http://host:2345");
-    pw.println("\t                                   ");
+    pw.printf(ApplicationCLI.CONTAINER_PATTERN, "Container-Id", "Start Time",
+        "Finish Time", "State", "Host", "Node Http Address", "LOG-URL");
+    pw.printf(ApplicationCLI.CONTAINER_PATTERN, "container_1234_0005_01_000001",
+        dateFormat.format(new Date(time1)), dateFormat.format(new Date(time2)),
+        "COMPLETE", "host:1234", "http://host:2345", "logURL");
+    pw.printf(ApplicationCLI.CONTAINER_PATTERN, "container_1234_0005_01_000002",
+        dateFormat.format(new Date(time1)), dateFormat.format(new Date(time2)),
+        "COMPLETE", "host:1234", "http://host:2345", "logURL");
+    pw.printf(ApplicationCLI.CONTAINER_PATTERN, "container_1234_0005_01_000003",
+        dateFormat.format(new Date(time1)), "N/A", "RUNNING", "host:1234",
+        "http://host:2345", "");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
     Log.info("ExpectedOutput");
