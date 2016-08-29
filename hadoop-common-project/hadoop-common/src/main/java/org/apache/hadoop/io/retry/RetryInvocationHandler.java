@@ -351,9 +351,11 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     if (retryInfo.isFail()) {
       // fail.
       if (retryInfo.action.reason != null) {
-        LOG.warn("Exception while invoking call #" + callId + " "
-            + proxyDescriptor.getProxyInfo().getString(method.getName())
-            + ". Not retrying because " + retryInfo.action.reason, e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Exception while invoking call #" + callId + " "
+              + proxyDescriptor.getProxyInfo().getString(method.getName())
+              + ". Not retrying because " + retryInfo.action.reason, e);
+        }
       }
       throw e;
     }
