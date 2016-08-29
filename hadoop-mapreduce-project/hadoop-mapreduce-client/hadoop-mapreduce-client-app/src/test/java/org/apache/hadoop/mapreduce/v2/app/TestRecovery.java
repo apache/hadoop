@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Supplier;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -96,6 +97,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Test;
@@ -1195,7 +1197,14 @@ public class TestRecovery {
     TaskAttempt task1Attempt1 = t1it.next();
     TaskAttempt task1Attempt2 = t1it.next();
     TaskAttempt task2Attempt = mapTask2.getAttempts().values().iterator().next();
+    final TaskAttempt t2a = task2Attempt;
 
+    // wait for the second task attempt to be assigned.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return t2a.getAssignedContainerID() != null;
+      }
+    }, 10, 10000);
     ContainerId t1a2contId = task1Attempt2.getAssignedContainerID();
 
     LOG.info(t1a2contId.toString());

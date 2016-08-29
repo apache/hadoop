@@ -15,6 +15,9 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6744. Increase timeout on TestDFSIO tests (Eric Badger via
     jlowe)
 
+    MAPREDUCE-6768. TestRecovery.testSpeculative failed with NPE (Haibo Chen
+    via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
