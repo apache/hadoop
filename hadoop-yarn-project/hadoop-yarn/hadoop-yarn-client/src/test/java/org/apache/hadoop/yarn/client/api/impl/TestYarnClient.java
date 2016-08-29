@@ -69,8 +69,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -158,7 +156,7 @@ public class TestYarnClient {
 
   @SuppressWarnings("deprecation")
   @Test (timeout = 30000)
-  public void testSubmitApplication() {
+  public void testSubmitApplication() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         100); // speed up tests
@@ -184,8 +182,6 @@ public class TestYarnClient {
       Assert.assertTrue(e instanceof ApplicationIdNotProvidedException);
       Assert.assertTrue(e.getMessage().contains(
           "ApplicationId is not provided in ApplicationSubmissionContext"));
-    } catch (IOException e) {
-      Assert.fail("IOException is not expected.");
     }
 
     // Submit the application with applicationId provided
@@ -197,13 +193,7 @@ public class TestYarnClient {
           System.currentTimeMillis(), i);
       when(context.getApplicationId()).thenReturn(applicationId);
       ((MockYarnClient) client).setYarnApplicationState(exitStates[i]);
-      try {
-        client.submitApplication(context);
-      } catch (YarnException e) {
-        Assert.fail("Exception is not expected.");
-      } catch (IOException e) {
-        Assert.fail("Exception is not expected.");
-      }
+      client.submitApplication(context);
       verify(((MockYarnClient) client).mockReport,times(4 * i + 4))
           .getYarnApplicationState();
     }
@@ -583,12 +573,11 @@ public class TestYarnClient {
             .thenReturn(mockNodeToLabelsResponse);
 
         historyClient = mock(AHSClient.class);
-        
-      } catch (YarnException e) {
-        Assert.fail("Exception is not expected.");
-      } catch (IOException e) {
-        Assert.fail("Exception is not expected.");
+
+      } catch (Exception e) {
+        Assert.fail("Unexpected exception caught: " + e);
       }
+
       when(mockResponse.getApplicationReport()).thenReturn(mockReport);
     }
 
@@ -993,36 +982,20 @@ public class TestYarnClient {
     return appId;
   }
 
-  private GetNewReservationResponse getNewReservation(YarnClient rmClient) {
-    GetNewReservationRequest newReservationRequest = GetNewReservationRequest
-        .newInstance();
-    GetNewReservationResponse getNewReservationResponse = null;
-    try {
-      getNewReservationResponse = rmClient.createReservation();
-    } catch (Exception e) {
-      Assert.fail(e.getMessage());
-    }
-    return getNewReservationResponse;
-  }
-
   private void waitTillAccepted(YarnClient rmClient, ApplicationId appId,
       boolean unmanagedApplication)
     throws Exception {
-    try {
-      long start = System.currentTimeMillis();
-      ApplicationReport report = rmClient.getApplicationReport(appId);
-      while (YarnApplicationState.ACCEPTED != report.getYarnApplicationState()) {
-        if (System.currentTimeMillis() - start > 20 * 1000) {
-          throw new Exception("App '" + appId + 
-            "' time out, failed to reach ACCEPTED state");
-        }
-        Thread.sleep(200);
-        report = rmClient.getApplicationReport(appId);
+    long start = System.currentTimeMillis();
+    ApplicationReport report = rmClient.getApplicationReport(appId);
+    while (YarnApplicationState.ACCEPTED != report.getYarnApplicationState()) {
+      if (System.currentTimeMillis() - start > 20 * 1000) {
+        throw new Exception(
+            "App '" + appId + "' time out, failed to reach ACCEPTED state");
       }
-      Assert.assertEquals(unmanagedApplication, report.isUnmanagedApp());
-    } catch (Exception ex) {
-      throw new Exception(ex);
+      Thread.sleep(200);
+      report = rmClient.getApplicationReport(appId);
     }
+    Assert.assertEquals(unmanagedApplication, report.isUnmanagedApp());
   }
 
   @Test
@@ -1071,13 +1044,11 @@ public class TestYarnClient {
     });
 
     client.init(conf);
-    try {
-      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT, true);
-      client.serviceInit(conf);
-      client.getTimelineDelegationToken();
-    } catch (Exception e) {
-      Assert.fail("Should not have thrown an exception");
-    }
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT,
+        true);
+    client.serviceInit(conf);
+    client.getTimelineDelegationToken();
+
     try {
       conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT, false);
       client.serviceInit(conf);
@@ -1229,16 +1200,13 @@ public class TestYarnClient {
   }
 
   private ReservationSubmissionRequest submitReservationTestHelper(
-      YarnClient client, long arrival, long deadline, long duration) {
-    ReservationId reservationID = getNewReservation(client).getReservationId();
+      YarnClient client, long arrival, long deadline, long duration)
+      throws IOException, YarnException {
+    ReservationId reservationID = client.createReservation().getReservationId();
     ReservationSubmissionRequest sRequest = createSimpleReservationRequest(
         reservationID, 4, arrival, deadline, duration);
-    ReservationSubmissionResponse sResponse = null;
-    try {
-      sResponse = client.submitReservation(sRequest);
-    } catch (Exception e) {
-      Assert.fail(e.getMessage());
-    }
+    ReservationSubmissionResponse sResponse =
+        client.submitReservation(sRequest);
     Assert.assertNotNull(sResponse);
     Assert.assertNotNull(reservationID);
     System.out.println("Submit reservation response: " + reservationID);
@@ -1260,11 +1228,7 @@ public class TestYarnClient {
 
       // Submit the reservation again with the same request and make sure it
       // passes.
-      try {
-        client.submitReservation(sRequest);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      client.submitReservation(sRequest);
 
       // Submit the reservation with the same reservation id but different
       // reservation definition, and ensure YarnException is thrown.
@@ -1314,12 +1278,7 @@ public class TestYarnClient {
       rDef.setDeadline(deadline);
       ReservationUpdateRequest uRequest =
           ReservationUpdateRequest.newInstance(rDef, reservationID);
-      ReservationUpdateResponse uResponse = null;
-      try {
-        uResponse = client.updateReservation(uRequest);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationUpdateResponse uResponse = client.updateReservation(uRequest);
       Assert.assertNotNull(uResponse);
       System.out.println("Update reservation response: " + uResponse);
     } finally {
@@ -1344,15 +1303,10 @@ public class TestYarnClient {
           submitReservationTestHelper(client, arrival, deadline, duration);
 
       ReservationId reservationID = sRequest.getReservationId();
-      ReservationListResponse response = null;
       ReservationListRequest request = ReservationListRequest.newInstance(
           ReservationSystemTestUtil.reservationQ, reservationID.toString(), -1,
           -1, false);
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationListResponse response = client.listReservations(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(1, response.getReservationAllocationState().size());
       Assert.assertEquals(response.getReservationAllocationState().get(0)
@@ -1388,12 +1342,7 @@ public class TestYarnClient {
           ReservationSystemTestUtil.reservationQ, "", arrival + duration / 2,
           arrival + duration / 2, true);
 
-      ReservationListResponse response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationListResponse response = client.listReservations(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(1, response.getReservationAllocationState().size());
       Assert.assertEquals(response.getReservationAllocationState().get(0)
@@ -1402,12 +1351,7 @@ public class TestYarnClient {
       request = ReservationListRequest.newInstance(
           ReservationSystemTestUtil.reservationQ, "", 1, Long.MAX_VALUE, true);
 
-      response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      response = client.listReservations(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(1, response.getReservationAllocationState().size());
       Assert.assertEquals(response.getReservationAllocationState().get(0)
@@ -1449,12 +1393,7 @@ public class TestYarnClient {
       ReservationListRequest request = ReservationListRequest
           .newInstance(ReservationSystemTestUtil.reservationQ, "", 1, -1, true);
 
-      ReservationListResponse response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationListResponse response = client.listReservations(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(1, response.getReservationAllocationState().size());
       Assert.assertEquals(response.getReservationAllocationState().get(0)
@@ -1464,12 +1403,7 @@ public class TestYarnClient {
       request = ReservationListRequest.newInstance(
           ReservationSystemTestUtil.reservationQ, "", 1, -10, true);
 
-      response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      response = client.listReservations(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(1, response.getReservationAllocationState().size());
       Assert.assertEquals(response.getReservationAllocationState().get(0)
@@ -1501,12 +1435,7 @@ public class TestYarnClient {
           ReservationSystemTestUtil.reservationQ, "", Long.MAX_VALUE, -1,
           false);
 
-      ReservationListResponse response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationListResponse response = client.listReservations(request);
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
@@ -1521,12 +1450,7 @@ public class TestYarnClient {
           ReservationSystemTestUtil.reservationQ, "", deadline + duration,
           deadline + 2 * duration, false);
 
-      response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      response = client.listReservations(request);
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
@@ -1539,12 +1463,7 @@ public class TestYarnClient {
           ReservationSystemTestUtil.reservationQ, "", 0, arrival - duration,
           false);
 
-      response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      response = client.listReservations(request);
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
@@ -1554,12 +1473,7 @@ public class TestYarnClient {
       request = ReservationListRequest
           .newInstance(ReservationSystemTestUtil.reservationQ, "", 0, 1, false);
 
-      response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      response = client.listReservations(request);
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
@@ -1590,12 +1504,7 @@ public class TestYarnClient {
       // Delete the reservation
       ReservationDeleteRequest dRequest =
           ReservationDeleteRequest.newInstance(reservationID);
-      ReservationDeleteResponse dResponse = null;
-      try {
-        dResponse = client.deleteReservation(dRequest);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationDeleteResponse dResponse = client.deleteReservation(dRequest);
       Assert.assertNotNull(dResponse);
       System.out.println("Delete reservation response: " + dResponse);
 
@@ -1604,12 +1513,7 @@ public class TestYarnClient {
           ReservationSystemTestUtil.reservationQ, reservationID.toString(), -1,
           -1, false);
 
-      ReservationListResponse response = null;
-      try {
-        response = client.listReservations(request);
-      } catch (Exception e) {
-        Assert.fail(e.getMessage());
-      }
+      ReservationListResponse response =  client.listReservations(request);
       Assert.assertNotNull(response);
       Assert.assertEquals(0, response.getReservationAllocationState().size());
     } finally {
