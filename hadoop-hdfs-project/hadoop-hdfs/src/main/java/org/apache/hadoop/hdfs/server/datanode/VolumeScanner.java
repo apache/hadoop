@@ -281,12 +281,13 @@ public class VolumeScanner extends Thread {
             volume.getBasePath(), block);
         return;
       }
-      LOG.warn("Reporting bad {} on {}", block, volume.getBasePath());
+      LOG.warn("Reporting bad " + block + " with volume "
+          + volume.getBasePath(), e);
       try {
         scanner.datanode.reportBadBlocks(block, volume);
       } catch (IOException ie) {
         // This is bad, but not bad enough to shut down the scanner.
-        LOG.warn("Cannot report bad " + block.getBlockId(), e);
+        LOG.warn("Cannot report bad block " + block, ie);
       }
     }
   }
