@@ -106,6 +106,7 @@ public class NodeHealthScriptRunner extends AbstractService {
         shexec.execute();
       } catch (ExitCodeException e) {
         // ignore the exit code of the script
+        exceptionStackTrace = StringUtils.stringifyException(e);
         status = HealthCheckerExitStatus.FAILED_WITH_EXIT_CODE;
         // On Windows, we will not hit the Stream closed IOException
         // thrown by stdout buffered reader for timeout event.
@@ -162,7 +163,7 @@ public class NodeHealthScriptRunner extends AbstractService {
         setHealthStatus(false, exceptionStackTrace);
         break;
       case FAILED_WITH_EXIT_CODE:
-        setHealthStatus(true, "", now);
+        setHealthStatus(false, exceptionStackTrace);
         break;
       case FAILED:
         setHealthStatus(false, shexec.getOutput());
