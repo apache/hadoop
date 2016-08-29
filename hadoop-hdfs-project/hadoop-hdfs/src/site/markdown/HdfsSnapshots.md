@@ -113,7 +113,7 @@ Upgrading to a version of HDFS with snapshots
 
 The HDFS snapshot feature introduces a new reserved path name used to
 interact with snapshots: `.snapshot`. When upgrading from an
-older version of HDFS, existing paths named `.snapshot` need
+older version of HDFS which does not support snapshots, existing paths named `.snapshot` need
 to first be renamed or deleted to avoid conflicting with the reserved path.
 See the upgrade section in
 [the HDFS user guide](HdfsUserGuide.html#Upgrade_and_Rollback)
