@@ -326,7 +326,9 @@ public class TestEncryptionZones {
   public void testBasicOperations() throws Exception {
 
     int numZones = 0;
-
+    /* Number of EZs should be 0 if no EZ is created */
+    assertEquals("Unexpected number of encryption zones!", numZones,
+        cluster.getNamesystem().getNumEncryptionZones());
     /* Test failure of create EZ on a directory that doesn't exist. */
     final Path zoneParent = new Path("/zones");
     final Path zone1 = new Path(zoneParent, "zone1");
