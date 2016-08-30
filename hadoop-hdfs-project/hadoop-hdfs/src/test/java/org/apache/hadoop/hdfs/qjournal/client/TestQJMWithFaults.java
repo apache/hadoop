@@ -27,7 +27,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -52,7 +54,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -125,7 +129,10 @@ public class TestQJMWithFaults {
     }
     return ret;
   }
-  
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   /**
    * Sets up two of the nodes to each drop a single RPC, at all
    * possible combinations of RPCs. This may result in the
@@ -186,6 +193,16 @@ public class TestQJMWithFaults {
     }
   }
   
+  /**
+   * Expect {@link UnknownHostException} if a hostname can't be resolved.
+   */
+  @Test
+  public void testUnresolvableHostName() throws Exception {
+    expectedException.expect(UnknownHostException.class);
+    new QuorumJournalManager(conf,
+        new URI("qjournal://" + "bogus:12345" + "/" + JID), FAKE_NSINFO);
+  }
+
   /**
    * Test case in which three JournalNodes randomly flip flop between
    * up and down states every time they get an RPC.
