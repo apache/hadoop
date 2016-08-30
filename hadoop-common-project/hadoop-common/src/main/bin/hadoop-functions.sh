@@ -1984,12 +1984,26 @@ function hadoop_secure_daemon_handler
 ## @return       will exit on failure conditions
 function hadoop_verify_user
 {
-  local command=$1
-  local uservar="HADOOP_${command}_USER"
+  declare program=$1
+  declare command=$2
+  declare uprogram
+  declare ucommand
+  declare uvar
 
-  if [[ -n ${!uservar} ]]; then
-    if [[ ${!uservar} !=  "${USER}" ]]; then
-      hadoop_error "ERROR: ${command} can only be executed by ${!uservar}."
+  if [[ -z "${BASH_VERSINFO[0]}" ]] \
+     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
+    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
+  else
+    uprogram=${program^^}
+    ucommand=${command^^}
+  fi
+
+  uvar="${uprogram}_${ucommand}_USER"
+
+  if [[ -n ${!uvar} ]]; then
+    if [[ ${!uvar} !=  "${USER}" ]]; then
+      hadoop_error "ERROR: ${command} can only be executed by ${!uvar}."
       exit 1
     fi
   fi

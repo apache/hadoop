@@ -190,6 +190,8 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
+hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 HADOOP_SUBCMD_ARGS=("$@")
 
 if declare -f hadoop_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
@@ -198,8 +200,6 @@ if declare -f hadoop_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
 else
   hadoopcmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
-
-hadoop_verify_user "${HADOOP_SUBCMD}"
 
 hadoop_add_client_opts
 

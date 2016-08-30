@@ -417,6 +417,7 @@ esac
 #
 # To prevent accidents, shell commands be (superficially) locked
 # to only allow certain users to execute certain subcommands.
+# It uses the format of (command)_(subcommand)_USER.
 #
 # For example, to limit who can execute the namenode command,
-# export HADOOP_namenode_USER=hdfs
+# export HDFS_NAMENODE_USER=hdfs
