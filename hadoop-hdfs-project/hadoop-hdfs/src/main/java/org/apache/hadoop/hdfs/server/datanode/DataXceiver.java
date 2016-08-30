@@ -312,6 +312,12 @@ class DataXceiver extends Receiver implements Runnable {
         } else {
           LOG.info(s1 + "; " + t);          
         }
+      } else if (t instanceof InvalidToken) {
+        // The InvalidToken exception has already been logged in
+        // checkAccess() method and this is not a server error.
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(s, t);
+        }
       } else {
         LOG.error(s, t);
       }
