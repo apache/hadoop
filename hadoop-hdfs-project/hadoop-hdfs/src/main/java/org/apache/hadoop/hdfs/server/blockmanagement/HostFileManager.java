@@ -138,6 +138,12 @@ public class HostFileManager extends HostConfigManager {
     return null;
   }
 
+  @Override
+  public long getMaintenanceExpirationTimeInMS(DatanodeID dn) {
+    // The include/exclude files based config doesn't support maintenance mode.
+    return 0;
+  }
+
   /**
    * Read the includes and excludes lists from the named files.  Any previous
    * includes and excludes lists are discarded.

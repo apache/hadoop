@@ -265,6 +265,33 @@ class HeartbeatManager implements DatanodeStatistics {
     }
   }
 
+  synchronized void startMaintenance(final DatanodeDescriptor node) {
+    if (!node.isAlive()) {
+      LOG.info("Dead node {} is put in maintenance state immediately.", node);
+      node.setInMaintenance();
+    } else if (node.isDecommissioned()) {
+      LOG.info("Decommissioned node " + node + " is put in maintenance state"
+          + " immediately.");
+      node.setInMaintenance();
+    } else {
+      stats.subtract(node);
+      node.startMaintenance();
+      stats.add(node);
+    }
+  }
+
+  synchronized void stopMaintenance(final DatanodeDescriptor node) {
+    LOG.info("Stopping maintenance of {} node {}",
+        node.isAlive() ? "live" : "dead", node);
+    if (!node.isAlive()) {
+      node.stopMaintenance();
+    } else {
+      stats.subtract(node);
+      node.stopMaintenance();
+      stats.add(node);
+    }
+  }
+
   synchronized void stopDecommission(final DatanodeDescriptor node) {
     LOG.info("Stopping decommissioning of {} node {}",
         node.isAlive() ? "live" : "dead", node);

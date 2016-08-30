@@ -77,4 +77,11 @@ public abstract class HostConfigManager implements Configurable {
    * @return the upgrade domain of dn.
    */
   public abstract String getUpgradeDomain(DatanodeID dn);
+
+  /**
+   * Get the maintenance expiration time in milli seconds.
+   * @param dn the DatanodeID of the datanode
+   * @return the maintenance expiration time of dn.
+   */
+  public abstract long getMaintenanceExpirationTimeInMS(DatanodeID dn);
 }

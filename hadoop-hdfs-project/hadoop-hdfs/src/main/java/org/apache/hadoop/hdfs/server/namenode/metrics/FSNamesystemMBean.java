@@ -208,4 +208,19 @@ public interface FSNamesystemMBean {
    * Return total time spent doing sync operations on FSEditLog.
    */
   String getTotalSyncTimes();
+
+  /**
+   * @return Number of IN_MAINTENANCE live data nodes
+   */
+  int getNumInMaintenanceLiveDataNodes();
+
+  /**
+   * @return Number of IN_MAINTENANCE dead data nodes
+   */
+  int getNumInMaintenanceDeadDataNodes();
+
+  /**
+   * @return Number of ENTERING_MAINTENANCE data nodes
+   */
+  int getNumEnteringMaintenanceDataNodes();
 }
