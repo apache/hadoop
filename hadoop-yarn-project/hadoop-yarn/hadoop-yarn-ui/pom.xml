@@ -30,7 +30,7 @@
   <packaging>${packaging.type}</packaging>
 
   <properties>
-    <packaging.type>jar</packaging.type>
+    <packaging.type>war</packaging.type>
     <webappDir>src/main/webapp</webappDir>
     <node.executable>node</node.executable>
     <nodeVersion>v0.12.2</nodeVersion>
@@ -52,9 +52,26 @@
             <exclude>src/main/webapp/bower.json</exclude>
             <exclude>src/main/webapp/package.json</exclude>
             <exclude>src/main/webapp/testem.json</exclude>
+
+            <exclude>src/main/webapp/dist/**/*</exclude>
+            <exclude>src/main/webapp/tmp/**/*</exclude>
             <exclude>src/main/webapp/public/assets/images/**/*</exclude>
+            <exclude>src/main/webapp/public/assets/images/*</exclude>
             <exclude>src/main/webapp/public/robots.txt</exclude>
+
+            <exclude>public/assets/images/**/*</exclude>
             <exclude>public/crossdomain.xml</exclude>
+
+            <exclude>src/main/webapp/.tmp/**/*</exclude>
+            <exclude>src/main/webapp/.bowerrc</exclude>
+            <exclude>src/main/webapp/.editorconfig</exclude>
+            <exclude>src/main/webapp/.ember-cli</exclude>
+            <exclude>src/main/webapp/.gitignore</exclude>
+            <exclude>src/main/webapp/.jshintrc</exclude>
+            <exclude>src/main/webapp/.travis.yml</exclude>
+            <exclude>src/main/webapp/.watchmanconfig</exclude>
+            <exclude>src/main/webapp/tests/.jshintrc</exclude>
+            <exclude>src/main/webapp/blueprints/.jshintrc</exclude>
           </excludes>
         </configuration>
       </plugin>
