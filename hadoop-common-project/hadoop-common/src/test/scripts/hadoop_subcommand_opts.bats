@@ -29,7 +29,7 @@ load hadoop-functions_test_helper
 
 @test "hadoop_subcommand_opts (hadoop simple exist)" {
   HADOOP_OPTS="x"
-  HADOOP_test_OPTS="y"
+  HADOOP_TEST_OPTS="y"
   hadoop_subcommand_opts hadoop test
   echo "${HADOOP_OPTS}"
   [ "${HADOOP_OPTS}" = "x y" ]
@@ -37,7 +37,7 @@ load hadoop-functions_test_helper
 
 @test "hadoop_subcommand_opts (hadoop complex exist)" {
   HADOOP_OPTS="x"
-  HADOOP_test_OPTS="y z"
+  HADOOP_TEST_OPTS="y z"
   hadoop_subcommand_opts hadoop test
   echo "${HADOOP_OPTS}"
   [ "${HADOOP_OPTS}" = "x y z" ]
@@ -45,7 +45,7 @@ load hadoop-functions_test_helper
 
 @test "hadoop_subcommand_opts (hdfs simple exist)" {
   HADOOP_OPTS="x"
-  HDFS_test_OPTS="y"
+  HDFS_TEST_OPTS="y"
   hadoop_subcommand_opts hdfs test
   echo "${HADOOP_OPTS}"
   [ "${HADOOP_OPTS}" = "x y" ]
@@ -53,24 +53,16 @@ load hadoop-functions_test_helper
 
 @test "hadoop_subcommand_opts (yarn simple exist)" {
   HADOOP_OPTS="x"
-  YARN_test_OPTS="y"
+  YARN_TEST_OPTS="y"
   hadoop_subcommand_opts yarn test
   echo "${HADOOP_OPTS}"
   [ "${HADOOP_OPTS}" = "x y" ]
 }
 
-@test "hadoop_subcommand_opts (deprecation case #1)" {
+@test "hadoop_subcommand_opts (deprecation case)" {
   HADOOP_OPTS="x"
   HADOOP_NAMENODE_OPTS="y"
   hadoop_subcommand_opts hdfs namenode
-  echo "${HADOOP_OPTS}"
-  [ "${HADOOP_OPTS}" = "x y" ]
-}
-
-@test "hadoop_subcommand_opts (deprecation case #2)" {
-  HADOOP_OPTS="x"
-  YARN_RESOURCEMANAGER_OPTS="y"
-  hadoop_subcommand_opts yarn resourcemanager
   echo "${HADOOP_OPTS}"
   [ "${HADOOP_OPTS}" = "x y" ]
 }

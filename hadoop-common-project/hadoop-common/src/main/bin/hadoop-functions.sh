@@ -2007,8 +2007,8 @@ function hadoop_subcommand_opts
 {
   declare program=$1
   declare command=$2
-  declare var
   declare uvar
+  declare depvar
   declare uprogram
   declare ucommand
 
@@ -2029,34 +2029,25 @@ function hadoop_subcommand_opts
     ucommand=${command^^}
   fi
 
-  # HDFS_namenode_OPTS
-  # HADOOP_distcp_OPTS
-  # MAPRED_distcp_OPTS
-  # YARN_sharedcachemanger_OPTS
-  # ...
-  var="${uprogram}_${command}_OPTS"
+  uvar="${uprogram}_${ucommand}_OPTS"
 
   # Let's handle all of the deprecation cases early
-  # HADOOP_NAMENODE_OPTS -> HDFS_namenode_OPTS
-  # YARN_RESOURCEMANAGER_OPTS -> YARN_resourcemanager_OPTS
+  # HADOOP_NAMENODE_OPTS -> HDFS_NAMENODE_OPTS
 
-  uvar="${uprogram}_${ucommand}_OPTS"
-  if [[ -n ${!uvar} ]]; then
-    hadoop_deprecate_envvar "${uvar}" "${var}"
+  depvar="HADOOP_${ucommand}_OPTS"
+
+  if [[ "${depvar}" != "${uvar}" ]]; then
+    if [[ -n "${!depvar}" ]]; then
+      hadoop_deprecate_envvar "${depvar}" "${uvar}"
+    fi
   fi
 
-  uvar="HADOOP_${ucommand}_OPTS"
   if [[ -n ${!uvar} ]]; then
-    hadoop_deprecate_envvar "${uvar}" "${var}"
-  fi
-
-  if [[ -n ${!var} ]]; then
-    hadoop_debug "Appending ${!var} onto HADOOP_OPTS"
-    HADOOP_OPTS="${HADOOP_OPTS} ${!var}"
+    hadoop_debug "Appending ${!uvar} onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${!uvar}"
     return 0
   fi
 }
-
 ## @description  Add custom (program)_(command)_SECURE_EXTRA_OPTS to HADOOP_OPTS.
 ## @description  This *does not* handle the pre-3.x deprecated cases
 ## @audience     public
