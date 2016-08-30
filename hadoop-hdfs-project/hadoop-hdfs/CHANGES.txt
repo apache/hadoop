@@ -39,6 +39,9 @@ Release 2.7.6 - UNRELEASED
     HDFS-13112. Token expiration edits may cause log corruption or deadlock.
     (daryn via kihwal)
 
+    HDFS-4210. Throw helpful exception when DNS entry for JournalNode cannot be
+    resolved. (Charles Lamb and John Zhuge)
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES
