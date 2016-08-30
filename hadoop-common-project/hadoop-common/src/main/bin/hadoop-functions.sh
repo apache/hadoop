@@ -2057,7 +2057,7 @@ function hadoop_subcommand_opts
   fi
 
   if [[ -n ${!uvar} ]]; then
-    hadoop_debug "Appending ${!uvar} onto HADOOP_OPTS"
+    hadoop_debug "Appending ${uvar} onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${!uvar}"
     return 0
   fi
@@ -2102,7 +2102,7 @@ function hadoop_subcommand_secure_opts
   uvar="${uprogram}_${ucommand}_SECURE_EXTRA_OPTS"
 
   if [[ -n ${!uvar} ]]; then
-    hadoop_debug "Appending ${!uvar} onto HADOOP_OPTS"
+    hadoop_debug "Appending ${uvar} onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${!uvar}"
     return 0
   fi
