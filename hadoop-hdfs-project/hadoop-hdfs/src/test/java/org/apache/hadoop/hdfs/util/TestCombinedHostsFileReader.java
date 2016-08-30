@@ -62,7 +62,7 @@ public class TestCombinedHostsFileReader {
   public void testLoadExistingJsonFile() throws Exception {
     Set<DatanodeAdminProperties> all =
         CombinedHostsFileReader.readFile(EXISTING_FILE.getAbsolutePath());
-    assertEquals(5, all.size());
+    assertEquals(7, all.size());
   }
 
   /*
