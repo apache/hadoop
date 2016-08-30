@@ -2057,6 +2057,51 @@ function hadoop_subcommand_opts
   fi
 }
 
+## @description  Add custom (program)_(command)_SECURE_EXTRA_OPTS to HADOOP_OPTS.
+## @description  This *does not* handle the pre-3.x deprecated cases
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        program
+## @param        subcommand
+## @return       will exit on failure conditions
+function hadoop_subcommand_secure_opts
+{
+  declare program=$1
+  declare command=$2
+  declare uvar
+  declare uprogram
+  declare ucommand
+
+  if [[ -z "${program}" || -z "${command}" ]]; then
+    return 1
+  fi
+
+  # bash 4 and up have built-in ways to upper and lower
+  # case the contents of vars.  This is faster than
+  # calling tr.
+
+  if [[ -z "${BASH_VERSINFO[0]}" ]] \
+     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
+    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
+  else
+    uprogram=${program^^}
+    ucommand=${command^^}
+  fi
+
+  # HDFS_DATANODE_SECURE_EXTRA_OPTS
+  # HDFS_NFS3_SECURE_EXTRA_OPTS
+  # ...
+  uvar="${uprogram}_${ucommand}_SECURE_EXTRA_OPTS"
+
+  if [[ -n ${!uvar} ]]; then
+    hadoop_debug "Appending ${!uvar} onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${!uvar}"
+    return 0
+  fi
+}
+
 ## @description  Perform the 'hadoop classpath', etc subcommand with the given
 ## @description  parameters
 ## @audience     private
