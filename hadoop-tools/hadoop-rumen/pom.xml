@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.0.0-alpha1-SNAPSHOT</version>
+    <version>3.0.0-alpha1</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-rumen</artifactId>
-  <version>3.0.0-alpha1-SNAPSHOT</version>
+  <version>3.0.0-alpha1</version>
   <description>Apache Hadoop Rumen</description>
   <name>Apache Hadoop Rumen</name>
   <packaging>jar</packaging>
