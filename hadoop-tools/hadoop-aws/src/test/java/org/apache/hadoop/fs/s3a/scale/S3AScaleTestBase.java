@@ -57,6 +57,10 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     Thread.currentThread().setName("JUnit");
   }
 
+  public static final long _1KB = 1024L;
+  public static final long _1MB = _1KB * _1KB;
+  public static final long _1GB = _1KB * _1MB;
+
   /**
    * The number of operations to perform: {@value}.
    */

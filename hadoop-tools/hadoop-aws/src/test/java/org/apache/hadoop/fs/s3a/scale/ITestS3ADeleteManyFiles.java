@@ -116,20 +116,9 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
 
   @Test
   public void testOpenCreate() throws IOException {
-    Path dir = new Path("/tests3a");
-    ContractTestUtils.createAndVerifyFile(fs, dir, 1024);
-    ContractTestUtils.createAndVerifyFile(fs, dir, 5 * 1024 * 1024);
-    ContractTestUtils.createAndVerifyFile(fs, dir, 20 * 1024 * 1024);
-
-
-    /*
-    Enable to test the multipart upload
-    try {
-      ContractTestUtils.createAndVerifyFile(fs, dir,
-          (long)6 * 1024 * 1024 * 1024);
-    } catch (IOException e) {
-      fail(e.getMessage());
-    }
-    */
+    final Path scaleTestDir = getTestPath();
+    final Path srcDir = new Path(scaleTestDir, "opencreate");
+    ContractTestUtils.createAndVerifyFile(fs, srcDir, 1024);
+    ContractTestUtils.createAndVerifyFile(fs, srcDir, 50 * 1024);
   }
 }
