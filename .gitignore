@@ -37,8 +37,8 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/.sass-cache
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/connect.lock
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/coverage/*
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/libpeerconnection.log
-hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webappnpm-debug.log
-hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapptestem.log
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/npm-debug.log
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/src/main/webapp/testem.log
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/dist
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-ui/tmp
 yarnregistry.pdf
