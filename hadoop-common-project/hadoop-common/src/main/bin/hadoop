@@ -208,8 +208,13 @@ if [[ ${HADOOP_WORKER_MODE} = true ]]; then
   exit $?
 fi
 
+hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
   HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
+
+  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
   priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
