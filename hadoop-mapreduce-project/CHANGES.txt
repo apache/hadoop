@@ -18,6 +18,8 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6768. TestRecovery.testSpeculative failed with NPE (Haibo Chen
     via jlowe)
 
+    MAPREDUCE-4784. TestRecovery occasionally fails (Haibo Chen via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
