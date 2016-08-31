@@ -74,15 +74,4 @@ public interface S3ATestConstants {
    */
   String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
 
-  /**
-   * Name of the property to define the file size for the huge file
-   * tests: {@value}. Measured in MB.
-   */
-  String KEY_HUGE_FILESIZE = S3A_SCALE_TEST + "huge.filesize";
-
-  /**
-   * The default huge size is small —full 5GB+ scale tests are something
-   * to run in long test runs on EC2 VMs. {@value}.
-   */
-  long DEFAULT_HUGE_FILESIZE = 10L;
 }

@@ -22,13 +22,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.util.Progressable;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.internal.AssumptionViolatedException;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,35 +76,35 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
 
   @Override
   public void tearDown() throws Exception {
-    // do nothing
+    // do nothing. Specifically: do not delete the test dir
   }
 
   @Override
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
     configuration.setBoolean(Constants.FAST_UPLOAD, true);
-    configuration.setLong(MIN_MULTIPART_THRESHOLD, 10 * _1MB);
+    configuration.setLong(MIN_MULTIPART_THRESHOLD, 1 * _1MB);
     configuration.setLong(SOCKET_SEND_BUFFER, BLOCKSIZE);
     configuration.setLong(SOCKET_RECV_BUFFER, BLOCKSIZE);
     return configuration;
   }
 
-  @Override
-  protected Timeout createTestTimeout() {
-    return new Timeout(120 * 60 * 1000);
-  }
-
   @Test
   public void test_001_CreateHugeFile() throws IOException {
-    long mb = getConf().getLong(KEY_HUGE_FILESIZE, DEFAULT_HUGE_FILESIZE);
+    long mb = getTestProperty(KEY_HUGE_FILESIZE, DEFAULT_HUGE_FILESIZE);
     long filesize = _1MB * mb;
 
     describe("Creating file %s of size %d MB", hugefile, mb);
     try {
-      long actualSize = fs.getFileStatus(hugefile).getLen();
-      Assume.assumeTrue("File of desired size already exists; skipping",
-          actualSize != filesize);
+      S3AFileStatus status = fs.getFileStatus(hugefile);
+      long actualSize = status.getLen();
+      if (actualSize == filesize) {
+        String message = "File of size " + mb + " MB exists: " + status;
+        LOG.info(message);
+        throw new AssumptionViolatedException(message);
+      }
     } catch (FileNotFoundException e) {
+      // the file doesn't exist and so must be created.
     }
     byte[] data = new byte[BLOCKSIZE];
     for (int i = 0; i < BLOCKSIZE; i++) {
@@ -115,21 +118,68 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
     long blocks = filesize / BLOCKSIZE;
     long blocksPerMB = _1MB / BLOCKSIZE;
 
+    // perform the upload.
+    // there's lots of logging here, so that a tail -f on the output log
+    // can give a view of what is happening.
+    StorageStatistics storageStatistics = fs.getStorageStatistics();
+    String putRequests = Statistic.OBJECT_PUT_REQUESTS.getSymbol();
+    String putBytes = Statistic.OBJECT_PUT_BYTES.getSymbol();
+
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    try(FSDataOutputStream out = fs.create(hugefile, true)) {
+
+    try(FSDataOutputStream out = fs.create(hugefile,
+        true,
+        BLOCKSIZE,
+        new ProgressCallback())) {
+
+
       for (long block = 0; block < blocks; block++) {
         out.write(data);
         if (block > 0 && blocksPerMB % block == 0) {
-          LOG.info(".");
+          long written = block * BLOCKSIZE;
+          long percentage = written * 100 / filesize;
+          LOG.info(String.format("[%02d%%] Written %d MB out of %d MB;" +
+                  " PUT = %d bytes in %d operations",
+              percentage, written, filesize,
+              storageStatistics.getLong(putBytes),
+              storageStatistics.getLong(
+                  putRequests)
+          ));
         }
       }
+      // now close the file
+      ContractTestUtils.NanoTimer flushTimer
+          = new ContractTestUtils.NanoTimer();
+//      out.flush();
+      flushTimer.end("Time to flush() output stream");
+      ContractTestUtils.NanoTimer closeTimer
+          = new ContractTestUtils.NanoTimer();
+      out.close();
+      closeTimer.end("Time to close() output stream");
     }
+
     timer.end("Time to write %d MB in blocks of %d", mb,
         BLOCKSIZE);
     LOG.info("Time per MB to write = {} nS", toHuman(timer.duration() / mb));
     logFSState();
     S3AFileStatus status = fs.getFileStatus(hugefile);
     assertEquals("File size in " + status, filesize, status.getLen());
+  }
+
+  /**
+   * Progress callback from AWS. Likely to come in on a different thread.
+   */
+  private static class ProgressCallback implements Progressable {
+    private int counter = 0;
+
+    @Override
+    public void progress() {
+      counter ++;
+    }
+
+    public int getCounter() {
+      return counter;
+    }
   }
 
   void assumeHugeFileExists() throws IOException {
@@ -159,7 +209,7 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
   }
 
   private void logFSState() {
-    LOG.info("File System state after operation; {}", fs);
+    LOG.info("File System state after operation:\n{}", fs);
   }
 
   @Test
