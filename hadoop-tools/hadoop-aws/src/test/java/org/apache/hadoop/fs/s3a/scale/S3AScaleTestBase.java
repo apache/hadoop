@@ -50,7 +50,8 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public TestName methodName = new TestName();
 
   @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
+  public Timeout testTimeout = createTestTimeout();
+
 
   @BeforeClass
   public static void nameThread() {
@@ -161,6 +162,14 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   protected long getOperationCount() {
     return getConf().getLong(KEY_OPERATION_COUNT, DEFAULT_OPERATION_COUNT);
+  }
+
+  /**
+   * Create the timeout for tests. Some large tests may need a larger value.
+   * @return the test timeout to use
+   */
+  protected Timeout createTestTimeout() {
+    return new Timeout(30 * 60 * 1000);
   }
 
   /**

@@ -1731,7 +1731,7 @@ endpoint:
 </property>
 ```
 
-#### Scale test operation count
+#### Scale tests
 
 Some scale tests perform multiple operations (such as creating many directories).
 
@@ -1767,6 +1767,37 @@ smaller to achieve faster test runs.
         <name>scale.test.distcp.file.size.kb</name>
         <value>10240</value>
       </property>
+
+S3A specific scale test properties are
+
+##### `fs.s3a.scale.test.huge.filesize`: size in MB for "Huge file tests".
+
+The Huge File tests validate S3A's ability to handle large files —the property
+`fs.s3a.scale.test.huge.filesize` declares the file size to use.
+
+```xml
+<property>
+  <name>fs.s3a.scale.test.huge.filesize</name>
+  <value>20</value>
+</property>
+```
+
+Amazon S3 handles files larger than 5GB differently than smaller ones.
+Setting the huge filesize to a number greater than 5120) validates support
+for huge files.
+
+```xml
+<property>
+  <name>fs.s3a.scale.test.huge.filesize</name>
+  <value>5130</value>
+</property>
+```
+
+1. Tests at this scale are slow: they are best executed from hosts running in
+the cloud infrastructure where the S3 endpoint is based.
+1. The tests are executed in an order to only clean up created files after
+the end of all the tests. If the tests are interrupted, the test data will remain.
+
 
 
 ### Testing against non AWS S3 endpoints.

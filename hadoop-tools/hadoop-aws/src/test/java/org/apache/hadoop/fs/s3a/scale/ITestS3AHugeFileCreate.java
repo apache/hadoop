@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +84,11 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
     configuration.setLong(SOCKET_SEND_BUFFER, BLOCKSIZE);
     configuration.setLong(SOCKET_RECV_BUFFER, BLOCKSIZE);
     return configuration;
+  }
+
+  @Override
+  protected Timeout createTestTimeout() {
+    return new Timeout(120 * 60 * 1000);
   }
 
   @Test
