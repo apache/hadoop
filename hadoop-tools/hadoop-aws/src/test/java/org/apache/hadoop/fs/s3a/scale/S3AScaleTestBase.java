@@ -120,6 +120,13 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public static final String KEY_HUGE_FILESIZE = S3A_SCALE_TEST + "huge.filesize";
 
   /**
+   * Name of the property to define the partition size for the huge file
+   * tests: {@value}. Measured in MB.
+   */
+  public static final String KEY_HUGE_PARTITION_SIZE =
+      S3A_SCALE_TEST + "huge.partition.size";
+
+  /**
    * The default huge size is small —full 5GB+ scale tests are something
    * to run in long test runs on EC2 VMs. {@value}.
    */
@@ -169,7 +176,8 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public void setUp() throws Exception {
     demandCreateConfiguration();
     LOG.debug("Scale test operation count = {}", getOperationCount());
-    fs = S3ATestUtils.createTestFileSystem(conf);
+    // multipart purges are disabled on the scale tests
+    fs = S3ATestUtils.createTestFileSystem(conf, false);
   }
 
   private void demandCreateConfiguration() {

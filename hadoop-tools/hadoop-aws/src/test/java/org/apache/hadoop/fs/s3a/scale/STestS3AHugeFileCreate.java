@@ -56,9 +56,9 @@ import static org.apache.hadoop.fs.s3a.Constants.SOCKET_SEND_BUFFER;
  * in case an individual test is executed.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
+public class STestS3AHugeFileCreate extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
-      ITestS3AHugeFileCreate.class);
+      STestS3AHugeFileCreate.class);
   private Path scaleTestDir;
   private Path hugefile;
   private Path hugefileRenamed;
@@ -83,14 +83,14 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
     configuration.setBoolean(Constants.FAST_UPLOAD, true);
-    configuration.setLong(MIN_MULTIPART_THRESHOLD, 1 * _1MB);
+    configuration.setLong(MIN_MULTIPART_THRESHOLD, 5 * _1MB);
     configuration.setLong(SOCKET_SEND_BUFFER, BLOCKSIZE);
     configuration.setLong(SOCKET_RECV_BUFFER, BLOCKSIZE);
     return configuration;
   }
 
   @Test
-  public void test_001_CreateHugeFile() throws IOException {
+  public void test_010_CreateHugeFile() throws IOException {
     long mb = getTestProperty(KEY_HUGE_FILESIZE, DEFAULT_HUGE_FILESIZE);
     long filesize = _1MB * mb;
 
@@ -133,14 +133,16 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
         new ProgressCallback())) {
 
 
-      for (long block = 0; block < blocks; block++) {
+      for (long block = 1; block <= blocks; block++) {
         out.write(data);
-        if (block > 0 && blocksPerMB % block == 0) {
+        if (block % blocksPerMB == 0) {
           long written = block * BLOCKSIZE;
           long percentage = written * 100 / filesize;
-          LOG.info(String.format("[%02d%%] Written %d MB out of %d MB;" +
+          LOG.info(String.format("[%03d%%] Written %.2f MB out of %.2f MB;" +
                   " PUT = %d bytes in %d operations",
-              percentage, written, filesize,
+              percentage,
+              1.0 * written / _1MB,
+              1.0 * filesize / _1MB,
               storageStatistics.getLong(putBytes),
               storageStatistics.getLong(
                   putRequests)
@@ -148,10 +150,6 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
         }
       }
       // now close the file
-      ContractTestUtils.NanoTimer flushTimer
-          = new ContractTestUtils.NanoTimer();
-//      out.flush();
-      flushTimer.end("Time to flush() output stream");
       ContractTestUtils.NanoTimer closeTimer
           = new ContractTestUtils.NanoTimer();
       out.close();
@@ -161,7 +159,11 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
     timer.end("Time to write %d MB in blocks of %d", mb,
         BLOCKSIZE);
     LOG.info("Time per MB to write = {} nS", toHuman(timer.duration() / mb));
+    LOG.info("Effective Bandwidth: {} MB/s", timer.bandwidth(filesize));
     logFSState();
+    Long putRequestCount = storageStatistics.getLong(putRequests);
+    LOG.info("Time per PUT {}",
+        toHuman(timer.nanosPerOperation(putRequestCount)));
     S3AFileStatus status = fs.getFileStatus(hugefile);
     assertEquals("File size in " + status, filesize, status.getLen());
   }
@@ -205,6 +207,7 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
     long mb = Math.max(filesize / _1MB, 1);
     timer.end("Time to read file of %d MB ", mb);
     LOG.info("Time per MB to read = {} nS", toHuman(timer.duration() / mb));
+    LOG.info("Effective Bandwidth: {} MB/s", timer.bandwidth(filesize));
     logFSState();
   }
 
@@ -224,6 +227,7 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
     long mb = Math.max(filesize / _1MB, 1);
     timer.end("Time to rename file of %d MB", mb);
     LOG.info("Time per MB to rename = {} nS", toHuman(timer.duration() / mb));
+    LOG.info("Effective Bandwidth: {} MB/s" , timer.bandwidth(filesize));
     logFSState();
     S3AFileStatus destFileStatus = fs.getFileStatus(hugefileRenamed);
     assertEquals(filesize, destFileStatus.getLen());
@@ -232,8 +236,13 @@ public class ITestS3AHugeFileCreate extends S3AScaleTestBase {
   @Test
   public void test_999_DeleteHugeFiles() throws IOException {
     describe("Deleting %s", hugefile);
+    ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     fs.delete(hugefile, false);
+    timer.end("Time to delete %s", hugefile);
+    ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
+
     fs.delete(hugefileRenamed, false);
+    timer2.end("Time to delete %s", hugefileRenamed);
     ContractTestUtils.rm(fs, getTestPath(), true, true);
   }
 
