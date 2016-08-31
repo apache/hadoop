@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang.StringUtils;
@@ -221,7 +224,7 @@ public abstract class Command extends Configured {
    * @return Set of node names
    * @throws IOException
    */
-  private Set<String> getNodeList(String listArg) throws IOException {
+  protected Set<String> getNodeList(String listArg) throws IOException {
     URL listURL;
     String nodeData;
     Set<String> resultSet = new TreeSet<>();
@@ -240,6 +243,37 @@ public abstract class Command extends Configured {
     String[] nodes = nodeData.split(",");
     Collections.addAll(resultSet, nodes);
     return resultSet;
+  }
+
+  /**
+   * Returns a DiskBalancer Node list from the Cluster or null if not found.
+   *
+   * @param listArg String File URL or a comma separated list of node names.
+   * @return List of DiskBalancer Node
+   * @throws IOException
+   */
+  protected List<DiskBalancerDataNode> getNodes(String listArg)
+      throws IOException {
+    Set<String> nodeNames = null;
+    List<DiskBalancerDataNode> nodeList = Lists.newArrayList();
+
+    if ((listArg == null) || listArg.isEmpty()) {
+      return nodeList;
+    }
+    nodeNames = getNodeList(listArg);
+
+    DiskBalancerDataNode node = null;
+    if (!nodeNames.isEmpty()) {
+      for (String name : nodeNames) {
+        node = getNode(name);
+
+        if (node != null) {
+          nodeList.add(node);
+        }
+      }
+    }
+
+    return nodeList;
   }
 
   /**
@@ -470,5 +504,13 @@ public abstract class Command extends Configured {
    * */
   public int getTopNodes() {
     return topNodes;
+  }
+
+  /**
+   * Set DiskBalancer cluster
+   */
+  @VisibleForTesting
+  public void setCluster(DiskBalancerCluster newCluster) {
+    this.cluster = newCluster;
   }
 }
