@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -139,6 +141,25 @@ class JsonUtilClient {
         symlink, DFSUtilClient.string2Bytes(localName),
         fileId, childrenNum, null,
         storagePolicy, null);
+  }
+
+  static DirectoryListing toDirectoryListing(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    final List<?> list = JsonUtilClient.getList(json,
+        "partialListing");
+
+    HdfsFileStatus[] partialListing = new HdfsFileStatus[list.size()];
+    int i = 0;
+    for (Object o : list) {
+      final Map<?, ?> m = (Map<?, ?>) o;
+      partialListing[i++] = toFileStatus(m, false);
+    }
+    int remainingEntries = getInt(json, "remainingEntries", -1);
+    Preconditions.checkState(remainingEntries != -1,
+        "remainingEntries was not set");
+    return new DirectoryListing(partialListing, remainingEntries);
   }
 
   /** Convert a Json map to an ExtendedBlock object. */

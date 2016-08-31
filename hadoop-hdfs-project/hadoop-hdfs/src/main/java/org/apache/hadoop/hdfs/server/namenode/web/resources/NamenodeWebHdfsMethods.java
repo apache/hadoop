@@ -789,11 +789,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
           final TokenServiceParam tokenService,
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
-          final NoRedirectParam noredirect
+          final NoRedirectParam noredirect,
+      @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
+          final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService, noredirect);
+        tokenKind, tokenService, noredirect, startAfter);
   }
 
   /** Handle HTTP GET request. */
@@ -832,12 +834,14 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
           final TokenServiceParam tokenService,
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
-          final NoRedirectParam noredirect
+          final NoRedirectParam noredirect,
+      @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
+          final StartAfterParam startAfter
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        tokenKind, tokenService);
+        tokenKind, tokenService, startAfter);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -846,7 +850,7 @@ public class NamenodeWebHdfsMethods {
           return get(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
               xattrNames, xattrEncoding, excludeDatanodes, fsAction, tokenKind,
-              tokenService, noredirect);
+              tokenService, noredirect, startAfter);
         } finally {
           reset();
         }
@@ -871,7 +875,8 @@ public class NamenodeWebHdfsMethods {
       final FsActionParam fsAction,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
-      final NoRedirectParam noredirectParam
+      final NoRedirectParam noredirectParam,
+      final StartAfterParam startAfter
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final Configuration conf = (Configuration) context
@@ -993,6 +998,16 @@ public class NamenodeWebHdfsMethods {
     case CHECKACCESS: {
       np.checkAccess(fullpath, FsAction.getFsAction(fsAction.getValue()));
       return Response.ok().build();
+    }
+    case LISTSTATUS_BATCH:
+    {
+      byte[] start = HdfsFileStatus.EMPTY_NAME;
+      if (startAfter != null && startAfter.getValue() != null) {
+        start = startAfter.getValue().getBytes(Charsets.UTF_8);
+      }
+      final DirectoryListing listing = getDirectoryListing(np, fullpath, start);
+      final String js = JsonUtil.toJsonString(listing);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
