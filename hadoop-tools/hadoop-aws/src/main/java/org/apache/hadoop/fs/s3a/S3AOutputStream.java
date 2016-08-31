@@ -84,8 +84,19 @@ public class S3AOutputStream extends OutputStream {
         new FileOutputStream(backupFile));
   }
 
+  /**
+   * Check for the filesystem being open.
+   * @throws IOException if the filesystem is closed.
+   */
+  void checkOpen() throws IOException {
+    if (closed) {
+      throw new IOException("Filesystem closed");
+    }
+  }
+
   @Override
   public void flush() throws IOException {
+    checkOpen();
     backupStream.flush();
   }
 
@@ -133,11 +144,13 @@ public class S3AOutputStream extends OutputStream {
 
   @Override
   public void write(int b) throws IOException {
+    checkOpen();
     backupStream.write(b);
   }
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
+    checkOpen();
     backupStream.write(b, off, len);
   }
 

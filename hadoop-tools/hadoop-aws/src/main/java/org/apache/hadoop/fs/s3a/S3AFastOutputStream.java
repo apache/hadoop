@@ -154,6 +154,16 @@ public class S3AFastOutputStream extends OutputStream {
   }
 
   /**
+   * Check for the filesystem being open.
+   * @throws IOException if the filesystem is closed.
+   */
+  void checkOpen() throws IOException {
+    if (closed) {
+      throw new IOException("Filesystem closed");
+    }
+  }
+
+  /**
    * Writes a byte to the memory buffer. If this causes the buffer to reach
    * its limit, the actual upload is submitted to the threadpool.
    * @param b the int of which the lowest byte is written
@@ -161,6 +171,7 @@ public class S3AFastOutputStream extends OutputStream {
    */
   @Override
   public synchronized void write(int b) throws IOException {
+    checkOpen();
     buffer.write(b);
     if (buffer.size() == bufferLimit) {
       uploadBuffer();
@@ -180,6 +191,7 @@ public class S3AFastOutputStream extends OutputStream {
   @Override
   public synchronized void write(byte[] b, int off, int len)
       throws IOException {
+    checkOpen();
     if (b == null) {
       throw new NullPointerException();
     } else if ((off < 0) || (off > b.length) || (len < 0) ||
