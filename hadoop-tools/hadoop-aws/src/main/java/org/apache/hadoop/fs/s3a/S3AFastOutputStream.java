@@ -94,7 +94,9 @@ public class S3AFastOutputStream extends OutputStream {
    * @param fs S3AFilesystem
    * @param bucket S3 bucket name
    * @param key S3 key name
-   * @param progress report progress in order to prevent timeouts
+   * @param progress report progress in order to prevent timeouts. If
+   * this class implements {@code ProgressListener} then it will be
+   * directly wired up to the AWS client, so receive detailed progress information.
    * @param cannedACL used CannedAccessControlList
    * @param partSize size of a single part in a multi-part upload (except
    * last part)
@@ -148,7 +150,9 @@ public class S3AFastOutputStream extends OutputStream {
     this.buffer = new ByteArrayOutputStream(initialBufferSize);
     this.executorService = MoreExecutors.listeningDecorator(threadPoolExecutor);
     this.multiPartUpload = null;
-    this.progressListener = new ProgressableListener(progress);
+    this.progressListener = (progress instanceof ProgressListener) ?
+        (ProgressListener) progress
+        : new ProgressableListener(progress);
     LOG.debug("Initialized S3AFastOutputStream for bucket '{}' key '{}'",
         bucket, key);
   }
