@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -506,10 +507,13 @@ class FSDirWriteFileOp {
         return newNode;
       }
     } catch (IOException e) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
-            "DIR* FSDirectory.unprotectedAddFile: exception when add "
-                + existing.getPath() + " to the file system", e);
+      NameNode.stateChangeLog.warn(
+          "DIR* FSDirectory.unprotectedAddFile: exception when add " + existing
+              .getPath() + " to the file system", e);
+      if (e instanceof FSLimitException.MaxDirectoryItemsExceededException) {
+        NameNode.stateChangeLog.warn("Please increase "
+            + "dfs.namenode.fs-limits.max-directory-items and make it "
+            + "consistent across all NameNodes.");
       }
     }
     return null;
