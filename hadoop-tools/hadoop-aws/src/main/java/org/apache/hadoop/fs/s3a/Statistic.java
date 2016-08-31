@@ -80,7 +80,7 @@ public enum Statistic {
   OBJECT_PUT_BYTES("object_put_bytes", "number of bytes uploaded"),
   STREAM_ABORTED("stream_aborted",
       "Count of times the TCP stream was aborted"),
-  STREAM_BACKWARD_SEEK_OPERATIONS("stream_backward_seek_pperations",
+  STREAM_BACKWARD_SEEK_OPERATIONS("stream_backward_seek_operations",
       "Number of executed seek operations which went backwards in a stream"),
   STREAM_CLOSED("streamClosed", "Count of times the TCP stream was closed"),
   STREAM_CLOSE_OPERATIONS("stream_close_operations",
