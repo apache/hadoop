@@ -96,6 +96,16 @@ public class JsonUtil {
     if (status == null) {
       return null;
     }
+    final Map<String, Object> m = toJsonMap(status);
+    try {
+      return includeType ?
+          toJsonString(FileStatus.class, m) : MAPPER.writeValueAsString(m);
+    } catch (IOException ignored) {
+    }
+    return null;
+  }
+
+  private static Map<String, Object> toJsonMap(HdfsFileStatus status) {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("pathSuffix", status.getLocalName());
     m.put("type", WebHdfsConstants.PathType.valueOf(status));
@@ -121,12 +131,7 @@ public class JsonUtil {
     m.put("fileId", status.getFileId());
     m.put("childrenNum", status.getChildrenNum());
     m.put("storagePolicy", status.getStoragePolicy());
-    try {
-      return includeType ?
-          toJsonString(FileStatus.class, m) : MAPPER.writeValueAsString(m);
-    } catch (IOException ignored) {
-    }
-    return null;
+    return m;
   }
 
   /** Convert an ExtendedBlock to a Json map. */
@@ -225,6 +230,34 @@ public class JsonUtil {
     m.put("locations", toJsonArray(locatedblock.getLocations()));
     m.put("cachedLocations", toJsonArray(locatedblock.getCachedLocations()));
     return m;
+  }
+
+  public static String toJsonString(final DirectoryListing listing) throws
+      IOException {
+
+    if (listing == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = new TreeMap<>();
+    m.put("partialListing", toJsonArray(listing.getPartialListing()));
+    m.put("remainingEntries", listing.getRemainingEntries());
+    return MAPPER.writeValueAsString(m);
+  }
+
+  private static Object[] toJsonArray(HdfsFileStatus[] statuses) throws
+      IOException {
+    if (statuses == null) {
+      return null;
+    }
+    if (statuses.length == 0) {
+      return EMPTY_OBJECT_ARRAY;
+    }
+    final Object[] a = new Object[statuses.length];
+    for (int i = 0; i < statuses.length; i++) {
+      a[i] = toJsonMap(statuses[i]);
+    }
+    return a;
   }
 
   /** Convert a LocatedBlock[] to a Json array. */

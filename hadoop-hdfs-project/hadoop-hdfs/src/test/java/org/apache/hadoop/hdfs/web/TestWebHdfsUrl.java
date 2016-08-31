@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
+import org.apache.hadoop.hdfs.web.resources.StartAfterParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.hdfs.web.resources.FsActionParam;
@@ -305,6 +306,30 @@ public class TestWebHdfsUrl {
             FsActionParam.NAME + "=" + FsAction.READ_WRITE.SYMBOL
         },
         checkAccessUrl);
+  }
+
+  @Test(timeout=60000)
+  public void testBatchedListingUrl() throws Exception {
+    Configuration conf = new Configuration();
+
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser("test-user");
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebHdfsFileSystem webhdfs = getWebHdfsFileSystem(ugi, conf);
+    Path fsPath = new Path("/p1");
+
+    final StartAfterParam startAfter =
+        new StartAfterParam("last");
+    URL url = webhdfs.toUrl(GetOpParam.Op.LISTSTATUS_BATCH,
+        fsPath, startAfter);
+    checkQueryParams(
+        new String[]{
+            GetOpParam.Op.LISTSTATUS_BATCH.toQueryString(),
+            new UserParam(ugi.getShortUserName()).toString(),
+            StartAfterParam.NAME + "=" + "last"
+        },
+        url);
   }
   
   private void checkQueryParams(String[] expected, URL url) {

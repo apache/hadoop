@@ -453,4 +453,11 @@ public class TestParam {
       LOG.info("EXPECTED: " + e);
     }
   }
+
+  @Test
+  public void testStartAfterParam() throws Exception {
+    String s = "/helloWorld";
+    StartAfterParam param = new StartAfterParam(s);
+    Assert.assertEquals(s, param.getValue());
+  }
 }

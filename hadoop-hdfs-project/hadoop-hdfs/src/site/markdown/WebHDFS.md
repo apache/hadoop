@@ -37,6 +37,7 @@ WebHDFS REST API
         * [Truncate a File](#Truncate_a_File)
         * [Status of a File/Directory](#Status_of_a_FileDirectory)
         * [List a Directory](#List_a_Directory)
+        * [Iteratively List a Directory](#Iteratively_List_a_Directory)
     * [Other File System Operations](#Other_File_System_Operations)
         * [Get Content Summary of a Directory](#Get_Content_Summary_of_a_Directory)
         * [Get File Checksum](#Get_File_Checksum)
@@ -143,6 +144,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`OPEN`](#Open_and_Read_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).open)
     * [`GETFILESTATUS`](#Status_of_a_FileDirectory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileStatus)
     * [`LISTSTATUS`](#List_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatus)
+    * [`LISTSTATUS_BATCH`](#Iteratively_List_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatusIterator)
     * [`GETCONTENTSUMMARY`](#Get_Content_Summary_of_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getContentSummary)
     * [`GETFILECHECKSUM`](#Get_File_Checksum) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileChecksum)
     * [`GETHOMEDIRECTORY`](#Get_Home_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getHomeDirectory)
@@ -589,6 +591,109 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatus
+
+### Iteratively List a Directory
+
+* Submit a HTTP GET request.
+
+        curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=<CHILD>"
+
+    The client receives a response with a batch of [`FileStatuses` JSON object](#FileStatuses_JSON_Schema), as well as iteration information:
+
+        HTTP/1.1 200 OK
+        Cache-Control: no-cache
+        Expires: Tue, 30 Aug 2016 16:42:16 GMT
+        Date: Tue, 30 Aug 2016 16:42:16 GMT
+        Pragma: no-cache
+        Expires: Tue, 30 Aug 2016 16:42:16 GMT
+        Date: Tue, 30 Aug 2016 16:42:16 GMT
+        Pragma: no-cache
+        Content-Type: application/json
+        X-FRAME-OPTIONS: SAMEORIGIN
+        Transfer-Encoding: chunked
+        Server: Jetty(6.1.26)
+
+        {
+            "partialListing": [
+                {
+                    "accessTime": 0,
+                    "blockSize": 0,
+                    "childrenNum": 0,
+                    "fileId": 16389,
+                    "group": "supergroup",
+                    "length": 0,
+                    "modificationTime": 1472575493064,
+                    "owner": "andrew",
+                    "pathSuffix": "anotherdir",
+                    "permission": "755",
+                    "replication": 0,
+                    "storagePolicy": 0,
+                    "type": "DIRECTORY"
+                },
+                {
+                    "accessTime": 0,
+                    "blockSize": 0,
+                    "childrenNum": 0,
+                    "fileId": 16386,
+                    "group": "supergroup",
+                    "length": 0,
+                    "modificationTime": 1472575274776,
+                    "owner": "andrew",
+                    "pathSuffix": "somedir",
+                    "permission": "755",
+                    "replication": 0,
+                    "storagePolicy": 0,
+                    "type": "DIRECTORY"
+                }
+            ],
+            "remainingEntries": 1
+        }
+
+
+If `remainingEntries` is non-zero, there are additional entries in the directory.
+To query the next batch, set the `startAfter` parameter to the `pathSuffix` of the last item returned in the current batch. For example:
+
+        curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=somedir"
+
+Which will return the next batch of directory entries:
+
+        HTTP/1.1 200 OK
+        Cache-Control: no-cache
+        Expires: Tue, 30 Aug 2016 16:46:23 GMT
+        Date: Tue, 30 Aug 2016 16:46:23 GMT
+        Pragma: no-cache
+        Expires: Tue, 30 Aug 2016 16:46:23 GMT
+        Date: Tue, 30 Aug 2016 16:46:23 GMT
+        Pragma: no-cache
+        Content-Type: application/json
+        X-FRAME-OPTIONS: SAMEORIGIN
+        Transfer-Encoding: chunked
+        Server: Jetty(6.1.26)
+
+        {
+            "partialListing": [
+                {
+                    "accessTime": 1472575333568,
+                    "blockSize": 1024,
+                    "childrenNum": 0,
+                    "fileId": 16388,
+                    "group": "supergroup",
+                    "length": 224,
+                    "modificationTime": 1472575334222,
+                    "owner": "andrew",
+                    "pathSuffix": "somefile",
+                    "permission": "644",
+                    "replication": 3,
+                    "storagePolicy": 0,
+                    "type": "FILE"
+                }
+            ],
+            "remainingEntries": 0
+        }
+
+Batch size is controlled by the `dfs.ls.limit` option on the NameNode.
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatusIterator
 
 Other File System Operations
 ----------------------------
