@@ -183,7 +183,7 @@ It's strongly recommended for the users to update a few configuration properties
         </property>
 
 *   JVM and log settings. You can export JVM settings (e.g., heap size and GC log) in
-    HADOOP\_NFS3\_OPTS. More NFS related settings can be found in hadoop-env.sh.
+    HDFS\_NFS3\_OPTS. More NFS related settings can be found in hadoop-env.sh.
     To get NFS debug trace, you can edit the log4j.property file
     to add the following. Note, debug trace, especially for ONCRPC, can be very verbose.
 
