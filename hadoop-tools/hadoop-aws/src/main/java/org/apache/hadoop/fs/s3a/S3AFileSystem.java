@@ -727,6 +727,15 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Get the storage statistics of this filesystem.
+   * @return the storage statistics
+   */
+  @Override
+  public S3AStorageStatistics getStorageStatistics() {
+    return storageStatistics;
+  }
+
+  /**
    * Request object metadata; increments counters in the process.
    * @param key key
    * @return the metadata
