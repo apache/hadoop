@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressListener;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -132,7 +134,6 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
         BLOCKSIZE,
         new ProgressCallback())) {
 
-
       for (long block = 1; block <= blocks; block++) {
         out.write(data);
         if (block % blocksPerMB == 0) {
@@ -150,6 +151,7 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
         }
       }
       // now close the file
+      LOG.info("Closing file and completing write operation");
       ContractTestUtils.NanoTimer closeTimer
           = new ContractTestUtils.NanoTimer();
       out.close();
@@ -158,11 +160,17 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
 
     timer.end("Time to write %d MB in blocks of %d", mb,
         BLOCKSIZE);
-    LOG.info("Time per MB to write = {} nS", toHuman(timer.duration() / mb));
-    LOG.info("Effective Bandwidth: {} MB/s", timer.bandwidth(filesize));
     logFSState();
+    if (mb > 0) {
+      LOG.info("Time per MB to write = {} nS", toHuman(timer.duration() / mb));
+    }
+    LOG.info("Effective Bandwidth: {} MB/s", timer.bandwidth(filesize));
     Long putRequestCount = storageStatistics.getLong(putRequests);
-    LOG.info("Time per PUT {}",
+    Long putByteCount = storageStatistics.getLong(putBytes);
+    LOG.info("PUT {} bytes in {} operations; {} MB/operation",
+        putByteCount, putRequestCount,
+        putByteCount  / (putRequestCount * _1MB));
+    LOG.info("Time per PUT {} nS",
         toHuman(timer.nanosPerOperation(putRequestCount)));
     S3AFileStatus status = fs.getFileStatus(hugefile);
     assertEquals("File size in " + status, filesize, status.getLen());
@@ -171,16 +179,27 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
   /**
    * Progress callback from AWS. Likely to come in on a different thread.
    */
-  private static class ProgressCallback implements Progressable {
+  private static class ProgressCallback implements Progressable,
+      ProgressListener {
     private int counter = 0;
 
     @Override
     public void progress() {
-      counter ++;
+      counter++;
     }
 
     public int getCounter() {
       return counter;
+    }
+
+    @Override
+    public void progressChanged(ProgressEvent progressEvent) {
+      counter++;
+      if (progressEvent.getEventType().isByteCountEvent()) {
+        LOG.debug("Event {}", progressEvent);
+      } else {
+        LOG.info("Event {}", progressEvent);
+      }
     }
   }
 
@@ -231,6 +250,11 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
     logFSState();
     S3AFileStatus destFileStatus = fs.getFileStatus(hugefileRenamed);
     assertEquals(filesize, destFileStatus.getLen());
+
+    // rename back
+    ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
+    fs.rename(hugefileRenamed, hugefile);
+    timer2.end("Renaming back");
   }
 
   @Test

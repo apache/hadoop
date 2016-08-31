@@ -173,7 +173,7 @@
                     <exclude>**/ITestS3AFileSystemContract.java</exclude>
                     <exclude>**/ITestS3AMiniYarnCluster.java</exclude>
                     <exclude>**/ITest*Root*.java</exclude>
-                    <exclude>**/ITestS3AHugeFileCreate.java</exclude>
+                    <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -199,6 +199,7 @@
                     <include>**/ITestS3AFileSystemContract.java</include>
                     <include>**/ITestS3AMiniYarnCluster.java</include>
                     <include>**/ITest*Root*.java</include>
+                    <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/STest*.java</include>
                   </includes>
                 </configuration>

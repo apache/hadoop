@@ -52,9 +52,8 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   @Rule
   public Timeout testTimeout = createTestTimeout();
 
-
-  @BeforeClass
-  public static void nameThread() {
+  @Before
+  public void nameThread() {
     Thread.currentThread().setName("JUnit");
   }
 
