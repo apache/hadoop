@@ -73,6 +73,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_I
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_DEFAULT;
@@ -824,6 +826,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.writeLockReportingThreshold = conf.getLong(
           DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
           DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT);
+      this.readLockReportingThreshold = conf.getLong(
+          DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+          DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT);
 
       // For testing purposes, allow the DT secret manager to be started regardless
       // of whether security is enabled.
@@ -1507,14 +1512,41 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private long writeLockReportingThreshold;
   /** Last time stamp for write lock. Keep the longest one for multi-entrance.*/
   private long writeLockHeldTimeStamp;
+  /** Threshold (ms) for long holding read lock report. */
+  private long readLockReportingThreshold;
+  /**
+   * Last time stamp for read lock. Keep the longest one for
+   * multi-entrance. This is ThreadLocal since there could be
+   * many read locks held simultaneously.
+   */
+  private static ThreadLocal<Long> readLockHeldTimeStamp =
+      new ThreadLocal<Long>() {
+        @Override
+        public Long initialValue() {
+          return Long.MAX_VALUE;
+        }
+      };
 
   @Override
   public void readLock() {
     this.fsLock.readLock().lock();
+    if (this.fsLock.getReadHoldCount() == 1) {
+      readLockHeldTimeStamp.set(monotonicNow());
+    }
   }
   @Override
   public void readUnlock() {
+    final boolean needReport = this.fsLock.getReadHoldCount() == 1;
+    final long readLockInterval = monotonicNow() - readLockHeldTimeStamp.get();
     this.fsLock.readLock().unlock();
+
+    if (needReport) {
+      readLockHeldTimeStamp.remove();
+      if (readLockInterval > this.readLockReportingThreshold) {
+        LOG.info("FSNamesystem read lock held for " + readLockInterval +
+            " ms via\n" + StringUtils.getStackTrace(Thread.currentThread()));
+      }
+    }
   }
   @Override
   public void writeLock() {
