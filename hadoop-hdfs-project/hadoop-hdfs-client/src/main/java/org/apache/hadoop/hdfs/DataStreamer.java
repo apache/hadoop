@@ -536,14 +536,8 @@ class DataStreamer extends Daemon {
     TraceScope scope = null;
     while (!streamerClosed && dfsClient.clientRunning) {
       // if the Responder encountered an error, shutdown Responder
-      if (errorState.hasError() && response != null) {
-        try {
-          response.close();
-          response.join();
-          response = null;
-        } catch (InterruptedException  e) {
-          LOG.warn("Caught exception", e);
-        }
+      if (errorState.hasError()) {
+        closeResponder();
       }
 
       DFSPacket one;
