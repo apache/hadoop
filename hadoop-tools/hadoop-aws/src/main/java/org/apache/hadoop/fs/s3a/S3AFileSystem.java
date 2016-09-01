@@ -44,6 +44,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
@@ -127,6 +128,7 @@ public class S3AFileSystem extends FileSystem {
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
+  private boolean fastUploadEnabled;
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
@@ -214,6 +216,8 @@ public class S3AFileSystem extends FileSystem {
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
+      fastUploadEnabled = getConf().getBoolean(FAST_UPLOAD,
+          DEFAULT_FAST_UPLOAD);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -487,7 +491,7 @@ public class S3AFileSystem extends FileSystem {
 
     }
     instrumentation.fileCreated();
-    if (getConf().getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD)) {
+    if (fastUploadEnabled) {
       return new FSDataOutputStream(
           new S3AFastOutputStream(s3,
               this,
@@ -727,6 +731,24 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Decrement a gauge by a specific value.
+   * @param statistic The operation to decrement
+   * @param count the count to decrement
+   */
+  protected void decrementGauge(Statistic statistic, long count) {
+    instrumentation.decrementGauge(statistic, count);
+  }
+
+  /**
+   * Increment a gauge by a specific value.
+   * @param statistic The operation to increment
+   * @param count the count to increment
+   */
+  protected void incrementGauge(Statistic statistic, long count) {
+    instrumentation.incrementGauge(statistic, count);
+  }
+
+  /**
    * Get the storage statistics of this filesystem.
    * @return the storage statistics
    */
@@ -890,7 +912,39 @@ public class S3AFileSystem extends FileSystem {
       len = putObjectRequest.getMetadata().getContentLength();
     }
     incrementPutStartStatistics(len);
-    return transfers.upload(putObjectRequest);
+    try {
+      Upload upload = transfers.upload(putObjectRequest);
+      incrementPutCompletedStatistics(true, len);
+      return upload;
+    } catch (AmazonClientException e) {
+      incrementPutCompletedStatistics(false, len);
+      throw e;
+    }
+  }
+
+  /**
+   * PUT an object directly (i.e. not via the transfer manager).
+   * Byte length is calculated from the file length, or, if there is no
+   * file, from the content length of the header.
+   * @param putObjectRequest the request
+   * @return the upload initiated
+   */
+  public PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest) {
+    long len;
+    if (putObjectRequest.getFile() != null) {
+      len = putObjectRequest.getFile().length();
+    } else {
+      len = putObjectRequest.getMetadata().getContentLength();
+    }
+    incrementPutStartStatistics(len);
+    try {
+      PutObjectResult result = s3.putObject(putObjectRequest);
+      incrementPutCompletedStatistics(true, len);
+      return result;
+    } catch (AmazonClientException e) {
+      incrementPutCompletedStatistics(false, len);
+      throw e;
+    }
   }
 
   /**
@@ -900,8 +954,16 @@ public class S3AFileSystem extends FileSystem {
    * @return the result of the operation.
    */
   public UploadPartResult uploadPart(UploadPartRequest request) {
-    incrementPutStartStatistics(request.getPartSize());
-    return s3.uploadPart(request);
+    long len = request.getPartSize();
+    incrementPutStartStatistics(len);
+    try {
+      UploadPartResult uploadPartResult = s3.uploadPart(request);
+      incrementPutCompletedStatistics(true, len);
+      return uploadPartResult;
+    } catch (AmazonClientException e) {
+      incrementPutCompletedStatistics(false, len);
+      throw e;
+    }
   }
 
   /**
@@ -914,9 +976,28 @@ public class S3AFileSystem extends FileSystem {
     LOG.debug("PUT start {} bytes", bytes);
     incrementWriteOperations();
     incrementStatistic(OBJECT_PUT_REQUESTS);
+    incrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
+    if (bytes > 0) {
+      incrementGauge(OBJECT_PUT_BYTES_PENDING, bytes);
+    }
+  }
+
+  /**
+   * At the end of a put/multipart upload operation, update the
+   * relevant counters and gauges.
+   *
+   * @param success did the operation succeed?
+   * @param bytes bytes in the request.
+   */
+  public void incrementPutCompletedStatistics(boolean success, long bytes) {
+    LOG.debug("PUT completed success={}; {} bytes", success, bytes);
+    incrementWriteOperations();
     if (bytes > 0) {
       incrementStatistic(OBJECT_PUT_BYTES, bytes);
+      decrementGauge(OBJECT_PUT_BYTES_PENDING, bytes);
     }
+    incrementStatistic(OBJECT_PUT_REQUESTS_COMPLETED);
+    decrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
   }
 
   /**
@@ -1663,6 +1744,7 @@ public class S3AFileSystem extends FileSystem {
     sb.append(", workingDir=").append(workingDir);
     sb.append(", inputPolicy=").append(inputPolicy);
     sb.append(", partSize=").append(partSize);
+    sb.append(", fastUpload=").append(fastUploadEnabled);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);
     if (cannedACL != null) {

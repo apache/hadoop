@@ -37,7 +37,6 @@ import java.io.IOException;
 public class ITestS3AFastOutputStream {
   private FileSystem fs;
 
-
   @Rule
   public Timeout testTimeout = new Timeout(30 * 60 * 1000);
 

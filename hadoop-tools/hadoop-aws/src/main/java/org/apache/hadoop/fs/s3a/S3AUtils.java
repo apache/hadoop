@@ -214,6 +214,18 @@ public final class S3AUtils {
   }
 
   /**
+   * Extract the error code of an AmazonServiceException.
+   * @param e any AmazonClientException
+   * @return the error code from the exception, or "" if it is the wrong
+   * type.
+   */
+  public static String extractErrorCode(AmazonClientException e) {
+     return e instanceof AmazonServiceException ?
+        ((AmazonServiceException) e).getErrorCode()
+         : "";
+  }
+
+  /**
    * Create a files status instance from a listing.
    * @param keyPath path to entry
    * @param summary summary from AWS

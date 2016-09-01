@@ -50,8 +50,6 @@ public class S3AOutputStream extends OutputStream {
   private boolean closed;
   private String key;
   private Progressable progress;
-  private long partSize;
-  private long partSizeThreshold;
   private S3AFileSystem fs;
   private LocalDirAllocator lDirAlloc;
 
@@ -63,9 +61,6 @@ public class S3AOutputStream extends OutputStream {
     this.key = key;
     this.progress = progress;
     this.fs = fs;
-
-    partSize = fs.getPartitionSize();
-    partSizeThreshold = fs.getMultiPartThreshold();
 
     if (conf.get(BUFFER_DIR, null) != null) {
       lDirAlloc = new LocalDirAllocator(BUFFER_DIR);
@@ -108,9 +103,6 @@ public class S3AOutputStream extends OutputStream {
 
     backupStream.close();
     LOG.debug("OutputStream for key '{}' closed. Now beginning upload", key);
-    LOG.debug("Minimum upload part size: {} threshold {}" , partSize,
-        partSizeThreshold);
-
 
     try {
       final ObjectMetadata om = fs.newObjectMetadata();

@@ -1256,6 +1256,67 @@ can be used:
 Using the explicit endpoint for the region is recommended for speed and the
 ability to use the V4 signing API.
 
+
+## "Timeout waiting for connection from pool" when writing to S3A
+
+This happens when using the Fast output stream, `fs.s3a.fast.upload=true` and
+the thread pool runs out of capacity. 
+
+```
+ [s3a-transfer-shared-pool1-t20] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: Timeout waiting for connection from poolorg.apache.http.conn.ConnectionPoolTimeoutException: Timeout waiting for connection from pool
+	at org.apache.http.impl.conn.PoolingClientConnectionManager.leaseConnection(PoolingClientConnectionManager.java:230)
+	at org.apache.http.impl.conn.PoolingClientConnectionManager$1.getConnection(PoolingClientConnectionManager.java:199)
+	at sun.reflect.GeneratedMethodAccessor13.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at com.amazonaws.http.conn.ClientConnectionRequestFactory$Handler.invoke(ClientConnectionRequestFactory.java:70)
+	at com.amazonaws.http.conn.$Proxy10.getConnection(Unknown Source)
+	at org.apache.http.impl.client.DefaultRequestDirector.execute(DefaultRequestDirector.java:424)
+	at org.apache.http.impl.client.AbstractHttpClient.doExecute(AbstractHttpClient.java:884)
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:82)
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:55)
+	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:728)
+	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+	at com.amazonaws.services.s3.AmazonS3Client.doUploadPart(AmazonS3Client.java:2921)
+	at com.amazonaws.services.s3.AmazonS3Client.uploadPart(AmazonS3Client.java:2906)
+	at org.apache.hadoop.fs.s3a.S3AFileSystem.uploadPart(S3AFileSystem.java:1025)
+	at org.apache.hadoop.fs.s3a.S3AFastOutputStream$MultiPartUpload$1.call(S3AFastOutputStream.java:360)
+	at org.apache.hadoop.fs.s3a.S3AFastOutputStream$MultiPartUpload$1.call(S3AFastOutputStream.java:355)
+	at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+```
+
+Make sure that `fs.s3a.connection.maximum` is at least larger
+than `fs.s3a.threads.max`.
+
+```xml
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>20</value>
+</property>
+
+<property>
+  <name>fs.s3a.connection.maximum</name>
+  <value>30</value>
+</property>
+```
+
+## "Timeout waiting for connection from pool" when reading from S3A
+
+This happens when more threads are trying to read from an S3A system than
+the maximum number of allocated HTTP connections. 
+
+Set `fs.s3a.connection.maximum` to a larger value (and at least as large as 
+`fs.s3a.threads.max`)
+
+### Out of heap memory when writing to S3A
+
+
 ## Visible S3 Inconsistency
 
 Amazon S3 is *an eventually consistent object store*. That is: not a filesystem.

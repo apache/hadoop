@@ -28,6 +28,8 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -50,6 +52,9 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInstrumentation {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3AInstrumentation.class);
+
   public static final String CONTEXT = "S3AFileSystem";
   private final MetricsRegistry registry =
       new MetricsRegistry("S3AFileSystem").setContext(CONTEXT);
@@ -99,8 +104,14 @@ public class S3AInstrumentation {
       OBJECT_METADATA_REQUESTS,
       OBJECT_MULTIPART_UPLOAD_ABORTED,
       OBJECT_PUT_BYTES,
-      OBJECT_PUT_REQUESTS
+      OBJECT_PUT_REQUESTS,
+      OBJECT_PUT_REQUESTS_COMPLETED
   };
+
+ private static final Statistic[] GAUGES_TO_CREATE = {
+     OBJECT_PUT_REQUESTS_ACTIVE,
+     OBJECT_PUT_BYTES_PENDING
+ };
 
   public S3AInstrumentation(URI name) {
     UUID fileSystemInstanceId = UUID.randomUUID();
@@ -140,6 +151,9 @@ public class S3AInstrumentation {
     ignoredErrors = counter(IGNORED_ERRORS);
     for (Statistic statistic : COUNTERS_TO_CREATE) {
       counter(statistic);
+    }
+    for (Statistic statistic : GAUGES_TO_CREATE) {
+      gauge(statistic.getSymbol(), statistic.getDescription());
     }
   }
 
@@ -252,18 +266,32 @@ public class S3AInstrumentation {
    * Lookup a counter by name. Return null if it is not known.
    * @param name counter name
    * @return the counter
+   * @throws IllegalStateException if the metric is not a counter
    */
   private MutableCounterLong lookupCounter(String name) {
     MutableMetric metric = lookupMetric(name);
     if (metric == null) {
       return null;
     }
-    Preconditions.checkNotNull(metric, "not found: " + name);
     if (!(metric instanceof MutableCounterLong)) {
       throw new IllegalStateException("Metric " + name
           + " is not a MutableCounterLong: " + metric);
     }
     return (MutableCounterLong) metric;
+  }
+
+  /**
+   * Look up a gauge.
+   * @param name gauge name
+   * @return the gauge or null
+   * @throws ClassCastException if the metric is not a Gauge.
+   */
+  public MutableGaugeLong lookupGauge(String name) {
+    MutableMetric metric = lookupMetric(name);
+    if (metric == null) {
+      LOG.debug("No metric {}", name);
+    }
+    return (MutableGaugeLong) metric;
   }
 
   /**
@@ -337,6 +365,38 @@ public class S3AInstrumentation {
     MutableCounterLong counter = lookupCounter(op.getSymbol());
     if (counter != null) {
       counter.incr(count);
+    }
+  }
+
+  /**
+   * Increment a specific gauge.
+   * No-op if not defined.
+   * @param op operation
+   * @param count increment value
+   * @throws ClassCastException if the metric is of the wrong type
+   */
+  public void incrementGauge(Statistic op, long count) {
+    MutableGaugeLong gauge = lookupGauge(op.getSymbol());
+    if (gauge != null) {
+      gauge.incr(count);
+    } else {
+      LOG.debug("No Gauge: "+ op);
+    }
+  }
+
+  /**
+   * Decrement a specific gauge.
+   * No-op if not defined.
+   * @param op operation
+   * @param count increment value
+   * @throws ClassCastException if the metric is of the wrong type
+   */
+  public void decrementGauge(Statistic op, long count) {
+    MutableGaugeLong gauge = lookupGauge(op.getSymbol());
+    if (gauge != null) {
+      gauge.decr(count);
+    } else {
+      LOG.debug("No Gauge: " + op);
     }
   }
 

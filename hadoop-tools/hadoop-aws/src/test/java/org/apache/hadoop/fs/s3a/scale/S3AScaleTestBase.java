@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -59,6 +61,7 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   public static final long _1KB = 1024L;
   public static final long _1MB = _1KB * _1KB;
+  public static final long _10MB = _1MB * 10;
   public static final long _1GB = _1KB * _1MB;
 
   /**
@@ -253,4 +256,17 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     }
   }
 
+  /**
+   * Get the gauge value of a statistic. Raises an assertion if
+   * there is no such gauge.
+   * @param statistic statistic to look up
+   * @return the value.
+   */
+  public long gaugeValue(Statistic statistic) {
+    S3AInstrumentation instrumentation = fs.getInstrumentation();
+    MutableGaugeLong gauge = instrumentation.lookupGauge(statistic.getSymbol());
+    assertNotNull("No gauge " + statistic
+        + " in " + instrumentation.dump("", " = ", "\n", true), gauge);
+    return gauge.value();
+  }
 }

@@ -28,7 +28,9 @@ import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
@@ -42,9 +44,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
-import static org.apache.hadoop.fs.s3a.Constants.SOCKET_RECV_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.SOCKET_SEND_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Scale test which creates a huge file.
@@ -54,8 +54,8 @@ import static org.apache.hadoop.fs.s3a.Constants.SOCKET_SEND_BUFFER;
  * an ordering based on the numbers.
  *
  * Having this ordering allows the tests to assume that the huge file
- * exists. Even so: they should all have an assumes() check at the start,
- * in case an individual test is executed.
+ * exists. Even so: they should all have a {@link #assumeHugeFileExists()}
+ * check at the start, in case an individual test is executed.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class STestS3AHugeFileCreate extends S3AScaleTestBase {
@@ -84,10 +84,11 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
-    configuration.setBoolean(Constants.FAST_UPLOAD, true);
+    configuration.setBoolean(FAST_UPLOAD, true);
     configuration.setLong(MIN_MULTIPART_THRESHOLD, 5 * _1MB);
     configuration.setLong(SOCKET_SEND_BUFFER, BLOCKSIZE);
     configuration.setLong(SOCKET_RECV_BUFFER, BLOCKSIZE);
+    configuration.set(USER_AGENT_PREFIX, "STestS3AHugeFileCreate");
     return configuration;
   }
 
@@ -126,9 +127,12 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
     StorageStatistics storageStatistics = fs.getStorageStatistics();
     String putRequests = Statistic.OBJECT_PUT_REQUESTS.getSymbol();
     String putBytes = Statistic.OBJECT_PUT_BYTES.getSymbol();
+    Statistic putRequestsActive = Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
+    Statistic putBytesPending = Statistic.OBJECT_PUT_BYTES_PENDING;
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
+    long blocksPer10MB = blocksPerMB * 10;
     try(FSDataOutputStream out = fs.create(hugefile,
         true,
         BLOCKSIZE,
@@ -136,18 +140,19 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
 
       for (long block = 1; block <= blocks; block++) {
         out.write(data);
-        if (block % blocksPerMB == 0) {
+        // every 10 MB, dump something
+        if (block % blocksPer10MB == 0) {
           long written = block * BLOCKSIZE;
           long percentage = written * 100 / filesize;
-          LOG.info(String.format("[%03d%%] Written %.2f MB out of %.2f MB;" +
-                  " PUT = %d bytes in %d operations",
+          LOG.info(String.format("[%02d%%] Written %.2f MB out of %.2f MB;" +
+                  " PUT = %d bytes (%d pending) in %d operations (%d active)",
               percentage,
               1.0 * written / _1MB,
               1.0 * filesize / _1MB,
               storageStatistics.getLong(putBytes),
-              storageStatistics.getLong(
-                  putRequests)
-          ));
+              gaugeValue(putBytesPending),
+              storageStatistics.getLong(putRequests),
+              gaugeValue(putRequestsActive)));
         }
       }
       // now close the file
@@ -174,12 +179,13 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
         toHuman(timer.nanosPerOperation(putRequestCount)));
     S3AFileStatus status = fs.getFileStatus(hugefile);
     assertEquals("File size in " + status, filesize, status.getLen());
+    assertEquals("active put requests in \n" + fs, 0, gaugeValue(putRequestsActive));
   }
 
   /**
    * Progress callback from AWS. Likely to come in on a different thread.
    */
-  private static class ProgressCallback implements Progressable,
+  private class ProgressCallback implements Progressable,
       ProgressListener {
     private int counter = 0;
 
