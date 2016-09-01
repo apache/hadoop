@@ -43,6 +43,8 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -355,23 +357,24 @@ public class Groups {
           executorService.submit(new Callable<List<String>>() {
             @Override
             public List<String> call() throws Exception {
-              boolean success = false;
-              try {
-                backgroundRefreshQueued.decrementAndGet();
-                backgroundRefreshRunning.incrementAndGet();
-                List<String> results = load(key);
-                success = true;
-                return results;
-              } finally {
-                backgroundRefreshRunning.decrementAndGet();
-                if (success) {
-                  backgroundRefreshSuccess.incrementAndGet();
-                } else {
-                  backgroundRefreshException.incrementAndGet();
-                }
-              }
+              backgroundRefreshQueued.decrementAndGet();
+              backgroundRefreshRunning.incrementAndGet();
+              List<String> results = load(key);
+              return results;
             }
           });
+      Futures.addCallback(listenableFuture, new FutureCallback<List<String>>() {
+        @Override
+        public void onSuccess(List<String> result) {
+          backgroundRefreshSuccess.incrementAndGet();
+          backgroundRefreshRunning.decrementAndGet();
+        }
+        @Override
+        public void onFailure(Throwable t) {
+          backgroundRefreshException.incrementAndGet();
+          backgroundRefreshRunning.decrementAndGet();
+        }
+      });
       return listenableFuture;
     }
 
