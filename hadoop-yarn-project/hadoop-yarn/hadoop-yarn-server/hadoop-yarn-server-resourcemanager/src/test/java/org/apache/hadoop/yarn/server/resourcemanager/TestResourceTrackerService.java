@@ -299,6 +299,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RMApp app = rm.submitApp(2000);
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
     ApplicationAttemptId aaid = app.getCurrentAppAttempt().getAppAttemptId();
+    nm1.nodeHeartbeat(aaid, 2, ContainerState.RUNNING);
+    nm3.nodeHeartbeat(true);
 
     // Graceful decommission host1 and host3
     writeToHostsFile("host1", "host3");
@@ -308,7 +310,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     // host1 should be DECOMMISSIONING due to running containers.
     // host3 should become DECOMMISSIONED.
-    nm1.nodeHeartbeat(aaid, 2, ContainerState.RUNNING);
+    nm1.nodeHeartbeat(true);
     nm3.nodeHeartbeat(true);
     rm.waitForState(id1, NodeState.DECOMMISSIONING);
     rm.waitForState(id3, NodeState.DECOMMISSIONED);
