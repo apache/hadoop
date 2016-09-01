@@ -83,6 +83,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   protected AdminStates adminState;
+  private long maintenanceExpireTimeInMS;
 
   public DatanodeInfo(DatanodeInfo from) {
     super(from);
@@ -499,17 +500,28 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /**
-   * Put a node to maintenance mode.
+   * Start the maintenance operation.
    */
   public void startMaintenance() {
-    adminState = AdminStates.ENTERING_MAINTENANCE;
+    this.adminState = AdminStates.ENTERING_MAINTENANCE;
   }
 
   /**
-   * Put a node to maintenance mode.
+   * Put a node directly to maintenance mode.
    */
   public void setInMaintenance() {
-    adminState = AdminStates.IN_MAINTENANCE;
+    this.adminState = AdminStates.IN_MAINTENANCE;
+  }
+
+  /**
+  * @param maintenanceExpireTimeInMS the time that the DataNode is in the
+  *        maintenance mode until in the unit of milliseconds.   */
+  public void setMaintenanceExpireTimeInMS(long maintenanceExpireTimeInMS) {
+    this.maintenanceExpireTimeInMS = maintenanceExpireTimeInMS;
+  }
+
+  public long getMaintenanceExpireTimeInMS() {
+    return this.maintenanceExpireTimeInMS;
   }
 
   /**
@@ -519,6 +531,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
     adminState = null;
   }
 
+  public static boolean maintenanceNotExpired(long maintenanceExpireTimeInMS) {
+    return Time.monotonicNow() < maintenanceExpireTimeInMS;
+  }
   /**
    * Returns true if the node is is entering_maintenance
    */
@@ -539,6 +554,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public boolean isMaintenance() {
     return (adminState == AdminStates.ENTERING_MAINTENANCE ||
         adminState == AdminStates.IN_MAINTENANCE);
+  }
+
+  public boolean maintenanceExpired() {
+    return !maintenanceNotExpired(this.maintenanceExpireTimeInMS);
   }
 
   public boolean isInService() {

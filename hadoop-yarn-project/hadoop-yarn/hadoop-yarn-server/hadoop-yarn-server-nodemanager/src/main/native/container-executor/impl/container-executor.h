@@ -31,7 +31,8 @@ enum command {
   LAUNCH_CONTAINER = 1,
   SIGNAL_CONTAINER = 2,
   DELETE_AS_USER = 3,
-  LAUNCH_DOCKER_CONTAINER = 4
+  LAUNCH_DOCKER_CONTAINER = 4,
+  LIST_AS_USER = 5
 };
 
 enum errorcodes {
@@ -79,7 +80,8 @@ enum operations {
   RUN_AS_USER_SIGNAL_CONTAINER = 8,
   RUN_AS_USER_DELETE = 9,
   RUN_AS_USER_LAUNCH_DOCKER_CONTAINER = 10,
-  RUN_DOCKER = 11
+  RUN_DOCKER = 11,
+  RUN_AS_USER_LIST = 12
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -188,6 +190,10 @@ int signal_container_as_user(const char *user, int pid, int sig);
 int delete_as_user(const char *user,
                    const char *dir_to_be_deleted,
                    char* const* baseDirs);
+
+// List the files in the given directory on stdout. The target_dir is always
+// assumed to be an absolute path.
+int list_as_user(const char *target_dir);
 
 // set the uid and gid of the node manager.  This is used when doing some
 // priviledged operations for setting the effective uid and gid.

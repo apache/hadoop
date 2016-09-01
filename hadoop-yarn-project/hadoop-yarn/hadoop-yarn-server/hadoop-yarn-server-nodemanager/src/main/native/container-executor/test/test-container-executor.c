@@ -454,6 +454,163 @@ void test_delete_user() {
   free(app_dir);
 }
 
+/**
+ * Read a file and tokenize it on newlines.  Place up to max lines into lines.
+ * The max+1st element of lines will be set to NULL.
+ *
+ * @param file the name of the file to open
+ * @param lines the pointer array into which to place the lines
+ * @param max the max number of lines to add to lines
+ */
+void read_lines(const char* file, char **lines, size_t max) {
+  char buf[4096];
+  size_t nread;
+
+  int fd = open(file, O_RDONLY);
+
+  if (fd < 0) {
+    printf("FAIL: failed to open directory listing file: %s\n", file);
+    exit(1);
+  } else {
+    char *cur = buf;
+    size_t count = sizeof buf;
+
+    while ((nread = read(fd, cur, count)) > 0) {
+      cur += nread;
+      count -= nread;
+    }
+
+    if (nread < 0) {
+      printf("FAIL: failed to read directory listing file: %s\n", file);
+      exit(1);
+    }
+
+    close(fd);
+  }
+
+  char* entity = strtok(buf, "\n");
+  int i;
+
+  for (i = 0; i < max; i++) {
+    if (entity == NULL) {
+      break;
+    }
+
+    lines[i] = (char *)malloc(sizeof(char) * (strlen(entity) + 1));
+    strcpy(lines[i], entity);
+    entity = strtok(NULL, "\n");
+  }
+
+  lines[i] = NULL;
+}
+
+void test_list_as_user() {
+  printf("\nTesting list_as_user\n");
+  char buffer[4096];
+
+  char *app_dir =
+      get_app_directory(TEST_ROOT "/local-1", "yarn", "app_4");
+
+  if (mkdirs(app_dir, 0700) != 0) {
+    printf("FAIL: unble to create application directory: %s\n", app_dir);
+    exit(1);
+  }
+
+  // Test with empty dir string
+  sprintf(buffer, "");
+  int ret = list_as_user(buffer);
+
+  if (ret == 0) {
+    printf("FAIL: did not fail on empty directory string\n");
+    exit(1);
+  }
+
+  // Test with a non-existent directory
+  sprintf(buffer, "%s/output", app_dir);
+
+  ret = list_as_user(buffer);
+
+  if (ret == 0) {
+    printf("FAIL: did not fail on non-existent directory\n");
+    exit(1);
+  }
+
+  // Write a couple files to list
+  sprintf(buffer, "%s/file1", app_dir);
+
+  if (write_config_file(buffer, 1) != 0) {
+    exit(1);
+  }
+
+  sprintf(buffer, "%s/.file2", app_dir);
+
+  if (write_config_file(buffer, 1) != 0) {
+    exit(1);
+  }
+
+  // Also create a directory
+  sprintf(buffer, "%s/output", app_dir);
+
+  if (mkdirs(buffer, 0700) != 0) {
+    exit(1);
+  }
+
+  // Test the regular case
+  // Store a copy of stdout, then redirect it to a file
+  sprintf(buffer, "%s/output/files", app_dir);
+
+  int oldout = dup(STDOUT_FILENO);
+  int fd = open(buffer, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+
+  dup2(fd, STDOUT_FILENO);
+
+  // Now list the files
+  ret = list_as_user(app_dir);
+
+  if (ret != 0) {
+    printf("FAIL: unable to list files in regular case\n");
+    exit(1);
+  }
+
+  // Restore stdout
+  close(fd);
+  dup2(oldout, STDOUT_FILENO);
+
+  // Check the output -- shouldn't be more than a couple lines
+  char *lines[16];
+
+  read_lines(buffer, lines, 15);
+
+  int got_file1 = 0;
+  int got_file2 = 0;
+  int got_output = 0;
+  int i;
+
+  for (i = 0; i < sizeof lines; i++) {
+    if (lines[i] == NULL) {
+      break;
+    } else if (strcmp("file1", lines[i]) == 0) {
+      got_file1 = 1;
+    } else if (strcmp(".file2", lines[i]) == 0) {
+      got_file2 = 1;
+    } else if (strcmp("output", lines[i]) == 0) {
+      got_output = 1;
+    } else {
+      printf("FAIL: listed extraneous file: %s\n", lines[i]);
+      exit(1);
+    }
+
+    free(lines[i]);
+  }
+
+  if (!got_file1 || !got_file2 || !got_output) {
+    printf("FAIL: missing files in listing\n");
+    exit(1);
+  }
+
+  free(app_dir);
+}
+
 void run_test_in_child(const char* test_name, void (*func)()) {
   printf("\nRunning test %s in child process\n", test_name);
   fflush(stdout);

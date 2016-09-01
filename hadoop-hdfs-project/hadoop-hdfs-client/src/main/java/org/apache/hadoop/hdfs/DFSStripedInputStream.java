@@ -359,11 +359,11 @@ public class DFSStripedInputStream extends DFSInputStream {
       ExtendedBlock currentBlock,
       CorruptedBlocks corruptedBlocks)
       throws IOException {
-    final int targetLength = strategy.buf.remaining();
+    final int targetLength = strategy.getTargetLength();
     int length = 0;
     try {
       while (length < targetLength) {
-        int ret = strategy.doRead(blockReader, 0, 0);
+        int ret = strategy.readFromBlock(blockReader);
         if (ret < 0) {
           throw new IOException("Unexpected EOS from the reader");
         }
@@ -425,13 +425,14 @@ public class DFSStripedInputStream extends DFSInputStream {
   }
 
   @Override
-  protected synchronized int readWithStrategy(ReaderStrategy strategy,
-      int off, int len) throws IOException {
+  protected synchronized int readWithStrategy(ReaderStrategy strategy)
+      throws IOException {
     dfsClient.checkOpen();
     if (closed.get()) {
       throw new IOException("Stream closed");
     }
 
+    int len = strategy.getTargetLength();
     CorruptedBlocks corruptedBlocks = new CorruptedBlocks();
     if (pos < getFileLength()) {
       try {
@@ -452,7 +453,7 @@ public class DFSStripedInputStream extends DFSInputStream {
           if (!curStripeRange.include(getOffsetInBlockGroup())) {
             readOneStripe(corruptedBlocks);
           }
-          int ret = copyToTargetBuf(strategy, off + result, realLen - result);
+          int ret = copyToTargetBuf(strategy, realLen - result);
           result += ret;
           pos += ret;
         }
@@ -470,16 +471,14 @@ public class DFSStripedInputStream extends DFSInputStream {
   /**
    * Copy the data from {@link #curStripeBuf} into the given buffer
    * @param strategy the ReaderStrategy containing the given buffer
-   * @param offset the offset of the given buffer. Used only when strategy is
-   *               a ByteArrayStrategy
    * @param length target length
    * @return number of bytes copied
    */
-  private int copyToTargetBuf(ReaderStrategy strategy, int offset, int length) {
+  private int copyToTargetBuf(ReaderStrategy strategy, int length) {
     final long offsetInBlk = getOffsetInBlockGroup();
     int bufOffset = getStripedBufOffset(offsetInBlk);
     curStripeBuf.position(bufOffset);
-    return strategy.copyFrom(curStripeBuf, offset,
+    return strategy.readFromBuffer(curStripeBuf,
         Math.min(length, curStripeBuf.remaining()));
   }
 
@@ -700,7 +699,8 @@ public class DFSStripedInputStream extends DFSInputStream {
 
     private ByteBufferStrategy[] getReadStrategies(StripingChunk chunk) {
       if (chunk.byteBuffer != null) {
-        ByteBufferStrategy strategy = new ByteBufferStrategy(chunk.byteBuffer);
+        ByteBufferStrategy strategy =
+            new ByteBufferStrategy(chunk.byteBuffer, readStatistics, dfsClient);
         return new ByteBufferStrategy[]{strategy};
       } else {
         ByteBufferStrategy[] strategies =
@@ -708,7 +708,8 @@ public class DFSStripedInputStream extends DFSInputStream {
         for (int i = 0; i < strategies.length; i++) {
           ByteBuffer buffer = ByteBuffer.wrap(chunk.byteArray.buf(),
               chunk.byteArray.getOffsets()[i], chunk.byteArray.getLengths()[i]);
-          strategies[i] = new ByteBufferStrategy(buffer);
+          strategies[i] =
+              new ByteBufferStrategy(buffer, readStatistics, dfsClient);
         }
         return strategies;
       }

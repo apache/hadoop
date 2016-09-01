@@ -39,12 +39,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -262,7 +262,7 @@ public class TestAMRMClientOnRMRestart {
     // new NM to represent NM re-register
     nm1 = new MockNM("h1:1234", 10240, rm2.getResourceTrackerService());
     NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId, ContainerState.RUNNING,
+        NMContainerStatus.newInstance(containerId, 0, ContainerState.RUNNING,
             Resource.newInstance(1024, 1), "recover container", 0,
             Priority.newInstance(0), 0);
     nm1.registerNode(Collections.singletonList(containerReport),
@@ -399,7 +399,7 @@ public class TestAMRMClientOnRMRestart {
 
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     NMContainerStatus containerReport =
-        NMContainerStatus.newInstance(containerId, ContainerState.RUNNING,
+        NMContainerStatus.newInstance(containerId, 0, ContainerState.RUNNING,
             Resource.newInstance(1024, 1), "recover container", 0,
             Priority.newInstance(0), 0);
     nm1.registerNode(Arrays.asList(containerReport), null);
@@ -562,8 +562,8 @@ public class TestAMRMClientOnRMRestart {
 
     List<ResourceRequest> lastAsk = null;
     List<ContainerId> lastRelease = null;
-    List<ContainerResourceChangeRequest> lastIncrease = null;
-    List<ContainerResourceChangeRequest> lastDecrease = null;
+    List<UpdateContainerRequest> lastIncrease = null;
+    List<UpdateContainerRequest> lastDecrease = null;
     List<String> lastBlacklistAdditions;
     List<String> lastBlacklistRemovals;
 
@@ -574,8 +574,8 @@ public class TestAMRMClientOnRMRestart {
         ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
         List<ContainerId> release, List<String> blacklistAdditions,
         List<String> blacklistRemovals,
-        List<ContainerResourceChangeRequest> increaseRequests,
-        List<ContainerResourceChangeRequest> decreaseRequests) {
+        List<UpdateContainerRequest> increaseRequests,
+        List<UpdateContainerRequest> decreaseRequests) {
       List<ResourceRequest> askCopy = new ArrayList<ResourceRequest>();
       for (ResourceRequest req : ask) {
         ResourceRequest reqCopy =

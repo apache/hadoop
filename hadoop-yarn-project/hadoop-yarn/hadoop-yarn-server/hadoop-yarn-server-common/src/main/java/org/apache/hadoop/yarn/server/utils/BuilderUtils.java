@@ -64,9 +64,11 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 
 /**
  * Builder utilities to construct various objects.
@@ -156,12 +158,14 @@ public class BuilderUtils {
     return cId;
   }
 
-  public static Token newContainerToken(ContainerId cId, String host,
-      int port, String user, Resource r, long expiryTime, int masterKeyId,
-      byte[] password, long rmIdentifier) throws IOException {
+  public static Token newContainerToken(ContainerId cId, int containerVersion,
+      String host, int port, String user, Resource r, long expiryTime,
+      int masterKeyId, byte[] password, long rmIdentifier) throws IOException {
     ContainerTokenIdentifier identifier =
-        new ContainerTokenIdentifier(cId, host + ":" + port, user, r,
-          expiryTime, masterKeyId, rmIdentifier, Priority.newInstance(0), 0);
+        new ContainerTokenIdentifier(cId, containerVersion, host + ":" + port,
+            user, r, expiryTime, masterKeyId, rmIdentifier,
+            Priority.newInstance(0), 0, null, CommonNodeLabelsManager.NO_LABEL,
+            ContainerType.TASK, ExecutionType.GUARANTEED);
     return newContainerToken(BuilderUtils.newNodeId(host, port), password,
         identifier);
   }

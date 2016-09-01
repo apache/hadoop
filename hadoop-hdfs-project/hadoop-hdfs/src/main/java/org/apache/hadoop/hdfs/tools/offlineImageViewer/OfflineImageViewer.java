@@ -186,6 +186,8 @@ public class OfflineImageViewer {
     
     options.addOption("p", "processor", true, "");
     options.addOption("h", "help", false, "");
+    options.addOption("maxSize", true, "");
+    options.addOption("step", true, "");
     options.addOption("skipBlocks", false, "");
     options.addOption("printToScreen", false, "");
     options.addOption("delimiter", true, "");

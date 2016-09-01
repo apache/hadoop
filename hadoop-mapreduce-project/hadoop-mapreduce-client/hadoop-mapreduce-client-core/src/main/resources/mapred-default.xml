@@ -211,6 +211,12 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.listen.queue.size</name>
+  <value>128</value>
+  <description>The length of the shuffle server listen queue.</description>
+</property>
+
+<property>
   <name>mapreduce.shuffle.connection-keep-alive.enable</name>
   <value>false</value>
   <description>set to true to support keep-alive connections.</description>

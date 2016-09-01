@@ -84,7 +84,7 @@ public class FairSchedulerTestBase {
 
     conf.setFloat(
         FairSchedulerConfiguration
-           .RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+           .RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE,
         TEST_RESERVATION_THRESHOLD);
     return conf;
   }

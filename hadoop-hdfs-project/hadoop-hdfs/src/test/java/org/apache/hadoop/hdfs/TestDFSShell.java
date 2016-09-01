@@ -113,6 +113,11 @@ public class TestDFSShell {
     return p;
   }
 
+  static void rmr(FileSystem fs, Path p) throws IOException {
+    assertTrue(fs.delete(p, true));
+    assertFalse(fs.exists(p));
+  }
+
   static File createLocalFile(File f) throws IOException {
     assertTrue(!f.exists());
     PrintWriter out = new PrintWriter(f);
@@ -189,7 +194,7 @@ public class TestDFSShell {
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
 	  FileSystem fs = cluster.getFileSystem();
 	  assertTrue("Not a HDFS: " + fs.getUri(),
-			  fs instanceof DistributedFileSystem);
+        fs instanceof DistributedFileSystem);
 	  try {
       fs.mkdirs(new Path(new Path("parent"), "child"));
       try {
@@ -224,6 +229,7 @@ public class TestDFSShell {
     shell.setConf(conf);
 
     try {
+      cluster.waitActive();
       Path myPath = new Path("/test/dir");
       assertTrue(fs.mkdirs(myPath));
       assertTrue(fs.exists(myPath));
@@ -251,7 +257,7 @@ public class TestDFSShell {
       assertTrue(val == 0);
       String returnString = out.toString();
       out.reset();
-      // Check if size matchs as expected
+      // Check if size matches as expected
       assertThat(returnString, containsString(myFileLength.toString()));
       assertThat(returnString, containsString(myFileDiskUsed.toString()));
       assertThat(returnString, containsString(myFile2Length.toString()));
@@ -308,7 +314,232 @@ public class TestDFSShell {
       System.setOut(psBackup);
       cluster.shutdown();
     }
+  }
 
+  @Test (timeout = 180000)
+  public void testDuSnapshots() throws IOException {
+    final int replication = 2;
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(replication).build();
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final PrintStream psBackup = System.out;
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final PrintStream psOut = new PrintStream(out);
+    final FsShell shell = new FsShell();
+    shell.setConf(conf);
+
+    try {
+      System.setOut(psOut);
+      cluster.waitActive();
+      final Path parent = new Path("/test");
+      final Path dir = new Path(parent, "dir");
+      mkdir(dfs, dir);
+      final Path file = new Path(dir, "file");
+      writeFile(dfs, file);
+      final Path file2 = new Path(dir, "file2");
+      writeFile(dfs, file2);
+      final Long fileLength = dfs.getFileStatus(file).getLen();
+      final Long fileDiskUsed = fileLength * replication;
+      final Long file2Length = dfs.getFileStatus(file2).getLen();
+      final Long file2DiskUsed = file2Length * replication;
+
+      /*
+       * Construct dir as follows:
+       * /test/dir/file   <- this will later be deleted after snapshot taken.
+       * /test/dir/newfile <- this will be created after snapshot taken.
+       * /test/dir/file2
+       * Snapshot enabled on /test
+       */
+
+      // test -du on /test/dir
+      int ret = -1;
+      try {
+        ret = shell.run(new String[] {"-du", dir.toString()});
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, ret);
+      String returnString = out.toString();
+      LOG.info("-du return is:\n" + returnString);
+      // Check if size matches as expected
+      assertTrue(returnString.contains(fileLength.toString()));
+      assertTrue(returnString.contains(fileDiskUsed.toString()));
+      assertTrue(returnString.contains(file2Length.toString()));
+      assertTrue(returnString.contains(file2DiskUsed.toString()));
+      out.reset();
+
+      // take a snapshot, then remove file and add newFile
+      final String snapshotName = "ss1";
+      final Path snapshotPath = new Path(parent, ".snapshot/" + snapshotName);
+      dfs.allowSnapshot(parent);
+      assertThat(dfs.createSnapshot(parent, snapshotName), is(snapshotPath));
+      rmr(dfs, file);
+      final Path newFile = new Path(dir, "newfile");
+      writeFile(dfs, newFile);
+      final Long newFileLength = dfs.getFileStatus(newFile).getLen();
+      final Long newFileDiskUsed = newFileLength * replication;
+
+      // test -du -s on /test
+      ret = -1;
+      try {
+        ret = shell.run(new String[] {"-du", "-s", parent.toString()});
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, ret);
+      returnString = out.toString();
+      LOG.info("-du -s return is:\n" + returnString);
+      Long combinedLength = fileLength + file2Length + newFileLength;
+      Long combinedDiskUsed = fileDiskUsed + file2DiskUsed + newFileDiskUsed;
+      assertTrue(returnString.contains(combinedLength.toString()));
+      assertTrue(returnString.contains(combinedDiskUsed.toString()));
+      out.reset();
+
+      // test -du on /test
+      ret = -1;
+      try {
+        ret = shell.run(new String[] {"-du", parent.toString()});
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, ret);
+      returnString = out.toString();
+      LOG.info("-du return is:\n" + returnString);
+      assertTrue(returnString.contains(combinedLength.toString()));
+      assertTrue(returnString.contains(combinedDiskUsed.toString()));
+      out.reset();
+
+      // test -du -s -x on /test
+      ret = -1;
+      try {
+        ret = shell.run(new String[] {"-du", "-s", "-x", parent.toString()});
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, ret);
+      returnString = out.toString();
+      LOG.info("-du -s -x return is:\n" + returnString);
+      Long exludeSnapshotLength = file2Length + newFileLength;
+      Long excludeSnapshotDiskUsed = file2DiskUsed + newFileDiskUsed;
+      assertTrue(returnString.contains(exludeSnapshotLength.toString()));
+      assertTrue(returnString.contains(excludeSnapshotDiskUsed.toString()));
+      out.reset();
+
+      // test -du -x on /test
+      ret = -1;
+      try {
+        ret = shell.run(new String[] {"-du", "-x", parent.toString()});
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, ret);
+      returnString = out.toString();
+      LOG.info("-du -x return is:\n" + returnString);
+      assertTrue(returnString.contains(exludeSnapshotLength.toString()));
+      assertTrue(returnString.contains(excludeSnapshotDiskUsed.toString()));
+      out.reset();
+    } finally {
+      System.setOut(psBackup);
+      cluster.shutdown();
+    }
+  }
+
+  @Test (timeout = 180000)
+  public void testCountSnapshots() throws IOException {
+    final int replication = 2;
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(replication).build();
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final PrintStream psBackup = System.out;
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    final PrintStream psOut = new PrintStream(out);
+    System.setOut(psOut);
+    final FsShell shell = new FsShell();
+    shell.setConf(conf);
+
+    try {
+      cluster.waitActive();
+      final Path parent = new Path("/test");
+      final Path dir = new Path(parent, "dir");
+      mkdir(dfs, dir);
+      final Path file = new Path(dir, "file");
+      writeFile(dfs, file);
+      final Path file2 = new Path(dir, "file2");
+      writeFile(dfs, file2);
+      final long fileLength = dfs.getFileStatus(file).getLen();
+      final long file2Length = dfs.getFileStatus(file2).getLen();
+      final Path dir2 = new Path(parent, "dir2");
+      mkdir(dfs, dir2);
+
+      /*
+       * Construct dir as follows:
+       * /test/dir/file   <- this will later be deleted after snapshot taken.
+       * /test/dir/newfile <- this will be created after snapshot taken.
+       * /test/dir/file2
+       * /test/dir2       <- this will later be deleted after snapshot taken.
+       * Snapshot enabled on /test
+       */
+
+      // take a snapshot
+      // then create /test/dir/newfile and remove /test/dir/file, /test/dir2
+      final String snapshotName = "s1";
+      final Path snapshotPath = new Path(parent, ".snapshot/" + snapshotName);
+      dfs.allowSnapshot(parent);
+      assertThat(dfs.createSnapshot(parent, snapshotName), is(snapshotPath));
+      rmr(dfs, file);
+      rmr(dfs, dir2);
+      final Path newFile = new Path(dir, "new file");
+      writeFile(dfs, newFile);
+      final Long newFileLength = dfs.getFileStatus(newFile).getLen();
+
+      // test -count on /test. Include header for easier debugging.
+      int val = -1;
+      try {
+        val = shell.run(new String[] {"-count", "-v", parent.toString() });
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, val);
+      String returnString = out.toString();
+      LOG.info("-count return is:\n" + returnString);
+      Scanner in = new Scanner(returnString);
+      in.nextLine();
+      assertEquals(3, in.nextLong()); //DIR_COUNT
+      assertEquals(3, in.nextLong()); //FILE_COUNT
+      assertEquals(fileLength + file2Length + newFileLength,
+          in.nextLong()); //CONTENT_SIZE
+      out.reset();
+
+      // test -count -x on /test. Include header for easier debugging.
+      val = -1;
+      try {
+        val =
+            shell.run(new String[] {"-count", "-x", "-v", parent.toString()});
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals(0, val);
+      returnString = out.toString();
+      LOG.info("-count -x return is:\n" + returnString);
+      in = new Scanner(returnString);
+      in.nextLine();
+      assertEquals(2, in.nextLong()); //DIR_COUNT
+      assertEquals(2, in.nextLong()); //FILE_COUNT
+      assertEquals(file2Length + newFileLength, in.nextLong()); //CONTENT_SIZE
+      out.reset();
+    } finally {
+      System.setOut(psBackup);
+      cluster.shutdown();
+    }
   }
 
   @Test (timeout = 30000)

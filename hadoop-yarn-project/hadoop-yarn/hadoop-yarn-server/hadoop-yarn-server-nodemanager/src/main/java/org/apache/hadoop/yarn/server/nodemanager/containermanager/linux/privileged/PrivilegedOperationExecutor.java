@@ -157,13 +157,15 @@ public class PrivilegedOperationExecutor {
       }
     } catch (ExitCodeException e) {
       if (operation.isFailureLoggingEnabled()) {
-
         StringBuilder logBuilder = new StringBuilder("Shell execution returned "
             + "exit code: ")
             .append(exec.getExitCode())
-            .append(". Privileged Execution Operation Output: ")
-            .append(System.lineSeparator()).append(exec.getOutput());
-
+            .append(". Privileged Execution Operation Stderr: ")
+            .append(System.lineSeparator())
+            .append(e.getMessage())
+            .append(System.lineSeparator())
+            .append("Stdout: " + exec.getOutput())
+            .append(System.lineSeparator());
         logBuilder.append("Full command array for failed execution: ")
             .append(System.lineSeparator());
         logBuilder.append(Arrays.toString(fullCommandArray));

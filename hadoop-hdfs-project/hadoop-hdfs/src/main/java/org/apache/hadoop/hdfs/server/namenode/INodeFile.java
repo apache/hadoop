@@ -200,8 +200,8 @@ public class INodeFile extends INodeWithAdditionalFields
   public INodeFile(INodeFile that) {
     super(that);
     this.header = that.header;
-    this.blocks = that.blocks;
     this.features = that.features;
+    setBlocks(that.blocks);
   }
   
   public INodeFile(INodeFile that, FileDiffList diffs) {
@@ -271,9 +271,6 @@ public class INodeFile extends INodeWithAdditionalFields
   /** Assert all blocks are complete. */
   private void assertAllBlocksComplete(int numCommittedAllowed,
       short minReplication) {
-    if (blocks == null) {
-      return;
-    }
     for (int i = 0; i < blocks.length; i++) {
       final String err = checkBlockComplete(blocks, i, numCommittedAllowed,
           minReplication);
@@ -342,7 +339,7 @@ public class INodeFile extends INodeWithAdditionalFields
   BlockInfo removeLastBlock(Block oldblock) {
     Preconditions.checkState(isUnderConstruction(),
         "file is no longer under construction");
-    if (blocks == null || blocks.length == 0) {
+    if (blocks.length == 0) {
       return null;
     }
     int size_1 = blocks.length - 1;
@@ -618,7 +615,7 @@ public class INodeFile extends INodeWithAdditionalFields
    */
   void addBlock(BlockInfo newblock) {
     Preconditions.checkArgument(newblock.isStriped() == this.isStriped());
-    if (this.blocks == null) {
+    if (this.blocks.length == 0) {
       this.setBlocks(new BlockInfo[]{newblock});
     } else {
       int size = this.blocks.length;
@@ -631,12 +628,12 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** Set the blocks. */
   private void setBlocks(BlockInfo[] blocks) {
-    this.blocks = blocks;
+    this.blocks = (blocks != null ? blocks : BlockInfo.EMPTY_ARRAY);
   }
 
   /** Clear all blocks of the file. */
   public void clearBlocks() {
-    setBlocks(BlockInfo.EMPTY_ARRAY);
+    this.blocks = BlockInfo.EMPTY_ARRAY;
   }
 
   @Override
@@ -836,7 +833,7 @@ public class INodeFile extends INodeWithAdditionalFields
    */
   public final long computeFileSize(boolean includesLastUcBlock,
       boolean usePreferredBlockSize4LastUcBlock) {
-    if (blocks == null || blocks.length == 0) {
+    if (blocks.length == 0) {
       return 0;
     }
     final int last = blocks.length - 1;
@@ -876,10 +873,6 @@ public class INodeFile extends INodeWithAdditionalFields
   // TODO: support EC with heterogeneous storage
   public final QuotaCounts storagespaceConsumedStriped() {
     QuotaCounts counts = new QuotaCounts.Builder().build();
-    if (blocks == null || blocks.length == 0) {
-      return counts;
-    }
-
     for (BlockInfo b : blocks) {
       Preconditions.checkState(b.isStriped());
       long blockSize = b.isComplete() ?
@@ -931,7 +924,7 @@ public class INodeFile extends INodeWithAdditionalFields
    * Return the penultimate allocated block for this file.
    */
   BlockInfo getPenultimateBlock() {
-    if (blocks == null || blocks.length <= 1) {
+    if (blocks.length <= 1) {
       return null;
     }
     return blocks[blocks.length - 2];
@@ -939,12 +932,12 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public BlockInfo getLastBlock() {
-    return blocks == null || blocks.length == 0? null: blocks[blocks.length-1];
+    return blocks.length == 0 ? null: blocks[blocks.length-1];
   }
 
   @Override
   public int numBlocks() {
-    return blocks == null ? 0 : blocks.length;
+    return blocks.length;
   }
 
   @VisibleForTesting
@@ -955,7 +948,7 @@ public class INodeFile extends INodeWithAdditionalFields
     out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block
     out.print(", blocks=");
-    out.print(blocks == null || blocks.length == 0? null: blocks[0]);
+    out.print(blocks.length == 0 ? null: blocks[0]);
     out.println();
   }
 
@@ -1004,7 +997,7 @@ public class INodeFile extends INodeWithAdditionalFields
       long newLength, BlockStoragePolicy bsps,
       QuotaCounts delta) {
     final BlockInfo[] blocks = getBlocks();
-    if (blocks == null || blocks.length == 0) {
+    if (blocks.length == 0) {
       return;
     }
 

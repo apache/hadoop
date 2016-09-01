@@ -135,7 +135,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     conf.setFloat(FairSchedulerConfiguration.PREEMPTION_THRESHOLD, 0f);
     conf.setFloat(
             FairSchedulerConfiguration
-                    .RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+                    .RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE,
             TEST_RESERVATION_THRESHOLD);
 
     resourceManager = new MockRM(conf);

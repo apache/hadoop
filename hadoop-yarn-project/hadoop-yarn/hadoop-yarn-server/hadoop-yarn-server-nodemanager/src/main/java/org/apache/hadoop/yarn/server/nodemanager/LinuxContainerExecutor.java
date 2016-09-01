@@ -54,7 +54,6 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.CgroupsLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -524,6 +523,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
+  public String[] getIpAndHost(Container container) {
+    return linuxContainerRuntime.getIpAndHost(container);
+  }
+
+  @Override
   public int reacquireContainer(ContainerReacquisitionContext ctx)
       throws IOException, InterruptedException {
     ContainerId containerId = ctx.getContainerId();
@@ -637,6 +641,45 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       LOG.error("DeleteAsUser for " + StringUtils.join(" ", pathsToDelete)
           + " returned with exit code: " + exitCode, e);
     }
+  }
+
+  @Override
+  protected File[] readDirAsUser(String user, Path dir) {
+    List<File> files = new ArrayList<>();
+    PrivilegedOperation listAsUserOp = new PrivilegedOperation(
+        PrivilegedOperation.OperationType.LIST_AS_USER, (String)null);
+    String runAsUser = getRunAsUser(user);
+    String dirString = "";
+
+    if (dir != null) {
+      dirString = dir.toUri().getPath();
+    }
+
+    listAsUserOp.appendArgs(runAsUser, user,
+        Integer.toString(
+            PrivilegedOperation.RunAsUserCommand.LIST_AS_USER.getValue()),
+        dirString);
+
+    try {
+      PrivilegedOperationExecutor privOpExecutor =
+          PrivilegedOperationExecutor.getInstance(super.getConf());
+
+      String results =
+          privOpExecutor.executePrivilegedOperation(listAsUserOp, true);
+
+      for (String file: results.split("\n")) {
+        // The container-executor always dumps its log output to stdout, which
+        // includes 3 lines that start with "main : "
+        if (!file.startsWith("main :")) {
+          files.add(new File(new File(dirString), file));
+        }
+      }
+    } catch (PrivilegedOperationException e) {
+      LOG.error("ListAsUser for " + dir + " returned with exit code: "
+          + e.getExitCode(), e);
+    }
+
+    return files.toArray(new File[files.size()]);
   }
 
   @Override

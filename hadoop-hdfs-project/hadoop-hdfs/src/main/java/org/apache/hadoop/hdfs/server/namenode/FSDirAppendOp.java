@@ -85,9 +85,10 @@ final class FSDirAppendOp {
     final LocatedBlock lb;
     final FSDirectory fsd = fsn.getFSDirectory();
     final String src;
+    final INodesInPath iip;
     fsd.writeLock();
     try {
-      final INodesInPath iip = fsd.resolvePathForWrite(pc, srcArg);
+      iip = fsd.resolvePathForWrite(pc, srcArg);
       src = iip.getPath();
       // Verify that the destination does not exist as a directory already
       final INode inode = iip.getLastINode();
@@ -148,8 +149,7 @@ final class FSDirAppendOp {
       fsd.writeUnlock();
     }
 
-    HdfsFileStatus stat = FSDirStatAndListingOp.getFileInfo(fsd, src, false,
-        FSDirectory.isReservedRawName(srcArg));
+    HdfsFileStatus stat = FSDirStatAndListingOp.getFileInfo(fsd, iip);
     if (lb != null) {
       NameNode.stateChangeLog.debug(
           "DIR* NameSystem.appendFile: file {} for {} at {} block {} block"

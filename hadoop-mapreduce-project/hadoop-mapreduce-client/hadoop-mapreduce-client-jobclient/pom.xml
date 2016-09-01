@@ -31,6 +31,8 @@
     <fork.mode>always</fork.mode>
     <!-- Needed for generating FindBugs warnings using parent pom -->
     <mr.basedir>${project.parent.basedir}/../</mr.basedir>
+    <should.run.jdiff>true</should.run.jdiff>
+    <dev-support.relative.dir>../../dev-support</dev-support.relative.dir>
   </properties>
 
   <dependencies>

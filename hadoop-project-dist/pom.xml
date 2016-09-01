@@ -160,7 +160,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>2.6.0</jdiff.stable.api>
+        <jdiff.stable.api>2.7.2</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
         <!-- Commented out for HADOOP-11776 -->
         <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
@@ -173,7 +173,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <executions>
-              <execution>
+             <execution>
                 <goals>
                   <goal>javadoc</goal>
                 </goals>
@@ -241,6 +241,26 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
+
+              <!-- Pre site -->
+              <execution>
+                <id>pre-site</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target if="is.hadoop.common.component">
+                    <!-- HADOOP-13428: This is for workaround issues of JDiff
+                         - https://sourceforge.net/p/javadiff/bugs/19/ -->
+                    <exec executable="patch" input="dev-support/jdiff-workaround.patch" dir="${basedir}">
+                        <arg value="-p3"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+
+
               <execution>
                 <id>site</id>
                 <phase>prepare-package</phase>
@@ -249,7 +269,6 @@
                 </goals>
                 <configuration>
                   <target if="is.hadoop.component">
-
                     <mkdir dir="${project.build.directory}/docs-src"/>
 
                     <!-- Docs -->
@@ -302,6 +321,25 @@
                   </target>
                 </configuration>
               </execution>
+
+              <!-- post site phase -->
+              <execution>
+                <id>post-site</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target if="is.hadoop.common.component">
+                    <!-- HADOOP-13428: Revert temporary patch-->
+                    <exec executable="patch" input="dev-support/jdiff-workaround.patch" dir="${basedir}">
+                        <arg value="-p3"/>
+                        <arg value="-R"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+
             </executions>
           </plugin>
         </plugins>

@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
@@ -354,12 +355,11 @@ extends AMRMClientAsync<T> {
           if (handler instanceof AMRMClientAsync.AbstractCallbackHandler) {
             // RM side of the implementation guarantees that there are
             // no duplications between increased and decreased containers
-            List<Container> changed = new ArrayList<>();
-            changed.addAll(response.getIncreasedContainers());
-            changed.addAll(response.getDecreasedContainers());
+            List<UpdatedContainer> changed = new ArrayList<>();
+            changed.addAll(response.getUpdatedContainers());
             if (!changed.isEmpty()) {
               ((AMRMClientAsync.AbstractCallbackHandler) handler)
-                  .onContainersResourceChanged(changed);
+                  .onContainersUpdated(changed);
             }
           }
 

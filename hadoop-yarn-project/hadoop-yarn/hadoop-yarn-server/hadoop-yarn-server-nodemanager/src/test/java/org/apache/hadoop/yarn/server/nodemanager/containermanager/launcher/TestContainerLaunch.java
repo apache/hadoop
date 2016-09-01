@@ -174,7 +174,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
       new DefaultContainerExecutor()
           .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()), tempFile.getName());
+              new Path(localLogDir.getAbsolutePath()), "user",
+              tempFile.getName());
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -243,7 +244,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       }
       new DefaultContainerExecutor()
           .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()));
+              new Path(localLogDir.getAbsolutePath()), "user");
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -298,7 +299,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       new DefaultContainerExecutor()
           .writeLaunchEnv(fos, env, resources, commands,
-              new Path(localLogDir.getAbsolutePath()));
+              new Path(localLogDir.getAbsolutePath()), "user");
       fos.flush();
       fos.close();
 
@@ -377,7 +378,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       commands.add(command);
       ContainerExecutor exec = new DefaultContainerExecutor();
       exec.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()));
+          new Path(localLogDir.getAbsolutePath()), "user");
       fos.flush();
       fos.close();
 
@@ -1400,7 +1401,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         ContainerExecutor exec = new DefaultContainerExecutor();
         exec.setConf(conf);
         exec.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), tempFile.getName());
+            new Path(localLogDir.getAbsolutePath()), "user",
+            tempFile.getName());
         fos.flush();
         fos.close();
         FileUtil.setExecutable(tempFile, true);

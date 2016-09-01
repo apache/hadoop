@@ -2699,7 +2699,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "am-scheduling.node-blacklisting-enabled";
   @Private
   public static final boolean DEFAULT_AM_SCHEDULING_NODE_BLACKLISTING_ENABLED =
-      true;
+      false;
 
   @Private
   /**
@@ -2709,7 +2709,7 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "am-scheduling.node-blacklisting-disable-threshold";
   @Private
   public static final float
-      DEFAULT_AM_SCHEDULING_NODE_BLACKLISTING_DISABLE_THRESHOLD = 0.8f;
+      DEFAULT_AM_SCHEDULING_NODE_BLACKLISTING_DISABLE_THRESHOLD = 0.2f;
 
   private static final String NM_SCRIPT_BASED_NODE_LABELS_PROVIDER_PREFIX =
       NM_NODE_LABELS_PROVIDER_PREFIX + "script.";

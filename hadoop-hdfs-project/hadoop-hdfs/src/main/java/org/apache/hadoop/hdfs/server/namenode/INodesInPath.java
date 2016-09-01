@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -126,6 +125,12 @@ public class INodesInPath {
   static INodesInPath resolve(final INodeDirectory startingDir,
       final byte[][] components, final boolean resolveLink)
       throws UnresolvedLinkException {
+    return resolve(startingDir, components, false, resolveLink);
+  }
+
+  static INodesInPath resolve(final INodeDirectory startingDir,
+      final byte[][] components, final boolean isRaw,
+      final boolean resolveLink) throws UnresolvedLinkException {
     Preconditions.checkArgument(startingDir.compareTo(components[0]) == 0);
 
     INode curNode = startingDir;
@@ -225,7 +230,7 @@ public class INodesInPath {
       System.arraycopy(inodes, 0, newNodes, 0, newNodes.length);
       inodes = newNodes;
     }
-    return new INodesInPath(inodes, components, isSnapshot, snapshotId);
+    return new INodesInPath(inodes, components, isRaw, isSnapshot, snapshotId);
   }
 
   private static boolean shouldUpdateLatestId(int sid, int snapshotId) {
@@ -249,7 +254,8 @@ public class INodesInPath {
     INode[] inodes = new INode[iip.inodes.length];
     System.arraycopy(iip.inodes, 0, inodes, 0, inodes.length);
     inodes[pos] = inode;
-    return new INodesInPath(inodes, iip.path, iip.isSnapshot, iip.snapshotId);
+    return new INodesInPath(inodes, iip.path, iip.isRaw,
+        iip.isSnapshot, iip.snapshotId);
   }
 
   /**
@@ -267,7 +273,8 @@ public class INodesInPath {
     byte[][] path = new byte[iip.path.length + 1][];
     System.arraycopy(iip.path, 0, path, 0, path.length - 1);
     path[path.length - 1] = childName;
-    return new INodesInPath(inodes, path, iip.isSnapshot, iip.snapshotId);
+    return new INodesInPath(inodes, path, iip.isRaw,
+        iip.isSnapshot, iip.snapshotId);
   }
 
   private final byte[][] path;
@@ -279,6 +286,13 @@ public class INodesInPath {
    * true if this path corresponds to a snapshot
    */
   private final boolean isSnapshot;
+
+  /**
+   * true if this is a /.reserved/raw path.  path component resolution strips
+   * it from the path so need to track it separately.
+   */
+  private final boolean isRaw;
+
   /**
    * For snapshot paths, it is the id of the snapshot; or 
    * {@link Snapshot#CURRENT_STATE_ID} if the snapshot does not exist. For 
@@ -287,17 +301,18 @@ public class INodesInPath {
    */
   private final int snapshotId;
 
-  private INodesInPath(INode[] inodes, byte[][] path, boolean isSnapshot,
-      int snapshotId) {
+  private INodesInPath(INode[] inodes, byte[][] path, boolean isRaw,
+      boolean isSnapshot,int snapshotId) {
     Preconditions.checkArgument(inodes != null && path != null);
     this.inodes = inodes;
     this.path = path;
+    this.isRaw = isRaw;
     this.isSnapshot = isSnapshot;
     this.snapshotId = snapshotId;
   }
 
   private INodesInPath(INode[] inodes, byte[][] path) {
-    this(inodes, path, false, CURRENT_STATE_ID);
+    this(inodes, path, false, false, CURRENT_STATE_ID);
   }
 
   /**
@@ -345,6 +360,10 @@ public class INodesInPath {
     return path;
   }
 
+  public byte[] getPathComponent(int i) {
+    return path[i];
+  }
+
   /** @return the full path in string form */
   public String getPath() {
     return DFSUtil.byteArray2PathString(path);
@@ -356,21 +375,6 @@ public class INodesInPath {
 
   public String getPath(int pos) {
     return DFSUtil.byteArray2PathString(path, 0, pos + 1); // it's a length...
-  }
-
-  /**
-   * @param offset start endpoint (inclusive)
-   * @param length number of path components
-   * @return sub-list of the path
-   */
-  public List<String> getPath(int offset, int length) {
-    Preconditions.checkArgument(offset >= 0 && length >= 0 && offset + length
-        <= path.length);
-    ImmutableList.Builder<String> components = ImmutableList.builder();
-    for (int i = offset; i < offset + length; i++) {
-      components.add(DFSUtil.bytes2String(path[i]));
-    }
-    return components.build();
   }
 
   public int length() {
@@ -400,7 +404,7 @@ public class INodesInPath {
     final byte[][] apath = new byte[length][];
     System.arraycopy(this.inodes, 0, anodes, 0, length);
     System.arraycopy(this.path, 0, apath, 0, length);
-    return new INodesInPath(anodes, apath, false, snapshotId);
+    return new INodesInPath(anodes, apath, isRaw, false, snapshotId);
   }
 
   /**
@@ -413,22 +417,17 @@ public class INodesInPath {
   }
 
   /**
-   * @return a new INodesInPath instance that only contains exisitng INodes.
+   * @return a new INodesInPath instance that only contains existing INodes.
    * Note that this method only handles non-snapshot paths.
    */
   public INodesInPath getExistingINodes() {
     Preconditions.checkState(!isSnapshot());
-    int i = 0;
-    for (; i < inodes.length; i++) {
-      if (inodes[i] == null) {
-        break;
+    for (int i = inodes.length; i > 0; i--) {
+      if (inodes[i - 1] != null) {
+        return (i == inodes.length) ? this : getAncestorINodesInPath(i);
       }
     }
-    INode[] existing = new INode[i];
-    byte[][] existingPath = new byte[i][];
-    System.arraycopy(inodes, 0, existing, 0, i);
-    System.arraycopy(path, 0, existingPath, 0, i);
-    return new INodesInPath(existing, existingPath, false, snapshotId);
+    return null;
   }
 
   /**
@@ -438,8 +437,18 @@ public class INodesInPath {
     return this.isSnapshot;
   }
 
+  /**
+   * @return if .snapshot is the last path component.
+   */
   boolean isDotSnapshotDir() {
     return isDotSnapshotDir(getLastLocalName());
+  }
+
+  /**
+   * @return if this is a /.reserved/raw path.
+   */
+  public boolean isRaw() {
+    return isRaw;
   }
 
   private static String toString(INode inode) {

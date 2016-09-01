@@ -158,7 +158,7 @@ public class TestDecommissioningStatus {
     // write nodename into the exclude file.
     ArrayList<String> nodes = new ArrayList<String>(decommissionedNodes);
     nodes.add(dnName);
-    hostsFileWriter.initExcludeHosts(nodes.toArray(new String[0]));
+    hostsFileWriter.initExcludeHosts(nodes);
   }
 
   private void checkDecommissionStatus(DatanodeDescriptor decommNode,

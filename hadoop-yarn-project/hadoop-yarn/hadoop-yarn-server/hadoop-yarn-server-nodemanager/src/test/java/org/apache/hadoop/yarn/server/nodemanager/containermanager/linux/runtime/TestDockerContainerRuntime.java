@@ -257,6 +257,18 @@ public class TestDockerContainerRuntime {
     return expectedCapabilitiesString.toString();
   }
 
+  private String getExpectedCGroupsMountString() {
+    boolean cGroupsMountExists = new File(
+        DockerLinuxContainerRuntime.CGROUPS_ROOT_DIRECTORY).exists();
+
+    if(cGroupsMountExists) {
+      return "-v " + DockerLinuxContainerRuntime.CGROUPS_ROOT_DIRECTORY
+          + ":" + DockerLinuxContainerRuntime.CGROUPS_ROOT_DIRECTORY + ":ro ";
+    } else {
+      return "";
+    }
+  }
+
   @Test
   public void testDockerContainerLaunch()
       throws ContainerExecutionException, PrivilegedOperationException,
@@ -276,6 +288,7 @@ public class TestDockerContainerRuntime {
         .append("--workdir=%3$s ")
         .append("--net=host ")
         .append(getExpectedTestCapabilitiesArgumentString())
+        .append(getExpectedCGroupsMountString())
         .append("-v %4$s:%4$s ")
         .append("-v %5$s:%5$s ")
         .append("-v %6$s:%6$s ")
@@ -381,6 +394,7 @@ public class TestDockerContainerRuntime {
             .append("--workdir=%3$s ")
             .append("--net=" + allowedNetwork + " ")
             .append(getExpectedTestCapabilitiesArgumentString())
+            .append(getExpectedCGroupsMountString())
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
             .append("-v %6$s:%6$s ").append("-v %7$s:%7$s ")
             .append("-v %8$s:%8$s ").append("%9$s ")
@@ -435,6 +449,7 @@ public class TestDockerContainerRuntime {
             .append("--workdir=%3$s ")
             .append("--net=" + customNetwork1 + " ")
             .append(getExpectedTestCapabilitiesArgumentString())
+            .append(getExpectedCGroupsMountString())
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
             .append("-v %6$s:%6$s ").append("-v %7$s:%7$s ")
             .append("-v %8$s:%8$s ").append("%9$s ")
@@ -471,6 +486,7 @@ public class TestDockerContainerRuntime {
             .append("--workdir=%3$s ")
             .append("--net=" + customNetwork2 + " ")
             .append(getExpectedTestCapabilitiesArgumentString())
+            .append(getExpectedCGroupsMountString())
             .append("-v %4$s:%4$s ").append("-v %5$s:%5$s ")
             .append("-v %6$s:%6$s ").append("-v %7$s:%7$s ")
             .append("-v %8$s:%8$s ").append("%9$s ")

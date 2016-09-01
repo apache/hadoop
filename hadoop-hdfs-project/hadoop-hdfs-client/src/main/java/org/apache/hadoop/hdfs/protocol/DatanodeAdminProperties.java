@@ -33,6 +33,7 @@ public class DatanodeAdminProperties {
   private int port;
   private String upgradeDomain;
   private AdminStates adminState = AdminStates.NORMAL;
+  private long maintenanceExpireTimeInMS = Long.MAX_VALUE;
 
   /**
    * Return the host name of the datanode.
@@ -96,5 +97,23 @@ public class DatanodeAdminProperties {
    */
   public void setAdminState(final AdminStates adminState) {
     this.adminState = adminState;
+  }
+
+  /**
+   * Get the maintenance expiration time in milliseconds.
+   * @return the maintenance expiration time in milliseconds.
+   */
+  public long getMaintenanceExpireTimeInMS() {
+    return this.maintenanceExpireTimeInMS;
+  }
+
+  /**
+   * Get the maintenance expiration time in milliseconds.
+   * @param maintenanceExpireTimeInMS
+   *        the maintenance expiration time in milliseconds.
+   */
+  public void setMaintenanceExpireTimeInMS(
+      final long maintenanceExpireTimeInMS) {
+    this.maintenanceExpireTimeInMS = maintenanceExpireTimeInMS;
   }
 }

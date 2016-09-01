@@ -58,9 +58,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -3232,9 +3233,10 @@ public class TestCapacityScheduler {
 
     // am1 asks to change its AM container from 1GB to 3GB
     am1.sendContainerResizingRequest(Arrays.asList(
-            ContainerResourceChangeRequest
-                .newInstance(containerId1, Resources.createResource(3 * GB))),
-        null);
+            UpdateContainerRequest
+                .newInstance(0, containerId1,
+                    ContainerUpdateType.INCREASE_RESOURCE,
+                    Resources.createResource(3 * GB), null)));
     
     FiCaSchedulerApp app = getFiCaSchedulerApp(rm, app1.getApplicationId());
     
@@ -3246,11 +3248,14 @@ public class TestCapacityScheduler {
     
     // am1 asks to change containerId2 (2G -> 3G) and containerId3 (2G -> 5G)
     am1.sendContainerResizingRequest(Arrays.asList(
-            ContainerResourceChangeRequest
-                .newInstance(containerId2, Resources.createResource(3 * GB)),
-            ContainerResourceChangeRequest
-                .newInstance(containerId3, Resources.createResource(5 * GB))),
-        null);
+        UpdateContainerRequest
+                .newInstance(0, containerId2,
+                    ContainerUpdateType.INCREASE_RESOURCE,
+                    Resources.createResource(3 * GB), null),
+        UpdateContainerRequest
+                .newInstance(0, containerId3,
+                    ContainerUpdateType.INCREASE_RESOURCE,
+                    Resources.createResource(5 * GB), null)));
     
     Assert.assertEquals(6 * GB,
         app.getAppAttemptResourceUsage().getPending().getMemorySize());
@@ -3261,13 +3266,18 @@ public class TestCapacityScheduler {
     // am1 asks to change containerId1 (1G->3G), containerId2 (2G -> 4G) and
     // containerId3 (2G -> 2G)
     am1.sendContainerResizingRequest(Arrays.asList(
-            ContainerResourceChangeRequest
-                .newInstance(containerId1, Resources.createResource(3 * GB)),
-            ContainerResourceChangeRequest
-                .newInstance(containerId2, Resources.createResource(4 * GB)),
-            ContainerResourceChangeRequest
-                .newInstance(containerId3, Resources.createResource(2 * GB))),
-        null);
+        UpdateContainerRequest
+                .newInstance(0, containerId1,
+                    ContainerUpdateType.INCREASE_RESOURCE,
+                    Resources.createResource(3 * GB), null),
+        UpdateContainerRequest
+                .newInstance(0, containerId2,
+                    ContainerUpdateType.INCREASE_RESOURCE,
+                    Resources.createResource(4 * GB), null),
+        UpdateContainerRequest
+                .newInstance(0, containerId3,
+                    ContainerUpdateType.INCREASE_RESOURCE,
+                    Resources.createResource(2 * GB), null)));
     Assert.assertEquals(4 * GB,
         app.getAppAttemptResourceUsage().getPending().getMemorySize());
     checkPendingResource(rm, "a1", 4 * GB, null);

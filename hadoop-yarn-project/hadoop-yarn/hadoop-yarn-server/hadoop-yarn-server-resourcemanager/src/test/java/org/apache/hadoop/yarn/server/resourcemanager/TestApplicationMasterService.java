@@ -35,16 +35,16 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
-import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -383,57 +383,47 @@ public class TestApplicationMasterService {
       
       // Ask for a normal increase should be successfull
       am1.sendContainerResizingRequest(Arrays.asList(
-              ContainerResourceChangeRequest.newInstance(
-                  ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
-                  Resources.createResource(2048))), null);
+              UpdateContainerRequest.newInstance(
+                  0, ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
+                  ContainerUpdateType.INCREASE_RESOURCE,
+                  Resources.createResource(2048), null)));
       
       // Target resource is negative, should fail
-      boolean exceptionCaught = false;
-      try {
-        am1.sendContainerResizingRequest(Arrays.asList(
-                ContainerResourceChangeRequest.newInstance(
-                    ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
-                    Resources.createResource(-1))), null);
-      } catch (InvalidResourceRequestException e) {
-        // This is expected
-        exceptionCaught = true;
-      }
-      Assert.assertTrue(exceptionCaught);
-      
+      AllocateResponse response =
+          am1.sendContainerResizingRequest(Arrays.asList(
+              UpdateContainerRequest.newInstance(0,
+                  ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
+                  ContainerUpdateType.INCREASE_RESOURCE,
+                  Resources.createResource(-1), null)));
+      Assert.assertEquals(1, response.getUpdateErrors().size());
+      Assert.assertEquals("RESOURCE_OUTSIDE_ALLOWED_RANGE",
+          response.getUpdateErrors().get(0).getReason());
+
       // Target resource is more than maxAllocation, should fail
-      try {
-        am1.sendContainerResizingRequest(Arrays.asList(
-                ContainerResourceChangeRequest.newInstance(
-                    ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
-                    Resources
-                        .add(registerResponse.getMaximumResourceCapability(),
-                            Resources.createResource(1)))), null);
-      } catch (InvalidResourceRequestException e) {
-        // This is expected
-        exceptionCaught = true;
-      }
+      response = am1.sendContainerResizingRequest(Arrays.asList(
+          UpdateContainerRequest.newInstance(0,
+              ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
+              ContainerUpdateType.INCREASE_RESOURCE,
+              Resources.add(
+                  registerResponse.getMaximumResourceCapability(),
+                  Resources.createResource(1)), null)));
+      Assert.assertEquals(1, response.getUpdateErrors().size());
+      Assert.assertEquals("RESOURCE_OUTSIDE_ALLOWED_RANGE",
+          response.getUpdateErrors().get(0).getReason());
 
-      Assert.assertTrue(exceptionCaught);
-      
       // Contains multiple increase/decrease requests for same contaienrId 
-      try {
-        am1.sendContainerResizingRequest(Arrays.asList(
-                ContainerResourceChangeRequest.newInstance(
-                    ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
-                    Resources
-                        .add(registerResponse.getMaximumResourceCapability(),
-                            Resources.createResource(1)))), Arrays.asList(
-                ContainerResourceChangeRequest.newInstance(
-                    ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
-                    Resources
-                        .add(registerResponse.getMaximumResourceCapability(),
-                            Resources.createResource(1)))));
-      } catch (InvalidResourceRequestException e) {
-        // This is expected
-        exceptionCaught = true;
-      }
-
-      Assert.assertTrue(exceptionCaught);
+      response = am1.sendContainerResizingRequest(Arrays.asList(
+          UpdateContainerRequest.newInstance(0,
+              ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
+              ContainerUpdateType.INCREASE_RESOURCE,
+              Resources.createResource(2048, 4), null),
+          UpdateContainerRequest.newInstance(0,
+              ContainerId.newContainerId(attempt1.getAppAttemptId(), 1),
+              ContainerUpdateType.DECREASE_RESOURCE,
+              Resources.createResource(1024, 1), null)));
+      Assert.assertEquals(1, response.getUpdateErrors().size());
+      Assert.assertEquals("UPDATE_OUTSTANDING_ERROR",
+          response.getUpdateErrors().get(0).getReason());
     } finally {
       if (rm != null) {
         rm.close();

@@ -27,6 +27,8 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -323,5 +325,11 @@ public class NodeManager implements ContainerManagementProtocol {
   public synchronized SignalContainerResponse signalToContainer(
       SignalContainerRequest request) throws YarnException, IOException {
     throw new YarnException("Not supported yet!");
+  }
+
+  @Override
+  public ResourceLocalizationResponse localize(
+      ResourceLocalizationRequest request) throws YarnException, IOException {
+    return null;
   }
 }

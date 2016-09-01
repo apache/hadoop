@@ -692,10 +692,6 @@ public class TestTrash extends TestCase {
     public TestTrashPolicy() { }
 
     @Override
-    public void initialize(Configuration conf, FileSystem fs, Path home) {
-    }
-
-    @Override
     public void initialize(Configuration conf, FileSystem fs) {
     }
 

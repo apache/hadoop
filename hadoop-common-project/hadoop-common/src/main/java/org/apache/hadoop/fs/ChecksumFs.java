@@ -179,7 +179,6 @@ public abstract class ChecksumFs extends FilterFs {
                new ChecksumFSInputChecker(fs, file)) {
         checker.seek(position);
         nread = checker.read(b, off, len);
-        checker.close();
       }
       return nread;
     }
@@ -297,7 +296,8 @@ public abstract class ChecksumFs extends FilterFs {
 
   @Override
   public boolean truncate(Path f, long newLength) throws IOException {
-    throw new IOException("Not supported");
+    throw new UnsupportedOperationException("Truncate is not supported "
+        + "by ChecksumFs");
   }
 
   /**

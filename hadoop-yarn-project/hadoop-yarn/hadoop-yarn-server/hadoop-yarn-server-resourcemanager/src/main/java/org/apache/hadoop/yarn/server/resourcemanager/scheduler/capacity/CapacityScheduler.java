@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerResourceChangeRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -63,6 +62,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -924,7 +925,7 @@ public class CapacityScheduler extends
   //    SchedContainerChangeRequest
   // 2. Deadlock with the scheduling thread.
   private LeafQueue updateIncreaseRequests(
-      List<ContainerResourceChangeRequest> increaseRequests,
+      List<UpdateContainerRequest> increaseRequests,
       FiCaSchedulerApp app) {
     if (null == increaseRequests || increaseRequests.isEmpty()) {
       return null;
@@ -952,8 +953,8 @@ public class CapacityScheduler extends
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release,
       List<String> blacklistAdditions, List<String> blacklistRemovals,
-      List<ContainerResourceChangeRequest> increaseRequests,
-      List<ContainerResourceChangeRequest> decreaseRequests) {
+      List<UpdateContainerRequest> increaseRequests,
+      List<UpdateContainerRequest> decreaseRequests) {
 
     FiCaSchedulerApp application = getApplicationAttempt(applicationAttemptId);
     if (application == null) {
@@ -1946,6 +1947,7 @@ public class CapacityScheduler extends
     LeafQueue dest = getAndCheckLeafQueue(destQueueName);
     // Validation check - ACLs, submission limits for user & queue
     String user = app.getUser();
+    checkQueuePartition(app, dest);
     try {
       dest.submitApplication(appId, user, destQueueName);
     } catch (AccessControlException e) {
@@ -1968,6 +1970,39 @@ public class CapacityScheduler extends
     LOG.info("App: " + app.getApplicationId() + " successfully moved from "
         + sourceQueueName + " to: " + destQueueName);
     return targetQueueName;
+  }
+
+  /**
+   * Check application can be moved to queue with labels enabled. All labels in
+   * application life time will be checked
+   *
+   * @param appId
+   * @param dest
+   * @throws YarnException
+   */
+  private void checkQueuePartition(FiCaSchedulerApp app, LeafQueue dest)
+      throws YarnException {
+    if (!YarnConfiguration.areNodeLabelsEnabled(conf)) {
+      return;
+    }
+    Set<String> targetqueuelabels = dest.getAccessibleNodeLabels();
+    AppSchedulingInfo schedulingInfo = app.getAppSchedulingInfo();
+    Set<String> appLabelexpressions = schedulingInfo.getRequestedPartitions();
+    // default partition access always available remove empty label
+    appLabelexpressions.remove(RMNodeLabelsManager.NO_LABEL);
+    Set<String> nonAccessiblelabels = new HashSet<String>();
+    for (String label : appLabelexpressions) {
+      if (!SchedulerUtils.checkQueueLabelExpression(targetqueuelabels, label,
+          null)) {
+        nonAccessiblelabels.add(label);
+      }
+    }
+    if (nonAccessiblelabels.size() > 0) {
+      throw new YarnException(
+          "Specified queue=" + dest.getQueueName() + " can't satisfy following "
+              + "apps label expressions =" + nonAccessiblelabels
+              + " accessible node labels =" + targetqueuelabels);
+    }
   }
 
   /**

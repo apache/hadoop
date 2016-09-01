@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
@@ -49,6 +50,8 @@ import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesNotEqual;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.GenericTestUtils.assertMatches;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestReservedRawPaths {
@@ -97,6 +100,24 @@ public class TestReservedRawPaths {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  /**
+   * Verify resolving path will return an iip that tracks if the original
+   * path was a raw path.
+   */
+  @Test(timeout = 120000)
+  public void testINodesInPath() throws IOException {
+    FSDirectory fsd = cluster.getNamesystem().getFSDirectory();
+    final String path = "/path";
+
+    INodesInPath iip = fsd.resolvePath(null, path);
+    assertFalse(iip.isRaw());
+    assertEquals(path, iip.getPath());
+
+    iip = fsd.resolvePath(null, "/.reserved/raw" + path);
+    assertTrue(iip.isRaw());
+    assertEquals(path, iip.getPath());
   }
 
   /**

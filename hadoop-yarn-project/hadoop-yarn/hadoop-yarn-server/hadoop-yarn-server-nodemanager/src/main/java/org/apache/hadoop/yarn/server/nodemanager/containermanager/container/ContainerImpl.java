@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -102,6 +103,7 @@ public class ContainerImpl implements Container {
   private final ContainerId containerId;
   private volatile Resource resource;
   private final String user;
+  private int version;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
   private final int diagnosticsMaxSize;
@@ -115,6 +117,8 @@ public class ContainerImpl implements Container {
   private int remainingRetryAttempts;
   private String workDir;
   private String logDir;
+  private String host;
+  private String ips;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -149,6 +153,7 @@ public class ContainerImpl implements Container {
     this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.stateStore = context.getNMStateStore();
+    this.version = containerTokenIdentifier.getVersion();
     this.launchContext = launchContext;
     if (launchContext != null
         && launchContext.getContainerRetryContext() != null) {
@@ -220,6 +225,7 @@ public class ContainerImpl implements Container {
       this.resource = Resource.newInstance(recoveredCapability.getMemorySize(),
           recoveredCapability.getVirtualCores());
     }
+    this.version = rcs.getVersion();
     this.remainingRetryAttempts = rcs.getRemainingRetryAttempts();
     this.workDir = rcs.getWorkDir();
     this.logDir = rcs.getLogDir();
@@ -507,9 +513,12 @@ public class ContainerImpl implements Container {
   public ContainerStatus cloneAndGetContainerStatus() {
     this.readLock.lock();
     try {
-      return BuilderUtils.newContainerStatus(this.containerId,
+      ContainerStatus status = BuilderUtils.newContainerStatus(this.containerId,
           getCurrentState(), diagnostics.toString(), exitCode, getResource(),
           this.containerTokenIdentifier.getExecutionType());
+      status.setIPs(ips == null ? null : Arrays.asList(ips.split(",")));
+      status.setHost(host);
+      return status;
     } finally {
       this.readLock.unlock();
     }
@@ -519,8 +528,8 @@ public class ContainerImpl implements Container {
   public NMContainerStatus getNMContainerStatus() {
     this.readLock.lock();
     try {
-      return NMContainerStatus.newInstance(this.containerId, getCurrentState(),
-          getResource(), diagnostics.toString(), exitCode,
+      return NMContainerStatus.newInstance(this.containerId, this.version,
+          getCurrentState(), getResource(), diagnostics.toString(), exitCode,
           containerTokenIdentifier.getPriority(),
           containerTokenIdentifier.getCreationTime(),
           containerTokenIdentifier.getNodeLabelExpression());
@@ -564,6 +573,12 @@ public class ContainerImpl implements Container {
   @Override
   public void setWorkDir(String workDir) {
     this.workDir = workDir;
+  }
+
+  @Override
+  public void setIpAndHost(String[] ipAndHost) {
+    this.ips = ipAndHost[0];
+    this.host = ipAndHost[1];
   }
 
   @Override

@@ -155,6 +155,20 @@ public class ReservationInputValidator {
           "validate reservation input definition", "ClientRMService", message);
       throw RPCUtil.getRemoteException(message);
     }
+    // check that the recurrence is a positive long value.
+    String recurrenceExpression = contract.getRecurrenceExpression();
+    try {
+      Long recurrence = Long.parseLong(recurrenceExpression);
+      if (recurrence < 0) {
+        message = "Negative Period : " + recurrenceExpression + ". Please try"
+            + " again with a non-negative long value as period";
+        throw RPCUtil.getRemoteException(message);
+      }
+    } catch (NumberFormatException e) {
+      message = "Invalid period " + recurrenceExpression + ". Please try"
+          + " again with a non-negative long value as period";
+      throw RPCUtil.getRemoteException(message);
+    }
   }
 
   private Plan getPlanFromQueue(ReservationSystem reservationSystem, String

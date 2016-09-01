@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -434,5 +435,26 @@ public class TestDiskBalancerCommand {
     } finally {
       miniDFSCluster.shutdown();
     }
+  }
+
+  @Test(timeout = 60000)
+  public void testGetNodeList() throws Exception {
+    ClusterConnector jsonConnector =
+        ConnectorFactory.getCluster(clusterJson, conf);
+    DiskBalancerCluster diskBalancerCluster =
+        new DiskBalancerCluster(jsonConnector);
+    diskBalancerCluster.readClusterInfo();
+
+    int nodeNum = 5;
+    StringBuilder listArg = new StringBuilder();
+    for (int i = 0; i < nodeNum; i++) {
+      listArg.append(diskBalancerCluster.getNodes().get(i).getDataNodeUUID())
+          .append(",");
+    }
+
+    ReportCommand command = new ReportCommand(conf, null);
+    command.setCluster(diskBalancerCluster);
+    List<DiskBalancerDataNode> nodeList = command.getNodes(listArg.toString());
+    assertEquals(nodeNum, nodeList.size());
   }
 }

@@ -39,6 +39,8 @@ import org.apache.hadoop.util.HttpExceptionUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -80,6 +82,9 @@ public class DelegationTokenAuthenticationFilter
   private static final String APPLICATION_JSON_MIME = "application/json";
   private static final String ERROR_EXCEPTION_JSON = "exception";
   private static final String ERROR_MESSAGE_JSON = "message";
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+          DelegationTokenAuthenticationFilter.class);
 
   /**
    * Sets an external <code>DelegationTokenSecretManager</code> instance to
@@ -261,6 +266,11 @@ public class DelegationTokenAuthenticationFilter
             HttpExceptionUtils.createServletExceptionResponse(response,
                 HttpServletResponse.SC_FORBIDDEN, ex);
             requestCompleted = true;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Authentication exception: " + ex.getMessage(), ex);
+            } else {
+              LOG.warn("Authentication exception: " + ex.getMessage());
+            }
           }
         }
       }

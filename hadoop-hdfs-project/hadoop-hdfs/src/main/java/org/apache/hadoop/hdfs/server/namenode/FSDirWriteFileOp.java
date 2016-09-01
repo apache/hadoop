@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -65,7 +66,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
@@ -340,7 +340,6 @@ class FSDirWriteFileOp {
       version = ezInfo.protocolVersion;
     }
 
-    boolean isRawPath = FSDirectory.isReservedRawName(src);
     FSDirectory fsd = fsn.getFSDirectory();
     INodesInPath iip = fsd.resolvePathForWrite(pc, src);
     src = iip.getPath();
@@ -420,10 +419,10 @@ class FSDirWriteFileOp {
     }
     fsn.checkFsObjectLimit();
     INodeFile newNode = null;
-    Map.Entry<INodesInPath, String> parent = FSDirMkdirOp
-        .createAncestorDirectories(fsd, iip, permissions);
+    INodesInPath parent =
+        FSDirMkdirOp.createAncestorDirectories(fsd, iip, permissions);
     if (parent != null) {
-      iip = addFile(fsd, parent.getKey(), parent.getValue(), permissions,
+      iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
                     replication, blockSize, holder, clientMachine);
       newNode = iip != null ? iip.getLastINode().asFile() : null;
     }
@@ -444,7 +443,7 @@ class FSDirWriteFileOp {
       NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: added " +
           src + " inode " + newNode.getId() + " " + holder);
     }
-    return FSDirStatAndListingOp.getFileInfo(fsd, src, false, isRawPath);
+    return FSDirStatAndListingOp.getFileInfo(fsd, iip);
   }
 
   static EncryptionKeyInfo getEncryptionKeyInfo(FSNamesystem fsn,
@@ -508,10 +507,13 @@ class FSDirWriteFileOp {
         return newNode;
       }
     } catch (IOException e) {
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug(
-            "DIR* FSDirectory.unprotectedAddFile: exception when add "
-                + existing.getPath() + " to the file system", e);
+      NameNode.stateChangeLog.warn(
+          "DIR* FSDirectory.unprotectedAddFile: exception when add " + existing
+              .getPath() + " to the file system", e);
+      if (e instanceof FSLimitException.MaxDirectoryItemsExceededException) {
+        NameNode.stateChangeLog.warn("Please increase "
+            + "dfs.namenode.fs-limits.max-directory-items and make it "
+            + "consistent across all NameNodes.");
       }
     }
     return null;
@@ -573,7 +575,7 @@ class FSDirWriteFileOp {
    * @return the new INodesInPath instance that contains the new INode
    */
   private static INodesInPath addFile(
-      FSDirectory fsd, INodesInPath existing, String localName,
+      FSDirectory fsd, INodesInPath existing, byte[] localName,
       PermissionStatus permissions, short replication, long preferredBlockSize,
       String clientName, String clientMachine)
       throws IOException {
@@ -590,7 +592,7 @@ class FSDirWriteFileOp {
       }
       INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
           modTime, modTime, replication, preferredBlockSize, ecPolicy != null);
-      newNode.setLocalName(DFSUtil.string2Bytes(localName));
+      newNode.setLocalName(localName);
       newNode.toUnderConstruction(clientName, clientMachine);
       newiip = fsd.addINode(existing, newNode);
     } finally {
@@ -598,12 +600,13 @@ class FSDirWriteFileOp {
     }
     if (newiip == null) {
       NameNode.stateChangeLog.info("DIR* addFile: failed to add " +
-          existing.getPath() + "/" + localName);
+          existing.getPath() + "/" + DFSUtil.bytes2String(localName));
       return null;
     }
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* addFile: " + localName + " is added");
+      NameNode.stateChangeLog.debug("DIR* addFile: " +
+          DFSUtil.bytes2String(localName) + " is added");
     }
     return newiip;
   }

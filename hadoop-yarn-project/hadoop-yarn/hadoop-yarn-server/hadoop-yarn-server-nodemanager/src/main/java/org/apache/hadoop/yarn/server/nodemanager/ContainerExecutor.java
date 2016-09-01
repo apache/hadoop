@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -65,8 +67,8 @@ import org.apache.hadoop.util.StringUtils;
  * underlying OS.  All executor implementations must extend ContainerExecutor.
  */
 public abstract class ContainerExecutor implements Configurable {
-  private static final String WILDCARD = "*";
   private static final Log LOG = LogFactory.getLog(ContainerExecutor.class);
+  protected static final String WILDCARD = "*";
 
   /**
    * The permissions to use when creating the launch script.
@@ -272,15 +274,16 @@ public abstract class ContainerExecutor implements Configurable {
    * @param environment the environment variables and their values
    * @param resources the resources which have been localized for this
    * container. Symlinks will be created to these localized resources
-   * @param command the command that will be run.
-   * @param logDir the log dir to copy debugging information to
+   * @param command the command that will be run
+   * @param logDir the log dir to which to copy debugging information
+   * @param user the username of the job owner
    * @throws IOException if any errors happened writing to the OutputStream,
    * while creating symlinks
    */
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
-      Map<Path, List<String>> resources, List<String> command, Path logDir)
-      throws IOException {
-    this.writeLaunchEnv(out, environment, resources, command, logDir,
+      Map<Path, List<String>> resources, List<String> command, Path logDir,
+      String user) throws IOException {
+    this.writeLaunchEnv(out, environment, resources, command, logDir, user,
         ContainerLaunch.CONTAINER_SCRIPT);
   }
 
@@ -293,17 +296,17 @@ public abstract class ContainerExecutor implements Configurable {
    * @param environment the environment variables and their values
    * @param resources the resources which have been localized for this
    * container. Symlinks will be created to these localized resources
-   * @param command the command that will be run.
-   * @param logDir the log dir to copy debugging information to
+   * @param command the command that will be run
+   * @param logDir the log dir to which to copy debugging information
+   * @param user the username of the job owner
    * @param outFilename the path to which to write the launch environment
    * @throws IOException if any errors happened writing to the OutputStream,
    * while creating symlinks
    */
   @VisibleForTesting
-  public void writeLaunchEnv(OutputStream out,
-      Map<String, String> environment, Map<Path, List<String>> resources,
-      List<String> command, Path logDir, String outFilename)
-      throws IOException {
+  public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
+      Map<Path, List<String>> resources, List<String> command, Path logDir,
+      String user, String outFilename) throws IOException {
     ContainerLaunch.ShellScriptBuilder sb =
         ContainerLaunch.ShellScriptBuilder.create();
     Set<String> whitelist = new HashSet<>();
@@ -332,9 +335,7 @@ public abstract class ContainerExecutor implements Configurable {
           if (new Path(linkName).getName().equals(WILDCARD)) {
             // If this is a wildcarded path, link to everything in the
             // directory from the working directory
-            File directory = new File(resourceEntry.getKey().toString());
-
-            for (File wildLink : directory.listFiles()) {
+            for (File wildLink : readDirAsUser(user, resourceEntry.getKey())) {
               sb.symlink(new Path(wildLink.toString()),
                   new Path(wildLink.getName()));
             }
@@ -366,6 +367,19 @@ public abstract class ContainerExecutor implements Configurable {
         out.close();
       }
     }
+  }
+
+  /**
+   * Return the files in the target directory. If retrieving the list of files
+   * requires specific access rights, that access will happen as the
+   * specified user. The list will not include entries for "." or "..".
+   *
+   * @param user the user as whom to access the target directory
+   * @param dir the target directory
+   * @return a list of files in the target directory
+   */
+  protected File[] readDirAsUser(String user, Path dir) {
+    return new File(dir.toString()).listFiles();
   }
 
   /**
@@ -624,6 +638,26 @@ public abstract class ContainerExecutor implements Configurable {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  // LinuxContainerExecutor overrides this method and behaves differently.
+  public String[] getIpAndHost(Container container) {
+    return getLocalIpAndHost(container);
+  }
+
+  // ipAndHost[0] contains ip.
+  // ipAndHost[1] contains hostname.
+  public static String[] getLocalIpAndHost(Container container) {
+    String[] ipAndHost = new String[2];
+    try {
+      InetAddress address = InetAddress.getLocalHost();
+      ipAndHost[0] = address.getHostAddress();
+      ipAndHost[1] = address.getHostName();
+    } catch (UnknownHostException e) {
+      LOG.error("Unable to get Local hostname and ip for " + container
+          .getContainerId(), e);
+    }
+    return ipAndHost;
   }
 
   /**

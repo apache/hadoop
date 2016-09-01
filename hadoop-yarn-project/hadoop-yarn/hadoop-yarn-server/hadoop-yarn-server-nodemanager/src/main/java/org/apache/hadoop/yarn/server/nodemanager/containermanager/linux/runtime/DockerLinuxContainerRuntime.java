@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerModule;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerClient;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerInspectCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRunCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerStopCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
@@ -144,6 +145,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS =
       "YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS";
+
+  static final String CGROUPS_ROOT_DIRECTORY = "/sys/fs/cgroup";
 
   private Configuration conf;
   private DockerClient dockerClient;
@@ -436,7 +439,6 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         LOCALIZED_RESOURCES);
     @SuppressWarnings("unchecked")
     List<String> userLocalDirs = ctx.getExecutionAttribute(USER_LOCAL_DIRS);
-
     Set<String> capabilities = new HashSet<>(Arrays.asList(conf.getStrings(
         YarnConfiguration.NM_DOCKER_CONTAINER_CAPABILITIES,
         YarnConfiguration.DEFAULT_NM_DOCKER_CONTAINER_CAPABILITIES)));
@@ -447,7 +449,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
         .detachOnRun()
         .setContainerWorkDir(containerWorkDir.toString())
         .setNetworkType(network)
-        .setCapabilities(capabilities);
+        .setCapabilities(capabilities)
+        .addMountLocation(CGROUPS_ROOT_DIRECTORY,
+            CGROUPS_ROOT_DIRECTORY + ":ro", false);
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
 
     allDirs.addAll(filecacheDirs);
@@ -455,7 +459,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     allDirs.addAll(containerLogDirs);
     allDirs.addAll(userLocalDirs);
     for (String dir: allDirs) {
-      runCommand.addMountLocation(dir, dir);
+      runCommand.addMountLocation(dir, dir, true);
     }
 
     if (environment.containsKey(ENV_DOCKER_CONTAINER_LOCAL_RESOURCE_MOUNTS)) {
@@ -470,7 +474,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           }
           String src = validateMount(dir[0], localizedResources);
           String dst = dir[1];
-          runCommand.addMountLocation(src, dst + ":ro");
+          runCommand.addMountLocation(src, dst + ":ro", true);
         }
       }
     }
@@ -591,5 +595,42 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @Override
   public void reapContainer(ContainerRuntimeContext ctx)
       throws ContainerExecutionException {
+  }
+
+
+  // ipAndHost[0] contains comma separated list of IPs
+  // ipAndHost[1] contains the hostname.
+  @Override
+  public String[] getIpAndHost(Container container) {
+    String containerId = container.getContainerId().toString();
+    DockerInspectCommand inspectCommand =
+        new DockerInspectCommand(containerId).getIpAndHost();
+    try {
+      String commandFile = dockerClient.writeCommandToTempFile(inspectCommand,
+          containerId);
+      PrivilegedOperation privOp = new PrivilegedOperation(
+          PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
+      privOp.appendArgs(commandFile);
+      String output = privilegedOperationExecutor
+          .executePrivilegedOperation(null, privOp, null,
+              container.getLaunchContext().getEnvironment(), true, false);
+      LOG.info("Docker inspect output for " + containerId + ": " + output);
+      int index = output.lastIndexOf(',');
+      if (index == -1) {
+        LOG.error("Incorrect format for ip and host");
+        return null;
+      }
+      String ips = output.substring(0, index).trim();
+      String host = output.substring(index+1).trim();
+      String[] ipAndHost = new String[2];
+      ipAndHost[0] = ips;
+      ipAndHost[1] = host;
+      return ipAndHost;
+    } catch (ContainerExecutionException e) {
+      LOG.error("Error when writing command to temp file", e);
+    } catch (PrivilegedOperationException e) {
+      LOG.error("Error when executing command.", e);
+    }
+    return null;
   }
 }

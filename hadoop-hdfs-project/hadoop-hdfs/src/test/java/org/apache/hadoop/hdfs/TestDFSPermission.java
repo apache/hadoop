@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
@@ -288,6 +289,86 @@ public class TestDFSPermission {
         FsPermission.createImmutable((short)0777));
   }
   
+  @Test(timeout=30000)
+  public void testTrashPermission() throws Exception {
+    //  /BSS                  user1:group2 777
+    //   /BSS/user1            user1:group2 755
+    //   /BSS/user1/test       user1:group1 600
+    Path rootDir = new Path("/BSS");
+    Path user1Dir = new Path("/BSS/user1");
+    Path user1File = new Path("/BSS/user1/test");
+
+    try {
+      conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "10");
+      fs = FileSystem.get(conf);
+
+      fs.mkdirs(rootDir);
+      fs.setPermission(rootDir, new FsPermission((short) 0777));
+
+      login(USER1);
+      fs.mkdirs(user1Dir);
+      fs.setPermission(user1Dir, new FsPermission((short) 0755));
+      fs.setOwner(user1Dir, USER1.getShortUserName(), GROUP2_NAME);
+
+      create(OpType.CREATE, user1File);
+      fs.setOwner(user1File, USER1.getShortUserName(), GROUP1_NAME);
+      fs.setPermission(user1File, new FsPermission((short) 0600));
+
+      try {
+        // login as user2, attempt to delete /BSS/user1
+        // this should fail because user2 has no permission to
+        // its sub directory.
+        login(USER2);
+        fs.delete(user1Dir, true);
+        fail("User2 should not be allowed to delete user1's dir.");
+      } catch (AccessControlException e) {
+        e.printStackTrace();
+        assertTrue("Permission denied messages must carry the username",
+            e.getMessage().contains(USER2_NAME));
+      }
+
+      // ensure the /BSS/user1 still exists
+      assertTrue(fs.exists(user1Dir));
+
+      try {
+        login(SUPERUSER);
+        Trash trash = new Trash(fs, conf);
+        Path trashRoot = trash.getCurrentTrashDir(user1Dir);
+        while(true) {
+          trashRoot = trashRoot.getParent();
+          if(trashRoot.getParent().isRoot()) {
+            break;
+          }
+        }
+        fs.mkdirs(trashRoot);
+        fs.setPermission(trashRoot, new FsPermission((short) 0777));
+
+        // login as user2, attempt to move /BSS/user1 to trash
+        // this should also fail otherwise the directory will be
+        // removed by trash emptier (emptier is running by superuser)
+        login(USER2);
+        Trash userTrash = new Trash(fs, conf);
+        assertTrue(userTrash.isEnabled());
+        userTrash.moveToTrash(user1Dir);
+        fail("User2 should not be allowed to move"
+            + "user1's dir to trash");
+      } catch (IOException e) {
+        // expect the exception is caused by permission denied
+        assertTrue(e.getCause() instanceof AccessControlException);
+        e.printStackTrace();
+        assertTrue("Permission denied messages must carry the username",
+            e.getCause().getMessage().contains(USER2_NAME));
+      }
+
+      // ensure /BSS/user1 still exists
+      assertEquals(fs.exists(user1Dir), true);
+    } finally {
+      login(SUPERUSER);
+      fs.delete(rootDir, true);
+      conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "0");
+    }
+  }
+
   /* check if the ownership of a file/directory is set correctly */
   @Test
   public void testOwnership() throws Exception {

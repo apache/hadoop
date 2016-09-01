@@ -403,7 +403,7 @@ public abstract class BaseContainerManagerTest {
       LogAggregationContext logAggregationContext, ExecutionType executionType)
       throws IOException {
     ContainerTokenIdentifier containerTokenIdentifier =
-        new ContainerTokenIdentifier(cId, nodeId.toString(), user, resource,
+        new ContainerTokenIdentifier(cId, 0, nodeId.toString(), user, resource,
             System.currentTimeMillis() + 100000L, 123, rmIdentifier,
             Priority.newInstance(0), 0, logAggregationContext, null,
             ContainerType.TASK, executionType);

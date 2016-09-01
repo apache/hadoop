@@ -1455,7 +1455,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // Set threshold to 2 * 1024 ==> 2048 MB & 2 * 1 ==> 2 vcores (test will
     // use vcores)
     conf.setFloat(FairSchedulerConfiguration.
-            RM_SCHEDULER_RESERVATION_THRESHOLD_INCERMENT_MULTIPLE,
+            RM_SCHEDULER_RESERVATION_THRESHOLD_INCREMENT_MULTIPLE,
         2f);
     scheduler.init(conf);
     scheduler.start();

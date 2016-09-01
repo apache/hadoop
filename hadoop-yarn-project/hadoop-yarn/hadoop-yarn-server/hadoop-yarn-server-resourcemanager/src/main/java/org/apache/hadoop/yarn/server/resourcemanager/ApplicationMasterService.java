@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -66,6 +67,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
+import org.apache.hadoop.yarn.api.records.UpdateContainerError;
+import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
@@ -87,6 +91,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
+
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
@@ -489,15 +494,6 @@ public class ApplicationMasterService extends AbstractService implements
         throw e;
       }
 
-      try {
-        RMServerUtils.increaseDecreaseRequestSanityCheck(rmContext,
-            request.getIncreaseRequests(), request.getDecreaseRequests(),
-            maximumCapacity);
-      } catch (InvalidResourceRequestException e) {
-        LOG.warn(e);
-        throw e;
-      }
-
       // In the case of work-preserving AM restart, it's possible for the
       // AM to release containers from the earlier attempt.
       if (!app.getApplicationSubmissionContext()
@@ -505,10 +501,21 @@ public class ApplicationMasterService extends AbstractService implements
         try {
           RMServerUtils.validateContainerReleaseRequest(release, appAttemptId);
         } catch (InvalidContainerReleaseException e) {
-          LOG.warn("Invalid container release by application " + appAttemptId, e);
+          LOG.warn("Invalid container release by application " + appAttemptId,
+              e);
           throw e;
         }
       }
+
+      // Split Update Resource Requests into increase and decrease.
+      // No Exceptions are thrown here. All update errors are aggregated
+      // and returned to the AM.
+      List<UpdateContainerRequest> increaseResourceReqs = new ArrayList<>();
+      List<UpdateContainerRequest> decreaseResourceReqs = new ArrayList<>();
+      List<UpdateContainerError> updateContainerErrors =
+          RMServerUtils.validateAndSplitUpdateResourceRequests(rmContext,
+              request, maximumCapacity, increaseResourceReqs,
+              decreaseResourceReqs);
 
       // Send new requests to appAttempt.
       Allocation allocation;
@@ -524,7 +531,7 @@ public class ApplicationMasterService extends AbstractService implements
         allocation =
             this.rScheduler.allocate(appAttemptId, ask, release,
                 blacklistAdditions, blacklistRemovals,
-                request.getIncreaseRequests(), request.getDecreaseRequests());
+                increaseResourceReqs, decreaseResourceReqs);
       }
 
       if (!blacklistAdditions.isEmpty() || !blacklistRemovals.isEmpty()) {
@@ -539,6 +546,10 @@ public class ApplicationMasterService extends AbstractService implements
         allocateResponse.setNMTokens(allocation.getNMTokens());
       }
 
+      // Notify the AM of container update errors
+      if (!updateContainerErrors.isEmpty()) {
+        allocateResponse.setUpdateErrors(updateContainerErrors);
+      }
       // update the response with the deltas of node status changes
       List<RMNode> updatedNodes = new ArrayList<RMNode>();
       if(app.pullRMNodeUpdates(updatedNodes) > 0) {
@@ -572,8 +583,23 @@ public class ApplicationMasterService extends AbstractService implements
       allocateResponse.setAvailableResources(allocation.getResourceLimit());
       
       // Handling increased/decreased containers
-      allocateResponse.setIncreasedContainers(allocation.getIncreasedContainers());
-      allocateResponse.setDecreasedContainers(allocation.getDecreasedContainers());
+      List<UpdatedContainer> updatedContainers = new ArrayList<>();
+      if (allocation.getIncreasedContainers() != null) {
+        for (Container c : allocation.getIncreasedContainers()) {
+          updatedContainers.add(
+              UpdatedContainer.newInstance(
+                  ContainerUpdateType.INCREASE_RESOURCE, c));
+        }
+      }
+      if (allocation.getDecreasedContainers() != null) {
+        for (Container c : allocation.getDecreasedContainers()) {
+          updatedContainers.add(
+              UpdatedContainer.newInstance(
+                  ContainerUpdateType.DECREASE_RESOURCE, c));
+        }
+      }
+
+      allocateResponse.setUpdatedContainers(updatedContainers);
 
       allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
 
@@ -623,7 +649,7 @@ public class ApplicationMasterService extends AbstractService implements
       return allocateResponse;
     }    
   }
-  
+
   private PreemptionMessage generatePreemptionMessage(Allocation allocation){
     PreemptionMessage pMsg = null;
     // assemble strict preemption request
