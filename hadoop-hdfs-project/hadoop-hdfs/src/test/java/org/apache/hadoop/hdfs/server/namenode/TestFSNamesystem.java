@@ -60,6 +60,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TestFSNamesystem {
@@ -432,54 +433,15 @@ public class TestFSNamesystem {
     t2.start();
     t1.join();
     t2.join();
+    // Look for the differentiating class names in the stack trace
+    String stackTracePatternString =
+        String.format("INFO.+%s(.+\n){4}\\Q%%s\\E\\.run", readLockLogStmt);
     Pattern t1Pattern = Pattern.compile(
-        String.format("\\Q%s\\E.+%s", t1.getName(), readLockLogStmt));
+        String.format(stackTracePatternString, t1.getClass().getName()));
     assertTrue(t1Pattern.matcher(logs.getOutput()).find());
     Pattern t2Pattern = Pattern.compile(
-        String.format("\\Q%s\\E.+%s", t2.getName(), readLockLogStmt));
+        String.format(stackTracePatternString, t2.getClass().getName()));
     assertFalse(t2Pattern.matcher(logs.getOutput()).find());
-
-    // Spin up a bunch of threads all grabbing the lock at once; assign some
-    // to go over threshold and some under. Check that they all log correctly.
-    logs.clearOutput();
-    final int threadCount = 50;
-    List<Thread> threads = new ArrayList<>(threadCount);
-    for (int i = 0; i < threadCount; i++) {
-      threads.add(new Thread() {
-        @Override
-        public void run() {
-          try {
-            long sleepTime;
-            if (this.getName().hashCode() % 2 == 0) {
-              sleepTime = readLockReportingThreshold + 10;
-            } else {
-              sleepTime = readLockReportingThreshold / 2;
-            }
-            fsn.readLock();
-            Thread.sleep(sleepTime);
-            fsn.readUnlock();
-          } catch (InterruptedException e) {
-            fail("Interrupted during testing");
-          }
-        }
-      });
-    }
-    for (Thread t : threads) {
-      t.start();
-    }
-    for (Thread t : threads) {
-      t.join();
-    }
-    for (Thread t : threads) {
-      Pattern p = Pattern.compile(
-          String.format("\\Q%s\\E.+%s", t.getName(), readLockLogStmt));
-      boolean foundLog = p.matcher(logs.getOutput()).find();
-      if (t.getName().hashCode() % 2 == 0) {
-        assertTrue(foundLog);
-      } else {
-        assertFalse(foundLog);
-      }
-    }
   }
 
   @Test
