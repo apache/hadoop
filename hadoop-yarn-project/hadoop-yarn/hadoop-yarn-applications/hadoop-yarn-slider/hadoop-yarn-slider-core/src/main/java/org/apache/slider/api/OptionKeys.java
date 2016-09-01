@@ -41,7 +41,20 @@ public interface OptionKeys extends InternalKeys {
    * Prefix for site.xml options: {@value}
    */
   String SITE_XML_PREFIX = "site.";
-
+  /**
+   * Prefix for config file options: {@value}
+   */
+  String CONF_FILE_PREFIX = "conf.";
+  /**
+   * Prefix for package options: {@value}
+   */
+  String PKG_FILE_PREFIX = "pkg.";
+  /**
+   * Prefix for export options: {@value}
+   */
+  String EXPORT_PREFIX = "export.";
+  String TYPE_SUFFIX = ".type";
+  String NAME_SUFFIX = ".name";
 
   /**
    * Zookeeper quorum host list: {@value}

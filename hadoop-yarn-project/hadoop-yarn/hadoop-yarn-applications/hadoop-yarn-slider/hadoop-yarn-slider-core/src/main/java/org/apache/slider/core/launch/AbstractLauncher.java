@@ -52,6 +52,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.apache.slider.providers.docker.DockerKeys.DEFAULT_DOCKER_NETWORK;
+
 /**
  * Launcher of applications: base class
  */
@@ -79,6 +81,7 @@ public abstract class AbstractLauncher extends Configured {
   protected LogAggregationContext logAggregationContext;
   protected boolean yarnDockerMode = false;
   protected String dockerImage;
+  protected String dockerNetwork = DEFAULT_DOCKER_NETWORK;
   protected String yarnContainerMountPoints;
   protected String runPrivilegedContainer;
 
@@ -232,7 +235,8 @@ public abstract class AbstractLauncher extends Configured {
     if(yarnDockerMode){
       Map<String, String> env = containerLaunchContext.getEnvironment();
       env.put("YARN_CONTAINER_RUNTIME_TYPE", "docker");
-      env.put("YARN_CONTAINER_RUNTIME_DOCKER_IMAGE", dockerImage);//if yarnDockerMode, then dockerImage is set
+      env.put("YARN_CONTAINER_RUNTIME_DOCKER_IMAGE", dockerImage);
+      env.put("YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK", dockerNetwork);
       env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER", runPrivilegedContainer);
       StringBuilder sb = new StringBuilder();
       for (Entry<String,String> mount : mountPaths.entrySet()) {
@@ -517,12 +521,24 @@ public abstract class AbstractLauncher extends Configured {
     this.dockerImage = dockerImage;
   }
 
+  public void setDockerNetwork(String dockerNetwork) {
+    this.dockerNetwork = dockerNetwork;
+  }
+
   public void setYarnContainerMountPoints(String yarnContainerMountPoints) {
     this.yarnContainerMountPoints = yarnContainerMountPoints;
   }
 
   public void setRunPrivilegedContainer(String runPrivilegedContainer) {
     this.runPrivilegedContainer = runPrivilegedContainer;
+  }
+
+  public void setRunPrivilegedContainer(boolean runPrivilegedContainer) {
+    if (runPrivilegedContainer) {
+      this.runPrivilegedContainer = Boolean.toString(true);
+    } else {
+      this.runPrivilegedContainer = Boolean.toString(false);
+    }
   }
 
 }
