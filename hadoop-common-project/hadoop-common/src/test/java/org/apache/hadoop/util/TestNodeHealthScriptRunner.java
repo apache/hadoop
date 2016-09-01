@@ -91,7 +91,6 @@ public class TestNodeHealthScriptRunner {
   public void testNodeHealthScript() throws Exception {
     String errorScript = "echo ERROR\n echo \"Tracker not healthy\"";
     String normalScript = "echo \"I am all fine\"";
-    String failWithExitCodeScript = "echo \"Not healthy\"; exit -1";
     String timeOutScript =
       Shell.WINDOWS ? "@echo off\nping -n 4 127.0.0.1 >nul\necho \"I am fine\""
       : "sleep 4\necho \"I am fine\"";
@@ -124,12 +123,6 @@ public class TestNodeHealthScriptRunner {
     Assert.assertTrue("Node health status reported unhealthy",
         nodeHealthScriptRunner.isHealthy());
     Assert.assertEquals("", nodeHealthScriptRunner.getHealthReport());
-
-    // Script which fails with exit code.
-    writeNodeHealthScriptFile(failWithExitCodeScript, true);
-    timerTask.run();
-    Assert.assertFalse("Node health status reported healthy",
-        nodeHealthScriptRunner.isHealthy());
 
     // Timeout script.
     writeNodeHealthScriptFile(timeOutScript, true);
