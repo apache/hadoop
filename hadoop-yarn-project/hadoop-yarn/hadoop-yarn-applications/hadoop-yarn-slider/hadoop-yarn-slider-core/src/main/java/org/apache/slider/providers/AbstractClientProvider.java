@@ -216,8 +216,8 @@ public abstract class AbstractClientProvider extends Configured {
    * Return a set of application specific string tags.
    * @return the set of tags.
    */
-  public Set<String> getApplicationTags (SliderFileSystem fileSystem,
-                                         String appDef) throws SliderException {
+  public Set<String> getApplicationTags(SliderFileSystem fileSystem,
+                                        ConfTreeOperations appConf) throws SliderException {
     return Collections.emptySet();
   }
 

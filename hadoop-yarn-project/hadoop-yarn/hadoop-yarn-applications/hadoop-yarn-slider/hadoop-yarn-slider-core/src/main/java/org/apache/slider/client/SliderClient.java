@@ -151,7 +151,6 @@ import org.apache.slider.core.registry.YarnAppListClient;
 import org.apache.slider.core.registry.docstore.ConfigFormat;
 import org.apache.slider.core.registry.docstore.PublishedConfigSet;
 import org.apache.slider.core.registry.docstore.PublishedConfiguration;
-import org.apache.slider.core.registry.docstore.PublishedConfigurationOutputter;
 import org.apache.slider.core.registry.docstore.PublishedExports;
 import org.apache.slider.core.registry.docstore.PublishedExportsOutputter;
 import org.apache.slider.core.registry.docstore.PublishedExportsSet;
@@ -162,6 +161,7 @@ import org.apache.slider.core.zk.ZKPathBuilder;
 import org.apache.slider.providers.AbstractClientProvider;
 import org.apache.slider.providers.SliderProviderFactory;
 import org.apache.slider.providers.agent.AgentKeys;
+import org.apache.slider.providers.docker.DockerClientProvider;
 import org.apache.slider.providers.slideram.SliderAMClientProvider;
 import org.apache.slider.server.appmaster.SliderAppMaster;
 import org.apache.slider.server.appmaster.rpc.RpcBinder;
@@ -2081,7 +2081,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
     // add the tags if available
     Set<String> applicationTags = provider.getApplicationTags(sliderFileSystem,
-        getApplicationDefinitionPath(appOperations));
+        appOperations);
 
     Credentials credentials = null;
     if (clusterSecure) {
@@ -2242,11 +2242,12 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
                                                   );
 
 
-    // TODO: consider supporting apps that don't have an image path
-    Path imagePath =
-        extractImagePath(sliderFileSystem, internalOptions);
-    if (sliderFileSystem.maybeAddImagePath(localResources, imagePath)) {
-      log.debug("Registered image path {}", imagePath);
+    if (!(provider instanceof DockerClientProvider)) {
+      Path imagePath =
+          extractImagePath(sliderFileSystem, internalOptions);
+      if (sliderFileSystem.maybeAddImagePath(localResources, imagePath)) {
+        log.debug("Registered image path {}", imagePath);
+      }
     }
 
     // build the environment
@@ -3814,7 +3815,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           Path subPath = new Path(path1, appReport.getApplicationId()
               .toString() + "/agent");
           imagePath = subPath.toString();
-          String pathStr = imagePath + "/" + AGENT_TAR;
+          String pathStr = imagePath + "/" + AgentKeys.AGENT_TAR;
           try {
             validateHDFSFile(sliderFileSystem, pathStr);
             log.info("Slider agent package is properly installed at " + pathStr);

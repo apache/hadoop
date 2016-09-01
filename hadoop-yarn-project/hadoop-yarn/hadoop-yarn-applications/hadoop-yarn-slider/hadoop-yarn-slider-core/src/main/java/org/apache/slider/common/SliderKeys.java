@@ -81,6 +81,10 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String COMPONENT_SEPARATOR = "-";
   String[] COMPONENT_KEYS_TO_SKIP = {"zookeeper.", "env.MALLOC_ARENA_MAX",
       "site.fs.", "site.dfs."};
+  /**
+   * A component type for a client component
+   */
+  String COMPONENT_TYPE_CLIENT = "client";
 
   /**
    * Key for application version. This must be set in app_config/global {@value}
@@ -222,7 +226,6 @@ public interface SliderKeys extends SliderXmlConfKeys {
   String SLIDER_JAR = "slider.jar";
   String JCOMMANDER_JAR = "jcommander.jar";
   String GSON_JAR = "gson.jar";
-  String AGENT_TAR = "slider-agent.tar.gz";
   String DEFAULT_APP_PKG = "appPkg.zip";
 
   String DEFAULT_JVM_HEAP = "256M";
@@ -288,4 +291,21 @@ public interface SliderKeys extends SliderXmlConfKeys {
 
   String SLIDER_CLASSPATH_EXTRA = "SLIDER_CLASSPATH_EXTRA";
   String YARN_CONTAINER_PATH = "/node/container/";
+
+  String GLOBAL_CONFIG_TAG = "global";
+  String SYSTEM_CONFIGS = "system_configs";
+  String JAVA_HOME = "java_home";
+  String TWO_WAY_SSL_ENABLED = "ssl.server.client.auth";
+  String INFRA_RUN_SECURITY_DIR = "infra/run/security/";
+  String CERT_FILE_LOCALIZATION_PATH = INFRA_RUN_SECURITY_DIR + "ca.crt";
+
+  String AM_CONFIG_GENERATION = "am.config.generation";
+  String APP_CONF_DIR = "app/conf";
+
+  String APP_RESOURCES = "application.resources";
+  String APP_RESOURCES_DIR = "app/resources";
+  String PER_COMPONENT = "per.component";
+  String PER_GROUP = "per.group";
+
+  String APP_PACKAGES_DIR = "app/packages";
 }

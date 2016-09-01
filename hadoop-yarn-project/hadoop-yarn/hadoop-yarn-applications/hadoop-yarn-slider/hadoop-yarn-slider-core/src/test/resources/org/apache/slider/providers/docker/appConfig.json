@@ -1,0 +1,42 @@
+{
+  "schema": "http://example.org/specification/v2.0.0",
+  "metadata": {},
+  "global": {
+    "am.config.generation": "true",
+    "component.unique.names": "true",
+
+    "export.app.monitor": "${COMPONENT1_HOST} : ${@//site/test-xml/xmlkey}",
+    "export.other.key": "exportvalue",
+
+    "docker.image": "docker.io/centos:centos6",
+    "docker.startCommand": "sleep 600",
+
+    "conf.test-json.type": "json",
+    "conf.test-json.name": "/tmp/test.json",
+    "conf.test-xml.type": "xml",
+    "conf.test-xml.name": "/tmp/test.xml",
+    "conf.test-properties.type": "properties",
+    "conf.test-properties.name": "/tmp/test.xml",
+    "conf.test-yaml.type": "yaml",
+    "conf.test-yaml.name": "/tmp/test.yaml",
+    "conf.test-env.type": "env",
+    "conf.test-env.name": "/tmp/testenv",
+    "conf.test-template.type": "template",
+    "conf.test-template.name": "/tmp/test.template",
+    "conf.test-hadoop-xml.type": "hadoop-xml",
+    "conf.test-hadoop-xml.name": "/tmp/test-hadoop.xml",
+
+    "site.test-json.jsonkey": "val1",
+    "site.test-xml.xmlkey": "val2",
+    "site.test-hadoop-xml.xmlkey": "val3",
+    "site.test-properties.propkey": "val4",
+    "site.test-yaml.yamlkey": "val5",
+    "site.test-env.content": "test ${envkey1} {{envkey2}} content",
+    "site.test-env.envkey1": "envval1",
+    "site.test-env.envkey2": "envval2",
+    "site.test-template.templatekey1": "templateval1",
+    "site.test-template.templatekey2": "templateval2"
+  },
+  "components": {
+  }
+}
