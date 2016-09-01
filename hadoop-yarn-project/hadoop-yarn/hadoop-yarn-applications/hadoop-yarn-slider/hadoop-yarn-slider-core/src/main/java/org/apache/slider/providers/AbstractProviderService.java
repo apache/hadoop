@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
@@ -136,6 +137,19 @@ public abstract class AbstractProviderService
 
   public void setAgentRestOperations(AgentRestOperations agentRestOperations) {
     this.restOps = agentRestOperations;
+  }
+
+  /**
+   * Load default Configuration
+   * @param confDir configuration directory
+   * @return configuration
+   * @throws BadCommandArgumentsException
+   * @throws IOException
+   */
+  @Override
+  public Configuration loadProviderConfigurationInformation(File confDir)
+      throws BadCommandArgumentsException, IOException {
+    return new Configuration(false);
   }
 
   /**
@@ -369,8 +383,6 @@ public abstract class AbstractProviderService
 
   @Override
   public void applyInitialRegistryDefinitions(URL amWebURI,
-      URL agentOpsURI,
-      URL agentStatusURI,
       ServiceRecord serviceRecord)
     throws IOException {
       this.amWebAPI = amWebURI;
@@ -421,5 +433,11 @@ public abstract class AbstractProviderService
   @Override
   public void rebuildContainerDetails(List<Container> liveContainers,
       String applicationId, Map<Integer, ProviderRole> providerRoles) {
+  }
+
+  @Override
+  public boolean processContainerStatus(ContainerId containerId,
+      ContainerStatus status) {
+    return false;
   }
 }

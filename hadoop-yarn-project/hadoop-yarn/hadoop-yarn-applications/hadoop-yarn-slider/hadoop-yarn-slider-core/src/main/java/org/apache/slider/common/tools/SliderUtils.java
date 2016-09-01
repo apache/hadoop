@@ -183,6 +183,10 @@ public final class SliderUtils {
     return !isUnset(s);
   }
 
+  public static boolean isEmpty(List l) {
+    return l == null || l.isEmpty();
+  }
+
   /**
    * Probe for a list existing and not being empty
    * @param l list

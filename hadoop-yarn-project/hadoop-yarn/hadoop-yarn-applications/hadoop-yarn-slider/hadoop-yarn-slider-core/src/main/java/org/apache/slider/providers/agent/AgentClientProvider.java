@@ -82,6 +82,8 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static org.apache.slider.common.tools.SliderUtils.getApplicationDefinitionPath;
+
 /** This class implements  the client-side aspects of the agent deployer */
 public class AgentClientProvider extends AbstractClientProvider
     implements AgentKeys, SliderKeys {
@@ -132,13 +134,13 @@ public class AgentClientProvider extends AbstractClientProvider
     sliderFileSystem.verifyFileExists(appDefPath);
 
     String agentConf = instanceDefinition.getAppConfOperations().
-        getGlobalOptions().getOption(AgentKeys.AGENT_CONF, "");
+        getGlobalOptions().getOption(AGENT_CONF, "");
     if (StringUtils.isNotEmpty(agentConf)) {
       sliderFileSystem.verifyFileExists(new Path(agentConf));
     }
 
     String appHome = instanceDefinition.getAppConfOperations().
-        getGlobalOptions().get(AgentKeys.PACKAGE_PATH);
+        getGlobalOptions().get(PACKAGE_PATH);
     if (SliderUtils.isUnset(appHome)) {
       String agentImage = instanceDefinition.getInternalOperations().
           get(InternalKeys.INTERNAL_APPLICATION_IMAGE_PATH);
@@ -173,7 +175,7 @@ public class AgentClientProvider extends AbstractClientProvider
     }
 
     Set<String> names = resources.getComponentNames();
-    names.remove(SliderKeys.COMPONENT_AM);
+    names.remove(COMPONENT_AM);
     Map<Integer, String> priorityMap = new HashMap<Integer, String>();
 
     for (String name : names) {
@@ -271,7 +273,7 @@ public class AgentClientProvider extends AbstractClientProvider
     String agentImage = instanceDefinition.getInternalOperations().
         get(InternalKeys.INTERNAL_APPLICATION_IMAGE_PATH);
     if (SliderUtils.isUnset(agentImage)) {
-      Path agentPath = new Path(tempPath.getParent(), AgentKeys.PROVIDER_AGENT);
+      Path agentPath = new Path(tempPath.getParent(), PROVIDER_AGENT);
       log.info("Automatically uploading the agent tarball at {}", agentPath);
       fileSystem.getFileSystem().mkdirs(agentPath);
       if (ProviderUtils.addAgentTar(this, AGENT_TAR, fileSystem, agentPath)) {
@@ -283,6 +285,12 @@ public class AgentClientProvider extends AbstractClientProvider
   }
 
   @Override
+  public Set<String> getApplicationTags(SliderFileSystem fileSystem,
+      ConfTreeOperations appConf) throws SliderException {
+    return getApplicationTags(fileSystem,
+        getApplicationDefinitionPath(appConf));
+  }
+
   public Set<String> getApplicationTags(SliderFileSystem fileSystem,
                                         String appDef) throws SliderException {
     Set<String> tags;
@@ -437,19 +445,19 @@ public class AgentClientProvider extends AbstractClientProvider
         if (config != null) {
           try {
             clientRoot = config.getJSONObject("global")
-                .getString(AgentKeys.APP_CLIENT_ROOT);
+                .getString(APP_CLIENT_ROOT);
           } catch (JSONException e) {
             log.info("Couldn't read {} from provided client config, falling " +
-                "back on default", AgentKeys.APP_CLIENT_ROOT);
+                "back on default", APP_CLIENT_ROOT);
           }
         }
         if (clientRoot == null && defaultConfig != null) {
           try {
             clientRoot = defaultConfig.getJSONObject("global")
-                .getString(AgentKeys.APP_CLIENT_ROOT);
+                .getString(APP_CLIENT_ROOT);
           } catch (JSONException e) {
             log.info("Couldn't read {} from default client config, using {}",
-                AgentKeys.APP_CLIENT_ROOT, clientInstallPath);
+                APP_CLIENT_ROOT, clientInstallPath);
           }
         }
         if (clientRoot == null) {
@@ -500,7 +508,7 @@ public class AgentClientProvider extends AbstractClientProvider
     try {
       String clientScriptPath = appPkgDir.getAbsolutePath() + File.separator + "package" +
                                 File.separator + clientScript;
-      List<String> command = Arrays.asList(AgentKeys.PYTHON_EXE,
+      List<String> command = Arrays.asList(PYTHON_EXE,
                "-S",
                clientScriptPath,
                "INSTALL",
@@ -510,12 +518,12 @@ public class AgentClientProvider extends AbstractClientProvider
                "DEBUG");
       ProcessBuilder pb = new ProcessBuilder(command);
       log.info("Command: " + StringUtils.join(pb.command(), " "));
-      pb.environment().put(SliderKeys.PYTHONPATH,
+      pb.environment().put(PYTHONPATH,
                            agentPkgDir.getAbsolutePath()
                            + File.separator + "slider-agent" + File.pathSeparator
                            + agentPkgDir.getAbsolutePath()
                            + File.separator + "slider-agent/jinja2");
-      log.info("{}={}", SliderKeys.PYTHONPATH, pb.environment().get(SliderKeys.PYTHONPATH));
+      log.info("{}={}", PYTHONPATH, pb.environment().get(PYTHONPATH));
 
       Process proc = pb.start();
       InputStream stderr = proc.getErrorStream();
@@ -555,8 +563,8 @@ public class AgentClientProvider extends AbstractClientProvider
 
   private void expandAgentTar(File agentPkgDir) throws IOException {
     String libDirProp =
-        System.getProperty(SliderKeys.PROPERTY_LIB_DIR);
-    File tarFile = new File(libDirProp, SliderKeys.AGENT_TAR);
+        System.getProperty(PROPERTY_LIB_DIR);
+    File tarFile = new File(libDirProp, AGENT_TAR);
     expandTar(tarFile, agentPkgDir);
   }
 
@@ -620,7 +628,7 @@ public class AgentClientProvider extends AbstractClientProvider
                                       String name) throws SliderException {
     try {
       JSONObject pkgList = new JSONObject();
-      pkgList.put(AgentKeys.PACKAGE_LIST,
+      pkgList.put(PACKAGE_LIST,
                   AgentProviderService.getPackageListFromApplication(metainfo.getApplication()));
       JSONObject obj = new JSONObject();
       obj.put("hostLevelParams", pkgList);

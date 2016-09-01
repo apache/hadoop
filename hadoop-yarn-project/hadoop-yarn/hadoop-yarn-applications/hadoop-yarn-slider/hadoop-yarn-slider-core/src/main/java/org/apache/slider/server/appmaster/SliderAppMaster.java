@@ -784,8 +784,10 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
               contentCache);
       initAMFilterOptions(serviceConf);
 
-      // start the agent web app
-      startAgentWebApp(appInformation, serviceConf, webAppApi);
+      if (providerService instanceof AgentProviderService) {
+        // start the agent web app
+        startAgentWebApp(appInformation, serviceConf, webAppApi);
+      }
       int webAppPort = deployWebApplication(webAppApi);
 
       String scheme = WebAppUtils.HTTP_PREFIX;
@@ -1296,8 +1298,6 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
     
     // the registry is running, so register services
     URL amWebURI = new URL(appMasterProxiedUrl);
-    URL agentOpsURI = new URL(agentOpsUrl);
-    URL agentStatusURI = new URL(agentStatusUrl);
 
     //Give the provider restricted access to the state, registry
     setupInitialRegistryPaths();
@@ -1324,15 +1324,20 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
             
     // internal services
     sliderAMProvider.applyInitialRegistryDefinitions(amWebURI,
-        agentOpsURI,
-        agentStatusURI,
         serviceRecord);
 
     // provider service dynamic definitions.
-    providerService.applyInitialRegistryDefinitions(amWebURI,
-        agentOpsURI,
-        agentStatusURI,
-        serviceRecord);
+    if (providerService instanceof AgentProviderService) {
+      URL agentOpsURI = new URL(agentOpsUrl);
+      URL agentStatusURI = new URL(agentStatusUrl);
+      ((AgentProviderService)providerService).applyInitialRegistryDefinitions(
+          amWebURI,
+          agentOpsURI,
+          agentStatusURI,
+          serviceRecord);
+    } else {
+      providerService.applyInitialRegistryDefinitions(amWebURI, serviceRecord);
+    }
 
     // set any provided attributes
     setProvidedServiceRecordAttributes(
@@ -2285,6 +2290,20 @@ public class SliderAppMaster extends AbstractSliderLaunchedService
       ContainerStatus containerStatus) {
     LOG_YARN.debug("Container Status: id={}, status={}", containerId,
         containerStatus);
+    if (providerService.processContainerStatus(containerId, containerStatus)) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+      }
+      RoleInstance cinfo = appState.getOwnedContainer(containerId);
+      if (cinfo != null) {
+        LOG_YARN.info("Re-requesting status for role {}, {}",
+            cinfo.role, containerId);
+        //trigger another async container status
+        nmClientAsync.getContainerStatusAsync(containerId,
+            cinfo.container.getNodeId());
+      }
+    }
   }
 
   @Override //  NMClientAsync.CallbackHandler 

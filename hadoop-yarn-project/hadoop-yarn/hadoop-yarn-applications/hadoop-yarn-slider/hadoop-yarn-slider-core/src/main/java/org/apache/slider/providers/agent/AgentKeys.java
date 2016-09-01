@@ -23,6 +23,7 @@ package org.apache.slider.providers.agent;
  */
 public interface AgentKeys {
 
+  String AGENT_TAR = "slider-agent.tar.gz";
   String PROVIDER_AGENT = "agent";
   String ROLE_NODE = "echo";
 
@@ -76,23 +77,13 @@ public interface AgentKeys {
   String AGENT_CONF = "agent.conf";
   String ADDON_FOR_ALL_COMPONENTS = "ALL";
 
-  String APP_RESOURCES = "application.resources";
-  String APP_RESOURCES_DIR = "app/resources";
-
-  String APP_CONF_DIR = "app/conf";
-
   String AGENT_INSTALL_DIR = "infra/agent";
   String APP_DEFINITION_DIR = "app/definition";
   String ADDON_DEFINITION_DIR = "addon/definition";
   String AGENT_CONFIG_FILE = "infra/conf/agent.ini";
   String AGENT_VERSION_FILE = "infra/version";
-  String APP_PACKAGES_DIR = "app/packages";
-  String PER_COMPONENT = "per.component";
-  String PER_GROUP = "per.group";
 
-  String JAVA_HOME = "java_home";
   String PACKAGE_LIST = "package_list";
-  String SYSTEM_CONFIGS = "system_configs";
   String WAIT_HEARTBEAT = "wait.heartbeat";
   String PYTHON_EXE = "python";
   String CREATE_DEF_ZK_NODE = "create.default.zookeeper.node";
@@ -104,7 +95,6 @@ public interface AgentKeys {
   String CERT_FILE_LOCALIZATION_PATH = INFRA_RUN_SECURITY_DIR + "ca.crt";
   String KEY_CONTAINER_LAUNCH_DELAY = "container.launch.delay.sec";
   String TEST_RELAX_VERIFICATION = "test.relax.validation";
-  String AM_CONFIG_GENERATION = "am.config.generation";
 
   String DEFAULT_METAINFO_MAP_KEY = "DEFAULT_KEY";
 }

@@ -24,6 +24,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.slider.api.ClusterDescription;
 import org.apache.slider.common.tools.SliderFileSystem;
 import org.apache.slider.core.conf.AggregateConf;
@@ -189,13 +190,9 @@ public interface ProviderService extends ProviderCore,
   /**
    * Prior to going live -register the initial service registry data
    * @param amWebURI URL to the AM. This may be proxied, so use relative paths
-   * @param agentOpsURI URI for agent operations. This will not be proxied
-   * @param agentStatusURI URI For agent status. Again: no proxy
    * @param serviceRecord service record to build up
    */
   void applyInitialRegistryDefinitions(URL amWebURI,
-      URL agentOpsURI,
-      URL agentStatusURI,
       ServiceRecord serviceRecord)
       throws IOException;
 
@@ -216,4 +213,11 @@ public interface ProviderService extends ProviderCore,
    */
   void rebuildContainerDetails(List<Container> liveContainers,
       String applicationId, Map<Integer, ProviderRole> providerRoles);
+
+  /**
+   * Process container status
+   * @return true if status needs to be requested again, false otherwise
+   */
+  boolean processContainerStatus(ContainerId containerId,
+      ContainerStatus status);
 }

@@ -103,13 +103,9 @@ public class SliderAMProviderService extends AbstractProviderService implements
 
   @Override
   public void applyInitialRegistryDefinitions(URL amWebURI,
-      URL agentOpsURI,
-      URL agentStatusURI,
       ServiceRecord serviceRecord)
       throws IOException {
     super.applyInitialRegistryDefinitions(amWebURI,
-        agentOpsURI,
-        agentStatusURI,
         serviceRecord);
     // now publish site.xml files
     YarnConfiguration defaultYarnConfig = new YarnConfiguration();
