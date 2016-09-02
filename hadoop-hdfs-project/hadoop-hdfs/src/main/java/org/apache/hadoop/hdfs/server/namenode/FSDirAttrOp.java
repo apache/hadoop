@@ -81,7 +81,7 @@ public class FSDirAttrOp {
           throw new AccessControlException("User " + username
               + " is not a super user (non-super user cannot change owner).");
         }
-        if (group != null && !pc.containsGroup(group)) {
+        if (group != null && !pc.isMemberOfGroup(group)) {
           throw new AccessControlException(
               "User " + username + " does not belong to " + group);
         }

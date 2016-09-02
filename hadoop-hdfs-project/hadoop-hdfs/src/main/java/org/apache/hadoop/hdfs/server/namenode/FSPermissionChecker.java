@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Collection;
 import java.util.Stack;
 
 import org.apache.commons.logging.Log;
@@ -81,7 +78,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
   private final UserGroupInformation callerUgi;
 
   private final String user;
-  private final Set<String> groups;
+  private final Collection<String> groups;
   private final boolean isSuper;
   private final INodeAttributeProvider attributeProvider;
 
@@ -92,24 +89,18 @@ class FSPermissionChecker implements AccessControlEnforcer {
     this.fsOwner = fsOwner;
     this.supergroup = supergroup;
     this.callerUgi = callerUgi;
-    HashSet<String> s =
-        new HashSet<String>(Arrays.asList(callerUgi.getGroupNames()));
-    groups = Collections.unmodifiableSet(s);
+    this.groups = callerUgi.getGroups();
     user = callerUgi.getShortUserName();
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
     this.attributeProvider = attributeProvider;
   }
 
-  public boolean containsGroup(String group) {
+  public boolean isMemberOfGroup(String group) {
     return groups.contains(group);
   }
 
   public String getUser() {
     return user;
-  }
-
-  public Set<String> getGroups() {
-    return groups;
   }
 
   public boolean isSuperUser() {
@@ -337,7 +328,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
     final FsAction checkAction;
     if (getUser().equals(inode.getUserName())) { //user class
       checkAction = mode.getUserAction();
-    } else if (getGroups().contains(inode.getGroupName())) { //group class
+    } else if (isMemberOfGroup(inode.getGroupName())) { //group class
       checkAction = mode.getGroupAction();
     } else { //other class
       checkAction = mode.getOtherAction();
@@ -407,7 +398,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
           // member of multiple groups that have entries that grant access, then
           // it doesn't matter which is chosen, so exit early after first match.
           String group = name == null ? inode.getGroupName() : name;
-          if (getGroups().contains(group)) {
+          if (isMemberOfGroup(group)) {
             FsAction masked = AclEntryStatusFormat.getPermission(entry).and(
                 mode.getGroupAction());
             if (masked.implies(access)) {
@@ -470,7 +461,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
         && mode.getUserAction().implies(access)) {
       return;
     }
-    if (getGroups().contains(pool.getGroupName())
+    if (isMemberOfGroup(pool.getGroupName())
         && mode.getGroupAction().implies(access)) {
       return;
     }

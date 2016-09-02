@@ -17,6 +17,9 @@ Release 2.7.5 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-10711. Optimize FSPermissionChecker group membership check.
+    (Daryn Sharp via kihwal)
+
   BUG FIXES
 
     HDFS-12157. Do fsyncDirectory(..) outside of FSDataset lock.
