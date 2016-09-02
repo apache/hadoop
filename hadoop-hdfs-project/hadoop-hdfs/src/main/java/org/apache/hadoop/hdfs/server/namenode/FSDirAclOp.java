@@ -39,8 +39,7 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -65,8 +64,7 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -90,8 +88,7 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -115,8 +112,7 @@ class FSDirAclOp {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -135,9 +131,8 @@ class FSDirAclOp {
       throws IOException {
     String src = srcArg;
     checkAclsConfigFlag(fsd);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -155,8 +150,7 @@ class FSDirAclOp {
       FSDirectory fsd, String src) throws IOException {
     checkAclsConfigFlag(fsd);
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     String srcs = FSDirectory.normalizePath(src);
     fsd.readLock();
     try {

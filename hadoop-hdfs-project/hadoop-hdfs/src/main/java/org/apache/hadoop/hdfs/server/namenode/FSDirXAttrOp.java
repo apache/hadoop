@@ -67,8 +67,7 @@ class FSDirXAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(
         pc, xAttr, FSDirectory.isReservedRawName(src));
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     xAttrs.add(xAttr);
     INodesInPath iip;
@@ -95,8 +94,7 @@ class FSDirXAttrOp {
     if (!getAll) {
       XAttrPermissionFilter.checkPermissionForApi(pc, xAttrs, isRawPath);
     }
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     final INodesInPath iip = fsd.getINodesInPath(src, true);
     if (fsd.isPermissionEnabled()) {
       fsd.checkPathAccess(pc, iip, FsAction.READ);
@@ -135,8 +133,7 @@ class FSDirXAttrOp {
     FSDirXAttrOp.checkXAttrsConfigFlag(fsd);
     final FSPermissionChecker pc = fsd.getPermissionChecker();
     final boolean isRawPath = FSDirectory.isReservedRawName(src);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     final INodesInPath iip = fsd.getINodesInPath(src, true);
     if (fsd.isPermissionEnabled()) {
       /* To access xattr names, you need EXECUTE in the owning directory. */
@@ -163,15 +160,13 @@ class FSDirXAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(
         pc, xAttr, FSDirectory.isReservedRawName(src));
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
-        src);
 
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     xAttrs.add(xAttr);
     INodesInPath iip;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src, pathComponents);
+      src = fsd.resolvePath(pc, src);
       iip = fsd.getINodesInPath4Write(src);
       checkXAttrChangeAccess(fsd, iip, xAttr, pc);
 

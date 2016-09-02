@@ -1778,8 +1778,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, "open", srcArg);
 
     if (res.updateAccessTime()) {
-      byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
-          srcArg);
       String src = srcArg;
       writeLock();
       final long now = now();
@@ -1803,7 +1801,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
          * HDFS-7463. A better fix is to change the edit log of SetTime to
          * use inode id instead of a path.
          */
-        src = dir.resolvePath(pc, srcArg, pathComponents);
+        src = dir.resolvePath(pc, srcArg);
         final INodesInPath iip = dir.getINodesInPath(src, true);
         INode inode = iip.getLastINode();
         boolean updateAccessTime = inode != null &&
@@ -1880,8 +1878,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       boolean needBlockToken)
       throws IOException {
     String src = srcArg;
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    src = dir.resolvePath(pc, srcArg, pathComponents);
+    src = dir.resolvePath(pc, srcArg);
     final INodesInPath iip = dir.getINodesInPath(src, true);
     final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
     if (isPermissionEnabled) {
@@ -2075,13 +2072,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     boolean res;
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     BlocksMapUpdateInfo toRemoveBlocks = new BlocksMapUpdateInfo();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot truncate for " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       res = truncateInternal(src, newLength, clientName,
           clientMachine, mtime, pc, toRemoveBlocks);
       stat = dir.getAuditFileInfo(dir.getINodesInPath4Write(src, false));
@@ -2438,7 +2434,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           " minimum value (" + DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY
           + "): " + blockSize + " < " + minBlockSize);
     }
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean create = flag.contains(CreateFlag.CREATE);
     boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
     boolean isLazyPersist = flag.contains(CreateFlag.LAZY_PERSIST);
@@ -2465,7 +2460,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (provider != null) {
       readLock();
       try {
-        src = dir.resolvePath(pc, src, pathComponents);
+        src = dir.resolvePath(pc, src);
         INodesInPath iip = dir.getINodesInPath4Write(src);
         // Nothing to do if the path is not within an EZ
         final EncryptionZone zone = dir.getEZForPath(iip);
@@ -2503,7 +2498,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkNameNodeSafeMode("Cannot create file" + src);
       dir.writeLock();
       try {
-        src = dir.resolvePath(pc, src, pathComponents);
+        src = dir.resolvePath(pc, src);
         final INodesInPath iip = dir.getINodesInPath4Write(src);
         toRemoveBlocks = startFileInternal(
             pc, iip, permissions, holder,
@@ -2877,12 +2872,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean skipSync = false;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot recover the lease of " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       final INodesInPath iip = dir.getINodesInPath4Write(src);
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (!inode.isUnderConstruction()) {
@@ -3030,12 +3024,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     LocatedBlock lb = null;
     HdfsFileStatus stat = null;
     FSPermissionChecker pc = getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot append to file" + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       final INodesInPath iip = dir.getINodesInPath4Write(src);
       lb = appendFileInternal(pc, iip, holder, clientMachine, newBlock,
           logRetryCache);
@@ -3120,12 +3113,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         " for {}", src, fileId, clientName);
 
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       FileState fileState = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock);
       if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
@@ -3380,14 +3372,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final byte storagePolicyID;
     final List<DatanodeStorageInfo> chosen;
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
       //check safe mode
       checkNameNodeSafeMode("Cannot add datanode; src=" + src + ", blk=" + blk);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
 
       //check lease
       final INode inode;
@@ -3436,14 +3427,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     NameNode.stateChangeLog.debug(
         "BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot abandon block " + b + " for file" + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
 
       final INode inode;
       final INodesInPath iip;
@@ -3534,14 +3524,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkBlock(last);
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot complete file " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       success = completeFileInternal(src, holder,
         ExtendedBlock.getLocalBlock(last), fileId);
     } finally {
@@ -4032,7 +4021,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
     FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
@@ -4040,7 +4028,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot fsync file " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       final INode inode;
       if (fileId == INodeId.GRANDFATHER_INODE_ID) {
         // Older clients may not have given us an inode ID to work with.
@@ -8100,15 +8088,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
     checkSuperuserPrivilege();
-    final byte[][] pathComponents =
-      FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
 
       final CipherSuite suite = CipherSuite.convert(cipher);
       // For now this is hardcoded, as we only support one method.
@@ -8140,15 +8126,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     throws AccessControlException, UnresolvedLinkException, IOException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
-    final byte[][] pathComponents =
-        FSDirectory.getPathComponentsForReservedPath(src);
     boolean success = false;
     final FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
+      src = dir.resolvePath(pc, src);
       final INodesInPath iip = dir.getINodesInPath(src, true);
       if (isPermissionEnabled) {
         dir.checkPathAccess(pc, iip, FsAction.READ);
@@ -8250,11 +8234,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void checkAccess(String src, FsAction mode) throws IOException {
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
+      src = FSDirectory.resolvePath(src, dir);
       final INodesInPath iip = dir.getINodesInPath(src, true);
       INode inode = iip.getLastINode();
       if (inode == null) {

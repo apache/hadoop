@@ -77,9 +77,8 @@ class FSDirDeleteOp {
       throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
-    src = fsd.resolvePath(pc, src, pathComponents);
+    src = fsd.resolvePath(pc, src);
     final INodesInPath iip = fsd.getINodesInPath4Write(src, false);
     if (!recursive && fsd.isNonEmptyDirectory(iip)) {
       throw new PathIsNotEmptyDirectoryException(src + " is non empty");

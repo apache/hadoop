@@ -64,11 +64,9 @@ class FSDirRenameOp {
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
 
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     HdfsFileStatus resultingStat = null;
-    src = fsd.resolvePath(pc, src, srcComponents);
-    dst = fsd.resolvePath(pc, dst, dstComponents);
+    src = fsd.resolvePath(pc, src);
+    dst = fsd.resolvePath(pc, dst);
     @SuppressWarnings("deprecation")
     final boolean status = renameTo(fsd, pc, src, dst, logRetryCache);
     if (status) {
@@ -239,11 +237,9 @@ class FSDirRenameOp {
     }
     final FSPermissionChecker pc = fsd.getPermissionChecker();
 
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    src = fsd.resolvePath(pc, src, srcComponents);
-    dst = fsd.resolvePath(pc, dst, dstComponents);
+    src = fsd.resolvePath(pc, src);
+    dst = fsd.resolvePath(pc, dst);
     renameTo(fsd, pc, src, dst, collectedBlocks, logRetryCache, options);
     INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
     HdfsFileStatus resultingStat = fsd.getAuditFileInfo(dstIIP);
