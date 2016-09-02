@@ -27,8 +27,14 @@ import java.util.Arrays;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
-class ResponseBuffer extends DataOutputStream {
-  ResponseBuffer(int capacity) {
+/** generates byte-length framed buffers. */
+public class ResponseBuffer extends DataOutputStream {
+
+  public ResponseBuffer() {
+    this(1024);
+  }
+
+  public ResponseBuffer(int capacity) {
     super(new FramedBuffer(capacity));
   }
 
@@ -39,7 +45,7 @@ class ResponseBuffer extends DataOutputStream {
     return buf;
   }
 
-  void writeTo(OutputStream out) throws IOException {
+  public void writeTo(OutputStream out) throws IOException {
     getFramedBuffer().writeTo(out);
   }
 
