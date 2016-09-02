@@ -76,8 +76,8 @@ final class FSDirTruncateOp {
     Block truncateBlock = null;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, srcArg);
-      iip = fsd.getINodesInPath4Write(src, true);
+      iip = fsd.resolvePathForWrite(pc, srcArg);
+      src = iip.getPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }

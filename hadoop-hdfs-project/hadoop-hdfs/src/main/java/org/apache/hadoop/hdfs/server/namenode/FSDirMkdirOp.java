@@ -52,8 +52,8 @@ class FSDirMkdirOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, src);
-      INodesInPath iip = fsd.getINodesInPath4Write(src);
+      INodesInPath iip = fsd.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       if (fsd.isPermissionEnabled()) {
         fsd.checkTraverse(pc, iip);
       }
