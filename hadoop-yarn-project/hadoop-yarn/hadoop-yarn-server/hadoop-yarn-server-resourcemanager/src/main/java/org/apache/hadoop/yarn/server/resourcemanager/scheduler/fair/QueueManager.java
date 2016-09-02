@@ -73,8 +73,9 @@ public class QueueManager {
   public void initialize(Configuration conf) throws IOException,
       SAXException, AllocationConfigurationException, ParserConfigurationException {
     rootQueue = new FSParentQueue("root", scheduler, null);
+    rootQueue.init();
     queues.put(rootQueue.getName(), rootQueue);
-    
+
     // Create the default queue
     getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
   }
@@ -174,7 +175,7 @@ public class QueueManager {
     }
     return queue;
   }
-  
+
   /**
    * Create a leaf or parent queue based on what is specified in
    * {@code queueType} and place it in the tree. Create any parents that don't
@@ -273,31 +274,14 @@ public class QueueManager {
       // Only create a leaf queue at the very end
       if (!i.hasNext() && (queueType != FSQueueType.PARENT)) {
         FSLeafQueue leafQueue = new FSLeafQueue(queueName, scheduler, parent);
-
-        try {
-          leafQueue.setPolicy(queueConf.getDefaultSchedulingPolicy());
-        } catch (AllocationConfigurationException ex) {
-          LOG.warn("Failed to set default scheduling policy "
-              + queueConf.getDefaultSchedulingPolicy()
-              + " on new leaf queue.", ex);
-        }
-
         leafQueues.add(leafQueue);
         queue = leafQueue;
       } else {
         newParent = new FSParentQueue(queueName, scheduler, parent);
-
-        try {
-          newParent.setPolicy(queueConf.getDefaultSchedulingPolicy());
-        } catch (AllocationConfigurationException ex) {
-          LOG.warn("Failed to set default scheduling policy "
-              + queueConf.getDefaultSchedulingPolicy()
-              + " on new parent queue.", ex);
-        }
-
         queue = newParent;
       }
 
+      queue.init();
       parent.addChildQueue(queue);
       setChildResourceLimits(parent, queue, queueConf);
       queues.put(queue.getName(), queue);
@@ -331,10 +315,10 @@ public class QueueManager {
         !configuredQueues.get(FSQueueType.PARENT).contains(child.getName())) {
       // For ad hoc queues, set their max reource allocations based on
       // their parents' default child settings.
-      Resource maxChild = queueConf.getMaxChildResources(parent.getName());
+      Resource maxChild = parent.getMaxChildQueueResource();
 
       if (maxChild != null) {
-        queueConf.setMaxResources(child.getName(), maxChild);
+        child.setMaxShare(maxChild);
       }
     }
   }
@@ -515,22 +499,7 @@ public class QueueManager {
     rootQueue.recomputeSteadyShares();
 
     for (FSQueue queue : queues.values()) {
-      // Update queue metrics
-      FSQueueMetrics queueMetrics = queue.getMetrics();
-      queueMetrics.setMinShare(queue.getMinShare());
-      queueMetrics.setMaxShare(queue.getMaxShare());
-      // Set scheduling policies and update queue metrics
-      try {
-        SchedulingPolicy policy = queueConf.getSchedulingPolicy(queue.getName());
-        policy.initialize(scheduler.getClusterResource());
-        queue.setPolicy(policy);
-
-        queueMetrics.setMaxApps(queueConf.getQueueMaxApps(queue.getName()));
-        queueMetrics.setSchedulingPolicy(policy.getName());
-      } catch (AllocationConfigurationException ex) {
-        LOG.warn("Cannot apply configured scheduling policy to queue "
-            + queue.getName(), ex);
-      }
+      queue.init();
     }
 
     // Update steady fair shares for all queues

@@ -45,8 +45,6 @@ public class TestQueueManager {
 
     // Set up some queues to test default child max resource inheritance
     allocConf.configuredQueues.get(FSQueueType.PARENT).add("root.test");
-    allocConf.setMaxChildResources("root.test",
-        Resources.createResource(8192, 256));
     allocConf.configuredQueues.get(FSQueueType.LEAF).add("root.test.childA");
     allocConf.configuredQueues.get(FSQueueType.PARENT).add("root.test.childB");
 
@@ -207,16 +205,17 @@ public class TestQueueManager {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
 
     queueManager.updateAllocationConfiguration(allocConf);
+    queueManager.getQueue("root.test").setMaxChildQueueResource(
+        Resources.createResource(8192, 256));
 
     FSQueue q1 = queueManager.createQueue("root.test.childC", FSQueueType.LEAF);
-
     assertNotNull("Leaf queue root.test.childC was not created",
         queueManager.getLeafQueue("root.test.childC", false));
     assertEquals("createQueue() returned wrong queue",
         "root.test.childC", q1.getName());
     assertEquals("Max resources for root.queue1 were not inherited from "
         + "parent's max child resources", Resources.createResource(8192, 256),
-        allocConf.getMaxResources("root.test.childC"));
+        q1.getMaxShare());
 
     FSQueue q2 = queueManager.createQueue("root.test.childD",
         FSQueueType.PARENT);
@@ -228,7 +227,7 @@ public class TestQueueManager {
     assertEquals("Max resources for root.test.childD were not inherited "
         + "from parent's max child resources",
         Resources.createResource(8192, 256),
-        allocConf.getMaxResources("root.test.childD"));
+        q2.getMaxShare());
 
     // Check that the childA and childB queues weren't impacted
     // by the child defaults
@@ -236,12 +235,12 @@ public class TestQueueManager {
         queueManager.getLeafQueue("root.test.childA", false));
     assertEquals("Max resources for root.test.childA were inherited from "
         + "parent's max child resources", Resources.unbounded(),
-        allocConf.getMaxResources("root.test.childA"));
+        queueManager.getLeafQueue("root.test.childA", false).getMaxShare());
     assertNotNull("Leaf queue root.test.childB was not created during setup",
         queueManager.getParentQueue("root.test.childB", false));
     assertEquals("Max resources for root.test.childB were inherited from "
         + "parent's max child resources", Resources.unbounded(),
-        allocConf.getMaxResources("root.test.childB"));
+        queueManager.getParentQueue("root.test.childB", false).getMaxShare());
   }
 
   /**
@@ -260,11 +259,11 @@ public class TestQueueManager {
     // Min default is 0,0
     assertEquals("Min resources were not set to default",
         Resources.createResource(0, 0),
-        allocConf.getMinResources("root.queue1"));
+        q1.getMinShare());
 
     // Max default is unbounded
     assertEquals("Max resources were not set to default", Resources.unbounded(),
-        allocConf.getMaxResources("root.queue1"));
+        q1.getMaxShare());
   }
 
   /**

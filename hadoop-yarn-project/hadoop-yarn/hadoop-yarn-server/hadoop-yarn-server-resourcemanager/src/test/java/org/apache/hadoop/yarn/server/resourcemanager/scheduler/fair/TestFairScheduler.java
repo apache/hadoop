@@ -4348,9 +4348,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     QueueManager queueMgr = scheduler.getQueueManager();
-    queueMgr.getLeafQueue("queue2", true);
-    scheduler.getAllocationConfiguration().queueMaxApps.put("root.queue2", 0);
-    
+    FSQueue queue2 = queueMgr.getLeafQueue("queue2", true);
+    queue2.setMaxRunningApps(0);
+
     ApplicationAttemptId appAttId =
         createSchedulingRequest(1024, 1, "queue1", "user1", 3);
     
@@ -4365,9 +4365,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
-    queueMgr.getLeafQueue("queue2", true);
-    scheduler.getAllocationConfiguration().maxQueueResources.put("root.queue2",
-        Resource.newInstance(1024, 1));
+    FSQueue queue2 = queueMgr.getLeafQueue("queue2", true);
+    queue2.setMaxShare(Resource.newInstance(1024, 1));
 
     ApplicationAttemptId appAttId =
         createSchedulingRequest(1024, 1, "queue1", "user1", 3);

@@ -66,8 +66,7 @@ public class MaxRunningAppsEnforcer {
     }
     // Check queue and all parent queues
     while (queue != null) {
-      int queueMaxApps = allocConf.getQueueMaxApps(queue.getName());
-      if (queue.getNumRunnableApps() >= queueMaxApps) {
+      if (queue.getNumRunnableApps() >= queue.getMaxRunningApps()) {
         return false;
       }
       queue = queue.getParent();
@@ -143,11 +142,10 @@ public class MaxRunningAppsEnforcer {
     // Thus we find the ancestor queue highest in the tree for which the app
     // that was at its maxRunningApps before the removal.
     FSQueue highestQueueWithAppsNowRunnable = (queue.getNumRunnableApps() ==
-        allocConf.getQueueMaxApps(queue.getName()) - 1) ? queue : null;
+        queue.getMaxRunningApps() - 1) ? queue : null;
     FSParentQueue parent = queue.getParent();
     while (parent != null) {
-      if (parent.getNumRunnableApps() == allocConf.getQueueMaxApps(parent
-          .getName()) - 1) {
+      if (parent.getNumRunnableApps() == parent.getMaxRunningApps() - 1) {
         highestQueueWithAppsNowRunnable = parent;
       }
       parent = parent.getParent();
@@ -265,8 +263,7 @@ public class MaxRunningAppsEnforcer {
    */
   private void gatherPossiblyRunnableAppLists(FSQueue queue,
       List<List<FSAppAttempt>> appLists) {
-    if (queue.getNumRunnableApps() < scheduler.getAllocationConfiguration()
-        .getQueueMaxApps(queue.getName())) {
+    if (queue.getNumRunnableApps() < queue.getMaxRunningApps()) {
       if (queue instanceof FSLeafQueue) {
         appLists.add(
             ((FSLeafQueue)queue).getCopyOfNonRunnableAppSchedulables());

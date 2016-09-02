@@ -1599,11 +1599,10 @@ public class FairScheduler extends
       if ((queue.getParent() != null) &&
           !configuredLeafQueues.contains(queue.getName()) &&
           !configuredParentQueues.contains(queue.getName())) {
-        Resource max =
-            allocConf.getMaxChildResources(queue.getParent().getName());
+        Resource max = queue.getParent().getMaxChildQueueResource();
 
         if (max != null) {
-          allocConf.setMaxResources(queue.getName(), max);
+          queue.setMaxShare(max);
         }
       }
     }
@@ -1665,7 +1664,7 @@ public class FairScheduler extends
     FSQueue cur = targetQueue;
     while (cur != lowestCommonAncestor) {
       // maxRunningApps
-      if (cur.getNumRunnableApps() == allocConf.getQueueMaxApps(cur.getQueueName())) {
+      if (cur.getNumRunnableApps() == cur.getMaxRunningApps()) {
         throw new YarnException("Moving app attempt " + appAttId + " to queue "
             + queueName + " would violate queue maxRunningApps constraints on"
             + " queue " + cur.getQueueName());
