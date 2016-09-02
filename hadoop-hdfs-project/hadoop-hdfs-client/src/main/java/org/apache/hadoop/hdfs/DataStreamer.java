@@ -484,6 +484,12 @@ class DataStreamer extends Daemon {
   private void initDataStreaming() {
     this.setName("DataStreamer for file " + src +
         " block " + block);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("nodes {} storageTypes {} storageIDs {}",
+          Arrays.toString(nodes),
+          Arrays.toString(storageTypes),
+          Arrays.toString(storageIDs));
+    }
     response = new ResponseProcessor(nodes);
     response.start();
     stage = BlockConstructionStage.DATA_STREAMING;
