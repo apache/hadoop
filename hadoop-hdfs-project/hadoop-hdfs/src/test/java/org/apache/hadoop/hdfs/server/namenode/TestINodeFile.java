@@ -856,9 +856,9 @@ public class TestINodeFile {
     byte[][] actual = FSDirectory.getPathComponents(inode);
     DFSTestUtil.checkComponentsEquals(expected, actual);
   }
-  
+
   /**
-   * Tests for {@link FSDirectory#resolvePath(String, byte[][], FSDirectory)}
+   * Tests for {@link FSDirectory#resolvePath(String, FSDirectory)}
    */
   @Test
   public void testInodePath() throws IOException {
@@ -868,54 +868,47 @@ public class TestINodeFile {
     // For an any inode look up return inode corresponding to "c" from /a/b/c
     FSDirectory fsd = Mockito.mock(FSDirectory.class);
     Mockito.doReturn(inode).when(fsd).getInode(Mockito.anyLong());
-    
-    // Null components
-    assertEquals("/test", FSDirectory.resolvePath("/test", null, fsd));
-    
+
     // Tests for FSDirectory#resolvePath()
     // Non inode regular path
-    byte[][] components = INode.getPathComponents(path);
-    String resolvedPath = FSDirectory.resolvePath(path, components, fsd);
+    String resolvedPath = FSDirectory.resolvePath(path, fsd);
     assertEquals(path, resolvedPath);
-    
+
     // Inode path with no trailing separator
-    components = INode.getPathComponents("/.reserved/.inodes/1");
-    resolvedPath = FSDirectory.resolvePath(path, components, fsd);
+    String testPath = "/.reserved/.inodes/1";
+    resolvedPath = FSDirectory.resolvePath(testPath, fsd);
     assertEquals(path, resolvedPath);
-    
+
     // Inode path with trailing separator
-    components = INode.getPathComponents("/.reserved/.inodes/1/");
+    testPath = "/.reserved/.inodes/1/";
+    resolvedPath = FSDirectory.resolvePath(testPath, fsd);
     assertEquals(path, resolvedPath);
-    
+
     // Inode relative path
-    components = INode.getPathComponents("/.reserved/.inodes/1/d/e/f");
-    resolvedPath = FSDirectory.resolvePath(path, components, fsd);
+    testPath = "/.reserved/.inodes/1/d/e/f";
+    resolvedPath = FSDirectory.resolvePath(testPath, fsd);
     assertEquals("/a/b/c/d/e/f", resolvedPath);
-    
+
     // A path with just .inodes  returns the path as is
-    String testPath = "/.reserved/.inodes";
-    components = INode.getPathComponents(testPath);
-    resolvedPath = FSDirectory.resolvePath(testPath, components, fsd);
+    testPath = "/.reserved/.inodes";
+    resolvedPath = FSDirectory.resolvePath(testPath, fsd);
     assertEquals(testPath, resolvedPath);
-    
+
     // Root inode path
     testPath = "/.reserved/.inodes/" + INodeId.ROOT_INODE_ID;
-    components = INode.getPathComponents(testPath);
-    resolvedPath = FSDirectory.resolvePath(testPath, components, fsd);
+    resolvedPath = FSDirectory.resolvePath(testPath, fsd);
     assertEquals("/", resolvedPath);
-    
+
     // An invalid inode path should remain unresolved
     testPath = "/.invalid/.inodes/1";
-    components = INode.getPathComponents(testPath);
-    resolvedPath = FSDirectory.resolvePath(testPath, components, fsd);
+    resolvedPath = FSDirectory.resolvePath(testPath, fsd);
     assertEquals(testPath, resolvedPath);
-    
+
     // Test path with nonexistent(deleted or wrong id) inode
     Mockito.doReturn(null).when(fsd).getInode(Mockito.anyLong());
     testPath = "/.reserved/.inodes/1234";
-    components = INode.getPathComponents(testPath);
     try {
-      String realPath = FSDirectory.resolvePath(testPath, components, fsd);
+      String realPath = FSDirectory.resolvePath(testPath, fsd);
       fail("Path should not be resolved:" + realPath);
     } catch (IOException e) {
       assertTrue(e instanceof FileNotFoundException);

@@ -70,15 +70,13 @@ final class FSDirTruncateOp {
     assert fsn.hasWriteLock();
 
     FSDirectory fsd = fsn.getFSDirectory();
-    byte[][] pathComponents = FSDirectory
-        .getPathComponentsForReservedPath(srcArg);
     final String src;
     final INodesInPath iip;
     final boolean onBlockBoundary;
     Block truncateBlock = null;
     fsd.writeLock();
     try {
-      src = fsd.resolvePath(pc, srcArg, pathComponents);
+      src = fsd.resolvePath(pc, srcArg);
       iip = fsd.getINodesInPath4Write(src, true);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
