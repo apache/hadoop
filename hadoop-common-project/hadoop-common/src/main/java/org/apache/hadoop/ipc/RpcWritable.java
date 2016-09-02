@@ -24,7 +24,6 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +33,7 @@ import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
 
+// note anything marked public is solely for access by SaslRpcClient
 @InterfaceAudience.Private
 public abstract class RpcWritable implements Writable {
 
@@ -99,6 +99,10 @@ public abstract class RpcWritable implements Writable {
       this.message = message;
     }
 
+    Message getMessage() {
+      return message;
+    }
+
     @Override
     void writeTo(ResponseBuffer out) throws IOException {
       int length = message.getSerializedSize();
@@ -128,11 +132,13 @@ public abstract class RpcWritable implements Writable {
     }
   }
 
-  // adapter to allow decoding of writables and protobufs from a byte buffer.
-  static class Buffer extends RpcWritable {
+  /**
+   * adapter to allow decoding of writables and protobufs from a byte buffer.
+   */
+  public static class Buffer extends RpcWritable {
     private ByteBuffer bb;
 
-    static Buffer wrap(ByteBuffer bb) {
+    public static Buffer wrap(ByteBuffer bb) {
       return new Buffer(bb);
     }
 
@@ -140,6 +146,10 @@ public abstract class RpcWritable implements Writable {
 
     Buffer(ByteBuffer bb) {
       this.bb = bb;
+    }
+
+    ByteBuffer getByteBuffer() {
+      return bb;
     }
 
     @Override
@@ -177,7 +187,7 @@ public abstract class RpcWritable implements Writable {
       return RpcWritable.wrap(value).readFrom(bb);
     }
 
-    int remaining() {
+    public int remaining() {
       return bb.remaining();
     }
   }
