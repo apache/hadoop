@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -80,16 +79,11 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     resourceManager = new MockRM(conf);
     resourceManager.start();
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
-    scheduler.allocConf = mock(AllocationConfiguration.class);
 
     String queueName = "root.queue1";
-    when(scheduler.allocConf.getMaxResources(queueName)).thenReturn(maxResource);
-    when(scheduler.allocConf.getMinResources(queueName)).thenReturn(Resources.none());
-    when(scheduler.allocConf.getQueueMaxApps(queueName)).
-        thenReturn(Integer.MAX_VALUE);
-    when(scheduler.allocConf.getSchedulingPolicy(queueName))
-        .thenReturn(SchedulingPolicy.DEFAULT_POLICY);
     FSLeafQueue schedulable = new FSLeafQueue(queueName, scheduler, null);
+    schedulable.init();
+    schedulable.setMaxShare(maxResource);
     assertEquals(schedulable.getMetrics().getMaxApps(), Integer.MAX_VALUE);
     assertEquals(schedulable.getMetrics().getSchedulingPolicy(),
         SchedulingPolicy.DEFAULT_POLICY.getName());

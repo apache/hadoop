@@ -264,29 +264,27 @@ public class FSLeafQueue extends FSQueue {
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources
-    Resource maxRes = scheduler.getAllocationConfiguration()
-        .getMaxResources(getName());
     demand = Resources.createResource(0);
     readLock.lock();
     try {
       for (FSAppAttempt sched : runnableApps) {
-        if (Resources.equals(demand, maxRes)) {
+        if (Resources.equals(demand, maxShare)) {
           break;
         }
-        updateDemandForApp(sched, maxRes);
+        updateDemandForApp(sched, maxShare);
       }
       for (FSAppAttempt sched : nonRunnableApps) {
-        if (Resources.equals(demand, maxRes)) {
+        if (Resources.equals(demand, maxShare)) {
           break;
         }
-        updateDemandForApp(sched, maxRes);
+        updateDemandForApp(sched, maxShare);
       }
     } finally {
       readLock.unlock();
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("The updated demand for " + getName() + " is " + demand
-          + "; the max is " + maxRes);
+          + "; the max is " + maxShare);
       LOG.debug("The updated fairshare for " + getName() + " is "
           + getFairShare());
     }
@@ -486,8 +484,6 @@ public class FSLeafQueue extends FSQueue {
    * @return true if this queue can run
    */
   public boolean canRunAppAM(Resource amResource) {
-    float maxAMShare =
-        scheduler.getAllocationConfiguration().getQueueMaxAMShare(getName());
     if (Math.abs(maxAMShare - -1.0f) < 0.0001) {
       return true;
     }
@@ -543,8 +539,7 @@ public class FSLeafQueue extends FSQueue {
    * @param weight queue weight
    */
   public void setWeights(float weight) {
-    scheduler.getAllocationConfiguration().setQueueWeight(getName(),
-        new ResourceWeights(weight));
+    this.weights = new ResourceWeights(weight);
   }
 
   /**
