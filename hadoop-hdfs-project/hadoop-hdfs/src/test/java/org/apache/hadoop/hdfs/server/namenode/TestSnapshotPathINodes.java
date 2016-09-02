@@ -146,6 +146,11 @@ public class TestSnapshotPathINodes {
     // The returned nodesInPath should be non-snapshot
     assertSnapshot(nodesInPath, false, null, -1);
 
+    // verify components are correct
+    for (int i=0; i < components.length; i++) {
+      assertEquals(components[i], nodesInPath.getPathComponent(i));
+    }
+
     // The last INode should be associated with file1
     assertTrue("file1=" + file1 + ", nodesInPath=" + nodesInPath,
         nodesInPath.getINode(components.length - 1) != null);
