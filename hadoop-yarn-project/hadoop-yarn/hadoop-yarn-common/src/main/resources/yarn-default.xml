@@ -299,6 +299,19 @@
   </property>
 
   <property>
+    <description>
+      The resource manager will log all commands being executed to the RM log
+      if this property is true. Commands may contain sensitive information,
+      such as application or service passwords, making logging the commands a
+      security risk. In cases where the cluster may be running applications with
+      such commands this property should be set to false. Commands are only
+      logged at the debug level.
+    </description>
+    <name>yarn.resourcemanager.amlauncher.log.command</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The class to use as the resource scheduler.</description>
     <name>yarn.resourcemanager.scheduler.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
