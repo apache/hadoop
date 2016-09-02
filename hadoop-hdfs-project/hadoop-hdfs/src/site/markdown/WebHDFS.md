@@ -1295,7 +1295,7 @@ All operations, except for [`OPEN`](#Open_and_Read_a_File), either return a zero
       {
         "entries":
         {
-          "type": "array"
+          "type": "array",
           "items":
           {
             "description": "ACL entry.",
@@ -1319,7 +1319,7 @@ All operations, except for [`OPEN`](#Open_and_Read_a_File), either return a zero
           "description": "True if the sticky bit is on.",
           "type"       : "boolean",
           "required"   : true
-        },
+        }
       }
     }
   }
@@ -1338,7 +1338,7 @@ All operations, except for [`OPEN`](#Open_and_Read_a_File), either return a zero
       "type"      : "array",
       "items":
       {
-        "type"    " "object",
+        "type"    : "object",
         "properties":
         {
           "name":
@@ -1369,7 +1369,7 @@ All operations, except for [`OPEN`](#Open_and_Read_a_File), either return a zero
     "XAttrNames":
     {
       "description": "XAttr names.",
-      "type"       : "string"
+      "type"       : "string",
       "required"   : true
     }
   }
@@ -1738,7 +1738,7 @@ See also: [`GETHOMEDIRECTORY`](#Get_Home_Directory), [Path](../../api/org/apache
         "javaClassName":                                     //an optional property
         {
           "description": "Java class name of the exception",
-          "type"       : "string",
+          "type"       : "string"
         }
       }
     }
