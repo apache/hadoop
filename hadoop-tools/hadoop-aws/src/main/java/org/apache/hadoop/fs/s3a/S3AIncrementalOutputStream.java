@@ -19,10 +19,9 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -33,7 +32,6 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -47,25 +45,24 @@ import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
-import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
+import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
 
 /**
- * Upload files/parts asap directly from a memory buffer (instead of buffering
- * to a file).
+ * Upload files/parts asap directly via different buffering mechanisms:
+ * memory, disk.
  * <p>
  * Uploads are managed low-level rather than through the AWS TransferManager.
  * This allows for uploading each part of a multi-part upload as soon as
@@ -75,23 +72,23 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class S3AFastOutputStream extends OutputStream {
+public class S3AIncrementalOutputStream extends OutputStream {
 
   private static final Logger LOG = S3AFileSystem.LOG;
+  private final S3AFileSystem fs;
   private final String key;
   private final String bucket;
-  private final AmazonS3 client;
-  private final int partSize;
-  private final int multiPartThreshold;
-  private final S3AFileSystem fs;
+  private final int partitionSize;
   private final CannedAccessControlList cannedACL;
   private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
   private MultiPartUpload multiPartUpload;
   private boolean closed;
-  private ByteArrayOutputStream buffer;
+  private S3AOutput.StreamDestination dest;
   private int bufferLimit;
   private final RetryPolicy retryPolicy;
+  private final S3AOutput.StreamDestinationFactory destFactory;
+  private final byte[] singleCharWrite = new byte[1];
 
 
   /**
@@ -100,7 +97,7 @@ public class S3AFastOutputStream extends OutputStream {
    * the stream a part is uploaded immediately (by using the low-level
    * multi-part upload API on the AmazonS3Client).
    *
-   * @param client AmazonS3Client used for S3 calls
+   *
    * @param fs S3AFilesystem
    * @param bucket S3 bucket name
    * @param key S3 key name
@@ -108,43 +105,35 @@ public class S3AFastOutputStream extends OutputStream {
    * this class implements {@code ProgressListener} then it will be
    * directly wired up to the AWS client, so receive detailed progress information.
    * @param cannedACL used CannedAccessControlList
-   * @param partSize size of a single part in a multi-part upload (except
+   * @param partitionSize size of a single part in a multi-part upload (except
    * last part)
    * @param multiPartThreshold files at least this size use multi-part upload
    * @param threadPoolExecutor thread factory
+   * @param destinationFactory factory for creating stream destinations
    * @throws IOException on any problem
    */
-  public S3AFastOutputStream(AmazonS3 client,
-      S3AFileSystem fs,
+  public S3AIncrementalOutputStream(S3AFileSystem fs,
       String bucket,
       String key,
       Progressable progress,
       CannedAccessControlList cannedACL,
-      long partSize,
-      long multiPartThreshold,
-      ExecutorService threadPoolExecutor)
+      int partitionSize,
+      ExecutorService threadPoolExecutor,
+      S3AOutput.StreamDestinationFactory destinationFactory)
       throws IOException {
+    this.fs = fs;
     this.bucket = bucket;
     this.key = key;
-    this.client = client;
-    this.fs = fs;
     this.cannedACL = cannedACL;
+    this.destFactory = destinationFactory;
     //Ensure limit as ByteArrayOutputStream size cannot exceed Integer.MAX_VALUE
-    if (partSize > Integer.MAX_VALUE) {
-      this.partSize = Integer.MAX_VALUE;
+    if (partitionSize > Integer.MAX_VALUE) {
+      this.partitionSize = Integer.MAX_VALUE;
       LOG.warn("s3a: MULTIPART_SIZE capped to ~2.14GB (maximum allowed size " +
           "when using 'FAST_UPLOAD = true')");
     } else {
-      this.partSize = (int) partSize;
+      this.partitionSize = partitionSize;
     }
-    if (multiPartThreshold > Integer.MAX_VALUE) {
-      this.multiPartThreshold = Integer.MAX_VALUE;
-      LOG.warn("s3a: MIN_MULTIPART_THRESHOLD capped to ~2.14GB (maximum " +
-          "allowed size when using 'FAST_UPLOAD = true')");
-    } else {
-      this.multiPartThreshold = (int) multiPartThreshold;
-    }
-    this.bufferLimit = this.multiPartThreshold;
     this.closed = false;
     int initialBufferSize = this.fs.getConf()
         .getInt(Constants.FAST_BUFFER_SIZE, Constants.DEFAULT_FAST_BUFFER_SIZE);
@@ -157,7 +146,8 @@ public class S3AFastOutputStream extends OutputStream {
           "exceed MIN_MULTIPART_THRESHOLD");
       initialBufferSize = this.bufferLimit;
     }
-    this.buffer = new ByteArrayOutputStream(initialBufferSize);
+    destFactory.init(fs);
+    maybeCreateDestStream();
     this.executorService = MoreExecutors.listeningDecorator(threadPoolExecutor);
     this.multiPartUpload = null;
     this.progressListener = (progress instanceof ProgressListener) ?
@@ -165,8 +155,14 @@ public class S3AFastOutputStream extends OutputStream {
         : new ProgressableListener(progress);
     this.retryPolicy = RetryPolicies.retryUpToMaximumCountWithProportionalSleep(
         5, 2000, TimeUnit.MILLISECONDS);
-    LOG.debug("Initialized S3AFastOutputStream for bucket '{}' key '{}'",
-        bucket, key);
+    LOG.debug("Initialized S3AFastOutputStream for bucket '{}' key '{}' " +
+            "output to {}", bucket, key, dest);
+  }
+
+  public void maybeCreateDestStream() throws IOException {
+    if (dest == null) {
+      dest = destFactory.create(this.partitionSize);
+    }
   }
 
   /**
@@ -180,18 +176,15 @@ public class S3AFastOutputStream extends OutputStream {
   }
 
   /**
-   * Writes a byte to the memory buffer. If this causes the buffer to reach
+   * Writes a byte to the destination. If this causes the buffer to reach
    * its limit, the actual upload is submitted to the threadpool.
    * @param b the int of which the lowest byte is written
    * @throws IOException on any problem
    */
   @Override
   public synchronized void write(int b) throws IOException {
-    checkOpen();
-    buffer.write(b);
-    if (buffer.size() == bufferLimit) {
-      uploadBuffer();
-    }
+    singleCharWrite[0] = (byte)b;
+    write(singleCharWrite, 0, 1);
   }
 
   /**
@@ -199,58 +192,61 @@ public class S3AFastOutputStream extends OutputStream {
    * buffer to reach its limit, the actual upload is submitted to the
    * threadpool and the remainder of the array is written to memory
    * (recursively).
-   * @param b byte array containing
-   * @param off offset in array where to start
+   * @param source byte array containing
+   * @param offset offset in array where to start
    * @param len number of bytes to be written
    * @throws IOException on any problem
    */
   @Override
-  public synchronized void write(byte[] b, int off, int len)
+  public synchronized void write(byte[] source, int offset, int len)
       throws IOException {
+
+    S3AOutput.validateWriteArgs(source, offset, len);
     checkOpen();
-    if (b == null) {
-      throw new NullPointerException();
-    } else if ((off < 0) || (off > b.length) || (len < 0) ||
-        ((off + len) > b.length) || ((off + len) < 0)) {
-      throw new IndexOutOfBoundsException();
-    } else if (len == 0) {
+    if (len == 0) {
       return;
     }
-    if (buffer.size() + len < bufferLimit) {
-      buffer.write(b, off, len);
-    } else {
-      int firstPart = bufferLimit - buffer.size();
-      buffer.write(b, off, firstPart);
+    maybeCreateDestStream();
+    int written = dest.write(source, offset, len);
+    if (written < len) {
+      // not everything was written. Trigger an upload then
+      // process the remainder.
       uploadBuffer();
-      this.write(b, off + firstPart, len - firstPart);
+      this.write(source, offset + written, len - written);
     }
   }
 
   private synchronized void uploadBuffer() throws IOException {
     if (multiPartUpload == null) {
       multiPartUpload = initiateMultiPartUpload();
+    }
+    multiPartUpload.uploadPartAsync(dest.openForUpload(), partitionSize);
+    dest.close();
+    dest = null;
+
+    {
        /* Upload the existing buffer if it exceeds partSize. This possibly
        requires multiple parts! */
-      final byte[] allBytes = buffer.toByteArray();
-      buffer = null; //earlier gc?
+      final byte[] allBytes = dest.toByteArray();
+      dest = null; //earlier gc?
       LOG.debug("Total length of initial buffer: {}", allBytes.length);
       int processedPos = 0;
-      while ((multiPartThreshold - processedPos) >= partSize) {
+      while ((multiPartThreshold - processedPos) >= partitionSize) {
         LOG.debug("Initial buffer: processing from byte {} to byte {}",
-            processedPos, (processedPos + partSize - 1));
+            processedPos, (processedPos + partitionSize - 1));
         multiPartUpload.uploadPartAsync(new ByteArrayInputStream(allBytes,
-            processedPos, partSize), partSize);
-        processedPos += partSize;
+            processedPos, partitionSize), partitionSize);
+        processedPos += partitionSize;
       }
       //resize and reset stream
-      bufferLimit = partSize;
-      buffer = new ByteArrayOutputStream(bufferLimit);
-      buffer.write(allBytes, processedPos, multiPartThreshold - processedPos);
+      bufferLimit = partitionSize;
+      dest = new ByteArrayOutputStream(bufferLimit);
+      dest.write(allBytes, processedPos, multiPartThreshold - processedPos);
     } else {
       //upload next part
-      multiPartUpload.uploadPartAsync(new ByteArrayInputStream(buffer
-          .toByteArray()), partSize);
-      buffer.reset();
+      multiPartUpload.uploadPartAsync(new ByteArrayInputStream(dest
+          .toByteArray()), partitionSize);
+      dest.reset();
     }
   }
 
@@ -271,10 +267,10 @@ public class S3AFastOutputStream extends OutputStream {
       if (multiPartUpload == null) {
         putObject();
       } else {
-        int size = buffer.size();
+        int size = dest.size();
         if (size > 0) {
           //send last part
-          multiPartUpload.uploadPartAsync(new ByteArrayInputStream(buffer
+          multiPartUpload.uploadPartAsync(new ByteArrayInputStream(dest
               .toByteArray()), size);
         }
         final List<PartETag> partETags = multiPartUpload
@@ -285,7 +281,7 @@ public class S3AFastOutputStream extends OutputStream {
       fs.finishedWrite(key);
       LOG.debug("Upload complete for bucket '{}' key '{}'", bucket, key);
     } finally {
-      buffer = null;
+      dest = null;
       super.close();
     }
   }
@@ -306,7 +302,7 @@ public class S3AFastOutputStream extends OutputStream {
     initiateMPURequest.setCannedACL(cannedACL);
     try {
       return new MultiPartUpload(
-          client.initiateMultipartUpload(initiateMPURequest).getUploadId());
+          getClient().initiateMultipartUpload(initiateMPURequest).getUploadId());
     } catch (AmazonClientException ace) {
       throw translateException("initiate MultiPartUpload", key, ace);
     }
@@ -316,12 +312,12 @@ public class S3AFastOutputStream extends OutputStream {
     LOG.debug("Executing regular upload for bucket '{}' key '{}'",
         bucket, key);
     final ObjectMetadata om = createDefaultMetadata();
-    final int size = buffer.size();
+    final int size = dest.size();
     om.setContentLength(size);
     final PutObjectRequest putObjectRequest =
         fs.newPutObjectRequest(key,
             om,
-            new ByteArrayInputStream(buffer.toByteArray()));
+            new ByteArrayInputStream(dest.toByteArray()));
     putObjectRequest.setGeneralProgressListener(progressListener);
     ListenableFuture<PutObjectResult> putObjectResult =
         executorService.submit(new Callable<PutObjectResult>() {
@@ -341,6 +337,9 @@ public class S3AFastOutputStream extends OutputStream {
     }
   }
 
+  private AmazonS3Client getClient() {
+    return fs.getAmazonS3Client();
+  }
 
   private class MultiPartUpload {
     private final String uploadId;
@@ -353,7 +352,7 @@ public class S3AFastOutputStream extends OutputStream {
           "id '{}'", bucket, key, uploadId);
     }
 
-    private void uploadPartAsync(ByteArrayInputStream inputStream,
+    private void uploadPartAsync(InputStream inputStream,
         int partSize) {
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request =
@@ -408,7 +407,7 @@ public class S3AFastOutputStream extends OutputStream {
         try {
           LOG.debug("Completing multi-part upload for key '{}', id '{}'",
               key, uploadId);
-          return client.completeMultipartUpload(
+          return getClient().completeMultipartUpload(
               new CompleteMultipartUploadRequest(bucket,
                   key,
                   uploadId,
@@ -435,7 +434,7 @@ public class S3AFastOutputStream extends OutputStream {
         try {
           LOG.debug("Completing multi-part upload for key '{}', id '{}'",
               key, uploadId);
-          client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
+          getClient().abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
               key, uploadId));
           return;
         } catch (AmazonClientException e) {
