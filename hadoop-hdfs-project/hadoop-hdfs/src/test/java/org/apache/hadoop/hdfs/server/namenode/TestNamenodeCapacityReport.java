@@ -71,7 +71,6 @@ public class TestNamenodeCapacityReport {
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      
       final FSNamesystem namesystem = cluster.getNamesystem();
       final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
           ).getDatanodeManager();
@@ -100,8 +99,9 @@ public class TestNamenodeCapacityReport {
             + " used " + used + " non DFS used " + nonDFSUsed 
             + " remaining " + remaining + " perentUsed " + percentUsed
             + " percentRemaining " + percentRemaining);
-        
-        assertTrue(configCapacity == (used + remaining + nonDFSUsed));
+        // There will be 5% space reserved in ext filesystem which is not
+        // considered.
+        assertTrue(configCapacity >= (used + remaining + nonDFSUsed));
         assertTrue(percentUsed == DFSUtilClient.getPercentUsed(used,
                                                                configCapacity));
         assertTrue(percentRemaining == DFSUtilClient.getPercentRemaining(
@@ -148,7 +148,9 @@ public class TestNamenodeCapacityReport {
       assertTrue(configCapacity == diskCapacity - reserved);
       
       // Ensure new total capacity reported excludes the reserved space
-      assertTrue(configCapacity == (used + remaining + nonDFSUsed));
+      // There will be 5% space reserved in ext filesystem which is not
+      // considered.
+      assertTrue(configCapacity >= (used + remaining + nonDFSUsed));
 
       // Ensure percent used is calculated based on used and present capacity
       assertTrue(percentUsed == DFSUtilClient.getPercentUsed(used,
@@ -160,9 +162,33 @@ public class TestNamenodeCapacityReport {
 
       // Ensure percent used is calculated based on used and present capacity
       assertTrue(percentRemaining == ((float)remaining * 100.0f)/(float)configCapacity);
+
+      //Adding testcase for non-dfs used where we need to consider
+      // reserved replica also.
+      final int fileCount = 5;
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      // create streams and hsync to force datastreamers to start
+      DFSOutputStream[] streams = new DFSOutputStream[fileCount];
+      for (int i=0; i < fileCount; i++) {
+        streams[i] = (DFSOutputStream)fs.create(new Path("/f"+i))
+            .getWrappedStream();
+        streams[i].write("1".getBytes());
+        streams[i].hsync();
+      }
+      triggerHeartbeats(cluster.getDataNodes());
+      assertTrue(configCapacity > (namesystem.getCapacityUsed() + namesystem
+          .getCapacityRemaining() + namesystem.getNonDfsUsedSpace()));
+      // There is a chance that nonDFS usage might have slightly due to
+      // testlogs, So assume 1MB other files used within this gap
+      assertTrue(
+          (namesystem.getCapacityUsed() + namesystem.getCapacityRemaining()
+              + namesystem.getNonDfsUsedSpace() + fileCount * fs
+              .getDefaultBlockSize()) - configCapacity < 1 * 1024);
     }
     finally {
-      if (cluster != null) {cluster.shutdown();}
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
   
