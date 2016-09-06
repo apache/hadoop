@@ -66,6 +66,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -187,7 +188,10 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     final int bufferSize = params.bufferSize();
     final short replication = params.replication();
     final long blockSize = params.blockSize();
-    final FsPermission permission = params.permission();
+    final FsPermission unmaskedPermission = params.unmaskedPermission();
+    final FsPermission permission = unmaskedPermission == null ?
+        params.permission() :
+        FsCreateModes.create(params.permission(), unmaskedPermission);
     final boolean createParent = params.createParent();
 
     EnumSet<CreateFlag> flags = params.createFlag();

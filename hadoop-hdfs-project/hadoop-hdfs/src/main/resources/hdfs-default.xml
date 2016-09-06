@@ -457,7 +457,19 @@
   </description>
 </property>
 
-<property>
+  <property>
+    <name>dfs.namenode.posix.acl.inheritance.enabled</name>
+    <value>false</value>
+    <description>
+      Set to true to enable POSIX style ACL inheritance. When it is enabled
+      and the create request comes from a compatible client, the NameNode
+      will apply default ACLs from the parent directory to the create mode
+      and ignore the client umask. If no default ACL found, it will apply the
+      client umask.
+    </description>
+  </property>
+
+  <property>
   <name>dfs.namenode.lazypersist.file.scrub.interval.sec</name>
   <value>300</value>
   <description>

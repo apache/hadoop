@@ -138,6 +138,20 @@ public class FsPermission implements Writable {
   }
 
   /**
+   * Get masked permission if exists.
+   */
+  public FsPermission getMasked() {
+    return null;
+  }
+
+  /**
+   * Get unmasked permission if exists.
+   */
+  public FsPermission getUnmasked() {
+    return null;
+  }
+
+  /**
    * Create and initialize a {@link FsPermission} from {@link DataInput}.
    */
   public static FsPermission read(DataInput in) throws IOException {

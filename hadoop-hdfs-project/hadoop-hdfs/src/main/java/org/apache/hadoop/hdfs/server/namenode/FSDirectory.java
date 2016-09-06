@@ -168,6 +168,10 @@ public class FSDirectory implements Closeable {
    * ACL-related operations.
    */
   private final boolean aclsEnabled;
+  /**
+   * Support for POSIX ACL inheritance. Not final for testing purpose.
+   */
+  private boolean posixAclInheritanceEnabled;
   private final boolean xattrsEnabled;
   private final int xattrMaxSize;
 
@@ -251,6 +255,10 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
     LOG.info("ACLs enabled? " + aclsEnabled);
+    this.posixAclInheritanceEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_DEFAULT);
+    LOG.info("POSIX ACL inheritance enabled? " + posixAclInheritanceEnabled);
     this.xattrsEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
@@ -450,6 +458,18 @@ public class FSDirectory implements Closeable {
   boolean isAclsEnabled() {
     return aclsEnabled;
   }
+
+  @VisibleForTesting
+  public boolean isPosixAclInheritanceEnabled() {
+    return posixAclInheritanceEnabled;
+  }
+
+  @VisibleForTesting
+  public void setPosixAclInheritanceEnabled(
+      boolean posixAclInheritanceEnabled) {
+    this.posixAclInheritanceEnabled = posixAclInheritanceEnabled;
+  }
+
   boolean isXattrsEnabled() {
     return xattrsEnabled;
   }
@@ -952,16 +972,18 @@ public class FSDirectory implements Closeable {
    * Add the given child to the namespace.
    * @param existing the INodesInPath containing all the ancestral INodes
    * @param child the new INode to add
+   * @param modes create modes
    * @return a new INodesInPath instance containing the new child INode. Null
    * if the adding fails.
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  INodesInPath addINode(INodesInPath existing, INode child)
+  INodesInPath addINode(INodesInPath existing, INode child,
+                        FsPermission modes)
       throws QuotaExceededException, UnresolvedLinkException {
     cacheName(child);
     writeLock();
     try {
-      return addLastINode(existing, child, true);
+      return addLastINode(existing, child, modes, true);
     } finally {
       writeUnlock();
     }
@@ -1067,12 +1089,51 @@ public class FSDirectory implements Closeable {
   }
 
   /**
+   * Turn on HDFS-6962 POSIX ACL inheritance when the property
+   * {@link DFSConfigKeys#DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY} is
+   * true and a compatible client has sent both masked and unmasked create
+   * modes.
+   *
+   * @param child INode newly created child
+   * @param modes create modes
+   */
+  private void copyINodeDefaultAcl(INode child, FsPermission modes) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("child: {}, posixAclInheritanceEnabled: {}, modes: {}",
+          child, posixAclInheritanceEnabled, modes);
+    }
+
+    if (posixAclInheritanceEnabled && modes != null &&
+        modes.getUnmasked() != null) {
+      //
+      // HDFS-6962: POSIX ACL inheritance
+      //
+      child.setPermission(modes.getUnmasked());
+      if (!AclStorage.copyINodeDefaultAcl(child)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("{}: no parent default ACL to inherit", child);
+        }
+        child.setPermission(modes.getMasked());
+      }
+    } else {
+      //
+      // Old behavior before HDFS-6962
+      //
+      AclStorage.copyINodeDefaultAcl(child);
+    }
+  }
+
+  /**
    * Add a child to the end of the path specified by INodesInPath.
+   * @param existing the INodesInPath containing all the ancestral INodes
+   * @param inode the new INode to add
+   * @param modes create modes
+   * @param checkQuota whether to check quota
    * @return an INodesInPath instance containing the new INode
    */
   @VisibleForTesting
   public INodesInPath addLastINode(INodesInPath existing, INode inode,
-      boolean checkQuota) throws QuotaExceededException {
+      FsPermission modes, boolean checkQuota) throws QuotaExceededException {
     assert existing.getLastINode() != null &&
         existing.getLastINode().isDirectory();
 
@@ -1119,7 +1180,7 @@ public class FSDirectory implements Closeable {
       return null;
     } else {
       if (!isRename) {
-        AclStorage.copyINodeDefaultAcl(inode);
+        copyINodeDefaultAcl(inode, modes);
       }
       addToInodeMap(inode);
     }
@@ -1128,7 +1189,8 @@ public class FSDirectory implements Closeable {
 
   INodesInPath addLastINodeNoQuotaCheck(INodesInPath existing, INode i) {
     try {
-      return addLastINode(existing, i, false);
+      // All callers do not have create modes to pass.
+      return addLastINode(existing, i, null, false);
     } catch (QuotaExceededException e) {
       NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e);
     }

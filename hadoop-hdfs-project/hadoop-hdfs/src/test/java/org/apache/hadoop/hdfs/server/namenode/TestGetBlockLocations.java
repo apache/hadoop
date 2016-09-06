@@ -127,7 +127,7 @@ public class TestGetBlockLocations {
         MOCK_INODE_ID, FILE_NAME.getBytes(StandardCharsets.UTF_8),
         perm, 1, 1, new BlockInfo[] {}, (short) 1,
         DFS_BLOCK_SIZE_DEFAULT);
-    fsn.getFSDirectory().addINode(iip, file);
+    fsn.getFSDirectory().addINode(iip, file, null);
     return fsn;
   }
 

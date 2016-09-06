@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
@@ -973,7 +974,8 @@ public class WebHdfsFileSystem extends FileSystem
     if (permission == null) {
       permission = FsPermission.getDefault();
     }
-    return permission.applyUMask(FsPermission.getUMask(getConf()));
+    return FsCreateModes.applyUMask(permission,
+        FsPermission.getUMask(getConf()));
   }
 
   private HdfsFileStatus getHdfsFileStatus(Path f) throws IOException {
@@ -1025,8 +1027,10 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.MKDIRS);
     final HttpOpParam.Op op = PutOpParam.Op.MKDIRS;
+    final FsPermission modes = applyUMask(permission);
     return new FsPathBooleanRunner(op, f,
-        new PermissionParam(applyUMask(permission))
+        new PermissionParam(modes.getMasked()),
+        new UnmaskedPermissionParam(modes.getUnmasked())
     ).run();
   }
 
@@ -1313,9 +1317,11 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE);
 
+    final FsPermission modes = applyUMask(permission);
     final HttpOpParam.Op op = PutOpParam.Op.CREATE;
     return new FsPathOutputStreamRunner(op, f, bufferSize,
-        new PermissionParam(applyUMask(permission)),
+        new PermissionParam(modes.getMasked()),
+        new UnmaskedPermissionParam(modes.getUnmasked()),
         new OverwriteParam(overwrite),
         new BufferSizeParam(bufferSize),
         new ReplicationParam(replication),
@@ -1331,9 +1337,11 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.CREATE_NON_RECURSIVE);
 
+    final FsPermission modes = applyUMask(permission);
     final HttpOpParam.Op op = PutOpParam.Op.CREATE;
     return new FsPathOutputStreamRunner(op, f, bufferSize,
-        new PermissionParam(applyUMask(permission)),
+        new PermissionParam(modes.getMasked()),
+        new UnmaskedPermissionParam(modes.getUnmasked()),
         new CreateFlagParam(flag),
         new CreateParentParam(false),
         new BufferSizeParam(bufferSize),
