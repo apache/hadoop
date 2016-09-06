@@ -131,6 +131,10 @@ public class S3AFileSystem extends FileSystem {
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
   private boolean fastUploadEnabled;
+  private boolean blockUploadEnabled;
+  private String blockOutputBuffer;
+  private S3ADataBlocks.AbstractBlockFactory
+      blockFactory;
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
@@ -157,18 +161,10 @@ public class S3AFileSystem extends FileSystem {
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
-      partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-      if (partSize < 5 * 1024 * 1024) {
-        LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
-        partSize = 5 * 1024 * 1024;
-      }
-
-      multiPartThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
+      partSize = getSizeProperty(conf, MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+      multiPartThreshold = getSizeProperty(conf, MIN_MULTIPART_THRESHOLD,
           DEFAULT_MIN_MULTIPART_THRESHOLD);
-      if (multiPartThreshold < 5 * 1024 * 1024) {
-        LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
-        multiPartThreshold = 5 * 1024 * 1024;
-      }
+
       //check but do not store the block size
       longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
@@ -213,6 +209,9 @@ public class S3AFileSystem extends FileSystem {
       verifyBucketExists();
 
       initMultipartUploads(conf);
+      String bufferDir = conf.get(BUFFER_DIR) != null
+          ? BUFFER_DIR : "hadoop.tmp.dir";
+      directoryAllocator = new LocalDirAllocator(bufferDir);
 
       serverSideEncryptionAlgorithm =
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
@@ -224,6 +223,23 @@ public class S3AFileSystem extends FileSystem {
       String itemName = conf.get(BUFFER_DIR) != null
           ? BUFFER_DIR : "hadoop.tmp.dir";
       directoryAllocator = new LocalDirAllocator(itemName);
+      blockUploadEnabled = conf.getBoolean(BLOCK_OUTPUT, false);
+      if (blockUploadEnabled) {
+        blockOutputBuffer = conf.getTrimmed(BLOCK_OUTPUT_BUFFER,
+            DEFAULT_BLOCK_OUTPUT_BUFFER);
+        partSize = ensureIntVal(MULTIPART_SIZE, partSize);
+        blockFactory = S3ADataBlocks.createFactory(blockOutputBuffer);
+        blockFactory.init(this);
+        LOG.debug("Uploading data via Block Upload, buffer = {}",
+            blockOutputBuffer);
+      } else {
+        fastUploadEnabled = getConf().getBoolean(FAST_UPLOAD,
+            DEFAULT_FAST_UPLOAD);
+        if (fastUploadEnabled) {
+          partSize = ensureIntVal(MULTIPART_SIZE, partSize);
+
+        }
+      }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -355,6 +371,30 @@ public class S3AFileSystem extends FileSystem {
    */
   LocalDirAllocator getDirectoryAllocator() {
     return directoryAllocator;
+  }
+
+  /**
+   * Get the bucket of this filesystem
+   * @return the bucket
+   */
+  public String getBucket() {
+    return bucket;
+  }
+
+  /**
+   * Get the thread pool of this FS
+   * @return the (blocking) thread pool.
+   */
+  public ExecutorService getThreadPoolExecutor() {
+    return threadPoolExecutor;
+  }
+
+  /**
+   * ACL list if set.
+   * @return an ACL list or null.
+   */
+  public CannedAccessControlList getCannedACL() {
+    return cannedACL;
   }
 
   /**
@@ -505,8 +545,17 @@ public class S3AFileSystem extends FileSystem {
 
     }
     instrumentation.fileCreated();
-    if (fastUploadEnabled) {
-      return new FSDataOutputStream(
+    FSDataOutputStream output;
+    if (blockUploadEnabled) {
+      output = new FSDataOutputStream(
+          new S3ABlockOutputStream(this,
+              key,
+              progress,
+              partSize,
+              blockFactory),
+          null);
+    } else if (fastUploadEnabled) {
+      output = new FSDataOutputStream(
           new S3AFastOutputStream(s3,
               this,
               bucket,
@@ -517,16 +566,19 @@ public class S3AFileSystem extends FileSystem {
               multiPartThreshold,
               threadPoolExecutor),
           statistics);
+    } else {
+
+      // We pass null to FSDataOutputStream so it won't count writes that
+      // are being buffered to a file
+      output = new FSDataOutputStream(
+          new S3AOutputStream(getConf(),
+              this,
+              key,
+              progress
+          ),
+          null);
     }
-    // We pass null to FSDataOutputStream so it won't count writes that
-    // are being buffered to a file
-    return new FSDataOutputStream(
-        new S3AOutputStream(getConf(),
-            this,
-            key,
-            progress
-        ),
-        null);
+    return output;
   }
 
   /**
@@ -1771,6 +1823,9 @@ public class S3AFileSystem extends FileSystem {
       sb.append(", serverSideEncryptionAlgorithm='")
           .append(serverSideEncryptionAlgorithm)
           .append('\'');
+    }
+    if (blockFactory != null) {
+      sb.append("Block Upload via ").append(blockFactory);
     }
     sb.append(", statistics {")
         .append(statistics)

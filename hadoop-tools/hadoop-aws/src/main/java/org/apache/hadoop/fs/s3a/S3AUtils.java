@@ -48,6 +48,9 @@ import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MIN_MULTIPART_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
 
 /**
@@ -454,5 +457,32 @@ public final class S3AUtils {
         String.format("Value of %s: %d is below the minimum value %d",
             key, v, min));
     return v;
+  }
+
+  public static long getSizeProperty(Configuration conf,
+      String property, long defVal) {
+    long partSize = conf.getLong(property, defVal);
+    if (partSize < MULTIPART_MIN_SIZE) {
+      LOG.error(property + " must be at least 5 MB");
+      partSize = MULTIPART_MIN_SIZE;
+    }
+    return partSize;
+  }
+
+  /**
+   * Ensure that the long value is in the range of an integer.
+   * @param name property name for error messages
+   * @param size original size
+   * @return the size, guaranteed to be less than or equal to the max
+   * value of an integer.
+   */
+  public static int ensureIntVal(String name, long size) {
+    if (size > Integer.MAX_VALUE) {
+      LOG.warn("s3a: " + name + " capped to ~2.14GB" +
+          " (maximum allowed size with current output mechanism)");
+      return Integer.MAX_VALUE;
+    } else {
+      return (int)size;
+    }
   }
 }

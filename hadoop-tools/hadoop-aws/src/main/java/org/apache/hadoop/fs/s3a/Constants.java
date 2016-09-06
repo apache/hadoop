@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public final class Constants {
 
+  public static final int MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
+
   private Constants() {
   }
 
@@ -177,6 +179,46 @@ public final class Constants {
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
+
+  /**
+   * Whether to use the experimental block output mechanism.
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String BLOCK_OUTPUT =
+      "fs.s3a.block.output";
+  /**
+   * What buffer to use.
+   * Default is {@link #OUTPUT_INCREMENTAL_BUFFER_DISK}
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String BLOCK_OUTPUT_BUFFER =
+      "fs.s3a.block.output.buffer";
+
+  /**
+   * Buffer blocks to disk: {@value}.
+   * Capacity is limited to available disk space.
+   */
+
+  @InterfaceStability.Unstable
+  public static final String BLOCK_OUTPUT_BUFFER_DISK =
+      "disk";
+
+  /**
+   * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String BLOCK_OUTPUT_BUFFER_ARRAY =
+      "array";
+
+  /**
+   * Default buffer option: {@value}.
+   */
+
+  @InterfaceStability.Unstable
+  public static final String DEFAULT_BLOCK_OUTPUT_BUFFER =
+      BLOCK_OUTPUT_BUFFER_DISK;
 
   /**
    * Which input strategy to use for buffering, seeking and similar when

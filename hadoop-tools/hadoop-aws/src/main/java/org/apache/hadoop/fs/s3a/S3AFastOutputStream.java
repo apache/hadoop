@@ -452,7 +452,7 @@ public class S3AFastOutputStream extends OutputStream {
      * Predicate to determine whether a failed operation should
      * be attempted again.
      * If a retry is advised, the exception is automatically logged and
-     * the filesystem statistic {@link Statistic.IGNORED_ERRORS} incremented.
+     * the filesystem statistic {@link Statistic#IGNORED_ERRORS} incremented.
      * @param e exception raised.
      * @param retryCount  number of retries already attempted
      * @return true if another attempt should be made
