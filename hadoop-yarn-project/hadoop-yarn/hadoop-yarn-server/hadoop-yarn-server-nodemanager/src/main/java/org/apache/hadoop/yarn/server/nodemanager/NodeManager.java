@@ -334,6 +334,9 @@ public class NodeManager extends CompositeService
     this.context = createNMContext(containerTokenSecretManager,
         nmTokenSecretManager, nmStore, isDistSchedulingEnabled);
 
+
+    ((NMContext)context).setContainerExecutor(exec);
+
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
     if (null == nodeLabelsProvider) {
@@ -490,6 +493,7 @@ public class NodeManager extends CompositeService
     private OpportunisticContainerAllocator containerAllocator;
 
     private final QueuingContext queuingContext;
+    private ContainerExecutor executor;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -645,6 +649,15 @@ public class NodeManager extends CompositeService
     @Override
     public OpportunisticContainerAllocator getContainerAllocator() {
       return containerAllocator;
+    }
+
+    @Override
+    public ContainerExecutor getContainerExecutor() {
+      return this.executor;
+    }
+
+    public void setContainerExecutor(ContainerExecutor executor) {
+      this.executor = executor;
     }
   }
 

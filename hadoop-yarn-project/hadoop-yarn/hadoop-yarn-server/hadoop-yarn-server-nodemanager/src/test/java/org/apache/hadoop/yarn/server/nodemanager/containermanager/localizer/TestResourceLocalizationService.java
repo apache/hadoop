@@ -66,6 +66,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
 import org.junit.Assert;
 
@@ -1766,7 +1767,7 @@ public class TestResourceLocalizationService {
       // creating new containers and populating corresponding localizer runners
 
       // Container - 1
-      ContainerImpl container1 = createMockContainer(user, 1);
+      Container container1 = createMockContainer(user, 1);
       String localizerId1 = container1.getContainerId().toString();
       rls.getPrivateLocalizers().put(
         localizerId1,
@@ -2291,7 +2292,7 @@ public class TestResourceLocalizationService {
   }
 
   private ContainerLocalizationRequestEvent createContainerLocalizationEvent(
-      ContainerImpl container, LocalResourceVisibility vis,
+      Container container, LocalResourceVisibility vis,
       LocalResourceRequest req) {
     Map<LocalResourceVisibility, Collection<LocalResourceRequest>> reqs =
         new HashMap<LocalResourceVisibility, Collection<LocalResourceRequest>>();
@@ -2309,6 +2310,7 @@ public class TestResourceLocalizationService {
     when(container.getUser()).thenReturn(user);
     Credentials mockCredentials = mock(Credentials.class);
     when(container.getCredentials()).thenReturn(mockCredentials);
+    when(container.getContainerState()).thenReturn(ContainerState.LOCALIZING);
     return container;
   }
 
@@ -2357,6 +2359,7 @@ public class TestResourceLocalizationService {
     creds.addToken(new Text("tok" + id), tk);
     when(c.getCredentials()).thenReturn(creds);
     when(c.toString()).thenReturn(cId.toString());
+    when(c.getContainerState()).thenReturn(ContainerState.LOCALIZING);
     return c;
   }
 

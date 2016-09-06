@@ -111,4 +111,6 @@ public interface Context {
   boolean isDistributedSchedulingEnabled();
 
   OpportunisticContainerAllocator getContainerAllocator();
+
+  ContainerExecutor getContainerExecutor();
 }

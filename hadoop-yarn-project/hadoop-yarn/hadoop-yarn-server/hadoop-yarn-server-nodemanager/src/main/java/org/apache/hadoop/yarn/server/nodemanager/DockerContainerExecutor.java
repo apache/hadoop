@@ -490,6 +490,12 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
   }
 
+  @Override
+  public void symLink(String target, String symlink)
+      throws IOException {
+
+  }
+
   /**
    * Converts a directory list to a docker mount string
    * @param dirs

@@ -112,6 +112,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResourceFailedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationEvent;
@@ -135,7 +136,6 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredUserResources;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerBuilderUtils;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -419,7 +419,7 @@ public class ResourceLocalizationService extends CompositeService
       handleInitApplicationResources(
           ((ApplicationLocalizationEvent)event).getApplication());
       break;
-    case INIT_CONTAINER_RESOURCES:
+    case LOCALIZE_CONTAINER_RESOURCES:
       handleInitContainerResources((ContainerLocalizationRequestEvent) event);
       break;
     case CONTAINER_RESOURCES_LOCALIZED:
@@ -469,6 +469,13 @@ public class ResourceLocalizationService extends CompositeService
   private void handleInitContainerResources(
       ContainerLocalizationRequestEvent rsrcReqs) {
     Container c = rsrcReqs.getContainer();
+    EnumSet<ContainerState> set =
+        EnumSet.of(ContainerState.LOCALIZING, ContainerState.RUNNING);
+    if (!set.contains(c.getContainerState())) {
+      LOG.warn(c.getContainerId() + " is at " + c.getContainerState()
+          + " state, do not localize resources.");
+      return;
+    }
     // create a loading cache for the file statuses
     LoadingCache<Path,Future<FileStatus>> statCache =
         CacheBuilder.newBuilder().build(FSDownload.createStatusCacheLoader(getConfig()));
@@ -538,7 +545,7 @@ public class ResourceLocalizationService extends CompositeService
     }
     String locId = c.getContainerId().toString();
     localizerTracker.cleanupPrivLocalizers(locId);
-    
+
     // Delete the container directories
     String userName = c.getUser();
     String containerIDStr = c.toString();
@@ -747,6 +754,14 @@ public class ResourceLocalizationService extends CompositeService
         case APPLICATION:
           synchronized (privLocalizers) {
             LocalizerRunner localizer = privLocalizers.get(locId);
+            if (localizer != null && localizer.killContainerLocalizer.get()) {
+              // Old localizer thread has been stopped, remove it and creates
+              // a new localizer thread.
+              LOG.info("New " + event.getType() + " localize request for "
+                  + locId + ", remove old private localizer.");
+              cleanupPrivLocalizers(locId);
+              localizer = null;
+            }
             if (null == localizer) {
               LOG.info("Created localizer for " + locId);
               localizer = new LocalizerRunner(req.getContext(), locId);

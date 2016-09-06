@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitor;
@@ -151,7 +152,7 @@ public abstract class BaseAMRMProxyTest {
    * rest. So the responses returned can be less than the number of end points
    * specified
    * 
-   * @param testContext
+   * @param testContexts
    * @param func
    * @return
    */
@@ -696,6 +697,11 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public OpportunisticContainerAllocator getContainerAllocator() {
+      return null;
+    }
+
+    @Override
+    public ContainerExecutor getContainerExecutor() {
       return null;
     }
   }
