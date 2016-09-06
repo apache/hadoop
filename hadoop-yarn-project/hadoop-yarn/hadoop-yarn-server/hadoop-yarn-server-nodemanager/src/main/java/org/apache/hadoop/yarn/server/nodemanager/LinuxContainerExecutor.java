@@ -683,6 +683,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   @Override
+  public void symLink(String target, String symlink) {
+
+  }
+
+  @Override
   public boolean isContainerAlive(ContainerLivenessContext ctx)
       throws IOException {
     String user = ctx.getUser();

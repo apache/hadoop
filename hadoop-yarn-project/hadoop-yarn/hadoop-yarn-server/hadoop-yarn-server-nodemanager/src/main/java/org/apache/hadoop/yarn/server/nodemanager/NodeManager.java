@@ -343,6 +343,9 @@ public class NodeManager extends CompositeService
     this.context = createNMContext(containerTokenSecretManager,
         nmTokenSecretManager, nmStore, isDistSchedulingEnabled, conf);
 
+
+    ((NMContext)context).setContainerExecutor(exec);
+
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
     if (null == nodeLabelsProvider) {
@@ -509,6 +512,7 @@ public class NodeManager extends CompositeService
     private OpportunisticContainerAllocator containerAllocator;
 
     private final QueuingContext queuingContext;
+    private ContainerExecutor executor;
 
     private NMTimelinePublisher nmTimelinePublisher;
 
@@ -701,6 +705,14 @@ public class NodeManager extends CompositeService
     @Override
     public NMTimelinePublisher getNMTimelinePublisher() {
       return nmTimelinePublisher;
+    }
+
+    public ContainerExecutor getContainerExecutor() {
+      return this.executor;
+    }
+
+    public void setContainerExecutor(ContainerExecutor executor) {
+      this.executor = executor;
     }
   }
 

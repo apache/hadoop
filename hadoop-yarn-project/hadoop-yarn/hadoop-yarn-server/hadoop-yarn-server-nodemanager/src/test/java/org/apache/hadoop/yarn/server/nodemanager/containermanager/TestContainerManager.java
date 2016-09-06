@@ -36,17 +36,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -83,6 +86,7 @@ import org.apache.hadoop.yarn.server.nodemanager.CMgrSignalContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestAuxServices.ServiceA;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -459,7 +463,138 @@ public class TestContainerManager extends BaseContainerManagerTest {
 	  // and verify exit code returned 
 	  testContainerLaunchAndExit(exitCode);	  
   }
-  
+
+  private Map<String, LocalResource> setupLocalResources(String fileName,
+      String symLink) throws Exception {
+    // ////// Create the resources for the container
+    File dir = new File(tmpDir, "dir");
+    dir.mkdirs();
+    File file = new File(dir, fileName);
+    PrintWriter fileWriter = new PrintWriter(file);
+    fileWriter.write("Hello World!");
+    fileWriter.close();
+
+    URL resourceURL = URL.fromPath(FileContext.getLocalFSFileContext()
+        .makeQualified(new Path(file.getAbsolutePath())));
+    LocalResource resource =
+        recordFactory.newRecordInstance(LocalResource.class);
+    resource.setResource(resourceURL);
+    resource.setSize(-1);
+    resource.setVisibility(LocalResourceVisibility.APPLICATION);
+    resource.setType(LocalResourceType.FILE);
+    resource.setTimestamp(file.lastModified());
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    localResources.put(symLink, resource);
+    return localResources;
+  }
+
+  // Start the container
+  // While the container is running, localize new resources.
+  // Verify the symlink is created properly
+  @Test
+  public void testLocalingResourceWhileContainerRunning() throws Exception {
+    // Real del service
+    delSrvc = new DeletionService(exec);
+    delSrvc.init(conf);
+
+    ((NodeManager.NMContext)context).setContainerExecutor(exec);
+    containerManager = createContainerManager(delSrvc);
+    containerManager.init(conf);
+    containerManager.start();
+    // set up local resources
+    Map<String, LocalResource> localResource =
+        setupLocalResources("file", "symLink1");
+    ContainerLaunchContext context =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    context.setLocalResources(localResource);
+
+    // a long running container - sleep
+    context.setCommands(Arrays.asList("sleep 6"));
+    ContainerId cId = createContainerId(0);
+
+    // start the container
+    StartContainerRequest scRequest = StartContainerRequest.newInstance(context,
+        createContainerToken(cId, DUMMY_RM_IDENTIFIER, this.context.getNodeId(),
+            user, this.context.getContainerTokenSecretManager()));
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(Arrays.asList(scRequest));
+    containerManager.startContainers(allRequests);
+    BaseContainerManagerTest
+        .waitForContainerState(containerManager, cId, ContainerState.RUNNING);
+
+    BaseContainerManagerTest.waitForApplicationState(containerManager,
+        cId.getApplicationAttemptId().getApplicationId(),
+        ApplicationState.RUNNING);
+    checkResourceLocalized(cId, "symLink1");
+
+    // Localize new local resources while container is running
+    Map<String, LocalResource> localResource2 =
+        setupLocalResources("file2", "symLink2");
+
+    ResourceLocalizationRequest request =
+        ResourceLocalizationRequest.newInstance(cId, localResource2);
+    containerManager.localize(request);
+
+    // Verify resource is localized and symlink is created.
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        try {
+          checkResourceLocalized(cId, "symLink2");
+          return true;
+        } catch (Throwable e) {
+          return false;
+        }
+      }
+    }, 500, 20000);
+
+    BaseContainerManagerTest
+        .waitForContainerState(containerManager, cId, ContainerState.COMPLETE);
+    // Verify container cannot localize resources while at non-running state.
+    try{
+      containerManager.localize(request);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Not able to localize new resources"));
+    }
+  }
+
+  private void checkResourceLocalized(ContainerId containerId, String symLink) {
+    String appId =
+        containerId.getApplicationAttemptId().getApplicationId().toString();
+    File userCacheDir = new File(localDir, ContainerLocalizer.USERCACHE);
+    File userDir = new File(userCacheDir, user);
+    File appCache = new File(userDir, ContainerLocalizer.APPCACHE);
+    // localDir/usercache/nobody/appcache/application_0_0000
+    File appDir = new File(appCache, appId);
+    // localDir/usercache/nobody/appcache/application_0_0000/container_0_0000_01_000000
+    File containerDir = new File(appDir, containerId.toString());
+    // localDir/usercache/nobody/appcache/application_0_0000/container_0_0000_01_000000/symLink1
+    File targetFile = new File(containerDir, symLink);
+
+    File sysDir =
+        new File(localDir, ResourceLocalizationService.NM_PRIVATE_DIR);
+    // localDir/nmPrivate/application_0_0000
+    File appSysDir = new File(sysDir, appId);
+    // localDir/nmPrivate/application_0_0000/container_0_0000_01_000000
+    File containerSysDir = new File(appSysDir, containerId.toString());
+
+    Assert.assertTrue("AppDir " + appDir.getAbsolutePath() + " doesn't exist!!",
+        appDir.exists());
+    Assert.assertTrue(
+        "AppSysDir " + appSysDir.getAbsolutePath() + " doesn't exist!!",
+        appSysDir.exists());
+    Assert.assertTrue(
+        "containerDir " + containerDir.getAbsolutePath() + " doesn't exist !",
+        containerDir.exists());
+    Assert.assertTrue("containerSysDir " + containerSysDir.getAbsolutePath()
+        + " doesn't exist !", containerDir.exists());
+    Assert.assertTrue(
+        "targetFile " + targetFile.getAbsolutePath() + " doesn't exist !!",
+        targetFile.exists());
+  }
+
   @Test
   public void testLocalFilesCleanup() throws InterruptedException,
       IOException, YarnException {

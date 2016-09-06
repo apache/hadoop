@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitor;
@@ -715,6 +716,11 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public NMTimelinePublisher getNMTimelinePublisher() {
+      return  null;
+    }
+
+    @Override
+    public ContainerExecutor getContainerExecutor() {
       return null;
     }
   }

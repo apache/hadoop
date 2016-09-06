@@ -182,6 +182,15 @@ public abstract class ContainerExecutor implements Configurable {
       throws IOException, InterruptedException;
 
   /**
+   * Create a symlink file which points to the target.
+   * @param target The target for symlink
+   * @param symlink the symlink file
+   * @throws IOException Error when creating symlinks
+   */
+  public abstract void symLink(String target, String symlink)
+      throws IOException;
+
+  /**
    * Check if a container is alive.
    * @param ctx Encapsulates information necessary for container liveness check.
    * @return true if container is still alive
