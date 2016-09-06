@@ -26,11 +26,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
@@ -58,9 +55,9 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * check at the start, in case an individual test is executed.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class STestS3AHugeFileCreate extends S3AScaleTestBase {
+public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
-      STestS3AHugeFileCreate.class);
+      AbstractSTestS3AHugeFiles.class);
   private Path scaleTestDir;
   private Path hugefile;
   private Path hugefileRenamed;
@@ -84,10 +81,11 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
-    configuration.setBoolean(FAST_UPLOAD, true);
-    configuration.setLong(MIN_MULTIPART_THRESHOLD, 5 * _1MB);
     configuration.setLong(SOCKET_SEND_BUFFER, BLOCKSIZE);
     configuration.setLong(SOCKET_RECV_BUFFER, BLOCKSIZE);
+    configuration.setLong(MIN_MULTIPART_THRESHOLD, 5 * _1MB);
+    configuration.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
+    configuration.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     configuration.set(USER_AGENT_PREFIX, "STestS3AHugeFileCreate");
     return configuration;
   }
@@ -98,17 +96,6 @@ public class STestS3AHugeFileCreate extends S3AScaleTestBase {
     long filesize = _1MB * mb;
 
     describe("Creating file %s of size %d MB", hugefile, mb);
-    try {
-      S3AFileStatus status = fs.getFileStatus(hugefile);
-      long actualSize = status.getLen();
-      if (actualSize == filesize) {
-        String message = "File of size " + mb + " MB exists: " + status;
-        LOG.info(message);
-        throw new AssumptionViolatedException(message);
-      }
-    } catch (FileNotFoundException e) {
-      // the file doesn't exist and so must be created.
-    }
     byte[] data = new byte[BLOCKSIZE];
     for (int i = 0; i < BLOCKSIZE; i++) {
       data[i] = (byte)(i % 256);

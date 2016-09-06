@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -279,7 +280,7 @@ class S3ADataBlocks {
     protected int bytesWritten;
 
     private BufferedOutputStream out;
-    private FileInputStream uploadStream;
+    private InputStream uploadStream;
 
     public FileBlock(File bufferFile, int limit)
         throws FileNotFoundException {
@@ -322,7 +323,7 @@ class S3ADataBlocks {
         out.close();
         out = null;
       }
-      uploadStream = new FileInputStream(bufferFile);
+      uploadStream = new BufferedInputStream(new FileInputStream(bufferFile));
       return new FileDeletingInputStream(uploadStream);
     }
 

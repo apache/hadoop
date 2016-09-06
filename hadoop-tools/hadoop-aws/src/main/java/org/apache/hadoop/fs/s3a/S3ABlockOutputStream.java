@@ -88,6 +88,7 @@ class S3ABlockOutputStream extends OutputStream {
   private MultiPartUpload multiPartUpload;
   private volatile boolean closed;
   private S3ADataBlocks.DataBlock currentBlock;
+  private long blockCount = 0;
 
   /**
    * S3A output stream which uploads blocks as soon as there is enough
@@ -131,6 +132,7 @@ class S3ABlockOutputStream extends OutputStream {
 
   public void maybeCreateDestStream() throws IOException {
     if (currentBlock == null) {
+      blockCount++;
       currentBlock = blockFactory.create(this.blockSize);
     }
   }
@@ -142,6 +144,20 @@ class S3ABlockOutputStream extends OutputStream {
   void checkOpen() throws IOException {
     if (closed) {
       throw new IOException("Filesystem closed");
+    }
+  }
+
+  /**
+   * The flush operation does not trigger an upload; that awaits
+   * the next block being full. What it does do is call {@code flush() }
+   * on the current block, leaving it to choose how to react.
+   * @throws IOException Any IO problem.
+   */
+  @Override
+  public synchronized void flush() throws IOException {
+    checkOpen();
+    if (currentBlock != null) {
+      currentBlock.flush();
     }
   }
 
@@ -189,7 +205,6 @@ class S3ABlockOutputStream extends OutputStream {
     } else {
       if (currentBlock.remainingCapacity() == 0) {
         // the whole buffer is done, trigger an upload
-        LOG.debug("Current block is full");
         uploadCurrentBlock();
       }
     }
@@ -201,6 +216,7 @@ class S3ABlockOutputStream extends OutputStream {
    * or initializing the upload.
    */
   private synchronized void uploadCurrentBlock() throws IOException {
+    LOG.debug("Writing block # {}", blockCount);
     if (multiPartUpload == null) {
       multiPartUpload = initiateMultiPartUpload();
     }
@@ -221,25 +237,27 @@ class S3ABlockOutputStream extends OutputStream {
     if (closed) {
       return;
     }
-    LOG.debug("Closing {}, data to upload = {}", this,
-      currentBlock == null ? 0 : currentBlock.dataSize() );
     closed = true;
-    if (currentBlock == null) {
-      return;
-    }
+    LOG.debug("{}: Closing block #{}: {}, data to upload = {}",
+        this,
+        blockCount,
+        currentBlock,
+        currentBlock == null ? 0 : currentBlock.dataSize() );
     try {
-      if (multiPartUpload == null) {
+      if (multiPartUpload == null && currentBlock != null) {
         // no uploads of data have taken place, put the single block up.
         putObject();
       } else {
         // there has already been at least one block scheduled for upload;
         // put up the current then wait
-        if (currentBlock.hasData()) {
+        if (currentBlock != null && currentBlock.hasData()) {
           //send last part
           multiPartUpload.uploadBlockAsync(currentBlock);
         }
-        final List<PartETag> partETags = multiPartUpload
-            .waitForAllPartUploads();
+        // wait for the partial uploads to finish
+        final List<PartETag> partETags =
+            multiPartUpload.waitForAllPartUploads();
+        // then complete the operation
         multiPartUpload.complete(partETags);
       }
       // This will delete unnecessary fake parent directories
@@ -378,6 +396,7 @@ class S3ABlockOutputStream extends OutputStream {
     }
 
     private List<PartETag> waitForAllPartUploads() throws IOException {
+      LOG.debug("Waiting for {} uploads to complete", partETagsFutures.size());
       try {
         return Futures.allAsList(partETagsFutures).get();
       } catch (InterruptedException ie) {
@@ -387,6 +406,8 @@ class S3ABlockOutputStream extends OutputStream {
       } catch (ExecutionException ee) {
         //there is no way of recovering so abort
         //cancel all partUploads
+        LOG.debug("While waiting for upload completion", ee);
+        LOG.debug("Cancelling futures");
         for (ListenableFuture<PartETag> future : partETagsFutures) {
           future.cancel(true);
         }
@@ -410,8 +431,9 @@ class S3ABlockOutputStream extends OutputStream {
       AmazonClientException lastException;
       do {
         try {
-          LOG.debug("Completing multi-part upload for key '{}', id '{}'" ,
-                  key, uploadId);
+          LOG.debug("Completing multi-part upload for key '{}'," +
+                  " id '{}' with {} partitions " ,
+                  key, uploadId, partETags.size());
           return getClient().completeMultipartUpload(
               new CompleteMultipartUploadRequest(bucket,
                   key,
