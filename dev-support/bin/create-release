@@ -527,7 +527,7 @@ function makearelease
   # shellcheck disable=SC2046
   run_and_redirect "${LOGDIR}/mvn_install.log" \
     "${MVN}" "${MVN_ARGS[@]}" install \
-      -Pdist,src \
+      -Pdist,src,yarn-ui \
       "${signflags[@]}" \
       -DskipTests -Dtar $(hadoop_native_flags)
 
