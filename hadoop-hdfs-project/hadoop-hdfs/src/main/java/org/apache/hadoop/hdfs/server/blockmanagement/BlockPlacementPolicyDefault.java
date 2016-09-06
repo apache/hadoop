@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -89,9 +90,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.stats = stats;
     this.clusterMap = clusterMap;
     this.host2datanodeMap = host2datanodeMap;
-    this.heartbeatInterval = conf.getLong(
+    this.heartbeatInterval = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000;
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS) * 1000;
     this.tolerateHeartbeatMultiplier = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_KEY,
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT);

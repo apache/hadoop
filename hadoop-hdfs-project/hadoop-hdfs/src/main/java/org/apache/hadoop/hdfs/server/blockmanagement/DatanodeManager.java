@@ -58,6 +58,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manage datanodes, include decommission and other activities.
@@ -234,9 +235,9 @@ public class DatanodeManager {
       dnsToSwitchMapping.resolve(locations);
     }
 
-    heartbeatIntervalSeconds = conf.getLong(
+    heartbeatIntervalSeconds = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
     heartbeatRecheckInterval = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
@@ -289,9 +290,9 @@ public class DatanodeManager {
         " = '" + staleInterval + "' is invalid. " +
         "It should be a positive non-zero value.");
     
-    final long heartbeatIntervalSeconds = conf.getLong(
+    final long heartbeatIntervalSeconds = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS);
     // The stale interval value cannot be smaller than 
     // 3 times of heartbeat interval 
     final long minStaleInterval = conf.getInt(

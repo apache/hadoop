@@ -34,6 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -742,9 +743,10 @@ public class DFSAdmin extends FsShell {
     long timeWindow = 0;
     long txGap = 0;
     if (argv.length > 1 && "-beforeShutdown".equals(argv[1])) {
-      final long checkpointPeriod = dfsConf.getLong(
+      final long checkpointPeriod = dfsConf.getTimeDuration(
           DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
-          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT,
+          TimeUnit.SECONDS);
       final long checkpointTxnCount = dfsConf.getLong(
           DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
           DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);

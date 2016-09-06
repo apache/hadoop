@@ -1024,8 +1024,8 @@ public class DataNode extends ReconfigurableBase
       return;
     }
     String reason = null;
-    if (conf.getInt(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 
-                    DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT) < 0) {
+    if (conf.getTimeDuration(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
+        DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT, TimeUnit.SECONDS) < 0) {
       reason = "verification is turned off by configuration";
     } else if ("SimulatedFSDataset".equals(data.getClass().getSimpleName())) {
       reason = "verifcation is not supported by SimulatedFSDataset";

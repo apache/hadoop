@@ -637,8 +637,12 @@
 </property>
 
 <property>
-  <name>dfs.blockreport.initialDelay</name>  <value>0</value>
-  <description>Delay for first block report in seconds.</description>
+  <name>dfs.blockreport.initialDelay</name>
+  <value>0</value>
+  <description>
+    Delay for first block report in seconds. Support multiple time unit
+    suffix(case insensitive), as described in dfs.heartbeat.interval.
+  </description>
 </property>
 
 <property>
@@ -681,6 +685,8 @@
   <value>21600</value>
   <description>Interval in seconds for Datanode to scan data directories and
   reconcile the difference between blocks in memory and on the disk.
+  Support multiple time unit suffix(case insensitive), as described
+  in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -715,7 +721,13 @@
 <property>
   <name>dfs.heartbeat.interval</name>
   <value>3</value>
-  <description>Determines datanode heartbeat interval in seconds.</description>
+  <description>
+    Determines datanode heartbeat interval in seconds.
+    Can use the following suffix (case insensitive):
+    ms(millis), s(sec), m(min), h(hour), d(day)
+    to specify the time (such as 2s, 2m, 1h, etc.).
+    Or provide complete number in seconds (such as 30 for 30 seconds).
+  </description>
 </property>
 
 <property>
@@ -920,7 +932,9 @@
   <name>dfs.namenode.decommission.interval</name>
   <value>30</value>
   <description>Namenode periodicity in seconds to check if decommission is 
-  complete.</description>
+  complete. Support multiple time unit suffix(case insensitive), as described
+  in dfs.heartbeat.interval.
+  </description>
 </property>
 
 <property>
@@ -949,7 +963,9 @@
   <name>dfs.namenode.replication.interval</name>
   <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
-  replication work for datanodes. </description>
+  replication work for datanodes. Support multiple time unit suffix(case insensitive),
+  as described in dfs.heartbeat.interval.
+  </description>
 </property>
 
 <property>
@@ -1044,7 +1060,10 @@
 <property>
   <name>dfs.namenode.checkpoint.period</name>
   <value>3600</value>
-  <description>The number of seconds between two periodic checkpoints.
+  <description>
+    The number of seconds between two periodic checkpoints.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -1062,7 +1081,8 @@
   <value>60</value>
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
-  of uncheckpointed transactions.
+  of uncheckpointed transactions. Support multiple time unit suffix(case insensitive),
+  as described in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -1408,6 +1428,8 @@
     the datanode dead and invoking the normal recovery mechanisms.
     The notification is sent by a datanode when it is being shutdown
     using the shutdownDatanode admin command with the upgrade option.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -1475,6 +1497,8 @@
     log segments, the StandbyNode will only be as up-to-date as how
     often the logs are rolled. Note that failover triggers a log roll
     so the StandbyNode will be up to date before it becomes active.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -1484,6 +1508,8 @@
   <description>
     How often, in seconds, the StandbyNode should check for new
     finalized log segments in the shared edits log.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 
@@ -2918,6 +2944,8 @@
     received request. Setting this to 0 fails requests right away if the
     datanode is not yet registered with the namenode. This wait time
     reduces initial request failures after datanode restart.
+    Support multiple time unit suffix(case insensitive), as described
+    in dfs.heartbeat.interval.
   </description>
 </property>
 

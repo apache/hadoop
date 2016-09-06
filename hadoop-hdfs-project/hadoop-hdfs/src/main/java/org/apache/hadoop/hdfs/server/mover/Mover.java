@@ -64,6 +64,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.text.DateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @InterfaceAudience.Private
@@ -602,10 +603,13 @@ public class Mover {
   static int run(Map<URI, List<Path>> namenodes, Configuration conf)
       throws IOException, InterruptedException {
     final long sleeptime =
-        conf.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-            DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 2000 +
-        conf.getLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY,
-            DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000;
+        conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+            DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
+            TimeUnit.SECONDS) * 2000 +
+        conf.getTimeDuration(
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT,
+            TimeUnit.SECONDS) * 1000;
     AtomicInteger retryCount = new AtomicInteger(0);
     LOG.info("namenodes = " + namenodes);
 
