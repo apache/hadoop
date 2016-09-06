@@ -30,6 +30,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -176,5 +177,44 @@ public class TestFsVolumeList {
     FsVolumeImpl volume4 = new FsVolumeImpl(dataset, "storage-id", volDir,
         conf, StorageType.DEFAULT);
     assertEquals("", 100L, volume4.getReserved());
+  }
+
+  @Test
+  public void testNonDfsUsedMetricForVolume() throws Exception {
+    File volDir = new File(baseDir, "volume-0");
+    volDir.mkdirs();
+    /*
+     * Lets have the example.
+     * Capacity - 1000
+     * Reserved - 100
+     * DfsUsed  - 200
+     * Actual Non-DfsUsed - 300 -->(expected)
+     * ReservedForReplicas - 50
+     */
+    long diskCapacity = 1000L;
+    long duReserved = 100L;
+    long dfsUsage = 200L;
+    long actualNonDfsUsage = 300L;
+    long reservedForReplicas = 50L;
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, duReserved);
+    FsVolumeImpl volume = new FsVolumeImpl(dataset, "storage-id", volDir, conf,
+        StorageType.DEFAULT);
+    FsVolumeImpl spyVolume = Mockito.spy(volume);
+    // Set Capacity for testing
+    long testCapacity = diskCapacity - duReserved;
+    spyVolume.setCapacityForTesting(testCapacity);
+    // Mock volume.getDfAvailable()
+    long dfAvailable = diskCapacity - dfsUsage - actualNonDfsUsage;
+    Mockito.doReturn(dfAvailable).when(spyVolume).getDfAvailable();
+    // Mock dfsUsage
+    Mockito.doReturn(dfsUsage).when(spyVolume).getDfsUsed();
+    // Mock reservedForReplcas
+    Mockito.doReturn(reservedForReplicas).when(spyVolume)
+        .getReservedForReplicas();
+    Mockito.doReturn(actualNonDfsUsage).when(spyVolume)
+        .getActualNonDfsUsed();
+    long expectedNonDfsUsage =
+        actualNonDfsUsage - duReserved;
+    assertEquals(expectedNonDfsUsage, spyVolume.getNonDfsUsed());
   }
 }

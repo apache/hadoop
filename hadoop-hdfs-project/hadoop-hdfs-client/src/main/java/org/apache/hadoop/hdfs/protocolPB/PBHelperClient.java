@@ -289,6 +289,7 @@ public class PBHelperClient {
         .setId(convert((DatanodeID) info))
         .setCapacity(info.getCapacity())
         .setDfsUsed(info.getDfsUsed())
+        .setNonDfsUsed(info.getNonDfsUsed())
         .setRemaining(info.getRemaining())
         .setBlockPoolUsed(info.getBlockPoolUsed())
         .setCacheCapacity(info.getCacheCapacity())
@@ -581,15 +582,24 @@ public class PBHelperClient {
   }
 
   static public DatanodeInfo convert(DatanodeInfoProto di) {
-    if (di == null) return null;
-    return new DatanodeInfo(
-        convert(di.getId()),
-        di.hasLocation() ? di.getLocation() : null,
-        di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
-        di.getBlockPoolUsed(), di.getCacheCapacity(), di.getCacheUsed(),
-        di.getLastUpdate(), di.getLastUpdateMonotonic(),
-        di.getXceiverCount(), convert(di.getAdminState()),
+    if (di == null) {
+      return null;
+    }
+    DatanodeInfo dinfo = new DatanodeInfo(convert(di.getId()),
+        di.hasLocation() ? di.getLocation() : null, di.getCapacity(),
+        di.getDfsUsed(), di.getRemaining(), di.getBlockPoolUsed(),
+        di.getCacheCapacity(), di.getCacheUsed(), di.getLastUpdate(),
+        di.getLastUpdateMonotonic(), di.getXceiverCount(),
+        convert(di.getAdminState()),
         di.hasUpgradeDomain() ? di.getUpgradeDomain() : null);
+    if (di.hasNonDfsUsed()) {
+      dinfo.setNonDfsUsed(di.getNonDfsUsed());
+    } else {
+      // use the legacy way for older datanodes
+      long nonDFSUsed = di.getCapacity() - di.getDfsUsed() - di.getRemaining();
+      dinfo.setNonDfsUsed(nonDFSUsed < 0 ? 0 : nonDFSUsed);
+    }
+    return dinfo;
   }
 
   public static StorageType[] convertStorageTypes(
@@ -1556,12 +1566,12 @@ public class PBHelperClient {
   }
 
   public static StorageReport convert(StorageReportProto p) {
-    return new StorageReport(
-        p.hasStorage() ?
-            convert(p.getStorage()) :
-            new DatanodeStorage(p.getStorageUuid()),
-        p.getFailed(), p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
-        p.getBlockPoolUsed());
+    long nonDfsUsed = p.hasNonDfsUsed() ? p.getNonDfsUsed() : p.getCapacity()
+        - p.getDfsUsed() - p.getRemaining();
+    return new StorageReport(p.hasStorage() ? convert(p.getStorage())
+        : new DatanodeStorage(p.getStorageUuid()), p.getFailed(),
+        p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
+        p.getBlockPoolUsed(), nonDfsUsed);
   }
 
   public static DatanodeStorage convert(DatanodeStorageProto s) {
@@ -2136,7 +2146,8 @@ public class PBHelperClient {
         .setBlockPoolUsed(r.getBlockPoolUsed()).setCapacity(r.getCapacity())
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
         .setStorageUuid(r.getStorage().getStorageID())
-        .setStorage(convert(r.getStorage()));
+        .setStorage(convert(r.getStorage()))
+        .setNonDfsUsed(r.getNonDfsUsed());
     return builder.build();
   }
 
