@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -213,6 +214,117 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // decommissined node is 1 since 1 node is rejoined after updating exclude
     // file
     checkDecommissionedNMCount(rm, metricCount + 1);
+  }
+
+  /**
+   * Graceful decommission node with no running application.
+   */
+  @Test
+  public void testGracefulDecommissionNoApp() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+
+    writeToHostsFile("");
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 10240);
+    MockNM nm3 = rm.registerNode("host3:4433", 5120);
+
+    int metricCount = ClusterMetrics.getMetrics().getNumDecommisionedNMs();
+    NodeHeartbeatResponse nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
+    NodeHeartbeatResponse nodeHeartbeat3 = nm3.nodeHeartbeat(true);
+
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
+
+    rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
+    rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
+
+    // Graceful decommission both host2 and host3.
+    writeToHostsFile("host2", "host3");
+    rm.getNodesListManager().refreshNodesGracefully(conf);
+
+    rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONING);
+    rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONING);
+
+    nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
+    nodeHeartbeat2 = nm2.nodeHeartbeat(true);
+    rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONED);
+    nodeHeartbeat3 = nm3.nodeHeartbeat(true);
+    rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONED);
+
+    checkDecommissionedNMCount(rm, metricCount + 2);
+
+    nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
+    nodeHeartbeat2 = nm2.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
+    nodeHeartbeat3 = nm3.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
+  }
+
+  /**
+   * Graceful decommission node with running application.
+   */
+  @Test
+  public void testGracefulDecommissionWithApp() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+
+    writeToHostsFile("");
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 10240);
+    MockNM nm2 = rm.registerNode("host2:5678", 20480);
+    MockNM nm3 = rm.registerNode("host3:4433", 10240);
+    NodeId id1 = nm1.getNodeId();
+    NodeId id3 = nm3.getNodeId();
+    rm.waitForState(id1, NodeState.RUNNING);
+    rm.waitForState(id3, NodeState.RUNNING);
+
+    // Create an app and launch two containers on host1.
+    RMApp app = rm.submitApp(2000);
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
+    ApplicationAttemptId aaid = app.getCurrentAppAttempt().getAppAttemptId();
+    nm1.nodeHeartbeat(aaid, 2, ContainerState.RUNNING);
+    nm3.nodeHeartbeat(true);
+
+    // Graceful decommission host1 and host3
+    writeToHostsFile("host1", "host3");
+    rm.getNodesListManager().refreshNodesGracefully(conf);
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    rm.waitForState(id3, NodeState.DECOMMISSIONING);
+
+    // host1 should be DECOMMISSIONING due to running containers.
+    // host3 should become DECOMMISSIONED.
+    nm1.nodeHeartbeat(true);
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    nm3.nodeHeartbeat(true);
+    rm.waitForState(id3, NodeState.DECOMMISSIONED);
+    nm1.nodeHeartbeat(aaid, 2, ContainerState.RUNNING);
+
+    // Complete containers on host1.
+    // Since the app is still RUNNING, expect NodeAction.NORMAL.
+    NodeHeartbeatResponse nodeHeartbeat1 =
+        nm1.nodeHeartbeat(aaid, 2, ContainerState.COMPLETE);
+    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat1.getNodeAction());
+
+    // Finish the app and verified DECOMMISSIONED.
+    MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
+    rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
+    nodeHeartbeat1 = nm1.nodeHeartbeat(aaid, 2, ContainerState.COMPLETE);
+    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat1.getNodeAction());
+    rm.waitForState(id1, NodeState.DECOMMISSIONED);
+    nodeHeartbeat1 = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat1.getNodeAction());
   }
 
   /**

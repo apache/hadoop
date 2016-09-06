@@ -1133,36 +1133,27 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       NodeState initialState = rmNode.getState();
       boolean isNodeDecommissioning =
           initialState.equals(NodeState.DECOMMISSIONING);
+      if (isNodeDecommissioning) {
+        List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
+        if (rmNode.runningApplications.isEmpty() &&
+            (keepAliveApps == null || keepAliveApps.isEmpty())) {
+          RMNodeImpl.deactivateNode(rmNode, NodeState.DECOMMISSIONED);
+          return NodeState.DECOMMISSIONED;
+        }
+      }
+
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
         LOG.info("Node " + rmNode.nodeId +
             " reported UNHEALTHY with details: " +
             remoteNodeHealthStatus.getHealthReport());
         // if a node in decommissioning receives an unhealthy report,
-        // it will keep decommissioning.
+        // it will stay in decommissioning.
         if (isNodeDecommissioning) {
           return NodeState.DECOMMISSIONING;
         } else {
           reportNodeUnusable(rmNode, NodeState.UNHEALTHY);
           return NodeState.UNHEALTHY;
         }
-      }
-      if (isNodeDecommissioning) {
-        List<ApplicationId> runningApps = rmNode.getRunningApps();
-
-        List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
-
-        // no running (and keeping alive) app on this node, get it
-        // decommissioned.
-        // TODO may need to check no container is being scheduled on this node
-        // as well.
-        if ((runningApps == null || runningApps.size() == 0)
-            && (keepAliveApps == null || keepAliveApps.size() == 0)) {
-          RMNodeImpl.deactivateNode(rmNode, NodeState.DECOMMISSIONED);
-          return NodeState.DECOMMISSIONED;
-        }
-
-        // TODO (in YARN-3223) if node in decommissioning, get node resource
-        // updated if container get finished (keep available resource to be 0)
       }
 
       rmNode.handleContainerStatus(statusEvent.getContainers());
@@ -1337,7 +1328,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
               + " is the first container get launched for application "
               + containerAppId);
         }
-        runningApplications.add(containerAppId);
+        handleRunningAppOnNode(this, context, containerAppId, nodeId);
       }
 
       // Process running containers
