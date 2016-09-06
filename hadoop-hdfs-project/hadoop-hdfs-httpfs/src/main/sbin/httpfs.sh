@@ -17,15 +17,15 @@ MYNAME="${BASH_SOURCE-$0}"
 
 function hadoop_usage
 {
-  hadoop_add_subcommand "run" "Start kms in the current window"
+  hadoop_add_subcommand "run" "Start HttpFS in the current window"
   hadoop_add_subcommand "run -security" "Start in the current window with security manager"
-  hadoop_add_subcommand "start" "Start kms in a separate window"
+  hadoop_add_subcommand "start" "Start HttpFS in a separate window"
   hadoop_add_subcommand "start -security" "Start in a separate window with security manager"
   hadoop_add_subcommand "status" "Return the LSB compliant status"
-  hadoop_add_subcommand "stop" "Stop kms, waiting up to 5 seconds for the process to end"
-  hadoop_add_subcommand "top n" "Stop kms, waiting up to n seconds for the process to end"
-  hadoop_add_subcommand "stop -force" "Stop kms, wait up to 5 seconds and then use kill -KILL if still running"
-  hadoop_add_subcommand "stop n -force" "Stop kms, wait up to n seconds and then use kill -KILL if still running"
+  hadoop_add_subcommand "stop" "Stop HttpFS, waiting up to 5 seconds for the process to end"
+  hadoop_add_subcommand "stop n" "Stop HttpFS, waiting up to n seconds for the process to end"
+  hadoop_add_subcommand "stop -force" "Stop HttpFS, wait up to 5 seconds and then use kill -KILL if still running"
+  hadoop_add_subcommand "stop n -force" "Stop HttpFS, wait up to n seconds and then use kill -KILL if still running"
   hadoop_generate_usage "${MYNAME}" false
 }
 
@@ -47,7 +47,7 @@ else
   exit 1
 fi
 
-# The Java System property 'httpfs.http.port' it is not used by Kms,
+# The Java System property 'httpfs.http.port' it is not used by HttpFS,
 # it is used in Tomcat's server.xml configuration file
 #
 
