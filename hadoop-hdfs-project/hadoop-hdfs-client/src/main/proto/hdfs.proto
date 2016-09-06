@@ -101,6 +101,7 @@ message DatanodeInfoProto {
   optional uint64 cacheUsed = 12 [default = 0];
   optional uint64 lastUpdateMonotonic = 13 [default = 0];
   optional string upgradeDomain = 14;
+  optional uint64 nonDfsUsed = 15;
 }
 
 /**
@@ -125,6 +126,7 @@ message StorageReportProto {
   optional uint64 remaining = 5 [ default = 0 ];
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
   optional DatanodeStorageProto storage = 7; // supersedes StorageUuid
+  optional uint64 nonDfsUsed = 8;
 }
 
 /**
