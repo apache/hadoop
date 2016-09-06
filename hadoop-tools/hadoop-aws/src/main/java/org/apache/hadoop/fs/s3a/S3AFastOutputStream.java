@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -71,7 +71,7 @@ public class S3AFastOutputStream extends OutputStream {
   private static final Logger LOG = S3AFileSystem.LOG;
   private final String key;
   private final String bucket;
-  private final AmazonS3Client client;
+  private final AmazonS3 client;
   private final int partSize;
   private final int multiPartThreshold;
   private final S3AFileSystem fs;
@@ -102,7 +102,7 @@ public class S3AFastOutputStream extends OutputStream {
    * @param threadPoolExecutor thread factory
    * @throws IOException on any problem
    */
-  public S3AFastOutputStream(AmazonS3Client client,
+  public S3AFastOutputStream(AmazonS3 client,
       S3AFileSystem fs,
       String bucket,
       String key,

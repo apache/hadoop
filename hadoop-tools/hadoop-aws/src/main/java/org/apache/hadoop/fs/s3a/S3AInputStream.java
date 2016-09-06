@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.google.common.base.Preconditions;
@@ -71,7 +71,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   private volatile boolean closed;
   private S3ObjectInputStream wrappedStream;
   private final FileSystem.Statistics stats;
-  private final AmazonS3Client client;
+  private final AmazonS3 client;
   private final String bucket;
   private final String key;
   private final long contentLength;
@@ -101,7 +101,7 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
   public S3AInputStream(String bucket,
       String key,
       long contentLength,
-      AmazonS3Client client,
+      AmazonS3 client,
       FileSystem.Statistics stats,
       S3AInstrumentation instrumentation,
       long readahead,

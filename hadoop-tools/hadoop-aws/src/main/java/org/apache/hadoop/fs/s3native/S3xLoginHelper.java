@@ -132,6 +132,9 @@ public final class S3xLoginHelper {
    *
    * This strips out login information.
    *
+   * @param uri the URI to canonicalize
+   * @param defaultPort default port to use in canonicalized URI if the input
+   *     URI has no port and this value is greater than 0
    * @return a new, canonicalized URI.
    */
   public static URI canonicalizeUri(URI uri, int defaultPort) {
