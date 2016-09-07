@@ -130,7 +130,7 @@ class S3ABlockOutputStream extends OutputStream {
     maybeCreateDestStream();
   }
 
-  public void maybeCreateDestStream() throws IOException {
+  private synchronized void maybeCreateDestStream() throws IOException {
     if (currentBlock == null) {
       blockCount++;
       currentBlock = blockFactory.create(this.blockSize);
@@ -244,9 +244,11 @@ class S3ABlockOutputStream extends OutputStream {
         currentBlock,
         currentBlock == null ? 0 : currentBlock.dataSize() );
     try {
-      if (multiPartUpload == null && currentBlock != null) {
-        // no uploads of data have taken place, put the single block up.
-        putObject();
+      if (multiPartUpload == null) {
+        if (currentBlock != null){
+          // no uploads of data have taken place, put the single block up.
+          putObject();
+        }
       } else {
         // there has already been at least one block scheduled for upload;
         // put up the current then wait

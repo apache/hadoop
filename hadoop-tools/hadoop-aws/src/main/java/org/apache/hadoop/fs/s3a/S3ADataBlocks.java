@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -42,7 +41,6 @@ import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
  */
 class S3ADataBlocks {
   static final Logger LOG = LoggerFactory.getLogger(S3ADataBlocks.class);
-  ;
 
   static abstract class AbstractBlockFactory implements Closeable {
 
@@ -50,10 +48,10 @@ class S3ADataBlocks {
 
     /**
      * Bind to the factory owner.
-     * @param owner owner factory
+     * @param fs owner filesystem
      */
-    void init(S3AFileSystem owner) {
-      this.owner = owner;
+    void init(S3AFileSystem fs) {
+      this.owner = fs;
     }
 
     /**
@@ -76,8 +74,8 @@ class S3ADataBlocks {
   static class MemoryBlockFactory extends AbstractBlockFactory {
 
     @Override
-    void init(S3AFileSystem owner) {
-      super.init(owner);
+    void init(S3AFileSystem fs) {
+      super.init(fs);
     }
 
     @Override
@@ -94,8 +92,8 @@ class S3ADataBlocks {
   static class DiskBlockFactory extends AbstractBlockFactory {
 
     @Override
-    void init(S3AFileSystem owner) {
-      super.init(owner);
+    void init(S3AFileSystem fs) {
+      super.init(fs);
     }
 
     @Override
@@ -137,8 +135,8 @@ class S3ADataBlocks {
     abstract boolean hasCapacity(long bytes);
 
     /**
-     * Is there data in the block?
-     * @return
+     * Is there data in the block.
+     * @return true if there is
      */
     boolean hasData() {
       return dataSize() > 0;
@@ -149,11 +147,11 @@ class S3ADataBlocks {
     /**
      * Write a series of bytes from the buffer, from the offset.
      * Returns the number of bytes written:
-     * @param b
-     * @param off
-     * @param len
+     * @param b buffer
+     * @param off offset
+     * @param len length of write
      * @return number of bytes written
-     * @throws IOException
+     * @throws IOException trouble
      */
     int write(byte b[], int off, int len) throws IOException {
       verifyState(Writing);
@@ -167,7 +165,7 @@ class S3ADataBlocks {
     /**
      * Switch to the upload state and return a stream for uploading.
      * @return the stream
-     * @throws IOException
+     * @throws IOException trouble
      */
     InputStream openForUpload() throws IOException {
       enterState(Writing, Upload);
@@ -178,7 +176,6 @@ class S3ADataBlocks {
      * Enter the closed state.
      * @return true if the class was in any other state, implying that
      * the subclass should do its close operations
-     * @throws IOException
      */
     protected synchronized boolean enterClosedState() {
       if (!state.equals(Closed)) {
@@ -323,26 +320,31 @@ class S3ADataBlocks {
         out.close();
         out = null;
       }
-      uploadStream = new BufferedInputStream(new FileInputStream(bufferFile));
+      uploadStream = new FileInputStream(bufferFile);
       return new FileDeletingInputStream(uploadStream);
     }
 
     @Override
     public synchronized void close() throws IOException {
+      final DestState state = getState();
+      LOG.debug("Closing {}", this);
       enterClosedState();
-      LOG.debug("Closed {}", this);
-      if (bufferFile.exists()) {
-        LOG.warn("Buffer file {} exists —close upload stream", bufferFile);
+      final boolean bufferExists = bufferFile.exists();
+      switch (state) {
+      case Writing:
+        if (bufferExists) {
+          // file was not uploaded
+          LOG.debug("Deleting buffer file as upload did not start");
+          bufferFile.delete();
+        }
+        break;
+      case Upload:
+        LOG.debug("Buffer file {} exists —close upload stream", bufferFile);
+        break;
+
+      case Closed:
+        // no-op
       }
-/*
-      IOUtils.closeStream(out);
-      out = null;
-      if (uploadStream != null) {
-        IOUtils.closeStream(uploadStream);
-      } else {
-        destFile.delete();
-      }
-*/
     }
 
     @Override
@@ -363,9 +365,12 @@ class S3ADataBlocks {
       return sb.toString();
     }
 
-    class FileDeletingInputStream extends ForwardingInputStream {
+    /**
+     * An input stream which deletes the buffer file when closed.
+     */
+    private class FileDeletingInputStream extends ForwardingInputStream {
 
-      public FileDeletingInputStream(InputStream source) {
+      FileDeletingInputStream(InputStream source) {
         super(source);
       }
 
@@ -381,6 +386,10 @@ class S3ADataBlocks {
    * Stream which forwards everything to its inner class.
    * For ease of subclassing.
    */
+  @SuppressWarnings({
+      "NullableProblems",
+      "NonSynchronizedMethodOverridesSynchronizedMethod"
+  })
   static class ForwardingInputStream extends InputStream {
 
     protected final InputStream source;

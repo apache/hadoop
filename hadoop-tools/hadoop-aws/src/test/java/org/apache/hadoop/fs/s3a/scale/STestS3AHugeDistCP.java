@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test very large scale distCP upload using the huge file options
+ * Test very large scale distCP upload using the huge file options.
  */
 public class STestS3AHugeDistCP extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(

@@ -200,6 +200,59 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Assume.assumeTrue("No file " + hugefile, fs.exists(hugefile));
   }
 
+  private void logFSState() {
+    LOG.info("File System state after operation:\n{}", fs);
+  }
+
+  @Test
+  public void test_040_PositionedReadHugeFile() throws Throwable {
+    assumeHugeFileExists();
+    final String encryption = getConf().getTrimmed(
+        SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    boolean encrypted = encryption != null;
+    if (encrypted) {
+      LOG.info("File is encrypted with algorithm {}", encryption);
+    }
+    String filetype = encrypted ? "encrypted file" : "file";
+    describe("Positioned reads of %s %s", filetype, hugefile);
+    S3AFileStatus status = fs.getFileStatus(hugefile);
+    long filesize = status.getLen();
+    int ops = 0;
+    final int bufferSize = 8192;
+    byte[] buffer = new byte[bufferSize];
+    long eof = filesize - 1;
+
+    ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
+    ContractTestUtils.NanoTimer readAtByte0, readAtByte0Again, readAtEOF;
+    try (FSDataInputStream in = fs.open(hugefile, BLOCKSIZE)) {
+      readAtByte0 = new ContractTestUtils.NanoTimer();
+      in.readFully(0, buffer);
+      readAtByte0.end("Time to read data at start of file");
+      ops++;
+
+      readAtEOF = new ContractTestUtils.NanoTimer();
+      in.readFully(eof - bufferSize, buffer);
+      readAtEOF.end("Time to read data at end of file");
+      ops++;
+
+      readAtByte0Again = new ContractTestUtils.NanoTimer();
+      in.readFully(0, buffer);
+      readAtByte0.end("Time to read data at start of file again");
+      ops++;
+      LOG.info("Final stream state: {}", in);
+    }
+    long mb = Math.max(filesize / _1MB, 1);
+
+    logFSState();
+    timer.end("Time to performed positioned reads of %s of %d MB ",
+        filetype, mb);
+    LOG.info("Time per positioned read = {} nS",
+        toHuman(timer.nanosPerOperation(ops)));
+    final long difference = readAtEOF.duration() - readAtByte0Again.duration();
+    LOG.info("Difference between read at start & end of {} is {} nS",
+        filetype, toHuman(difference));
+  }
+
   @Test
   public void test_050_readHugeFile() throws Throwable {
     assumeHugeFileExists();
@@ -214,18 +267,17 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
       for (long block = 0; block < blocks; block++) {
         in.readFully(data);
       }
+      LOG.info("Final stream state: {}", in);
     }
 
     long mb = Math.max(filesize / _1MB, 1);
     timer.end("Time to read file of %d MB ", mb);
-    LOG.info("Time per MB to read = {} nS", toHuman(timer.duration() / mb));
+    LOG.info("Time per MB to read = {} nS",
+        toHuman(timer.nanosPerOperation(mb)));
     LOG.info("Effective Bandwidth: {} MB/s", timer.bandwidth(filesize));
     logFSState();
   }
 
-  private void logFSState() {
-    LOG.info("File System state after operation:\n{}", fs);
-  }
 
   @Test
   public void test_100_renameHugeFile() throws Throwable {
