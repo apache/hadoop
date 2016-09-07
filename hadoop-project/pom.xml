@@ -88,6 +88,7 @@
 
     <tomcat.version>6.0.44</tomcat.version>
     <guice.version>4.0</guice.version>
+    <joda-time.version>2.9.4</joda-time.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
@@ -1037,6 +1038,12 @@
        <scope>test</scope>
      </dependency>
       
+     <dependency>
+        <groupId>joda-time</groupId>
+        <artifactId>joda-time</artifactId>
+        <version>${joda-time.version}</version>
+     </dependency>
+
       <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
