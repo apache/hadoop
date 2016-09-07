@@ -112,7 +112,8 @@ public class TestRpcBase {
     return setupTestServer(builder);
   }
 
-  protected static RPC.Server setupTestServer(RPC.Builder builder) throws IOException {
+  protected static RPC.Server setupTestServer(
+      RPC.Builder builder) throws IOException {
     RPC.Server server = builder.build();
 
     server.start();
@@ -175,17 +176,21 @@ public class TestRpcBase {
     public TestTokenIdentifier() {
       this(new Text(), new Text());
     }
+
     public TestTokenIdentifier(Text tokenid) {
       this(tokenid, new Text());
     }
+
     public TestTokenIdentifier(Text tokenid, Text realUser) {
       this.tokenid = tokenid == null ? new Text() : tokenid;
       this.realUser = realUser == null ? new Text() : realUser;
     }
+
     @Override
     public Text getKind() {
       return KIND_NAME;
     }
+
     @Override
     public UserGroupInformation getUser() {
       if (realUser.toString().isEmpty()) {
@@ -203,6 +208,7 @@ public class TestRpcBase {
       tokenid.readFields(in);
       realUser.readFields(in);
     }
+
     @Override
     public void write(DataOutput out) throws IOException {
       tokenid.write(out);
@@ -234,7 +240,7 @@ public class TestRpcBase {
     @SuppressWarnings("unchecked")
     @Override
     public Token<TestTokenIdentifier> selectToken(Text service,
-                                                  Collection<Token<? extends TokenIdentifier>> tokens) {
+                      Collection<Token<? extends TokenIdentifier>> tokens) {
       if (service == null) {
         return null;
       }
@@ -388,19 +394,17 @@ public class TestRpcBase {
     }
 
     @Override
-    public TestProtos.AuthUserResponseProto getAuthUser(
+    public TestProtos.UserResponseProto getAuthUser(
         RpcController controller, TestProtos.EmptyRequestProto request)
         throws ServiceException {
-      UserGroupInformation authUser = null;
+      UserGroupInformation authUser;
       try {
         authUser = UserGroupInformation.getCurrentUser();
       } catch (IOException e) {
         throw new ServiceException(e);
       }
 
-      return TestProtos.AuthUserResponseProto.newBuilder()
-          .setAuthUser(authUser.getUserName())
-          .build();
+      return newUserResponse(authUser.getUserName());
     }
 
     @Override
@@ -431,6 +435,34 @@ public class TestRpcBase {
       postponedCalls.clear();
 
       return TestProtos.EmptyResponseProto.newBuilder().build();
+    }
+
+    @Override
+    public TestProtos.UserResponseProto getCurrentUser(
+        RpcController controller,
+        TestProtos.EmptyRequestProto request) throws ServiceException {
+      String user;
+      try {
+        user = UserGroupInformation.getCurrentUser().toString();
+      } catch (IOException e) {
+        throw new ServiceException("Failed to get current user", e);
+      }
+
+      return newUserResponse(user);
+    }
+
+    @Override
+    public TestProtos.UserResponseProto getServerRemoteUser(
+        RpcController controller,
+        TestProtos.EmptyRequestProto request) throws ServiceException {
+      String serverRemoteUser = Server.getRemoteUser().toString();
+      return newUserResponse(serverRemoteUser);
+    }
+
+    private TestProtos.UserResponseProto newUserResponse(String user) {
+      return TestProtos.UserResponseProto.newBuilder()
+          .setUser(user)
+          .build();
     }
   }
 
@@ -477,9 +509,5 @@ public class TestRpcBase {
       return AuthMethod.TOKEN;
     }
     return null;
-  }
-
-  protected static String convert(TestProtos.AuthUserResponseProto response) {
-    return response.getAuthUser();
   }
 }
