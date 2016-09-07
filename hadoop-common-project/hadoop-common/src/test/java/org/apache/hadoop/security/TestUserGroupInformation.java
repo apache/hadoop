@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.kerberos.KeyTab;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
@@ -1029,5 +1030,28 @@ public class TestUserGroupInformation {
     Collection<Token<?>> credsugiTokens = tokenUgi.getTokens();
     assertTrue(credsugiTokens.contains(token1));
     assertTrue(credsugiTokens.contains(token2));
+  }
+
+  @Test
+  public void testCheckTGTAfterLoginFromSubject() throws Exception {
+    // security on, default is remove default realm
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+    UserGroupInformation.setConfiguration(conf);
+
+    // Login from a pre-set subject with a keytab
+    final Subject subject = new Subject();
+    KeyTab keytab = KeyTab.getInstance();
+    subject.getPrivateCredentials().add(keytab);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws IOException {
+        UserGroupInformation.loginUserFromSubject(subject);
+        // this should not throw.
+        UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+        return null;
+      }
+    });
+
   }
 }

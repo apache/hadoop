@@ -632,9 +632,24 @@ public class UserGroupInformation {
    * @param subject the user's subject
    */
   UserGroupInformation(Subject subject) {
+    this(subject, false);
+  }
+
+  /**
+   * Create a UGI from the given subject.
+   * @param subject the subject
+   * @param externalKeyTab if the subject's keytab is managed by the user.
+   *                       Setting this to true will prevent UGI from attempting
+   *                       to login the keytab, or to renew it.
+   */
+  private UserGroupInformation(Subject subject, final boolean externalKeyTab) {
     this.subject = subject;
     this.user = subject.getPrincipals(User.class).iterator().next();
-    this.isKeytab = KerberosUtil.hasKerberosKeyTab(subject);
+    if (externalKeyTab) {
+      this.isKeytab = false;
+    } else {
+      this.isKeytab = KerberosUtil.hasKerberosKeyTab(subject);
+    }
     this.isKrbTkt = KerberosUtil.hasKerberosTicket(subject);
   }
 
@@ -850,10 +865,11 @@ public class UserGroupInformation {
           newLoginContext(authenticationMethod.getLoginAppName(), 
                           subject, new HadoopConfiguration());
       login.login();
-      UserGroupInformation realUser = new UserGroupInformation(subject);
+      LOG.debug("Assuming keytab is managed externally since logged in from"
+          + " subject.");
+      UserGroupInformation realUser = new UserGroupInformation(subject, true);
       realUser.setLogin(login);
       realUser.setAuthenticationMethod(authenticationMethod);
-      realUser = new UserGroupInformation(login.getSubject());
       // If the HADOOP_PROXY_USER environment variable or property
       // is specified, create a proxy user as the logged in user.
       String proxyUser = System.getenv(HADOOP_PROXY_USER);
