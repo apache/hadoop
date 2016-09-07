@@ -48,8 +48,6 @@ import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MIN_MULTIPART_THRESHOLD;
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
 
@@ -459,11 +457,21 @@ public final class S3AUtils {
     return v;
   }
 
-  public static long getSizeProperty(Configuration conf,
+  /**
+   * Get a size property from the configuration: this property must
+   * be at least equal to {@link Constants#MULTIPART_MIN_SIZE}.
+   * If it is too small, it is rounded up to that minimum, and a warning
+   * printed.
+   * @param conf configuration
+   * @param property property name
+   * @param defVal default value
+   * @return the value, guaranteed to be above the minimum size
+   */
+  public static long getMultipartSizeProperty(Configuration conf,
       String property, long defVal) {
     long partSize = conf.getLong(property, defVal);
     if (partSize < MULTIPART_MIN_SIZE) {
-      LOG.error(property + " must be at least 5 MB");
+      LOG.warn(property + " must be at least 5 MB");
       partSize = MULTIPART_MIN_SIZE;
     }
     return partSize;
@@ -476,7 +484,7 @@ public final class S3AUtils {
    * @return the size, guaranteed to be less than or equal to the max
    * value of an integer.
    */
-  public static int ensureIntVal(String name, long size) {
+  public static int ensureOutputParameterInRange(String name, long size) {
     if (size > Integer.MAX_VALUE) {
       LOG.warn("s3a: " + name + " capped to ~2.14GB" +
           " (maximum allowed size with current output mechanism)");

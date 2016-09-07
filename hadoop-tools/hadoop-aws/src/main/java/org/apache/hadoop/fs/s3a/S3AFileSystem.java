@@ -161,8 +161,8 @@ public class S3AFileSystem extends FileSystem {
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
-      partSize = getSizeProperty(conf, MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-      multiPartThreshold = getSizeProperty(conf, MIN_MULTIPART_THRESHOLD,
+      partSize = getMultipartSizeProperty(conf, MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+      multiPartThreshold = getMultipartSizeProperty(conf, MIN_MULTIPART_THRESHOLD,
           DEFAULT_MIN_MULTIPART_THRESHOLD);
 
       //check but do not store the block size
@@ -217,17 +217,12 @@ public class S3AFileSystem extends FileSystem {
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
-      fastUploadEnabled = getConf().getBoolean(FAST_UPLOAD,
-          DEFAULT_FAST_UPLOAD);
 
-      String itemName = conf.get(BUFFER_DIR) != null
-          ? BUFFER_DIR : "hadoop.tmp.dir";
-      directoryAllocator = new LocalDirAllocator(itemName);
       blockUploadEnabled = conf.getBoolean(BLOCK_OUTPUT, false);
       if (blockUploadEnabled) {
         blockOutputBuffer = conf.getTrimmed(BLOCK_OUTPUT_BUFFER,
             DEFAULT_BLOCK_OUTPUT_BUFFER);
-        partSize = ensureIntVal(MULTIPART_SIZE, partSize);
+        partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
         blockFactory = S3ADataBlocks.createFactory(blockOutputBuffer);
         blockFactory.init(this);
         LOG.debug("Uploading data via Block Upload, buffer = {}",
@@ -236,7 +231,7 @@ public class S3AFileSystem extends FileSystem {
         fastUploadEnabled = getConf().getBoolean(FAST_UPLOAD,
             DEFAULT_FAST_UPLOAD);
         if (fastUploadEnabled) {
-          partSize = ensureIntVal(MULTIPART_SIZE, partSize);
+          partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
 
         }
       }

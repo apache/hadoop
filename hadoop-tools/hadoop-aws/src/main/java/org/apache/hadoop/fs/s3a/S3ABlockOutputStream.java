@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -55,10 +55,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.fs.s3a.S3AUtils.extractException;
-import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
-import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
+import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
  * Upload files/parts directly via different buffering mechanisms:
@@ -290,7 +288,7 @@ class S3ABlockOutputStream extends OutputStream {
     initiateMPURequest.setCannedACL(cannedACL);
     try {
       return new MultiPartUpload(
-          getClient().initiateMultipartUpload(initiateMPURequest).getUploadId());
+          getS3Client().initiateMultipartUpload(initiateMPURequest).getUploadId());
     } catch (AmazonClientException ace) {
       throw translateException("initiate MultiPartUpload", key, ace);
     }
@@ -334,7 +332,7 @@ class S3ABlockOutputStream extends OutputStream {
     }
   }
 
-  private AmazonS3Client getClient() {
+  private AmazonS3 getS3Client() {
     return fs.getAmazonS3Client();
   }
 
@@ -436,7 +434,7 @@ class S3ABlockOutputStream extends OutputStream {
           LOG.debug("Completing multi-part upload for key '{}'," +
                   " id '{}' with {} partitions " ,
                   key, uploadId, partETags.size());
-          return getClient().completeMultipartUpload(
+          return getS3Client().completeMultipartUpload(
               new CompleteMultipartUploadRequest(bucket,
                   key,
                   uploadId,
@@ -462,7 +460,7 @@ class S3ABlockOutputStream extends OutputStream {
         try {
           LOG.debug("Aborting multi-part upload for key '{}', id '{}'",
               key, uploadId);
-          getClient().abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
+          getS3Client().abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
               key, uploadId));
           return;
         } catch (AmazonClientException e) {
