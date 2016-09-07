@@ -80,6 +80,7 @@
     <findbugs.version>3.0.0</findbugs.version>
 
     <tomcat.version>6.0.44</tomcat.version>
+    <joda-time.version>2.9.4</joda-time.version>
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.7</javac.version>
@@ -994,6 +995,12 @@
         <version>4.2.0</version>
     </dependency>
       
+     <dependency>
+        <groupId>joda-time</groupId>
+        <artifactId>joda-time</artifactId>
+        <version>${joda-time.version}</version>
+     </dependency>
+
       <dependency>
           <groupId>com.nimbusds</groupId>
           <artifactId>nimbus-jose-jwt</artifactId>
