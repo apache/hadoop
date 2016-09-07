@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -509,6 +510,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         continue;
       }
     }
+  }
+
+  @Override
+  public void symLink(String target, String symlink) throws IOException {
+    FileUtil.symLink(target, symlink);
   }
 
   /** Permissions for user dir.

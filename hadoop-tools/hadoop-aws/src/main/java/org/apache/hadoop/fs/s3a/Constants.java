@@ -53,7 +53,8 @@ public final class Constants {
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
 
   // connect to s3 over ssl?
-  public static final String SECURE_CONNECTIONS = "fs.s3a.connection.ssl.enabled";
+  public static final String SECURE_CONNECTIONS =
+      "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
 
   //use a custom endpoint?
@@ -75,7 +76,8 @@ public final class Constants {
   public static final int DEFAULT_MAX_ERROR_RETRIES = 20;
 
   // seconds until we give up trying to establish a connection to s3
-  public static final String ESTABLISH_TIMEOUT = "fs.s3a.connection.establish.timeout";
+  public static final String ESTABLISH_TIMEOUT =
+      "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
 
   // seconds until we give up on a connection to s3
@@ -111,11 +113,13 @@ public final class Constants {
   public static final long DEFAULT_MULTIPART_SIZE = 104857600; // 100 MB
 
   // minimum size in bytes before we start a multipart uploads or copy
-  public static final String MIN_MULTIPART_THRESHOLD = "fs.s3a.multipart.threshold";
+  public static final String MIN_MULTIPART_THRESHOLD =
+      "fs.s3a.multipart.threshold";
   public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;
 
   //enable multiobject-delete calls?
-  public static final String ENABLE_MULTI_DELETE = "fs.s3a.multiobjectdelete.enable";
+  public static final String ENABLE_MULTI_DELETE =
+      "fs.s3a.multiobjectdelete.enable";
 
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
@@ -134,11 +138,13 @@ public final class Constants {
   public static final String DEFAULT_CANNED_ACL = "";
 
   // should we try to purge old multipart uploads when starting up
-  public static final String PURGE_EXISTING_MULTIPART = "fs.s3a.multipart.purge";
+  public static final String PURGE_EXISTING_MULTIPART =
+      "fs.s3a.multipart.purge";
   public static final boolean DEFAULT_PURGE_EXISTING_MULTIPART = false;
 
   // purge any multipart uploads older than this number of seconds
-  public static final String PURGE_EXISTING_MULTIPART_AGE = "fs.s3a.multipart.purge.age";
+  public static final String PURGE_EXISTING_MULTIPART_AGE =
+      "fs.s3a.multipart.purge.age";
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 14400;
 
   // s3 server-side encryption
@@ -198,4 +204,15 @@ public final class Constants {
    */
   @InterfaceStability.Unstable
   public static final String INPUT_FADV_RANDOM = "random";
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static final String S3_CLIENT_FACTORY_IMPL =
+      "fs.s3a.s3.client.factory.impl";
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static final Class<? extends S3ClientFactory>
+      DEFAULT_S3_CLIENT_FACTORY_IMPL =
+          S3ClientFactory.DefaultS3ClientFactory.class;
 }

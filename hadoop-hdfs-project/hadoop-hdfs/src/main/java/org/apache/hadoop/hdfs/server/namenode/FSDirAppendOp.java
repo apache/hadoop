@@ -84,12 +84,10 @@ final class FSDirAppendOp {
 
     final LocatedBlock lb;
     final FSDirectory fsd = fsn.getFSDirectory();
-    final String src;
     final INodesInPath iip;
     fsd.writeLock();
     try {
       iip = fsd.resolvePathForWrite(pc, srcArg);
-      src = iip.getPath();
       // Verify that the destination does not exist as a directory already
       final INode inode = iip.getLastINode();
       final String path = iip.getPath();
@@ -111,7 +109,7 @@ final class FSDirAppendOp {
       // not support appending file with striped blocks
       if (file.isStriped()) {
         throw new UnsupportedOperationException(
-            "Cannot append to files with striped block " + src);
+            "Cannot append to files with striped block " + path);
       }
 
       BlockManager blockManager = fsd.getBlockManager();

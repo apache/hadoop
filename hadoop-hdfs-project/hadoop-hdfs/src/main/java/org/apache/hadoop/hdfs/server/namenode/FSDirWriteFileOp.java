@@ -496,7 +496,8 @@ class FSDirWriteFileOp {
             replication, preferredBlockSize, storagePolicyId, ecPolicy != null);
       }
       newNode.setLocalName(localName);
-      INodesInPath iip = fsd.addINode(existing, newNode);
+      INodesInPath iip = fsd.addINode(existing, newNode,
+          permissions.getPermission());
       if (iip != null) {
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
@@ -594,7 +595,7 @@ class FSDirWriteFileOp {
           modTime, modTime, replication, preferredBlockSize, ecPolicy != null);
       newNode.setLocalName(localName);
       newNode.toUnderConstruction(clientName, clientMachine);
-      newiip = fsd.addINode(existing, newNode);
+      newiip = fsd.addINode(existing, newNode, permissions.getPermission());
     } finally {
       fsd.writeUnlock();
     }

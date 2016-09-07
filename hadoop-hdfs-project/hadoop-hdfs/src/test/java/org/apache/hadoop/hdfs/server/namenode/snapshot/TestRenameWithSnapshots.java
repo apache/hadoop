@@ -1570,7 +1570,9 @@ public class TestRenameWithSnapshots {
     FSDirectory fsdir2 = Mockito.spy(fsdir);
     Mockito.doThrow(new NSQuotaExceededException("fake exception")).when(fsdir2)
         .addLastINode((INodesInPath) Mockito.anyObject(),
-            (INode) Mockito.anyObject(), Mockito.anyBoolean());
+            (INode) Mockito.anyObject(),
+            (FsPermission) Mockito.anyObject(),
+            Mockito.anyBoolean());
     Whitebox.setInternalState(fsn, "dir", fsdir2);
     // rename /test/dir1/foo to /test/dir2/subdir2/foo. 
     // FSDirectory#verifyQuota4Rename will pass since the remaining quota is 2.

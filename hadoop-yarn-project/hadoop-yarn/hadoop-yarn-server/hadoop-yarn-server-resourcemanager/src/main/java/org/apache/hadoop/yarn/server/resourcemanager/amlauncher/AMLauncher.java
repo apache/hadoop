@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 
 /**
  * The launch of the AM itself.
@@ -81,6 +82,7 @@ public class AMLauncher implements Runnable {
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   private final Container masterContainer;
+  private final boolean logCommandLine;
 
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
@@ -93,6 +95,9 @@ public class AMLauncher implements Runnable {
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
     this.masterContainer = application.getMasterContainer();
+    this.logCommandLine =
+        conf.getBoolean(YarnConfiguration.RM_AMLAUNCHER_LOG_COMMAND,
+          YarnConfiguration.DEFAULT_RM_AMLAUNCHER_LOG_COMMAND);
   }
 
   private void connect() throws IOException {
@@ -188,11 +193,22 @@ public class AMLauncher implements Runnable {
     // Construct the actual Container
     ContainerLaunchContext container =
         applicationMasterContext.getAMContainerSpec();
-    LOG.info("Command to launch container "
-        + containerID
-        + " : "
-        + StringUtils.arrayToString(container.getCommands().toArray(
-            new String[0])));
+
+    if (LOG.isDebugEnabled()) {
+      StringBuilder message = new StringBuilder("Command to launch container ");
+
+      message.append(containerID).append(" : ");
+
+      if (logCommandLine) {
+        message.append(Joiner.on(",").join(container.getCommands()));
+      } else {
+        message.append("<REDACTED> -- Set ");
+        message.append(YarnConfiguration.RM_AMLAUNCHER_LOG_COMMAND);
+        message.append(" to true to reenable command logging");
+      }
+
+      LOG.debug(message.toString());
+    }
 
     // Populate the current queue name in the environment variable.
     setupQueueNameEnv(container, applicationMasterContext);

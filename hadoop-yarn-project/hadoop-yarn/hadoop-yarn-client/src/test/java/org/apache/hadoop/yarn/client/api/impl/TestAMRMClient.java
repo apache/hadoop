@@ -145,8 +145,13 @@ public class TestAMRMClient {
     yarnClient.start();
 
     // get node info
+    assertTrue("All node managers did not connect to the RM within the "
+        + "allotted 5-second timeout",
+        yarnCluster.waitForNodeManagersToConnect(5000L));
     nodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
-    
+    assertEquals("Not all node managers were reported running",
+        nodeCount, nodeReports.size());
+
     priority = Priority.newInstance(1);
     priority2 = Priority.newInstance(2);
     capability = Resource.newInstance(1024, 1);

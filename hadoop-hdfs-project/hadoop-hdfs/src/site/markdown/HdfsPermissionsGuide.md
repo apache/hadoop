@@ -333,4 +333,10 @@ Configuration Parameters
     default, ACLs are disabled. When ACLs are disabled, the NameNode rejects
     all attempts to set an ACL.
 
+*   `dfs.namenode.posix.acl.inheritance.enabled`
 
+    Set to true to enable POSIX style ACL inheritance. Disabled by default.
+    When it is enabled and the create request comes from a compatible client,
+    the NameNode will apply default ACLs from the parent directory to
+    the create mode and ignore the client umask. If no default ACL is found,
+    it will apply the client umask.

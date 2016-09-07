@@ -59,6 +59,15 @@ public abstract class FSQueue implements Queue, Schedulable {
   
   protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
 
+  protected ResourceWeights weights;
+  protected Resource minShare;
+  protected Resource maxShare;
+  protected int maxRunningApps;
+  protected Resource maxChildQueueResource;
+
+  // maxAMShare is a value between 0 and 1.
+  protected float maxAMShare;
+
   private long fairSharePreemptionTimeout = Long.MAX_VALUE;
   private long minSharePreemptionTimeout = Long.MAX_VALUE;
   private float fairSharePreemptionThreshold = 0.5f;
@@ -68,15 +77,20 @@ public abstract class FSQueue implements Queue, Schedulable {
     this.name = name;
     this.scheduler = scheduler;
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
-    metrics.setMinShare(getMinShare());
-    metrics.setMaxShare(getMaxShare());
-
-    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
-    metrics.setMaxApps(allocConf.getQueueMaxApps(name));
-    metrics.setSchedulingPolicy(allocConf.getSchedulingPolicy(name).getName());
     this.parent = parent;
   }
-  
+
+  /**
+   * Initialize a queue by setting its queue-specific properties and its
+   * metrics.
+   * This function is invoked when a new queue is created or reloading the
+   * allocation configuration.
+   */
+  public void init() {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+    allocConf.initFSQueue(this, scheduler);
+  }
+
   public String getName() {
     return name;
   }
@@ -103,19 +117,51 @@ public abstract class FSQueue implements Queue, Schedulable {
   public abstract void setPolicy(SchedulingPolicy policy)
       throws AllocationConfigurationException;
 
+  public void setWeights(ResourceWeights weights){
+    this.weights = weights;
+  }
+
   @Override
   public ResourceWeights getWeights() {
-    return scheduler.getAllocationConfiguration().getQueueWeight(getName());
+    return weights;
   }
-  
+
+  public void setMinShare(Resource minShare){
+    this.minShare = minShare;
+  }
+
   @Override
   public Resource getMinShare() {
-    return scheduler.getAllocationConfiguration().getMinResources(getName());
+    return minShare;
   }
-  
+
+  public void setMaxShare(Resource maxShare){
+    this.maxShare = maxShare;
+  }
+
   @Override
   public Resource getMaxShare() {
-    return scheduler.getAllocationConfiguration().getMaxResources(getName());
+    return maxShare;
+  }
+
+  public void setMaxChildQueueResource(Resource maxChildShare){
+    this.maxChildQueueResource = maxChildShare;
+  }
+
+  public Resource getMaxChildQueueResource() {
+    return maxChildQueueResource;
+  }
+
+  public void setMaxRunningApps(int maxRunningApps){
+    this.maxRunningApps = maxRunningApps;
+  }
+
+  public int getMaxRunningApps() {
+    return maxRunningApps;
+  }
+
+  public void setMaxAMShare(float maxAMShare){
+    this.maxAMShare = maxAMShare;
   }
 
   @Override
@@ -302,8 +348,7 @@ public abstract class FSQueue implements Queue, Schedulable {
    * @return true if check passes (can assign) or false otherwise
    */
   protected boolean assignContainerPreCheck(FSSchedulerNode node) {
-    if (!Resources.fitsIn(getResourceUsage(),
-        scheduler.getAllocationConfiguration().getMaxResources(getName()))
+    if (!Resources.fitsIn(getResourceUsage(), maxShare)
         || node.getReservedContainer() != null) {
       return false;
     }

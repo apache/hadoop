@@ -166,7 +166,9 @@ public class TestNameNodeMetrics {
         MetricsAsserts.getLongGauge("CapacityRemaining", rb);
     long capacityUsedNonDFS =
         MetricsAsserts.getLongGauge("CapacityUsedNonDFS", rb);
-    assert(capacityUsed + capacityRemaining + capacityUsedNonDFS ==
+    // There will be 5% space reserved in ext filesystem which is not
+    // considered.
+    assert (capacityUsed + capacityRemaining + capacityUsedNonDFS <=
         capacityTotal);
   }
 

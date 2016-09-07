@@ -880,6 +880,15 @@ public class TestConfiguration extends TestCase {
     assertEquals(30L, conf.getTimeDuration("test.time.X", 30, SECONDS));
     conf.set("test.time.X", "30");
     assertEquals(30L, conf.getTimeDuration("test.time.X", 40, SECONDS));
+    assertEquals(10L, conf.getTimeDuration("test.time.c", "10", SECONDS));
+    assertEquals(30L, conf.getTimeDuration("test.time.c", "30s", SECONDS));
+    assertEquals(120L, conf.getTimeDuration("test.time.c", "2m", SECONDS));
+    conf.set("test.time.c", "30");
+    assertEquals(30L, conf.getTimeDuration("test.time.c", "40s", SECONDS));
+
+    // check suffix insensitive
+    conf.set("test.time.d", "30S");
+    assertEquals(30L, conf.getTimeDuration("test.time.d", 40, SECONDS));
 
     for (Configuration.ParsedTimeDuration ptd :
          Configuration.ParsedTimeDuration.values()) {
@@ -887,6 +896,43 @@ public class TestConfiguration extends TestCase {
       assertEquals(1 + ptd.suffix(), conf.get("test.time.unit"));
       assertEquals(1, conf.getTimeDuration("test.time.unit", 2, ptd.unit()));
     }
+  }
+
+  public void testTimeDurationWarning() {
+    // check warn for possible loss of precision
+    final String warnFormat = "Possible loss of precision converting %s" +
+            " to %s for test.time.warn";
+    final ArrayList<String> warnchk = new ArrayList<>();
+    Configuration wconf = new Configuration(false) {
+      @Override
+      void logDeprecation(String message) {
+        warnchk.add(message);
+      }
+    };
+    String[] convDAYS = new String[]{"23h", "30m", "40s", "10us", "40000ms"};
+    for (String s : convDAYS) {
+      wconf.set("test.time.warn", s);
+      assertEquals(0, wconf.getTimeDuration("test.time.warn", 1, DAYS));
+    }
+    for (int i = 0; i < convDAYS.length; ++i) {
+      String wchk = String.format(warnFormat, convDAYS[i], "DAYS");
+      assertEquals(wchk, warnchk.get(i));
+    }
+
+    warnchk.clear();
+    wconf.setTimeDuration("test.time.warn", 1441, MINUTES);
+    assertEquals(1, wconf.getTimeDuration("test.time.warn", 0, DAYS));
+    assertEquals(24, wconf.getTimeDuration("test.time.warn", 0, HOURS));
+    String dchk = String.format(warnFormat, "1441m", "DAYS");
+    assertEquals(dchk, warnchk.get(0));
+    String hchk = String.format(warnFormat, "1441m", "HOURS");
+    assertEquals(hchk, warnchk.get(1));
+    assertEquals(1441, wconf.getTimeDuration("test.time.warn", 0, MINUTES));
+    // no warning
+    assertEquals(2, warnchk.size());
+    assertEquals(86460, wconf.getTimeDuration("test.time.warn", 0, SECONDS));
+    // no warning
+    assertEquals(2, warnchk.size());
   }
 
   public void testPattern() throws IOException {

@@ -53,11 +53,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.GlobPattern;
-import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcResponseMessageWrapper;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.ResponseBuffer;
 import org.apache.hadoop.ipc.RpcConstants;
+import org.apache.hadoop.ipc.RpcWritable;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
@@ -368,11 +368,13 @@ public class SaslRpcClient {
     // loop until sasl is complete or a rpc error occurs
     boolean done = false;
     do {
-      int totalLen = inStream.readInt();
-      RpcResponseMessageWrapper responseWrapper =
-          new RpcResponseMessageWrapper();
-      responseWrapper.readFields(inStream);
-      RpcResponseHeaderProto header = responseWrapper.getMessageHeader();
+      int rpcLen = inStream.readInt();
+      ByteBuffer bb = ByteBuffer.allocate(rpcLen);
+      inStream.readFully(bb.array());
+
+      RpcWritable.Buffer saslPacket = RpcWritable.Buffer.wrap(bb);
+      RpcResponseHeaderProto header =
+          saslPacket.getValue(RpcResponseHeaderProto.getDefaultInstance());
       switch (header.getStatus()) {
         case ERROR: // might get a RPC error during 
         case FATAL:
@@ -380,15 +382,14 @@ public class SaslRpcClient {
                                     header.getErrorMsg());
         default: break;
       }
-      if (totalLen != responseWrapper.getLength()) {
-        throw new SaslException("Received malformed response length");
-      }
-      
       if (header.getCallId() != AuthProtocol.SASL.callId) {
         throw new SaslException("Non-SASL response during negotiation");
       }
       RpcSaslProto saslMessage =
-          RpcSaslProto.parseFrom(responseWrapper.getMessageBytes());
+          saslPacket.getValue(RpcSaslProto.getDefaultInstance());
+      if (saslPacket.remaining() > 0) {
+        throw new SaslException("Received malformed response length");
+      }
       // handle sasl negotiation process
       RpcSaslProto.Builder response = null;
       switch (saslMessage.getState()) {
@@ -452,16 +453,16 @@ public class SaslRpcClient {
     return authMethod;
   }
 
-  private void sendSaslMessage(DataOutputStream out, RpcSaslProto message)
+  private void sendSaslMessage(OutputStream out, RpcSaslProto message)
       throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending sasl message "+message);
     }
-    RpcRequestMessageWrapper request =
-        new RpcRequestMessageWrapper(saslHeader, message);
-    out.writeInt(request.getLength());
-    request.write(out);
-    out.flush();    
+    ResponseBuffer buf = new ResponseBuffer();
+    saslHeader.writeDelimitedTo(buf);
+    message.writeDelimitedTo(buf);
+    buf.writeTo(out);
+    out.flush();
   }
 
   /**
@@ -634,12 +635,8 @@ public class SaslRpcClient {
           .setState(SaslState.WRAP)
           .setToken(ByteString.copyFrom(buf, 0, buf.length))
           .build();
-      RpcRequestMessageWrapper request =
-          new RpcRequestMessageWrapper(saslHeader, saslMessage);
-      DataOutputStream dob = new DataOutputStream(out);
-      dob.writeInt(request.getLength());
-      request.write(dob);
-     }
+      sendSaslMessage(out, saslMessage);
+    }
   }
 
   /** Release resources used by wrapped saslClient */

@@ -131,7 +131,18 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     LOG.info("Running testContainerLaunchAndExitFailure");
     super.testContainerLaunchAndExitFailure();
   }
-  
+
+  @Override
+  public void testLocalingResourceWhileContainerRunning()
+      throws Exception {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    super.testLocalingResourceWhileContainerRunning();
+  }
+
   @Override
   public void testLocalFilesCleanup() throws InterruptedException,
       IOException, YarnException {

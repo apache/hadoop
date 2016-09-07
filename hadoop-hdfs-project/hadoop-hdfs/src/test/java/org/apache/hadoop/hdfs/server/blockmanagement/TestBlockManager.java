@@ -1200,7 +1200,7 @@ public class TestBlockManager {
           StorageReport report = new StorageReport(
               dns, true, storageInfo.getCapacity(),
               storageInfo.getDfsUsed(), storageInfo.getRemaining(),
-              storageInfo.getBlockPoolUsed());
+              storageInfo.getBlockPoolUsed(), 0L);
           reports.add(report);
           break;
         }

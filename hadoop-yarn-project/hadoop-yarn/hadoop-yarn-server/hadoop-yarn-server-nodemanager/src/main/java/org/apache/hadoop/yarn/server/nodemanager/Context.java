@@ -126,4 +126,6 @@ public interface Context {
   void setNMTimelinePublisher(NMTimelinePublisher nmMetricsPublisher);
 
   NMTimelinePublisher getNMTimelinePublisher();
+
+  ContainerExecutor getContainerExecutor();
 }

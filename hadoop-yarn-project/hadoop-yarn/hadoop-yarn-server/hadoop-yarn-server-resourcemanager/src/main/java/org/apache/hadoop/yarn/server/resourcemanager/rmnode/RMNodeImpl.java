@@ -1170,12 +1170,21 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       NodeState initialState = rmNode.getState();
       boolean isNodeDecommissioning =
           initialState.equals(NodeState.DECOMMISSIONING);
+      if (isNodeDecommissioning) {
+        List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
+        if (rmNode.runningApplications.isEmpty() &&
+            (keepAliveApps == null || keepAliveApps.isEmpty())) {
+          RMNodeImpl.deactivateNode(rmNode, NodeState.DECOMMISSIONED);
+          return NodeState.DECOMMISSIONED;
+        }
+      }
+
       if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
         LOG.info("Node " + rmNode.nodeId +
             " reported UNHEALTHY with details: " +
             remoteNodeHealthStatus.getHealthReport());
         // if a node in decommissioning receives an unhealthy report,
-        // it will keep decommissioning.
+        // it will stay in decommissioning.
         if (isNodeDecommissioning) {
           return NodeState.DECOMMISSIONING;
         } else {
@@ -1349,7 +1358,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
               + " is the first container get launched for application "
               + containerAppId);
         }
-        runningApplications.add(containerAppId);
+        handleRunningAppOnNode(this, context, containerAppId, nodeId);
       }
 
       // Process running containers

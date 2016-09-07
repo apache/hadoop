@@ -326,7 +326,7 @@ public class NMTimelinePublisher extends CompositeService {
       publishContainerLocalizationEvent((ContainerLocalizationEvent) event,
           ContainerMetricsConstants.LOCALIZATION_FINISHED_EVENT_TYPE);
       break;
-    case INIT_CONTAINER_RESOURCES:
+    case LOCALIZE_CONTAINER_RESOURCES:
       publishContainerLocalizationEvent((ContainerLocalizationEvent) event,
           ContainerMetricsConstants.LOCALIZATION_START_EVENT_TYPE);
       break;

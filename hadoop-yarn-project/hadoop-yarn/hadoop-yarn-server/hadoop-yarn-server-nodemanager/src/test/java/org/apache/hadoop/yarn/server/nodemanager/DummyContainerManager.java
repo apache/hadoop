@@ -86,7 +86,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
           dispatcher.getEventHandler().handle(new ApplicationInitedEvent(
                 app.getAppId()));
           break;
-        case INIT_CONTAINER_RESOURCES:
+        case LOCALIZE_CONTAINER_RESOURCES:
           ContainerLocalizationRequestEvent rsrcReqs =
             (ContainerLocalizationRequestEvent) event;
           // simulate localization of all requested resources

@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAMContainerLaunchDiagnosticsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSAssignment;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
@@ -616,5 +618,30 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       diagnosticMessageBldr.append(" ).");
       updateAMContainerDiagnostics(AMState.ACTIVATED, diagnosticMessageBldr.toString());
     }
+  }
+
+  /**
+   * Recalculates the per-app, percent of queue metric, specific to the
+   * Capacity Scheduler.
+   */
+  @Override
+  public synchronized ApplicationResourceUsageReport getResourceUsageReport() {
+    ApplicationResourceUsageReport report = super.getResourceUsageReport();
+    Resource cluster = rmContext.getScheduler().getClusterResource();
+    Resource totalPartitionRes =
+        rmContext.getNodeLabelManager()
+          .getResourceByLabel(getAppAMNodePartitionName(), cluster);
+    ResourceCalculator calc = rmContext.getScheduler().getResourceCalculator();
+    if (!calc.isInvalidDivisor(totalPartitionRes)) {
+      float queueAbsMaxCapPerPartition =
+          ((AbstractCSQueue)getQueue()).getQueueCapacities()
+            .getAbsoluteCapacity(getAppAMNodePartitionName());
+      float queueUsagePerc =
+          calc.divide(totalPartitionRes, report.getUsedResources(),
+              Resources.multiply(totalPartitionRes,
+                  queueAbsMaxCapPerPartition)) * 100;
+      report.setQueueUsagePercentage(queueUsagePerc);
+    }
+    return report;
   }
 }

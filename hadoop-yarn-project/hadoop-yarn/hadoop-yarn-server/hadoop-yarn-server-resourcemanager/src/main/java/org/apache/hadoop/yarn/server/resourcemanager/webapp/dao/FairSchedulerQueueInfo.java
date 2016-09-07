@@ -101,7 +101,7 @@ public class FairSchedulerQueueInfo {
     fractionMemMinShare = (float)minResources.getMemorySize() / clusterResources.getMemorySize();
     fractionMemMaxShare = (float)maxResources.getMemorySize() / clusterResources.getMemorySize();
     
-    maxApps = allocConf.getQueueMaxApps(queueName);
+    maxApps = queue.getMaxRunningApps();
 
     pendingContainers = queue.getMetrics().getPendingContainers();
     allocatedContainers = queue.getMetrics().getAllocatedContainers();

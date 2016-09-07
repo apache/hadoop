@@ -414,8 +414,10 @@ public class DirectoryScanner implements Runnable {
   DirectoryScanner(DataNode datanode, FsDatasetSpi<?> dataset, Configuration conf) {
     this.datanode = datanode;
     this.dataset = dataset;
-    int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
-        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT);
+    int interval = (int) conf.getTimeDuration(
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
+        DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT,
+        TimeUnit.SECONDS);
     scanPeriodMsecs = interval * MILLIS_PER_SECOND; //msec
 
     int throttle =

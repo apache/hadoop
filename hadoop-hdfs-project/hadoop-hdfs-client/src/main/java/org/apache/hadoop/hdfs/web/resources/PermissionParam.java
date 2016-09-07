@@ -54,7 +54,7 @@ public class PermissionParam extends ShortParam {
    * @param value the parameter value.
    */
   public PermissionParam(final FsPermission value) {
-    super(DOMAIN, value == null? null: value.toShort(), null, null);
+    this(DOMAIN, value == null ? null : value.toShort(), null, null);
   }
 
   /**
@@ -62,7 +62,12 @@ public class PermissionParam extends ShortParam {
    * @param str a string representation of the parameter value.
    */
   public PermissionParam(final String str) {
-    super(DOMAIN, DOMAIN.parse(str), (short)0, (short)01777);
+    this(DOMAIN, DOMAIN.parse(str), (short)0, (short)01777);
+  }
+
+  PermissionParam(final Domain domain, final Short value, final Short min,
+                  final Short max) {
+    super(domain, value, min, max);
   }
 
   @Override

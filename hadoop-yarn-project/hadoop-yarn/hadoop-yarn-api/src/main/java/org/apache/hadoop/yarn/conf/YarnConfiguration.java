@@ -534,6 +534,18 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE = 10;
 
+  /**
+   * The {@code AMLauncher.createAMContainerLaunchContext()} method will log the
+   * command being executed to the RM log if this property is true. Commands
+   * may contain sensitive information, such as application or service
+   * passwords, making logging the commands a security risk. In cases where
+   * the cluster may be running applications with such commands, this property
+   * should be set to false. Commands are only logged at the debug level.
+   */
+  public static final String RM_AMLAUNCHER_LOG_COMMAND =
+      RM_PREFIX + "amlauncher.log.command";
+  public static final boolean DEFAULT_RM_AMLAUNCHER_LOG_COMMAND = false;
+
   //RM delegation token related keys
   public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";

@@ -630,10 +630,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     ArrayList<String > names = new ArrayList<String>();
 	if (isDeprecated(name)) {
       DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
-      warnOnceIfDeprecated(deprecations, name);
-      for (String newKey : keyInfo.newKeys) {
-        if(newKey != null) {
-          names.add(newKey);
+      if (keyInfo != null) {
+        if (!keyInfo.getAndSetAccessed()) {
+          logDeprecation(keyInfo.getWarningMessage(name));
+        }
+
+        for (String newKey : keyInfo.newKeys) {
+          if (newKey != null) {
+            names.add(newKey);
+          }
         }
       }
     }
@@ -1232,11 +1237,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  private void warnOnceIfDeprecated(DeprecationContext deprecations, String name) {
-    DeprecatedKeyInfo keyInfo = deprecations.getDeprecatedKeyMap().get(name);
-    if (keyInfo != null && !keyInfo.getAndSetAccessed()) {
-      LOG_DEPRECATION.info(keyInfo.getWarningMessage(name));
-    }
+  @VisibleForTesting
+  void logDeprecation(String message) {
+    LOG_DEPRECATION.info(message);
   }
 
   /**
@@ -1625,20 +1628,38 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     String vStr = get(name);
     if (null == vStr) {
       return defaultValue;
+    } else {
+      return getTimeDurationHelper(name, vStr, unit);
     }
-    vStr = vStr.trim();
-    return getTimeDurationHelper(name, vStr, unit);
+  }
+
+  public long getTimeDuration(String name, String defaultValue, TimeUnit unit) {
+    String vStr = get(name);
+    if (null == vStr) {
+      return getTimeDurationHelper(name, defaultValue, unit);
+    } else {
+      return getTimeDurationHelper(name, vStr, unit);
+    }
   }
 
   private long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
+    vStr = vStr.trim();
+    vStr = StringUtils.toLowerCase(vStr);
     ParsedTimeDuration vUnit = ParsedTimeDuration.unitFor(vStr);
     if (null == vUnit) {
-      LOG.warn("No unit for " + name + "(" + vStr + ") assuming " + unit);
+      logDeprecation("No unit for " + name + "(" + vStr + ") assuming " + unit);
       vUnit = ParsedTimeDuration.unitFor(unit);
     } else {
       vStr = vStr.substring(0, vStr.lastIndexOf(vUnit.suffix()));
     }
-    return unit.convert(Long.parseLong(vStr), vUnit.unit());
+
+    long raw = Long.parseLong(vStr);
+    long converted = unit.convert(raw, vUnit.unit());
+    if (vUnit.unit().convert(converted, unit) < raw) {
+      logDeprecation("Possible loss of precision converting " + vStr
+          + vUnit.suffix() + " to " + unit + " for " + name);
+    }
+    return converted;
   }
 
   public long[] getTimeDurations(String name, TimeUnit unit) {

@@ -21,7 +21,6 @@ package org.apache.hadoop.ipc;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.protobuf.CodedOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,13 +30,11 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
-import org.apache.hadoop.ipc.ProtobufRpcEngine.RpcRequestMessageWrapper;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
@@ -54,7 +51,6 @@ import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ProtoUtil;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
@@ -65,6 +61,7 @@ import javax.net.SocketFactory;
 import javax.security.sasl.Sasl;
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.Map.Entry;
@@ -429,7 +426,7 @@ public class Client implements AutoCloseable {
     private final boolean doPing; //do we need to send ping message
     private final int pingInterval; // how often sends ping to the server
     private final int soTimeout; // used by ipc ping and rpc timeout
-    private ByteArrayOutputStream pingRequest; // ping message
+    private ResponseBuffer pingRequest; // ping message
     
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
@@ -459,7 +456,7 @@ public class Client implements AutoCloseable {
       this.doPing = remoteId.getDoPing();
       if (doPing) {
         // construct a RPC header with the callId as the ping callId
-        pingRequest = new ByteArrayOutputStream();
+        pingRequest = new ResponseBuffer();
         RpcRequestHeaderProto pingHeader = ProtoUtil
             .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
                 OperationProto.RPC_FINAL_PACKET, PING_CALL_ID,
@@ -979,12 +976,10 @@ public class Client implements AutoCloseable {
           .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
               OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
               RpcConstants.INVALID_RETRY_COUNT, clientId);
-      RpcRequestMessageWrapper request =
-          new RpcRequestMessageWrapper(connectionContextHeader, message);
-      
-      // Write out the packet length
-      out.writeInt(request.getLength());
-      request.write(out);
+      final ResponseBuffer buf = new ResponseBuffer();
+      connectionContextHeader.writeDelimitedTo(buf);
+      message.writeDelimitedTo(buf);
+      buf.writeTo(out);
     }
     
     /* wait till someone signals us to start reading RPC response or
@@ -1030,7 +1025,6 @@ public class Client implements AutoCloseable {
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         synchronized (out) {
-          out.writeInt(pingRequest.size());
           pingRequest.writeTo(out);
           out.flush();
         }
@@ -1085,12 +1079,13 @@ public class Client implements AutoCloseable {
       // 2) RpcRequest
       //
       // Items '1' and '2' are prepared here. 
-      final DataOutputBuffer d = new DataOutputBuffer();
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
           call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
           clientId);
-      header.writeDelimitedTo(d);
-      call.rpcRequest.write(d);
+
+      final ResponseBuffer buf = new ResponseBuffer();
+      header.writeDelimitedTo(buf);
+      RpcWritable.wrap(call.rpcRequest).writeTo(buf);
 
       synchronized (sendRpcRequestLock) {
         Future<?> senderFuture = sendParamsExecutor.submit(new Runnable() {
@@ -1101,14 +1096,10 @@ public class Client implements AutoCloseable {
                 if (shouldCloseConnection.get()) {
                   return;
                 }
-                
-                if (LOG.isDebugEnabled())
+                if (LOG.isDebugEnabled()) {
                   LOG.debug(getName() + " sending #" + call.id);
-         
-                byte[] data = d.getData();
-                int totalLength = d.getLength();
-                out.writeInt(totalLength); // Total Length
-                out.write(data, 0, totalLength);// RpcRequestHeader + RpcRequest
+                }
+                buf.writeTo(out); // RpcRequestHeader + RpcRequest
                 out.flush();
               }
             } catch (IOException e) {
@@ -1119,7 +1110,7 @@ public class Client implements AutoCloseable {
             } finally {
               //the buffer is just an in-memory buffer, but it is still polite to
               // close early
-              IOUtils.closeStream(d);
+              IOUtils.closeStream(buf);
             }
           }
         });
@@ -1151,12 +1142,13 @@ public class Client implements AutoCloseable {
       
       try {
         int totalLen = in.readInt();
-        RpcResponseHeaderProto header = 
-            RpcResponseHeaderProto.parseDelimitedFrom(in);
-        checkResponse(header);
+        ByteBuffer bb = ByteBuffer.allocate(totalLen);
+        in.readFully(bb.array());
 
-        int headerLen = header.getSerializedSize();
-        headerLen += CodedOutputStream.computeRawVarint32Size(headerLen);
+        RpcWritable.Buffer packet = RpcWritable.Buffer.wrap(bb);
+        RpcResponseHeaderProto header =
+            packet.getValue(RpcResponseHeaderProto.getDefaultInstance());
+        checkResponse(header);
 
         int callId = header.getCallId();
         if (LOG.isDebugEnabled())
@@ -1164,28 +1156,15 @@ public class Client implements AutoCloseable {
 
         RpcStatusProto status = header.getStatus();
         if (status == RpcStatusProto.SUCCESS) {
-          Writable value = ReflectionUtils.newInstance(valueClass, conf);
-          value.readFields(in);                 // read value
+          Writable value = packet.newInstance(valueClass, conf);
           final Call call = calls.remove(callId);
           call.setRpcResponse(value);
-          
-          // verify that length was correct
-          // only for ProtobufEngine where len can be verified easily
-          if (call.getRpcResponse() instanceof ProtobufRpcEngine.RpcWrapper) {
-            ProtobufRpcEngine.RpcWrapper resWrapper = 
-                (ProtobufRpcEngine.RpcWrapper) call.getRpcResponse();
-            if (totalLen != headerLen + resWrapper.getLength()) { 
-              throw new RpcClientException(
-                  "RPC response length mismatch on rpc success");
-            }
-          }
-        } else { // Rpc Request failed
-          // Verify that length was correct
-          if (totalLen != headerLen) {
-            throw new RpcClientException(
-                "RPC response length mismatch on rpc error");
-          }
-          
+        }
+        // verify that packet length was correct
+        if (packet.remaining() > 0) {
+          throw new RpcClientException("RPC response length mismatch");
+        }
+        if (status != RpcStatusProto.SUCCESS) { // Rpc Request failed
           final String exceptionClassName = header.hasExceptionClassName() ?
                 header.getExceptionClassName() : 
                   "ServerDidNotSetExceptionClassName";

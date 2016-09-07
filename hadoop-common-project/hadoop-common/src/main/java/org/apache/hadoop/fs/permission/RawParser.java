@@ -15,22 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.fs.permission;
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
+import java.util.regex.Pattern;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-/**
- * A pluggable object for altering the weights of apps in the fair scheduler,
- * which is used for example by {@link NewAppWeightBooster} to give higher
- * weight to new jobs so that short jobs finish faster.
- *
- * May implement {@link Configurable} to access configuration parameters.
- */
-@Private
-@Unstable
-public interface WeightAdjuster {
-  public double adjustWeight(FSAppAttempt app, double curWeight);
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+class RawParser extends PermissionParser {
+  private static Pattern rawOctalPattern =
+      Pattern.compile("^\\s*([01]?)([0-7]{3})\\s*$");
+  private static Pattern rawNormalPattern =
+      Pattern.compile("\\G\\s*([ugoa]*)([+=-]+)([rwxt]*)([,\\s]*)\\s*");
+
+  private short permission;
+
+  public RawParser(String modeStr) throws IllegalArgumentException {
+    super(modeStr, rawNormalPattern, rawOctalPattern);
+    permission = (short)combineModes(0, false);
+  }
+
+  public short getPermission() {
+    return permission;
+  }
+
 }
