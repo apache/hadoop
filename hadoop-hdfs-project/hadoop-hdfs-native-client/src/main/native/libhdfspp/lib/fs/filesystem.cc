@@ -40,6 +40,9 @@ using ::asio::ip::tcp;
 
 static constexpr uint16_t kDefaultPort = 8020;
 
+// forward declarations
+const std::string get_effective_user_name(const std::string &);
+
 uint32_t FileSystem::GetDefaultFindMaxDepth() {
   return std::numeric_limits<uint32_t>::max();
 }
@@ -72,8 +75,18 @@ Status FileSystem::CheckValidReplication(uint16_t replication) {
  *                    FILESYSTEM BASE CLASS
  ****************************************************************************/
 
-FileSystem * FileSystem::New(
+FileSystem *FileSystem::New(
     IoService *&io_service, const std::string &user_name, const Options &options) {
+  return new FileSystemImpl(io_service, user_name, options);
+}
+
+FileSystem *FileSystem::New() {
+  // No, this pointer won't be leaked.  The FileSystem takes ownership.
+  IoService *io_service = IoService::New();
+  if(!io_service)
+    return nullptr;
+  std::string user_name = get_effective_user_name("");
+  Options options;
   return new FileSystemImpl(io_service, user_name, options);
 }
 

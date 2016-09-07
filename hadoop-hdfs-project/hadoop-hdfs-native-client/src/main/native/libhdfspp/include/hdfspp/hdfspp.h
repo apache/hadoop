@@ -155,18 +155,25 @@ class FileSystem {
    * initializes the RPC connections to the NameNode and returns an
    * FileSystem object.
    *
+   * Note: The FileSystem takes ownership of the IoService passed in the
+   * constructor.  The FileSystem destructor will call delete on it.
+   *
    * If user_name is blank, the current user will be used for a default.
    **/
-  static FileSystem * New(
+  static FileSystem *New(
       IoService *&io_service, const std::string &user_name, const Options &options);
 
-  virtual void Connect(const std::string &server,
-      const std::string &service,
+  /**
+   * Returns a new instance with default user and option, with the default IOService.
+   **/
+  static FileSystem *New();
+
+
+  virtual void Connect(const std::string &server, const std::string &service,
       const std::function<void(const Status &, FileSystem *)> &handler) = 0;
 
   /* Synchronous call of Connect */
-  virtual Status Connect(const std::string &server,
-      const std::string &service) = 0;
+  virtual Status Connect(const std::string &server, const std::string &service) = 0;
 
 
   /**
