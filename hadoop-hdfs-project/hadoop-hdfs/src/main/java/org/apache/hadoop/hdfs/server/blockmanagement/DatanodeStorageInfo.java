@@ -109,6 +109,7 @@ public class DatanodeStorageInfo {
 
   private long capacity;
   private long dfsUsed;
+  private long nonDfsUsed;
   private volatile long remaining;
   private long blockPoolUsed;
 
@@ -218,6 +219,9 @@ public class DatanodeStorageInfo {
     return dfsUsed;
   }
 
+  long getNonDfsUsed() {
+    return nonDfsUsed;
+  }
   long getRemaining() {
     return remaining;
   }
@@ -291,6 +295,7 @@ public class DatanodeStorageInfo {
   void updateState(StorageReport r) {
     capacity = r.getCapacity();
     dfsUsed = r.getDfsUsed();
+    nonDfsUsed = r.getNonDfsUsed();
     remaining = r.getRemaining();
     blockPoolUsed = r.getBlockPoolUsed();
   }
@@ -328,9 +333,8 @@ public class DatanodeStorageInfo {
   }
   
   StorageReport toStorageReport() {
-    return new StorageReport(
-        new DatanodeStorage(storageID, state, storageType),
-        false, capacity, dfsUsed, remaining, blockPoolUsed);
+    return new StorageReport(new DatanodeStorage(storageID, state, storageType),
+        false, capacity, dfsUsed, remaining, blockPoolUsed, nonDfsUsed);
   }
 
   static Iterable<StorageType> toStorageTypes(

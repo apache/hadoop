@@ -141,9 +141,7 @@ class HeartbeatManager implements DatanodeStatistics {
 
   @Override
   public synchronized long getCapacityUsedNonDFS() {
-    final long nonDFSUsed = stats.capacityTotal
-        - stats.capacityRemaining - stats.capacityUsed;
-    return nonDFSUsed < 0L? 0L : nonDFSUsed;
+    return stats.capacityUsedNonDfs;
   }
 
   @Override
@@ -394,6 +392,7 @@ class HeartbeatManager implements DatanodeStatistics {
   private static class Stats {
     private long capacityTotal = 0L;
     private long capacityUsed = 0L;
+    private long capacityUsedNonDfs = 0L;
     private long capacityRemaining = 0L;
     private long blockPoolUsed = 0L;
     private int xceiverCount = 0;
@@ -407,6 +406,7 @@ class HeartbeatManager implements DatanodeStatistics {
 
     private void add(final DatanodeDescriptor node) {
       capacityUsed += node.getDfsUsed();
+      capacityUsedNonDfs += node.getNonDfsUsed();
       blockPoolUsed += node.getBlockPoolUsed();
       xceiverCount += node.getXceiverCount();
       if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
@@ -423,6 +423,7 @@ class HeartbeatManager implements DatanodeStatistics {
 
     private void subtract(final DatanodeDescriptor node) {
       capacityUsed -= node.getDfsUsed();
+      capacityUsedNonDfs -= node.getNonDfsUsed();
       blockPoolUsed -= node.getBlockPoolUsed();
       xceiverCount -= node.getXceiverCount();
       if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {

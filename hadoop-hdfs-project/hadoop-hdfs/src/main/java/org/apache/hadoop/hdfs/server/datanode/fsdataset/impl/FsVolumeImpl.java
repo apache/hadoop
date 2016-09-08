@@ -345,12 +345,44 @@ public class FsVolumeImpl implements FsVolumeSpi {
    */
   @Override
   public long getAvailable() throws IOException {
-    long remaining = getCapacity() - getDfsUsed() - reservedForRbw.get();
-    long available = usage.getAvailable() - reserved - reservedForRbw.get();
+    long remaining = getCapacity() - getDfsUsed() - getReservedForRbw();
+    long available =
+        usage.getAvailable() - getRemainingReserved() - getReservedForRbw();
     if (remaining > available) {
       remaining = available;
     }
     return (remaining > 0) ? remaining : 0;
+  }
+
+  long getActualNonDfsUsed() throws IOException {
+    return usage.getUsed() - getDfsUsed();
+  }
+
+  private long getRemainingReserved() throws IOException {
+    long actualNonDfsUsed = getActualNonDfsUsed();
+    if (actualNonDfsUsed < reserved) {
+      return reserved - actualNonDfsUsed;
+    }
+    return 0L;
+  }
+
+  /**
+   * Unplanned Non-DFS usage, i.e. Extra usage beyond reserved.
+   *
+   * @return
+   * @throws IOException
+   */
+  public long getNonDfsUsed() throws IOException {
+    long actualNonDfsUsed = getActualNonDfsUsed();
+    if (actualNonDfsUsed < reserved) {
+      return 0L;
+    }
+    return actualNonDfsUsed - reserved;
+  }
+
+  @VisibleForTesting
+  long getDfAvailable() {
+    return usage.getAvailable();
   }
 
   @VisibleForTesting

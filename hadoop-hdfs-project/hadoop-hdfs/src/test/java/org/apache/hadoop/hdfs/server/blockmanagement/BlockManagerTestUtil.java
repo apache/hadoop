@@ -291,7 +291,7 @@ public class BlockManagerTestUtil {
       StorageReport report = new StorageReport(
           dns ,false, storage.getCapacity(),
           storage.getDfsUsed(), storage.getRemaining(),
-          storage.getBlockPoolUsed());
+          storage.getBlockPoolUsed(), 0L);
       reports.add(report);
     }
     return reports.toArray(StorageReport.EMPTY_ARRAY);

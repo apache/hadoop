@@ -44,6 +44,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.percent2String;
 public class DatanodeInfo extends DatanodeID implements Node {
   private long capacity;
   private long dfsUsed;
+  private long nonDfsUsed;
   private long remaining;
   private long blockPoolUsed;
   private long cacheCapacity;
@@ -87,6 +88,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     super(from);
     this.capacity = from.getCapacity();
     this.dfsUsed = from.getDfsUsed();
+    this.nonDfsUsed = from.getNonDfsUsed();
     this.remaining = from.getRemaining();
     this.blockPoolUsed = from.getBlockPoolUsed();
     this.cacheCapacity = from.getCacheCapacity();
@@ -102,6 +104,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     super(nodeID);
     this.capacity = 0L;
     this.dfsUsed = 0L;
+    this.nonDfsUsed = 0L;
     this.remaining = 0L;
     this.blockPoolUsed = 0L;
     this.cacheCapacity = 0L;
@@ -138,10 +141,25 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final long lastUpdate, final long lastUpdateMonotonic,
       final int xceiverCount, final String networkLocation,
       final AdminStates adminState) {
-    super(ipAddr, hostName, datanodeUuid, xferPort, infoPort,
-            infoSecurePort, ipcPort);
+    this(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
+        ipcPort, capacity, dfsUsed, 0L, remaining, blockPoolUsed, cacheCapacity,
+        cacheUsed, lastUpdate, lastUpdateMonotonic, xceiverCount,
+        networkLocation, adminState);
+  }
+  /** Constructor. */
+  public DatanodeInfo(final String ipAddr, final String hostName,
+     final String datanodeUuid, final int xferPort, final int infoPort,
+     final int infoSecurePort, final int ipcPort, final long capacity,
+     final long dfsUsed, final long nonDfsUsed, final long remaining,
+     final long blockPoolUsed, final long cacheCapacity, final long cacheUsed,
+     final long lastUpdate, final long lastUpdateMonotonic,
+     final int xceiverCount, final String networkLocation,
+     final AdminStates adminState) {
+      super(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
+                ipcPort);
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
+    this.nonDfsUsed = nonDfsUsed;
     this.remaining = remaining;
     this.blockPoolUsed = blockPoolUsed;
     this.cacheCapacity = cacheCapacity;
@@ -169,9 +187,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public long getBlockPoolUsed() { return blockPoolUsed; }
 
   /** The used space by the data node. */
-  public long getNonDfsUsed() { 
-    long nonDFSUsed = capacity - dfsUsed - remaining;
-    return nonDFSUsed < 0 ? 0 : nonDFSUsed;
+  public long getNonDfsUsed() {
+    return nonDfsUsed;
   }
 
   /** The used space by the data node as percentage of present capacity */
@@ -259,6 +276,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /** Sets the used space for the datanode. */
   public void setDfsUsed(long dfsUsed) {
     this.dfsUsed = dfsUsed;
+  }
+
+  /**
+   * Sets the nondfs-used space for the datanode.
+   */
+  public void setNonDfsUsed(long nonDfsUsed) {
+    this.nonDfsUsed = nonDfsUsed;
   }
 
   /** Sets raw free space. */

@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosing
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -120,4 +122,41 @@ public class TestFsVolumeList {
     } catch (IllegalStateException e) {
     }
   }
+
+  @Test
+  public void testNonDfsUsedMetricForVolume() throws Exception {
+    File volDir = new File(baseDir, "volume-0");
+    volDir.mkdirs();
+    /*
+     * Lets have the example.
+     * Capacity - 1000
+     * Reserved - 100
+     * DfsUsed  - 200
+     * Actual Non-DfsUsed - 300 -->(expected)
+     * ReservedForReplicas - 50
+     */
+    long diskCapacity = 1000L;
+    long duReserved = 100L;
+    long dfsUsage = 200L;
+    long actualNonDfsUsage = 300L;
+    long reservedForReplicas = 50L;
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, duReserved);
+    FsVolumeImpl volume = new FsVolumeImpl(dataset, "storage-id", volDir, conf,
+        StorageType.DEFAULT);
+    FsVolumeImpl spyVolume = Mockito.spy(volume);
+    // Set Capacity for testing
+    long testCapacity = diskCapacity - duReserved;
+    spyVolume.setCapacityForTesting(testCapacity);
+    // Mock volume.getDfAvailable()
+    long dfAvailable = diskCapacity - dfsUsage - actualNonDfsUsage;
+    Mockito.doReturn(dfAvailable).when(spyVolume).getDfAvailable();
+    // Mock dfsUsage
+    Mockito.doReturn(dfsUsage).when(spyVolume).getDfsUsed();
+    // Mock reservedForReplcas
+    Mockito.doReturn(reservedForReplicas).when(spyVolume).getReservedForRbw();
+    Mockito.doReturn(actualNonDfsUsage).when(spyVolume).getActualNonDfsUsed();
+    long expectedNonDfsUsage = actualNonDfsUsage - duReserved;
+    assertEquals(expectedNonDfsUsage, spyVolume.getNonDfsUsed());
+  }
+
 }
