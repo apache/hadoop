@@ -57,7 +57,8 @@ import static org.junit.Assert.assertTrue;
 
 public class TestDFSStripedInputStream {
 
-  public static final Log LOG = LogFactory.getLog(TestDFSStripedInputStream.class);
+  public static final Log LOG =
+      LogFactory.getLog(TestDFSStripedInputStream.class);
 
   private MiniDFSCluster cluster;
   private Configuration conf = new Configuration();
@@ -272,12 +273,16 @@ public class TestDFSStripedInputStream {
     // |10     |
     done += in.read(0, readBuffer, 0, delta);
     assertEquals(delta, done);
+    assertArrayEquals(Arrays.copyOf(expected, done),
+        Arrays.copyOf(readBuffer, done));
     // both head and trail cells are partial
     // |c_0      |c_1    |c_2 |c_3 |c_4      |c_5         |
     // |256K - 10|missing|256K|256K|256K - 10|not in range|
     done += in.read(delta, readBuffer, delta,
         CELLSIZE * (DATA_BLK_NUM - 1) - 2 * delta);
     assertEquals(CELLSIZE * (DATA_BLK_NUM - 1) - delta, done);
+    assertArrayEquals(Arrays.copyOf(expected, done),
+        Arrays.copyOf(readBuffer, done));
     // read the rest
     done += in.read(done, readBuffer, done, readSize - done);
     assertEquals(readSize, done);
@@ -291,8 +296,8 @@ public class TestDFSStripedInputStream {
     testStatefulRead(true, true);
   }
 
-  private void testStatefulRead(boolean useByteBuffer, boolean cellMisalignPacket)
-      throws Exception {
+  private void testStatefulRead(boolean useByteBuffer,
+      boolean cellMisalignPacket) throws Exception {
     final int numBlocks = 2;
     final int fileSize = numBlocks * BLOCK_GROUP_SIZE;
     if (cellMisalignPacket) {
@@ -302,7 +307,8 @@ public class TestDFSStripedInputStream {
     }
     DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
         NUM_STRIPE_PER_BLOCK, false);
-    LocatedBlocks lbs = fs.getClient().namenode.getBlockLocations(filePath.toString(), 0, fileSize);
+    LocatedBlocks lbs = fs.getClient().namenode.
+        getBlockLocations(filePath.toString(), 0, fileSize);
 
     assert lbs.getLocatedBlocks().size() == numBlocks;
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
@@ -359,5 +365,112 @@ public class TestDFSStripedInputStream {
       assertArrayEquals(expected, readBuffer);
     }
     fs.delete(filePath, true);
+  }
+
+  @Test
+  public void testStatefulReadWithDNFailure() throws Exception {
+    final int numBlocks = 4;
+    final int failedDNIdx = DATA_BLK_NUM - 1;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        NUM_STRIPE_PER_BLOCK, false);
+    LocatedBlocks lbs = fs.getClient().namenode.getBlockLocations(
+        filePath.toString(), 0, BLOCK_GROUP_SIZE);
+
+    assert lbs.get(0) instanceof LocatedStripedBlock;
+    LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
+    for (int i = 0; i < DATA_BLK_NUM + PARITY_BLK_NUM; i++) {
+      Block blk = new Block(bg.getBlock().getBlockId() + i,
+          NUM_STRIPE_PER_BLOCK * CELLSIZE,
+          bg.getBlock().getGenerationStamp());
+      blk.setGenerationStamp(bg.getBlock().getGenerationStamp());
+      cluster.injectBlocks(i, Arrays.asList(blk),
+          bg.getBlock().getBlockPoolId());
+    }
+    DFSStripedInputStream in =
+        new DFSStripedInputStream(fs.getClient(), filePath.toString(), false,
+            ecPolicy, null);
+    int readSize = BLOCK_GROUP_SIZE;
+    byte[] readBuffer = new byte[readSize];
+    byte[] expected = new byte[readSize];
+    /** A variation of {@link DFSTestUtil#fillExpectedBuf} for striped blocks */
+    for (int i = 0; i < NUM_STRIPE_PER_BLOCK; i++) {
+      for (int j = 0; j < DATA_BLK_NUM; j++) {
+        for (int k = 0; k < CELLSIZE; k++) {
+          int posInBlk = i * CELLSIZE + k;
+          int posInFile = i * CELLSIZE * DATA_BLK_NUM + j * CELLSIZE + k;
+          expected[posInFile] = SimulatedFSDataset.simulatedByte(
+              new Block(bg.getBlock().getBlockId() + j), posInBlk);
+        }
+      }
+    }
+
+    ErasureCoderOptions coderOptions = new ErasureCoderOptions(
+        DATA_BLK_NUM, PARITY_BLK_NUM);
+    RawErasureDecoder rawDecoder = CodecUtil.createRawDecoder(conf,
+        ecPolicy.getCodecName(), coderOptions);
+
+    // Update the expected content for decoded data
+    int[] missingBlkIdx = new int[PARITY_BLK_NUM];
+    for (int i = 0; i < missingBlkIdx.length; i++) {
+      if (i == 0) {
+        missingBlkIdx[i] = failedDNIdx;
+      } else {
+        missingBlkIdx[i] = DATA_BLK_NUM + i;
+      }
+    }
+    cluster.stopDataNode(failedDNIdx);
+    for (int i = 0; i < NUM_STRIPE_PER_BLOCK; i++) {
+      byte[][] decodeInputs = new byte[DATA_BLK_NUM + PARITY_BLK_NUM][CELLSIZE];
+      byte[][] decodeOutputs = new byte[missingBlkIdx.length][CELLSIZE];
+      for (int j = 0; j < DATA_BLK_NUM; j++) {
+        int posInBuf = i * CELLSIZE * DATA_BLK_NUM + j * CELLSIZE;
+        if (j != failedDNIdx) {
+          System.arraycopy(expected, posInBuf, decodeInputs[j], 0, CELLSIZE);
+        }
+      }
+      for (int j = DATA_BLK_NUM; j < DATA_BLK_NUM + PARITY_BLK_NUM; j++) {
+        for (int k = 0; k < CELLSIZE; k++) {
+          int posInBlk = i * CELLSIZE + k;
+          decodeInputs[j][k] = SimulatedFSDataset.simulatedByte(
+              new Block(bg.getBlock().getBlockId() + j), posInBlk);
+        }
+      }
+      for (int m : missingBlkIdx) {
+        decodeInputs[m] = null;
+      }
+      rawDecoder.decode(decodeInputs, missingBlkIdx, decodeOutputs);
+      int posInBuf = i * CELLSIZE * DATA_BLK_NUM + failedDNIdx * CELLSIZE;
+      System.arraycopy(decodeOutputs[0], 0, expected, posInBuf, CELLSIZE);
+    }
+
+    int delta = 10;
+    int done = 0;
+    // read a small delta, shouldn't trigger decode
+    // |cell_0 |
+    // |10     |
+    done += in.read(readBuffer, 0, delta);
+    assertEquals(delta, done);
+    // both head and trail cells are partial
+    // |c_0      |c_1    |c_2 |c_3 |c_4      |c_5         |
+    // |256K - 10|missing|256K|256K|256K - 10|not in range|
+    while (done < (CELLSIZE * (DATA_BLK_NUM - 1) - 2 * delta)) {
+      int ret = in.read(readBuffer, delta,
+          CELLSIZE * (DATA_BLK_NUM - 1) - 2 * delta);
+      assertTrue(ret > 0);
+      done += ret;
+    }
+    assertEquals(CELLSIZE * (DATA_BLK_NUM - 1) - delta, done);
+    // read the rest
+
+    int restSize;
+    restSize = readSize - done;
+    while (done < restSize) {
+      int ret = in.read(readBuffer, done, restSize);
+      assertTrue(ret > 0);
+      done += ret;
+    }
+
+    assertEquals(readSize, done);
+    assertArrayEquals(expected, readBuffer);
   }
 }
