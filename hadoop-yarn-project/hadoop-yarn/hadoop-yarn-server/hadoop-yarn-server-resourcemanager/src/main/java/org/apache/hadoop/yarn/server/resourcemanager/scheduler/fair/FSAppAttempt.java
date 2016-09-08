@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFini
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -476,7 +477,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public FSLeafQueue getQueue() {
-    return (FSLeafQueue)super.getQueue();
+    Queue queue = super.getQueue();
+    assert queue instanceof FSLeafQueue;
+    return (FSLeafQueue) queue;
   }
 
   // Preemption related methods

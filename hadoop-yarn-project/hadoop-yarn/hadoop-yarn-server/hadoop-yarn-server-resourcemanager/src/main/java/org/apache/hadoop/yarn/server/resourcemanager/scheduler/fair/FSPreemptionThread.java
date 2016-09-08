@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -63,7 +62,7 @@ public class FSPreemptionThread extends Thread {
       FSAppAttempt starvedApp;
       try{
         starvedApp = context.getStarvedApps().take();
-        if (Resources.none().equals(starvedApp.getStarvation())) {
+        if (Resources.isNone(starvedApp.getStarvation())) {
           continue;
         }
       } catch (InterruptedException e) {

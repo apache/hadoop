@@ -232,7 +232,7 @@ public class FSLeafQueue extends FSQueue {
     try {
       policy.computeShares(runnableApps, getFairShare());
       if (checkStarvation) {
-        identifyStarvedApplications();
+        updatedStarvedApps();
       }
     } finally {
       readLock.unlock();
@@ -256,10 +256,12 @@ public class FSLeafQueue extends FSQueue {
    * one application that is starved. And, even if the queue is not
    * starved due to fairshare, there might still be starved applications.
    */
-  private void identifyStarvedApplications() {
+  private void updatedStarvedApps() {
     // First identify starved applications and track total amount of
     // starvation (in resources)
     Resource fairShareStarvation = Resources.clone(none());
+
+    // Fetch apps with unmet demand sorted by fairshare starvation
     TreeSet<FSAppAttempt> appsWithDemand = fetchAppsWithDemand();
     for (FSAppAttempt app : appsWithDemand) {
       Resource appStarvation = app.fairShareStarvation();
@@ -594,13 +596,18 @@ public class FSLeafQueue extends FSQueue {
         getFairShare());
   }
 
+  /**
+   * Helper method to compute the amount of minshare starvation.
+   *
+   * @return the extent of minshare starvation
+   */
   private Resource minShareStarvation() {
+    // If demand < minshare, we should use demand to determine starvation
     Resource desiredShare = Resources.min(policy.getResourceCalculator(),
         scheduler.getClusterResource(), getMinShare(), getDemand());
 
     Resource starvation = Resources.subtract(desiredShare, getResourceUsage());
-    boolean starved = Resources.greaterThan(policy.getResourceCalculator(),
-        scheduler.getClusterResource(), starvation, none());
+    boolean starved = !Resources.isNone(starvation);
 
     long now = scheduler.getClock().getTime();
     if (!starved) {
@@ -621,6 +628,6 @@ public class FSLeafQueue extends FSQueue {
    */
   @VisibleForTesting
   boolean isStarvedForMinShare() {
-    return !Resources.none().equals(minShareStarvation());
+    return !Resources.isNone(minShareStarvation());
   }
 }
