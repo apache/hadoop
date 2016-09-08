@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import java.io.IOException;
 import java.util.LinkedList;
 
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * File size distribution visitor.
  * 
@@ -67,6 +69,7 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
   private FileContext current;
 
   private boolean inInode = false;
+  private boolean formatOutput = false;
 
   /**
    * File or directory information.
@@ -78,12 +81,12 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
     int replication;
   }
 
-  public FileDistributionVisitor(String filename,
-                                 long maxSize,
-                                 int step) throws IOException {
+  public FileDistributionVisitor(String filename, long maxSize, int step,
+      boolean formatOutput) throws IOException {
     super(filename, false);
     this.maxSize = (maxSize == 0 ? MAX_SIZE_DEFAULT : maxSize);
     this.step = (step == 0 ? INTERVAL_DEFAULT : step);
+    this.formatOutput = formatOutput;
     long numIntervals = this.maxSize / this.step;
     if(numIntervals >= Integer.MAX_VALUE)
       throw new IOException("Too many distribution intervals " + numIntervals);
@@ -113,9 +116,22 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
 
   private void output() throws IOException {
     // write the distribution into the output file
-    write("Size\tNumFiles\n");
-    for(int i = 0; i < distribution.length; i++)
-      write(((long)i * step) + "\t" + distribution[i] + "\n");
+    write((formatOutput ? "Size Range" : "Size") + "\tNumFiles\n");
+    for (int i = 0; i < distribution.length; i++) {
+      if (distribution[i] > 0) {
+        if (formatOutput) {
+          write((i == 0 ? "[" : "(")
+              + StringUtils.byteDesc(((long) (i == 0 ? 0 : i - 1) * step))
+              + ", "
+              + StringUtils.byteDesc((long)
+                  (i == distribution.length - 1 ? maxFileSize : i * step))
+                  + "]\t"
+              + distribution[i] + "\n");
+        } else {
+          write(((long) i * step) + "\t" + distribution[i] + "\n");
+        }
+      }
+    }
     System.out.println("totalFiles = " + totalFiles);
     System.out.println("totalDirectories = " + totalDirectories);
     System.out.println("totalBlocks = " + totalBlocks);

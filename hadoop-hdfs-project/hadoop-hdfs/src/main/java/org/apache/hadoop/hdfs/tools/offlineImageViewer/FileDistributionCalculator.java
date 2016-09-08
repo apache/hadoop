@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.util.LimitInputStream;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 
@@ -75,11 +76,14 @@ final class FileDistributionCalculator {
   private long totalSpace;
   private long maxFileSize;
 
+  private boolean formatOutput = false;
+
   FileDistributionCalculator(Configuration conf, long maxSize, int steps,
-      PrintStream out) {
+      boolean formatOutput, PrintStream out) {
     this.conf = conf;
     this.maxSize = maxSize == 0 ? MAX_SIZE_DEFAULT : maxSize;
     this.steps = steps == 0 ? INTERVAL_DEFAULT : steps;
+    this.formatOutput = formatOutput;
     this.out = out;
     long numIntervals = this.maxSize / this.steps;
     // avoid OutOfMemoryError when allocating an array
@@ -148,10 +152,20 @@ final class FileDistributionCalculator {
 
   private void output() {
     // write the distribution into the output file
-    out.print("Size\tNumFiles\n");
+    out.print((formatOutput ? "Size Range" : "Size") + "\tNumFiles\n");
     for (int i = 0; i < distribution.length; i++) {
       if (distribution[i] != 0) {
-        out.print(((long) i * steps) + "\t" + distribution[i]);
+        if (formatOutput) {
+          out.print((i == 0 ? "[" : "(")
+              + StringUtils.byteDesc(((long) (i == 0 ? 0 : i - 1) * steps))
+              + ", "
+              + StringUtils.byteDesc((long)
+                  (i == distribution.length - 1 ? maxFileSize : i * steps))
+                  + "]\t" + distribution[i]);
+        } else {
+          out.print(((long) i * steps) + "\t" + distribution[i]);
+        }
+
         out.print('\n');
       }
     }
