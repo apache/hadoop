@@ -46,61 +46,63 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.PositionTrackingIn
 public class OfflineImageViewer {
   public static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
   
-  private final static String usage = 
-    "Usage: bin/hdfs oiv_legacy [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n" +
-    "Offline Image Viewer\n" + 
-    "View a Hadoop fsimage INPUTFILE using the specified PROCESSOR,\n" +
-    "saving the results in OUTPUTFILE.\n" +
-    "\n" +
-    "The oiv utility will attempt to parse correctly formed image files\n" +
-    "and will abort fail with mal-formed image files.\n" +
-    "\n" +
-    "The tool works offline and does not require a running cluster in\n" +
-    "order to process an image file.\n" +
-    "\n" +
-    "The following image processors are available:\n" +
-    "  * Ls: The default image processor generates an lsr-style listing\n" +
-    "    of the files in the namespace, with the same fields in the same\n" +
-    "    order.  Note that in order to correctly determine file sizes,\n" +
-    "    this formatter cannot skip blocks and will override the\n" +
-    "    -skipBlocks option.\n" +
-    "  * Indented: This processor enumerates over all of the elements in\n" +
-    "    the fsimage file, using levels of indentation to delineate\n" +
-    "    sections within the file.\n" +
-    "  * Delimited: Generate a text file with all of the elements common\n" +
-    "    to both inodes and inodes-under-construction, separated by a\n" +
-    "    delimiter. The default delimiter is \u0001, though this may be\n" +
-    "    changed via the -delimiter argument. This processor also overrides\n" +
-    "    the -skipBlocks option for the same reason as the Ls processor\n" +
-    "  * XML: This processor creates an XML document with all elements of\n" +
-    "    the fsimage enumerated, suitable for further analysis by XML\n" +
-    "    tools.\n" +
-    "  * FileDistribution: This processor analyzes the file size\n" +
-    "    distribution in the image.\n" +
-    "    -maxSize specifies the range [0, maxSize] of file sizes to be\n" +
-    "     analyzed (128GB by default).\n" +
-    "    -step defines the granularity of the distribution. (2MB by default)\n" +
-    "  * NameDistribution: This processor analyzes the file names\n" +
-    "    in the image and prints total number of file names and how frequently\n" +
-    "    file names are reused.\n" +
-    "\n" + 
-    "Required command line arguments:\n" +
-    "-i,--inputFile <arg>   FSImage file to process.\n" +
-    "-o,--outputFile <arg>  Name of output file. If the specified\n" +
-    "                       file exists, it will be overwritten.\n" +
-    "\n" + 
-    "Optional command line arguments:\n" +
-    "-p,--processor <arg>   Select which type of processor to apply\n" +
-    "                       against image file." +
-    " (Ls|XML|Delimited|Indented|FileDistribution).\n" +
-    "-h,--help              Display usage information and exit\n" +
-    "-printToScreen         For processors that write to a file, also\n" +
-    "                       output to screen. On large image files this\n" +
-    "                       will dramatically increase processing time.\n" +
-    "-skipBlocks            Skip inodes' blocks information. May\n" +
-    "                       significantly decrease output.\n" +
-    "                       (default = false).\n" +
-    "-delimiter <arg>       Delimiting string to use with Delimited processor\n";
+  private final static String usage =
+      "Usage: bin/hdfs oiv_legacy [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n"
+          + "Offline Image Viewer\n"
+          + "View a Hadoop fsimage INPUTFILE using the specified PROCESSOR,\n"
+          + "saving the results in OUTPUTFILE.\n"
+          + "\n"
+          + "The oiv utility will attempt to parse correctly formed image files\n"
+          + "and will abort fail with mal-formed image files.\n"
+          + "\n"
+          + "The tool works offline and does not require a running cluster in\n"
+          + "order to process an image file.\n"
+          + "\n"
+          + "The following image processors are available:\n"
+          + "  * Ls: The default image processor generates an lsr-style listing\n"
+          + "    of the files in the namespace, with the same fields in the same\n"
+          + "    order.  Note that in order to correctly determine file sizes,\n"
+          + "    this formatter cannot skip blocks and will override the\n"
+          + "    -skipBlocks option.\n"
+          + "  * Indented: This processor enumerates over all of the elements in\n"
+          + "    the fsimage file, using levels of indentation to delineate\n"
+          + "    sections within the file.\n"
+          + "  * Delimited: Generate a text file with all of the elements common\n"
+          + "    to both inodes and inodes-under-construction, separated by a\n"
+          + "    delimiter. The default delimiter is \u0001, though this may be\n"
+          + "    changed via the -delimiter argument. This processor also overrides\n"
+          + "    the -skipBlocks option for the same reason as the Ls processor\n"
+          + "  * XML: This processor creates an XML document with all elements of\n"
+          + "    the fsimage enumerated, suitable for further analysis by XML\n"
+          + "    tools.\n"
+          + "  * FileDistribution: This processor analyzes the file size\n"
+          + "    distribution in the image.\n"
+          + "    -maxSize specifies the range [0, maxSize] of file sizes to be\n"
+          + "     analyzed (128GB by default).\n"
+          + "    -step defines the granularity of the distribution. (2MB by default)\n"
+          + "    -format formats the output result in a human-readable fashion\n"
+          + "     rather than a number of bytes. (false by default)\n"
+          + "  * NameDistribution: This processor analyzes the file names\n"
+          + "    in the image and prints total number of file names and how frequently\n"
+          + "    file names are reused.\n"
+          + "\n"
+          + "Required command line arguments:\n"
+          + "-i,--inputFile <arg>   FSImage file to process.\n"
+          + "-o,--outputFile <arg>  Name of output file. If the specified\n"
+          + "                       file exists, it will be overwritten.\n"
+          + "\n"
+          + "Optional command line arguments:\n"
+          + "-p,--processor <arg>   Select which type of processor to apply\n"
+          + "                       against image file."
+          + " (Ls|XML|Delimited|Indented|FileDistribution).\n"
+          + "-h,--help              Display usage information and exit\n"
+          + "-printToScreen         For processors that write to a file, also\n"
+          + "                       output to screen. On large image files this\n"
+          + "                       will dramatically increase processing time.\n"
+          + "-skipBlocks            Skip inodes' blocks information. May\n"
+          + "                       significantly decrease output.\n"
+          + "                       (default = false).\n"
+          + "-delimiter <arg>       Delimiting string to use with Delimited processor\n";
 
   private final boolean skipBlocks;
   private final String inputFile;
@@ -188,6 +190,7 @@ public class OfflineImageViewer {
     options.addOption("h", "help", false, "");
     options.addOption("maxSize", true, "");
     options.addOption("step", true, "");
+    options.addOption("format", false, "");
     options.addOption("skipBlocks", false, "");
     options.addOption("printToScreen", false, "");
     options.addOption("delimiter", true, "");
@@ -253,7 +256,8 @@ public class OfflineImageViewer {
     } else if (processor.equals("FileDistribution")) {
       long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
       int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
-      v = new FileDistributionVisitor(outputFile, maxSize, step);
+      boolean formatOutput = cmd.hasOption("format");
+      v = new FileDistributionVisitor(outputFile, maxSize, step, formatOutput);
     } else if (processor.equals("NameDistribution")) {
       v = new NameDistributionVisitor(outputFile, printToScreen);
     } else {
