@@ -636,6 +636,9 @@ public class MockRM extends ResourceManager {
   public void waitForState(NodeId nodeId, NodeState finalState)
       throws InterruptedException {
     RMNode node = getRMContext().getRMNodes().get(nodeId);
+    if (node == null) {
+      node = getRMContext().getInactiveRMNodes().get(nodeId);
+    }
     Assert.assertNotNull("node shouldn't be null", node);
     int timeWaiting = 0;
     while (!finalState.equals(node.getState())) {

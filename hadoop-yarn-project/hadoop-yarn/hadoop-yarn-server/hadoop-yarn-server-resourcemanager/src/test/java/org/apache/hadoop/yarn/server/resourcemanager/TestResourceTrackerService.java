@@ -253,19 +253,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONING);
 
     nodeHeartbeat1 = nm1.nodeHeartbeat(true);
-    rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
     nodeHeartbeat2 = nm2.nodeHeartbeat(true);
-    rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONED);
     nodeHeartbeat3 = nm3.nodeHeartbeat(true);
-    rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONED);
 
     checkDecommissionedNMCount(rm, metricCount + 2);
+    rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONED);
+    rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONED);
 
-    nodeHeartbeat1 = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
     nodeHeartbeat2 = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
     nodeHeartbeat3 = nm3.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
     Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
   }
 
@@ -306,8 +304,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // host1 should be DECOMMISSIONING due to running containers.
     // host3 should become DECOMMISSIONED.
     nm1.nodeHeartbeat(true);
-    rm.waitForState(id1, NodeState.DECOMMISSIONING);
     nm3.nodeHeartbeat(true);
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
     rm.waitForState(id3, NodeState.DECOMMISSIONED);
     nm1.nodeHeartbeat(aaid, 2, ContainerState.RUNNING);
 
