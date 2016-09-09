@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -181,6 +182,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACL_STICKY_BIT_JSON = "stickyBit";
   public static final String ACL_ENTRIES_JSON = "entries";
   public static final String ACL_BIT_JSON = "aclBit";
+
+  public static final String ENC_BIT_JSON = "encBit";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
@@ -957,6 +960,21 @@ public class HttpFSFileSystem extends FileSystem
     return createAclStatus(json);
   }
 
+  /** Convert a string to a FsPermission object. */
+  static FsPermission toFsPermission(JSONObject json) {
+    final String s = (String) json.get(PERMISSION_JSON);
+    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
+    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
+    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
+    final boolean aBit = (aclBit != null) ? aclBit : false;
+    final boolean eBit = (encBit != null) ? encBit : false;
+    if (aBit || eBit) {
+      return new FsPermissionExtension(perm, aBit, eBit);
+    } else {
+      return perm;
+    }
+  }
+
   private FileStatus createFileStatus(Path parent, JSONObject json) {
     String pathSuffix = (String) json.get(PATH_SUFFIX_JSON);
     Path path = (pathSuffix.equals("")) ? parent : new Path(parent, pathSuffix);
@@ -964,8 +982,7 @@ public class HttpFSFileSystem extends FileSystem
     long len = (Long) json.get(LENGTH_JSON);
     String owner = (String) json.get(OWNER_JSON);
     String group = (String) json.get(GROUP_JSON);
-    FsPermission permission =
-      new FsPermission(Short.parseShort((String) json.get(PERMISSION_JSON), 8));
+    final FsPermission permission = toFsPermission(json);
     long aTime = (Long) json.get(ACCESS_TIME_JSON);
     long mTime = (Long) json.get(MODIFICATION_TIME_JSON);
     long blockSize = (Long) json.get(BLOCK_SIZE_JSON);
