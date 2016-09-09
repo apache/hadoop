@@ -501,14 +501,11 @@ public class DiskBalancer {
       public void run() {
         Thread.currentThread().setName("DiskBalancerThread");
         LOG.info("Executing Disk balancer plan. Plan File: {}, Plan ID: {}",
-                planFile, planID);
-        try {
-          for (Map.Entry<VolumePair, DiskBalancerWorkItem> entry :
-              workMap.entrySet()) {
-            blockMover.copyBlocks(entry.getKey(), entry.getValue());
-          }
-        } finally {
-          blockMover.setExitFlag();
+            planFile, planID);
+        for (Map.Entry<VolumePair, DiskBalancerWorkItem> entry :
+            workMap.entrySet()) {
+          blockMover.setRunnable();
+          blockMover.copyBlocks(entry.getKey(), entry.getValue());
         }
       }
     });
@@ -857,8 +854,8 @@ public class DiskBalancer {
 
       if (item.getErrorCount() >= getMaxError(item)) {
         item.setErrMsg("Error count exceeded.");
-        LOG.info("Maximum error count exceeded. Error count: {} Max error:{} "
-            , item.getErrorCount(), item.getMaxDiskErrors());
+        LOG.info("Maximum error count exceeded. Error count: {} Max error:{} ",
+            item.getErrorCount(), item.getMaxDiskErrors());
       }
 
       return null;
@@ -962,7 +959,8 @@ public class DiskBalancer {
               LOG.error("Exceeded the max error count. source {}, dest: {} " +
                       "error count: {}", source.getBasePath(),
                   dest.getBasePath(), item.getErrorCount());
-              break;
+              this.setExitFlag();
+              continue;
             }
 
             // Check for the block tolerance constraint.
@@ -971,7 +969,8 @@ public class DiskBalancer {
                       "blocks.",
                   source.getBasePath(), dest.getBasePath(),
                   item.getBytesCopied(), item.getBlocksCopied());
-              break;
+              this.setExitFlag();
+              continue;
             }
 
             ExtendedBlock block = getNextBlock(poolIters, item);
@@ -979,7 +978,8 @@ public class DiskBalancer {
             if (block == null) {
               LOG.error("No source blocks, exiting the copy. Source: {}, " +
                   "dest:{}", source.getBasePath(), dest.getBasePath());
-              break;
+              this.setExitFlag();
+              continue;
             }
 
             // check if someone told us exit, treat this as an interruption
@@ -987,7 +987,7 @@ public class DiskBalancer {
             // for the thread, since both getNextBlock and moveBlocAcrossVolume
             // can take some time.
             if (!shouldRun()) {
-              break;
+              continue;
             }
 
             long timeUsed;
@@ -1006,7 +1006,8 @@ public class DiskBalancer {
               LOG.error("Destination volume: {} does not have enough space to" +
                   " accommodate a block. Block Size: {} Exiting from" +
                   " copyBlocks.", dest.getBasePath(), block.getNumBytes());
-              break;
+              this.setExitFlag();
+              continue;
             }
 
             LOG.debug("Moved block with size {} from  {} to {}",
