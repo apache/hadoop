@@ -248,9 +248,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         filetype, mb);
     LOG.info("Time per positioned read = {} nS",
         toHuman(timer.nanosPerOperation(ops)));
-    final long difference = readAtEOF.duration() - readAtByte0Again.duration();
-    LOG.info("Difference between read at start & end of {} is {} nS",
-        filetype, toHuman(difference));
   }
 
   @Test
@@ -290,8 +287,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     fs.rename(hugefile, hugefileRenamed);
     long mb = Math.max(filesize / _1MB, 1);
     timer.end("Time to rename file of %d MB", mb);
-    LOG.info("Time per MB to rename = {} nS", toHuman(timer.duration() / mb));
-    LOG.info("Effective Bandwidth: {} MB/s" , timer.bandwidth(filesize));
+    LOG.info("Time per MB to rename = {} nS",
+        toHuman(timer.nanosPerOperation(mb)));
     logFSState();
     S3AFileStatus destFileStatus = fs.getFileStatus(hugefileRenamed);
     assertEquals(filesize, destFileStatus.getLen());
@@ -300,6 +297,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
     fs.rename(hugefileRenamed, hugefile);
     timer2.end("Renaming back");
+    LOG.info("Time per MB to rename = {} nS",
+        toHuman(timer2.nanosPerOperation(mb)));
   }
 
   @Test

@@ -114,7 +114,33 @@ public enum Statistic {
   STREAM_CLOSE_BYTES_READ("stream_bytes_read_in_close",
       "Count of bytes read when closing streams during seek operations."),
   STREAM_ABORT_BYTES_DISCARDED("stream_bytes_discarded_in_abort",
-      "Count of bytes discarded by aborting the stream");
+      "Count of bytes discarded by aborting the stream"),
+  STREAM_WRITE_FAILURES("stream_write_failures",
+      "Count of stream write failures reported"),
+  STREAM_WRITE_BLOCK_UPLOADS("stream_write_block_uploads",
+      "Count of block/partition uploads completed"),
+  STREAM_WRITE_BLOCK_UPLOADS_ACTIVE("stream_write_block_uploads_active",
+      "Count of block/partition uploads completed"),
+  STREAM_WRITE_BLOCK_UPLOADS_COMMITTED("stream_write_block_uploads_committed",
+      "Count of number of block uploads committed"),
+  STREAM_WRITE_BLOCK_UPLOADS_ABORTED("stream_write_block_uploads_aborted",
+      "Count of number of block uploads aborted"),
+
+  STREAM_WRITE_BLOCK_UPLOADS_PENDING("stream_write_block_uploads_pending",
+      "Gauge of block/partitions uploads queued to be written"),
+  STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING(
+      "stream_write_block_uploads_data_pending",
+      "Gauge of block/partitions data uploads queued to be written"),
+  STREAM_WRITE_TOTAL_TIME("stream_write_total_time",
+      "Count of total time taken for uploads to complete"),
+  STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
+      "Count of total data uploaded in block output"),
+  STREAM_WRITE_BANDWIDTH("stream_write_bandwidth",
+      "Gauge of inferred bandwidth"),
+  STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
+      "Total queue duration of all block uploads"),
+
+  ;
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

@@ -547,7 +547,8 @@ public class S3AFileSystem extends FileSystem {
               key,
               progress,
               partSize,
-              blockFactory),
+              blockFactory,
+              instrumentation.newOutputStreamStatistics()),
           null);
     } else if (fastUploadEnabled) {
       output = new FSDataOutputStream(

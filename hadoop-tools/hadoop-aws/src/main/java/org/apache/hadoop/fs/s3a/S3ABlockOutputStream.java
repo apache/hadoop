@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -87,6 +88,8 @@ class S3ABlockOutputStream extends OutputStream {
   private volatile boolean closed;
   private S3ADataBlocks.DataBlock currentBlock;
   private long blockCount = 0;
+  private final S3AInstrumentation.OutputStreamStatistics statistics;
+
 
   /**
    * S3A output stream which uploads blocks as soon as there is enough
@@ -99,13 +102,15 @@ class S3ABlockOutputStream extends OutputStream {
    * directly wired up to the AWS client, so receive detailed progress information.
    * @param blockSize size of a single block.
    * @param blockFactory factory for creating stream destinations
+   * @param statistics stats for this stream
    * @throws IOException on any problem
    */
-  public S3ABlockOutputStream(S3AFileSystem fs,
+  S3ABlockOutputStream(S3AFileSystem fs,
       String key,
       Progressable progress,
       long blockSize,
-      S3ADataBlocks.AbstractBlockFactory blockFactory)
+      S3ADataBlocks.AbstractBlockFactory blockFactory,
+      S3AInstrumentation.OutputStreamStatistics statistics)
       throws IOException {
     this.fs = fs;
     this.bucket = fs.getBucket();
@@ -113,6 +118,7 @@ class S3ABlockOutputStream extends OutputStream {
     this.cannedACL = fs.getCannedACL();
     this.blockFactory = blockFactory;
     this.blockSize = (int) blockSize;
+    this.statistics = statistics;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
         "Block size is too small: %d", blockSize);
     this.executorService = MoreExecutors.listeningDecorator(
@@ -128,6 +134,10 @@ class S3ABlockOutputStream extends OutputStream {
     maybeCreateDestStream();
   }
 
+  /**
+   * Demand create a destination stream.
+   * @throws IOException on any failure to create
+   */
   private synchronized void maybeCreateDestStream() throws IOException {
     if (currentBlock == null) {
       blockCount++;
@@ -267,6 +277,8 @@ class S3ABlockOutputStream extends OutputStream {
       LOG.debug("Closing block and factory");
       IOUtils.closeStream(currentBlock);
       IOUtils.closeStream(blockFactory);
+      LOG.debug("Statistics: {}", statistics);
+      IOUtils.closeStream(statistics);
       currentBlock = null;
     }
   }
@@ -310,7 +322,12 @@ class S3ABlockOutputStream extends OutputStream {
         fs.newPutObjectRequest(key,
             om,
             block.openForUpload());
-    putObjectRequest.setGeneralProgressListener(progressListener);
+    long transferQueueTime = now();
+    BlockUploadProgress callback =
+        new BlockUploadProgress(
+            block, progressListener, transferQueueTime);
+    putObjectRequest.setGeneralProgressListener(callback);
+    statistics.blockUploadQueued(block.dataSize());
     ListenableFuture<PutObjectResult> putObjectResult =
         executorService.submit(new Callable<PutObjectResult>() {
           @Override
@@ -343,9 +360,19 @@ class S3ABlockOutputStream extends OutputStream {
     sb.append("key='").append(key).append('\'');
     sb.append(", bucket='").append(bucket).append('\'');
     sb.append(", blockSize=").append(blockSize);
-    sb.append(", dest=").append(currentBlock);
+    if (currentBlock != null) {
+      sb.append(", currentBlock=").append(currentBlock);
+    }
     sb.append('}');
     return sb.toString();
+  }
+
+  private void incrementWriteOperations() {
+    fs.incrementWriteOperations();
+  }
+
+  private long now() {
+    return System.currentTimeMillis();
   }
 
   /**
@@ -371,13 +398,18 @@ class S3ABlockOutputStream extends OutputStream {
         throws IOException {
       LOG.debug("Queueing upload of {}", block);
       final int size = block.dataSize();
-      final InputStream inputStream = block.openForUpload();
+      final InputStream uploadStream = block.openForUpload();
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request =
           new UploadPartRequest().withBucketName(bucket).withKey(key)
-              .withUploadId(uploadId).withInputStream(inputStream)
+              .withUploadId(uploadId).withInputStream(uploadStream)
               .withPartNumber(currentPartNumber).withPartSize(size);
-      request.setGeneralProgressListener(progressListener);
+      long transferQueueTime = now();
+      BlockUploadProgress callback =
+          new BlockUploadProgress(
+          block, progressListener, transferQueueTime);
+      request.setGeneralProgressListener(callback);
+      statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<PartETag> partETagFuture =
           executorService.submit(new Callable<PartETag>() {
             @Override
@@ -387,7 +419,10 @@ class S3ABlockOutputStream extends OutputStream {
                   uploadId);
               // do the upload
               PartETag partETag = fs.uploadPart(request).getPartETag();
-              // close the block, triggering its cleanup
+              LOG.debug("Completed upload of {}", block);
+              LOG.debug("Stream statistics of {}", statistics);
+
+              // close the block
               block.close();
               return partETag;
             }
@@ -395,7 +430,7 @@ class S3ABlockOutputStream extends OutputStream {
       partETagsFutures.add(partETagFuture);
     }
 
-    private List<PartETag> waitForAllPartUploads() throws IOException {
+   private List<PartETag> waitForAllPartUploads() throws IOException {
       LOG.debug("Waiting for {} uploads to complete", partETagsFutures.size());
       try {
         return Futures.allAsList(partETagsFutures).get();
@@ -441,6 +476,7 @@ class S3ABlockOutputStream extends OutputStream {
                   partETags));
         } catch (AmazonClientException e) {
           lastException = e;
+          statistics.exceptionInMultipartComplete();
         }
       } while (shouldRetry(lastException, retryCount++));
       // this point is only reached if the operation failed more than
@@ -465,6 +501,7 @@ class S3ABlockOutputStream extends OutputStream {
           return;
         } catch (AmazonClientException e) {
           lastException = e;
+          statistics.exceptionInMultipartAbort();
         }
       } while (shouldRetry(lastException, retryCount++));
       // this point is only reached if the operation failed more than
@@ -496,7 +533,62 @@ class S3ABlockOutputStream extends OutputStream {
       }
     }
 
+  }
 
+  /**
+   * The upload progress listener registered for events.
+   * It updates statistics and handles the end of the upload
+   */
+  private class BlockUploadProgress implements ProgressListener {
+    private final S3ADataBlocks.DataBlock block;
+    private final ProgressListener next;
+    private final long transferQueueTime;
+    private long transferStartTime;
+
+    private BlockUploadProgress(S3ADataBlocks.DataBlock block,
+        ProgressListener next,
+        long transferQueueTime) {
+      this.block = block;
+      this.transferQueueTime = transferQueueTime;
+      this.next = next;
+    }
+
+    @Override
+    public void progressChanged(ProgressEvent progressEvent) {
+      ProgressEventType eventType = progressEvent.getEventType();
+      long bytesTransferred = progressEvent.getBytesTransferred();
+
+      int blockSize = block.dataSize();
+      switch (eventType) {
+
+      case REQUEST_BYTE_TRANSFER_EVENT:
+        // bytes uploaded
+        statistics.bytesTransferred(bytesTransferred);
+        break;
+
+      case TRANSFER_PART_STARTED_EVENT:
+        transferStartTime = now();
+        statistics.blockUploadStarted(transferStartTime - transferQueueTime,
+            blockSize);
+        incrementWriteOperations();
+        break;
+
+      case TRANSFER_PART_COMPLETED_EVENT:
+        statistics.blockUploadCompleted(now() - transferStartTime, blockSize);
+        break;
+
+      case TRANSFER_PART_FAILED_EVENT:
+        statistics.blockUploadFailed(now() - transferStartTime, blockSize);
+        break;
+
+      default:
+        // nothing
+      }
+
+      if (next != null) {
+        next.progressChanged(progressEvent);
+      }
+    }
   }
 
   private static class ProgressableListener implements ProgressListener {

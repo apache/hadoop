@@ -173,6 +173,14 @@ class S3ADataBlocks {
     }
 
     /**
+     * actions to take on block upload completion.
+     * @throws IOException Any failure
+     */
+    void blockUploadCompleted() throws IOException {
+
+    }
+
+    /**
      * Enter the closed state.
      * @return true if the class was in any other state, implying that
      * the subclass should do its close operations
