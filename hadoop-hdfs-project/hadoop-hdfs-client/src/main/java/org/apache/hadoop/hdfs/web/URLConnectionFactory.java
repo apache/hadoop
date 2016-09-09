@@ -183,6 +183,7 @@ public class URLConnectionFactory {
       return openConnection(url, false);
     } catch (AuthenticationException e) {
       // Unreachable
+      LOG.error("Open connection {} failed", url, e);
       return null;
     }
   }
