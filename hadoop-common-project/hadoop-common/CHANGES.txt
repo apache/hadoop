@@ -34,6 +34,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-12418. TestRPC.testRPCInterruptedSimple fails intermittently.
     (kihwal)
 
+    HADOOP-13579. Fix source-level compatibility after HADOOP-11252.
+    (Tsuyoshi Ozawa via aajisaka)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
