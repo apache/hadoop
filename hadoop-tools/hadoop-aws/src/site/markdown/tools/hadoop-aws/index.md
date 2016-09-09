@@ -1023,7 +1023,7 @@ the classpath.
 
 This means that one or more of the `aws-*-sdk` JARs are missing. Add them.
 
-### Missing method in AWS class
+### Missing method in `com.amazonaws` class
 
 This can be triggered by incompatibilities between the AWS SDK on the classpath
 and the version which Hadoop was compiled with.
@@ -1047,23 +1047,84 @@ classpath. All Jackson JARs on the classpath *must* be of the same version.
 
 ### Authentication failure
 
-The general cause is: you have the wrong credentials —or somehow
+If Hadoop cannot authenticate with the S3 service endpoint,
+the client retries a number of times before eventually failing.
+When it finally gives up, it will report a message about signature mismatch:
+
+```
+com.amazonaws.services.s3.model.AmazonS3Exception:
+ The request signature we calculated does not match the signature you provided.
+ Check your key and signing method.
+  (Service: Amazon S3; Status Code: 403; Error Code: SignatureDoesNotMatch,
+```
+
+The likely cause is that you either have the wrong credentials or somehow
 the credentials were not readable on the host attempting to read or write
 the S3 Bucket.
 
-There's not much that Hadoop can do for diagnostics here.
 Enabling debug logging for the package `org.apache.hadoop.fs.s3a`
-can help somewhat.
+can help provide more information.
 
-Most common: there's an error in the key or secret.
+The most common cause is that you have the wrong credentials for any of the current
+authentication mechanism(s) —or somehow
+the credentials were not readable on the host attempting to read or write
+the S3 Bucket. However, there are a couple of system configuration problems
+(JVM version, system clock) which also need to be checked.
 
-Otherwise, try to use the AWS command line tools with the same credentials.
-If you set the environment variables, you can take advantage of S3A's support
-of environment-variable authentication by attempting to use the `hdfs fs` command
-to read or write data on S3. That is: comment out the `fs.s3a` secrets and rely on
-the environment variables.
+Most common: there's an error in the configuration properties.
 
-### Authentication failure when using URLs with embedded secrets
+
+1. Make sure that the name of the bucket is the correct one.
+That is: check the URL.
+
+1. Make sure the property names are correct. For S3A, they are
+`fs.s3a.access.key` and `fs.s3a.secret.key` —you cannot just copy the S3N
+properties and replace `s3n` with `s3a`.
+
+1. Make sure the properties are visible to the process attempting to
+talk to the object store. Placing them in `core-site.xml` is the standard
+mechanism.
+
+1. If using session authentication, the session may have expired.
+Generate a new session token and secret.
+
+1. If using environement variable-based authentication, make sure that the
+relevant variables are set in the environment in which the process is running.
+
+The standard first step is: try to use the AWS command line tools with the same
+credentials, through a command such as:
+
+    hdfs fs -ls s3a://my-bucket/
+
+Note the trailing "/" here; without that the shell thinks you are trying to list
+your home directory under the bucket, which will only exist if explicitly created.
+
+
+Attempting to list a bucket using inline credentials is a
+means of verifying that the key and secret can access a bucket;
+
+    hdfs fs -ls s3a://key:secret@my-bucket/
+
+Do escape any `+` or `/` symbols in the secret, as discussed below, and never
+share the URL, logs generated using it, or use such an inline authentication
+mechanism in production.
+
+Finally, if you set the environment variables, you can take advantage of S3A's
+support of environment-variable authentication by attempting the same ls operation.
+That is: unset the `fs.s3a` secrets and rely on the environment variables.
+
+#### Authentication failure due to clock skew
+
+The timestamp is used in signing to S3, so as to
+defend against replay attacks. If the system clock is too far behind *or ahead*
+of Amazon's, requests will be rejected.
+
+This can surface as the situation where
+read requests are allowed, but operations which write to the bucket are denied.
+
+Check the system clock.
+
+#### Authentication failure when using URLs with embedded secrets
 
 If using the (strongly discouraged) mechanism of including the
 AWS Key and secret in a URL, then both "+" and "/" symbols need
@@ -1076,23 +1137,25 @@ encoding problems are not uncommon.
 | `/` | `%2F` |
 
 
-That is, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
+As an example, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
 be represented as
 
 ```
-s3a://user1:a%2Bb%2Fc@bucket
+s3a://user1:a%2Bb%2Fc@bucket/
 ```
 
 This technique is only needed when placing secrets in the URL. Again,
 this is something users are strongly advised against using.
 
-### Authentication failures running on Java 8u60+
+#### Authentication Failures When Running on Java 8u60+
 
 A change in the Java 8 JVM broke some of the `toString()` string generation
 of Joda Time 2.8.0, which stopped the Amazon S3 client from being able to
 generate authentication headers suitable for validation by S3.
 
-Fix: make sure that the version of Joda Time is 2.8.1 or later.
+**Fix**: Make sure that the version of Joda Time is 2.8.1 or later, or
+use a new version of Java 8.
+
 
 ### "Bad Request" exception when working with AWS S3 Frankfurt, Seoul, or other "V4" endpoint
 
@@ -1291,10 +1354,12 @@ expense of sequential read performance and bandwidth.
 The slow performance of `rename()` surfaces during the commit phase of work,
 including
 
-* The MapReduce FileOutputCommitter.
-* DistCp's rename after copy operation.
+* The MapReduce `FileOutputCommitter`.
+* DistCp's rename-after-copy operation.
+* The `hdfs fs -rm` command renaming the file under `.Trash` rather than
+deleting it. Use `-skipTrash` to eliminate that step.
 
-Both these operations can be significantly slower when S3 is the destination
+These operations can be significantly slower when S3 is the destination
 compared to HDFS or other "real" filesystem.
 
 *Improving S3 load-balancing behavior*
