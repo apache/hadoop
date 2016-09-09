@@ -1013,6 +1013,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * Return a HttpServer.Builder that the journalnode / namenode / secondary
    * namenode can use to initialize their HTTP / HTTPS server.
    *
+   * @param conf configuration object
+   * @param httpAddr HTTP address
+   * @param httpsAddr HTTPS address
+   * @param name  Name of the server
+   * @throws IOException from Builder
+   * @return builder object
    */
   public static HttpServer2.Builder httpServerTemplateForRM(Configuration conf,
       final InetSocketAddress httpAddr, final InetSocketAddress httpsAddr,
