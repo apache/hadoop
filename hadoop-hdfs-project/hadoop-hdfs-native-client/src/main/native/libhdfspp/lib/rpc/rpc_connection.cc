@@ -214,7 +214,7 @@ void RpcConnection::HandshakeComplete(const Status &s) {
 #ifdef USE_SASL
         sasl_protocol_ = std::make_shared<SaslProtocol>(cluster_name_, auth_info_, shared_from_this());
         sasl_protocol_->SetEventHandlers(event_handlers_);
-        sasl_protocol_->authenticate([shared_this, this](
+        sasl_protocol_->Authenticate([shared_this, this](
                           const Status & status, const AuthInfo & new_auth_info) {
                         AuthComplete(status, new_auth_info); } );
 #else

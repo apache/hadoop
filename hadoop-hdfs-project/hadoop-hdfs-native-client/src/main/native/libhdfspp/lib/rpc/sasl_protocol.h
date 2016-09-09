@@ -19,15 +19,15 @@
 #ifndef LIB_RPC_SASLPROTOCOL_H
 #define LIB_RPC_SASLPROTOCOL_H
 
-#include "hdfspp/status.h"
-#include "common/auth_info.h"
-#include "common/libhdfs_events_impl.h"
-
-#include <RpcHeader.pb.h>
-
 #include <memory>
 #include <mutex>
 #include <functional>
+
+#include <RpcHeader.pb.h>
+
+#include "hdfspp/status.h"
+#include "common/auth_info.h"
+#include "common/libhdfs_events_impl.h"
 
 namespace hdfs {
 
@@ -35,6 +35,7 @@ static constexpr const char * SASL_METHOD_NAME = "sasl message";
 
 class RpcConnection;
 class SaslEngine;
+class SaslMethod;
 
 class SaslProtocol : public std::enable_shared_from_this<SaslProtocol>
 {
@@ -48,8 +49,9 @@ public:
 
   // Start the async authentication process.  Must be called while holding the
   //   connection lock, but all callbacks will occur outside of the connection lock
-  void authenticate(std::function<void(const Status & status, const AuthInfo new_auth_info)> callback);
+  void Authenticate(std::function<void(const Status & status, const AuthInfo new_auth_info)> callback);
   void OnServerResponse(const Status & status, const hadoop::common::RpcSaslProto * response);
+  std::pair<Status, hadoop::common::RpcSaslProto> BuildInitMessage( std::string & token, const hadoop::common::RpcSaslProto * negotiate_msg);
 private:
   enum State {
     kUnstarted,
@@ -72,10 +74,12 @@ private:
   bool SendSaslMessage(hadoop::common::RpcSaslProto & message);
   bool AuthComplete(const Status & status, const AuthInfo & auth_info);
 
+  void ResetEngine();
   void Negotiate(const hadoop::common::RpcSaslProto * response);
   void Challenge(const hadoop::common::RpcSaslProto * response);
-};
 
-}
+}; // class SaslProtocol
+
+} // namespace hdfs
 
 #endif /* LIB_RPC_SASLPROTOCOL_H */

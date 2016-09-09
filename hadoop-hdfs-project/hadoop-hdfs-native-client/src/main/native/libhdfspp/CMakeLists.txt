@@ -23,13 +23,15 @@ cmake_minimum_required(VERSION 2.8)
 enable_testing()
 include (CTest)
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake" ${CMAKE_MODULE_PATH})
-SET(CMAKE_DISABLE_FIND_PACKAGE_CyrusSASL TRUE) # Until development is done.
+
+# If there's a better way to inform FindCyrusSASL.cmake, let's make this cleaner:
+SET(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${CYRUS_SASL_DIR};${GSASL_DIR}")
 
 find_package(Doxygen)
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(GSasl)
 find_package(CyrusSASL)
+find_package(GSasl)
 find_package(Threads)
 
 find_program(MEMORYCHECK_COMMAND valgrind HINTS ${VALGRIND_DIR} )
@@ -41,36 +43,47 @@ if (REQUIRE_VALGRIND AND MEMORYCHECK_COMMAND MATCHES "MEMORYCHECK_COMMAND-NOTFOU
                       "The path can be included via a -DVALGRIND_DIR=... flag passed to CMake.")
 endif (REQUIRE_VALGRIND AND MEMORYCHECK_COMMAND MATCHES "MEMORYCHECK_COMMAND-NOTFOUND" )
 
+# Find the SASL library to use.  If you don't want to require a sasl library,
+#    define -DNO_SASL=1 in your cmake call
 # Prefer Cyrus SASL, but use GSASL if it is found
 # Note that the packages can be disabled by setting CMAKE_DISABLE_FIND_PACKAGE_GSasl or
 #    CMAKE_DISABLE_FIND_PACKAGE_CyrusSASL, respectively (case sensitive)
 set (SASL_LIBRARIES)
 set (SASL_INCLUDE_DIR)
-if (CYRUS_SASL_FOUND)
-    message(STATUS "Using Cyrus SASL; link with ${CYRUS_SASL_LIBRARIES}")
-    set (SASL_INCLUDE_DIR ${CYRUS_SASL_INCLUDE_DIR})
-    set (SASL_LIBRARIES ${CYRUS_SASL_SHARED_LIB})
-    add_definitions(-DUSE_SASL -DUSE_CYRUS_SASL)
-else (CYRUS_SASL_FOUND)
-    if (REQUIRE_CYRUS_SASL)
-      message(FATAL_ERROR "Cyrus SASL was required but not found.  "
-                            "The path can be included via a -DCYRUS_SASL_DIR=... flag passed to CMake.")
-    endif (REQUIRE_CYRUS_SASL)
+if (NOT NO_SASL)
+    if (CYRUS_SASL_FOUND)
+        message(STATUS "Using Cyrus SASL; link with ${CYRUS_SASL_SHARED_LIB}")
+        set (SASL_INCLUDE_DIR ${CYRUS_SASL_INCLUDE_DIR})
+        set (SASL_LIBRARIES ${CYRUS_SASL_SHARED_LIB})
+        set (CMAKE_USING_CYRUS_SASL 1)
+        add_definitions(-DUSE_SASL -DUSE_CYRUS_SASL)
+    else (CYRUS_SASL_FOUND)
+        if (REQUIRE_CYRUS_SASL)
+          message(FATAL_ERROR "Cyrus SASL was required but not found.  "
+                                "The path can be included via a -DCYRUS_SASL_DIR=... flag passed to CMake.")
+        endif (REQUIRE_CYRUS_SASL)
 
-    # If we didn't pick Cyrus, use GSASL instead
-    if (GSASL_FOUND)
-      message(STATUS "Using GSASL; link with ${GSASL_LIBRARIES}")
-      set (SASL_INCLUDE_DIR ${GSASL_INCLUDE_DIR})
-      set (SASL_LIBRARIES ${GSASL_LIBRARIES})
-      add_definitions(-DUSE_SASL -DUSE_GSASL)
-    else (GSASL_FOUND)
-      if (REQUIRE_GSASL)
-        message(FATAL_ERROR "GSASL was required but not found.  "
-                            "The path can be included via a -DGSASL_DIR=... flag passed to CMake.")
-      endif (REQUIRE_GSASL)
-      message(STATUS "Not using SASL")
-    endif (GSASL_FOUND)
-endif (CYRUS_SASL_FOUND)
+        # If we didn't pick Cyrus, use GSASL instead
+        if (GSASL_FOUND)
+          message(STATUS "Using GSASL; link with ${GSASL_LIBRARIES}")
+          set (SASL_INCLUDE_DIR ${GSASL_INCLUDE_DIR})
+          set (SASL_LIBRARIES ${GSASL_LIBRARIES})
+          set (CMAKE_USING_GSASL 1)
+          add_definitions(-DUSE_SASL -DUSE_GSASL)
+        else (GSASL_FOUND)
+          if (REQUIRE_GSASL)
+            message(FATAL_ERROR "GSASL was required but not found.  "
+                                "The path can be included via a -DGSASL_DIR=... flag passed to CMake.")
+          endif (REQUIRE_GSASL)
+
+          # No SASL was found, but NO_SASL was not defined
+          message(FATAL_ERROR "Cound not find a SASL library (GSASL (gsasl) or Cyrus SASL (libsasl2).  "
+                            "Install/configure one of them or define NO_SASL=1 in your cmake call")
+        endif (GSASL_FOUND)
+    endif (CYRUS_SASL_FOUND)
+else (NOT NO_SASL)
+    message(STATUS "Compiling with NO SASL SUPPORT")
+endif (NOT NO_SASL)
 
 add_definitions(-DASIO_STANDALONE -DASIO_CPP11_DATE_TIME)
 

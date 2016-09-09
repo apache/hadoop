@@ -22,13 +22,11 @@
 #include "hdfspp/status.h"
 #include "optional.hpp"
 
-#ifdef USE_GSASL
-#include "gsasl.h"
-#endif
-
 #include <vector>
 
 namespace hdfs {
+
+class SaslProtocol;
 
 template <class T>
 using optional = std::experimental::optional<T>;
@@ -38,7 +36,7 @@ public:
   std::string protocol;
   std::string mechanism;
   std::string serverid;
-  void *      data;
+  std::string challenge;
 };
 
 class SaslEngine {
@@ -48,7 +46,7 @@ public:
         kWaitingForData,
         kSuccess,
         kFailure,
-        kError,
+        kErrorState,
     };
 
     // State transitions:
@@ -56,70 +54,51 @@ public:
     // kUnstarted --start--> kWaitingForData --step-+--> kSuccess --finish--v
     //                                               \-> kFailure -/
 
-    SaslEngine() : state_ (kUnstarted) {}
+    // State transitions:
+    //                    \--------------------------/
+    // kUnstarted --start--> kWaitingForData --step-+--> kSuccess --finish--v
+    //                                               \-> kFailure -/
+
+    SaslEngine(): state_ (kUnstarted) {}
     virtual ~SaslEngine();
 
     // Must be called when state is kUnstarted
-    Status setKerberosInfo(const std::string &principal);
+    Status SetKerberosInfo(const std::string &principal);
     // Must be called when state is kUnstarted
-    Status setPasswordInfo(const std::string &id,
+    Status SetPasswordInfo(const std::string &id,
                            const std::string &password);
 
+    // Choose a mechanism from the available ones.  Will set the
+    //    chosen_mech_ member and return true if we found one we
+    //    can process
+    bool ChooseMech(const std::vector<SaslMethod> &avail_auths);
+
     // Returns the current state
-    State getState();
+    State GetState();
 
     // Must be called when state is kUnstarted
-    virtual std::pair<Status,SaslMethod>  start(
-              const std::vector<SaslMethod> &protocols) = 0;
+    virtual std::pair<Status,std::string>  Start() = 0;
 
     // Must be called when state is kWaitingForData
     // Returns kOK and any data that should be sent to the server
-    virtual std::pair<Status,std::string> step(const std::string data) = 0;
+    virtual std::pair<Status,std::string> Step(const std::string data) = 0;
 
-    // Must only be called when state is kSuccess, kFailure, or kError
-    virtual Status finish() = 0;
+    // Must only be called when state is kSuccess, kFailure, or kErrorState
+    virtual Status Finish() = 0;
+
+    // main repository of generic Sasl config data:
+    SaslMethod chosen_mech_;
 protected:
   State state_;
+  SaslProtocol * sasl_protocol_;
 
   optional<std::string> principal_;
+  optional<std::string> realm_;
   optional<std::string> id_;
   optional<std::string> password_;
 
-};
+}; // class SaslEngine
 
-#ifdef USE_GSASL
-class GSaslEngine : public SaslEngine
-{
-public:
-  GSaslEngine() : SaslEngine(), ctx_(nullptr), session_(nullptr) {}
-  virtual ~GSaslEngine();
+} // namespace hdfs
 
-  virtual std::pair<Status,SaslMethod>  start(
-            const std::vector<SaslMethod> &protocols);
-  virtual std::pair<Status,std::string> step(const std::string data);
-  virtual Status finish();
-private:
-  Gsasl * ctx_;
-  Gsasl_session * session_;
-
-  Status init_kerberos(const SaslMethod & mechanism);
-};
-#endif
-
-#ifdef USE_CYRUS_SASL
-class CyrusSaslEngine : public SaslEngine
-{
-public:
-  GSaslEngine() : SaslEngine(), ctx_(nullptr), session_(nullptr) {}
-  virtual ~GSaslEngine();
-
-  virtual std::pair<Status,SaslMethod>  start(
-            const std::vector<SaslMethod> &protocols);
-  virtual std::pair<Status,std::string> step(const std::string data);
-  virtual Status finish();
-private:
-};
-#endif
-
-}
 #endif /* LIB_RPC_SASLENGINE_H */
