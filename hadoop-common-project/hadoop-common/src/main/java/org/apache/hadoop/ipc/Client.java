@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
@@ -415,8 +416,8 @@ public class Client implements AutoCloseable {
     private SaslRpcClient saslRpcClient;
     
     private Socket socket = null;                 // connected socket
-    private DataInputStream in;
-    private DataOutputStream out;
+    private IpcStreams ipcStreams;
+    private final int maxResponseLength;
     private final int rpcTimeout;
     private int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
@@ -428,8 +429,8 @@ public class Client implements AutoCloseable {
     private final boolean doPing; //do we need to send ping message
     private final int pingInterval; // how often sends ping to the server
     private final int soTimeout; // used by ipc ping and rpc timeout
-    private ResponseBuffer pingRequest; // ping message
-    
+    private byte[] pingRequest; // ping message
+
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
@@ -448,6 +449,9 @@ public class Client implements AutoCloseable {
             0,
             new UnknownHostException());
       }
+      this.maxResponseLength = remoteId.conf.getInt(
+          CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
+          CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT);
       this.rpcTimeout = remoteId.getRpcTimeout();
       this.maxIdleTime = remoteId.getMaxIdleTime();
       this.connectionRetryPolicy = remoteId.connectionRetryPolicy;
@@ -458,12 +462,13 @@ public class Client implements AutoCloseable {
       this.doPing = remoteId.getDoPing();
       if (doPing) {
         // construct a RPC header with the callId as the ping callId
-        pingRequest = new ResponseBuffer();
+        ResponseBuffer buf = new ResponseBuffer();
         RpcRequestHeaderProto pingHeader = ProtoUtil
             .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
                 OperationProto.RPC_FINAL_PACKET, PING_CALL_ID,
                 RpcConstants.INVALID_RETRY_COUNT, clientId);
-        pingHeader.writeDelimitedTo(pingRequest);
+        pingHeader.writeDelimitedTo(buf);
+        pingRequest = buf.toByteArray();
       }
       this.pingInterval = remoteId.getPingInterval();
       if (rpcTimeout > 0) {
@@ -598,15 +603,15 @@ public class Client implements AutoCloseable {
       }
       return false;
     }
-    
-    private synchronized AuthMethod setupSaslConnection(final InputStream in2, 
-        final OutputStream out2) throws IOException {
+
+    private synchronized AuthMethod setupSaslConnection(IpcStreams streams)
+        throws IOException {
       // Do not use Client.conf here! We must use ConnectionId.conf, since the
       // Client object is cached and shared between all RPC clients, even those
       // for separate services.
       saslRpcClient = new SaslRpcClient(remoteId.getTicket(),
           remoteId.getProtocol(), remoteId.getAddress(), remoteId.conf);
-      return saslRpcClient.saslConnect(in2, out2);
+      return saslRpcClient.saslConnect(streams);
     }
 
     /**
@@ -771,12 +776,9 @@ public class Client implements AutoCloseable {
         Random rand = null;
         while (true) {
           setupConnection();
-          InputStream inStream = NetUtils.getInputStream(socket);
-          OutputStream outStream = NetUtils.getOutputStream(socket);
-          writeConnectionHeader(outStream);
+          ipcStreams = new IpcStreams(socket, maxResponseLength);
+          writeConnectionHeader(ipcStreams);
           if (authProtocol == AuthProtocol.SASL) {
-            final InputStream in2 = inStream;
-            final OutputStream out2 = outStream;
             UserGroupInformation ticket = remoteId.getTicket();
             if (ticket.getRealUser() != null) {
               ticket = ticket.getRealUser();
@@ -787,7 +789,7 @@ public class Client implements AutoCloseable {
                     @Override
                     public AuthMethod run()
                         throws IOException, InterruptedException {
-                      return setupSaslConnection(in2, out2);
+                      return setupSaslConnection(ipcStreams);
                     }
                   });
             } catch (IOException ex) {
@@ -806,8 +808,7 @@ public class Client implements AutoCloseable {
             }
             if (authMethod != AuthMethod.SIMPLE) {
               // Sasl connect is successful. Let's set up Sasl i/o streams.
-              inStream = saslRpcClient.getInputStream(inStream);
-              outStream = saslRpcClient.getOutputStream(outStream);
+              ipcStreams.setSaslClient(saslRpcClient);
               // for testing
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
@@ -826,18 +827,11 @@ public class Client implements AutoCloseable {
               }
             }
           }
-        
-          if (doPing) {
-            inStream = new PingInputStream(inStream);
-          }
-          this.in = new DataInputStream(new BufferedInputStream(inStream));
 
-          // SASL may have already buffered the stream
-          if (!(outStream instanceof BufferedOutputStream)) {
-            outStream = new BufferedOutputStream(outStream);
+          if (doPing) {
+            ipcStreams.setInputStream(new PingInputStream(ipcStreams.in));
           }
-          this.out = new DataOutputStream(outStream);
-          
+
           writeConnectionContext(remoteId, authMethod);
 
           // update last activity time
@@ -951,17 +945,28 @@ public class Client implements AutoCloseable {
      * |  AuthProtocol (1 byte)           |      
      * +----------------------------------+
      */
-    private void writeConnectionHeader(OutputStream outStream)
+    private void writeConnectionHeader(IpcStreams streams)
         throws IOException {
-      DataOutputStream out = new DataOutputStream(new BufferedOutputStream(outStream));
-      // Write out the header, version and authentication method
-      out.write(RpcConstants.HEADER.array());
-      out.write(RpcConstants.CURRENT_VERSION);
-      out.write(serviceClass);
-      out.write(authProtocol.callId);
-      out.flush();
+      // Write out the header, version and authentication method.
+      // The output stream is buffered but we must not flush it yet.  The
+      // connection setup protocol requires the client to send multiple
+      // messages before reading a response.
+      //
+      //   insecure: send header+context+call, read
+      //   secure  : send header+negotiate, read, (sasl), context+call, read
+      //
+      // The client must flush only when it's prepared to read.  Otherwise
+      // "broken pipe" exceptions occur if the server closes the connection
+      // before all messages are sent.
+      final DataOutputStream out = streams.out;
+      synchronized (out) {
+        out.write(RpcConstants.HEADER.array());
+        out.write(RpcConstants.CURRENT_VERSION);
+        out.write(serviceClass);
+        out.write(authProtocol.callId);
+      }
     }
-    
+
     /* Write the connection context header for each connection
      * Out is not synchronized because only the first thread does this.
      */
@@ -977,12 +982,17 @@ public class Client implements AutoCloseable {
           .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
               OperationProto.RPC_FINAL_PACKET, CONNECTION_CONTEXT_CALL_ID,
               RpcConstants.INVALID_RETRY_COUNT, clientId);
+      // do not flush.  the context and first ipc call request must be sent
+      // together to avoid possibility of broken pipes upon authz failure.
+      // see writeConnectionHeader
       final ResponseBuffer buf = new ResponseBuffer();
       connectionContextHeader.writeDelimitedTo(buf);
       message.writeDelimitedTo(buf);
-      buf.writeTo(out);
+      synchronized (ipcStreams.out) {
+        ipcStreams.sendRequest(buf.toByteArray());
+      }
     }
-    
+
     /* wait till someone signals us to start reading RPC response or
      * it is idle too long, it is marked as to be closed, 
      * or the client is marked as not running.
@@ -1025,9 +1035,9 @@ public class Client implements AutoCloseable {
       long curTime = Time.now();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
-        synchronized (out) {
-          pingRequest.writeTo(out);
-          out.flush();
+        synchronized (ipcStreams.out) {
+          ipcStreams.sendRequest(pingRequest);
+          ipcStreams.flush();
         }
       }
     }
@@ -1093,15 +1103,16 @@ public class Client implements AutoCloseable {
           @Override
           public void run() {
             try {
-              synchronized (Connection.this.out) {
+              synchronized (ipcStreams.out) {
                 if (shouldCloseConnection.get()) {
                   return;
                 }
                 if (LOG.isDebugEnabled()) {
                   LOG.debug(getName() + " sending #" + call.id);
                 }
-                buf.writeTo(out); // RpcRequestHeader + RpcRequest
-                out.flush();
+                // RpcRequestHeader + RpcRequest
+                ipcStreams.sendRequest(buf.toByteArray());
+                ipcStreams.flush();
               }
             } catch (IOException e) {
               // exception at this point would leave the connection in an
@@ -1142,10 +1153,7 @@ public class Client implements AutoCloseable {
       touch();
       
       try {
-        int totalLen = in.readInt();
-        ByteBuffer bb = ByteBuffer.allocate(totalLen);
-        in.readFully(bb.array());
-
+        ByteBuffer bb = ipcStreams.readResponse();
         RpcWritable.Buffer packet = RpcWritable.Buffer.wrap(bb);
         RpcResponseHeaderProto header =
             packet.getValue(RpcResponseHeaderProto.getDefaultInstance());
@@ -1210,8 +1218,7 @@ public class Client implements AutoCloseable {
       connections.remove(remoteId, this);
 
       // close the streams and therefore the socket
-      IOUtils.closeStream(out);
-      IOUtils.closeStream(in);
+      IOUtils.closeStream(ipcStreams);
       disposeSasl();
 
       // clean up all calls
@@ -1739,5 +1746,76 @@ public class Client implements AutoCloseable {
   @Unstable
   public void close() throws Exception {
     stop();
+  }
+
+  /** Manages the input and output streams for an IPC connection.
+   *  Only exposed for use by SaslRpcClient.
+   */
+  @InterfaceAudience.Private
+  public static class IpcStreams implements Closeable, Flushable {
+    private DataInputStream in;
+    public DataOutputStream out;
+    private int maxResponseLength;
+    private boolean firstResponse = true;
+
+    IpcStreams(Socket socket, int maxResponseLength) throws IOException {
+      this.maxResponseLength = maxResponseLength;
+      setInputStream(
+          new BufferedInputStream(NetUtils.getInputStream(socket)));
+      setOutputStream(
+          new BufferedOutputStream(NetUtils.getOutputStream(socket)));
+    }
+
+    void setSaslClient(SaslRpcClient client) throws IOException {
+      setInputStream(client.getInputStream(in));
+      setOutputStream(client.getOutputStream(out));
+    }
+
+    private void setInputStream(InputStream is) {
+      this.in = (is instanceof DataInputStream)
+          ? (DataInputStream)is : new DataInputStream(is);
+    }
+
+    private void setOutputStream(OutputStream os) {
+      this.out = (os instanceof DataOutputStream)
+          ? (DataOutputStream)os : new DataOutputStream(os);
+    }
+
+    public ByteBuffer readResponse() throws IOException {
+      int length = in.readInt();
+      if (firstResponse) {
+        firstResponse = false;
+        // pre-rpcv9 exception, almost certainly a version mismatch.
+        if (length == -1) {
+          in.readInt(); // ignore fatal/error status, it's fatal for us.
+          throw new RemoteException(WritableUtils.readString(in),
+                                    WritableUtils.readString(in));
+        }
+      }
+      if (length <= 0) {
+        throw new RpcException("RPC response has invalid length");
+      }
+      if (maxResponseLength > 0 && length > maxResponseLength) {
+        throw new RpcException("RPC response exceeds maximum data length");
+      }
+      ByteBuffer bb = ByteBuffer.allocate(length);
+      in.readFully(bb.array());
+      return bb;
+    }
+
+    public void sendRequest(byte[] buf) throws IOException {
+      out.write(buf);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      out.flush();
+    }
+
+    @Override
+    public void close() {
+      IOUtils.closeStream(out);
+      IOUtils.closeStream(in);
+    }
   }
 }
