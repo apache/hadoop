@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -418,7 +418,7 @@ public abstract class Command extends Configured {
    * @return default top number of nodes.
    */
   protected int getDefaultTop() {
-    return DiskBalancer.DEFAULT_TOP;
+    return DiskBalancerCLI.DEFAULT_TOP;
   }
 
   /**
@@ -437,7 +437,7 @@ public abstract class Command extends Configured {
   protected int parseTopNodes(final CommandLine cmd, final StrBuilder result) {
     String outputLine = "";
     int nodes = 0;
-    final String topVal = cmd.getOptionValue(DiskBalancer.TOP);
+    final String topVal = cmd.getOptionValue(DiskBalancerCLI.TOP);
     if (StringUtils.isBlank(topVal)) {
       outputLine = String.format(
           "No top limit specified, using default top value %d.",

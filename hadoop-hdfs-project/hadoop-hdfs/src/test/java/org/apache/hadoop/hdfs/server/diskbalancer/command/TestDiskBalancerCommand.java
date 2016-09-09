@@ -41,18 +41,19 @@ import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.CANCEL;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.HELP;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.NODE;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.PLAN;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.QUERY;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.REPORT;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.CANCEL;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.HELP;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.NODE;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.PLAN;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.QUERY;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.REPORT;
 
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
@@ -387,8 +388,7 @@ public class TestDiskBalancerCommand {
   private List<String> runCommandInternal(final String cmdLine) throws
       Exception {
     String[] cmds = StringUtils.split(cmdLine, ' ');
-    org.apache.hadoop.hdfs.tools.DiskBalancer db =
-        new org.apache.hadoop.hdfs.tools.DiskBalancer(conf);
+    DiskBalancerCLI db = new DiskBalancerCLI(conf);
 
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);

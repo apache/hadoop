@@ -50,7 +50,7 @@ import java.io.PrintStream;
  * At very high level diskbalancer computes a set of moves that will make disk
  * utilization equal and then those moves are executed by the datanode.
  */
-public class DiskBalancer extends Configured implements Tool {
+public class DiskBalancerCLI extends Configured implements Tool {
   /**
    * Computes a plan for a given set of nodes.
    */
@@ -126,7 +126,7 @@ public class DiskBalancer extends Configured implements Tool {
    */
   public static final String PLAN_TEMPLATE = "%s.plan.json";
   private static final Logger LOG =
-      LoggerFactory.getLogger(DiskBalancer.class);
+      LoggerFactory.getLogger(DiskBalancerCLI.class);
 
   private static final Options PLAN_OPTIONS = new Options();
   private static final Options EXECUTE_OPTIONS = new Options();
@@ -140,7 +140,7 @@ public class DiskBalancer extends Configured implements Tool {
    *
    * @param conf
    */
-  public DiskBalancer(Configuration conf) {
+  public DiskBalancerCLI(Configuration conf) {
     super(conf);
   }
 
@@ -151,7 +151,7 @@ public class DiskBalancer extends Configured implements Tool {
    * @throws Exception
    */
   public static void main(String[] argv) throws Exception {
-    DiskBalancer shell = new DiskBalancer(new HdfsConfiguration());
+    DiskBalancerCLI shell = new DiskBalancerCLI(new HdfsConfiguration());
     int res = 0;
     try {
       res = ToolRunner.run(shell, argv);
@@ -446,27 +446,27 @@ public class DiskBalancer extends Configured implements Tool {
   private int dispatch(CommandLine cmd, Options opts, final PrintStream out)
       throws Exception {
     Command currentCommand = null;
-    if (cmd.hasOption(DiskBalancer.PLAN)) {
+    if (cmd.hasOption(DiskBalancerCLI.PLAN)) {
       currentCommand = new PlanCommand(getConf());
     }
 
-    if (cmd.hasOption(DiskBalancer.EXECUTE)) {
+    if (cmd.hasOption(DiskBalancerCLI.EXECUTE)) {
       currentCommand = new ExecuteCommand(getConf());
     }
 
-    if (cmd.hasOption(DiskBalancer.QUERY)) {
+    if (cmd.hasOption(DiskBalancerCLI.QUERY)) {
       currentCommand = new QueryCommand(getConf());
     }
 
-    if (cmd.hasOption(DiskBalancer.CANCEL)) {
+    if (cmd.hasOption(DiskBalancerCLI.CANCEL)) {
       currentCommand = new CancelCommand(getConf());
     }
 
-    if (cmd.hasOption(DiskBalancer.REPORT)) {
+    if (cmd.hasOption(DiskBalancerCLI.REPORT)) {
       currentCommand = new ReportCommand(getConf(), out);
     }
 
-    if (cmd.hasOption(DiskBalancer.HELP)) {
+    if (cmd.hasOption(DiskBalancerCLI.HELP)) {
       currentCommand = new HelpCommand(getConf());
     }
 

@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -42,9 +42,10 @@ public class QueryCommand extends Command {
    */
   public QueryCommand(Configuration conf) {
     super(conf);
-    addValidCommandParameters(DiskBalancer.QUERY, "Queries the status of disk" +
-        " plan running on a given datanode.");
-    addValidCommandParameters(DiskBalancer.VERBOSE, "Prints verbose results.");
+    addValidCommandParameters(DiskBalancerCLI.QUERY,
+        "Queries the status of disk plan running on a given datanode.");
+    addValidCommandParameters(DiskBalancerCLI.VERBOSE,
+        "Prints verbose results.");
   }
 
   /**
@@ -55,9 +56,9 @@ public class QueryCommand extends Command {
   @Override
   public void execute(CommandLine cmd) throws Exception {
     LOG.info("Executing \"query plan\" command.");
-    Preconditions.checkState(cmd.hasOption(DiskBalancer.QUERY));
-    verifyCommandOptions(DiskBalancer.QUERY, cmd);
-    String nodeName = cmd.getOptionValue(DiskBalancer.QUERY);
+    Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.QUERY));
+    verifyCommandOptions(DiskBalancerCLI.QUERY, cmd);
+    String nodeName = cmd.getOptionValue(DiskBalancerCLI.QUERY);
     Preconditions.checkNotNull(nodeName);
     nodeName = nodeName.trim();
     String nodeAddress = nodeName;
@@ -79,7 +80,7 @@ public class QueryCommand extends Command {
               workStatus.getPlanID(),
               workStatus.getResult().toString());
 
-      if (cmd.hasOption(DiskBalancer.VERBOSE)) {
+      if (cmd.hasOption(DiskBalancerCLI.VERBOSE)) {
         System.out.printf("%s", workStatus.currentStateString());
       }
     } catch (DiskBalancerException ex) {
@@ -101,6 +102,6 @@ public class QueryCommand extends Command {
 
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.printHelp("hdfs diskbalancer -query <hostname>  [options]",
-        header, DiskBalancer.getQueryOptions(), footer);
+        header, DiskBalancerCLI.getQueryOptions(), footer);
   }
 }

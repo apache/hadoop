@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -52,15 +52,15 @@ public class ReportCommand extends Command {
     super(conf);
     this.out = out;
 
-    addValidCommandParameters(DiskBalancer.REPORT,
+    addValidCommandParameters(DiskBalancerCLI.REPORT,
         "Report volume information of nodes.");
 
     String desc = String.format(
         "Top number of nodes to be processed. Default: %d", getDefaultTop());
-    addValidCommandParameters(DiskBalancer.TOP, desc);
+    addValidCommandParameters(DiskBalancerCLI.TOP, desc);
 
     desc = String.format("Print out volume information for a DataNode.");
-    addValidCommandParameters(DiskBalancer.NODE, desc);
+    addValidCommandParameters(DiskBalancerCLI.NODE, desc);
   }
 
   @Override
@@ -69,8 +69,8 @@ public class ReportCommand extends Command {
     String outputLine = "Processing report command";
     recordOutput(result, outputLine);
 
-    Preconditions.checkState(cmd.hasOption(DiskBalancer.REPORT));
-    verifyCommandOptions(DiskBalancer.REPORT, cmd);
+    Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.REPORT));
+    verifyCommandOptions(DiskBalancerCLI.REPORT, cmd);
     readClusterInfo(cmd);
 
     final String nodeFormat =
@@ -81,7 +81,7 @@ public class ReportCommand extends Command {
         "[%s: volume-%s] - %.2f used: %d/%d, %.2f free: %d/%d, "
         + "isFailed: %s, isReadOnly: %s, isSkip: %s, isTransient: %s.";
 
-    if (cmd.hasOption(DiskBalancer.NODE)) {
+    if (cmd.hasOption(DiskBalancerCLI.NODE)) {
       /*
        * Reporting volume information for a specific DataNode
        */
@@ -136,7 +136,7 @@ public class ReportCommand extends Command {
      * get value that identifies a DataNode from command line, it could be UUID,
      * IP address or host name.
      */
-    final String nodeVal = cmd.getOptionValue(DiskBalancer.NODE);
+    final String nodeVal = cmd.getOptionValue(DiskBalancerCLI.NODE);
 
     if (StringUtils.isBlank(nodeVal)) {
       outputLine = "The value for '-node' is neither specified or empty.";
@@ -211,6 +211,6 @@ public class ReportCommand extends Command {
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.printHelp("hdfs diskbalancer -fs http://namenode.uri " +
         "-report [options]",
-        header, DiskBalancer.getReportOptions(), footer);
+        header, DiskBalancerCLI.getReportOptions(), footer);
   }
 }

@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -53,18 +53,18 @@ public class PlanCommand extends Command {
     this.thresholdPercentage = 1;
     this.bandwidth = 0;
     this.maxError = 0;
-    addValidCommandParameters(DiskBalancer.OUTFILE, "Output directory in " +
+    addValidCommandParameters(DiskBalancerCLI.OUTFILE, "Output directory in " +
         "HDFS. The generated plan will be written to a file in this " +
         "directory.");
-    addValidCommandParameters(DiskBalancer.BANDWIDTH, "Maximum Bandwidth to " +
-        "be used while copying.");
-    addValidCommandParameters(DiskBalancer.THRESHOLD, "Percentage skew that " +
-        "we tolerate before diskbalancer starts working.");
-    addValidCommandParameters(DiskBalancer.MAXERROR, "Max errors to tolerate " +
-        "between 2 disks");
-    addValidCommandParameters(DiskBalancer.VERBOSE, "Run plan command in " +
+    addValidCommandParameters(DiskBalancerCLI.BANDWIDTH,
+        "Maximum Bandwidth to be used while copying.");
+    addValidCommandParameters(DiskBalancerCLI.THRESHOLD,
+        "Percentage skew that we tolerate before diskbalancer starts working.");
+    addValidCommandParameters(DiskBalancerCLI.MAXERROR,
+        "Max errors to tolerate between 2 disks");
+    addValidCommandParameters(DiskBalancerCLI.VERBOSE, "Run plan command in " +
         "verbose mode.");
-    addValidCommandParameters(DiskBalancer.PLAN, "Plan Command");
+    addValidCommandParameters(DiskBalancerCLI.PLAN, "Plan Command");
   }
 
   /**
@@ -77,36 +77,37 @@ public class PlanCommand extends Command {
   @Override
   public void execute(CommandLine cmd) throws Exception {
     LOG.debug("Processing Plan Command.");
-    Preconditions.checkState(cmd.hasOption(DiskBalancer.PLAN));
-    verifyCommandOptions(DiskBalancer.PLAN, cmd);
+    Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.PLAN));
+    verifyCommandOptions(DiskBalancerCLI.PLAN, cmd);
 
-    if (cmd.getOptionValue(DiskBalancer.PLAN) == null) {
+    if (cmd.getOptionValue(DiskBalancerCLI.PLAN) == null) {
       throw new IllegalArgumentException("A node name is required to create a" +
           " plan.");
     }
 
-    if (cmd.hasOption(DiskBalancer.BANDWIDTH)) {
-      this.bandwidth = Integer.parseInt(cmd.getOptionValue(DiskBalancer
+    if (cmd.hasOption(DiskBalancerCLI.BANDWIDTH)) {
+      this.bandwidth = Integer.parseInt(cmd.getOptionValue(DiskBalancerCLI
           .BANDWIDTH));
     }
 
-    if (cmd.hasOption(DiskBalancer.MAXERROR)) {
-      this.maxError = Integer.parseInt(cmd.getOptionValue(DiskBalancer
+    if (cmd.hasOption(DiskBalancerCLI.MAXERROR)) {
+      this.maxError = Integer.parseInt(cmd.getOptionValue(DiskBalancerCLI
           .MAXERROR));
     }
 
     readClusterInfo(cmd);
     String output = null;
-    if (cmd.hasOption(DiskBalancer.OUTFILE)) {
-      output = cmd.getOptionValue(DiskBalancer.OUTFILE);
+    if (cmd.hasOption(DiskBalancerCLI.OUTFILE)) {
+      output = cmd.getOptionValue(DiskBalancerCLI.OUTFILE);
     }
     setOutputPath(output);
 
     // -plan nodename is the command line argument.
-    DiskBalancerDataNode node = getNode(cmd.getOptionValue(DiskBalancer.PLAN));
+    DiskBalancerDataNode node =
+        getNode(cmd.getOptionValue(DiskBalancerCLI.PLAN));
     if (node == null) {
       throw new IllegalArgumentException("Unable to find the specified node. " +
-          cmd.getOptionValue(DiskBalancer.PLAN));
+          cmd.getOptionValue(DiskBalancerCLI.PLAN));
     }
     this.thresholdPercentage = getThresholdPercentage(cmd);
 
@@ -124,8 +125,8 @@ public class PlanCommand extends Command {
 
 
     try (FSDataOutputStream beforeStream = create(String.format(
-        DiskBalancer.BEFORE_TEMPLATE,
-        cmd.getOptionValue(DiskBalancer.PLAN)))) {
+        DiskBalancerCLI.BEFORE_TEMPLATE,
+        cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
       beforeStream.write(getCluster().toJson()
           .getBytes(StandardCharsets.UTF_8));
     }
@@ -133,17 +134,17 @@ public class PlanCommand extends Command {
     if (plan != null && plan.getVolumeSetPlans().size() > 0) {
       LOG.info("Writing plan to : {}", getOutputPath());
       try (FSDataOutputStream planStream = create(String.format(
-          DiskBalancer.PLAN_TEMPLATE,
-          cmd.getOptionValue(DiskBalancer.PLAN)))) {
+          DiskBalancerCLI.PLAN_TEMPLATE,
+          cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
         planStream.write(plan.toJson().getBytes(StandardCharsets.UTF_8));
       }
     } else {
       LOG.info("No plan generated. DiskBalancing not needed for node: {} " +
-              "threshold used: {}", cmd.getOptionValue(DiskBalancer.PLAN),
+              "threshold used: {}", cmd.getOptionValue(DiskBalancerCLI.PLAN),
           this.thresholdPercentage);
     }
 
-    if (cmd.hasOption(DiskBalancer.VERBOSE) && plans.size() > 0) {
+    if (cmd.hasOption(DiskBalancerCLI.VERBOSE) && plans.size() > 0) {
       printToScreen(plans);
     }
   }
@@ -162,8 +163,8 @@ public class PlanCommand extends Command {
         " will balance the data.";
 
     HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.printHelp("hdfs diskbalancer -plan " +
-        "<hostname> [options]", header, DiskBalancer.getPlanOptions(), footer);
+    helpFormatter.printHelp("hdfs diskbalancer -plan <hostname> [options]",
+        header, DiskBalancerCLI.getPlanOptions(), footer);
   }
 
   /**
@@ -174,8 +175,8 @@ public class PlanCommand extends Command {
    */
   private double getThresholdPercentage(CommandLine cmd) {
     Double value = 0.0;
-    if (cmd.hasOption(DiskBalancer.THRESHOLD)) {
-      value = Double.parseDouble(cmd.getOptionValue(DiskBalancer.THRESHOLD));
+    if (cmd.hasOption(DiskBalancerCLI.THRESHOLD)) {
+      value = Double.parseDouble(cmd.getOptionValue(DiskBalancerCLI.THRESHOLD));
     }
 
     if ((value <= 0.0) || (value > 100.0)) {
