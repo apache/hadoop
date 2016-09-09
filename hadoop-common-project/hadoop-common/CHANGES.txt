@@ -42,6 +42,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-13297. Add missing dependency in setting
     maven-remote-resource-plugin to fix builds. (Sean Busbey via aajisaka)
 
+    HADOOP-13579. Fix source-level compatibility after HADOOP-11252.
+    (Tsuyoshi Ozawa via aajisaka)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
