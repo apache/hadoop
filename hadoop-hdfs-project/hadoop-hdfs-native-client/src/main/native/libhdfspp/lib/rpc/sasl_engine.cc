@@ -16,20 +16,19 @@
  * limitations under the License.
  */
 
-#include "sasl_engine.h"
-
-#include "common/logging.h"
-
 #include <sstream>
+#include <string.h> // memcpy()
 
+#include "sasl_engine.h"
+#include "common/logging.h"
 
 namespace hdfs {
 
 /*****************************************************************************
- *                     BASE CLASS
+ *                    SASL ENGINE BASE CLASS
  */
 
-SaslEngine::State SaslEngine::getState()
+SaslEngine::State SaslEngine::GetState()
 {
     return state_;
 }
@@ -37,149 +36,45 @@ SaslEngine::State SaslEngine::getState()
 SaslEngine::~SaslEngine() {
 }
 
-Status SaslEngine::setKerberosInfo(const std::string &principal)
+Status SaslEngine::SetKerberosInfo(const std::string &principal)
 {
   principal_ = principal;
   return Status::OK();
 }
 
-Status SaslEngine::setPasswordInfo(const std::string &id,
-                       const std::string &password)
+Status SaslEngine::SetPasswordInfo(const std::string &id,
+                                   const std::string &password)
 {
   id_ = id;
   password_ = password;
   return Status::OK();
 }
 
+bool SaslEngine::ChooseMech(const std::vector<SaslMethod> &resp_auths) {
+  Status status = Status::OK();
 
-#ifdef USE_GSASL
-/*****************************************************************************
- *                     GSASL
- */
+  if (resp_auths.empty()) return NULL;
 
-#include <gsasl.h>
+  for (SaslMethod auth: resp_auths) {
+     if ( auth.mechanism != "GSSAPI") continue; // Hack: only GSSAPI for now
 
+     // do a proper deep copy of the vector element
+     // that we like, because the original v ector will go away:
+     chosen_mech_.mechanism = auth.mechanism;
+     chosen_mech_.protocol  = auth.protocol;
+     chosen_mech_.serverid  = auth.serverid;
+     chosen_mech_.challenge = auth.challenge;
 
-/*****************************************************************************
- *                     UTILITY FUNCTIONS
- */
-
-Status gsasl_rc_to_status(int rc)
-{
-  if (rc == GSASL_OK) {
-    return Status::OK();
-  } else {
-    std::ostringstream ss;
-    ss << "Cannot initialize client (" << rc << "): " << gsasl_strerror(rc);
-    return Status::Error(ss.str().c_str());
-  }
-}
-
-
-GSaslEngine::~GSaslEngine()
-{
-  if (session_ != nullptr) {
-      gsasl_finish(session_);
+     return auth.mechanism.c_str();
   }
 
-  if (ctx_ != nullptr) {
-      gsasl_done(ctx_);
-  }
-}
+  state_ = kErrorState;
+  status = Status::Error("SaslEngine::chooseMech(): No good protocol.");
 
-std::pair<Status, SaslMethod> GSaslEngine::start(const std::vector<SaslMethod> &protocols)
-{
-  int rc = gsasl_init(&ctx_);
-  if (rc != GSASL_OK) {
-    state_ = kError;
-    return std::make_pair(gsasl_rc_to_status(rc), SaslMethod());
-  }
+  // Clear out the chosen mech
+  chosen_mech_ = SaslMethod();
 
-  // Hack to only do GSSAPI at the moment
-  for (auto protocol: protocols) {
-    if (protocol.mechanism == "GSSAPI") {
-      Status init = init_kerberos(protocol);
-      if (init.ok()) {
-        state_ = kWaitingForData;
-        return std::make_pair(init, protocol);
-      } else {
-        state_ = kError;
-        return std::make_pair(init, SaslMethod());
-      }
-    }
-  }
+  return NULL;
+} // choose_mech()
 
-  state_ = kError;
-  return std::make_pair(Status::Error("No good protocol"), SaslMethod());
-}
-
-Status GSaslEngine::init_kerberos(const SaslMethod & mechanism) {
-  /* Create new authentication session. */
-  int rc = gsasl_client_start(ctx_, mechanism.mechanism.c_str(), &session_);
-  if (rc != GSASL_OK) {
-    return gsasl_rc_to_status(rc);
-  }
-
-  if (!principal_) {
-    return Status::Error("Attempted kerberos authentication with no principal");
-  }
-
-  gsasl_property_set(session_, GSASL_SERVICE, mechanism.protocol.c_str());
-  gsasl_property_set(session_, GSASL_AUTHID, principal_.value().c_str());
-  gsasl_property_set(session_, GSASL_HOSTNAME, mechanism.serverid.c_str());
-  return Status::OK();
-  }
-
-  std::pair<Status, std::string> GSaslEngine::step(const std::string data)
-  {
-    if (state_ != kWaitingForData)
-      LOG_WARN(kRPC, << "GSaslEngine::step when state is " << state_);
-
-    char * output = NULL;
-    size_t outputSize;
-    int rc = gsasl_step(session_, data.c_str(), data.size(), &output,
-                        &outputSize);
-
-    if (rc == GSASL_NEEDS_MORE || rc == GSASL_OK) {
-      std::string retval(output, output ? outputSize : 0);
-      if (output) {
-        free(output);
-      }
-
-      if (rc == GSASL_OK) {
-        state_ = kSuccess;
-      }
-
-      return std::make_pair(Status::OK(), retval);
-    }
-    else {
-      if (output) {
-        free(output);
-      }
-      state_ = kFailure;
-      return std::make_pair(gsasl_rc_to_status(rc), "");
-    }
-  }
-
-Status GSaslEngine::finish()
-{
-  if (state_ != kSuccess && state_ != kFailure && state_ != kError )
-    LOG_WARN(kRPC, << "GSaslEngine::finish when state is " << state_);
-
-  if (session_ != nullptr) {
-      gsasl_finish(session_);
-      session_ = NULL;
-  }
-
-  if (ctx_ != nullptr) {
-      gsasl_done(ctx_);
-      ctx_ = nullptr;
-  }
-
-  return Status::OK();
-}
-#endif // USE_GSASL
-
-
-
-}
+} // namespace hdfs

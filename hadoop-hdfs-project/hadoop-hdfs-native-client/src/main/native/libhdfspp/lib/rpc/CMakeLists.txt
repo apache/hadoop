@@ -16,7 +16,16 @@
 # limitations under the License.
 #
 
-include_directories(${OPENSSL_INCLUDE_DIRS})
-add_library(rpc_obj OBJECT rpc_connection.cc rpc_engine.cc sasl_protocol.cc sasl_engine.cc)
+list(APPEND rpc_object_items rpc_connection.cc rpc_engine.cc sasl_protocol.cc sasl_engine.cc)
+if (CMAKE_USING_CYRUS_SASL)
+  list(APPEND rpc_object_items cyrus_sasl_engine.cc)
+endif (CMAKE_USING_CYRUS_SASL)
+if (CMAKE_USING_GSASL)
+ list(APPEND rpc_object_items gsasl_engine.cc)
+endif (CMAKE_USING_GSASL)
+
+add_library(rpc_obj OBJECT ${rpc_object_items})
+
+
 add_dependencies(rpc_obj proto)
 add_library(rpc $<TARGET_OBJECTS:rpc_obj>)
