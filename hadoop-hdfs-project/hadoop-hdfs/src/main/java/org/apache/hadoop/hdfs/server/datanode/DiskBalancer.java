@@ -121,16 +121,22 @@ public class DiskBalancer {
    */
   public void shutdown() {
     lock.lock();
+    boolean needShutdown = false;
     try {
       this.isDiskBalancerEnabled = false;
       this.currentResult = Result.NO_PLAN;
       if ((this.future != null) && (!this.future.isDone())) {
         this.currentResult = Result.PLAN_CANCELLED;
         this.blockMover.setExitFlag();
-        shutdownExecutor();
+        scheduler.shutdown();
+        needShutdown = true;
       }
     } finally {
       lock.unlock();
+    }
+    // no need to hold lock while shutting down executor.
+    if (needShutdown) {
+      shutdownExecutor();
     }
   }
 
@@ -139,7 +145,6 @@ public class DiskBalancer {
    */
   private void shutdownExecutor() {
     final int secondsTowait = 10;
-    scheduler.shutdown();
     try {
       if (!scheduler.awaitTermination(secondsTowait, TimeUnit.SECONDS)) {
         scheduler.shutdownNow();
@@ -228,6 +233,7 @@ public class DiskBalancer {
    */
   public void cancelPlan(String planID) throws DiskBalancerException {
     lock.lock();
+    boolean needShutdown = false;
     try {
       checkDiskBalancerEnabled();
       if (this.planID == null ||
@@ -239,12 +245,17 @@ public class DiskBalancer {
             DiskBalancerException.Result.NO_SUCH_PLAN);
       }
       if (!this.future.isDone()) {
-        this.blockMover.setExitFlag();
-        shutdownExecutor();
         this.currentResult = Result.PLAN_CANCELLED;
+        this.blockMover.setExitFlag();
+        scheduler.shutdown();
+        needShutdown = true;
       }
     } finally {
       lock.unlock();
+    }
+    // no need to hold lock while shutting down executor.
+    if (needShutdown) {
+      shutdownExecutor();
     }
   }
 
