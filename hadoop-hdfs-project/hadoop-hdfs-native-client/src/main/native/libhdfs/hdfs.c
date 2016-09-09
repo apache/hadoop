@@ -114,7 +114,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     jthr = invokeMethod(env, &jVal, INSTANCE, file->file, 
                   "org/apache/hadoop/hdfs/client/HdfsDataInputStream",
                   "getReadStatistics",
-                  "()Lorg/apache/hadoop/hdfs/DFSInputStream$ReadStatistics;");
+                  "()Lorg/apache/hadoop/hdfs/ReadStatistics;");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileGetReadStatistics: getReadStatistics failed");
@@ -127,7 +127,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
         goto done;
     }
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "org/apache/hadoop/hdfs/ReadStatistics",
                   "getTotalBytesRead", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -137,7 +137,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     s->totalBytesRead = jVal.j;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "org/apache/hadoop/hdfs/ReadStatistics",
                   "getTotalLocalBytesRead", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -147,7 +147,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     s->totalLocalBytesRead = jVal.j;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "org/apache/hadoop/hdfs/ReadStatistics",
                   "getTotalShortCircuitBytesRead", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -156,7 +156,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     }
     s->totalShortCircuitBytesRead = jVal.j;
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/DFSInputStream$ReadStatistics",
+                  "org/apache/hadoop/hdfs/ReadStatistics",
                   "getTotalZeroCopyBytesRead", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,

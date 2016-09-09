@@ -304,7 +304,7 @@ public class DataChecksum implements Checksum {
           bytesPerChecksum, checksums.array(), crcsOffset, fileName, basePos);
       return;
     }
-    if (NativeCrc32.isAvailable()) {
+    if (NativeCrc32.isAvailable() && data.isDirect()) {
       NativeCrc32.verifyChunkedSums(bytesPerChecksum, type.id, checksums, data,
           fileName, basePos);
     } else {

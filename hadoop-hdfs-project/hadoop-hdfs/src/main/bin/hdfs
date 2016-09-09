@@ -129,7 +129,7 @@ function hdfscmd_case
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     diskbalancer)
-      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancer
+      HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancerCLI
       hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;

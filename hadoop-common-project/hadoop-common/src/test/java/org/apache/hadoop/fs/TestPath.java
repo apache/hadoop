@@ -17,9 +17,14 @@
  */
 
 package org.apache.hadoop.fs;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -505,5 +510,20 @@ public class TestPath {
     assertFalse(Path.isWindowsAbsolutePath("/test", true));
     assertFalse(Path.isWindowsAbsolutePath("C:test", false));
     assertFalse(Path.isWindowsAbsolutePath("/C:test", true));
+  }
+
+  @Test(timeout = 30000)
+  public void testSerDeser() throws Throwable {
+    Path source = new Path("hdfs://localhost:4040/scratch");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(256);
+    try(ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(source);
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    try (ObjectInputStream ois = new ObjectInputStream(bais)) {
+      Path deser = (Path) ois.readObject();
+      Assert.assertEquals(source, deser);
+    }
+
   }
 }
