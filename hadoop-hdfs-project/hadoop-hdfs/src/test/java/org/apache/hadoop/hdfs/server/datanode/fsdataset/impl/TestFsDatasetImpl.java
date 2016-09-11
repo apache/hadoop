@@ -636,24 +636,19 @@ public class TestFsDatasetImpl {
 
     class VolRemoveThread extends Thread {
       public void run() {
+        Set<File> volumesToRemove = new HashSet<>();
         try {
-          Set<File> volumesToRemove = new HashSet<>();
           volumesToRemove.add(StorageLocation.parse(
               dataset.getVolume(eb).getBasePath()).getFile());
-          /**
-           * TODO: {@link FsDatasetImpl#removeVolumes(Set, boolean)} is throwing
-           * IllegalMonitorStateException when there is a parallel reader/writer
-           * to the volume. Remove below exception handling block after fixing
-           * HDFS-10830.
-           */
-          LOG.info("Removing volume " + volumesToRemove);
-          dataset.removeVolumes(volumesToRemove, true);
-          volRemoveCompletedLatch.countDown();
-          LOG.info("Removed volume " + volumesToRemove);
         } catch (Exception e) {
-          LOG.info("Unexpected issue while removing volume: ", e);
-          volRemoveCompletedLatch.countDown();
+          LOG.info("Problem preparing volumes to remove: ", e);
+          Assert.fail("Exception in remove volume thread, check log for " +
+              "details.");
         }
+        LOG.info("Removing volume " + volumesToRemove);
+        dataset.removeVolumes(volumesToRemove, true);
+        volRemoveCompletedLatch.countDown();
+        LOG.info("Removed volume " + volumesToRemove);
       }
     }
 
