@@ -86,7 +86,7 @@ The solution is to have separate setting for server endpoints to force binding t
       <name>dfs.namenode.http-bind-host</name>
       <value>0.0.0.0</value>
       <description>
-        The actual adress the HTTP server will bind to. If this optional address
+        The actual address the HTTP server will bind to. If this optional address
         is set, it overrides only the hostname portion of dfs.namenode.http-address.
         It can also be specified per name node or name service for HA/Federation.
         This is useful for making the name node HTTP server listen on all
@@ -98,7 +98,7 @@ The solution is to have separate setting for server endpoints to force binding t
       <name>dfs.namenode.https-bind-host</name>
       <value>0.0.0.0</value>
       <description>
-        The actual adress the HTTPS server will bind to. If this optional address
+        The actual address the HTTPS server will bind to. If this optional address
         is set, it overrides only the hostname portion of dfs.namenode.https-address.
         It can also be specified per name node or name service for HA/Federation.
         This is useful for making the name node HTTPS server listen on all

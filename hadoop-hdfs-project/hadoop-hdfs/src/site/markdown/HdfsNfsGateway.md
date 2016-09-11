@@ -148,7 +148,7 @@ It's strongly recommended for the users to update a few configuration properties
     characters. The machine name format can be a single host, a "*", a Java regular expression, or an IPv4 address. The access
     privilege uses rw or ro to specify read/write or read-only access of the machines to exports. If the access privilege is not provided, the default is read-only. Entries are separated by ";".
     For example: "192.168.0.0/22 rw ; \\\\w\*\\\\.example\\\\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after
-    this property is updated. Note that, here Java regular expression is differnt with the regrulation expression used in 
+    this property is updated. Note that, here Java regular expression is different with the regulation expression used in
     Linux NFS export table, such as, using "\\\\w\*\\\\.example\\\\.com" instead of "\*.example.com", "192\\\\.168\\\\.0\\\\.(11|22)"
     instead of "192.168.0.[11|22]" and so on.  
 
