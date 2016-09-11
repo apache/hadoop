@@ -3046,4 +3046,11 @@
       Keytab based login can be enabled with dfs.balancer.keytab.enabled.
     </description>
   </property>
+
+<property>
+  <name>dfs.lock.suppress.warning.interval</name>
+  <value>10s</value>
+  <description>Instrumentation reporting long critical sections will suppress
+    consecutive warnings within this interval.</description>
+</property>
 </configuration>
