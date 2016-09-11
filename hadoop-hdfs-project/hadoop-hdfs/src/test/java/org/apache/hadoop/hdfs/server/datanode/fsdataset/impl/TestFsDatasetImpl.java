@@ -639,11 +639,11 @@ public class TestFsDatasetImpl {
         Set<File> volumesToRemove = new HashSet<>();
         try {
           volumesToRemove.add(StorageLocation.parse(
-                  dataset.getVolume(eb).getBasePath()).getFile());
+              dataset.getVolume(eb).getBasePath()).getFile());
         } catch (Exception e) {
-          LOG.info("Problem preparing volumes to remove: " + e);
+          LOG.info("Problem preparing volumes to remove: ", e);
           Assert.fail("Exception in remove volume thread, check log for " +
-                  "details.");
+              "details.");
         }
         LOG.info("Removing volume " + volumesToRemove);
         dataset.removeVolumes(volumesToRemove, true);

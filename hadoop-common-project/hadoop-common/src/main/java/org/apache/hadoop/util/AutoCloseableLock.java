@@ -18,6 +18,7 @@
 package org.apache.hadoop.util;
 
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -135,4 +136,11 @@ public class AutoCloseableLock implements AutoCloseable {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * See {@link ReentrantLock#newCondition()}.
+   * @return the Condition object
+   */
+  public Condition newCondition() {
+    return lock.newCondition();
+  }
 }
