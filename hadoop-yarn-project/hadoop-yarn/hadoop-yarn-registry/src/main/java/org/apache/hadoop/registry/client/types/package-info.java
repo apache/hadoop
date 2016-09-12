@@ -38,4 +38,10 @@
  * from REST front ends to the registry.
  *
  */
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 package org.apache.hadoop.registry.client.types;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

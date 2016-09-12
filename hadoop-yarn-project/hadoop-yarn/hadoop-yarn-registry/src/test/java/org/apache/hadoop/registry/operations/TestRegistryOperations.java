@@ -283,7 +283,7 @@ public class TestRegistryOperations extends AbstractRegistryTest {
     List<String> list = operations.list(path);
     assertEquals("Wrong no. of children", 2, list.size());
     // there's no order here, so create one
-    Map<String, String> names = new HashMap<String, String>();
+    Map<String, String> names = new HashMap<>();
     String entries = "";
     for (String child : list) {
       names.put(child, child);

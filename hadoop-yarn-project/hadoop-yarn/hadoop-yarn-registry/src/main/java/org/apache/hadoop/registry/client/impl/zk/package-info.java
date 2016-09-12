@@ -34,6 +34,10 @@
  * some operations/instantiating some objects. The definitions of these
  * are kept in {@link org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions}.
  *
- *
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 package org.apache.hadoop.registry.client.impl.zk;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

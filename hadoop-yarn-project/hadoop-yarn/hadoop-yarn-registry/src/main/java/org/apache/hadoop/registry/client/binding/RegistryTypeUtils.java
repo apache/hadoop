@@ -178,8 +178,8 @@ public class RegistryTypeUtils {
   /**
    * Get a single URI endpoint.
    * @param epr endpoint
-   * @return the uri of the first entry in the address list. Null if the endpoint
-   * itself is null
+   * @return the uri of the first entry in the address list.
+   * Null if the endpoint itself is null
    * @throws InvalidRecordException if the type is wrong, there are no addresses
    * or the payload ill-formatted
    */
@@ -194,7 +194,7 @@ public class RegistryTypeUtils {
       throw new InvalidRecordException(epr.toString(),
           "No addresses in endpoint");
     }
-    List<String> results = new ArrayList<String>(addresses.size());
+    List<String> results = new ArrayList<>(addresses.size());
     for (Map<String, String> address : addresses) {
       results.add(getAddressField(address, ADDRESS_URI));
     }
@@ -232,7 +232,7 @@ public class RegistryTypeUtils {
       throw new InvalidRecordException("", "Null endpoint");
     }
     List<String> addresses = retrieveAddressesUriType(epr);
-    List<URL> results = new ArrayList<URL>(addresses.size());
+    List<URL> results = new ArrayList<>(addresses.size());
     for (String address : addresses) {
       results.add(new URL(address));
     }

@@ -134,7 +134,7 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
         Class.forName(KerberosUtil.getKrb5LoginModuleName());
     Constructor<?> kerb5LoginConstr = kerb5LoginClass.getConstructor();
     Object kerb5LoginObject = kerb5LoginConstr.newInstance();
-    final Map<String, String> options = new HashMap<String, String>();
+    final Map<String, String> options = new HashMap<>();
     options.put("debug", "true");
     if (IBM_JAVA) {
       options.put("useKeytab",

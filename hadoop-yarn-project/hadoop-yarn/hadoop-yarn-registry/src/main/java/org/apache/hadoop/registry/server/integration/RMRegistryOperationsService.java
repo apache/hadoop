@@ -69,7 +69,7 @@ public class RMRegistryOperationsService extends RegistryAdminService {
    * access rights.
    *
    * @param conf configuration of the service
-   * @throws Exception
+   * @throws Exception failure to initialize
    */
   @Override
   protected void serviceInit(Configuration conf) throws Exception {

@@ -22,6 +22,8 @@ package org.apache.hadoop.registry.server.services;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 import org.apache.curator.framework.api.BackgroundCallback;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
@@ -76,6 +78,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * implements the recursive purge operation -the class
  * {@code AsyncPurge} provides the asynchronous scheduling of this.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class RegistryAdminService extends RegistryOperationsService {
 
   private static final Logger LOG =
@@ -483,20 +487,20 @@ public class RegistryAdminService extends RegistryOperationsService {
       }
       // there's children
       switch (purgePolicy) {
-        case SkipOnChildren:
-          // don't do the deletion... continue to next record
-          LOG.debug("Skipping deletion of {}", path);
-          toDelete = false;
-          break;
-        case PurgeAll:
-          // mark for deletion
-          LOG.debug("Scheduling for deletion of {} with children", path);
-          toDelete = true;
-          entries = new ArrayList<>(0);
-          break;
-        case FailOnChildren:
-          LOG.debug("Failing deletion operation on {}", path);
-          throw new PathIsNotEmptyDirectoryException(path);
+      case SkipOnChildren:
+        // don't do the deletion... continue to next record
+        LOG.debug("Skipping deletion of {}", path);
+        toDelete = false;
+        break;
+      case PurgeAll:
+        // mark for deletion
+        LOG.debug("Scheduling for deletion of {} with children", path);
+        toDelete = true;
+        entries = new ArrayList<>(0);
+        break;
+      case FailOnChildren:
+        LOG.debug("Failing deletion operation on {}", path);
+        throw new PathIsNotEmptyDirectoryException(path);
       }
     }
 

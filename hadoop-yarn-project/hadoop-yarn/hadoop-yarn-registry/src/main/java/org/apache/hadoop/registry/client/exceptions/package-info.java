@@ -30,4 +30,9 @@
  *   All exceptions in this package are derived from
  *   {@link org.apache.hadoop.registry.client.exceptions.RegistryIOException}
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 package org.apache.hadoop.registry.client.exceptions;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

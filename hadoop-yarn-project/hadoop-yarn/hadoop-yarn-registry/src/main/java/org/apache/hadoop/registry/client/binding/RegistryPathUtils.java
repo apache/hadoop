@@ -146,7 +146,7 @@ public class RegistryPathUtils {
   public static List<String> split(String path) {
     //
     String[] pathelements = path.split("/");
-    List<String> dirs = new ArrayList<String>(pathelements.length);
+    List<String> dirs = new ArrayList<>(pathelements.length);
     for (String pathelement : pathelements) {
       if (!pathelement.isEmpty()) {
         dirs.add(pathelement);

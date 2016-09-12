@@ -297,8 +297,8 @@ public class CuratorService extends CompositeService
   }
 
   /**
-   * Get the registry binding source ... this can be used to
-   * create new ensemble providers
+   * Get the registry binding source; this can be used to
+   * create new ensemble providers.
    * @return the registry binding source in use
    */
   public RegistryBindingSource getBindingSource() {

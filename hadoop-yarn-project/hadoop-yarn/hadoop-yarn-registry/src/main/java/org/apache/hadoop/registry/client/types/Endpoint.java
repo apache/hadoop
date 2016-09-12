@@ -88,7 +88,7 @@ public final class Endpoint implements Cloneable {
     this.protocolType = that.protocolType;
     this.addresses = newAddresses(that.addresses.size());
     for (Map<String, String> address : that.addresses) {
-      Map<String, String> addr2 = new HashMap<String, String>(address.size());
+      Map<String, String> addr2 = new HashMap<>(address.size());
       addr2.putAll(address);
       addresses.add(addr2);
     }
@@ -147,9 +147,7 @@ public final class Endpoint implements Cloneable {
       String protocolType,
       Map<String, String> addr) {
     this(api, addressType, protocolType);
-    if (addr != null) {
-      addresses.add(addr);
-    }
+    maybeAdd(addr);
   }
 
   /**
@@ -159,15 +157,24 @@ public final class Endpoint implements Cloneable {
    * @param protocolType protocol type
    * @param addrs addresses. Null elements will be skipped
    */
+  @SafeVarargs
   public Endpoint(String api,
       String addressType,
       String protocolType,
       Map<String, String>...addrs) {
     this(api, addressType, protocolType);
     for (Map<String, String> addr : addrs) {
-      if (addr!=null) {
-        addresses.add(addr);
-      }
+      maybeAdd(addr);
+    }
+  }
+
+  /**
+   * Add an address map if it is not null.
+   * @param addr addresses
+   */
+  private void maybeAdd(Map<String, String> addr) {
+    if (addr != null) {
+      addresses.add(addr);
     }
   }
 
@@ -177,7 +184,7 @@ public final class Endpoint implements Cloneable {
    * @return the new list
    */
   private List<Map<String, String>> newAddresses(int size) {
-    return new ArrayList<Map<String, String>>(size);
+    return new ArrayList<>(size);
   }
 
   /**

@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Raised if an attempt to parse a record failed.
- *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

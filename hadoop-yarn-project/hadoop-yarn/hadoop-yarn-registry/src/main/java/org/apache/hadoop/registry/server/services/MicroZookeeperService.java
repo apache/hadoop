@@ -65,9 +65,11 @@ import java.net.UnknownHostException;
 @InterfaceStability.Evolving
 public class MicroZookeeperService
     extends AbstractService
-    implements RegistryBindingSource, RegistryConstants,
+    implements RegistryBindingSource,
+    RegistryConstants,
+    RegistryInternalConstants,
     ZookeeperConfigOptions,
-    MicroZookeeperServiceKeys{
+    MicroZookeeperServiceKeys {
 
 
   private static final Logger
@@ -206,8 +208,8 @@ public class MicroZookeeperService
             "true"));
 
       //needed so that you can use sasl: strings in the registry
-      System.setProperty(RegistryInternalConstants.ZOOKEEPER_AUTH_PROVIDER +".1",
-          RegistryInternalConstants.SASLAUTHENTICATION_PROVIDER);
+      System.setProperty(ZOOKEEPER_AUTH_PROVIDER +".1",
+          SASLAUTHENTICATION_PROVIDER);
       String serverContext =
           System.getProperty(PROP_ZK_SERVER_SASL_CONTEXT);
       addDiagnostics("Server JAAS context s = %s", serverContext);

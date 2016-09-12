@@ -204,7 +204,7 @@ public class RegistryUtils {
       IOException {
     List<String> childNames = registryOperations.list(path);
     Map<String, RegistryPathStatus> results =
-        new HashMap<String, RegistryPathStatus>();
+        new HashMap<>();
     for (String childName : childNames) {
       String child = join(path, childName);
       try {
@@ -313,7 +313,7 @@ public class RegistryUtils {
       RegistryOperations operations,
       String parentpath,
       Collection<RegistryPathStatus> stats) throws IOException {
-    Map<String, ServiceRecord> results = new HashMap<String, ServiceRecord>(stats.size());
+    Map<String, ServiceRecord> results = new HashMap<>(stats.size());
     for (RegistryPathStatus stat : stats) {
       if (stat.size > ServiceRecord.RECORD_TYPE.length()) {
         // maybe has data

@@ -26,44 +26,44 @@ import org.apache.hadoop.registry.client.api.RegistryConstants;
  * so are kept separate.
  */
 public interface MicroZookeeperServiceKeys {
-  public static final String ZKSERVICE_PREFIX =
+  String ZKSERVICE_PREFIX =
       RegistryConstants.REGISTRY_PREFIX + "zk.service.";
   /**
    * Key to define the JAAS context for the ZK service: {@value}.
    */
-  public static final String KEY_REGISTRY_ZKSERVICE_JAAS_CONTEXT =
+  String KEY_REGISTRY_ZKSERVICE_JAAS_CONTEXT =
       ZKSERVICE_PREFIX + "service.jaas.context";
 
   /**
-   * ZK servertick time: {@value}
+   * ZK servertick time: {@value}.
    */
-  public static final String KEY_ZKSERVICE_TICK_TIME =
+  String KEY_ZKSERVICE_TICK_TIME =
       ZKSERVICE_PREFIX + "ticktime";
 
   /**
    * host to register on: {@value}.
    */
-  public static final String KEY_ZKSERVICE_HOST = ZKSERVICE_PREFIX + "host";
+  String KEY_ZKSERVICE_HOST = ZKSERVICE_PREFIX + "host";
   /**
    * Default host to serve on -this is <code>localhost</code> as it
    * is the only one guaranteed to be available: {@value}.
    */
-  public static final String DEFAULT_ZKSERVICE_HOST = "localhost";
+  String DEFAULT_ZKSERVICE_HOST = "localhost";
   /**
-   * port; 0 or below means "any": {@value}
+   * port; 0 or below means "any": {@value}.
    */
-  public static final String KEY_ZKSERVICE_PORT = ZKSERVICE_PREFIX + "port";
+  String KEY_ZKSERVICE_PORT = ZKSERVICE_PREFIX + "port";
 
   /**
-   * Directory containing data: {@value}
+   * Directory containing data: {@value}.
    */
-  public static final String KEY_ZKSERVICE_DIR = ZKSERVICE_PREFIX + "dir";
+  String KEY_ZKSERVICE_DIR = ZKSERVICE_PREFIX + "dir";
 
   /**
-   * Should failed SASL clients be allowed: {@value}?
+   * Should failed SASL clients be allowed: {@value}.
    *
    * Default is the ZK default: true
    */
-  public static final String KEY_ZKSERVICE_ALLOW_FAILED_SASL_CLIENTS =
+  String KEY_ZKSERVICE_ALLOW_FAILED_SASL_CLIENTS =
       ZKSERVICE_PREFIX + "allow.failed.sasl.clients";
 }

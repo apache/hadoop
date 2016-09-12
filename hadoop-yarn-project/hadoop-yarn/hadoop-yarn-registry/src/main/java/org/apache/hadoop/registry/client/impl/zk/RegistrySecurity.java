@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.service.AbstractService;
@@ -83,13 +84,6 @@ public class RegistrySecurity extends AbstractService {
   public static final String E_NO_USER_DETERMINED_FOR_ACLS =
       "No user for ACLs determinable from current user or registry option "
       + KEY_REGISTRY_USER_ACCOUNTS;
-
-  /**
-   * Error raised when the registry is tagged as secure but this
-   * process doesn't have hadoop security enabled.
-   */
-  public static final String E_NO_KERBEROS =
-      "Registry security is enabled -but Hadoop security is not enabled";
 
   /**
    * Access policy options.
@@ -253,49 +247,51 @@ public class RegistrySecurity extends AbstractService {
 
       // configure security access based on settings.
       switch (access) {
-        case sasl:
-          // secure + SASL => has to be authenticated
-          if (!UserGroupInformation.isSecurityEnabled()) {
-            throw new IOException("Kerberos required for secure registry access");
-          }
-          UserGroupInformation currentUser =
-              UserGroupInformation.getCurrentUser();
-          jaasClientContext = getOrFail(KEY_REGISTRY_CLIENT_JAAS_CONTEXT,
-              DEFAULT_REGISTRY_CLIENT_JAAS_CONTEXT);
-          jaasClientIdentity = currentUser.getShortUserName();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Auth is SASL user=\"{}\" JAAS context=\"{}\"",
-                jaasClientIdentity,
-                jaasClientContext);
-          }
-          break;
+      case sasl:
+        // secure + SASL => has to be authenticated
+        if (!UserGroupInformation.isSecurityEnabled()) {
+          throw new AccessControlException("Kerberos required" +
+              " for secure registry access");
+        }
+        UserGroupInformation currentUser =
+            UserGroupInformation.getCurrentUser();
+        jaasClientContext = getOrFail(KEY_REGISTRY_CLIENT_JAAS_CONTEXT,
+            DEFAULT_REGISTRY_CLIENT_JAAS_CONTEXT);
+        jaasClientIdentity = currentUser.getShortUserName();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Auth is SASL user=\"{}\" JAAS context=\"{}\"",
+              jaasClientIdentity,
+              jaasClientContext);
+        }
+        break;
 
-        case digest:
-          String id = getOrFail(KEY_REGISTRY_CLIENT_AUTHENTICATION_ID, "");
-          String pass = getOrFail(KEY_REGISTRY_CLIENT_AUTHENTICATION_PASSWORD, "");
-          if (userACLs.isEmpty()) {
-            //
-            throw new ServiceStateException(E_NO_USER_DETERMINED_FOR_ACLS);
-          }
-          digest(id, pass);
-          ACL acl = new ACL(ZooDefs.Perms.ALL, toDigestId(id, pass));
-          userACLs.add(acl);
-          digestAuthUser = id;
-          digestAuthPassword = pass;
-          String authPair = id + ":" + pass;
-          digestAuthData = authPair.getBytes("UTF-8");
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Auth is Digest ACL: {}", aclToString(acl));
-          }
-          break;
+      case digest:
+        String id = getOrFail(KEY_REGISTRY_CLIENT_AUTHENTICATION_ID, "");
+        String pass = getOrFail(KEY_REGISTRY_CLIENT_AUTHENTICATION_PASSWORD,
+            "");
+        if (userACLs.isEmpty()) {
+          //
+          throw new ServiceStateException(E_NO_USER_DETERMINED_FOR_ACLS);
+        }
+        digest(id, pass);
+        ACL acl = new ACL(ZooDefs.Perms.ALL, toDigestId(id, pass));
+        userACLs.add(acl);
+        digestAuthUser = id;
+        digestAuthPassword = pass;
+        String authPair = id + ":" + pass;
+        digestAuthData = authPair.getBytes("UTF-8");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Auth is Digest ACL: {}", aclToString(acl));
+        }
+        break;
 
-        case anon:
-          // nothing is needed; account is read only.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Auth is anonymous");
-          }
-          userACLs = new ArrayList<>(0);
-          break;
+      case anon:
+        // nothing is needed; account is read only.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Auth is anonymous");
+        }
+        userACLs = new ArrayList<>(0);
+        break;
       }
       systemACLs.addAll(userACLs);
 
@@ -928,7 +924,8 @@ public class RegistrySecurity extends AbstractService {
   /**
    * Create an ACL For a user.
    * @param ugi User identity
-   * @param perms permissions to pass to {@link #createACLfromUsername(String, int)}
+   * @param perms permissions to pass to
+   *   {@link #createACLfromUsername(String, int)}
    * @return the ACL For the specified user. If the username doesn't end
    * in "@" then the realm is added
    */

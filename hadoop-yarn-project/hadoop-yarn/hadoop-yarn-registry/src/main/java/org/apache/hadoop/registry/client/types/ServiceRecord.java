@@ -47,7 +47,7 @@ public class ServiceRecord implements Cloneable {
   public static final String RECORD_TYPE = "JSONServiceRecord";
 
   /**
-   * The type field. This must be the string {@link #RECORD_TYPE}
+   * The type field. This must be the string {@link #RECORD_TYPE}.
    */
   public String type = RECORD_TYPE;
 
@@ -59,17 +59,17 @@ public class ServiceRecord implements Cloneable {
   /**
    * map to handle unknown attributes.
    */
-  private Map<String, String> attributes = new HashMap<String, String>(4);
+  private Map<String, String> attributes = new HashMap<>(4);
 
   /**
    * List of endpoints intended for use to external callers.
    */
-  public List<Endpoint> external = new ArrayList<Endpoint>();
+  public List<Endpoint> external = new ArrayList<>();
 
   /**
    * List of endpoints for use <i>within</i> an application.
    */
-  public List<Endpoint> internal = new ArrayList<Endpoint>();
+  public List<Endpoint> internal = new ArrayList<>();
 
   /**
    * Create a service record with no ID, description or registration time.
@@ -92,14 +92,14 @@ public class ServiceRecord implements Cloneable {
     // endpoints
     List<Endpoint> src = that.internal;
     if (src != null) {
-      internal = new ArrayList<Endpoint>(src.size());
+      internal = new ArrayList<>(src.size());
       for (Endpoint endpoint : src) {
         internal.add(new Endpoint(endpoint));
       }
     }
     src = that.external;
     if (src != null) {
-      external = new ArrayList<Endpoint>(src.size());
+      external = new ArrayList<>(src.size());
       for (Endpoint endpoint : src) {
         external.add(new Endpoint(endpoint));
       }

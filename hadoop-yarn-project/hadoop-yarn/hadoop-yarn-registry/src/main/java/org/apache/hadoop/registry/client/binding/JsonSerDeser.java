@@ -54,7 +54,7 @@ import java.io.InputStream;
  * which use the mapper
  * @param <T> Type to marshal.
  */
-@InterfaceAudience.Private()
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class JsonSerDeser<T> {
 
