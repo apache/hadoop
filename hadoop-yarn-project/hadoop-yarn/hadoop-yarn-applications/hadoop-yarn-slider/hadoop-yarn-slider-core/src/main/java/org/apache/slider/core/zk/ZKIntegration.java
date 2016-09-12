@@ -33,6 +33,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -65,6 +67,8 @@ public class ZKIntegration implements Watcher, Closeable {
   private final String clustername;
   private final String userPath;
   private int sessionTimeout = SESSION_TIMEOUT;
+  private static final Map<String, ZooKeeper> ZK_SESSIONS = new HashMap<>();
+
 /**
  flag to set to indicate that the user path should be created if
  it is not already there
@@ -93,10 +97,32 @@ public class ZKIntegration implements Watcher, Closeable {
     this.userPath = mkSliderUserPath(username);
   }
 
-  public void init() throws IOException {
-    assert zookeeper == null;
-    log.debug("Binding ZK client to {}", zkConnection);
-    zookeeper = new ZooKeeper(zkConnection, sessionTimeout, this, canBeReadOnly);
+  /**
+   * Returns true only if an active ZK session is available and retrieved from
+   * cache, false when it has to create a new one.
+   *
+   * @return true if from cache, false when new session created
+   * @throws IOException
+   */
+  public synchronized boolean init() throws IOException {
+    if (zookeeper != null && getAlive()) {
+      return true;
+    }
+
+    synchronized (ZK_SESSIONS) {
+      if (ZK_SESSIONS.containsKey(zkConnection)) {
+        zookeeper = ZK_SESSIONS.get(zkConnection);
+      }
+      if (zookeeper == null || !getAlive()) {
+        log.info("Binding ZK client to {}", zkConnection);
+        zookeeper = new ZooKeeper(zkConnection, sessionTimeout, this,
+            canBeReadOnly);
+        ZK_SESSIONS.put(zkConnection, zookeeper);
+        return false;
+      } else {
+        return true;
+      }
+    }
   }
 
   /**

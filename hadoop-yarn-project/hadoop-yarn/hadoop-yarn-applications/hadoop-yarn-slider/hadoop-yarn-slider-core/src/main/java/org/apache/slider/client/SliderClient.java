@@ -604,11 +604,14 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       BlockingZKWatcher watcher = new BlockingZKWatcher();
       client = ZKIntegration.newInstance(registryQuorum, user, clusterName, true, false, watcher,
           ZKIntegration.SESSION_TIMEOUT);
-      client.init();
-      watcher.waitForZKConnection(2 * 1000);
+      boolean fromCache = client.init();
+      if (!fromCache) {
+        watcher.waitForZKConnection(2 * 1000);
+      }
     } catch (InterruptedException e) {
       client = null;
-      log.warn("Unable to connect to zookeeper quorum {}", registryQuorum, e);
+      log.warn("Interrupted - unable to connect to zookeeper quorum {}",
+          registryQuorum, e);
     } catch (IOException e) {
       log.warn("Unable to connect to zookeeper quorum {}", registryQuorum, e);
     }
