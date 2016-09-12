@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -15,23 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if ! declare -f hadoop_subcommand_distch >/dev/null 2>/dev/null; then
+load hadoop-functions_test_helper
 
-  if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "distch" "distributed metadata changer"
-  fi
-
-  # this can't be indented otherwise shelldocs won't get it
-
-## @description  distch command for hadoop
-## @audience     public
-## @stability    stable
-## @replaceable  yes
-function hadoop_subcommand_distch
-{
-  # shellcheck disable=SC2034
-  HADOOP_CLASSNAME=org.apache.hadoop.tools.DistCh
-  hadoop_add_to_classpath_tools hadoop-extras
+@test "hadoop_subcommand_opts (daemonization false)" {
+  HADOOP_OPTS="1"
+  HADOOP_CLIENT_OPTS="2"
+  HADOOP_SUBCMD_SUPPORTDAEMONIZATION="false"
+  hadoop_add_client_opts
+  [ "${HADOOP_OPTS}" = "1 2" ]
 }
 
-fi
+@test "hadoop_subcommand_opts (daemonization true)" {
+  HADOOP_OPTS="1"
+  HADOOP_CLIENT_OPTS="2"
+  HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+  hadoop_add_client_opts
+  [ "${HADOOP_OPTS}" = "1" ]
+}
+
+@test "hadoop_subcommand_opts (daemonization empty)" {
+  HADOOP_OPTS="1"
+  HADOOP_CLIENT_OPTS="2"
+  unset HADOOP_SUBCMD_SUPPORTDAEMONIZATION
+  hadoop_add_client_opts
+  [ "${HADOOP_OPTS}" = "1 2" ]
+}

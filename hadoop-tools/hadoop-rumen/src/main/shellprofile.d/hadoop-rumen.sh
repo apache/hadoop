@@ -30,8 +30,6 @@ function hadoop_subcommand_rumenfolder
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.tools.rumen.Folder
   hadoop_add_to_classpath_tools hadoop-rumen
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 fi
@@ -51,8 +49,6 @@ function hadoop_subcommand_rumentrace
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.tools.rumen.TraceBuilder
   hadoop_add_to_classpath_tools hadoop-rumen
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 fi

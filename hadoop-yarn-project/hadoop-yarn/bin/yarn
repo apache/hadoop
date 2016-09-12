@@ -68,8 +68,6 @@ function yarncmd_case
   case ${subcmd} in
     application|applicationattempt|container)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.ApplicationCLI
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
       set -- "${subcmd}" "$@"
       HADOOP_SUBCMD_ARGS=("$@")
     ;;
@@ -78,13 +76,9 @@ function yarncmd_case
     ;;
     cluster)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.ClusterCLI
-      hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
-      YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     daemonlog)
       HADOOP_CLASSNAME=org.apache.hadoop.log.LogLevel
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     envvars)
       echo "JAVA_HOME='${JAVA_HOME}'"
@@ -99,8 +93,6 @@ function yarncmd_case
     ;;
     jar)
       HADOOP_CLASSNAME=org.apache.hadoop.util.RunJar
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     historyserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
@@ -111,19 +103,13 @@ function yarncmd_case
     ;;
     logs)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.LogsCLI
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     node)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.NodeCLI
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     nodemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
-      hadoop_debug "Append YARN_NODEMANAGER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_NODEMANAGER_OPTS}"
       # Backwards compatibility
       if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
         HADOOP_HEAPSIZE_MAX="${YARN_NODEMANAGER_HEAPSIZE}"
@@ -132,8 +118,6 @@ function yarncmd_case
     proxyserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
-      hadoop_debug "Append YARN_PROXYSERVER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_PROXYSERVER_OPTS}"
       # Backwards compatibility
       if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
         # shellcheck disable=SC2034
@@ -142,14 +126,10 @@ function yarncmd_case
     ;;
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.QueueCLI
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_RESOURCEMANAGER_OPTS}"
-      hadoop_debug "Append YARN_RESOURCEMANAGER_OPTS onto HADOOP_OPTS"
       # Backwards compatibility
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
         # shellcheck disable=SC2034
@@ -158,31 +138,21 @@ function yarncmd_case
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     sharedcachemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
-      hadoop_debug "Append YARN_SHAREDCACHEMANAGER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_SHAREDCACHEMANAGER_OPTS}"
     ;;
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
-      hadoop_debug "Append YARN_TIMELINEREADER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_TIMELINEREADER_OPTS}"
     ;;
     timelineserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
-      hadoop_debug "Append YARN_TIMELINESERVER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_TIMELINESERVER_OPTS}"
       # Backwards compatibility
       if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
         # shellcheck disable=SC2034
@@ -191,8 +161,6 @@ function yarncmd_case
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
     ;;
     top)
       doNotSetCols=0
@@ -222,8 +190,6 @@ function yarncmd_case
         fi
       fi
       HADOOP_CLASSNAME=org.apache.hadoop.yarn.client.cli.TopCLI
-      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS}"
       HADOOP_SUBCMD_ARGS=("$@")
     ;;
     *)
@@ -262,6 +228,8 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
+hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 HADOOP_SUBCMD_ARGS=("$@")
 
 if declare -f yarn_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
@@ -271,15 +239,30 @@ else
   yarncmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
 
-hadoop_verify_user "${HADOOP_SUBCMD}"
+# It's unclear if YARN_CLIENT_OPTS is actually a useful
+# thing to have separate from HADOOP_CLIENT_OPTS.  Someone
+# might use it, so let's not deprecate it and just override
+# HADOOP_CLIENT_OPTS instead before we (potentially) add it
+# to the command line
+if [[ -n "${YARN_CLIENT_OPTS}" ]]; then
+  # shellcheck disable=SC2034
+  HADOOP_CLIENT_OPTS=${YARN_CLIENT_OPTS}
+fi
+
+hadoop_add_client_opts
 
 if [[ ${HADOOP_WORKER_MODE} = true ]]; then
   hadoop_common_worker_mode_execute "${HADOOP_YARN_HOME}/bin/yarn" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
+hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
   HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
+
+  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
   priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"
