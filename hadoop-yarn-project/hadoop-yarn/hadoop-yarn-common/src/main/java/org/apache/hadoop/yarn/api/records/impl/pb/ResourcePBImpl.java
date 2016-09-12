@@ -170,7 +170,9 @@ public class ResourcePBImpl extends Resource {
       resourceInformation.setName(resource);
     }
     initResources();
-    resources.put(resource, resourceInformation);
+    if (resources.containsKey(resource)) {
+      resources.put(resource, resourceInformation);
+    }
   }
 
   @Override

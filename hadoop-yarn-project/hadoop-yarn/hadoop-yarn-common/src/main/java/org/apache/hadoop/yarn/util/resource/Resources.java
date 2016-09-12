@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -142,6 +143,11 @@ public class Resources {
           tmp.get(entry.getKey()).setValue(resourceValue);
         }
       }
+      // this is a fix for getVirtualCores returning an int
+      if (resourceValue > Integer.MAX_VALUE) {
+        tmp.get(ResourceInformation.VCORES.getName())
+            .setValue((long) Integer.MAX_VALUE);
+      }
       return tmp;
     }
 
@@ -187,12 +193,30 @@ public class Resources {
   }
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemorySize(), res.getVirtualCores());
+    Resource ret = Resource.newInstance(0, 0);
+    for (Map.Entry<String, ResourceInformation> entry : res.getResources()
+        .entrySet()) {
+      ret.setResourceInformation(entry.getKey(),
+          ResourceInformation.newInstance(entry.getValue()));
+    }
+    return ret;
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
-    lhs.setMemorySize(lhs.getMemorySize() + rhs.getMemorySize());
-    lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
+    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(name);
+        ResourceInformation lhsValue = entry.getValue();
+        Long convertedRhs = UnitsConversionUtil
+            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
+                rhsValue.getValue());
+        lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
+      } catch (YarnException ye) {
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -201,8 +225,20 @@ public class Resources {
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
-    lhs.setMemorySize(lhs.getMemorySize() - rhs.getMemorySize());
-    lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
+    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(name);
+        ResourceInformation lhsValue = entry.getValue();
+        Long convertedRhs = UnitsConversionUtil
+            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
+                rhsValue.getValue());
+        lhs.setResourceValue(name, lhsValue.getValue() - convertedRhs);
+      } catch (YarnException ye) {
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -233,8 +269,12 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    lhs.setMemorySize((long)(lhs.getMemorySize() * by));
-    lhs.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      ResourceInformation lhsValue = entry.getValue();
+      lhs.setResourceValue(name, (long) (lhsValue.getValue() * by));
+    }
     return lhs;
   }
 
@@ -248,9 +288,20 @@ public class Resources {
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {
-    lhs.setMemorySize(lhs.getMemorySize() + (long)(rhs.getMemorySize() * by));
-    lhs.setVirtualCores(lhs.getVirtualCores()
-        + (int)(rhs.getVirtualCores() * by));
+    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(name);
+        ResourceInformation lhsValue = entry.getValue();
+        Long convertedRhs = (long) (UnitsConversionUtil
+            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
+                rhsValue.getValue()) * by);
+        lhs.setResourceValue(name, lhsValue.getValue() + convertedRhs);
+      } catch (YarnException ye) {
+        continue;
+      }
+    }
     return lhs;
   }
 
@@ -266,8 +317,12 @@ public class Resources {
   
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
     Resource out = clone(lhs);
-    out.setMemorySize((long)(lhs.getMemorySize() * by));
-    out.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    for (Map.Entry<String, ResourceInformation> entry : out.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      ResourceInformation lhsValue = entry.getValue();
+      out.setResourceValue(name, (long) (lhsValue.getValue() * by));
+    }
     return out;
   }
 
@@ -367,8 +422,23 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-    return smaller.getMemorySize() <= bigger.getMemorySize() &&
-        smaller.getVirtualCores() <= bigger.getVirtualCores();
+    for (Map.Entry<String, ResourceInformation> entry : smaller.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      try {
+        ResourceInformation rhsValue = bigger.getResourceInformation(name);
+        ResourceInformation lhsValue = entry.getValue();
+        Long convertedRhs = UnitsConversionUtil
+            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
+                rhsValue.getValue());
+        if(lhsValue.getValue() > convertedRhs) {
+          return false;
+        }
+      } catch (YarnException ye) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static boolean fitsIn(ResourceCalculator rc, Resource cluster,
@@ -377,13 +447,45 @@ public class Resources {
   }
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
-    return createResource(Math.min(lhs.getMemorySize(), rhs.getMemorySize()),
-        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()));
+    Resource ret = createResource(0);
+    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(name);
+        ResourceInformation lhsValue = entry.getValue();
+        Long convertedRhs = UnitsConversionUtil
+            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
+                rhsValue.getValue());
+        ResourceInformation outInfo =
+            lhsValue.getValue() < convertedRhs ? lhsValue : rhsValue;
+        ret.setResourceInformation(name, outInfo);
+      } catch (YarnException ye) {
+        continue;
+      }
+    }
+    return ret;
   }
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
-    return createResource(Math.max(lhs.getMemorySize(), rhs.getMemorySize()),
-        Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()));
+    Resource ret = createResource(0);
+    for (Map.Entry<String, ResourceInformation> entry : lhs.getResources()
+        .entrySet()) {
+      String name = entry.getKey();
+      try {
+        ResourceInformation rhsValue = rhs.getResourceInformation(name);
+        ResourceInformation lhsValue = entry.getValue();
+        Long convertedRhs = UnitsConversionUtil
+            .convert(rhsValue.getUnits(), lhsValue.getUnits(),
+                rhsValue.getValue());
+        ResourceInformation outInfo =
+            lhsValue.getValue() > convertedRhs ? lhsValue : rhsValue;
+        ret.setResourceInformation(name, outInfo);
+      } catch (YarnException ye) {
+        continue;
+      }
+    }
+    return ret;
   }
 
   public static boolean isAnyMajorResourceZero(ResourceCalculator rc,
