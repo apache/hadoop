@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +50,17 @@ public class TestResourceUtils {
   @Before
   public void setup() {
     ResourceUtils.resetResourceTypes();
+  }
+
+  @After
+  public void teardown() {
+    Configuration conf = new YarnConfiguration();
+    File source = new File(
+        conf.getClassLoader().getResource("resource-types-1.xml").getFile());
+    File dest = new File(source.getParent(), "resource-types.xml");
+    if (dest.exists()) {
+      dest.delete();
+    }
   }
 
   private void testMemoryAndVcores(Map<String, ResourceInformation> res) {
@@ -251,6 +263,7 @@ public class TestResourceUtils {
 
     Configuration conf = new YarnConfiguration();
     Map<String, Resource> testRun = new HashMap<>();
+    setupResourceTypes(conf, "resource-types-4.xml");
     // testRun.put("node-resources-1.xml", Resource.newInstance(1024, 1));
     Resource test3Resources = Resource.newInstance(1024, 1);
     test3Resources.setResourceInformation("resource1",
@@ -271,5 +284,15 @@ public class TestResourceUtils {
           ResourceUtils.getNodeResourceInformation(conf);
       Assert.assertEquals(entry.getValue().getResources(), actual);
     }
+  }
+
+  public static String setupResourceTypes(Configuration conf, String filename)
+      throws Exception {
+    File source = new File(
+        conf.getClassLoader().getResource(filename).getFile());
+    File dest = new File(source.getParent(), "resource-types.xml");
+    FileUtils.copyFile(source, dest);
+    ResourceUtils.getResourceTypes();
+    return dest.getAbsolutePath();
   }
 }

@@ -183,8 +183,10 @@ public class DominantResourceCalculator extends ResourceCalculator {
         Long requiredResourceValue = UnitsConversionUtil
             .convert(requiredResource.getUnits(), availableResource.getUnits(),
                 requiredResource.getValue());
-        Long tmp = availableResource.getValue() / requiredResourceValue;
-        min = min < tmp ? min : tmp;
+        if (requiredResourceValue != 0) {
+          Long tmp = availableResource.getValue() / requiredResourceValue;
+          min = min < tmp ? min : tmp;
+        }
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
             "Error getting resource information for " + resource, ye);
@@ -301,10 +303,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
             .convert(stepFactorResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 stepFactorResourceInformation.getValue());
-
-        tmp.setValue(
-            Math.min(roundUp(Math.max(rValue, minimumValue), stepFactorValue),
-                maximumValue));
+        Long value = Math.max(rValue, minimumValue);
+        if (stepFactorValue != 0) {
+          value = roundUp(value, stepFactorValue);
+        }
+        tmp.setValue(Math.min(value, maximumValue));
         ret.setResourceInformation(resource, tmp);
       } catch (YarnException ye) {
         throw new IllegalArgumentException(
@@ -340,9 +343,11 @@ public class DominantResourceCalculator extends ResourceCalculator {
             .convert(stepFactorResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 stepFactorResourceInformation.getValue());
-
-        Long value = roundUp ? roundUp(rValue, stepFactorValue) :
-            roundDown(rValue, stepFactorValue);
+        Long value = rValue;
+        if (stepFactorValue != 0) {
+          value = roundUp ? roundUp(rValue, stepFactorValue) :
+              roundDown(rValue, stepFactorValue);
+        }
         tmp.setValue(value);
         ret.setResourceInformation(resource, tmp);
       } catch (YarnException ye) {
@@ -382,10 +387,15 @@ public class DominantResourceCalculator extends ResourceCalculator {
             .convert(stepFactorResourceInformation.getUnits(),
                 rResourceInformation.getUnits(),
                 stepFactorResourceInformation.getValue());
-
-        Long value =
-            roundUp ? roundUp((long) Math.ceil(rValue * by), stepFactorValue) :
-                roundDown((long) (rValue * by), stepFactorValue);
+        Long value;
+        if (stepFactorValue != 0) {
+          value = roundUp ?
+              roundUp((long) Math.ceil(rValue * by), stepFactorValue) :
+              roundDown((long) (rValue * by), stepFactorValue);
+        } else {
+          value =
+              roundUp ? (long) Math.ceil(rValue * by) : (long) (rValue * by);
+        }
         tmp.setValue(value);
         ret.setResourceInformation(resource, tmp);
       } catch (YarnException ye) {
