@@ -73,8 +73,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * A key async action is the depth-first tree purge, which supports
  * pluggable policies for deleting entries. The method
  * {@link #purge(String, NodeSelector, PurgePolicy, BackgroundCallback)}
- * implements the recursive purge operation —the class
- * {{AsyncPurge}} provides the asynchronous scheduling of this.
+ * implements the recursive purge operation -the class
+ * {@code AsyncPurge} provides the asynchronous scheduling of this.
  */
 public class RegistryAdminService extends RegistryOperationsService {
 
@@ -88,25 +88,25 @@ public class RegistryAdminService extends RegistryOperationsService {
       | ZooDefs.Perms.CREATE | ZooDefs.Perms.DELETE;
 
   /**
-   * Executor for async operations
+   * Executor for async operations.
    */
   protected final ExecutorService executor;
 
   /**
    * Future of the root path creation operation schedule on
-   * service <code>start()</code>
+   * service <code>start()</code>.
    */
   private Future<Void> rootPathsFuture;
 
   /**
-   * Flag set to true when registry setup is completed —that is, when the
+   * Flag set to true when registry setup is completed -that is, when the
    * root directories have been created. If that operation fails, this
    * flag will remain false.
    */
   private volatile boolean registrySetupCompleted;
 
   /**
-   * Construct an instance of the service
+   * Construct an instance of the service.
    * @param name service name
    */
   public RegistryAdminService(String name) {
@@ -114,8 +114,8 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * construct an instance of the service, using the
-   * specified binding source to bond to ZK
+   * Construct an instance of the service, using the
+   * specified binding source to bond to ZK.
    * @param name service name
    * @param bindingSource provider of ZK binding information
    */
@@ -156,7 +156,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Get the executor
+   * Get the executor.
    * @return the executor
    */
   protected ExecutorService getExecutor() {
@@ -164,7 +164,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Submit a callable
+   * Submit a callable.
    * @param callable callable
    * @param <V> type of the final get
    * @return a future to wait on
@@ -177,14 +177,14 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Asynchronous operation to create a directory
+   * Asynchronous operation to create a directory.
    * @param path path
    * @param acls ACL list
    * @param createParents flag to indicate parent dirs should be created
    * as needed
    * @return the future which will indicate whether or not the operation
-   * succeeded —and propagate any exceptions
-   * @throws IOException
+   * succeeded -and propagate any exceptions
+   * @throws IOException problem creating the path
    */
   public Future<Boolean> createDirAsync(final String path,
       final List<ACL> acls,
@@ -196,7 +196,7 @@ public class RegistryAdminService extends RegistryOperationsService {
           return maybeCreate(path, CreateMode.PERSISTENT,
               acls, createParents);
         } catch (IOException e) {
-          LOG.warn("Exception creating path {}: {}", path, e);
+          LOG.warn("Exception creating path {}", path, e);
           throw e;
         }
       }
@@ -213,17 +213,18 @@ public class RegistryAdminService extends RegistryOperationsService {
     super.serviceInit(conf);
     RegistrySecurity registrySecurity = getRegistrySecurity();
     if (registrySecurity.isSecureRegistry()) {
-      ACL sasl = registrySecurity.createSaslACLFromCurrentUser(ZooDefs.Perms.ALL);
+      ACL sasl = registrySecurity
+          .createSaslACLFromCurrentUser(ZooDefs.Perms.ALL);
       registrySecurity.addSystemACL(sasl);
-      LOG.info("Registry System ACLs:",
+      LOG.info("Registry System ACLs: {}",
           RegistrySecurity.aclsToString(
           registrySecurity.getSystemACLs()));
     }
   }
 
   /**
-   * Start the service, including creating base directories with permissions
-   * @throws Exceptionn on a failure to start.
+   * Start the service, including creating base directories with permissions.
+   * @throws Exception on a failure to start.
    */
   @Override
   protected void serviceStart() throws Exception {
@@ -233,7 +234,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Asynchronous operation to create the root directories
+   * Asynchronous operation to create the root directories.
    * @return the future which can be used to await the outcome of this
    * operation
    */
@@ -267,7 +268,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Create the initial registry paths
+   * Create the initial registry paths.
    * @throws IOException any failure
    */
   private void createRootRegistryPaths() throws IOException {
@@ -293,7 +294,7 @@ public class RegistryAdminService extends RegistryOperationsService {
           bindingDiagnosticDetails(),
           dumpRegistryRobustly(true));
 
-      LOG.error(" Failure {}", e, e);
+      LOG.error(" Failure createRootRegistryPaths: {}", e.getPath(), e);
       LOG.error(message);
 
       throw new NoPathPermissionsException(e.getPath().toString(), message, e);
@@ -302,7 +303,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Get the path to a user's home dir
+   * Get the path to a user's home dir.
    * @param username username
    * @return a path for services underneath
    */
@@ -330,7 +331,7 @@ public class RegistryAdminService extends RegistryOperationsService {
 
   /**
    * Start an async operation to create the home path for a user
-   * if it does not exist
+   * if it does not exist.
    * @param shortname username, without any @REALM in kerberos
    * @return the path created
    * @throws IOException any failure while setting up the operation
@@ -402,11 +403,18 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Policy to purge entries
+   * How to act when purging an entry which has children..
    */
   public enum PurgePolicy {
+    /** Purge everything .*/
     PurgeAll,
+
+    /** Fail if there are child entries. */
     FailOnChildren,
+
+    /**
+     * Skip if there are child entries.
+     */
     SkipOnChildren
   }
 
@@ -414,25 +422,26 @@ public class RegistryAdminService extends RegistryOperationsService {
    * Recursive operation to purge all matching records under a base path.
    * <ol>
    *   <li>Uses a depth first search</li>
-   *   <li>A match is on ID and persistence policy, or, if policy==-1, any match</li>
-   *   <li>If a record matches then it is deleted without any child searches</li>
+   *   <li>A path is considered a match if {@code selector} selects it.</li>
+   *   <li>If a record matches then it is deleted based on the
+   *   {@code PurgePolicy} and the number of children (any).</li>
    *   <li>Deletions will be asynchronous if a callback is provided</li>
    * </ol>
    *
    * The code is designed to be robust against parallel deletions taking place;
    * in such a case it will stop attempting that part of the tree. This
    * avoid the situation of more than 1 purge happening in parallel and
-   * one of the purge operations deleteing the node tree above the other.
+   * one of the purge operations deleting the node tree above the other.
    * @param path base path
    * @param selector selector for the purge policy
    * @param purgePolicy what to do if there is a matching record with children
    * @param callback optional curator callback
-   * @return the number of delete operations perfomed. As deletes may be for
+   * @return the number of delete operations performed. As deletes may be for
    * everything under a path, this may be less than the number of records
    * actually deleted
-   * @throws IOException problems
    * @throws PathIsNotEmptyDirectoryException if an entry cannot be deleted
-   * as it has children and the purge policy is FailOnChildren
+   * as it has children and the purge policy is {@link PurgePolicy#FailOnChildren}
+   * @throws IOException other problems
    */
   @VisibleForTesting
   public int purge(String path,
@@ -460,11 +469,7 @@ public class RegistryAdminService extends RegistryOperationsService {
       ServiceRecord serviceRecord = resolve(path);
       // there is now an entry here.
       toDelete = selector.shouldSelect(path, registryPathStatus, serviceRecord);
-    } catch (EOFException ignored) {
-      // ignore
-    } catch (InvalidRecordException ignored) {
-      // ignore
-    } catch (NoRecordException ignored) {
+    } catch (EOFException | NoRecordException | InvalidRecordException ignored) {
       // ignore
     } catch (PathNotFoundException e) {
       // there's no record here, it may have been deleted already.
@@ -480,23 +485,17 @@ public class RegistryAdminService extends RegistryOperationsService {
       switch (purgePolicy) {
         case SkipOnChildren:
           // don't do the deletion... continue to next record
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skipping deletion");
-          }
+          LOG.debug("Skipping deletion of {}", path);
           toDelete = false;
           break;
         case PurgeAll:
           // mark for deletion
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Scheduling for deletion with children");
-          }
+          LOG.debug("Scheduling for deletion of {} with children", path);
           toDelete = true;
-          entries = new ArrayList<RegistryPathStatus>(0);
+          entries = new ArrayList<>(0);
           break;
         case FailOnChildren:
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Failing deletion operation");
-          }
+          LOG.debug("Failing deletion operation on {}", path);
           throw new PathIsNotEmptyDirectoryException(path);
       }
     }
@@ -527,7 +526,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * Comparator used for purge logic
+   * Comparator used for purge logic.
    */
   public interface NodeSelector {
 
@@ -537,7 +536,7 @@ public class RegistryAdminService extends RegistryOperationsService {
   }
 
   /**
-   * An async registry purge action taking
+   * An async registry purge action taking.
    * a selector which decides what to delete
    */
   public class AsyncPurge implements Callable<Integer> {
@@ -572,7 +571,7 @@ public class RegistryAdminService extends RegistryOperationsService {
             purgePolicy,
             callback);
       } catch (Exception e) {
-        LOG.warn("Exception in {}: {}", this, e, e);
+        LOG.warn("Exception in {}", this, e);
         throw e;
       }
     }

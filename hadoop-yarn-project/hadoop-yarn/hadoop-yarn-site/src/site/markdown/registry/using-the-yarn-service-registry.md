@@ -70,12 +70,14 @@ The registry cannot be used:-
 		yarn:id = ${application_attemptId}
 
 	 This means that the record will be deleted when the application attempt
-	 completes, even if a new attempt is created. Every Application attempt will have to re-register the endpoint —which may be needed to locate the service anyway.
+	 completes, even if a new attempt is created. Every Application attempt will
+	 have to re-register the endpoint —which may be needed to locate the service anyway.
 4. Alternatively, the record MAY have the persistence policy of "application":
 
 		yarn:persistence = "application_attempt"
 		yarn:id = application_attemptId
-	This means that the record will persist even between application attempts, albeit with out of date endpoint information.
+	This means that the record will persist even between application attempts,
+	 albeit with out of date endpoint information.
 5. Client applications look up the service by way of the path.
 
 The choice of path is an application specific one.

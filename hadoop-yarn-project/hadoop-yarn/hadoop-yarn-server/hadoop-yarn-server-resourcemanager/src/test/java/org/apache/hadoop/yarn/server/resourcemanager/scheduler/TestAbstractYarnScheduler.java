@@ -644,7 +644,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     RMContext privateContext =
         new RMContextImpl(privateDispatcher, null, null, null, null, null, null,
-            null, null, null);
+            null, null, null, null);
     privateContext.setNodeLabelManager(Mockito.mock(RMNodeLabelsManager.class));
 
     privateDispatcher.register(SchedulerEventType.class, sleepHandler);

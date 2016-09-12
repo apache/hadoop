@@ -40,14 +40,14 @@ import java.util.regex.Pattern;
 public class RegistryPathUtils {
 
   /**
-   * Compiled down pattern to validate single entries in the path
+   * Compiled down pattern to validate single entries in the path.
    */
   private static final Pattern PATH_ENTRY_VALIDATION_PATTERN =
       Pattern.compile(RegistryInternalConstants.VALID_PATH_ENTRY_PATTERN);
 
   /**
    * Validate ZK path with the path itself included in
-   * the exception text
+   * the exception text.
    * @param path path to validate
    * @return the path parameter
    * @throws InvalidPathnameException if the pathname is invalid.
@@ -83,7 +83,8 @@ public class RegistryPathUtils {
   }
 
   /**
-   * Create a full path from the registry root and the supplied subdir
+   * Create a full path from the registry root and the supplied subdir.
+   * @param base root of the registry
    * @param path path of operation
    * @return an absolute path
    * @throws InvalidPathnameException if the path is invalid
@@ -99,7 +100,7 @@ public class RegistryPathUtils {
    * Join two paths, guaranteeing that there will not be exactly
    * one separator between the two, and exactly one at the front
    * of the path. There will be no trailing "/" except for the special
-   * case that this is the root path
+   * case that this is the root path.
    * @param base base path
    * @param path second path to add
    * @return a combined path.
@@ -138,7 +139,7 @@ public class RegistryPathUtils {
   }
 
   /**
-   * split a path into elements, stripping empty elements
+   * split a path into elements, stripping empty elements.
    * @param path the path
    * @return the split path
    */
@@ -172,7 +173,7 @@ public class RegistryPathUtils {
   }
 
   /**
-   * Get the parent of a path
+   * Get the parent of a path.
    * @param path path to look at
    * @return the parent path
    * @throws PathNotFoundException if the path was at root.
@@ -198,7 +199,7 @@ public class RegistryPathUtils {
 
   /**
    * Perform any formatting for the registry needed to convert
-   * non-simple-DNS elements
+   * non-simple-DNS elements.
    * @param element element to encode
    * @return an encoded string
    */
@@ -208,7 +209,7 @@ public class RegistryPathUtils {
 
   /**
    * Perform whatever transforms are needed to get a YARN ID into
-   * a DNS-compatible name
+   * a DNS-compatible name.
    * @param yarnId ID as string of YARN application, instance or container
    * @return a string suitable for use in registry paths.
    */

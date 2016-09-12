@@ -37,7 +37,7 @@ import java.io.IOException;
 import java.util.concurrent.Future;
 
 /**
- * Handle RM events by updating the registry
+ * Handle RM events by updating the registry.
  * <p>
  * These actions are all implemented as event handlers to operations
  * which come from the RM.
@@ -62,10 +62,9 @@ public class RMRegistryOperationsService extends RegistryAdminService {
     super(name, bindingSource);
   }
 
-
   /**
    * Extend the parent service initialization by verifying that the
-   * service knows —in a secure cluster— the realm in which it is executing.
+   * service knows -in a secure cluster- the realm in which it is executing.
    * It needs this to properly build up the user names and hence their
    * access rights.
    *
@@ -88,7 +87,7 @@ public class RMRegistryOperationsService extends RegistryAdminService {
   }
 
   /**
-   * remove all application attempt entries
+   * remove all application attempt entries.
    * @param attemptId attempt ID
    */
   protected void purgeAppAttemptRecords(ApplicationAttemptId attemptId) {
@@ -98,8 +97,8 @@ public class RMRegistryOperationsService extends RegistryAdminService {
   }
 
   /**
-   * Actions to take when an application attempt is completed
-   * @param attemptId  application  ID
+   * Actions to take when an application attempt is completed.
+   * @param attemptId  application ID
    * @throws IOException problems
    */
   public void onApplicationAttemptUnregistered(ApplicationAttemptId attemptId)
@@ -110,7 +109,7 @@ public class RMRegistryOperationsService extends RegistryAdminService {
   }
 
   /**
-   * Actions to take when an application is completed
+   * Actions to take when an application is completed.
    * @param id  application  ID
    * @throws IOException problems
    */
@@ -124,19 +123,19 @@ public class RMRegistryOperationsService extends RegistryAdminService {
   }
 
   /**
-   * This is the event where the user is known, so the user directory
+   * This is the event where the user is known, so the user directory.
    * can be created
    * @param applicationId application  ID
    * @param user username
    * @throws IOException problems
    */
-  public void onStateStoreEvent(ApplicationId applicationId, String user) throws
-      IOException {
+  public void onStateStoreEvent(ApplicationId applicationId, String user)
+      throws IOException {
     initUserRegistryAsync(user);
   }
 
   /**
-   * Actions to take when the AM container is completed
+   * Actions to take when the AM container is completed.
    * @param id  container ID
    * @throws IOException problems
    */
@@ -168,7 +167,8 @@ public class RMRegistryOperationsService extends RegistryAdminService {
       String persistencePolicyMatch) {
 
     return purgeRecordsAsync(path,
-        id, persistencePolicyMatch,
+        id,
+        persistencePolicyMatch,
         purgeOnCompletionPolicy,
         new DeleteCompletionCallback());
   }
@@ -195,7 +195,7 @@ public class RMRegistryOperationsService extends RegistryAdminService {
       String persistencePolicyMatch,
       PurgePolicy purgePolicy,
       BackgroundCallback callback) {
-    LOG.info(" records under {} with ID {} and policy {}: {}",
+    LOG.info(" records under {} with ID {} and policy {}",
         path, id, persistencePolicyMatch);
     return submit(
         new AsyncPurge(path,

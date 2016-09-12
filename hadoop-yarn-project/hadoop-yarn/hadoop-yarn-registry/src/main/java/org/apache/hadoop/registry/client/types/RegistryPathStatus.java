@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Output of a <code>RegistryOperations.stat()</code> call
+ * Output of a <code>RegistryOperations.stat()</code> call.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -33,12 +33,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class RegistryPathStatus {
 
   /**
-   * Short path in the registry to this entry
+   * Short path in the registry to this entry.
    */
   public final String path;
 
   /**
-   * Timestamp
+   * Timestamp.
    */
   public final long time;
 
@@ -49,12 +49,12 @@ public final class RegistryPathStatus {
   public final long size;
 
   /**
-   * Number of child nodes
+   * Number of child nodes.
    */
   public final int children;
 
   /**
-   * Construct an instance
+   * Construct an instance.
    * @param path full path
    * @param time time
    * @param size entry size

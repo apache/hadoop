@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Registry Operations
+ * Registry Operations.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -63,7 +63,7 @@ public interface RegistryOperations extends Service {
       IOException;
 
   /**
-   * Bind a path in the registry to a service record
+   * Bind a path in the registry to a service record.
    * @param path path to service record
    * @param record service record service record to create/update
    * @param flags bind flags
@@ -80,7 +80,7 @@ public interface RegistryOperations extends Service {
       IOException;
 
   /**
-   * Resolve the record at a path
+   * Resolve the record at a path.
    * @param path path to an entry containing a {@link ServiceRecord}
    * @return the record
    * @throws PathNotFoundException path is not in the registry.
@@ -97,7 +97,7 @@ public interface RegistryOperations extends Service {
       IOException;
 
   /**
-   * Get the status of a path
+   * Get the status of a path.
    * @param path path to query
    * @return the status of the path
    * @throws PathNotFoundException path is not in the registry.
@@ -115,7 +115,7 @@ public interface RegistryOperations extends Service {
    * any failure downgraded to a
    * @param path path to query
    * @return true if the path was found
-   * @throws IOException
+   * @throws IOException IO problems
    */
   boolean exists(String path) throws IOException;
 
@@ -125,9 +125,9 @@ public interface RegistryOperations extends Service {
    * @param path path to query
    * @return a possibly empty list of the short path names of
    * child entries.
-   * @throws PathNotFoundException
-   * @throws InvalidPathnameException
-   * @throws IOException
+   * @throws PathNotFoundException path is not in the registry.
+   * @throws InvalidPathnameException the path is invalid.
+   * @throws IOException IO problems
    */
    List<String> list(String path) throws
       PathNotFoundException,
@@ -178,5 +178,5 @@ public interface RegistryOperations extends Service {
    * Only  accessors added via {@link #addWriteAccessor(String, String)}
    * are removed.
    */
-  public void clearWriteAccessors();
+  void clearWriteAccessors();
 }

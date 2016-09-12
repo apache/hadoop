@@ -45,7 +45,7 @@ import java.io.IOException;
 
 /**
  * This is the RM service which translates from RM events
- * to registry actions
+ * to registry actions.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -56,20 +56,21 @@ public class RMRegistryService extends CompositeService {
   private final RMContext rmContext;
 
   /**
-   * Registry service
+   * Registry service for deployment within the YARN RM.
    */
   private final RMRegistryOperationsService registryOperations;
 
   public RMRegistryService(RMContext rmContext) {
     super(RMRegistryService.class.getName());
     this.rmContext = rmContext;
-
-    registryOperations =
-        new RMRegistryOperationsService("Registry");
+    registryOperations = new RMRegistryOperationsService("Registry");
     addService(registryOperations);
   }
 
-
+  /**
+   * Start the service: register event handlers.
+   * @throws Exception any problem starting up
+   */
   @Override
   protected void serviceStart() throws Exception {
     super.serviceStart();
@@ -80,11 +81,11 @@ public class RMRegistryService extends CompositeService {
     register(RMAppAttemptEventType.class, new AppEventHandler());
     register(RMAppManagerEventType.class, new AppManagerEventHandler());
     register(RMStateStoreEventType.class, new StateStoreEventHandler());
-    register(RMContainerEventType.class,  new ContainerEventHandler());
+    register(RMContainerEventType.class, new ContainerEventHandler());
   }
 
   /**
-   * register a handler
+   * Register a handler.
    * @param eventType event type
    * @param handler handler
    */
@@ -101,13 +102,13 @@ public class RMRegistryService extends CompositeService {
     ApplicationId appId =
         event.getApplicationId();
     switch (eventType) {
-      case APP_COMPLETED:
-        registryOperations.onApplicationCompleted(appId);
-        break;
-      default:
-        // this isn't in the enum today...just making sure for the
-        // future
-        break;
+    case APP_COMPLETED:
+      registryOperations.onApplicationCompleted(appId);
+      break;
+    default:
+      // this isn't in the enum today...just making sure for the
+      // future
+      break;
     }
   }
 
@@ -116,19 +117,18 @@ public class RMRegistryService extends CompositeService {
       throws IOException {
     RMStateStoreEventType eventType = event.getType();
     switch (eventType) {
-      case STORE_APP:
-        RMStateStoreAppEvent storeAppEvent = (RMStateStoreAppEvent) event;
-        ApplicationStateData appState = storeAppEvent.getAppState();
-        ApplicationId appId =
-            appState.getApplicationSubmissionContext().getApplicationId();
-        registryOperations.onStateStoreEvent(appId, appState.getUser());
-        break;
+    case STORE_APP:
+      RMStateStoreAppEvent storeAppEvent = (RMStateStoreAppEvent) event;
+      ApplicationStateData appState = storeAppEvent.getAppState();
+      ApplicationId appId =
+          appState.getApplicationSubmissionContext().getApplicationId();
+      registryOperations.onStateStoreEvent(appId, appState.getUser());
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
-
 
   @SuppressWarnings("EnumSwitchStatementWhichMissesCases")
   protected void handleAppAttemptEvent(RMAppAttemptEvent event) throws
@@ -139,20 +139,20 @@ public class RMRegistryService extends CompositeService {
 
     switch (eventType) {
 
-      case UNREGISTERED:
-        registryOperations.onApplicationAttemptUnregistered(appAttemptId);
-        break;
+    case UNREGISTERED:
+      registryOperations.onApplicationAttemptUnregistered(appAttemptId);
+      break;
 
-      // container has finished
-      case CONTAINER_FINISHED:
-        RMAppAttemptContainerFinishedEvent cfe =
-            (RMAppAttemptContainerFinishedEvent) event;
-        ContainerId containerId = cfe.getContainerStatus().getContainerId();
-        registryOperations.onContainerFinished(containerId);
-        break;
+    // container has finished
+    case CONTAINER_FINISHED:
+      RMAppAttemptContainerFinishedEvent cfe =
+          (RMAppAttemptContainerFinishedEvent) event;
+      ContainerId containerId = cfe.getContainerStatus().getContainerId();
+      registryOperations.onContainerFinished(containerId);
+      break;
 
-      default:
-        // do nothing
+    default:
+      // do nothing
     }
   }
 
@@ -161,36 +161,34 @@ public class RMRegistryService extends CompositeService {
       throws IOException {
     RMContainerEventType eventType = event.getType();
     switch (eventType) {
-      case FINISHED:
-        ContainerId containerId = event.getContainerId();
-        registryOperations.onContainerFinished(containerId);
-        break;
+    case FINISHED:
+      ContainerId containerId = event.getContainerId();
+      registryOperations.onContainerFinished(containerId);
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   }
 
   /**
-   * Handler for app events
+   * Handler for app events.
    */
-  private class AppEventHandler implements
-      EventHandler<RMAppAttemptEvent> {
+  private class AppEventHandler implements EventHandler<RMAppAttemptEvent> {
 
     @Override
     public void handle(RMAppAttemptEvent event) {
       try {
         handleAppAttemptEvent(event);
       } catch (IOException e) {
-        LOG.warn("handling {}: {}", event, e, e);
+        LOG.warn("handling {}", event, e);
       }
     }
   }
 
   /**
-   * Handler for RM-side App manager events
+   * Handler for RM-side App manager events.
    */
-
   private class AppManagerEventHandler
       implements EventHandler<RMAppManagerEvent> {
     @Override
@@ -198,7 +196,7 @@ public class RMRegistryService extends CompositeService {
       try {
         handleAppManagerEvent(event);
       } catch (IOException e) {
-        LOG.warn("handling {}: {}", event, e, e);
+        LOG.warn("handling {}", event, e);
       }
     }
   }
@@ -208,32 +206,32 @@ public class RMRegistryService extends CompositeService {
    * This happens early on, and as the data contains the user details,
    * it is where paths can be set up in advance of being used.
    */
-
-  private class StateStoreEventHandler implements EventHandler<RMStateStoreEvent> {
+  private class StateStoreEventHandler
+      implements EventHandler<RMStateStoreEvent> {
     @Override
     public void handle(RMStateStoreEvent event) {
       try {
         handleStateStoreEvent(event);
       } catch (IOException e) {
-        LOG.warn("handling {}: {}", event, e, e);
+        LOG.warn("handling {}", event, e);
       }
     }
   }
 
   /**
-   * Handler for RM-side container events
+   * Handler for RM-side container events.
    */
-  private class ContainerEventHandler implements EventHandler<RMContainerEvent> {
+  private class ContainerEventHandler
+      implements EventHandler<RMContainerEvent> {
 
     @Override
     public void handle(RMContainerEvent event) {
       try {
         handleContainerEvent(event);
       } catch (IOException e) {
-        LOG.warn("handling {}: {}", event, e, e);
+        LOG.warn("handling {}", event, e);
       }
     }
   }
-
 
 }

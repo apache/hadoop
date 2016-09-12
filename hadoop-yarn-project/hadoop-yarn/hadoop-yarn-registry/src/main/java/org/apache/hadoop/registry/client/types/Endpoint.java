@@ -50,7 +50,7 @@ import java.util.Map;
 public final class Endpoint implements Cloneable {
 
   /**
-   * API implemented at the end of the binding
+   * API implemented at the end of the binding.
    */
   public String api;
 
@@ -67,7 +67,7 @@ public final class Endpoint implements Cloneable {
   public String protocolType;
 
   /**
-   * a list of address tuples —tuples whose format depends on the address type
+   * a list of address tuples -tuples whose format depends on the address type.
    */
   public List<Map<String, String>> addresses;
 
@@ -95,7 +95,7 @@ public final class Endpoint implements Cloneable {
   }
 
   /**
-   * Build an endpoint with a list of addresses
+   * Build an endpoint with a list of addresses.
    * @param api API name
    * @param addressType address type
    * @param protocolType protocol type
@@ -115,7 +115,7 @@ public final class Endpoint implements Cloneable {
   }
 
   /**
-   * Build an endpoint with an empty address list
+   * Build an endpoint with an empty address list.
    * @param api API name
    * @param addressType address type
    * @param protocolType protocol type
@@ -153,7 +153,7 @@ public final class Endpoint implements Cloneable {
   }
 
   /**
-   * Build an endpoint with a list of addresses
+   * Build an endpoint with a list of addresses.
    * @param api API name
    * @param addressType address type
    * @param protocolType protocol type
@@ -172,7 +172,7 @@ public final class Endpoint implements Cloneable {
   }
 
   /**
-   * Create a new address structure of the requested size
+   * Create a new address structure of the requested size.
    * @param size size to create
    * @return the new list
    */
@@ -185,7 +185,7 @@ public final class Endpoint implements Cloneable {
    * is ASCII-encoded and added to the list of addresses.
    * @param api API name
    * @param protocolType protocol type
-   * @param uris URIs to convert to a list of tup;les
+   * @param uris URIs to convert to a list of tuples
    */
   public Endpoint(String api,
       String protocolType,
@@ -208,7 +208,7 @@ public final class Endpoint implements Cloneable {
 
   /**
    * Validate the record by checking for null fields and other invalid
-   * conditions
+   * conditions.
    * @throws NullPointerException if a field is null when it
    * MUST be set.
    * @throws RuntimeException on invalid entries
@@ -224,9 +224,9 @@ public final class Endpoint implements Cloneable {
   }
 
   /**
-   * Shallow clone: the lists of addresses are shared
+   * Shallow clone: the lists of addresses are shared.
    * @return a cloned instance
-   * @throws CloneNotSupportedException
+   * @throws CloneNotSupportedException clone not supported
    */
   @Override
   public Object clone() throws CloneNotSupportedException {
@@ -235,7 +235,7 @@ public final class Endpoint implements Cloneable {
 
 
   /**
-   * Static instance of service record marshalling
+   * Static instance of service record marshalling.
    */
   private static class Marshal extends JsonSerDeser<Endpoint> {
     private Marshal() {

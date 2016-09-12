@@ -121,7 +121,7 @@ public class RegistryCli extends Configured implements Tool, Closeable {
    *   After this call is made, no operations may be made of this
    *   object, <i>or of a YARN registry instance used when constructing
    *   this object. </i>
-   * @throws IOException
+   * @throws IOException IO problems
    */
   @Override
   public void close() throws IOException {

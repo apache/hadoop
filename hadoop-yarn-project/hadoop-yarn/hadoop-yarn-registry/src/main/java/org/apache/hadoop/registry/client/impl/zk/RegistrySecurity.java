@@ -78,7 +78,7 @@ public class RegistrySecurity extends AbstractService {
 
   /**
    * there's no default user to add with permissions, so it would be
-   * impossible to create nodes with unrestricted user access
+   * impossible to create nodes with unrestricted user access.
    */
   public static final String E_NO_USER_DETERMINED_FOR_ACLS =
       "No user for ACLs determinable from current user or registry option "
@@ -92,31 +92,31 @@ public class RegistrySecurity extends AbstractService {
       "Registry security is enabled -but Hadoop security is not enabled";
 
   /**
-   * Access policy options
+   * Access policy options.
    */
   private enum AccessPolicy {
     anon, sasl, digest
   }
 
   /**
-   * Access mechanism
+   * Access mechanism.
    */
   private AccessPolicy access;
 
   /**
-   * User used for digest auth
+   * User used for digest auth.
    */
 
   private String digestAuthUser;
 
   /**
-   * Password used for digest auth
+   * Password used for digest auth.
    */
 
   private String digestAuthPassword;
 
   /**
-   * Auth data used for digest auth
+   * Auth data used for digest auth.
    */
   private byte[] digestAuthData;
 
@@ -126,13 +126,13 @@ public class RegistrySecurity extends AbstractService {
   private boolean secureRegistry;
 
   /**
-   * An ACL with read-write access for anyone
+   * An ACL with read-write access for anyone.
    */
   public static final ACL ALL_READWRITE_ACCESS =
       new ACL(ZooDefs.Perms.ALL, ZooDefs.Ids.ANYONE_ID_UNSAFE);
 
   /**
-   * An ACL with read access for anyone
+   * An ACL with read access for anyone.
    */
   public static final ACL ALL_READ_ACCESS =
       new ACL(ZooDefs.Perms.READ, ZooDefs.Ids.ANYONE_ID_UNSAFE);
@@ -144,39 +144,39 @@ public class RegistrySecurity extends AbstractService {
   public static final List<ACL> WorldReadWriteACL;
 
   static {
-    List<ACL> acls = new ArrayList<ACL>();
+    List<ACL> acls = new ArrayList<>();
     acls.add(ALL_READWRITE_ACCESS);
-    WorldReadWriteACL = new CopyOnWriteArrayList<ACL>(acls);
+    WorldReadWriteACL = new CopyOnWriteArrayList<>(acls);
   }
 
   /**
-   * the list of system ACLs
+   * the list of system ACLs.
    */
-  private final List<ACL> systemACLs = new ArrayList<ACL>();
+  private final List<ACL> systemACLs = new ArrayList<>();
 
   /**
    * A list of digest ACLs which can be added to permissions
    * —and cleared later.
    */
-  private final List<ACL> digestACLs = new ArrayList<ACL>();
+  private final List<ACL> digestACLs = new ArrayList<>();
 
   /**
-   * the default kerberos realm
+   * the default kerberos realm.
    */
   private String kerberosRealm;
 
   /**
-   * Client context
+   * Client context.
    */
   private String jaasClientContext;
 
   /**
-   * Client identity
+   * Client identity.
    */
   private String jaasClientIdentity;
 
   /**
-   * Create an instance
+   * Create an instance.
    * @param name service name
    */
   public RegistrySecurity(String name) {
@@ -184,9 +184,10 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Init the service: this sets up security based on the configuration
+   * Init the service: this sets up security based on the configuration.
    * @param conf configuration
-   * @throws Exception
+   * @throws ServiceStateException if the authenticatin mechanism is unknown.
+   * @throws Exception any initialization problem.
    */
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
@@ -215,7 +216,7 @@ public class RegistrySecurity extends AbstractService {
    * Init security.
    *
    * After this operation, the {@link #systemACLs} list is valid.
-   * @throws IOException
+   * @throws IOException problems initializing security.
    */
   private void initSecurity() throws IOException {
 
@@ -293,7 +294,7 @@ public class RegistrySecurity extends AbstractService {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Auth is anonymous");
           }
-          userACLs = new ArrayList<ACL>(0);
+          userACLs = new ArrayList<>(0);
           break;
       }
       systemACLs.addAll(userACLs);
@@ -308,7 +309,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Add another system ACL
+   * Add another system ACL.
    * @param acl add ACL
    */
   public void addSystemACL(ACL acl) {
@@ -316,8 +317,9 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Add a digest ACL
+   * Add a digest ACL.
    * @param acl add ACL
+   * @return true if the registry is secure and the ACL added
    */
   public boolean addDigestACL(ACL acl) {
     if (secureRegistry) {
@@ -336,7 +338,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Reset the digest ACL list
+   * Reset the digest ACL list.
    */
   public void resetDigestACLs() {
     if (LOG.isDebugEnabled()) {
@@ -346,7 +348,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Flag to indicate the cluster is secure
+   * Flag to indicate the cluster is secure.
    * @return true if the config enabled security
    */
   public boolean isSecureRegistry() {
@@ -354,7 +356,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Get the system principals
+   * Get the system principals.
    * @return the system principals
    */
   public List<ACL> getSystemACLs() {
@@ -363,21 +365,21 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Get all ACLs needed for a client to use when writing to the repo.
+   * Get all ACLs needed for a client to use when creating a new entry.
    * That is: system ACLs, its own ACL, any digest ACLs
    * @return the client ACLs
    */
   public List<ACL> getClientACLs() {
-    List<ACL> clientACLs = new ArrayList<ACL>(systemACLs);
+    List<ACL> clientACLs = new ArrayList<>(systemACLs);
     clientACLs.addAll(digestACLs);
     return clientACLs;
   }
 
   /**
-   * Create a SASL ACL for the user
+   * Create a SASL ACL for the user.
    * @param perms permissions
    * @return an ACL for the current user or null if they aren't a kerberos user
-   * @throws IOException
+   * @throws IOException IO problems
    */
   public ACL createSaslACLFromCurrentUser(int perms) throws IOException {
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
@@ -389,7 +391,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Given a UGI, create a SASL ACL from it
+   * Given a UGI, create a SASL ACL from it.
    * @param ugi UGI
    * @param perms permissions
    * @return a new ACL
@@ -400,7 +402,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Get a conf option, throw an exception if it is null/empty
+   * Get a conf option, throw an exception if it is null/empty.
    * @param key key
    * @param defval default value
    * @return the value
@@ -439,9 +441,10 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Generate a base-64 encoded digest of the idPasswordPair pair
+   * Generate a base-64 encoded digest of the idPasswordPair pair.
    * @param idPasswordPair id:password
    * @return a string that can be used for authentication
+   * @throws IOException on invalid idPasswordPair or digest problems
    */
   public String digest(String idPasswordPair) throws IOException {
     if (StringUtils.isEmpty(idPasswordPair) || !isValid(idPasswordPair)) {
@@ -457,18 +460,18 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Generate a base-64 encoded digest of the idPasswordPair pair
+   * Generate a base-64 encoded digest of the idPasswordPair pair.
    * @param id ID
    * @param password pass
    * @return a string that can be used for authentication
-   * @throws IOException
+   * @throws IOException on invalid idPasswordPair or digest problems
    */
   public String digest(String id, String password) throws IOException {
     return digest(id + ":" + password);
   }
 
   /**
-   * Given a digest, create an ID from it
+   * Given a digest, create an ID from it.
    * @param digest digest
    * @return ID
    */
@@ -477,7 +480,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Create a Digest ID from an id:pass pair
+   * Create a Digest ID from an id:pass pair.
    * @param id ID
    * @param password password
    * @return an ID
@@ -544,7 +547,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Parse the IDs, adding a realm if needed, setting the permissions
+   * Parse the IDs, adding a realm if needed, setting the permissions.
    * @param principalList id string
    * @param realm realm to add
    * @param perms permissions
@@ -554,7 +557,7 @@ public class RegistrySecurity extends AbstractService {
   public List<ACL> buildACLs(String principalList, String realm, int perms)
       throws IOException {
     List<String> aclPairs = splitAclPairs(principalList, realm);
-    List<ACL> ids = new ArrayList<ACL>(aclPairs.size());
+    List<ACL> ids = new ArrayList<>(aclPairs.size());
     for (String aclPair : aclPairs) {
       ACL newAcl = new ACL();
       newAcl.setId(parse(aclPair, realm));
@@ -565,7 +568,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Parse an ACL list. This includes configuration indirection
+   * Parse an ACL list. This includes configuration indirection.
    * {@link ZKUtil#resolveConfIndirection(String)}
    * @param zkAclConf configuration string
    * @return an ACL list
@@ -585,15 +588,11 @@ public class RegistrySecurity extends AbstractService {
    * @return a JVM-specific kerberos login module classname.
    */
   public static String getKerberosAuthModuleForJVM() {
-    if (System.getProperty("java.vendor").contains("IBM")) {
-      return "com.ibm.security.auth.module.Krb5LoginModule";
-    } else {
-      return "com.sun.security.auth.module.Krb5LoginModule";
-    }
+    return KerberosUtil.getKrb5LoginModuleName();
   }
 
   /**
-   * JAAS template: {@value}
+   * JAAS template: {@value}.
    * Note the semicolon on the last entry
    */
   private static final String JAAS_ENTRY =
@@ -621,7 +620,7 @@ public class RegistrySecurity extends AbstractService {
      );
 
   /**
-   * Create a JAAS entry for insertion
+   * Create a JAAS entry for insertion.
    * @param context context of the entry
    * @param principal kerberos principal
    * @param keytab keytab
@@ -665,7 +664,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Set the Zookeeper server property
+   * Set the Zookeeper server property.
    * {@link ZookeeperConfigOptions#PROP_ZK_SERVER_SASL_CONTEXT}
    * to the SASL context. When the ZK server starts, this is the context
    * which it will read in
@@ -676,7 +675,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Reset any system properties related to JAAS
+   * Reset any system properties related to JAAS.
    */
   public static void clearJaasSystemProperties() {
     System.clearProperty(Environment.JAAS_CONF_KEY);
@@ -754,7 +753,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Clear all the ZK SASL Client properties
+   * Clear all the ZK SASL Client properties.
    * <b>Important:</b>This is JVM-wide
    */
   public static void clearZKSaslClientProperties() {
@@ -764,7 +763,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Turn ZK SASL on
+   * Turn ZK SASL on.
    * <b>Important:</b>This is JVM-wide
    */
   protected static void enableZookeeperClientSASL() {
@@ -799,7 +798,7 @@ public class RegistrySecurity extends AbstractService {
       UserGroupInformation realUser = currentUser.getRealUser();
       LOG.info("Real User = {}" , realUser);
     } catch (IOException e) {
-      LOG.warn("Failed to get current user {}, {}", e);
+      LOG.warn("Failed to get current user", e);
     }
   }
 
@@ -824,7 +823,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Convert an ACL to a string, with any obfuscation needed
+   * Convert an ACL to a string, with any obfuscation needed.
    * @param acl ACL
    * @return ACL string value
    */
@@ -838,7 +837,7 @@ public class RegistrySecurity extends AbstractService {
 
   /**
    * Convert an ID to a string, stripping out all but the first few characters
-   * of any digest auth hash for security reasons
+   * of any digest auth hash for security reasons.
    * @param id ID
    * @return a string description of a Zookeeper ID
    */
@@ -858,7 +857,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Build up low-level security diagnostics to aid debugging
+   * Build up low-level security diagnostics to aid debugging.
    * @return a string to use in diagnostics
    */
   public String buildSecurityDiagnostics() {
@@ -905,8 +904,8 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Get the default kerberos realm —returning "" if there
-   * is no realm or other problem
+   * Get the default kerberos realm -returning "" if there
+   * is no realm or other problem.
    * @return the default realm of the system if it
    * could be determined
    */
@@ -929,12 +928,13 @@ public class RegistrySecurity extends AbstractService {
   /**
    * Create an ACL For a user.
    * @param ugi User identity
-   * @return the ACL For the specified user. Ifthe username doesn't end
+   * @param perms permissions to pass to {@link #createACLfromUsername(String, int)}
+   * @return the ACL For the specified user. If the username doesn't end
    * in "@" then the realm is added
    */
   public ACL createACLForUser(UserGroupInformation ugi, int perms) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Creating ACL For ", new UgiInfo(ugi));
+      LOG.debug("Creating ACL For {}", new UgiInfo(ugi));
     }
     if (!secureRegistry) {
       return ALL_READWRITE_ACCESS;
@@ -944,7 +944,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * Given a user name (short or long), create a SASL ACL
+   * Given a user name (short or long), create a SASL ACL.
    * @param username user name; if it doesn't contain an "@" symbol, the
    * service's kerberos realm is added
    * @param perms permissions
@@ -961,7 +961,7 @@ public class RegistrySecurity extends AbstractService {
   }
 
   /**
-   * On demand string-ifier for UGI with extra details
+   * On demand string-ifier for UGI with extra details.
    */
   public static class UgiInfo {
 
@@ -969,7 +969,7 @@ public class RegistrySecurity extends AbstractService {
       try {
         return new UgiInfo(UserGroupInformation.getCurrentUser());
       } catch (IOException e) {
-        LOG.info("Failed to get current user {}", e, e);
+        LOG.info("Failed to get current user", e);
         return new UgiInfo(null);
       }
     }
@@ -991,14 +991,15 @@ public class RegistrySecurity extends AbstractService {
       builder.append(" hasKerberosCredentials=").append(
           ugi.hasKerberosCredentials());
       builder.append(" isFromKeytab=").append(ugi.isFromKeytab());
-      builder.append(" kerberos is enabled in Hadoop =").append(UserGroupInformation.isSecurityEnabled());
+      builder.append(" kerberos is enabled in Hadoop =")
+          .append(UserGroupInformation.isSecurityEnabled());
       return builder.toString();
     }
 
   }
 
   /**
-   * on-demand stringifier for a list of ACLs
+   * on-demand stringifier for a list of ACLs.
    */
   public static class AclListInfo {
     public final List<ACL> acls;
