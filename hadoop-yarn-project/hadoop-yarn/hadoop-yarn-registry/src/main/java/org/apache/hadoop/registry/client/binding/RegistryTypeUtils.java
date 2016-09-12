@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Static methods to work with registry types —primarily endpoints and the
+ * Static methods to work with registry types, primarily endpoints and the
  * list representation of addresses.
  */
 @InterfaceAudience.Public
@@ -45,7 +45,7 @@ import java.util.Map;
 public class RegistryTypeUtils {
 
   /**
-   * Create a URL endpoint from a list of URIs
+   * Create a URL endpoint from a list of URIs.
    * @param api implemented API
    * @param protocolType protocol type
    * @param uris URIs
@@ -58,7 +58,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create a REST endpoint from a list of URIs
+   * Create a REST endpoint from a list of URIs.
    * @param api implemented API
    * @param uris URIs
    * @return a new endpoint
@@ -69,7 +69,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create a Web UI endpoint from a list of URIs
+   * Create a Web UI endpoint from a list of URIs.
    * @param api implemented API
    * @param uris URIs
    * @return a new endpoint
@@ -80,7 +80,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create an internet address endpoint from a list of URIs
+   * Create an internet address endpoint from a list of URIs.
    * @param api implemented API
    * @param protocolType protocol type
    * @param hostname hostname/FQDN
@@ -102,7 +102,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create an IPC endpoint
+   * Create an IPC endpoint.
    * @param api API
    * @param address the address as a tuple of (hostname, port)
    * @return the new endpoint
@@ -115,19 +115,19 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create a single entry map
+   * Create a single entry map.
    * @param key map entry key
    * @param val map entry value
    * @return a 1 entry map.
    */
   public static Map<String, String> map(String key, String val) {
-    Map<String, String> map = new HashMap<String, String>(1);
+    Map<String, String> map = new HashMap<>(1);
     map.put(key, val);
     return map;
   }
 
   /**
-   * Create a URI
+   * Create a URI.
    * @param uri value
    * @return a 1 entry map.
    */
@@ -136,7 +136,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create a (hostname, port) address pair
+   * Create a (hostname, port) address pair.
    * @param hostname hostname
    * @param port port
    * @return a 1 entry map.
@@ -149,7 +149,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Create a (hostname, port) address pair
+   * Create a (hostname, port) address pair.
    * @param address socket address whose hostname and port are used for the
    * generated address.
    * @return a 1 entry map.
@@ -159,7 +159,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Require a specific address type on an endpoint
+   * Require a specific address type on an endpoint.
    * @param required required type
    * @param epr endpoint
    * @throws InvalidRecordException if the type is wrong
@@ -176,7 +176,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Get a single URI endpoint
+   * Get a single URI endpoint.
    * @param epr endpoint
    * @return the uri of the first entry in the address list. Null if the endpoint
    * itself is null
@@ -203,7 +203,7 @@ public class RegistryTypeUtils {
 
   /**
    * Get a specific field from an address -raising an exception if
-   * the field is not present
+   * the field is not present.
    * @param address address to query
    * @param field field to resolve
    * @return the resolved value. Guaranteed to be non-null.
@@ -219,7 +219,7 @@ public class RegistryTypeUtils {
   }
 
   /**
-   * Get the address URLs. Guranteed to return at least one address.
+   * Get the address URLs. Guaranteed to return at least one address.
    * @param epr endpoint
    * @return the address as a URL
    * @throws InvalidRecordException if the type is wrong, there are no addresses
@@ -241,7 +241,7 @@ public class RegistryTypeUtils {
 
   /**
    * Validate the record by checking for null fields and other invalid
-   * conditions
+   * conditions.
    * @param path path for exceptions
    * @param record record to validate. May be null
    * @throws InvalidRecordException on invalid entries
@@ -270,7 +270,7 @@ public class RegistryTypeUtils {
 
   /**
    * Validate the endpoint by checking for null fields and other invalid
-   * conditions
+   * conditions.
    * @param path path for exceptions
    * @param endpoint endpoint to validate. May be null
    * @throws InvalidRecordException on invalid entries

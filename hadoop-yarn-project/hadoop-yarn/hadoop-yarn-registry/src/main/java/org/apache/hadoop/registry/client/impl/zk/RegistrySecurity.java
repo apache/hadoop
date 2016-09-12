@@ -156,7 +156,7 @@ public class RegistrySecurity extends AbstractService {
 
   /**
    * A list of digest ACLs which can be added to permissions
-   * —and cleared later.
+   * and cleared later.
    */
   private final List<ACL> digestACLs = new ArrayList<>();
 
@@ -251,7 +251,7 @@ public class RegistrySecurity extends AbstractService {
         }
       }
 
-      // here check for UGI having secure on or digest + ID
+      // configure security access based on settings.
       switch (access) {
         case sasl:
           // secure + SASL => has to be authenticated

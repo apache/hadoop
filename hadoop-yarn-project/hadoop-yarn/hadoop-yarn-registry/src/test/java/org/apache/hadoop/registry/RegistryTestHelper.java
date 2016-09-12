@@ -49,7 +49,7 @@ import static org.apache.hadoop.registry.client.binding.RegistryTypeUtils.*;
 
 /**
  * This is a set of static methods to aid testing the registry operations.
- * The methods can be imported statically —or the class used as a base
+ * The methods can be imported statically, or the class used as a base
  * class for tests.
  */
 public class RegistryTestHelper extends Assert {
@@ -207,7 +207,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Find an endpoint in a record or fail,
+   * Find an endpoint in a record or fail.
    * @param record record
    * @param api API
    * @param external external?
@@ -237,7 +237,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Log a record
+   * Log a record.
    * @param name record name
    * @param record details
    * @throws IOException only if something bizarre goes wrong marshalling
@@ -324,7 +324,7 @@ public class RegistryTestHelper extends Assert {
    * @param user username
    * @param keytab keytab to list
    * @return the UGI
-   * @throws IOException
+   * @throws IOException login failure.
    */
   public static UserGroupInformation loginUGI(String user, File keytab) throws
       IOException {

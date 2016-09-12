@@ -29,7 +29,7 @@ import org.apache.zookeeper.server.ZooKeeperSaslServer;
  * Methods/classes being invoked. This implies that:
  * <ol>
  *   <li>There can only be one instance of a ZK client or service class
- *   in a single JVM —else their configuration options will conflict.</li>
+ *   in a single JVM -else their configuration options will conflict.</li>
  *   <li>It is safest to set these properties immediately before
  *   invoking ZK operations.</li>
  * </ol>

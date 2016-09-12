@@ -190,23 +190,4 @@ public class TestRegistrySecurityHelper extends Assert {
     LOG.info("User {} has ACL {}", user, acl);
   }
 
-
-  @Test
-  public void testSecurityImpliesKerberos() throws Throwable {
-    Configuration conf = new Configuration();
-    conf.setBoolean("hadoop.security.authentication", true);
-    conf.setBoolean(KEY_REGISTRY_SECURE, true);
-    conf.set(KEY_REGISTRY_KERBEROS_REALM, "KERBEROS");
-    ;
-    try(RegistrySecurity security = new RegistrySecurity("registry security")) {
-      security.init(conf);
-      fail("Expected an initialization failure in " + security);
-    } catch (Exception e) {
-      assertTrue(
-          "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e,
-          e.toString().contains(RegistrySecurity.E_NO_KERBEROS));
-    }
-  }
-
-
 }

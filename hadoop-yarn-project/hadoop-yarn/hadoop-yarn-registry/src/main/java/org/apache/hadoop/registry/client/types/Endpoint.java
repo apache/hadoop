@@ -140,7 +140,7 @@ public final class Endpoint implements Cloneable {
    * @param api API name
    * @param addressType address type
    * @param protocolType protocol type
-   * @param addr address. May be null —in which case it is not added
+   * @param addr address. May be null -in which case it is not added
    */
   public Endpoint(String api,
       String addressType,
