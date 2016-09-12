@@ -23,6 +23,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -456,5 +457,53 @@ public class TestDiskBalancerCommand {
     command.setCluster(diskBalancerCluster);
     List<DiskBalancerDataNode> nodeList = command.getNodes(listArg.toString());
     assertEquals(nodeNum, nodeList.size());
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithMultipleNodes() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String dataNodeUuid2 = cluster.getDataNodes().get(1).getDatanodeUuid();
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, dataNodeUuid2);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+    // Since the order of input nodes will be disrupted when parse
+    // the node string, we should compare UUID with both output lines.
+    assertTrue(outputs.get(2).contains(dataNodeUuid1)
+        || outputs.get(6).contains(dataNodeUuid1));
+    assertTrue(outputs.get(2).contains(dataNodeUuid2)
+        || outputs.get(6).contains(dataNodeUuid2));
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithInvalidNode() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String invalidNode = "invalidNode";
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, invalidNode);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(invalidNode))));
+
+    String invalidNodeInfo =
+        String.format("The node(s) '%s' not found. "
+            + "Please make sure that '%s' exists in the cluster."
+            , invalidNode, invalidNode);
+    assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 }

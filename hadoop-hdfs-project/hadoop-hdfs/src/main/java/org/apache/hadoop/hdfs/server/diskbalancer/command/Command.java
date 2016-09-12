@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerConstants;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
@@ -256,6 +257,7 @@ public abstract class Command extends Configured {
       throws IOException {
     Set<String> nodeNames = null;
     List<DiskBalancerDataNode> nodeList = Lists.newArrayList();
+    List<String> invalidNodeList = Lists.newArrayList();
 
     if ((listArg == null) || listArg.isEmpty()) {
       return nodeList;
@@ -269,8 +271,20 @@ public abstract class Command extends Configured {
 
         if (node != null) {
           nodeList.add(node);
+        } else {
+          invalidNodeList.add(name);
         }
       }
+    }
+
+    if (!invalidNodeList.isEmpty()) {
+      String invalidNodes = StringUtils.join(invalidNodeList.toArray(), ",");
+      String warnMsg = String.format(
+          "The node(s) '%s' not found. "
+          + "Please make sure that '%s' exists in the cluster.",
+          invalidNodes, invalidNodes);
+      throw new DiskBalancerException(warnMsg,
+          DiskBalancerException.Result.INVALID_NODE);
     }
 
     return nodeList;
