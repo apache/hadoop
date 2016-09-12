@@ -50,8 +50,6 @@ public class S3AOutputStream extends OutputStream {
   private boolean closed;
   private final String key;
   private final Progressable progress;
-  private final long partSize;
-  private final long partSizeThreshold;
   private final S3AFileSystem fs;
   private final LocalDirAllocator lDirAlloc;
 
@@ -63,9 +61,6 @@ public class S3AOutputStream extends OutputStream {
     this.key = key;
     this.progress = progress;
     this.fs = fs;
-
-    partSize = fs.getPartitionSize();
-    partSizeThreshold = fs.getMultiPartThreshold();
 
     lDirAlloc = fs.getDirectoryAllocator();
 

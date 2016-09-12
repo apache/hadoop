@@ -1102,6 +1102,34 @@
 </property>
 
 <property>
+  <name>fs.s3a.block.upload</name>
+  <value>false</value>
+  <description>
+    Use the incremental block upload mechanism with
+    the buffering mechanism set in fs.s3a.block.output.buffer.
+    The number of threads performing uploads in the filesystem is defined
+    by fs.s3a.threads.max; the queue of waiting uploads limited by
+    fs.s3a.max.total.tasks.
+    The size of each buffer is set by fs.s3a.multipart.size.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>disk</value>
+  <description>
+    Buffering mechanims to use when using S3a Block upload
+    (fs.s3a.block.upload=true). values: disk, array.
+    "disk" will use the directories listed in fs.s3a.buffer.dir as
+    the location(s) to save data prior to being uploaded.
+    If using "array", the data is stored in memory arrays.
+    The fs.s3a.threads.max and fs.s3a.max.total.tasks values must then
+    be kept low so as to prevent heap overflows.
+    No effect if fs.s3a.block.upload is false.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.readahead.range</name>
   <value>65536</value>
   <description>Bytes to read ahead during a seek() before closing and
@@ -1115,6 +1143,7 @@
   <description>Size of initial memory buffer in bytes allocated for an
     upload. No effect if fs.s3a.fast.upload is false.</description>
 </property>
+
 
 <property>
   <name>fs.s3a.user.agent.prefix</name>

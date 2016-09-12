@@ -881,8 +881,237 @@ Seoul
 If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
 or as a 400 Bad Request.
 
-### S3AFastOutputStream
- **Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
+### Improving S3A Upload Performance/Reducing Delays
+
+Because of the nature of the S3 object store, data written to an S3A `OutputStream` 
+is not written incrementally —instead, by default, it is buffered to disk
+until the stream is closed in its `close()` method. 
+
+This has time implications:
+
+* The execution time for `OutputStream.close()` is proportional to the amount of data
+buffered and inversely proportional to the bandwidth. That is `O(data/bandwidth)`.
+* The bandwidth is that available from the host to S3: other work in the same
+process, server or network at the time of upload may increase the upload time,
+hence the duration of the `close()` call.
+* If a process uploading data fails before `OutputStream.close()` is called,
+all data is lost.
+* The disks hosting temporary directories defined in `fs.s3a.buffer.dir` must
+have the capacity to store the entire buffered file.
+
+Put succinctly: the further the process is from the S3 endpoint, or the smaller
+the EC-hosted VM is, the longer it will take work to complete.
+
+This can create problems in application code:
+
+* Application code often assumes that the `close()` call is fast and so does not
+need to be executed in a separate thread: the delays can create bottlenecks in
+operations.
+
+* Very slow uploads sometimes cause applications to time out.
+ 
+* Large uploads may consume more disk capacity than is available in
+the temporary disk.
+
+There is ongoing work to address these issues, primarily through 
+supporting incremental uploads of large objects, uploading intermediate
+blocks of data (in S3 terms, "parts of a multipart upload). This can make more
+effective use of bandwidth during the write sequence, and may reduce the delay
+during the final `close()` call to that needed to upload *all outstanding
+data*, rather than *all data generated.* 
+
+This work began in Hadoop 2.7 with the `S3AFastOutputStream`
+[HADOOP-11183](https://issues.apache.org/jira/browse/HADOOP-11183), and
+has continued with ` S3ABlockOutputStream`
+[HADOOP-13560](https://issues.apache.org/jira/browse/HADOOP-13560).
+
+#### Stabilizing: S3ABlockOutputStream
+
+
+**Warning: NEW in hadoop 2.9. UNSTABLE: use at own risk**
+
+This is high-performance incremental file upload mechanism which:
+
+1. Always uploads large files as blocks with the size set by
+   `fs.s3a.multipart.size`. That is: the threshold at which multipart uploads
+   begin and the size of each upload are identical.
+1. Uploads blocks in parallel in background threads.
+1. Begins uploading blocks as soon as the buffered data exceeds this partition
+   size.
+1. Can buffer data to disk (default) or in memory.
+1. When buffering data to disk, uses the directory/directories listed in
+   `fs.s3a.buffer.dir`. The size of data which can be buffered is limited
+   to the available disk space.
+1. Generates output statistics as metrics on the filesystem.
+
+```xml
+<property>
+  <name>fs.s3a.block.upload</name>
+  <value>false</value>
+  <description>
+    Use the incremental block upload mechanism with
+    the buffering mechanism set in fs.s3a.block.output.buffer.
+    The number of threads performing uploads in the filesystem is defined
+    by fs.s3a.threads.max; the queue of waiting uploads limited by
+    fs.s3a.max.total.tasks.
+    The size of each buffer is set by fs.s3a.multipart.size.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>disk</value>
+  <description>
+    Buffering mechanims to use when using S3a Block upload
+    (fs.s3a.block.upload=true). values: disk, array.
+    "disk" will use the directories listed in fs.s3a.buffer.dir as
+    the location(s) to save data prior to being uploaded.
+    If using "array", the data is stored in memory arrays.
+    The fs.s3a.threads.max and fs.s3a.max.total.tasks values must then
+    be kept low so as to prevent heap overflows.
+    No effect if fs.s3a.block.upload is false.
+  </description>
+</property>
+```
+
+**Notes**
+
+* If the amount of data written to a stream is below that set in `fs.s3a.multipart.size`,
+the upload is performed in the `OutputStream.close()` operation —as with
+the original output stream.
+
+* The published Hadoop metrics monitor include live queue length and
+upload operation counts, so identifying when there is a backlog of work/
+a mismatch between data generation rates and network bandwidth. Per-stream
+statistics can also be logged by calling `toString()` on the current stream.
+
+* Incremental writes are not visible; the object can only be listed
+or read when the multipart operation completes in the `close()` call, which
+will block until the upload is completed.
+
+
+##### Disk upload `fs.s3a.block.output.buffer=disk`
+
+When `fs.s3a.block.output.buffer` is set to `array`, all data is buffered
+to local hard disks in prior to upload. This minimizes the amount of memory
+consumed, and so eliminates heap size as the limiting factor in queued uploads
+—exactly as the original "direct to disk" buffering used when
+`fs.s3a.block.output=false` and `fs.s3a.fast.upload=false`.
+
+Unlike the original buffering, uploads are incremental during the write operation:
+once the size of the output stream exceeds the number of bytes set in `fs.s3a.multipart.size`,
+the upload is queued to a background thread.
+
+This can make more effective use of available bandwidth to upload data
+to S3, and may reduce delays in the `OutputStream.close()` operation.
+
+The available upload bandwidth is generally limited by network capacity —
+rather than the number of threads performing uploads. Having a large value
+of `fs.s3a.threads.max` does not generally reduce upload time or increase
+throughput. Instead the bandwidth is shared between all threads, slowing them
+all down. We recommend a low number of threads, especially when uploading
+over long-haul connections. 
+
+```xml
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>5</value>
+  <description> Maximum number of concurrent active (part)uploads,
+    which each use a thread from the threadpool.</description>
+</property>
+```
+Because the upload data is buffered via disk, there is little risk of heap
+overflow as the queue of pending uploads (limited by `fs.s3a.max.total.tasks`)
+increases.
+
+```xml
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>20</value>
+  <description>Number of (part)uploads allowed to the queue before
+    blocking additional uploads.</description>
+</property>
+```
+
+
+##### Array upload: `fs.s3a.block.output.buffer=array`
+
+When `fs.s3a.block.output.buffer` is set to `array`, all data is buffered
+in memory prior to upload. This *may* be faster than buffering to disk.
+
+This `array` option is similar to the in-memory-only stream implemented in
+`S3AFastOutputStream`: the amount of data which can be buffered is
+limited by available heap. The slower the write bandwidth to S3, the greater
+the risk of heap overflows. To reduce the risk of this, the number of
+threads performing uploads and the size of queued upload operations must be
+kept low. As an example: three threads and one queued task will consume
+`(3  + 1) * fs.s3a.multipart.size` bytes.
+
+```xml
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>3</value>
+  <description> Maximum number of concurrent active (part)uploads,
+    which each use a thread from the threadpool.</description>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>1</value>
+  <description>Number of (part)uploads allowed to the queue before
+    blocking additional uploads.</description>
+</property>
+```
+
+#### Cleaning up After Incremental Upload Failures: `fs.s3a.multipart.purge`
+
+
+If an incremental streaming operation is interrupted, there may be 
+intermediate partitions uploaded to S3 —which will be billed for.
+
+These charges can be reduced by enabling `fs.s3a.multipart.purge`, 
+and setting a purge time in seconds, such as 86400 seconds —24 hours, after
+which the S3 service automatically deletes outstanding multipart
+upload data from operations which are considered to have failed by virtue
+of having been in progress for longer than this purge time.
+
+```xml
+<property>
+  <name>fs.s3a.multipart.purge</name>
+  <value>true</value>
+  <description>True if you want to purge existing multipart uploads that may not have been
+     completed/aborted correctly</description>
+</property>
+
+<property>
+  <name>fs.s3a.multipart.purge.age</name>
+  <value>86400</value>
+  <description>Minimum age in seconds of multipart uploads to purge</description>
+</property>
+```
+
+If an S3A client is instantited with `fs.s3a.multipart.purge=true`,
+it sets the purge time *for the entire bucket*. That is: it will affect all
+multipart uploads to that bucket, from all applications —and persist until set
+to a a new value. Leaving `fs.s3a.multipart.purge` to its default, `false`,
+means that the client will not make any attempt to reset or change the partition
+rate.
+
+The best practise for using this option is for it to be explicitly set in a
+bucket management process to a value which is known to be greater than the
+maximum duration of any  multipart write, while leaving the configuration option to its
+default, `false` in `core-site.xml`. This eliminates the risk
+that one client unintentionally sets a purge time so low as to break multipart
+uploads being attempted by other applications.
+
+
+#### S3AFastOutputStream
+
+**Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
+
+**Hadoop 2.9+: use the block output mechanism instead**
+
+
 
     <property>
       <name>fs.s3a.fast.upload</name>
@@ -915,6 +1144,12 @@ parts of size `fs.s3a.multipart.size` are used to protect against overflowing
 the available memory. These settings should be tuned to the envisioned
 workflow (some large files, many small ones, ...) and the physical
 limitations of the machine and cluster (memory, network bandwidth).
+
+
+**Note** 
+
+Consult the section *Cleaning up After Incremental Upload Failures* for
+advice on how to manage multipart upload failures.
 
 ### S3A Experimental "fadvise" input policy support
 

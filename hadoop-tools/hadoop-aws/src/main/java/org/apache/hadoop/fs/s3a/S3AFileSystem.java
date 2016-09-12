@@ -133,8 +133,7 @@ public class S3AFileSystem extends FileSystem {
   private boolean fastUploadEnabled;
   private boolean blockUploadEnabled;
   private String blockOutputBuffer;
-  private S3ADataBlocks.AbstractBlockFactory
-      blockFactory;
+  private S3ADataBlocks.AbstractBlockFactory blockFactory;
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
