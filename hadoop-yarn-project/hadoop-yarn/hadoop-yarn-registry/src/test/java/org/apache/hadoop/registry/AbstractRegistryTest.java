@@ -68,7 +68,7 @@ public class AbstractRegistryTest extends AbstractZKRegistryTest {
 
   /**
    * Create a service entry with the sample endpoints, and put it
-   * at the destination
+   * at the destination.
    * @param path path
    * @param createFlags flags
    * @return the record
@@ -82,7 +82,7 @@ public class AbstractRegistryTest extends AbstractZKRegistryTest {
 
   /**
    * Create a service entry with the sample endpoints, and put it
-   * at the destination
+   * at the destination.
    * @param path path
    * @param createFlags flags
    * @return the record
@@ -100,7 +100,7 @@ public class AbstractRegistryTest extends AbstractZKRegistryTest {
   }
 
   /**
-   * Assert a path exists
+   * Assert a path exists.
    * @param path path in the registry
    * @throws IOException
    */
@@ -109,7 +109,7 @@ public class AbstractRegistryTest extends AbstractZKRegistryTest {
   }
 
   /**
-   * assert that a path does not exist
+   * assert that a path does not exist.
    * @param path path in the registry
    * @throws IOException
    */
@@ -123,7 +123,7 @@ public class AbstractRegistryTest extends AbstractZKRegistryTest {
   }
 
   /**
-   * Assert that a path resolves to a service record
+   * Assert that a path resolves to a service record.
    * @param path path in the registry
    * @throws IOException
    */

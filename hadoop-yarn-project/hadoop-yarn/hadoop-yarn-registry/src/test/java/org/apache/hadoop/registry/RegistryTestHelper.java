@@ -70,7 +70,7 @@ public class RegistryTestHelper extends Assert {
   public static final String HTTP_API = "http://";
 
   /**
-   * Assert the path is valid by ZK rules
+   * Assert the path is valid by ZK rules.
    * @param path path to check
    */
   public static void assertValidZKPath(String path) {
@@ -82,7 +82,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Assert that a string is not empty (null or "")
+   * Assert that a string is not empty (null or "").
    * @param message message to raise if the string is empty
    * @param check string to check
    */
@@ -93,7 +93,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Assert that a string is empty (null or "")
+   * Assert that a string is empty (null or "").
    * @param check string to check
    */
   public static void assertNotEmpty(String check) {
@@ -103,7 +103,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Log the details of a login context
+   * Log the details of a login context.
    * @param name name to assert that the user is logged in as
    * @param loginContext the login context
    */
@@ -115,14 +115,14 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Set the JVM property to enable Kerberos debugging
+   * Set the JVM property to enable Kerberos debugging.
    */
   public static void enableKerberosDebugging() {
     System.setProperty(AbstractSecureRegistryTest.SUN_SECURITY_KRB5_DEBUG,
         "true");
   }
   /**
-   * Set the JVM property to enable Kerberos debugging
+   * Set the JVM property to enable Kerberos debugging.
    */
   public static void disableKerberosDebugging() {
     System.setProperty(AbstractSecureRegistryTest.SUN_SECURITY_KRB5_DEBUG,
@@ -130,7 +130,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * General code to validate bits of a component/service entry built iwth
+   * General code to validate bits of a component/service entry built with.
    * {@link #addSampleEndpoints(ServiceRecord, String)}
    * @param record instance to check
    */
@@ -162,7 +162,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Assert that an endpoint matches the criteria
+   * Assert that an endpoint matches the criteria.
    * @param endpoint endpoint to examine
    * @param addressType expected address type
    * @param protocolType expected protocol type
@@ -249,7 +249,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Create a service entry with the sample endpoints
+   * Create a service entry with the sample endpoints.
    * @param persistence persistence policy
    * @return the record
    * @throws IOException on a failure
@@ -265,7 +265,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Add some endpoints
+   * Add some endpoints.
    * @param entry entry
    */
   public static void addSampleEndpoints(ServiceRecord entry, String hostname)
@@ -291,7 +291,7 @@ public class RegistryTestHelper extends Assert {
 
   /**
    * Describe the stage in the process with a box around it -so as
-   * to highlight it in test logs
+   * to highlight it in test logs.
    * @param log log to use
    * @param text text
    * @param args logger args
@@ -303,7 +303,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * log out from a context if non-null ... exceptions are caught and logged
+   * log out from a context if non-null ... exceptions are caught and logged.
    * @param login login context
    * @return null, always
    */
@@ -320,7 +320,7 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Login via a UGI. Requres UGI to have been set up
+   * Login via a UGI. Requires UGI to have been set up.
    * @param user username
    * @param keytab keytab to list
    * @return the UGI

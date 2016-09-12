@@ -49,7 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Verify that logins work
+ * Verify that logins work.
  */
 public class TestSecureLogins extends AbstractSecureRegistryTest {
   private static final Logger LOG =

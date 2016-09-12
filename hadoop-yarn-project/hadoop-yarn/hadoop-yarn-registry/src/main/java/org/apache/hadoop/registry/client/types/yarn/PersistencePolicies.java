@@ -21,7 +21,7 @@ package org.apache.hadoop.registry.client.types.yarn;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 
 /**
- * Persistence policies for {@link ServiceRecord}
+ * Persistence policies for {@link ServiceRecord}.
  */
 
 public interface PersistencePolicies {
@@ -43,7 +43,7 @@ public interface PersistencePolicies {
   String APPLICATION_ATTEMPT = "application-attempt";
 
   /**
-   * Remove when the YARN container in the ID field finishes: {@value}
+   * Remove when the YARN container in the ID field finishes: {@value}.
    */
   String CONTAINER = "container";
 

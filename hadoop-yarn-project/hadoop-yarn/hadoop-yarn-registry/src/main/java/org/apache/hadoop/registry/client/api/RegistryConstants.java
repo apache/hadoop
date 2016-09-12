@@ -32,12 +32,12 @@ public interface RegistryConstants {
   /**
    * prefix for registry configuration options: {@value}.
    * Why <code>hadoop.</code> and not YARN? It can
-   * live outside YARN
+   * live outside YARN.
    */
   String REGISTRY_PREFIX = "hadoop.registry.";
 
   /**
-   * Prefix for zookeeper-specific options: {@value}
+   * Prefix for zookeeper-specific options: {@value}.
    *  <p>
    * For clients using other protocols, these options are not supported.
    */
@@ -45,12 +45,12 @@ public interface RegistryConstants {
 
   /**
    * flag to indicate whether or not the registry should
-   * be enabled in the RM: {@value}
+   * be enabled in the RM: {@value}.
    */
   String KEY_REGISTRY_ENABLED = REGISTRY_PREFIX + "rm.enabled";
 
   /**
-   * Defaut value for enabling the registry in the RM: {@value}
+   * Default value for enabling the registry in the RM: {@value}.
    */
   boolean DEFAULT_REGISTRY_ENABLED = false;
 
@@ -69,12 +69,12 @@ public interface RegistryConstants {
   boolean DEFAULT_REGISTRY_SECURE = false;
 
   /**
-   * Root path in the ZK tree for the registry: {@value}
+   * Root path in the ZK tree for the registry: {@value}.
    */
   String KEY_REGISTRY_ZK_ROOT = ZK_PREFIX + "root";
 
   /**
-   * Default root of the yarn registry: {@value}
+   * Default root of the yarn registry: {@value}.
    */
   String DEFAULT_ZK_REGISTRY_ROOT = "/registry";
 
@@ -92,7 +92,7 @@ public interface RegistryConstants {
 
   /**
    * Registry client uses Kerberos: authentication is automatic from
-   * logged in user
+   * logged in user.
    */
   String REGISTRY_CLIENT_AUTH_KERBEROS = "kerberos";
 
@@ -104,12 +104,12 @@ public interface RegistryConstants {
   String REGISTRY_CLIENT_AUTH_DIGEST = "digest";
 
   /**
-   * No authentication; client is anonymous
+   * No authentication; client is anonymous.
    */
   String REGISTRY_CLIENT_AUTH_ANONYMOUS = "";
 
   /**
-   * Registry client authentication ID
+   * Registry client authentication ID.
    * <p>
    * This is only used in secure clusters with
    * {@link #KEY_REGISTRY_CLIENT_AUTH} set to
@@ -134,24 +134,24 @@ public interface RegistryConstants {
 
   /**
    * List of hostname:port pairs defining the
-   * zookeeper quorum binding for the registry {@value}
+   * zookeeper quorum binding for the registry {@value}.
    */
   String KEY_REGISTRY_ZK_QUORUM = ZK_PREFIX + "quorum";
 
   /**
-   * The default zookeeper quorum binding for the registry: {@value}
+   * The default zookeeper quorum binding for the registry: {@value}.
    */
   String DEFAULT_REGISTRY_ZK_QUORUM = "localhost:2181";
 
   /**
-   * Zookeeper session timeout in milliseconds: {@value}
+   * Zookeeper session timeout in milliseconds: {@value}.
    */
   String KEY_REGISTRY_ZK_SESSION_TIMEOUT =
       ZK_PREFIX + "session.timeout.ms";
 
   /**
-  * The default ZK session timeout: {@value}.
-  */
+   * The default ZK session timeout: {@value}.
+   */
   int DEFAULT_ZK_SESSION_TIMEOUT = 60000;
 
   /**
@@ -224,9 +224,9 @@ public interface RegistryConstants {
 
   /**
    * A comma separated list of Zookeeper ACL identifiers with
-   * system access to the registry in a secure cluster: {@value}.
+   * user access to the registry in a secure cluster: {@value}.
    *
-   * These are given full access to all entries.
+   * These are given full access to entries under the user account.
    *
    * If there is an "@" at the end of an entry it
    * instructs the registry client to append the default kerberos domain.
@@ -259,7 +259,7 @@ public interface RegistryConstants {
   String KEY_REGISTRY_CLIENT_JAAS_CONTEXT = REGISTRY_PREFIX + "jaas.context";
 
   /**
-   * default client-side registry JAAS context: {@value}
+   * default client-side registry JAAS context: {@value}.
    */
   String DEFAULT_REGISTRY_CLIENT_JAAS_CONTEXT = "Client";
 

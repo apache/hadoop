@@ -23,7 +23,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * Tests for the {@link RegistryUtils} class
+ * Tests for the {@link RegistryUtils} class.
  */
 public class TestRegistryOperationUtils extends Assert {
 

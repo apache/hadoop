@@ -40,7 +40,7 @@ public class TestRegistryPathUtils extends Assert {
   }
 
   /*
-  * Euro symbol
+  * Euro symbol.
    */
   @Test
   public void testFormatEuroSymbol() throws Throwable {

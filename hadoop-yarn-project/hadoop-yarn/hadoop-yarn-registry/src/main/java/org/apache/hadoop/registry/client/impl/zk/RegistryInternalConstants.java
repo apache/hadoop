@@ -46,7 +46,7 @@ public interface RegistryInternalConstants {
   int PERMISSIONS_REGISTRY_READERS = ZooDefs.Perms.READ;
 
   /**
-   * Permissions for system services: {@value}
+   * Permissions for system services: {@value}.
    */
   int PERMISSIONS_REGISTRY_SYSTEM_SERVICES = ZooDefs.Perms.ALL;
 
@@ -75,7 +75,7 @@ public interface RegistryInternalConstants {
 
   /**
    * This the Hadoop environment variable which propagates the identity
-   * of a user in an insecure cluster
+   * of a user in an insecure cluster.
    */
   String HADOOP_USER_NAME = "HADOOP_USER_NAME";
 }

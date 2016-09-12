@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 public class TestRegistryCli extends AbstractRegistryTest {
   protected static final Logger LOG =
-      LoggerFactory.getLogger(TestRegistryOperations.class);
+      LoggerFactory.getLogger(TestRegistryCli.class);
 
   private ByteArrayOutputStream sysOutStream;
   private PrintStream sysOut;

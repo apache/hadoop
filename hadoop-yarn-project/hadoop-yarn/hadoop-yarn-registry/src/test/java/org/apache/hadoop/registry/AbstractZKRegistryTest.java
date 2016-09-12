@@ -84,7 +84,7 @@ public class AbstractZKRegistryTest extends RegistryTestHelper {
   }
 
   /**
-   * give our thread a name
+   * give our thread a name.
    */
   @Before
   public void nameThread() {
@@ -92,7 +92,7 @@ public class AbstractZKRegistryTest extends RegistryTestHelper {
   }
 
   /**
-   * Returns the connection string to use
+   * Returns the connection string to use.
    *
    * @return connection string
    */

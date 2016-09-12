@@ -36,7 +36,7 @@ import java.util.List;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
 /**
- * Test for registry security operations
+ * Test for registry security operations.
  */
 public class TestRegistrySecurityHelper extends Assert {
   private static final Logger LOG =
@@ -197,9 +197,10 @@ public class TestRegistrySecurityHelper extends Assert {
     conf.setBoolean("hadoop.security.authentication", true);
     conf.setBoolean(KEY_REGISTRY_SECURE, true);
     conf.set(KEY_REGISTRY_KERBEROS_REALM, "KERBEROS");
-    RegistrySecurity security = new RegistrySecurity("registry security");
-    try {
+    ;
+    try(RegistrySecurity security = new RegistrySecurity("registry security")) {
       security.init(conf);
+      fail("Expected an initialization failure in " + security);
     } catch (Exception e) {
       assertTrue(
           "did not find "+ RegistrySecurity.E_NO_KERBEROS + " in " + e,

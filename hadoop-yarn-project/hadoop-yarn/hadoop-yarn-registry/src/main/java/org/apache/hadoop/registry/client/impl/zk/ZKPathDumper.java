@@ -43,7 +43,7 @@ public class ZKPathDumper {
   private final boolean verbose;
 
   /**
-   * Create a path dumper -but do not dump the path until asked
+   * Create a path dumper -but do not dump the path until asked.
    * @param curator curator instance
    * @param root root
    * @param verbose verbose flag - includes more details (such as ACLs)
@@ -73,7 +73,7 @@ public class ZKPathDumper {
   /**
    * Recursively expand the path into the supplied string builder, increasing
    * the indentation by {@link #INDENT} as it proceeds (depth first) down
-   * the tree
+   * the tree.
    * @param builder string build to append to
    * @param path path to examine
    * @param indent current indentation
@@ -120,7 +120,7 @@ public class ZKPathDumper {
   }
 
   /**
-   * Append the specified indentation to a builder
+   * Append the specified indentation to a builder.
    * @param builder string build to append to
    * @param indent current indentation
    * @param c charactor to use for indentation
