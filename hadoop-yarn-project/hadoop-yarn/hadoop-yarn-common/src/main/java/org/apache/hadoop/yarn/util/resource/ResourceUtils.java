@@ -241,7 +241,7 @@ public class ResourceUtils {
     lock = null;
   }
 
-  private static String getUnits(String resourceValue) {
+  public static String getUnits(String resourceValue) {
     String units;
     for (int i = 0; i < resourceValue.length(); i++) {
       if (Character.isAlphabetic(resourceValue.charAt(i))) {
@@ -325,4 +325,5 @@ public class ResourceUtils {
   synchronized public static void resetNodeResources() {
     nodeLock = null;
   }
+
 }
