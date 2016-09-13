@@ -232,32 +232,42 @@ public class JsonUtil {
     return m;
   }
 
+  private static Map<String, Object> toJson(final DirectoryListing listing)
+      throws IOException {
+    final Map<String, Object> m = new TreeMap<>();
+    // Serialize FileStatus[] to a FileStatuses map
+    m.put("partialListing", toJsonMap(listing.getPartialListing()));
+    // Simple int
+    m.put("remainingEntries", listing.getRemainingEntries());
+
+    return m;
+  }
+
   public static String toJsonString(final DirectoryListing listing) throws
       IOException {
 
     if (listing == null) {
       return null;
     }
-
-    final Map<String, Object> m = new TreeMap<>();
-    m.put("partialListing", toJsonArray(listing.getPartialListing()));
-    m.put("remainingEntries", listing.getRemainingEntries());
-    return MAPPER.writeValueAsString(m);
+    return toJsonString(DirectoryListing.class, toJson(listing));
   }
 
-  private static Object[] toJsonArray(HdfsFileStatus[] statuses) throws
+  private static Map<String, Object> toJsonMap(HdfsFileStatus[] statuses) throws
       IOException {
     if (statuses == null) {
       return null;
     }
-    if (statuses.length == 0) {
-      return EMPTY_OBJECT_ARRAY;
-    }
-    final Object[] a = new Object[statuses.length];
+
+    final Map<String, Object> fileStatuses = new TreeMap<>();
+    final Map<String, Object> fileStatus = new TreeMap<>();
+    fileStatuses.put("FileStatuses", fileStatus);
+    final Object[] array = new Object[statuses.length];
+    fileStatus.put("FileStatus", array);
     for (int i = 0; i < statuses.length; i++) {
-      a[i] = toJsonMap(statuses[i]);
+      array[i] = toJsonMap(statuses[i]);
     }
-    return a;
+
+    return fileStatuses;
   }
 
   /** Convert a LocatedBlock[] to a Json array. */
