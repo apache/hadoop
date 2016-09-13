@@ -30,18 +30,15 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.junit.Assert;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.junit.Assert;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -127,6 +124,24 @@ public class TestRpcBase {
       throws ServiceException {
     try {
       return RPC.getProxy(TestRpcService.class, 0, serverAddr, clientConf);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  protected static TestRpcService getClient(InetSocketAddress serverAddr,
+      Configuration clientConf, final RetryPolicy connectionRetryPolicy)
+      throws ServiceException {
+    try {
+      return RPC.getProtocolProxy(
+          TestRpcService.class,
+          0,
+          serverAddr,
+          UserGroupInformation.getCurrentUser(),
+          clientConf,
+          NetUtils.getDefaultSocketFactory(clientConf),
+          RPC.getRpcTimeout(clientConf),
+          connectionRetryPolicy, null).getProxy();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

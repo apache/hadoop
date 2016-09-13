@@ -183,6 +183,20 @@ public class RetryPolicies {
       return new RetryAction(RetryAction.RetryDecision.FAIL, 0, "try once " +
           "and fail.");
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == this) {
+        return true;
+      } else {
+        return obj != null && obj.getClass() == this.getClass();
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      return this.getClass().hashCode();
+    }
   }
 
   static class RetryForever implements RetryPolicy {
