@@ -597,15 +597,15 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatu
 
         curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=<CHILD>"
 
-    The client receives a response with a batch of [`FileStatuses` JSON object](#FileStatuses_JSON_Schema), as well as iteration information:
+    The client receives a response with a [`DirectoryListing` JSON object](#DirectoryListing_JSON_Schema), which contains a [`FileStatuses` JSON object](#FileStatuses_JSON_Schema), as well as iteration information:
 
         HTTP/1.1 200 OK
         Cache-Control: no-cache
-        Expires: Tue, 30 Aug 2016 16:42:16 GMT
-        Date: Tue, 30 Aug 2016 16:42:16 GMT
+        Expires: Thu, 08 Sep 2016 03:40:38 GMT
+        Date: Thu, 08 Sep 2016 03:40:38 GMT
         Pragma: no-cache
-        Expires: Tue, 30 Aug 2016 16:42:16 GMT
-        Date: Tue, 30 Aug 2016 16:42:16 GMT
+        Expires: Thu, 08 Sep 2016 03:40:38 GMT
+        Date: Thu, 08 Sep 2016 03:40:38 GMT
         Pragma: no-cache
         Content-Type: application/json
         X-FRAME-OPTIONS: SAMEORIGIN
@@ -613,56 +613,61 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatu
         Server: Jetty(6.1.26)
 
         {
-            "partialListing": [
-                {
-                    "accessTime": 0,
-                    "blockSize": 0,
-                    "childrenNum": 0,
-                    "fileId": 16389,
-                    "group": "supergroup",
-                    "length": 0,
-                    "modificationTime": 1472575493064,
-                    "owner": "andrew",
-                    "pathSuffix": "anotherdir",
-                    "permission": "755",
-                    "replication": 0,
-                    "storagePolicy": 0,
-                    "type": "DIRECTORY"
+            "DirectoryListing": {
+                "partialListing": {
+                    "FileStatuses": {
+                        "FileStatus": [
+                            {
+                                "accessTime": 0,
+                                "blockSize": 0,
+                                "childrenNum": 0,
+                                "fileId": 16387,
+                                "group": "supergroup",
+                                "length": 0,
+                                "modificationTime": 1473305882563,
+                                "owner": "andrew",
+                                "pathSuffix": "bardir",
+                                "permission": "755",
+                                "replication": 0,
+                                "storagePolicy": 0,
+                                "type": "DIRECTORY"
+                            },
+                            {
+                                "accessTime": 1473305896945,
+                                "blockSize": 1024,
+                                "childrenNum": 0,
+                                "fileId": 16388,
+                                "group": "supergroup",
+                                "length": 0,
+                                "modificationTime": 1473305896965,
+                                "owner": "andrew",
+                                "pathSuffix": "bazfile",
+                                "permission": "644",
+                                "replication": 3,
+                                "storagePolicy": 0,
+                                "type": "FILE"
+                            }
+                        ]
+                    }
                 },
-                {
-                    "accessTime": 0,
-                    "blockSize": 0,
-                    "childrenNum": 0,
-                    "fileId": 16386,
-                    "group": "supergroup",
-                    "length": 0,
-                    "modificationTime": 1472575274776,
-                    "owner": "andrew",
-                    "pathSuffix": "somedir",
-                    "permission": "755",
-                    "replication": 0,
-                    "storagePolicy": 0,
-                    "type": "DIRECTORY"
-                }
-            ],
-            "remainingEntries": 1
+                "remainingEntries": 2
+            }
         }
-
 
 If `remainingEntries` is non-zero, there are additional entries in the directory.
 To query the next batch, set the `startAfter` parameter to the `pathSuffix` of the last item returned in the current batch. For example:
 
-        curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=somedir"
+        curl -i  "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=LISTSTATUS_BATCH&startAfter=bazfile"
 
 Which will return the next batch of directory entries:
 
         HTTP/1.1 200 OK
         Cache-Control: no-cache
-        Expires: Tue, 30 Aug 2016 16:46:23 GMT
-        Date: Tue, 30 Aug 2016 16:46:23 GMT
+        Expires: Thu, 08 Sep 2016 03:43:20 GMT
+        Date: Thu, 08 Sep 2016 03:43:20 GMT
         Pragma: no-cache
-        Expires: Tue, 30 Aug 2016 16:46:23 GMT
-        Date: Tue, 30 Aug 2016 16:46:23 GMT
+        Expires: Thu, 08 Sep 2016 03:43:20 GMT
+        Date: Thu, 08 Sep 2016 03:43:20 GMT
         Pragma: no-cache
         Content-Type: application/json
         X-FRAME-OPTIONS: SAMEORIGIN
@@ -670,24 +675,45 @@ Which will return the next batch of directory entries:
         Server: Jetty(6.1.26)
 
         {
-            "partialListing": [
-                {
-                    "accessTime": 1472575333568,
-                    "blockSize": 1024,
-                    "childrenNum": 0,
-                    "fileId": 16388,
-                    "group": "supergroup",
-                    "length": 224,
-                    "modificationTime": 1472575334222,
-                    "owner": "andrew",
-                    "pathSuffix": "somefile",
-                    "permission": "644",
-                    "replication": 3,
-                    "storagePolicy": 0,
-                    "type": "FILE"
-                }
-            ],
-            "remainingEntries": 0
+            "DirectoryListing": {
+                "partialListing": {
+                    "FileStatuses": {
+                        "FileStatus": [
+                            {
+                                "accessTime": 0,
+                                "blockSize": 0,
+                                "childrenNum": 0,
+                                "fileId": 16386,
+                                "group": "supergroup",
+                                "length": 0,
+                                "modificationTime": 1473305878951,
+                                "owner": "andrew",
+                                "pathSuffix": "foodir",
+                                "permission": "755",
+                                "replication": 0,
+                                "storagePolicy": 0,
+                                "type": "DIRECTORY"
+                            },
+                            {
+                                "accessTime": 1473305902864,
+                                "blockSize": 1024,
+                                "childrenNum": 0,
+                                "fileId": 16389,
+                                "group": "supergroup",
+                                "length": 0,
+                                "modificationTime": 1473305902878,
+                                "owner": "andrew",
+                                "pathSuffix": "quxfile",
+                                "permission": "644",
+                                "replication": 3,
+                                "storagePolicy": 0,
+                                "type": "FILE"
+                            }
+                        ]
+                    }
+                },
+                "remainingEntries": 0
+            }
         }
 
 Batch size is controlled by the `dfs.ls.limit` option on the NameNode.
@@ -1671,6 +1697,41 @@ A `FileStatuses` JSON object represents an array of `FileStatus` JSON objects.
 ```
 
 See also: [`FileStatus` Properties](#FileStatus_Properties), [`LISTSTATUS`](#List_a_Directory), [FileStatus](../../api/org/apache/hadoop/fs/FileStatus.html)
+
+### DirectoryListing JSON Schema
+
+A `DirectoryListing` JSON object represents a batch of directory entries while iteratively listing a directory. It contains a `FileStatuses` JSON object as well as iteration information.
+
+```json
+{
+  "name"      : "DirectoryListing",
+  "properties":
+  {
+    "DirectoryListing":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "partialListing":
+        {
+          "description": "A partial directory listing",
+          "type"       : "object", // A FileStatuses object
+          "required"   : true
+        },
+        "remainingEntries":
+        {
+          "description": "Number of remaining entries",
+          "type"       : "integer",
+          "required"   : true
+        }
+      }
+    }
+  }
+
+}
+```
+
+See also: [`FileStatuses` JSON Schema](#FileStatuses_JSON_Schema), [`LISTSTATUS_BATCH`](#Iteratively_List_a_Directory), [FileStatus](../../api/org/apache/hadoop/fs/FileStatus.html)
 
 ### Long JSON Schema
 
