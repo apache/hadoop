@@ -277,21 +277,24 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   @Override
   public void storeContainer(ContainerId containerId, int containerVersion,
       StartContainerRequest startRequest) throws IOException {
+    String idStr = containerId.toString();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("storeContainer: containerId= " + containerId
+      LOG.debug("storeContainer: containerId= " + idStr
           + ", startRequest= " + startRequest);
     }
-    String keyRequest = CONTAINERS_KEY_PREFIX + containerId.toString()
+    String keyRequest = CONTAINERS_KEY_PREFIX + idStr
         + CONTAINER_REQUEST_KEY_SUFFIX;
-    String keyVersion = CONTAINERS_KEY_PREFIX + containerId.toString()
-        + CONTAINER_VERSION_KEY_SUFFIX;
+    String keyVersion = getContainerVersionKey(idStr);
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
         batch.put(bytes(keyRequest),
             ((StartContainerRequestPBImpl) startRequest)
                 .getProto().toByteArray());
-        batch.put(bytes(keyVersion), bytes(Integer.toString(containerVersion)));
+        if (containerVersion != 0) {
+          batch.put(bytes(keyVersion),
+              bytes(Integer.toString(containerVersion)));
+        }
         db.write(batch);
       } finally {
         batch.close();
@@ -299,6 +302,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (DBException e) {
       throw new IOException(e);
     }
+  }
+
+  @VisibleForTesting
+  String getContainerVersionKey(String containerId) {
+    return CONTAINERS_KEY_PREFIX + containerId + CONTAINER_VERSION_KEY_SUFFIX;
   }
 
   @Override
@@ -1222,6 +1230,11 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     return CURRENT_VERSION_INFO;
   }
   
+  @VisibleForTesting
+  DB getDB() {
+    return db;
+  }
+
   /**
    * 1) Versioning scheme: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
    * 2) Any incompatible change of state-store is a major upgrade, and any
