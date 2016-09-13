@@ -1173,6 +1173,14 @@
     <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
   </property>
 
+  <property>
+    <description>The time in seconds between full compactions of the NM state
+    database. Setting the interval to zero disables the full compaction
+    cycles.</description>
+    <name>yarn.nodemanager.recovery.compaction-interval-secs</name>
+    <value>3600</value>
+  </property>
+
   <!--Docker configuration-->
 
   <property>
