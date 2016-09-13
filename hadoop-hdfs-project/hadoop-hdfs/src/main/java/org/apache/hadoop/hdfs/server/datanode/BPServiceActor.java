@@ -1179,10 +1179,11 @@ class BPServiceActor implements Runnable {
         resetBlockReportTime = false;
       } else {
         /* say the last block report was at 8:20:14. The current report
-         * should have started around 9:20:14 (default 1 hour interval).
+         * should have started around 14:20:14 (default 6 hour interval).
          * If current time is :
-         *   1) normal like 9:20:18, next report should be at 10:20:14
-         *   2) unexpected like 11:35:43, next report should be at 12:20:14
+         *   1) normal like 14:20:18, next report should be at 20:20:14.
+         *   2) unexpected like 21:35:43, next report should be at 2:20:14
+         *      on the next day.
          */
         nextBlockReportTime +=
               (((monotonicNow() - nextBlockReportTime + blockReportIntervalMs) /
