@@ -293,6 +293,9 @@ public abstract class FSQueue implements Queue, Schedulable {
   /**
    * Recomputes the shares for all child queues and applications based on this
    * queue's current share, and checks for starvation.
+   *
+   * @param checkStarvation whether to check for fairshare or minshare
+   *                        starvation on update
    */
   public abstract void updateInternal(boolean checkStarvation);
 

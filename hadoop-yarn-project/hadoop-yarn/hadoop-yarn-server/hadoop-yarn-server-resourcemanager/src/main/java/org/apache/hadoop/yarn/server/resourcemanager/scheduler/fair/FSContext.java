@@ -19,7 +19,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 /**
  * Helper class that holds basic information to be passed around
- * FairScheduler classes.
+ * FairScheduler classes. Think of this as a glorified map that holds key
+ * information about the scheduler.
  */
 public class FSContext {
   // Preemption-related info

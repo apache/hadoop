@@ -74,7 +74,8 @@ public class FSLeafQueue extends FSQueue {
   private final ActiveUsersManager activeUsersManager;
   public static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
-  public FSLeafQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
+  public FSLeafQueue(
+      String name, FairScheduler scheduler, FSParentQueue parent) {
     super(name, scheduler, parent);
     this.scheduler = scheduler;
     this.context = scheduler.getContext();
@@ -265,11 +266,11 @@ public class FSLeafQueue extends FSQueue {
     TreeSet<FSAppAttempt> appsWithDemand = fetchAppsWithDemand();
     for (FSAppAttempt app : appsWithDemand) {
       Resource appStarvation = app.fairShareStarvation();
-      if (Resources.equals(Resources.none(), appStarvation))  {
-        break;
-      } else {
+      if (!Resources.equals(Resources.none(), appStarvation))  {
         context.getStarvedApps().addStarvedApp(app);
         Resources.addTo(fairShareStarvation, appStarvation);
+      } else {
+        break;
       }
     }
 
@@ -611,15 +612,16 @@ public class FSLeafQueue extends FSQueue {
 
     long now = scheduler.getClock().getTime();
     if (!starved) {
+      // Record that the queue is not starved
       setLastTimeAtMinShare(now);
     }
 
-    if (starved &&
-        (now - lastTimeAtMinShare > getMinSharePreemptionTimeout())) {
-      return starvation;
-    } else {
-      return Resources.clone(Resources.none());
+    if (now - lastTimeAtMinShare < getMinSharePreemptionTimeout()) {
+      // the queue is not starved for the preemption timeout
+      starvation = Resources.clone(Resources.none());
     }
+
+    return starvation;
   }
 
   /**

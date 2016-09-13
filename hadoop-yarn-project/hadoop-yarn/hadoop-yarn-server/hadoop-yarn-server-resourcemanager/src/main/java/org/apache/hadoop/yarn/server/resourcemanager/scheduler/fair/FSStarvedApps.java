@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 
@@ -49,7 +50,9 @@ public class FSStarvedApps {
   }
 
   private static class StarvationComparator implements
-      Comparator<FSAppAttempt> {
+      Comparator<FSAppAttempt>, Serializable {
+    private static final long serialVersionUID = 1;
+
     @Override
     public int compare(FSAppAttempt app1, FSAppAttempt app2) {
       return Resources.fitsIn(app1.getStarvation(), app2.getStarvation())

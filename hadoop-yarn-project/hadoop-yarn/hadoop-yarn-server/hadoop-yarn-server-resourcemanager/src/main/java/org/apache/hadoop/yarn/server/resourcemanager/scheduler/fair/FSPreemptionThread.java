@@ -34,7 +34,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * Thread that handles FairScheduler preemption
+ * Thread that handles FairScheduler preemption.
  */
 public class FSPreemptionThread extends Thread {
   private static final Log LOG = LogFactory.getLog(FSPreemptionThread.class);
@@ -62,16 +62,15 @@ public class FSPreemptionThread extends Thread {
       FSAppAttempt starvedApp;
       try{
         starvedApp = context.getStarvedApps().take();
-        if (Resources.isNone(starvedApp.getStarvation())) {
-          continue;
+        if (!Resources.isNone(starvedApp.getStarvation())) {
+          List<RMContainer> containers = identifyContainersToPreempt(starvedApp);
+          if (containers != null) {
+            preemptContainers(containers);
+          }
         }
       } catch (InterruptedException e) {
         LOG.info("Preemption thread interrupted! Exiting.");
         return;
-      }
-      List<RMContainer> containers = identifyContainersToPreempt(starvedApp);
-      if (containers != null) {
-        preemptContainers(containers);
       }
     }
   }

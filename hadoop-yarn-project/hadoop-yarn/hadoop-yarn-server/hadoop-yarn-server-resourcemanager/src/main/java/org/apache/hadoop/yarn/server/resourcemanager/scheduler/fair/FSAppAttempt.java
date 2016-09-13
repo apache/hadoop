@@ -523,7 +523,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   public boolean canContainerBePreempted(RMContainer container) {
     // Sanity check that the app owns this container
-    if (!liveContainers.containsKey(container.getContainerId()) &&
+    if (!getLiveContainersMap().containsKey(container.getContainerId()) &&
         !newlyAllocatedContainers.contains(container)) {
       LOG.error("Looking to preempt container " + container +
           ". Container does not belong to app " + getApplicationId());
