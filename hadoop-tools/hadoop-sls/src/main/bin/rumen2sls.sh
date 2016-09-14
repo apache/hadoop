@@ -68,8 +68,7 @@ function run_sls_generator()
   hadoop_add_param args -outputJobs "-outputJobs ${outputdir}/${outputprefix}-jobs.json"
   hadoop_add_param args -outputNodes "-outputNodes ${outputdir}/${outputprefix}-nodes.json"
 
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  hadoop_add_client_opts
 
   hadoop_finalize
   # shellcheck disable=SC2086

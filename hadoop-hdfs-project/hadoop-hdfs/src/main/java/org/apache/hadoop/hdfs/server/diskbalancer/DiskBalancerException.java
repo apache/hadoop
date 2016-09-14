@@ -38,7 +38,8 @@ public class DiskBalancerException extends IOException {
     INVALID_MOVE,
     INTERNAL_ERROR,
     NO_SUCH_PLAN,
-    UNKNOWN_KEY
+    UNKNOWN_KEY,
+    INVALID_NODE,
   }
 
   private final Result result;

@@ -64,17 +64,17 @@ Administrators can configure individual daemons using the configuration options 
 
 | Daemon | Environment Variable |
 |:---- |:---- |
-| NameNode | HADOOP\_NAMENODE\_OPTS |
-| DataNode | HADOOP\_DATANODE\_OPTS |
-| Secondary NameNode | HADOOP\_SECONDARYNAMENODE\_OPTS |
+| NameNode | HDFS\_NAMENODE\_OPTS |
+| DataNode | HDFS\_DATANODE\_OPTS |
+| Secondary NameNode | HDFS\_SECONDARYNAMENODE\_OPTS |
 | ResourceManager | YARN\_RESOURCEMANAGER\_OPTS |
 | NodeManager | YARN\_NODEMANAGER\_OPTS |
 | WebAppProxy | YARN\_PROXYSERVER\_OPTS |
-| Map Reduce Job History Server | HADOOP\_JOB\_HISTORYSERVER\_OPTS |
+| Map Reduce Job History Server | MAPRED\_HISTORYSERVER\_OPTS |
 
-For example, To configure Namenode to use parallelGC, the following statement should be added in hadoop-env.sh :
+For example, To configure Namenode to use parallelGC and a 4GB Java Heap, the following statement should be added in hadoop-env.sh :
 
-      export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC"
+      export HDFS_NAMENODE_OPTS="-XX:+UseParallelGC -Xmx4g"
 
 See `etc/hadoop/hadoop-env.sh` for other examples.
 
@@ -90,13 +90,6 @@ It is also traditional to configure `HADOOP_HOME` in the system-wide shell envir
 
       HADOOP_HOME=/path/to/hadoop
       export HADOOP_HOME
-
-| Daemon | Environment Variable |
-|:---- |:---- |
-| ResourceManager | YARN\_RESOURCEMANAGER\_HEAPSIZE |
-| NodeManager | YARN\_NODEMANAGER\_HEAPSIZE |
-| WebAppProxy | YARN\_PROXYSERVER\_HEAPSIZE |
-| Map Reduce Job History Server | HADOOP\_JOB\_HISTORYSERVER\_HEAPSIZE |
 
 ### Configuring the Hadoop Daemons
 

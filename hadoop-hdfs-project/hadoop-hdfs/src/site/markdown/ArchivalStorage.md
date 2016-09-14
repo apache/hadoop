@@ -89,7 +89,7 @@ Note 2: For the erasure coded files with striping layout, the suitable storage p
 
 When a file or directory is created, its storage policy is *unspecified*. The storage policy can be specified using the "[`storagepolicies -setStoragePolicy`](#Set_Storage_Policy)" command. The effective storage policy of a file or directory is resolved by the following rules.
 
-1.  If the file or directory is specificed with a storage policy, return it.
+1.  If the file or directory is specified with a storage policy, return it.
 
 2.  For an unspecified file or directory, if it is the root directory, return the *default storage policy*. Otherwise, return its parent's effective storage policy.
 

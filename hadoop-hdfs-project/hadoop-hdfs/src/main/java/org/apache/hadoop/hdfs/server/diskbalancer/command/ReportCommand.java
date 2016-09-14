@@ -27,10 +27,11 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerException;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
-import org.apache.hadoop.hdfs.tools.DiskBalancer;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -52,15 +53,15 @@ public class ReportCommand extends Command {
     super(conf);
     this.out = out;
 
-    addValidCommandParameters(DiskBalancer.REPORT,
+    addValidCommandParameters(DiskBalancerCLI.REPORT,
         "Report volume information of nodes.");
 
     String desc = String.format(
         "Top number of nodes to be processed. Default: %d", getDefaultTop());
-    addValidCommandParameters(DiskBalancer.TOP, desc);
+    addValidCommandParameters(DiskBalancerCLI.TOP, desc);
 
-    desc = String.format("Print out volume information for a DataNode.");
-    addValidCommandParameters(DiskBalancer.NODE, desc);
+    desc = String.format("Print out volume information for DataNode(s).");
+    addValidCommandParameters(DiskBalancerCLI.NODE, desc);
   }
 
   @Override
@@ -69,8 +70,8 @@ public class ReportCommand extends Command {
     String outputLine = "Processing report command";
     recordOutput(result, outputLine);
 
-    Preconditions.checkState(cmd.hasOption(DiskBalancer.REPORT));
-    verifyCommandOptions(DiskBalancer.REPORT, cmd);
+    Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.REPORT));
+    verifyCommandOptions(DiskBalancerCLI.REPORT, cmd);
     readClusterInfo(cmd);
 
     final String nodeFormat =
@@ -81,9 +82,9 @@ public class ReportCommand extends Command {
         "[%s: volume-%s] - %.2f used: %d/%d, %.2f free: %d/%d, "
         + "isFailed: %s, isReadOnly: %s, isSkip: %s, isTransient: %s.";
 
-    if (cmd.hasOption(DiskBalancer.NODE)) {
+    if (cmd.hasOption(DiskBalancerCLI.NODE)) {
       /*
-       * Reporting volume information for a specific DataNode
+       * Reporting volume information for specific DataNode(s)
        */
       handleNodeReport(cmd, result, nodeFormatWithoutSequence, volumeFormat);
 
@@ -133,65 +134,81 @@ public class ReportCommand extends Command {
       final String nodeFormat, final String volumeFormat) throws Exception {
     String outputLine = "";
     /*
-     * get value that identifies a DataNode from command line, it could be UUID,
-     * IP address or host name.
+     * get value that identifies DataNode(s) from command line, it could be
+     * UUID, IP address or host name.
      */
-    final String nodeVal = cmd.getOptionValue(DiskBalancer.NODE);
+    final String nodeVal = cmd.getOptionValue(DiskBalancerCLI.NODE);
 
     if (StringUtils.isBlank(nodeVal)) {
       outputLine = "The value for '-node' is neither specified or empty.";
       recordOutput(result, outputLine);
     } else {
       /*
-       * Reporting volume information for a specific DataNode
+       * Reporting volume information for specific DataNode(s)
        */
       outputLine = String.format(
-          "Reporting volume information for DataNode '%s'.", nodeVal);
+          "Reporting volume information for DataNode(s) '%s'.", nodeVal);
       recordOutput(result, outputLine);
 
-      final String trueStr = "True";
-      final String falseStr = "False";
-      DiskBalancerDataNode dbdn = getNode(nodeVal);
-      // get storage path of datanode
-      populatePathNames(dbdn);
+      List<DiskBalancerDataNode> dbdns = Lists.newArrayList();
+      try {
+        dbdns = getNodes(nodeVal);
+      } catch (DiskBalancerException e) {
+        // If there are some invalid nodes that contained in nodeVal,
+        // the exception will be threw.
+        recordOutput(result, e.getMessage());
+        return;
+      }
 
-      if (dbdn == null) {
-        outputLine = String.format(
-            "Can't find a DataNode that matches '%s'.", nodeVal);
-        recordOutput(result, outputLine);
-      } else {
-        result.appendln(String.format(nodeFormat,
-            dbdn.getDataNodeName(),
-            dbdn.getDataNodeIP(),
-            dbdn.getDataNodePort(),
-            dbdn.getDataNodeUUID(),
-            dbdn.getVolumeCount(),
-            dbdn.getNodeDataDensity()));
-
-        List<String> volumeList = Lists.newArrayList();
-        for (DiskBalancerVolumeSet vset : dbdn.getVolumeSets().values()) {
-          for (DiskBalancerVolume vol : vset.getVolumes()) {
-            volumeList.add(String.format(volumeFormat,
-                vol.getStorageType(),
-                vol.getPath(),
-                vol.getUsedRatio(),
-                vol.getUsed(),
-                vol.getCapacity(),
-                vol.getFreeRatio(),
-                vol.getFreeSpace(),
-                vol.getCapacity(),
-                vol.isFailed() ? trueStr : falseStr,
-                vol.isReadOnly() ? trueStr : falseStr,
-                vol.isSkip() ? trueStr : falseStr,
-                vol.isTransient() ? trueStr : falseStr));
-          }
+      if (!dbdns.isEmpty()) {
+        for (DiskBalancerDataNode node : dbdns) {
+          recordNodeReport(result, node, nodeFormat, volumeFormat);
+          result.append(System.lineSeparator());
         }
-
-        Collections.sort(volumeList);
-        result.appendln(
-            StringUtils.join(volumeList.toArray(), System.lineSeparator()));
       }
     }
+  }
+
+  /**
+   * Put node report lines to string buffer.
+   */
+  private void recordNodeReport(StrBuilder result, DiskBalancerDataNode dbdn,
+      final String nodeFormat, final String volumeFormat) throws Exception {
+    final String trueStr = "True";
+    final String falseStr = "False";
+
+    // get storage path of datanode
+    populatePathNames(dbdn);
+    result.appendln(String.format(nodeFormat,
+        dbdn.getDataNodeName(),
+        dbdn.getDataNodeIP(),
+        dbdn.getDataNodePort(),
+        dbdn.getDataNodeUUID(),
+        dbdn.getVolumeCount(),
+        dbdn.getNodeDataDensity()));
+
+    List<String> volumeList = Lists.newArrayList();
+    for (DiskBalancerVolumeSet vset : dbdn.getVolumeSets().values()) {
+      for (DiskBalancerVolume vol : vset.getVolumes()) {
+        volumeList.add(String.format(volumeFormat,
+            vol.getStorageType(),
+            vol.getPath(),
+            vol.getUsedRatio(),
+            vol.getUsed(),
+            vol.getCapacity(),
+            vol.getFreeRatio(),
+            vol.getFreeSpace(),
+            vol.getCapacity(),
+            vol.isFailed() ? trueStr : falseStr,
+            vol.isReadOnly() ? trueStr: falseStr,
+            vol.isSkip() ? trueStr : falseStr,
+            vol.isTransient() ? trueStr : falseStr));
+      }
+    }
+
+    Collections.sort(volumeList);
+    result.appendln(
+        StringUtils.join(volumeList.toArray(), System.lineSeparator()));
   }
 
   /**
@@ -199,18 +216,18 @@ public class ReportCommand extends Command {
    */
   @Override
   public void printHelp() {
-    String header = "Report command reports the volume information of a given" +
-        " datanode, or prints out the list of nodes that will benefit from " +
-        "running disk balancer. Top defaults to " + getDefaultTop();
+    String header = "Report command reports the volume information of given" +
+        " datanode(s), or prints out the list of nodes that will benefit " +
+        "from running disk balancer. Top defaults to " + getDefaultTop();
     String footer = ". E.g.:\n"
         + "hdfs diskbalancer -report\n"
         + "hdfs diskbalancer -report -top 5\n"
         + "hdfs diskbalancer -report "
-        + "-node {DataNodeID | IP | Hostname}";
+        + "-node [<DataNodeID|IP|Hostname>,...]";
 
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.printHelp("hdfs diskbalancer -fs http://namenode.uri " +
         "-report [options]",
-        header, DiskBalancer.getReportOptions(), footer);
+        header, DiskBalancerCLI.getReportOptions(), footer);
   }
 }

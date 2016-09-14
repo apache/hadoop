@@ -31,14 +31,14 @@
 # Specify the max heapsize for the JobHistoryServer.  If no units are
 # given, it will be assumed to be in MB.
 # This value will be overridden by an Xmx setting specified in HADOOP_OPTS,
-# and/or HADOOP_JOB_HISTORYSERVER_OPTS.
+# and/or MAPRED_HISTORYSERVER_OPTS.
 # Default is the same as HADOOP_HEAPSIZE_MAX.
 #export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the HistoryServer.
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS
-#export HADOOP_JOB_HISTORYSERVER_OPTS=
+#export MAPRED_HISTORYSERVER_OPTS=
 
 # Specify the log4j settings for the JobHistoryServer
 # Java property: hadoop.root.logger

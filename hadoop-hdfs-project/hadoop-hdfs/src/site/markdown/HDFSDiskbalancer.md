@@ -102,9 +102,9 @@ or
 Plan ID can be read from datanode using query command.
 
 ### Report
-Report command provides detailed report about a node.
+Report command provides detailed report about node(s).
 
-`hdfs diskbalancer -fs http://namenode.uri -report -node {DataNodeID | IP | Hostname}`
+`hdfs diskbalancer -fs http://namenode.uri -report -node [<DataNodeID|IP|Hostname>,...]`
 
 
 Settings

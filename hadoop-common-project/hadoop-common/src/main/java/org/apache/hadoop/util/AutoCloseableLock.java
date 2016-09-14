@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.util;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This is a wrap class of a ReentrantLock. Extending AutoCloseable
@@ -25,14 +29,22 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class AutoCloseableLock implements AutoCloseable {
 
-  private final ReentrantLock lock;
+  private final Lock lock;
 
   /**
    * Creates an instance of {@code AutoCloseableLock}, initializes
-   * the underlying {@code ReentrantLock} object.
+   * the underlying lock instance with a new {@code ReentrantLock}.
    */
   public AutoCloseableLock() {
-    this.lock = new ReentrantLock();
+    this(new ReentrantLock());
+  }
+
+  /**
+   * Wrap provided Lock instance.
+   * @param lock Lock instance to wrap in AutoCloseable API.
+   */
+  public AutoCloseableLock(Lock lock) {
+    this.lock = lock;
   }
 
   /**
@@ -86,7 +98,7 @@ public class AutoCloseableLock implements AutoCloseable {
 
   /**
    * A wrapper method that makes a call to {@code tryLock()} of
-   * the underlying {@code ReentrantLock} object.
+   * the underlying {@code Lock} object.
    *
    * If the lock is not held by another thread, acquires the lock, set the
    * hold count to one and returns {@code true}.
@@ -116,7 +128,19 @@ public class AutoCloseableLock implements AutoCloseable {
    * @return {@code true} if any thread holds this lock and
    *         {@code false} otherwise
    */
-  public boolean isLocked() {
-    return lock.isLocked();
+  @VisibleForTesting
+  boolean isLocked() {
+    if (lock instanceof ReentrantLock) {
+      return ((ReentrantLock)lock).isLocked();
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * See {@link ReentrantLock#newCondition()}.
+   * @return the Condition object
+   */
+  public Condition newCondition() {
+    return lock.newCondition();
   }
 }

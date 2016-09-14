@@ -19,7 +19,11 @@ package org.apache.hadoop.conf;
 
 import java.io.StringWriter;
 import java.io.StringReader;
+import java.util.HashMap;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.HttpHeaders;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -32,6 +36,7 @@ import org.xml.sax.InputSource;
 
 import junit.framework.TestCase;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Basic test case that the ConfServlet can write configuration
@@ -45,6 +50,25 @@ public class TestConfServlet extends TestCase {
     Configuration testConf = new Configuration();
     testConf.set(TEST_KEY, TEST_VAL);
     return testConf;
+  }
+
+  @Test
+  public void testParseHeaders() throws Exception {
+    HashMap<String, String> verifyMap = new HashMap<String, String>();
+    verifyMap.put("text/plain", ConfServlet.FORMAT_XML);
+    verifyMap.put(null, ConfServlet.FORMAT_XML);
+    verifyMap.put("text/xml", ConfServlet.FORMAT_XML);
+    verifyMap.put("application/xml", ConfServlet.FORMAT_XML);
+    verifyMap.put("application/json", ConfServlet.FORMAT_JSON);
+
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    for(String contentTypeExpected : verifyMap.keySet()) {
+      String contenTypeActual = verifyMap.get(contentTypeExpected);
+      Mockito.when(request.getHeader(HttpHeaders.ACCEPT))
+          .thenReturn(contentTypeExpected);
+      assertEquals(contenTypeActual,
+          ConfServlet.parseAccecptHeader(request));
+    }
   }
 
   @Test

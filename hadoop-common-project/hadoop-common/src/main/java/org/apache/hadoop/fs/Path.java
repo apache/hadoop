@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputValidation;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.regex.Pattern;
@@ -37,7 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 @Stringable
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Path implements Comparable {
+public class Path implements Comparable, Serializable, ObjectInputValidation {
 
   /**
    * The directory separator, a slash.
@@ -65,6 +68,8 @@ public class Path implements Comparable {
    */
   private static final Pattern HAS_DRIVE_LETTER_SPECIFIER =
       Pattern.compile("^/?[a-zA-Z]:");
+
+  private static final long serialVersionUID = 0xad00f;
 
   private URI uri; // a hierarchical uri
 
@@ -564,5 +569,18 @@ public class Path implements Comparable {
       throw new IllegalArgumentException(e);
     }
     return new Path(newUri);
+  }
+
+  /**
+   * Validate the contents of a deserialized Path, so as
+   * to defend against malicious object streams.
+   * @throws InvalidObjectException if there's no URI
+   */
+  @Override
+  public void validateObject() throws InvalidObjectException {
+    if (uri == null) {
+      throw new InvalidObjectException("No URI in deserialized Path");
+    }
+
   }
 }

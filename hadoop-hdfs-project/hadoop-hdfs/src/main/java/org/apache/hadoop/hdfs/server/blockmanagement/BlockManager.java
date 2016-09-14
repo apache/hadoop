@@ -2624,7 +2624,7 @@ public class BlockManager implements BlockStatsMXBean {
       } while (storageBlock != null);
     }
 
-    // Iterate any remaing blocks that have not been reported and remove them
+    // Iterate any remaining blocks that have not been reported and remove them
     while (storageBlocksIterator.hasNext()) {
       toRemove.add(storageBlocksIterator.next());
     }
@@ -2677,7 +2677,7 @@ public class BlockManager implements BlockStatsMXBean {
                 corruptReplicas.isReplicaCorrupt(storedBlock, dn))) {
       // Add replica if appropriate. If the replica was previously corrupt
       // but now okay, it might need to be updated.
-      toAdd.add(new BlockInfoToAdd(storedBlock, replica));
+      toAdd.add(new BlockInfoToAdd(storedBlock, new Block(replica)));
     }
   }
 

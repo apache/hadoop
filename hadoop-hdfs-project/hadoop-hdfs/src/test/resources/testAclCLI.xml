@@ -679,63 +679,63 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output># file: /dir1/dir2</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output># owner: USERNAME</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output># group: supergroup</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>user::rwx</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>user:charlie:r-x</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>group::r-x</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
-          <expected-output>group:admin:rwx</expected-output>
+          <type>RegexpComparator</type>
+          <expected-output>^group:admin:rwx\b.*</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
-          <expected-output>mask::rwx</expected-output>
+          <type>ExactLineComparator</type>
+          <expected-output>mask::r-x</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>default:user::rwx</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>default:user:charlie:r-x</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>default:group::r-x</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>default:group:admin:rwx</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>default:mask::rwx</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>default:other::r-x</expected-output>
         </comparator>
         <comparator>
-          <type>SubstringComparator</type>
+          <type>ExactLineComparator</type>
           <expected-output>other::r-x</expected-output>
         </comparator>
       </comparators>

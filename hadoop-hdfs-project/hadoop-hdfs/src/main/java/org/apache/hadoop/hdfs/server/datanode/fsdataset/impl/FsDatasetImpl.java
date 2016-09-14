@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -60,6 +62,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.InstrumentedLock;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -267,6 +270,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private final int maxDataLength;
 
   private final AutoCloseableLock datasetLock;
+  private final Condition datasetLockCondition;
   
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -278,7 +282,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.dataStorage = storage;
     this.conf = conf;
     this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
-    this.datasetLock = new AutoCloseableLock();
+    this.datasetLock = new AutoCloseableLock(
+        new InstrumentedLock(getClass().getName(), LOG,
+          conf.getTimeDuration(
+            DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
+            DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS),
+          300));
+    this.datasetLockCondition = datasetLock.newCondition();
+
     // The number of volumes required for operation is the total number
     // of volumes minus the number of failed volumes we can tolerate.
     volFailuresTolerated = datanode.getDnConf().getVolFailuresTolerated();
@@ -515,7 +527,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // Disable the volume from the service.
           asyncDiskService.removeVolume(sd.getCurrentDir());
           volumes.removeVolume(absRoot, clearFailure);
-          volumes.waitVolumeRemoved(5000, this);
+          volumes.waitVolumeRemoved(5000, datasetLockCondition);
 
           // Removed all replica information for the blocks on the volume.
           // Unlike updating the volumeMap in addVolume(), this operation does

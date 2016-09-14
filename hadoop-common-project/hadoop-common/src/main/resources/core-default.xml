@@ -1313,10 +1313,19 @@
   <name>ipc.maximum.data.length</name>
   <value>67108864</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
-    accepted by the server. Messages larger than this value are rejected by
-    server immediately. This setting should rarely need to be changed. It merits
-    investigating whether the cause of long RPC messages can be fixed instead,
-    e.g. by splitting into smaller messages.
+    accepted by the server. Messages larger than this value are rejected by the
+    immediately to avoid possible OOMs. This setting should rarely need to be
+    changed.
+  </description>
+</property>
+
+<property>
+  <name>ipc.maximum.response.length</name>
+  <value>134217728</value>
+  <description>This indicates the maximum IPC message length (bytes) that can be
+    accepted by the client. Messages larger than this value are rejected
+    immediately to avoid possible OOMs. This setting should rarely need to be
+    changed.  Set to 0 to disable.
   </description>
 </property>
 

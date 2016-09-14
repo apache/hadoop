@@ -16,21 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
+package org.apache.hadoop.cli.util;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configurable;
+import java.util.StringTokenizer;
 
 /**
- * A pluggable object for altering the weights of apps in the fair scheduler,
- * which is used for example by {@link NewAppWeightBooster} to give higher
- * weight to new jobs so that short jobs finish faster.
+ * Comparator for the Command line tests.
  *
- * May implement {@link Configurable} to access configuration parameters.
+ * This comparator searches for an exact line as 'expected'
+ * in the string 'actual' and returns true if found
+ *
  */
-@Private
-@Unstable
-public interface WeightAdjuster {
-  public double adjustWeight(FSAppAttempt app, double curWeight);
+public class ExactLineComparator extends ComparatorBase {
+
+  @Override
+  public boolean compare(String actual, String expected) {
+    boolean success = false;
+    StringTokenizer tokenizer = new StringTokenizer(actual, "\n\r");
+    while (tokenizer.hasMoreTokens() && !success) {
+      String actualToken = tokenizer.nextToken();
+      success = actualToken.equals(expected);
+    }
+
+    return success;
+  }
+
 }

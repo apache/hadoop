@@ -23,6 +23,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -41,18 +42,19 @@ import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.CANCEL;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.HELP;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.NODE;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.PLAN;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.QUERY;
-import static org.apache.hadoop.hdfs.tools.DiskBalancer.REPORT;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.CANCEL;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.HELP;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.NODE;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.PLAN;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.QUERY;
+import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.REPORT;
 
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
@@ -387,8 +389,7 @@ public class TestDiskBalancerCommand {
   private List<String> runCommandInternal(final String cmdLine) throws
       Exception {
     String[] cmds = StringUtils.split(cmdLine, ' ');
-    org.apache.hadoop.hdfs.tools.DiskBalancer db =
-        new org.apache.hadoop.hdfs.tools.DiskBalancer(conf);
+    DiskBalancerCLI db = new DiskBalancerCLI(conf);
 
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
@@ -456,5 +457,53 @@ public class TestDiskBalancerCommand {
     command.setCluster(diskBalancerCluster);
     List<DiskBalancerDataNode> nodeList = command.getNodes(listArg.toString());
     assertEquals(nodeNum, nodeList.size());
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithMultipleNodes() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String dataNodeUuid2 = cluster.getDataNodes().get(1).getDatanodeUuid();
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, dataNodeUuid2);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+    // Since the order of input nodes will be disrupted when parse
+    // the node string, we should compare UUID with both output lines.
+    assertTrue(outputs.get(2).contains(dataNodeUuid1)
+        || outputs.get(6).contains(dataNodeUuid1));
+    assertTrue(outputs.get(2).contains(dataNodeUuid2)
+        || outputs.get(6).contains(dataNodeUuid2));
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithInvalidNode() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String invalidNode = "invalidNode";
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, invalidNode);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(invalidNode))));
+
+    String invalidNodeInfo =
+        String.format("The node(s) '%s' not found. "
+            + "Please make sure that '%s' exists in the cluster."
+            , invalidNode, invalidNode);
+    assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 }
