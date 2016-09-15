@@ -91,6 +91,7 @@ When running benchmarks with the above operation(s), please provide operation-sp
 The benchmark measures the number of operations performed by the name-node per second. Specifically, for each operation tested, it reports the total running time in seconds (_Elapsed Time_), operation throughput (_Ops per sec_), and average time for the operations (_Average Time_). The higher, the better.
 
 Following is a sample reports by running following commands that opens 100K files with 1K threads against a remote name-node. See [HDFS scalability: the limits to growth](https://www.usenix.org/legacy/publications/login/2010-04/openpdfs/shvachko.pdf) for real-world benchmark stats.
+
 ```
 $ hadoop org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark -fs hdfs://nameservice:9000 -op open -threads 1000 -files 100000
 
