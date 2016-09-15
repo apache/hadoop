@@ -123,7 +123,11 @@ public abstract class BaseContainerManagerTest {
       conf) {
     public int getHttpPort() {
       return HTTP_PORT;
-    };
+    }
+    @Override
+    public ContainerExecutor getContainerExecutor() {
+      return exec;
+    }
   };
   protected ContainerExecutor exec;
   protected DeletionService delSrvc;
