@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -91,12 +92,15 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected CapacitySchedulerContext csContext;
   protected YarnAuthorizationProvider authorizer = null;
 
-  public AbstractCSQueue(CapacitySchedulerContext cs, 
+  protected ActivitiesManager activitiesManager;
+
+  public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     this.labelManager = cs.getRMContext().getNodeLabelManager();
     this.parent = parent;
     this.queueName = queueName;
     this.resourceCalculator = cs.getResourceCalculator();
+    this.activitiesManager = cs.getActivitiesManager();
     
     // must be called after parent and queueName is set
     this.metrics =

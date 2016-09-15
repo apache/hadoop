@@ -42,12 +42,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -81,7 +80,7 @@ public class ParentQueue extends AbstractCSQueue {
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
-  public ParentQueue(CapacitySchedulerContext cs, 
+  public ParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
     this.scheduler = cs;
@@ -98,14 +97,14 @@ public class ParentQueue extends AbstractCSQueue {
           "capacity of " + rawCapacity + " for queue " + queueName +
           ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
     }
-    
+
     this.childQueues = new TreeSet<CSQueue>(nonPartitionedQueueComparator);
-    
+
     setupQueueConfigs(cs.getClusterResource());
 
-    LOG.info("Initialized parent-queue " + queueName + 
-        " name=" + queueName + 
-        ", fullname=" + getQueuePath()); 
+    LOG.info("Initialized parent-queue " + queueName +
+        " name=" + queueName +
+        ", fullname=" + getQueuePath());
   }
 
   synchronized void setupQueueConfigs(Resource clusterResource)
@@ -380,6 +379,10 @@ public class ParentQueue extends AbstractCSQueue {
         " #applications: " + getNumApplications());
   }
 
+  private String getParentName() {
+    return getParent() != null ? getParent().getQueueName() : "";
+  }
+
   @Override
   public synchronized CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, ResourceLimits resourceLimits,
@@ -392,6 +395,16 @@ public class ParentQueue extends AbstractCSQueue {
             + ", because it is not able to access partition=" + node
             .getPartition());
       }
+
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+          getParentName(), getQueueName(), ActivityState.REJECTED,
+          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + node
+              .getPartition());
+      if (rootQueue) {
+        ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
+            node);
+      }
+
       return CSAssignment.NULL_ASSIGNMENT;
     }
     
@@ -404,6 +417,15 @@ public class ParentQueue extends AbstractCSQueue {
             + ", because it doesn't need more resource, schedulingMode="
             + schedulingMode.name() + " node-partition=" + node.getPartition());
       }
+
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+          getParentName(), getQueueName(), ActivityState.SKIPPED,
+          ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE);
+      if (rootQueue) {
+        ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
+            node);
+      }
+
       return CSAssignment.NULL_ASSIGNMENT;
     }
     
@@ -423,9 +445,18 @@ public class ParentQueue extends AbstractCSQueue {
           resourceLimits, Resources.createResource(
               getMetrics().getReservedMB(), getMetrics()
                   .getReservedVirtualCores()), schedulingMode)) {
+
+        ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+            getParentName(), getQueueName(), ActivityState.SKIPPED,
+            ActivityDiagnosticConstant.QUEUE_MAX_CAPACITY_LIMIT);
+        if (rootQueue) {
+          ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
+              node);
+        }
+
         break;
       }
-      
+
       // Schedule
       CSAssignment assignedToChild =
           assignContainersToChildQueues(clusterResource, node, resourceLimits,
@@ -436,6 +467,29 @@ public class ParentQueue extends AbstractCSQueue {
       if (Resources.greaterThan(
               resourceCalculator, clusterResource, 
               assignedToChild.getResource(), Resources.none())) {
+
+        ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+            getParentName(), getQueueName(), ActivityState.ACCEPTED,
+            ActivityDiagnosticConstant.EMPTY);
+
+        if (node.getReservedContainer() == null) {
+          if (rootQueue) {
+            ActivitiesLogger.NODE.finishAllocatedNodeAllocation(
+                activitiesManager, node,
+                assignedToChild.getAssignmentInformation()
+                    .getFirstAllocatedOrReservedContainerId(),
+                AllocationState.ALLOCATED);
+          }
+        } else {
+          if (rootQueue) {
+            ActivitiesLogger.NODE.finishAllocatedNodeAllocation(
+                activitiesManager, node,
+                assignedToChild.getAssignmentInformation()
+                    .getFirstAllocatedOrReservedContainerId(),
+                AllocationState.RESERVED);
+          }
+        }
+
         // Track resource utilization for the parent-queue
         allocateResource(clusterResource, assignedToChild.getResource(),
             node.getPartition(), assignedToChild.isIncreasedAllocation());
@@ -474,6 +528,15 @@ public class ParentQueue extends AbstractCSQueue {
 
       } else {
         assignment.setSkippedType(assignedToChild.getSkippedType());
+
+        ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+            getParentName(), getQueueName(), ActivityState.SKIPPED,
+            ActivityDiagnosticConstant.EMPTY);
+        if (rootQueue) {
+          ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
+              node);
+        }
+
         break;
       }
 
@@ -631,7 +694,7 @@ public class ParentQueue extends AbstractCSQueue {
             resourceToSubtract);
       }
     }
-    
+
     return assignment;
   }
 
