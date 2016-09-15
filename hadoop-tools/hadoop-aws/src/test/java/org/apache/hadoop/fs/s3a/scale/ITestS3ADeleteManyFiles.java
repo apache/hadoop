@@ -114,11 +114,4 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
     ContractTestUtils.assertDeleted(fs, finalDir, true, false);
   }
 
-  @Test
-  public void testOpenCreate() throws IOException {
-    final Path scaleTestDir = getTestPath();
-    final Path srcDir = new Path(scaleTestDir, "opencreate");
-    ContractTestUtils.createAndVerifyFile(fs, srcDir, 1024);
-    ContractTestUtils.createAndVerifyFile(fs, srcDir, 50 * 1024);
-  }
 }
