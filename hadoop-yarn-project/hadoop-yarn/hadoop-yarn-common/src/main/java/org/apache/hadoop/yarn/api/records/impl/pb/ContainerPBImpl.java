@@ -49,7 +49,11 @@ public class ContainerPBImpl extends Container {
   private Resource resource = null;
   private Priority priority = null;
   private Token containerToken = null;
-
+  
+  private ContainerId originContainerId = null;
+  private NodeId originNodeId = null;
+  
+  
   public ContainerPBImpl() {
     builder = ContainerProto.newBuilder();
   }
@@ -107,6 +111,16 @@ public class ContainerPBImpl extends Container {
         && !((TokenPBImpl) this.containerToken).getProto().equals(
             builder.getContainerToken())) {
       builder.setContainerToken(convertToProtoFormat(this.containerToken));
+    }
+    if (this.originContainerId != null
+        && !((ContainerIdPBImpl) originContainerId).getProto().equals(
+        builder.getOriginContainerId())) {
+      builder.setOriginContainerId(convertToProtoFormat(this.originContainerId));
+    }
+    if (this.originNodeId != null
+        && !((NodeIdPBImpl) originNodeId).getProto().equals(
+        builder.getOriginNodeId())) {
+      builder.setOriginNodeId(convertToProtoFormat(this.originNodeId));
     }
   }
 
@@ -285,7 +299,61 @@ public class ContainerPBImpl extends Container {
     maybeInitBuilder();
     builder.setVersion(version);
   }
-
+  
+  @Override
+  public boolean getIsMove() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getIsMove();
+  }
+  
+  @Override
+  public void setIsMove(boolean isMove) {
+    maybeInitBuilder();
+    builder.setIsMove(isMove);
+  }
+  
+  @Override
+  public ContainerId getOriginContainerId() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.originContainerId != null) {
+      return this.originContainerId;
+    }
+    if (!p.hasOriginContainerId()) {
+      return null;
+    }
+    this.originContainerId = convertFromProtoFormat(p.getOriginContainerId());
+    return this.originContainerId;
+  }
+  
+  @Override
+  public void setOriginContainerId(ContainerId originContainerId) {
+    maybeInitBuilder();
+    if (originContainerId == null)
+      builder.clearOriginContainerId();
+    this.originContainerId = originContainerId;
+  }
+  
+  @Override
+  public NodeId getOriginNodeId() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.originNodeId != null) {
+      return this.originNodeId;
+    }
+    if (!p.hasOriginNodeId()) {
+      return null;
+    }
+    this.originNodeId = convertFromProtoFormat(p.getOriginNodeId());
+    return this.originNodeId;
+  }
+  
+  @Override
+  public void setOriginNodeId(NodeId originNodeId) {
+    maybeInitBuilder();
+    if (originNodeId == null)
+      builder.clearOriginNodeId();
+    this.originNodeId = originNodeId;
+  }
+  
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
     return new ContainerIdPBImpl(p);
   }
@@ -348,6 +416,11 @@ public class ContainerPBImpl extends Container {
     sb.append("Priority: ").append(getPriority()).append(", ");
     sb.append("Token: ").append(getContainerToken()).append(", ");
     sb.append("ExecutionType: ").append(getExecutionType()).append(", ");
+    sb.append("IsMove: ").append(getIsMove()).append(", ");
+    if (getIsMove()) {
+      sb.append("OriginContainerId: ").append(getOriginContainerId()).append(", ");
+      sb.append("OriginNodeId: ").append(getOriginNodeId()).append(", ");
+    }
     sb.append("]");
     return sb.toString();
   }

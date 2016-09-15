@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -41,6 +42,8 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   private Resource capability = null;
   private ExecutionTypeRequest executionTypeRequest = null;
   
+  private boolean isMove = false;
+  private ContainerId originContainerId = null;
   
   public ResourceRequestPBImpl() {
     builder = ResourceRequestProto.newBuilder();
@@ -202,6 +205,26 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
   public void setAllocationRequestId(long allocationRequestID) {
     maybeInitBuilder();
     builder.setAllocationRequestId(allocationRequestID);
+  }
+  
+  @Override
+  public boolean getIsMove() {
+    return isMove;
+  }
+  
+  @Override
+  public void setIsMove(boolean isMove) {
+    this.isMove = isMove;
+  }
+  
+  @Override
+  public ContainerId getOriginContainerId() {
+    return originContainerId;
+  }
+  
+  @Override
+  public void setOriginContainerId(ContainerId originContainerId) {
+    this.originContainerId = originContainerId;
   }
 
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {

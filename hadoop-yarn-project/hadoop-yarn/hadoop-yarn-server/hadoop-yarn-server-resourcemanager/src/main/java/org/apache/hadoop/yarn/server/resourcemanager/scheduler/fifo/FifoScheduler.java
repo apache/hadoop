@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerMoveRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -384,6 +385,74 @@ public class FifoScheduler extends
           headroom, null, null, null, application.pullUpdatedNMTokens());
     }
   }
+  
+  /**
+   * This is the version of allocate that handles container relocation requests
+   */
+  public Allocation allocate(ApplicationAttemptId applicationAttemptId,
+      List<ResourceRequest> ask, List<ContainerId> release,
+      List<String> blacklistAdditions, List<String> blacklistRemovals,
+      List<UpdateContainerRequest> increaseRequests,
+      List<UpdateContainerRequest> decreaseRequests,
+      List<ContainerMoveRequest> moveAsk) {
+    FiCaSchedulerApp application = getApplicationAttempt(applicationAttemptId);
+    if (application == null) {
+      LOG.error("Calling allocate on removed " +
+          "or non existant application " + applicationAttemptId);
+      return EMPTY_ALLOCATION;
+    }
+    
+    // Sanity check
+    SchedulerUtils.normalizeRequests(ask, resourceCalculator,
+        getClusterResource(), minimumAllocation,
+        getMaximumResourceCapability());
+    
+    // Release containers
+    releaseContainers(release, application);
+    
+    synchronized (application) {
+      
+      // make sure we aren't stopping/removing the application
+      // when the allocate comes in
+      if (application.isStopped()) {
+        LOG.info("Calling allocate on a stopped " +
+            "application " + applicationAttemptId);
+        return EMPTY_ALLOCATION;
+      }
+      
+      // In order to handle ask and moveAsk uniformly, convert all container move requests
+      // into resource requests
+      application.convertAndAppendMoveAsk(moveAsk, ask);
+      
+      if (!ask.isEmpty()) {
+        LOG.debug("allocate: pre-update" +
+            " applicationId=" + applicationAttemptId +
+            " application=" + application);
+        application.showRequests();
+        
+        // Update application requests
+        application.updateResourceRequests(ask);
+        
+        LOG.debug("allocate: post-update" +
+            " applicationId=" + applicationAttemptId +
+            " application=" + application);
+        application.showRequests();
+        
+        LOG.debug("allocate:" +
+            " applicationId=" + applicationAttemptId +
+            " #ask=" + ask.size());
+      }
+  
+      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+      
+      Resource headroom = application.getHeadroom();
+      application.setApplicationHeadroomForMetrics(headroom);
+      List<Container> newlyAllocatedContainers = application.pullNewlyAllocatedContainers();
+      System.out.println();
+      return new Allocation(newlyAllocatedContainers,
+          headroom, null, null, null, application.pullUpdatedNMTokens());
+    }
+  }
 
   private FiCaSchedulerNode getNode(NodeId nodeId) {
     return nodeTracker.getNode(nodeId);
@@ -714,6 +783,15 @@ public class FifoScheduler extends
             node.getRMNode().getHttpAddress(), capability,
             schedulerKey.getPriority(), null,
             schedulerKey.getAllocationRequestId());
+        
+        // handle resource requests that were generated from container move requests, so that the
+        // allocated container is aware of the container relocation
+        if(request.getIsMove()) {
+          container.setIsMove(request.getIsMove());
+          container.setOriginContainerId(request.getOriginContainerId());
+          container.setOriginNodeId(
+              application.getRMContainer(request.getOriginContainerId()).getAllocatedNode());
+        }
         
         // Allocate!
         

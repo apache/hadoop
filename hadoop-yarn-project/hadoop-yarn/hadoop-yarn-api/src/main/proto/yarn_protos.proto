@@ -95,6 +95,9 @@ message ContainerProto {
   optional ExecutionTypeProto execution_type = 7 [default = GUARANTEED];
   optional int64 allocation_request_id = 8 [default = -1];
   optional int32 version = 9 [default = 0];
+  optional bool isMove = 20 [default = false];
+  optional ContainerIdProto origin_container_id = 21;
+  optional NodeIdProto origin_node_id = 22;
 }
 
 message ContainerReportProto {
@@ -305,6 +308,12 @@ message ResourceRequestProto {
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
   optional int64 allocation_request_id = 8 [default = 0];
+}
+
+message ContainerMoveRequestProto {
+  optional PriorityProto priority = 1;
+  optional ContainerIdProto origin_container_id = 2;
+  optional string target_host = 3;
 }
 
 message ExecutionTypeRequestProto {
