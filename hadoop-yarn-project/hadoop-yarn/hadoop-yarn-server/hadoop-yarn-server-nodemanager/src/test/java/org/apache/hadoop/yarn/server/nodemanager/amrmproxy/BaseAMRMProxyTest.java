@@ -668,6 +668,11 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
+    public Configuration getConf() {
+      return null;
+    }
+
+    @Override
     public void setDecommissioned(boolean isDecommissioned) {
     }
 

@@ -186,8 +186,9 @@ public class TestResourceLocalizationService {
     String logDir = lfs.makeQualified(new Path(basedir, "logdir ")).toString();
     conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
     nmContext = new NMContext(new NMContainerTokenSecretManager(
-      conf), new NMTokenSecretManagerInNM(), null,
-      new ApplicationACLsManager(conf), new NMNullStateStoreService(), false);
+        conf), new NMTokenSecretManagerInNM(), null,
+        new ApplicationACLsManager(conf), new NMNullStateStoreService(),
+        false, conf);
   }
 
   @After
@@ -2372,7 +2373,7 @@ public class TestResourceLocalizationService {
     NMContext nmContext =
         new NMContext(new NMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInNM(), null,
-          new ApplicationACLsManager(conf), stateStore, false);
+          new ApplicationACLsManager(conf), stateStore, false, conf);
     ResourceLocalizationService rawService =
       new ResourceLocalizationService(dispatcher, exec, delService,
                                       dirsHandler, nmContext);

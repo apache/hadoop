@@ -470,7 +470,8 @@ public class ResourceLocalizationService extends CompositeService
       ContainerLocalizationRequestEvent rsrcReqs) {
     Container c = rsrcReqs.getContainer();
     EnumSet<ContainerState> set =
-        EnumSet.of(ContainerState.LOCALIZING, ContainerState.RUNNING);
+        EnumSet.of(ContainerState.LOCALIZING,
+            ContainerState.RUNNING, ContainerState.REINITIALIZING);
     if (!set.contains(c.getContainerState())) {
       LOG.warn(c.getContainerId() + " is at " + c.getContainerState()
           + " state, do not localize resources.");

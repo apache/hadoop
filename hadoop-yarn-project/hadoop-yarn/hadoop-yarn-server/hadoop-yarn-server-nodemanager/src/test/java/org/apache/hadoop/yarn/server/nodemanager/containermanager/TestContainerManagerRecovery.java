@@ -559,7 +559,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       NMStateStoreService stateStore) {
     NMContext context = new NMContext(new NMContainerTokenSecretManager(
         conf), new NMTokenSecretManagerInNM(), null,
-        new ApplicationACLsManager(conf), stateStore, false){
+        new ApplicationACLsManager(conf), stateStore, false, conf){
       public int getHttpPort() {
         return HTTP_PORT;
       }

@@ -109,11 +109,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerReInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.SignalContainersLauncherEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceSet;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
@@ -161,6 +163,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class ContainerManagerImpl extends CompositeService implements
     ContainerManager {
 
+  private enum ReinitOp {
+    UPGRADE, COMMIT, ROLLBACK, LOCALIZE;
+  }
   /**
    * Extra duration to wait for applications to be killed on shutdown.
    */
@@ -1449,18 +1454,8 @@ public class ContainerManagerImpl extends CompositeService implements
       ResourceLocalizationRequest request) throws YarnException, IOException {
 
     ContainerId containerId = request.getContainerId();
-    Container container = context.getContainers().get(containerId);
-    if (container == null) {
-      throw new YarnException("Specified " + containerId + " does not exist!");
-    }
-    if (!container.getContainerState()
-        .equals(org.apache.hadoop.yarn.server.nodemanager.
-            containermanager.container.ContainerState.RUNNING)) {
-      throw new YarnException(
-          containerId + " is at " + container.getContainerState()
-              + " state. Not able to localize new resources.");
-    }
-
+    Container container = preUpgradeOrLocalizeCheck(containerId,
+        ReinitOp.LOCALIZE);
     try {
       Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
           container.getResourceSet().addResources(request.getLocalResources());
@@ -1474,6 +1469,38 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     return ResourceLocalizationResponse.newInstance();
+  }
+
+  public void upgradeContainer(ContainerId containerId,
+      ContainerLaunchContext upgradeLaunchContext) throws YarnException {
+    Container container = preUpgradeOrLocalizeCheck(containerId,
+        ReinitOp.UPGRADE);
+    ResourceSet resourceSet = new ResourceSet();
+    try {
+      resourceSet.addResources(upgradeLaunchContext.getLocalResources());
+      dispatcher.getEventHandler().handle(
+          new ContainerReInitEvent(containerId, upgradeLaunchContext,
+              resourceSet));
+      container.setIsReInitializing(true);
+    } catch (URISyntaxException e) {
+      LOG.info("Error when parsing local resource URI for upgrade of" +
+          "Container [" + containerId + "]", e);
+      throw new YarnException(e);
+    }
+  }
+
+  private Container preUpgradeOrLocalizeCheck(ContainerId containerId,
+      ReinitOp op) throws YarnException {
+    Container container = context.getContainers().get(containerId);
+    if (container == null) {
+      throw new YarnException("Specified " + containerId + " does not exist!");
+    }
+    if (!container.isRunning() || container.isReInitializing()) {
+      throw new YarnException("Cannot perform " + op + " on [" + containerId
+          + "]. Current state is [" + container.getContainerState() + ", " +
+          "isReInitializing=" + container.isReInitializing() + "].");
+    }
+    return container;
   }
 
   @SuppressWarnings("unchecked")
