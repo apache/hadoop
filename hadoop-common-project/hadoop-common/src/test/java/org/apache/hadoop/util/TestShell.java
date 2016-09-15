@@ -138,12 +138,12 @@ public class TestShell extends TestCase {
         inheritParentEnv);
     command.execute();
     String[] varsArr = command.getOutput().split("\n");
-    Map<String, String> vars = new HashMap<>();
+    Map<String, String> vars = new HashMap<String, String>();
     for (String var : varsArr) {
       int eqIndex = var.indexOf('=');
       vars.put(var.substring(0, eqIndex), var.substring(eqIndex + 1));
     }
-    Map<String, String> expectedEnv = new HashMap<>();
+    Map<String, String> expectedEnv = new HashMap<String, String>();
     expectedEnv.putAll(System.getenv());
     if (inheritParentEnv) {
       expectedEnv.putAll(customEnv);
