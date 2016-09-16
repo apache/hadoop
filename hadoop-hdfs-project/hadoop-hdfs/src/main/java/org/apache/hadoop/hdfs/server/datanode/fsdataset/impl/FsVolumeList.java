@@ -201,7 +201,7 @@ class FsVolumeList {
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
           } catch (ClosedChannelException e) {
             FsDatasetImpl.LOG.info("The volume " + v + " is closed while " +
-                "addng replicas, ignored.");
+                "adding replicas, ignored.");
           } catch (IOException ioe) {
             FsDatasetImpl.LOG.info("Caught exception while adding replicas " +
                 "from " + v + ". Will throw later.", ioe);
