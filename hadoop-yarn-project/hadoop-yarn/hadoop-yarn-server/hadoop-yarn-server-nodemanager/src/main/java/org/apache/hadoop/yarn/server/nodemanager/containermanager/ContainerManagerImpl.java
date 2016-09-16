@@ -165,8 +165,8 @@ import static org.apache.hadoop.service.Service.STATE.STARTED;
 public class ContainerManagerImpl extends CompositeService implements
     ContainerManager {
 
-  private enum ReinitOp {
-    UPGRADE, COMMIT, ROLLBACK, LOCALIZE;
+  private enum ReInitOp {
+    RE_INIT, COMMIT, ROLLBACK, LOCALIZE;
   }
   /**
    * Extra duration to wait for applications to be killed on shutdown.
@@ -1535,7 +1535,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     ContainerId containerId = request.getContainerId();
     Container container = preUpgradeOrLocalizeCheck(containerId,
-        ReinitOp.LOCALIZE);
+        ReInitOp.LOCALIZE);
     try {
       Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
           container.getResourceSet().addResources(request.getLocalResources());
@@ -1551,16 +1551,31 @@ public class ContainerManagerImpl extends CompositeService implements
     return ResourceLocalizationResponse.newInstance();
   }
 
-  public void upgradeContainer(ContainerId containerId,
-      ContainerLaunchContext upgradeLaunchContext) throws YarnException {
+  /**
+   * ReInitialize a container using a new Launch Context. If the
+   * retryFailureContext is not provided, The container is
+   * terminated on Failure.
+   *
+   * NOTE: Auto-Commit is true by default. This also means that the rollback
+   *       context is purged as soon as the command to start the new process
+   *       is sent. (The Container moves to RUNNING state)
+   *
+   * @param containerId Container Id.
+   * @param autoCommit Auto Commit flag.
+   * @param reInitLaunchContext Target Launch Context.
+   * @throws YarnException Yarn Exception.
+   */
+  public void reInitializeContainer(ContainerId containerId,
+      ContainerLaunchContext reInitLaunchContext, boolean autoCommit)
+      throws YarnException {
     Container container = preUpgradeOrLocalizeCheck(containerId,
-        ReinitOp.UPGRADE);
+        ReInitOp.RE_INIT);
     ResourceSet resourceSet = new ResourceSet();
     try {
-      resourceSet.addResources(upgradeLaunchContext.getLocalResources());
+      resourceSet.addResources(reInitLaunchContext.getLocalResources());
       dispatcher.getEventHandler().handle(
-          new ContainerReInitEvent(containerId, upgradeLaunchContext,
-              resourceSet));
+          new ContainerReInitEvent(containerId, reInitLaunchContext,
+              resourceSet, autoCommit));
       container.setIsReInitializing(true);
     } catch (URISyntaxException e) {
       LOG.info("Error when parsing local resource URI for upgrade of" +
@@ -1569,8 +1584,41 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
+  /**
+   * Rollback the last reInitialization, if possible.
+   * @param containerId Container ID.
+   * @throws YarnException Yarn Exception.
+   */
+  public void rollbackReInitialization(ContainerId containerId)
+      throws YarnException {
+    Container container = preUpgradeOrLocalizeCheck(containerId,
+        ReInitOp.ROLLBACK);
+    if (container.canRollback()) {
+      dispatcher.getEventHandler().handle(
+          new ContainerEvent(containerId, ContainerEventType.ROLLBACK_REINIT));
+    } else {
+      throw new YarnException("Nothing to rollback to !!");
+    }
+  }
+
+  /**
+   * Commit last reInitialization after which no rollback will be possible.
+   * @param containerId Container ID.
+   * @throws YarnException Yarn Exception.
+   */
+  public void commitReInitialization(ContainerId containerId)
+      throws YarnException {
+    Container container = preUpgradeOrLocalizeCheck(containerId,
+        ReInitOp.COMMIT);
+    if (container.canRollback()) {
+      container.commitUpgrade();
+    } else {
+      throw new YarnException("Nothing to Commit !!");
+    }
+  }
+
   private Container preUpgradeOrLocalizeCheck(ContainerId containerId,
-      ReinitOp op) throws YarnException {
+      ReInitOp op) throws YarnException {
     Container container = context.getContainers().get(containerId);
     if (container == null) {
       throw new YarnException("Specified " + containerId + " does not exist!");

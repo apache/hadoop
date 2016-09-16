@@ -26,6 +26,7 @@ public enum ContainerEventType {
   UPDATE_DIAGNOSTICS_MSG,
   CONTAINER_DONE,
   REINITIALIZE_CONTAINER,
+  ROLLBACK_REINIT,
 
   // DownloadManager
   CONTAINER_INITED,
