@@ -84,7 +84,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
       count = 0;
     }
 
-    synchronized FileSystem getFileSytem(Configuration conf)
+    synchronized FileSystem getFileSystem(Configuration conf)
       throws IOException {
       if (fs == null) {
         fs = FileSystem.get(conf);
@@ -290,7 +290,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     }
     Configuration conf = new Configuration(namenodeConf);
     conf.set(HTTPFS_FS_USER, user);
-    return cachedFS.getFileSytem(conf);
+    return cachedFS.getFileSystem(conf);
   }
 
   protected void closeFileSystem(FileSystem fs) throws IOException {

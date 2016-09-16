@@ -103,6 +103,7 @@ public class TestFilterFileSystem {
     public void processDeleteOnExit();
     public FsStatus getStatus();
     public FileStatus[] listStatus(Path f, PathFilter filter);
+    public FileStatus[] listStatusBatch(Path f, byte[] token);
     public FileStatus[] listStatus(Path[] files);
     public FileStatus[] listStatus(Path[] files, PathFilter filter);
     public FileStatus[] globStatus(Path pathPattern);
