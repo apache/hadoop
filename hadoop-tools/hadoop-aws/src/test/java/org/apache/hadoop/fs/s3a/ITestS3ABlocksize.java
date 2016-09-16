@@ -48,9 +48,6 @@ public class ITestS3ABlocksize extends AbstractFSContractTestBase {
     return new S3AContract(conf);
   }
 
-  @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
-
   @Test
   @SuppressWarnings("deprecation")
   public void testBlockSize() throws Exception {

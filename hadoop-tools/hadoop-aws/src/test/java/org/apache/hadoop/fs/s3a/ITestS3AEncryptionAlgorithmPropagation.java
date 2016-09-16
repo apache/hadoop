@@ -43,12 +43,6 @@ public class ITestS3AEncryptionAlgorithmPropagation
     return conf;
   }
 
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    IOUtils.closeStream(getFileSystem());
-  }
-
   @Test
   public void testEncrypt0() throws Throwable {
     writeThenReadFileToFailure(0);

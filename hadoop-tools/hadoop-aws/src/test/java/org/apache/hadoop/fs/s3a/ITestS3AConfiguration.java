@@ -76,13 +76,13 @@ public class ITestS3AConfiguration {
 
   /**
    * Test if custom endpoint is picked up.
-   * <p/>
+   * <p>
    * The test expects TEST_ENDPOINT to be defined in the Configuration
    * describing the endpoint of the bucket to which TEST_FS_S3A_NAME points
-   * (f.i. "s3-eu-west-1.amazonaws.com" if the bucket is located in Ireland).
+   * (i.e. "s3-eu-west-1.amazonaws.com" if the bucket is located in Ireland).
    * Evidently, the bucket has to be hosted in the region denoted by the
    * endpoint for the test to succeed.
-   * <p/>
+   * <p>
    * More info and the list of endpoint identifiers:
    * http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
    *

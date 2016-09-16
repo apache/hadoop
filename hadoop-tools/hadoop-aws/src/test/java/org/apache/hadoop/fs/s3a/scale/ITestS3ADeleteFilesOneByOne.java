@@ -36,9 +36,4 @@ public class ITestS3ADeleteFilesOneByOne extends ITestS3ADeleteManyFiles {
     return configuration;
   }
 
-  @Override
-  @Test
-  public void testOpenCreate() throws IOException {
-
-  }
 }

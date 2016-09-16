@@ -34,32 +34,18 @@ import org.junit.rules.Timeout;
  * 4th part should not trigger an exception as it would with a
  * non-blocking threadpool.
  */
-public class ITestS3ABlockingThreadPool {
-
-  private Configuration conf;
-  private S3AFileSystem fs;
+public class ITestS3ABlockingThreadPool extends AbstractS3ATestBase {
 
   @Rule
   public Timeout testTimeout = new Timeout(30 * 60 * 1000);
 
-  protected Path getTestPath() {
-    return new Path("/tests3a");
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    conf = new Configuration();
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = new Configuration();
     conf.setLong(Constants.MIN_MULTIPART_THRESHOLD, 5 * 1024 * 1024);
-    conf.setLong(Constants.MULTIPART_SIZE, 5 * 1024 * 1024);
-    conf.setInt(Constants.MAX_THREADS, 2);
-    conf.setInt(Constants.MAX_TOTAL_TASKS, 1);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    if (fs != null) {
-      fs.delete(getTestPath(), true);
-    }
+    conf.setInt(Constants.MULTIPART_SIZE, 5 * 1024 * 1024);
+    conf.setBoolean(Constants.FAST_UPLOAD, true);
+    return conf;
   }
 
   @Test
