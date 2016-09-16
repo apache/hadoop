@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -27,14 +26,17 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerMoveRequest;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerMoveRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.UpdateContainerRequestPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerMoveRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.UpdateContainerRequestProto;
@@ -54,6 +56,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private List<ContainerId> release = null;
   private List<UpdateContainerRequest> updateRequests = null;
   private ResourceBlacklistRequest blacklistRequest = null;
+  private List<ContainerMoveRequest> moveAsk = null;
   
   public AllocateRequestPBImpl() {
     builder = AllocateRequestProto.newBuilder();
@@ -103,6 +106,9 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
     if (this.blacklistRequest != null) {
       builder.setBlacklistRequest(convertToProtoFormat(this.blacklistRequest));
+    }
+    if (this.moveAsk != null) {
+      addMoveAsksToProto();
     }
   }
 
@@ -358,6 +364,69 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     };
     builder.addAllRelease(iterable);
   }
+  
+  @Override
+  public List<ContainerMoveRequest> getMoveAskList() {
+    initMoveAsks();
+    return this.moveAsk;
+  }
+  
+  @Override
+  public void setMoveAskList(final List<ContainerMoveRequest> containerMoveRequests) {
+    if(containerMoveRequests == null) {
+      return;
+    }
+    initMoveAsks();
+    this.moveAsk.clear();
+    this.moveAsk.addAll(containerMoveRequests);
+  }
+  
+  private void initMoveAsks() {
+    if (this.moveAsk != null) {
+      return;
+    }
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerMoveRequestProto> list = p.getMoveAskList();
+    this.moveAsk = new ArrayList<ContainerMoveRequest>();
+    
+    for (ContainerMoveRequestProto c : list) {
+      this.moveAsk.add(convertFromProtoFormat(c));
+    }
+  }
+  
+  private void addMoveAsksToProto() {
+    maybeInitBuilder();
+    builder.clearMoveAsk();
+    if (moveAsk == null)
+      return;
+    Iterable<ContainerMoveRequestProto> iterable = new Iterable<ContainerMoveRequestProto>() {
+      @Override
+      public Iterator<ContainerMoveRequestProto> iterator() {
+        return new Iterator<ContainerMoveRequestProto>() {
+          
+          Iterator<ContainerMoveRequest> iter = moveAsk.iterator();
+          
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+          
+          @Override
+          public ContainerMoveRequestProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+          
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+            
+          }
+        };
+        
+      }
+    };
+    builder.addAllMoveAsk(iterable);
+  }
 
   private ResourceRequestPBImpl convertFromProtoFormat(ResourceRequestProto p) {
     return new ResourceRequestPBImpl(p);
@@ -391,5 +460,13 @@ public class AllocateRequestPBImpl extends AllocateRequest {
 
   private ResourceBlacklistRequestProto convertToProtoFormat(ResourceBlacklistRequest t) {
     return ((ResourceBlacklistRequestPBImpl)t).getProto();
+  }
+  
+  private ContainerMoveRequestPBImpl convertFromProtoFormat(ContainerMoveRequestProto p) {
+    return new ContainerMoveRequestPBImpl(p);
+  }
+  
+  private ContainerMoveRequestProto convertToProtoFormat(ContainerMoveRequest t) {
+    return ((ContainerMoveRequestPBImpl)t).getProto();
   }
 }  
