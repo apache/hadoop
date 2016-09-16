@@ -79,4 +79,8 @@ public interface Container extends EventHandler<ContainerEvent> {
   void setIsReInitializing(boolean isReInitializing);
 
   boolean isReInitializing();
+
+  boolean canRollback();
+
+  void commitUpgrade();
 }

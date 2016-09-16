@@ -30,18 +30,22 @@ public class ContainerReInitEvent extends ContainerEvent {
 
   private final ContainerLaunchContext reInitLaunchContext;
   private final ResourceSet resourceSet;
+  private final boolean autoCommit;
 
   /**
    * Container Re-Init Event.
-   * @param cID Container Id
-   * @param upgradeContext Upgrade context
-   * @param resourceSet Resource Set
+   * @param cID Container Id.
+   * @param upgradeContext Upgrade Context.
+   * @param resourceSet Resource Set.
+   * @param autoCommit Auto Commit.
    */
   public ContainerReInitEvent(ContainerId cID,
-      ContainerLaunchContext upgradeContext, ResourceSet resourceSet){
+      ContainerLaunchContext upgradeContext,
+      ResourceSet resourceSet, boolean autoCommit){
     super(cID, ContainerEventType.REINITIALIZE_CONTAINER);
     this.reInitLaunchContext = upgradeContext;
     this.resourceSet = resourceSet;
+    this.autoCommit = autoCommit;
   }
 
   /**
@@ -58,5 +62,13 @@ public class ContainerReInitEvent extends ContainerEvent {
    */
   public ResourceSet getResourceSet() {
     return resourceSet;
+  }
+
+  /**
+   * Should this re-Initialization be auto-committed.
+   * @return AutoCommit.
+   */
+  public boolean isAutoCommit() {
+    return autoCommit;
   }
 }

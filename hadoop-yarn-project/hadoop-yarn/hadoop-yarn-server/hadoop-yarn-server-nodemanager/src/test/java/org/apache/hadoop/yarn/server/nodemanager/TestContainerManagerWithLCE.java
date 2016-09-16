@@ -270,15 +270,15 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
   }
 
   @Override
-  public void testContainerUpgradeSuccess() throws IOException,
+  public void testContainerUpgradeSuccessAutoCommit() throws IOException,
       InterruptedException, YarnException {
     // Don't run the test if the binary is not available.
     if (!shouldRunTest()) {
       LOG.info("LCE binary path is not passed. Not running the test");
       return;
     }
-    LOG.info("Running testContainerUpgradeSuccess");
-    super.testContainerUpgradeSuccess();
+    LOG.info("Running testContainerUpgradeSuccessAutoCommit");
+    super.testContainerUpgradeSuccessAutoCommit();
   }
 
   @Override
@@ -291,6 +291,42 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     }
     LOG.info("Running testContainerUpgradeLocalizationFailure");
     super.testContainerUpgradeLocalizationFailure();
+  }
+
+  @Override
+  public void testContainerUpgradeSuccessExplicitCommit() throws IOException,
+    InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeSuccessExplicitCommit");
+    super.testContainerUpgradeSuccessExplicitCommit();
+  }
+
+  @Override
+  public void testContainerUpgradeSuccessExplicitRollback() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeSuccessExplicitRollback");
+    super.testContainerUpgradeSuccessExplicitRollback();
+  }
+
+  @Override
+  public void testContainerUpgradeRollbackDueToFailure() throws IOException,
+      InterruptedException, YarnException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerUpgradeRollbackDueToFailure");
+    super.testContainerUpgradeRollbackDueToFailure();
   }
 
   @Override
