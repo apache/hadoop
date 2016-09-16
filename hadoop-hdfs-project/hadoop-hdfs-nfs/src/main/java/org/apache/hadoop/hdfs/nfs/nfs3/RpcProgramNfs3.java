@@ -814,7 +814,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       attrs = Nfs3Utils.getFileAttr(dfsClient, Nfs3Utils.getFileIdPath(handle),
           iug);
       if (readCount < count) {
-        LOG.info("Partical read. Asked offset: " + offset + " count: " + count
+        LOG.info("Partial read. Asked offset: " + offset + " count: " + count
             + " and read back: " + readCount + " file size: "
             + attrs.getSize());
       }

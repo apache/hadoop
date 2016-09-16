@@ -318,7 +318,7 @@ public class FSDirectory implements Closeable {
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
-    NameNode.LOG.info("Caching file names occuring more than " + threshold
+    NameNode.LOG.info("Caching file names occurring more than " + threshold
         + " times");
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
