@@ -64,7 +64,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
@@ -1504,55 +1503,30 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   private static final byte[] EMPTY_ARRAY = new byte[] {};
-  private class DirListingIterator<T extends FileStatus> implements
-      RemoteIterator<T> {
-
-    private final Path path;
-    private DirectoryListing thisListing;
-    private int i = 0;
-    private byte[] prevKey = EMPTY_ARRAY;
-
-    DirListingIterator(Path path) {
-      this.path = path;
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-      if (thisListing == null) {
-        fetchMore();
-      }
-      return i < thisListing.getPartialListing().length ||
-          thisListing.hasMore();
-    }
-
-    private void fetchMore() throws IOException {
-      thisListing = new FsPathResponseRunner<DirectoryListing>(
-          GetOpParam.Op.LISTSTATUS_BATCH,
-          path, new StartAfterParam(new String(prevKey, Charsets.UTF_8))) {
-        @Override
-        DirectoryListing decodeResponse(Map<?, ?> json) throws IOException {
-          return JsonUtilClient.toDirectoryListing(json);
-        }
-      }.run();
-      i = 0;
-      prevKey = thisListing.getLastName();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public T next() throws IOException {
-      Preconditions.checkState(hasNext(), "No more items in iterator");
-      if (i == thisListing.getPartialListing().length) {
-        fetchMore();
-      }
-      return (T)makeQualified(thisListing.getPartialListing()[i++], path);
-    }
-  }
 
   @Override
-  public RemoteIterator<FileStatus> listStatusIterator(final Path f)
-      throws FileNotFoundException, IOException {
-    return new DirListingIterator<>(f);
+  public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
+      FileNotFoundException, IOException {
+    byte[] prevKey = EMPTY_ARRAY;
+    if (token != null) {
+      prevKey = token;
+    }
+    DirectoryListing listing = new FsPathResponseRunner<DirectoryListing>(
+        GetOpParam.Op.LISTSTATUS_BATCH,
+        f, new StartAfterParam(new String(prevKey, Charsets.UTF_8))) {
+      @Override
+      DirectoryListing decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtilClient.toDirectoryListing(json);
+      }
+    }.run();
+    // Qualify the returned FileStatus array
+    final HdfsFileStatus[] statuses = listing.getPartialListing();
+    FileStatus[] qualified = new FileStatus[statuses.length];
+    for (int i = 0; i < statuses.length; i++) {
+      qualified[i] = makeQualified(statuses[i], f);
+    }
+    return new DirectoryEntries(qualified, listing.getLastName(),
+        listing.hasMore());
   }
 
   @Override
