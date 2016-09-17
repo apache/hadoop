@@ -28,7 +28,7 @@ HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-aws' in the list.
 
 ### Features
 
-**NOTE: `s3:` is being phased out. Use `s3n:` or `s3a:` instead.**
+**NOTE: `s3:` has been phased out. Use `s3n:` or `s3a:` instead.**
 
 1. The second-generation, `s3n:` filesystem, making it easy to share
 data between hadoop and other applications via the S3 object store.
@@ -86,38 +86,6 @@ these instructions —and be aware that all issues related to S3 integration
 in EMR can only be addressed by Amazon themselves: please raise your issues
 with them.
 
-## S3
-
-The `s3://` filesystem is the original S3 store in the Hadoop codebase.
-It implements an inode-style filesystem atop S3, and was written to
-provide scaleability when S3 had significant limits on the size of blobs.
-It is incompatible with any other application's use of data in S3.
-
-It is now deprecated and will be removed in Hadoop 3. Please do not use,
-and migrate off data which is on it.
-
-### Dependencies
-
-* `jets3t` jar
-* `commons-codec` jar
-* `commons-logging` jar
-* `httpclient` jar
-* `httpcore` jar
-* `java-xmlbuilder` jar
-
-### Authentication properties
-
-    <property>
-      <name>fs.s3.awsAccessKeyId</name>
-      <description>AWS access key ID</description>
-    </property>
-
-    <property>
-      <name>fs.s3.awsSecretAccessKey</name>
-      <description>AWS secret key</description>
-    </property>
-
-
 ## S3N
 
 S3N was the first S3 Filesystem client which used "native" S3 objects, hence
@@ -171,16 +139,16 @@ it should be used wherever possible.
 ### Other properties
 
     <property>
-      <name>fs.s3.buffer.dir</name>
+      <name>fs.s3n.buffer.dir</name>
       <value>${hadoop.tmp.dir}/s3</value>
-      <description>Determines where on the local filesystem the s3:/s3n: filesystem
+      <description>Determines where on the local filesystem the s3n: filesystem
       should store files before sending them to S3
       (or after retrieving them from S3).
       </description>
     </property>
 
     <property>
-      <name>fs.s3.maxRetries</name>
+      <name>fs.s3n.maxRetries</name>
       <value>4</value>
       <description>The maximum number of retries for reading or writing files to
         S3, before we signal failure to the application.
@@ -188,7 +156,7 @@ it should be used wherever possible.
     </property>
 
     <property>
-      <name>fs.s3.sleepTimeSeconds</name>
+      <name>fs.s3n.sleepTimeSeconds</name>
       <value>10</value>
       <description>The number of seconds to sleep between each S3 retry.
       </description>
@@ -1011,7 +979,7 @@ includes `distcp`.
 
 ### `ClassNotFoundException: org.apache.hadoop.fs.s3a.S3AFileSystem`
 
-(or `org.apache.hadoop.fs.s3native.NativeS3FileSystem`, `org.apache.hadoop.fs.s3.S3FileSystem`).
+(or `org.apache.hadoop.fs.s3native.NativeS3FileSystem`).
 
 These are the Hadoop classes, found in the `hadoop-aws` JAR. An exception
 reporting one of these classes is missing means that this JAR is not on
