@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -37,6 +40,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.commons.cli.CommandLine;
@@ -50,7 +57,12 @@ import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.commons.lang.time.DurationFormatUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -60,11 +72,16 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
 public class TopCLI extends YarnCLI {
+
+  private static final String CLUSTER_INFO_URL = "/ws/v1/cluster/info";
 
   private static final Log LOG = LogFactory.getLog(TopCLI.class);
   private String CLEAR = "\u001b[2J";
@@ -742,23 +759,91 @@ public class TopCLI extends YarnCLI {
 
   long getRMStartTime() {
     try {
-      URL url =
-          new URL("http://"
-              + client.getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS)
-              + "/ws/v1/cluster/info");
-      URLConnection conn = url.openConnection();
-      conn.connect();
-      InputStream in = conn.getInputStream();
-      String encoding = conn.getContentEncoding();
-      encoding = encoding == null ? "UTF-8" : encoding;
-      String body = IOUtils.toString(in, encoding);
-      JSONObject obj = new JSONObject(body);
-      JSONObject clusterInfo = obj.getJSONObject("clusterInfo");
+      // connect with url
+      URL url = getClusterUrl();
+      if (null == url) {
+        return -1;
+      }
+      JSONObject clusterInfo = getJSONObject(connect(url));
       return clusterInfo.getLong("startedOn");
     } catch (Exception e) {
       LOG.error("Could not fetch RM start time", e);
     }
     return -1;
+  }
+
+  private JSONObject getJSONObject(URLConnection conn)
+      throws IOException, JSONException {
+    InputStream in = conn.getInputStream();
+    String encoding = conn.getContentEncoding();
+    encoding = encoding == null ? "UTF-8" : encoding;
+    String body = IOUtils.toString(in, encoding);
+    JSONObject obj = new JSONObject(body);
+    JSONObject clusterInfo = obj.getJSONObject("clusterInfo");
+    return clusterInfo;
+  }
+
+  private URL getClusterUrl() throws Exception {
+    URL url = null;
+    Configuration conf = getConf();
+    if (HAUtil.isHAEnabled(conf)) {
+      Collection<String> haids = HAUtil.getRMHAIds(conf);
+      for (String rmhid : haids) {
+        try {
+          url = getHAClusterUrl(conf, rmhid);
+          if (isActive(url)) {
+            break;
+          }
+        } catch (ConnectException e) {
+          // ignore and try second one when one of RM is down
+        }
+      }
+    } else {
+      url = new URL(
+          WebAppUtils.getRMWebAppURLWithScheme(conf) + CLUSTER_INFO_URL);
+    }
+    return url;
+  }
+
+  private boolean isActive(URL url) throws Exception {
+    URLConnection connect = connect(url);
+    JSONObject clusterInfo = getJSONObject(connect);
+    return clusterInfo.getString("haState").equals("ACTIVE");
+  }
+
+  @VisibleForTesting
+  public URL getHAClusterUrl(Configuration conf, String rmhid)
+      throws MalformedURLException {
+    return new URL(WebAppUtils.getHttpSchemePrefix(conf)
+        + WebAppUtils.getResolvedRemoteRMWebAppURLWithoutScheme(conf,
+            YarnConfiguration.useHttps(conf) ? Policy.HTTPS_ONLY
+                : Policy.HTTP_ONLY,
+            rmhid)
+        + CLUSTER_INFO_URL);
+  }
+
+  private URLConnection connect(URL url) throws Exception {
+    AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+    AuthenticatedURL authUrl;
+    SSLFactory clientSslFactory;
+    URLConnection connection;
+    // If https is chosen, configures SSL client.
+    if (YarnConfiguration.useHttps(getConf())) {
+      clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, getConf());
+      clientSslFactory.init();
+      SSLSocketFactory sslSocktFact = clientSslFactory.createSSLSocketFactory();
+
+      authUrl =
+          new AuthenticatedURL(new KerberosAuthenticator(), clientSslFactory);
+      connection = authUrl.openConnection(url, token);
+      HttpsURLConnection httpsConn = (HttpsURLConnection) connection;
+      httpsConn.setSSLSocketFactory(sslSocktFact);
+    } else {
+      authUrl = new AuthenticatedURL(new KerberosAuthenticator());
+      connection = authUrl.openConnection(url, token);
+    }
+    connection.connect();
+    return connection;
   }
 
   String getHeader(QueueMetrics queueMetrics, NodesInformation nodes) {
@@ -768,7 +853,10 @@ public class TopCLI extends YarnCLI {
       queue = StringUtils.join(queues, ",");
     }
     long now = Time.now();
-    long uptime = now - rmStartTime;
+    long uptime = 0L;
+    if (rmStartTime != -1) {
+      uptime = now - rmStartTime;
+    }
     long days = TimeUnit.MILLISECONDS.toDays(uptime);
     long hours =
         TimeUnit.MILLISECONDS.toHours(uptime)
