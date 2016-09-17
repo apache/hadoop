@@ -230,7 +230,7 @@ public class LeafQueue extends AbstractCSQueue {
     LOG.info("Initializing " + queueName + "\n" +
         "capacity = " + queueCapacities.getCapacity() +
         " [= (float) configuredCapacity / 100 ]" + "\n" + 
-        "asboluteCapacity = " + queueCapacities.getAbsoluteCapacity() +
+        "absoluteCapacity = " + queueCapacities.getAbsoluteCapacity() +
         " [= parentAbsoluteCapacity * capacity ]" + "\n" +
         "maxCapacity = " + queueCapacities.getMaximumCapacity() +
         " [= configuredMaxCapacity ]" + "\n" +

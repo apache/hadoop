@@ -216,7 +216,7 @@ public class ContainersMonitorImpl extends AbstractService implements
             return false;
     }
     if (!(isPmemCheckEnabled() || isVmemCheckEnabled())) {
-      LOG.info("Neither virutal-memory nor physical-memory monitoring is " +
+      LOG.info("Neither virtual-memory nor physical-memory monitoring is " +
           "needed. Not running the monitor-thread");
       return false;
     }

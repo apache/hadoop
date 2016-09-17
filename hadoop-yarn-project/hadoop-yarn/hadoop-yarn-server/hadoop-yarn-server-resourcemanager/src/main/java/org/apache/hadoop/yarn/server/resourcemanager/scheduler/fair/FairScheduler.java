@@ -944,7 +944,7 @@ public class FairScheduler extends
     FSAppAttempt application = getSchedulerApp(appAttemptId);
     if (application == null) {
       LOG.info("Calling allocate on removed " +
-          "or non existant application " + appAttemptId);
+          "or non existent application " + appAttemptId);
       return EMPTY_ALLOCATION;
     }
 

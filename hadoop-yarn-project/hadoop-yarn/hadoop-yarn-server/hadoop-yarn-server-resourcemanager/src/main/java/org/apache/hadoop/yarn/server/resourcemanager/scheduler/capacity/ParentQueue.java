@@ -125,9 +125,9 @@ public class ParentQueue extends AbstractCSQueue {
 
     LOG.info(queueName +
         ", capacity=" + this.queueCapacities.getCapacity() +
-        ", asboluteCapacity=" + this.queueCapacities.getAbsoluteCapacity() +
+        ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity() +
         ", maxCapacity=" + this.queueCapacities.getMaximumCapacity() +
-        ", asboluteMaxCapacity=" + this.queueCapacities.getAbsoluteMaximumCapacity() + 
+        ", absoluteMaxCapacity=" + this.queueCapacities.getAbsoluteMaximumCapacity() +
         ", state=" + state +
         ", acls=" + aclsString + 
         ", labels=" + labelStrBuilder.toString() + "\n" +
