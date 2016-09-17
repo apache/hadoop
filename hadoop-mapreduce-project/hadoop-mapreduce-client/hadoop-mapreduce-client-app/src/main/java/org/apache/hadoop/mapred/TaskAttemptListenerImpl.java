@@ -260,7 +260,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public void done(TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("Done acknowledgement from " + taskAttemptID.toString());
+    LOG.info("Done acknowledgment from " + taskAttemptID.toString());
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);

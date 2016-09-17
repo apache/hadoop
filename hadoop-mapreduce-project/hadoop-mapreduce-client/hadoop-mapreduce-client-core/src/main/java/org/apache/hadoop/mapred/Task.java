@@ -1312,7 +1312,7 @@ abstract public class Task implements Writable, Configurable {
     setPhase(TaskStatus.Phase.CLEANUP);
     getProgress().setStatus("cleanup");
     statusUpdate(umbilical);
-    LOG.info("Runnning cleanup for the task");
+    LOG.info("Running cleanup for the task");
     // do the cleanup
     committer.abortTask(taskContext);
   }
