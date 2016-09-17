@@ -672,7 +672,7 @@ public class ShuffleHandler extends AuxiliaryService {
       return;
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
-      LOG.info("Storing state DB schedma version info " + getCurrentVersion());
+      LOG.info("Storing state DB schema version info " + getCurrentVersion());
       storeVersion();
     } else {
       throw new IOException(

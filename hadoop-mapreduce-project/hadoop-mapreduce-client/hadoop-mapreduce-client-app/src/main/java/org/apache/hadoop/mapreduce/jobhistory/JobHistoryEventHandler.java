@@ -385,7 +385,7 @@ public class JobHistoryEventHandler extends AbstractService
         }
         mi.shutDownTimer();
       } catch (IOException e) {
-        LOG.info("Exception while cancelling delayed flush timer. "
+        LOG.info("Exception while canceling delayed flush timer. "
             + "Likely caused by a failed flush " + e.getMessage());
       }
     }
