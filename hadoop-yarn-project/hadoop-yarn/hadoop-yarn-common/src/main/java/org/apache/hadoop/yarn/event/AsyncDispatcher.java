@@ -142,7 +142,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   protected void serviceStop() throws Exception {
     if (drainEventsOnStop) {
       blockNewEvents = true;
-      LOG.info("AsyncDispatcher is draining to stop, igonring any new events.");
+      LOG.info("AsyncDispatcher is draining to stop, ignoring any new events.");
       long endTime = System.currentTimeMillis() + getConfig()
           .getLong(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT,
               YarnConfiguration.DEFAULT_DISPATCHER_DRAIN_EVENTS_TIMEOUT);

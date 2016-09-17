@@ -405,7 +405,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
           }
         }
       }
-      LOG.info("Completed reading history information of all conatiners"
+      LOG.info("Completed reading history information of all containers"
           + " of application attempt " + appAttemptId);
     } catch (IOException e) {
       LOG.info("Error when reading history information of some containers"
