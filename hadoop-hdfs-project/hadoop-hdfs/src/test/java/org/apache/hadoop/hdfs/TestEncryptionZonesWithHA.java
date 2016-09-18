@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
@@ -62,7 +63,7 @@ public class TestEncryptionZonesWithHA {
     fsHelper = new FileSystemTestHelper();
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" +
         new Path(testRootDir.toString(), "test.jks").toUri()
     );

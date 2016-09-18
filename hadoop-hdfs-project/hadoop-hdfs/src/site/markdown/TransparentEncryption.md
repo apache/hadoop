@@ -117,7 +117,7 @@ Once a KMS has been set up and the NameNode and HDFS clients have been correctly
 
 ### <a name="Configuring_the_cluster_KeyProvider"></a>Configuring the cluster KeyProvider
 
-#### dfs.encryption.key.provider.uri
+#### hadoop.security.key.provider.path
 
 The KeyProvider to use when interacting with encryption keys used when reading and writing to an encryption zone.
 

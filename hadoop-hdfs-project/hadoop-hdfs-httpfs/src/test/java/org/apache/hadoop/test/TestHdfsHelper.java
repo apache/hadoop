@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
@@ -158,7 +159,8 @@ public class TestHdfsHelper extends TestDirHelper {
       FileSystemTestHelper helper = new FileSystemTestHelper();
       final String jceksPath = JavaKeyStoreProvider.SCHEME_NAME + "://file" +
           new Path(helper.getTestRootDir(), "test.jks").toUri();
-      conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, jceksPath);
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+          jceksPath);
       MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
       builder.numDataNodes(2);
       MiniDFSCluster miniHdfs = builder.build();
