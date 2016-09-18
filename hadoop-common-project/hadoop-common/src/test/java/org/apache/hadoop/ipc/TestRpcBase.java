@@ -31,8 +31,6 @@ import org.junit.Assert;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.ipc.protobuf.TestProtos;
-import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
@@ -481,7 +479,7 @@ public class TestRpcBase {
     }
   }
 
-  protected static TestProtos.EmptyRequestProto newEmptyRequest() {
+  public static TestProtos.EmptyRequestProto newEmptyRequest() {
     return TestProtos.EmptyRequestProto.newBuilder().build();
   }
 
