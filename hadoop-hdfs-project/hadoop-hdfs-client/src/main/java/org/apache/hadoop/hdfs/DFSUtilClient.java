@@ -526,7 +526,7 @@ public class DFSUtilClient {
   }
 
   private static String keyProviderUriKeyName =
-      HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI;
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
 
   /**
    * Set the key provider uri configuration key name for creating key providers.
@@ -616,16 +616,17 @@ public class DFSUtilClient {
   }
 
   /**
-   * Probe for HDFS Encryption being enabled; this uses the value of
-   * the option {@link HdfsClientConfigKeys#DFS_ENCRYPTION_KEY_PROVIDER_URI},
-   * returning true if that property contains a non-empty, non-whitespace
+   * Probe for HDFS Encryption being enabled; this uses the value of the option
+   * {@link CommonConfigurationKeysPublic#HADOOP_SECURITY_KEY_PROVIDER_PATH}
+   * , returning true if that property contains a non-empty, non-whitespace
    * string.
    * @param conf configuration to probe
    * @return true if encryption is considered enabled.
    */
   public static boolean isHDFSEncryptionEnabled(Configuration conf) {
-    return !conf.getTrimmed(
-        HdfsClientConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "").isEmpty();
+    return !(conf.getTrimmed(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH, "")
+        .isEmpty());
   }
 
   public static InetSocketAddress getNNAddress(String address) {

@@ -35,7 +35,7 @@ import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderFactory;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -66,7 +66,7 @@ public class TestCryptoAdminCLI extends CLITestHelperDFS {
 
     tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
     final Path jksPath = new Path(tmpDir.toString(), "test.jks");
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
 
     dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

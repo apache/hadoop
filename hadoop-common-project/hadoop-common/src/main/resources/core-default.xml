@@ -2038,6 +2038,14 @@
 </property>
 
 <property>
+  <name>hadoop.security.key.provider.path</name>
+  <description>
+    The KeyProvider to use when managing zone keys, and interacting with
+    encryption keys when reading and writing to an encryption zone.
+  </description>
+</property>
+
+<property>
   <name>fs.har.impl.disable.cache</name>
   <value>true</value>
   <description>Don't cache 'har' filesystem instances.</description>

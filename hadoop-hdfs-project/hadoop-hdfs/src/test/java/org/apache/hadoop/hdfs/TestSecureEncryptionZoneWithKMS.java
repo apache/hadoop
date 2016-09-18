@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.KMSConfiguration;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestWrapper;
 import org.apache.hadoop.fs.FileUtil;
@@ -237,8 +238,9 @@ public class TestSecureEncryptionZoneWithKMS {
   @Before
   public void setup() throws Exception {
     // Start MiniDFS Cluster
-    baseConf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
-        getKeyProviderURI());
+    baseConf
+        .set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+            getKeyProviderURI());
     baseConf.setBoolean(DFSConfigKeys
         .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
 

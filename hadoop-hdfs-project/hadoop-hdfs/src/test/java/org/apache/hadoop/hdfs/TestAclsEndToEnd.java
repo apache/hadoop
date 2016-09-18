@@ -36,6 +36,7 @@ import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.KMSConfiguration;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider;
 import org.apache.hadoop.crypto.key.kms.server.MiniKMS;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -190,7 +191,7 @@ public class TestAclsEndToEnd {
         "keyadmin,hdfs,user");
     conf.set(ProxyUsers.CONF_HADOOP_PROXYUSER + "." + realUser + ".hosts",
         "*");
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         getKeyProviderURI());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
