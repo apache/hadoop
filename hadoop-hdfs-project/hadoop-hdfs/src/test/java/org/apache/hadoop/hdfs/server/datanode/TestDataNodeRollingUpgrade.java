@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Ensure that the DataNode correctly handles rolling upgrade
@@ -114,8 +115,11 @@ public class TestDataNodeRollingUpgrade {
   }
 
   private File getTrashFileForBlock(File blockFile, boolean exists) {
+
+    ReplicaInfo info = Mockito.mock(ReplicaInfo.class);
+    Mockito.when(info.getBlockURI()).thenReturn(blockFile.toURI());
     File trashFile = new File(
-        dn0.getStorage().getTrashDirectoryForBlockFile(blockPoolId, blockFile));
+        dn0.getStorage().getTrashDirectoryForReplica(blockPoolId, info));
     assertEquals(exists, trashFile.exists());
     return trashFile;
   }

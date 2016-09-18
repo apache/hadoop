@@ -245,7 +245,7 @@ public class NNStorage extends Storage implements Closeable,
     /* We don't want more than one thread trying to restore at a time */
     synchronized (this.restorationLock) {
       LOG.info("NNStorage.attemptRestoreRemovedStorage: check removed(failed) "+
-               "storarge. removedStorages size = " + removedStorageDirs.size());
+               "storage. removedStorages size = " + removedStorageDirs.size());
       for (StorageDirectory sd : this.removedStorageDirs) {
         File root = sd.getRoot();
         LOG.info("currently disabled dir " + root.getAbsolutePath() +

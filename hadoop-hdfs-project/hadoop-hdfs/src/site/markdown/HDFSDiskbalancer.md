@@ -19,6 +19,7 @@ HDFS Disk Balancer
 * [Architecture](#Architecture)
 * [Commands](#Commands)
 * [Settings](#Settings)
+* [Debugging](#Debugging)
 
 
 Overview
@@ -67,9 +68,12 @@ The following sections discusses what commands are supported by disk balancer
 | `-thresholdPercentage`| Since we operate against a snap-shot of datanode, the move operations have a tolerance percentage to declare success. If user specifies 10% and move operation is say 20GB in size, if we can move 18GB that operation is considered successful. This is to accommodate the changes in datanode in real time. This parameter is not needed and a default is used if not specified.|
 | `-maxerror` | Max error allows users to specify how many block copy operations must fail before we abort a move step. Once again, this is not a needed parameter and a system-default is used if not specified.|
 | `-v`| Verbose mode, specifying this parameter forces the plan command to print out a summary of the plan on stdout.|
+|`-fs`| - Specifies the namenode to use. if not specified default from config  is used. |
+
 
 The plan command writes two output files. They are `<nodename>.before.json` which
-captures the state of the datanode before the diskbalancer is run, and `<nodename>.plan.json`.
+captures the state of the cluster before the diskbalancer is run, and
+`<nodename>.plan.json`.
 
 ### Execute
 
@@ -118,3 +122,106 @@ There is a set of diskbalancer settings that can be controlled via hdfs-site.xml
 |`dfs.disk.balancer.max.disk.throughputInMBperSec` | This controls the maximum disk bandwidth consumed by diskbalancer while copying data. If a value like 10MB is specified then diskbalancer on the average will only copy 10MB/S. The default value is 10MB/S.|
 |`dfs.disk.balancer.max.disk.errors`| sets the value of maximum number of errors we can ignore for a specific move between two disks before it is abandoned. For example, if a plan has 3 pair of disks to copy between , and the first disk set encounters more than 5 errors, then we abandon the first copy and start the second copy in the plan. The default value of max errors is set to 5.|
 |`dfs.disk.balancer.block.tolerance.percent`| The tolerance percent specifies when we have reached a good enough value for any copy step. For example, if you specify 10% then getting close to 10% of the target value is good enough.|
+
+ Debugging
+---------
+
+Disk balancer generates two output files. The nodename.before.json contains
+the state of cluster that we read from the  namenode. This file
+contains detailed information about  datanodes and volumes.
+
+if you plan to post this file to an apache JIRA, you might want to
+replace your hostnames and volume paths since it may leak your personal
+information.
+
+You can also trim this file down to focus only on the nodes that you want to
+report in the JIRA.
+
+The nodename.plan.json contains the plan for the specific node. This plan
+file contains as a series of steps. A step is executed as a series of move
+operations inside the datanode.
+
+To diff the state of a node before and after, you can either re-run a plan
+command and diff the new nodename.before.json with older before.json or run
+report command against the node.
+
+To see the progress of a running plan, please run query command with option -v.
+This will print out a set of steps -- Each step represents a move operation
+from one disk to another.
+
+The speed of move is limited by the bandwidth that is specified. The default
+value of bandwidth is set to 10MB/sec. if you do a query with -v option you
+will see the following values.
+
+
+      "sourcePath" : "/data/disk2/hdfs/dn",
+
+      "destPath" : "/data/disk3/hdfs/dn",
+
+      "workItem" :
+
+        "startTime" : 1466575335493,
+
+        "secondsElapsed" : 16486,
+
+        "bytesToCopy" : 181242049353,
+
+        "bytesCopied" : 172655116288,
+
+        "errorCount" : 0,
+
+        "errMsg" : null,
+
+        "blocksCopied" : 1287,
+
+        "maxDiskErrors" : 5,
+
+        "tolerancePercent" : 10,
+
+        "bandwidth" : 10
+
+
+ *source path* - is the volume we are copying from.
+
+ *dest path* - is the volume to where we are copying to.
+
+ *start time* - is current time in milliseconds.
+
+ *seconds elapsed* - is updated whenever we update the stats. This might be
+ slower than the wall clock time.
+
+ *bytes to copy* - is number of bytes we are supposed to copy. We copy plus or
+ minus a certain percentage. So often you will see bytesCopied -- as a value
+ lesser than bytes to copy. In the default case, getting within 10% of bytes
+ to move is considered good enough.
+
+ *bytes copied* - is the actual number of bytes that we moved from source disk to
+ destination disk.
+
+ *error count* - Each time we encounter an error we will increment the error
+ count. As long as error count remains less than max error count (default
+ value is 5), we will try to complete this move. if we hit the max error count
+ we will abandon this current step and execute the next step in the plan.
+
+ *error message* - Currently a single string that reports the last error message.
+ Older messages should be in the datanode log.
+
+
+ *blocks copied* - Number of blocks copied.
+
+ *max disk errors* - The configuration used for this move step. currently it will
+ report the default config value, since the user interface to control these
+ values per step is not in place. It is a future work item. The default or
+ the command line value specified in plan command is used for this value.
+
+*tolerance percent* - This represents how much off we can be while moving data.
+In a busy cluster this allows admin to say, compute a plan, but I know this
+node is being used so it is okay if disk balancer can reach +/- 10% of the
+bytes to be copied.
+
+*bandwidth* - This is the maximum aggregate source disk bandwidth used by the
+disk balancer. After moving a block disk balancer computes how many seconds it
+should have taken to move that block with the specified bandwidth. If the
+actual move took less time than expected, then disk balancer will sleep for
+that duration. Please note that currently all moves are executed
+sequentially by a single thread.

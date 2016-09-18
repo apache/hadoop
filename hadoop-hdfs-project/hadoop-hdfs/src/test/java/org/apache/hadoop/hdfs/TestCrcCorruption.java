@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -172,12 +172,12 @@ public class TestCrcCorruption {
       final int dnIdx = 0;
       final DataNode dn = cluster.getDataNodes().get(dnIdx);
       final String bpid = cluster.getNamesystem().getBlockPoolId();
-      List<FinalizedReplica> replicas =
+      List<ReplicaInfo> replicas =
           dn.getFSDataset().getFinalizedBlocks(bpid);
       assertTrue("Replicas do not exist", !replicas.isEmpty());
 
       for (int idx = 0; idx < replicas.size(); idx++) {
-        FinalizedReplica replica = replicas.get(idx);
+        ReplicaInfo replica = replicas.get(idx);
         ExtendedBlock eb = new ExtendedBlock(bpid, replica);
         if (idx % 3 == 0) {
           LOG.info("Deliberately removing meta for block " + eb);

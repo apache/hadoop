@@ -143,23 +143,36 @@ class JsonUtilClient {
         storagePolicy, null);
   }
 
+  static HdfsFileStatus[] toHdfsFileStatusArray(final Map<?, ?> json) {
+    Preconditions.checkNotNull(json);
+    final Map<?, ?> rootmap =
+        (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
+    final List<?> array = JsonUtilClient.getList(rootmap,
+        FileStatus.class.getSimpleName());
+
+    // convert FileStatus
+    Preconditions.checkNotNull(array);
+    final HdfsFileStatus[] statuses = new HdfsFileStatus[array.size()];
+    int i = 0;
+    for (Object object : array) {
+      final Map<?, ?> m = (Map<?, ?>) object;
+      statuses[i++] = JsonUtilClient.toFileStatus(m, false);
+    }
+    return statuses;
+  }
+
   static DirectoryListing toDirectoryListing(final Map<?, ?> json) {
     if (json == null) {
       return null;
     }
-    final List<?> list = JsonUtilClient.getList(json,
-        "partialListing");
+    final Map<?, ?> listing = getMap(json, "DirectoryListing");
+    final Map<?, ?> partialListing = getMap(listing, "partialListing");
+    HdfsFileStatus[] fileStatuses = toHdfsFileStatusArray(partialListing);
 
-    HdfsFileStatus[] partialListing = new HdfsFileStatus[list.size()];
-    int i = 0;
-    for (Object o : list) {
-      final Map<?, ?> m = (Map<?, ?>) o;
-      partialListing[i++] = toFileStatus(m, false);
-    }
-    int remainingEntries = getInt(json, "remainingEntries", -1);
+    int remainingEntries = getInt(listing, "remainingEntries", -1);
     Preconditions.checkState(remainingEntries != -1,
         "remainingEntries was not set");
-    return new DirectoryListing(partialListing, remainingEntries);
+    return new DirectoryListing(fileStatuses, remainingEntries);
   }
 
   /** Convert a Json map to an ExtendedBlock object. */
@@ -205,6 +218,15 @@ class JsonUtilClient {
     Object list = m.get(key);
     if (list instanceof List<?>) {
       return (List<?>) list;
+    } else {
+      return null;
+    }
+  }
+
+  static Map<?, ?> getMap(Map<?, ?> m, String key) {
+    Object map = m.get(key);
+    if (map instanceof Map<?, ?>) {
+      return (Map<?, ?>) map;
     } else {
       return null;
     }

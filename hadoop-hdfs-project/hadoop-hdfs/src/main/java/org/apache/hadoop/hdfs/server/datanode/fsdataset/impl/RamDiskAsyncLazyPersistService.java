@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
 import java.io.File;
@@ -182,8 +183,7 @@ class RamDiskAsyncLazyPersistService {
    */
   void submitLazyPersistTask(String bpId, long blockId,
       long genStamp, long creationTime,
-      File metaFile, File blockFile,
-      FsVolumeReference target) throws IOException {
+      ReplicaInfo replica, FsVolumeReference target) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("LazyWriter schedule async task to persist RamDisk block pool id: "
           + bpId + " block id: " + blockId);
@@ -198,31 +198,29 @@ class RamDiskAsyncLazyPersistService {
     }
 
     ReplicaLazyPersistTask lazyPersistTask = new ReplicaLazyPersistTask(
-        bpId, blockId, genStamp, creationTime, blockFile, metaFile,
+        bpId, blockId, genStamp, creationTime, replica,
         target, lazyPersistDir);
     execute(volume.getCurrentDir(), lazyPersistTask);
   }
 
   class ReplicaLazyPersistTask implements Runnable {
-    final String bpId;
-    final long blockId;
-    final long genStamp;
-    final long creationTime;
-    final File blockFile;
-    final File metaFile;
-    final FsVolumeReference targetVolume;
-    final File lazyPersistDir;
+    private final String bpId;
+    private final long blockId;
+    private final long genStamp;
+    private final long creationTime;
+    private final ReplicaInfo replicaInfo;
+    private final FsVolumeReference targetVolume;
+    private final File lazyPersistDir;
 
     ReplicaLazyPersistTask(String bpId, long blockId,
         long genStamp, long creationTime,
-        File blockFile, File metaFile,
+        ReplicaInfo replicaInfo,
         FsVolumeReference targetVolume, File lazyPersistDir) {
       this.bpId = bpId;
       this.blockId = blockId;
       this.genStamp = genStamp;
       this.creationTime = creationTime;
-      this.blockFile = blockFile;
-      this.metaFile = metaFile;
+      this.replicaInfo = replicaInfo;
       this.targetVolume = targetVolume;
       this.lazyPersistDir = lazyPersistDir;
     }
@@ -232,8 +230,10 @@ class RamDiskAsyncLazyPersistService {
       // Called in AsyncLazyPersistService.execute for displaying error messages.
       return "LazyWriter async task of persist RamDisk block pool id:"
           + bpId + " block pool id: "
-          + blockId + " with block file " + blockFile
-          + " and meta file " + metaFile + " to target volume " + targetVolume;}
+          + blockId + " with block file " + replicaInfo.getBlockURI()
+          + " and meta file " + replicaInfo.getMetadataURI()
+          + " to target volume " + targetVolume;
+    }
 
     @Override
     public void run() {
@@ -243,7 +243,7 @@ class RamDiskAsyncLazyPersistService {
         int smallBufferSize = DFSUtilClient.getSmallBufferSize(EMPTY_HDFS_CONF);
         // No FsDatasetImpl lock for the file copy
         File targetFiles[] = FsDatasetImpl.copyBlockFiles(
-            blockId, genStamp, metaFile, blockFile, lazyPersistDir, true,
+            blockId, genStamp, replicaInfo, lazyPersistDir, true,
             smallBufferSize, conf);
 
         // Lock FsDataSetImpl during onCompleteLazyPersist callback

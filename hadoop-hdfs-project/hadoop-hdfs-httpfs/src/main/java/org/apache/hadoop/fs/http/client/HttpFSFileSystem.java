@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.http.client;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+
+import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -111,6 +113,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_SET_FLAG_PARAM = "flag";
   public static final String XATTR_ENCODING_PARAM = "encoding";
   public static final String NEW_LENGTH_PARAM = "newlength";
+  public static final String START_AFTER_PARAM = "startAfter";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -184,6 +187,10 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
 
+  public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
+  public static final String PARTIAL_LISTING_JSON = "partialListing";
+  public static final String REMAINING_ENTRIES_JSON = "remainingEntries";
+
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
   private static final String HTTP_GET = "GET";
@@ -203,7 +210,7 @@ public class HttpFSFileSystem extends FileSystem
     MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
     REMOVEDEFAULTACL(HTTP_PUT), REMOVEACL(HTTP_PUT), SETACL(HTTP_PUT),
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
-    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET);
+    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET);
 
     private String httpMethod;
 
@@ -666,6 +673,17 @@ public class HttpFSFileSystem extends FileSystem
     return (Boolean) json.get(DELETE_JSON);
   }
 
+  private FileStatus[] toFileStatuses(JSONObject json, Path f) {
+    json = (JSONObject) json.get(FILE_STATUSES_JSON);
+    JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
+    FileStatus[] array = new FileStatus[jsonArray.size()];
+    f = makeQualified(f);
+    for (int i = 0; i < jsonArray.size(); i++) {
+      array[i] = createFileStatus(f, (JSONObject) jsonArray.get(i));
+    }
+    return array;
+  }
+
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
@@ -684,14 +702,36 @@ public class HttpFSFileSystem extends FileSystem
                                            params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    json = (JSONObject) json.get(FILE_STATUSES_JSON);
-    JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
-    FileStatus[] array = new FileStatus[jsonArray.size()];
-    f = makeQualified(f);
-    for (int i = 0; i < jsonArray.size(); i++) {
-      array[i] = createFileStatus(f, (JSONObject) jsonArray.get(i));
+    return toFileStatuses(json, f);
+  }
+
+  @Override
+  public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
+      FileNotFoundException, IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.LISTSTATUS_BATCH.toString());
+    if (token != null) {
+      params.put(START_AFTER_PARAM, new String(token, Charsets.UTF_8));
     }
-    return array;
+    HttpURLConnection conn = getConnection(
+        Operation.LISTSTATUS_BATCH.getMethod(),
+        params, f, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    // Parse the FileStatus array
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    JSONObject listing = (JSONObject) json.get(DIRECTORY_LISTING_JSON);
+    FileStatus[] statuses = toFileStatuses(
+        (JSONObject) listing.get(PARTIAL_LISTING_JSON), f);
+    // New token is the last FileStatus entry
+    byte[] newToken = null;
+    if (statuses.length > 0) {
+      newToken = statuses[statuses.length - 1].getPath().getName().toString()
+          .getBytes(Charsets.UTF_8);
+    }
+    // Parse the remainingEntries boolean into hasMore
+    final long remainingEntries = (Long) listing.get(REMAINING_ENTRIES_JSON);
+    final boolean hasMore = remainingEntries > 0 ? true : false;
+    return new DirectoryEntries(statuses, newToken, hasMore);
   }
 
   /**
