@@ -37,14 +37,15 @@ import static org.junit.Assert.assertTrue;
  * Tests basic functionality for AliyunOSSInputStream, including seeking and
  * reading files.
  */
-public class TestOSSInputStream {
+public class TestAliyunOSSInputStream {
 
   private FileSystem fs;
 
-  protected static final Logger LOG =
-      LoggerFactory.getLogger(TestOSSInputStream.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAliyunOSSInputStream.class);
 
-  private static String testRootPath = OSSTestUtils.generateUniqueTestPath();
+  private static String testRootPath =
+      AliyunOSSTestUtils.generateUniqueTestPath();
 
   @Rule
   public Timeout testTimeout = new Timeout(30 * 60 * 1000);
@@ -52,7 +53,7 @@ public class TestOSSInputStream {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    fs = OSSTestUtils.createTestFileSystem(conf);
+    fs = AliyunOSSTestUtils.createTestFileSystem(conf);
   }
 
   @After

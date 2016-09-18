@@ -19,16 +19,16 @@
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
+import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * OSS contract seeking tests.
+ * Aliyun OSS contract deleting tests.
  */
-public class TestOSSContractSeek extends AbstractContractSeekTest {
+public class TestAliyunOSSContractDelete extends AbstractContractDeleteTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+    return new AliyunOSSContract(conf);
   }
 }

@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.aliyun.oss;
 import com.aliyun.oss.common.auth.Credentials;
 import com.aliyun.oss.common.auth.InvalidCredentialsException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.aliyun.oss.contract.OSSContract;
+import org.apache.hadoop.fs.aliyun.oss.contract.AliyunOSSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.junit.Test;
@@ -38,11 +38,12 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.SECURITY_TOKEN;
  * should only be used against transient filesystems where you don't care about
  * the data.
  */
-public class TestOSSTemporaryCredentials extends AbstractFSContractTestBase {
+public class TestAliyunOSSTemporaryCredentials
+    extends AbstractFSContractTestBase {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+    return new AliyunOSSContract(conf);
   }
 
   @Test

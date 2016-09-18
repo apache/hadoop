@@ -19,16 +19,31 @@
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
 /**
- * OSS contract deleting tests.
+ * The contract of Aliyun OSS: only enabled if the test bucket is provided.
  */
-public class TestOSSContractDelete extends AbstractContractDeleteTest {
+public class AliyunOSSContract extends AbstractBondedFSContract {
+
+  public static final String CONTRACT_XML = "contract/aliyun-oss.xml";
+
+  public AliyunOSSContract(Configuration conf) {
+    super(conf);
+    //insert the base features
+    addConfResource(CONTRACT_XML);
+  }
 
   @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+  public String getScheme() {
+    return "oss";
+  }
+
+  @Override
+  public Path getTestPath() {
+    String testUniqueForkId = System.getProperty("test.unique.fork.id");
+    return testUniqueForkId == null ? super.getTestPath() :
+        new Path("/" + testUniqueForkId, "test");
   }
 }

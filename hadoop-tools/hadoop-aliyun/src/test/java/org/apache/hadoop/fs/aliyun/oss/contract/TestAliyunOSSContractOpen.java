@@ -19,16 +19,16 @@
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
+import org.apache.hadoop.fs.contract.AbstractContractOpenTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * OSS contract directory tests.
+ * Aliyun OSS contract opening file tests.
  */
-public class TestOSSContractMkdir extends AbstractContractMkdirTest {
+public class TestAliyunOSSContractOpen extends AbstractContractOpenTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+    return new AliyunOSSContract(conf);
   }
 }

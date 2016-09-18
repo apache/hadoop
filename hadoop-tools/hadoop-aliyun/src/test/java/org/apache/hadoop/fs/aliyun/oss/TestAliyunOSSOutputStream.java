@@ -33,9 +33,10 @@ import java.io.IOException;
 /**
  * Tests regular and multi-part upload functionality for AliyunOSSOutputStream.
  */
-public class TestOSSOutputStream {
+public class TestAliyunOSSOutputStream {
   private FileSystem fs;
-  private static String testRootPath = OSSTestUtils.generateUniqueTestPath();
+  private static String testRootPath =
+      AliyunOSSTestUtils.generateUniqueTestPath();
 
   @Rule
   public Timeout testTimeout = new Timeout(30 * 60 * 1000);
@@ -45,7 +46,7 @@ public class TestOSSOutputStream {
     Configuration conf = new Configuration();
     conf.setLong(Constants.MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, 5 * 1024 * 1024);
     conf.setInt(Constants.MULTIPART_UPLOAD_SIZE_KEY, 5 * 1024 * 1024);
-    fs = OSSTestUtils.createTestFileSystem(conf);
+    fs = AliyunOSSTestUtils.createTestFileSystem(conf);
   }
 
   @After
@@ -56,7 +57,7 @@ public class TestOSSOutputStream {
   }
 
   protected Path getTestPath() {
-    return new Path(testRootPath + "/testoss");
+    return new Path(testRootPath + "/test-aliyun-oss");
   }
 
   @Test

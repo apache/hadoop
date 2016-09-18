@@ -23,13 +23,13 @@ import org.apache.hadoop.fs.contract.AbstractContractCreateTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * OSS contract creating tests.
+ * Aliyun OSS contract creating tests.
  */
-public class TestOSSContractCreate extends AbstractContractCreateTest {
+public class TestAliyunOSSContractCreate extends AbstractContractCreateTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+    return new AliyunOSSContract(conf);
   }
 
 }

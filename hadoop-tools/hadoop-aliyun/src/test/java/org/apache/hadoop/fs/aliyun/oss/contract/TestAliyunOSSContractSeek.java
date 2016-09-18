@@ -15,30 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
-
-import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
+import org.apache.hadoop.fs.contract.AbstractContractSeekTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * Contract test suite covering Aliyun OSS integration with DistCp.
+ * Aliyun OSS contract seeking tests.
  */
-public class TestOSSContractDispCp extends AbstractContractDistCpTest {
-
-  private static final long MULTIPART_SETTING = 8 * 1024 * 1024; // 8 MB
+public class TestAliyunOSSContractSeek extends AbstractContractSeekTest {
 
   @Override
-  protected Configuration createConfiguration() {
-    Configuration newConf = super.createConfiguration();
-    newConf.setLong(MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, MULTIPART_SETTING);
-    newConf.setLong(MULTIPART_UPLOAD_SIZE_KEY, MULTIPART_SETTING);
-    return newConf;
-  }
-
-  @Override
-  protected OSSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new AliyunOSSContract(conf);
   }
 }

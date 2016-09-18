@@ -41,7 +41,7 @@ import static org.junit.Assume.assumeNotNull;
  * Test the bridging logic between Hadoop's abstract filesystem and
  * Aliyun OSS.
  */
-public class TestOSSFileSystemStore {
+public class TestAliyunOSSFileSystemStore {
   private Configuration conf;
   private AliyunOSSFileSystemStore store;
   private AliyunOSSFileSystem fs;
@@ -67,8 +67,8 @@ public class TestOSSFileSystemStore {
   @BeforeClass
   public static void checkSettings() throws Exception {
     Configuration conf = new Configuration();
-    assumeNotNull(conf.get("fs.oss.accessKeyId"));
-    assumeNotNull(conf.get("fs.oss.accessKeySecret"));
+    assumeNotNull(conf.get(Constants.ACCESS_KEY));
+    assumeNotNull(conf.get(Constants.SECRET_KEY));
     assumeNotNull(conf.get("test.fs.oss.name"));
   }
 

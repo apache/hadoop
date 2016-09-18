@@ -19,35 +19,17 @@
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.aliyun.oss.OSSTestUtils;
-import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * The contract of OSS: only enabled if the test bucket is provided.
+ * Aliyun OSS contract renaming tests.
  */
-public class OSSContract extends AbstractBondedFSContract {
-
-  public static final String CONTRACT_XML = "contract/oss.xml";
-  public static final String CONTRACT_TEST_OSS_FS_NAME =
-      "fs.contract.test.fs.oss";
-
-  private static String testPath = OSSTestUtils.generateUniqueTestPath();
-
-  public OSSContract(Configuration conf) {
-    super(conf);
-    //insert the base features
-    addConfResource(CONTRACT_XML);
-  }
+public class TestAliyunOSSContractRename extends AbstractContractRenameTest {
 
   @Override
-  public String getScheme() {
-    return "oss";
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new AliyunOSSContract(conf);
   }
 
-  @Override
-  public Path getTestPath() {
-    Path path = new Path(testPath);
-    return path;
-  }
 }

@@ -22,32 +22,28 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
 /**
- * Tests a live OSS system.
+ * Tests a live Aliyun OSS system.
  *
  * This uses BlockJUnit4ClassRunner because FileSystemContractBaseTest from
  * TestCase which uses the old Junit3 runner that doesn't ignore assumptions
  * properly making it impossible to skip the tests if we don't have a valid
  * bucket.
  */
-public class TestOSSFileSystemContract extends FileSystemContractBaseTest {
-
-  protected static final Logger LOG =
-      LoggerFactory.getLogger(TestOSSFileSystemContract.class);
-
+public class TestAliyunOSSFileSystemContract
+    extends FileSystemContractBaseTest {
   public static final String TEST_FS_OSS_NAME = "test.fs.oss.name";
-  private static String testRootPath = OSSTestUtils.generateUniqueTestPath();
+  private static String testRootPath =
+      AliyunOSSTestUtils.generateUniqueTestPath();
 
   @Override
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    fs = OSSTestUtils.createTestFileSystem(conf);
+    fs = AliyunOSSTestUtils.createTestFileSystem(conf);
     super.setUp();
   }
 

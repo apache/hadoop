@@ -29,15 +29,15 @@ import java.io.IOException;
 /**
  * Root dir operations against an Aliyun OSS bucket.
  */
-public class TestOSSContractRootDir extends
+public class TestAliyunOSSContractRootDir extends
     AbstractContractRootDirectoryTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOSSContractRootDir.class);
+      LoggerFactory.getLogger(TestAliyunOSSContractRootDir.class);
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+    return new AliyunOSSContract(conf);
   }
 
   @Override

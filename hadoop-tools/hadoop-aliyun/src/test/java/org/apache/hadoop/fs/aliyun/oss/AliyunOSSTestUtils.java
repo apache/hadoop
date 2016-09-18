@@ -24,15 +24,13 @@ import org.junit.internal.AssumptionViolatedException;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Date;
-import java.util.Random;
 
 /**
- * Utility class for OSS Tests.
+ * Utility class for Aliyun OSS Tests.
  */
-public final class OSSTestUtils {
+public final class AliyunOSSTestUtils {
 
-  private OSSTestUtils() {
+  private AliyunOSSTestUtils() {
   }
 
   /**
@@ -48,7 +46,7 @@ public final class OSSTestUtils {
   public static AliyunOSSFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
     String fsname = conf.getTrimmed(
-        TestOSSFileSystemContract.TEST_FS_OSS_NAME, "");
+        TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME, "");
 
     boolean liveTest = !StringUtils.isEmpty(fsname);
     URI testURI = null;
@@ -59,7 +57,7 @@ public final class OSSTestUtils {
 
     if (!liveTest) {
       throw new AssumptionViolatedException("No test filesystem in "
-          + TestOSSFileSystemContract.TEST_FS_OSS_NAME);
+          + TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME);
     }
     AliyunOSSFileSystem ossfs = new AliyunOSSFileSystem();
     ossfs.initialize(testURI, conf);
@@ -72,9 +70,8 @@ public final class OSSTestUtils {
    * @return root test path
    */
   public static String generateUniqueTestPath() {
-    Long time = new Date().getTime();
-    Random rand = new Random();
-    return "/test_" + Long.toString(time) + "_"
-        + Long.toString(Math.abs(rand.nextLong()));
+    String testUniqueForkId = System.getProperty("test.unique.fork.id");
+    return testUniqueForkId == null ? "/test" :
+        "/" + testUniqueForkId + "/test";
   }
 }

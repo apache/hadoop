@@ -15,21 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
+import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * Test getFileStatus and related listing operations.
+ * Aliyun OSS contract directory tests.
  */
-public class TestOSSContractGetFileStatus
-    extends AbstractContractGetFileStatusTest {
+public class TestAliyunOSSContractMkdir extends AbstractContractMkdirTest {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new OSSContract(conf);
+    return new AliyunOSSContract(conf);
   }
-
 }
