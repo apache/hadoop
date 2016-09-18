@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DeprecatedKeys;
@@ -142,6 +143,8 @@ public class HdfsConfiguration extends Configuration {
         new DeprecationDelta("dfs.client.file-block-storage-locations.timeout",
             HdfsClientConfigKeys.
                 DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS),
+        new DeprecationDelta("dfs.encryption.key.provider.uri",
+            CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH),
     });
   }
 

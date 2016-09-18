@@ -152,7 +152,6 @@ public interface HdfsClientConfigKeys {
       "dfs.datanode.kerberos.principal";
   String  DFS_DATANODE_READAHEAD_BYTES_KEY = "dfs.datanode.readahead.bytes";
   long    DFS_DATANODE_READAHEAD_BYTES_DEFAULT = 4 * 1024 * 1024; // 4MB
-  String  DFS_ENCRYPTION_KEY_PROVIDER_URI = "dfs.encryption.key.provider.uri";
 
   String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY =
       "dfs.encrypt.data.transfer.cipher.suites";
