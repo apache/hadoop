@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.Credentials;
@@ -46,7 +45,9 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 @RunWith(value = Parameterized.class)
 public class TestCopyListing extends SimpleCopyListing {
@@ -77,7 +78,7 @@ public class TestCopyListing extends SimpleCopyListing {
   }
 
   public TestCopyListing(int numListstatusThreads) {
-    super(config, CREDENTIALS, numListstatusThreads);
+    super(config, CREDENTIALS, numListstatusThreads, 0, false);
   }
 
   protected TestCopyListing(Configuration configuration) {
@@ -220,6 +221,84 @@ public class TestCopyListing extends SimpleCopyListing {
       TestDistCpUtils.delete(fs, "/tmp");
     }
   }
+
+  @Test(timeout=60000)
+  public void testWithRandomFileListing() throws IOException {
+    FileSystem fs = null;
+    try {
+      fs = FileSystem.get(getConf());
+      List<Path> srcPaths = new ArrayList<>();
+      List<Path> srcFiles = new ArrayList<>();
+      Path target = new Path("/tmp/out/1");
+      final int pathCount = 25;
+      for (int i = 0; i < pathCount; i++) {
+        Path p = new Path("/tmp", String.valueOf(i));
+        srcPaths.add(p);
+        fs.mkdirs(p);
+
+        Path fileName = new Path(p, i + ".txt");
+        srcFiles.add(fileName);
+        try (OutputStream out = fs.create(fileName)) {
+          out.write(i);
+        }
+      }
+
+      Path listingFile = new Path("/tmp/file");
+      DistCpOptions options = new DistCpOptions(srcPaths, target);
+      options.setSyncFolder(true);
+
+      // Check without randomizing files
+      getConf().setBoolean(
+          DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES, false);
+      SimpleCopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS);
+      listing.buildListing(listingFile, options);
+
+      Assert.assertEquals(listing.getNumberOfPaths(), pathCount);
+      validateFinalListing(listingFile, srcFiles);
+      fs.delete(listingFile, true);
+
+      // Check with randomized file listing
+      getConf().setBoolean(
+          DistCpConstants.CONF_LABEL_SIMPLE_LISTING_RANDOMIZE_FILES, true);
+      listing = new SimpleCopyListing(getConf(), CREDENTIALS);
+
+      // Set the seed for randomness, so that it can be verified later
+      long seed = System.nanoTime();
+      listing.setSeedForRandomListing(seed);
+      listing.buildListing(listingFile, options);
+      Assert.assertEquals(listing.getNumberOfPaths(), pathCount);
+
+      // validate randomness
+      Collections.shuffle(srcFiles, new Random(seed));
+      validateFinalListing(listingFile, srcFiles);
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp");
+    }
+  }
+
+  private void validateFinalListing(Path pathToListFile, List<Path> srcFiles)
+      throws IOException {
+    FileSystem fs = pathToListFile.getFileSystem(config);
+
+    try (SequenceFile.Reader reader = new SequenceFile.Reader(
+        config, SequenceFile.Reader.file(pathToListFile))) {
+      CopyListingFileStatus currentVal = new CopyListingFileStatus();
+
+      Text currentKey = new Text();
+      int idx = 0;
+      while (reader.next(currentKey)) {
+        reader.getCurrentValue(currentVal);
+        Assert.assertEquals("srcFiles.size=" + srcFiles.size()
+                + ", idx=" + idx, fs.makeQualified(srcFiles.get(idx)),
+            currentVal.getPath());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("val=" + fs.makeQualified(srcFiles.get(idx)));
+        }
+        idx++;
+      }
+    }
+  }
+
 
   @Test(timeout=10000)
   public void testBuildListingForSingleFile() {
