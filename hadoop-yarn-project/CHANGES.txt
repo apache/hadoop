@@ -16,6 +16,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5483. Optimize RMAppAttempt#pullJustFinishedContainers (sandflee via
     jlowe)
 
+    YARN-5540. Scheduler spends too much time looking at empty priorities
+    (jlowe)
+
   BUG FIXES
 
     YARN-5197. RM leaks containers if running container disappears from

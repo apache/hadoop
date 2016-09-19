@@ -20,14 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -63,7 +61,7 @@ public class AppSchedulingInfo {
   private final AtomicLong containerIdCounter;
   private final int EPOCH_BIT_SHIFT = 40;
 
-  final Set<Priority> priorities = new TreeSet<Priority>(
+  final Set<Priority> priorities = new ConcurrentSkipListSet<Priority>(
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
   final Map<Priority, Map<String, ResourceRequest>> requests =
     new ConcurrentHashMap<Priority, Map<String, ResourceRequest>>();
@@ -154,6 +152,7 @@ public class AppSchedulingInfo {
         // Thus we don't need another loop ala the one in decrementOutstanding()  
         // which is needed during deactivate.
         if (request.getNumContainers() > 0) {
+          priorities.add(priority);
           activeUsersManager.activateApplication(user, applicationId);
         }
       }
@@ -163,7 +162,6 @@ public class AppSchedulingInfo {
       if (asks == null) {
         asks = new ConcurrentHashMap<String, ResourceRequest>();
         this.requests.put(priority, asks);
-        this.priorities.add(priority);
       }
       lastRequest = asks.get(resourceName);
 
@@ -178,6 +176,7 @@ public class AppSchedulingInfo {
         
         // Similarly, deactivate application?
         if (request.getNumContainers() <= 0) {
+          priorities.remove(priority);
           LOG.info("checking for deactivate of application :"
               + this.applicationId);
           checkForDeactivation();
@@ -376,22 +375,13 @@ public class AppSchedulingInfo {
     // Do we have any outstanding requests?
     // If there is nothing, we need to deactivate this application
     if (numOffSwitchContainers == 0) {
+      priorities.remove(offSwitchRequest.getPriority());
       checkForDeactivation();
     }
   }
   
   synchronized private void checkForDeactivation() {
-    boolean deactivate = true;
-    for (Priority priority : getPriorities()) {
-      ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
-      if (request != null) {
-        if (request.getNumContainers() > 0) {
-          deactivate = false;
-          break;
-        }
-      }
-    }
-    if (deactivate) {
+    if (priorities.isEmpty()) {
       activeUsersManager.deactivateApplication(user, applicationId);
     }
   }
