@@ -54,7 +54,7 @@ public abstract class YarnAuthorizationProvider {
             (YarnAuthorizationProvider) ReflectionUtils.newInstance(
               authorizerClass, conf);
         authorizer.init(conf);
-        LOG.info(authorizerClass.getName() + " is instiantiated.");
+        LOG.info(authorizerClass.getName() + " is instantiated.");
       }
     }
     return authorizer;

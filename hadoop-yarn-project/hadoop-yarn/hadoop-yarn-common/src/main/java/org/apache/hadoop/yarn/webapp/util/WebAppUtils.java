@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -183,32 +182,32 @@ public class WebAppUtils {
 
   public static String getResolvedRemoteRMWebAppURLWithoutScheme(Configuration conf,
       Policy httpPolicy) {
-    InetSocketAddress address = null;
     String rmId = null;
     if (HAUtil.isHAEnabled(conf)) {
       // If HA enabled, pick one of the RM-IDs and rely on redirect to go to
       // the Active RM
       rmId = (String) HAUtil.getRMHAIds(conf).toArray()[0];
     }
+    return getResolvedRemoteRMWebAppURLWithoutScheme(conf, httpPolicy, rmId);
+  }
+
+  public static String getResolvedRemoteRMWebAppURLWithoutScheme(
+      Configuration conf, Policy httpPolicy, String rmId) {
+    InetSocketAddress address = null;
 
     if (httpPolicy == Policy.HTTPS_ONLY) {
-      address =
-          conf.getSocketAddr(
-              rmId == null
-                  ? YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS
-                  : HAUtil.addSuffix(
-                  YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, rmId),
-              YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT);
+      address = conf.getSocketAddr(
+          rmId == null ? YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS
+              : HAUtil.addSuffix(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
+                  rmId),
+          YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT);
     } else {
-      address =
-          conf.getSocketAddr(
-              rmId == null
-                  ? YarnConfiguration.RM_WEBAPP_ADDRESS
-                  : HAUtil.addSuffix(
-                  YarnConfiguration.RM_WEBAPP_ADDRESS, rmId),
-              YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
+      address = conf.getSocketAddr(
+          rmId == null ? YarnConfiguration.RM_WEBAPP_ADDRESS
+              : HAUtil.addSuffix(YarnConfiguration.RM_WEBAPP_ADDRESS, rmId),
+          YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
     }
     return getResolvedAddress(address);
   }
