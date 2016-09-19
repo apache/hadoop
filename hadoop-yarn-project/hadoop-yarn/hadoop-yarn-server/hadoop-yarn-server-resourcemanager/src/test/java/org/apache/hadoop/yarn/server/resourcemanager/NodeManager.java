@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
@@ -336,6 +338,13 @@ public class NodeManager implements ContainerManagementProtocol {
   public ResourceLocalizationResponse localize(
       ResourceLocalizationRequest request) throws YarnException, IOException {
     return null;
+  }
+  
+  @Override
+  public GetContainerLaunchContextResponse getContainerLaunchContext(
+      GetContainerLaunchContextRequest request) throws YarnException, IOException {
+    throw new UnsupportedOperationException("getting the container launch context is not " +
+        "supported for this implementation of ContainerManagementProtocol");
   }
 
   @Override

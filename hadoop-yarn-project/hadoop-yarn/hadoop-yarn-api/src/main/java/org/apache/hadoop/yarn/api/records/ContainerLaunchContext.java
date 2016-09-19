@@ -228,4 +228,36 @@ public abstract class ContainerLaunchContext {
   @Unstable
   public abstract void setContainerRetryContext(
       ContainerRetryContext containerRetryContext);
+  
+  /**
+   * Creates a deeper copy of this container launch context.
+   *
+   * @return the copy of this container launch context
+   * @throws InstantiationException
+   * @throws IllegalAccessException
+   */
+  public ContainerLaunchContext copy() throws InstantiationException,
+      IllegalAccessException {
+      return newInstance(
+          copyMap(getLocalResources()),
+          copyMap(getEnvironment()),
+          copyList(getCommands()),
+          copyMap(getServiceData()),
+          getTokens(),
+          copyMap(getApplicationACLs()));
+  }
+  
+  private static <K, V> Map<K, V> copyMap(final Map<K, V> source) throws InstantiationException,
+      IllegalAccessException {
+    final Map<K, V> newMap = source.getClass().newInstance();
+    newMap.putAll(source);
+    return newMap;
+  }
+  
+  private static <T> List<T> copyList(final List<T> source) throws InstantiationException,
+      IllegalAccessException {
+    final List<T> newList = source.getClass().newInstance();
+    newList.addAll(source);
+    return newList;
+  }
 }

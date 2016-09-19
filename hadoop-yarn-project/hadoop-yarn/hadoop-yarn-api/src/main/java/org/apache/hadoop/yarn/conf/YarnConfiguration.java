@@ -1696,6 +1696,9 @@ public class YarnConfiguration extends Configuration {
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_RELOCATION_PROTOCOL =
+      "security.containerrelocation.protocol.acl";
 
   public static final String
   YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONHISTORY_PROTOCOL =

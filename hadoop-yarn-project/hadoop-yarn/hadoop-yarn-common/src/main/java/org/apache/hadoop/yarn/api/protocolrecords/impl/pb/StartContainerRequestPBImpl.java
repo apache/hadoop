@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerLaunchContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.TokenPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProtoOrBuilder;
 
@@ -43,6 +48,9 @@ public class StartContainerRequestPBImpl extends StartContainerRequest {
   private ContainerLaunchContext containerLaunchContext = null;
 
   private Token containerToken = null;
+  private ContainerId originContainerId = null;
+  private NodeId originNodeId = null;
+  private Token originNMToken = null;
   
   public StartContainerRequestPBImpl() {
     builder = StartContainerRequestProto.newBuilder();
@@ -86,6 +94,15 @@ public class StartContainerRequestPBImpl extends StartContainerRequest {
     }
     if(this.containerToken != null) {
       builder.setContainerToken(convertToProtoFormat(this.containerToken));
+    }
+    if(this.originContainerId != null) {
+      builder.setOriginContainerId(convertToProtoFormat(this.originContainerId));
+    }
+    if(this.originNodeId != null) {
+      builder.setOriginNodeId(convertToProtoFormat(this.originNodeId));
+    }
+    if(this.originNMToken != null) {
+      builder.setOriginNmToken(convertToProtoFormat(this.originNMToken));
     }
   }
 
@@ -147,7 +164,85 @@ public class StartContainerRequestPBImpl extends StartContainerRequest {
     }
     this.containerToken = containerToken;
   }
-
+  
+  @Override
+  public boolean getIsMove() {
+    StartContainerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getIsMove();
+  }
+  
+  @Override
+  public void setIsMove(boolean isMove) {
+    maybeInitBuilder();
+    builder.setIsMove(isMove);
+  }
+  
+  @Override
+  public ContainerId getOriginContainerId() {
+    StartContainerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.originContainerId != null) {
+      return this.originContainerId;
+    }
+    if (!p.hasOriginContainerId()) {
+      return null;
+    }
+    this.originContainerId = convertFromProtoFormat(p.getOriginContainerId());
+    return this.originContainerId;
+  }
+  
+  @Override
+  public void setOriginContainerId(ContainerId originContainerId) {
+    maybeInitBuilder();
+    if(originContainerId == null) {
+      builder.clearOriginContainerId();
+    }
+    this.originContainerId = originContainerId;
+  }
+  
+  @Override
+  public NodeId getOriginNodeId() {
+    StartContainerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.originNodeId != null) {
+      return this.originNodeId;
+    }
+    if (!p.hasOriginNodeId()) {
+      return null;
+    }
+    this.originNodeId = convertFromProtoFormat(p.getOriginNodeId());
+    return this.originNodeId;
+  }
+  
+  @Override
+  public void setOriginNodeId(NodeId originNodeId) {
+    maybeInitBuilder();
+    if(originNodeId == null) {
+      builder.clearOriginNodeId();
+    }
+    this.originNodeId = originNodeId;
+  }
+  
+  @Override
+  public Token getOriginNMToken() {
+    StartContainerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.originNMToken != null) {
+      return this.originNMToken;
+    }
+    if (!p.hasOriginNmToken()) {
+      return null;
+    }
+    this.originNMToken = convertFromProtoFormat(p.getOriginNmToken());
+    return this.originNMToken;
+  }
+  
+  @Override
+  public void setOriginNMToken(Token originNMToken) {
+    maybeInitBuilder();
+    if(originNMToken == null) {
+      builder.clearOriginNmToken();
+    }
+    this.originNMToken = originNMToken;
+  }
+  
   private ContainerLaunchContextPBImpl convertFromProtoFormat(ContainerLaunchContextProto p) {
     return new ContainerLaunchContextPBImpl(p);
   }
@@ -155,14 +250,27 @@ public class StartContainerRequestPBImpl extends StartContainerRequest {
   private ContainerLaunchContextProto convertToProtoFormat(ContainerLaunchContext t) {
     return ((ContainerLaunchContextPBImpl)t).getProto();
   }
-
-
-
+  
   private TokenPBImpl convertFromProtoFormat(TokenProto containerProto) {
     return new TokenPBImpl(containerProto);
   }
 
   private TokenProto convertToProtoFormat(Token container) {
     return ((TokenPBImpl)container).getProto();
+  }
+  private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
+    return new ContainerIdPBImpl(p);
+  }
+  
+  private ContainerIdProto convertToProtoFormat(ContainerId t) {
+    return ((ContainerIdPBImpl)t).getProto();
+  }
+  
+  private NodeIdPBImpl convertFromProtoFormat(NodeIdProto p) {
+    return new NodeIdPBImpl(p);
+  }
+  
+  private NodeIdProto convertToProtoFormat(NodeId t) {
+    return ((NodeIdPBImpl)t).getProto();
   }
 }  
