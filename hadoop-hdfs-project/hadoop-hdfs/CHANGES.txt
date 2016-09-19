@@ -20,6 +20,9 @@ Release 2.6.5 - UNRELEASED
     HDFS-9669. TcpPeerServer should respect ipc.server.listen.queue.size
     (Elliot Clark via cmccabe)
 
+    HDFS-10870. Wrong dfs.namenode.acls.enabled default in HdfsPermissionsGuide.apt.vm.
+    (John Zhuge via lei)
+
   OPTIMIZATIONS
 
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via

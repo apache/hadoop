@@ -431,7 +431,7 @@ HDFS Permissions Guide
        The administrators for the cluster specified as an ACL. This
        controls who can access the default servlets, etc. in the HDFS.
 
-     * <<<dfs.namenode.acls.enabled = true>>>
+     * <<<dfs.namenode.acls.enabled = false>>>
 
        Set to true to enable support for HDFS ACLs (Access Control Lists).  By
        default, ACLs are disabled.  When ACLs are disabled, the NameNode rejects
