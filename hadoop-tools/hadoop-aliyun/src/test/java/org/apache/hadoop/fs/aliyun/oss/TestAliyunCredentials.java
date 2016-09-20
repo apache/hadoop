@@ -26,10 +26,10 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.junit.Test;
 
-import java.net.URI;
+import java.io.IOException;
 
-import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY;
-import static org.apache.hadoop.fs.aliyun.oss.Constants.SECRET_KEY;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_ID;
+import static org.apache.hadoop.fs.aliyun.oss.Constants.ACCESS_KEY_SECRET;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.SECURITY_TOKEN;
 
 /**
@@ -38,8 +38,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.SECURITY_TOKEN;
  * should only be used against transient filesystems where you don't care about
  * the data.
  */
-public class TestAliyunOSSTemporaryCredentials
-    extends AbstractFSContractTestBase {
+public class TestAliyunCredentials extends AbstractFSContractTestBase {
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
@@ -47,19 +46,33 @@ public class TestAliyunOSSTemporaryCredentials
   }
 
   @Test
-  public void testTemporaryCredentialValidation() throws Throwable {
+  public void testCredentialMissingAccessKeyId() throws Throwable {
     Configuration conf = new Configuration();
-    conf.set(ACCESS_KEY, "accessKeyId");
-    conf.set(SECRET_KEY, "accessKeySecret");
-    conf.set(SECURITY_TOKEN, "");
-    URI uri = getFileSystem().getUri();
-    TemporaryAliyunCredentialsProvider provider
-        = new TemporaryAliyunCredentialsProvider(uri, conf);
+    conf.set(ACCESS_KEY_ID, "");
+    conf.set(ACCESS_KEY_SECRET, "accessKeySecret");
+    conf.set(SECURITY_TOKEN, "token");
+    validateCredential(conf);
+  }
+
+  @Test
+  public void testCredentialMissingAccessKeySecret() throws Throwable {
+    Configuration conf = new Configuration();
+    conf.set(ACCESS_KEY_ID, "accessKeyId");
+    conf.set(ACCESS_KEY_SECRET, "");
+    conf.set(SECURITY_TOKEN, "token");
+    validateCredential(conf);
+  }
+
+  private void validateCredential(Configuration conf) {
     try {
+      AliyunCredentialsProvider provider
+          = new AliyunCredentialsProvider(conf);
       Credentials credentials = provider.getCredentials();
       fail("Expected a CredentialInitializationException, got " + credentials);
     } catch (InvalidCredentialsException expected) {
       // expected
+    } catch (IOException e) {
+      fail("Unexpected exception.");
     }
   }
 }

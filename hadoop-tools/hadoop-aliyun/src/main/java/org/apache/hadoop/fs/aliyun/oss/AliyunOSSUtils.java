@@ -23,8 +23,6 @@ import java.io.InputStream;
 import java.net.URI;
 
 import com.aliyun.oss.common.auth.CredentialsProvider;
-import com.aliyun.oss.common.auth.DefaultCredentialProvider;
-import com.aliyun.oss.common.auth.DefaultCredentials;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ProviderUtils;
@@ -32,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
-import static org.apache.hadoop.fs.aliyun.oss.Constants.ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY;
 
 /**
  * Utility methods for Aliyun OSS code.
@@ -52,7 +49,7 @@ final public class AliyunOSSUtils {
    * @return the value for the key
    * @throws IOException if failed to get password from configuration
    */
-  static public String getPassword(Configuration conf, String key)
+  public static String getValueWithKey(Configuration conf, String key)
       throws IOException {
     try {
       final char[] pass = conf.getPassword(key);
@@ -126,12 +123,7 @@ final public class AliyunOSSUtils {
       Configuration newConf =
           ProviderUtils.excludeIncompatibleCredentialProviders(conf,
               AliyunOSSFileSystem.class);
-      String accessKey =
-          AliyunOSSUtils.getPassword(newConf, ACCESS_KEY);
-      String secretKey =
-          AliyunOSSUtils.getPassword(newConf, SECRET_KEY);
-      credentials = new DefaultCredentialProvider(
-          new DefaultCredentials(accessKey, secretKey));
+      credentials = new AliyunCredentialsProvider(newConf);
     } else {
       try {
         LOG.debug("Credential provider class is:" + className);
@@ -139,7 +131,7 @@ final public class AliyunOSSUtils {
         try {
           credentials =
               (CredentialsProvider)credClass.getDeclaredConstructor(
-                  URI.class, Configuration.class).newInstance(uri, conf);
+                  Configuration.class).newInstance(conf);
         } catch (NoSuchMethodException | SecurityException e) {
           credentials =
               (CredentialsProvider)credClass.getDeclaredConstructor()

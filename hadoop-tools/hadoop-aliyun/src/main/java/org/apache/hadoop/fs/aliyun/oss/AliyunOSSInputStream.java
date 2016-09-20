@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
-import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+
+import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
  * The input stream for OSS blob system.

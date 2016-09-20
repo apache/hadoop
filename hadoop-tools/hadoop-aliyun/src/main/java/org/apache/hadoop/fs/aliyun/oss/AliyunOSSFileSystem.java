@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
-import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -42,6 +40,8 @@ import com.aliyun.oss.model.ObjectMetadata;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
  * Implementation of {@link FileSystem} for <a href="https://oss.aliyun.com">

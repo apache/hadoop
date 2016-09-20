@@ -67,8 +67,8 @@ public class TestAliyunOSSFileSystemStore {
   @BeforeClass
   public static void checkSettings() throws Exception {
     Configuration conf = new Configuration();
-    assumeNotNull(conf.get(Constants.ACCESS_KEY));
-    assumeNotNull(conf.get(Constants.SECRET_KEY));
+    assumeNotNull(conf.get(Constants.ACCESS_KEY_ID));
+    assumeNotNull(conf.get(Constants.ACCESS_KEY_SECRET));
     assumeNotNull(conf.get("test.fs.oss.name"));
   }
 

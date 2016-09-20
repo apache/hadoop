@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
-import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.util.Progressable;
+
+import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
  * The output stream for OSS blob system.
