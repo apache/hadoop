@@ -928,7 +928,15 @@ has continued with ` S3ABlockOutputStream`
 #### Stabilizing: S3ABlockOutputStream
 
 
-**Warning: NEW in hadoop 2.9. UNSTABLE: use at own risk**
+**New in Hadoop 2.9+; replaces the "fast" upload of Hadoop 2.7**
+
+The default mechanism for file uploads in S3 buffers the entire output to
+a file, then uploads it in the final `OutputStream.close()` call, a call
+which then takes time proportional to the data to upload.
+
+The Block output stream, `S3ABlockOutputStream` writes the file in blocks
+as the amount of data written exceeds the partition size defined in
+`fs.s3a.multipart.size`.
 
 This is high-performance incremental file upload mechanism which:
 
@@ -942,12 +950,14 @@ This is high-performance incremental file upload mechanism which:
 1. When buffering data to disk, uses the directory/directories listed in
    `fs.s3a.buffer.dir`. The size of data which can be buffered is limited
    to the available disk space.
-1. Generates output statistics as metrics on the filesystem.
+1. Generates output statistics as metrics on the filesystem, including
+   statistics of active and pending block uploads.
+
 
 ```xml
 <property>
   <name>fs.s3a.block.upload</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Use the incremental block upload mechanism with
     the buffering mechanism set in fs.s3a.block.output.buffer.
@@ -962,15 +972,33 @@ This is high-performance incremental file upload mechanism which:
   <name>fs.s3a.block.output.buffer</name>
   <value>disk</value>
   <description>
-    Buffering mechanims to use when using S3a Block upload
-    (fs.s3a.block.upload=true). values: disk, array.
+    Buffering mechanism to use when using S3A Block upload
+    (fs.s3a.block.upload=true). Values: disk, array, bytebuffer.
+
     "disk" will use the directories listed in fs.s3a.buffer.dir as
     the location(s) to save data prior to being uploaded.
-    If using "array", the data is stored in memory arrays.
-    The fs.s3a.threads.max and fs.s3a.max.total.tasks values must then
-    be kept low so as to prevent heap overflows.
+
+    "array" uses arrays in the JVM heap
+
+    "bytebuffer" uses off-heap memory within the JVM.
+
+    Both "array" and "bytebuffer" will consume memory proportional
+    to the partition size * active+pending block uploads.
+
+    To avoid running out of memory, keep the fs.s3a.threads.max and
+    fs.s3a.max.total.tasks values low.
+
     No effect if fs.s3a.block.upload is false.
   </description>
+  
+  <property>
+    <name>fs.s3a.multipart.size</name>
+    <value>104857600</value>
+    <description>
+    How big (in bytes) to split upload or copy operations up into.
+    </description>
+  </property>
+
 </property>
 ```
 
@@ -992,7 +1020,7 @@ will block until the upload is completed.
 
 ##### Disk upload `fs.s3a.block.output.buffer=disk`
 
-When `fs.s3a.block.output.buffer` is set to `array`, all data is buffered
+When `fs.s3a.block.output.buffer` is set to `disk`, all data is buffered
 to local hard disks in prior to upload. This minimizes the amount of memory
 consumed, and so eliminates heap size as the limiting factor in queued uploads
 —exactly as the original "direct to disk" buffering used when
@@ -1012,24 +1040,70 @@ throughput. Instead the bandwidth is shared between all threads, slowing them
 all down. We recommend a low number of threads, especially when uploading
 over long-haul connections. 
 
-```xml
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>5</value>
-  <description> Maximum number of concurrent active (part)uploads,
-    which each use a thread from the threadpool.</description>
-</property>
-```
 Because the upload data is buffered via disk, there is little risk of heap
 overflow as the queue of pending uploads (limited by `fs.s3a.max.total.tasks`)
 increases.
 
+
 ```xml
+<property>
+  <name>fs.s3a.block.upload</name>
+  <value>true</value>
+</property>
+  
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>disk</value>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>5</value>
+</property>
+
 <property>
   <name>fs.s3a.max.total.tasks</name>
   <value>20</value>
-  <description>Number of (part)uploads allowed to the queue before
-    blocking additional uploads.</description>
+</property>
+```
+
+
+##### Block Upload with ByteBuffers: `fs.s3a.block.output.buffer=bytebuffer`
+
+When `fs.s3a.block.output.buffer` is set to `bytebuffer`, all data is buffered
+in "Direct" ByteBuffers prior to upload. This *may* be faster than buffering to disk.
+
+These buffers are in the memory of the JVM, albeit not in the Java Heap itself.
+The amount of data which can be buffered is
+limited by the Jva runtime, the operating system, and, for YARN applications,
+the amount of memory requested for each container.
+
+The slower the write bandwidth to S3, the greater the risk of running out
+of memory.
+
+To reduce the risk of this, the number of
+threads performing uploads and the size of queued upload operations must be
+kept low.
+
+```xml
+<property>
+  <name>fs.s3a.block.upload</name>
+  <value>true</value>
+</property>
+  
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>array</value>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>3</value>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>1</value>
 </property>
 ```
 
@@ -1037,11 +1111,14 @@ increases.
 ##### Array upload: `fs.s3a.block.output.buffer=array`
 
 When `fs.s3a.block.output.buffer` is set to `array`, all data is buffered
-in memory prior to upload. This *may* be faster than buffering to disk.
+in byte arrays in the JVM's heap prior to upload.
+This *may* be faster than buffering to disk.
 
-This `array` option is similar to the in-memory-only stream implemented in
-`S3AFastOutputStream`: the amount of data which can be buffered is
-limited by available heap. The slower the write bandwidth to S3, the greater
+This `array` option is similar to the in-memory-only stream offered in
+Hadoop 2.7 with `fs.s3a.fast.upload=true`
+
+The amount of data which can be buffered is limited by the available
+size of the JVM heap heap. The slower the write bandwidth to S3, the greater
 the risk of heap overflows. To reduce the risk of this, the number of
 threads performing uploads and the size of queued upload operations must be
 kept low. As an example: three threads and one queued task will consume
@@ -1049,17 +1126,23 @@ kept low. As an example: three threads and one queued task will consume
 
 ```xml
 <property>
+  <name>fs.s3a.block.upload</name>
+  <value>true</value>
+</property>
+  
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>array</value>
+</property>
+
+<property>
   <name>fs.s3a.threads.max</name>
   <value>3</value>
-  <description> Maximum number of concurrent active (part)uploads,
-    which each use a thread from the threadpool.</description>
 </property>
 
 <property>
   <name>fs.s3a.max.total.tasks</name>
   <value>1</value>
-  <description>Number of (part)uploads allowed to the queue before
-    blocking additional uploads.</description>
 </property>
 ```
 
@@ -1551,6 +1634,45 @@ Set `fs.s3a.connection.maximum` to a larger value (and at least as large as
 
 ### Out of heap memory when writing to S3A
 
+This can happen when using the block output stream (`fs.s3a.block.output=true`)
+and in-memory buffering (either `fs.s3a.block.output.buffer=array` or
+`fs.s3a.block.output.buffer=bytebuffer`).
+
+More data is being generated than in the JVM than it can upload to S3 —and
+so much data has been buffered that the JVM has run out of memory.
+
+Fixes
+
+1. Increase heap capacity. This is a short term measure —the problem may
+return.
+1. Decrease the values of `fs.s3a.threads.max` and `fs.s3a.max.total.tasks`
+ so that less uploads can be pending. You may need to decrease the value
+of `fs.s3a.multipart.size` to reduce the amount of memory buffered in each
+queued operation.
+1. Switch to disk buffering: `fs.s3a.block.output.buffer=disk`. The upper limit
+on buffered data becomes limited to that of disk capacity.
+
+If using disk buffering, the number of total tasks can be kept high, as
+pending uploads consume little memory. Keeping the thread count low can
+reduce bandwidth requirements on the uploads
+
+## When writing to S3A: "java.io.FileNotFoundException: Completing multi-part upload"
+
+
+```
+java.io.FileNotFoundException: Completing multi-part upload on fork-5/test/multipart/1c397ca6-9dfb-4ac1-9cf7-db666673246b: com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed. (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: 84FF8057174D9369), S3 Extended Request ID: Ij5Yn6Eq/qIERH4Z6Io3YL2t9/qNZ7z9gjPb1FrTtTovZ8k1MXqh+zCYYjqmfJ/fCY6E1+JR9jA=
+	at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1182)
+	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:770)
+	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+	at com.amazonaws.services.s3.AmazonS3Client.completeMultipartUpload(AmazonS3Client.java:2705)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.complete(S3ABlockOutputStream.java:473)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$200(S3ABlockOutputStream.java:382)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.close(S3ABlockOutputStream.java:272)
+	at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:72)
+	at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
+``
 
 ## Visible S3 Inconsistency
 

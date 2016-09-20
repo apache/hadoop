@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.scale;
+package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 
-import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD;
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
-
-public class STestS3AHugeFilesFastUpload extends AbstractSTestS3AHugeFiles {
+/**
+ * Run the encryption tests against the block output stream.
+ */
+public class ITestS3AEncryptionBlockOutputStream extends ITestS3AEncryption {
 
   @Override
   protected Configuration createConfiguration() {
-    final Configuration configuration = super.createConfiguration();
-    configuration.setBoolean(FAST_UPLOAD, true);
-    return configuration;
+    Configuration conf = super.createConfiguration();
+    conf.setBoolean(Constants.BLOCK_OUTPUT, true);
+    conf.set(Constants.BLOCK_OUTPUT_BUFFER,
+        Constants.BLOCK_OUTPUT_BYTEBUFFER);
+    return conf;
   }
 }

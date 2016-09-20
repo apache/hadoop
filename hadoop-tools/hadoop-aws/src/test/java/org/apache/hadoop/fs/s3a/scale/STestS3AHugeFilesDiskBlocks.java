@@ -23,10 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER_DISK;
-import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD;
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 
 public class STestS3AHugeFilesDiskBlocks extends AbstractSTestS3AHugeFiles {
 

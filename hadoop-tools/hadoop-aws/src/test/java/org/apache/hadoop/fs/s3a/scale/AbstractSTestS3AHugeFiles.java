@@ -32,12 +32,10 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.internal.AssumptionViolatedException;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
@@ -83,7 +81,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Configuration configuration = super.createConfiguration();
     configuration.setLong(SOCKET_SEND_BUFFER, BLOCKSIZE);
     configuration.setLong(SOCKET_RECV_BUFFER, BLOCKSIZE);
-    configuration.setLong(MIN_MULTIPART_THRESHOLD, 5 * _1MB);
     configuration.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     configuration.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     configuration.set(USER_AGENT_PREFIX, "STestS3AHugeFileCreate");

@@ -87,8 +87,12 @@ public class S3ATestUtils {
     }
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
-    conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
-    conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 0);
+    if (purge) {
+      conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
+      // but a long delay so that parallel multipart tests don't
+      // suddenly start timing out
+      conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 30 * 60);
+    }
     fs1.initialize(testURI, conf);
     return fs1;
   }

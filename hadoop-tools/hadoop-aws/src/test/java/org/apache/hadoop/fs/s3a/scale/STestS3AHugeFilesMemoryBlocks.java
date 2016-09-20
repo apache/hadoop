@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER_ARRAY;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER_DISK;
 
 public class STestS3AHugeFilesMemoryBlocks extends AbstractSTestS3AHugeFiles {
 

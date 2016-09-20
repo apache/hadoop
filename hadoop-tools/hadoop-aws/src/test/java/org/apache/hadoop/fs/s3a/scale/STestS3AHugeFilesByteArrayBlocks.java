@@ -18,15 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
 
-/**
- * Test very large scale distCP upload using the huge file options.
- */
-public class STestS3AHugeDistCP extends S3AScaleTestBase {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      STestS3AHugeDistCP.class);
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BYTEBUFFER;
 
+public class STestS3AHugeFilesByteArrayBlocks
+    extends AbstractSTestS3AHugeFiles {
 
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration configuration = super.createConfiguration();
+    configuration.setBoolean(BLOCK_OUTPUT, true);
+    configuration.set(BLOCK_OUTPUT_BUFFER, BLOCK_OUTPUT_BYTEBUFFER);
+    return configuration;
+  }
 }

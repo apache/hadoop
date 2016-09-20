@@ -74,29 +74,60 @@ class S3ABlockOutputStream extends OutputStream {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ABlockOutputStream.class);
+  /** Owner fs. */
   private final S3AFileSystem fs;
+
+  /** Object being uploaded. */
   private final String key;
+
+  /** Bucket; used in building requests. */
   private final String bucket;
+
+  /** Size of all blocks. */
   private final int blockSize;
+
+  /** optional hard-coded ACL. */
   private final CannedAccessControlList cannedACL;
+
+  /** Callback for progress. */
   private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
-  private final RetryPolicy retryPolicy;
+
+  /** Retry policy for multipart commits; not all AWS SDK versions retry */
+  private final RetryPolicy retryPolicy =
+      RetryPolicies.retryUpToMaximumCountWithProportionalSleep(
+          5,
+          2000,
+          TimeUnit.MILLISECONDS);
+  /**
+   * Factory for blocks.
+   */
   private final S3ADataBlocks.AbstractBlockFactory blockFactory;
+  /** Preallocated byte buffer for writing single characters. */
   private final byte[] singleCharWrite = new byte[1];
+
+  /** Multipart upload details; null means none started */
   private MultiPartUpload multiPartUpload;
+
+  /** Closed flag. */
   private volatile boolean closed;
+
+  /** Current data block. Null means none currently active */
   private S3ADataBlocks.DataBlock currentBlock;
+
+  /** Count of blocks uploaded. */
   private long blockCount = 0;
+
+  /** Statistics to build up. */
   private final S3AInstrumentation.OutputStreamStatistics statistics;
 
-
   /**
-   * S3A output stream which uploads blocks as soon as there is enough
-   * data.
+   * An S3A output stream which uploads partitions in a separate pool of
+   * threads; different {@link S3ADataBlocks.AbstractBlockFactory}
+   * instances can control where data is buffered.
    *
    * @param fs S3AFilesystem
-   * @param key S3 key name
+   * @param key S3 object to work on.
    * @param progress report progress in order to prevent timeouts. If
    * this class implements {@code ProgressListener} then it will be
    * directly wired up to the AWS client, so receive detailed progress information.
@@ -127,11 +158,17 @@ class S3ABlockOutputStream extends OutputStream {
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    this.retryPolicy = RetryPolicies.retryUpToMaximumCountWithProportionalSleep(
-        5, 2000, TimeUnit.MILLISECONDS);
     LOG.debug("Initialized S3AFastOutputStream for bucket '{}' key '{}' " +
             "output to {}", bucket, key, currentBlock);
     maybeCreateDestStream();
+  }
+
+  /**
+   * Get the S3 Client to talk to.
+   * @return the S3Client instance of the owner FS.
+   */
+  private AmazonS3 getS3Client() {
+    return fs.getAmazonS3Client();
   }
 
   /**
@@ -219,22 +256,27 @@ class S3ABlockOutputStream extends OutputStream {
   }
 
   /**
-   * Trigger the upload.
+   * Start an asynchronous upload of the current block.
    * @throws IOException Problems opening the destination for upload
    * or initializing the upload.
    */
   private synchronized void uploadCurrentBlock() throws IOException {
+    Preconditions.checkNotNull(currentBlock, "current block");
     LOG.debug("Writing block # {}", blockCount);
     if (multiPartUpload == null) {
       multiPartUpload = initiateMultiPartUpload();
     }
     multiPartUpload.uploadBlockAsync(currentBlock);
+    // close the block
     currentBlock.close();
+    // set it to null, so the next write will create a new block.
     currentBlock = null;
   }
 
   /**
-   * Close the stream. This will not return until the upload is complete
+   * Close the stream.
+   *
+   * This will not return until the upload is complete
    * or the attempt to perform the upload has failed.
    * Exceptions raised in this method are indicative that the write has
    * failed and data is at risk of being lost.
@@ -246,10 +288,10 @@ class S3ABlockOutputStream extends OutputStream {
       return;
     }
     closed = true;
-    LOG.debug("{}: Closing block #{}: {}, data to upload = {}",
+    LOG.debug("{}: Closing block #{}: current block= {}, data to upload = {}",
         this,
         blockCount,
-        currentBlock,
+        currentBlock == null ? "(none)" : currentBlock,
         currentBlock == null ? 0 : currentBlock.dataSize() );
     try {
       if (multiPartUpload == null) {
@@ -307,7 +349,9 @@ class S3ABlockOutputStream extends OutputStream {
   }
 
   /**
-   * Upload the current block as a single PUT request.
+   * Upload the current block as a single PUT request; if the buffer
+   * is empty a 0-byte PUT will be invoked, as it is needed to create an
+   * entry at the far end.
    * @throws IOException any problem.
    */
   private void putObject() throws IOException {
@@ -349,10 +393,6 @@ class S3ABlockOutputStream extends OutputStream {
     }
   }
 
-  private AmazonS3 getS3Client() {
-    return fs.getAmazonS3Client();
-  }
-
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -371,6 +411,10 @@ class S3ABlockOutputStream extends OutputStream {
     fs.incrementWriteOperations();
   }
 
+  /**
+   * Current time in nanoseconds.
+   * @return time
+   */
   private long now() {
     return System.currentTimeMillis();
   }
@@ -384,7 +428,7 @@ class S3ABlockOutputStream extends OutputStream {
 
     public MultiPartUpload(String uploadId) {
       this.uploadId = uploadId;
-      this.partETagsFutures = new ArrayList<>();
+      this.partETagsFutures = new ArrayList<>(2);
       LOG.debug("Initiated multi-part upload for bucket '{}' key '{}' with " +
           "id '{}'", bucket, key, uploadId);
     }
@@ -401,13 +445,17 @@ class S3ABlockOutputStream extends OutputStream {
       final InputStream uploadStream = block.openForUpload();
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request =
-          new UploadPartRequest().withBucketName(bucket).withKey(key)
-              .withUploadId(uploadId).withInputStream(uploadStream)
-              .withPartNumber(currentPartNumber).withPartSize(size);
+          new UploadPartRequest()
+              .withBucketName(bucket)
+              .withKey(key)
+              .withUploadId(uploadId)
+              .withInputStream(uploadStream)
+              .withPartNumber(currentPartNumber)
+              .withPartSize(size);
       long transferQueueTime = now();
       BlockUploadProgress callback =
           new BlockUploadProgress(
-          block, progressListener, transferQueueTime);
+              block, progressListener, transferQueueTime);
       request.setGeneralProgressListener(callback);
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<PartETag> partETagFuture =
@@ -430,7 +478,12 @@ class S3ABlockOutputStream extends OutputStream {
       partETagsFutures.add(partETagFuture);
     }
 
-   private List<PartETag> waitForAllPartUploads() throws IOException {
+    /**
+     * Block awating all outstanding uploads to complete.
+     * @return list of results
+     * @throws IOException IO Problems
+     */
+    private List<PartETag> waitForAllPartUploads() throws IOException {
       LOG.debug("Waiting for {} uploads to complete", partETagsFutures.size());
       try {
         return Futures.allAsList(partETagsFutures).get();
@@ -541,16 +594,23 @@ class S3ABlockOutputStream extends OutputStream {
    */
   private class BlockUploadProgress implements ProgressListener {
     private final S3ADataBlocks.DataBlock block;
-    private final ProgressListener next;
+    private final ProgressListener nextListener;
     private final long transferQueueTime;
     private long transferStartTime;
 
+    /**
+     * Track the progress of a single block upload.
+     * @param block block to monitor
+     * @param nextListener optional next progress listener
+     * @param transferQueueTime time the block was transferred
+     * into the queue
+     */
     private BlockUploadProgress(S3ADataBlocks.DataBlock block,
-        ProgressListener next,
+        ProgressListener nextListener,
         long transferQueueTime) {
       this.block = block;
       this.transferQueueTime = transferQueueTime;
-      this.next = next;
+      this.nextListener = nextListener;
     }
 
     @Override
@@ -585,12 +645,15 @@ class S3ABlockOutputStream extends OutputStream {
         // nothing
       }
 
-      if (next != null) {
-        next.progressChanged(progressEvent);
+      if (nextListener != null) {
+        nextListener.progressChanged(progressEvent);
       }
     }
   }
 
+  /**
+   * Bridge from AWS {@code ProgressListener} to Hadoop {@link Progressable}.
+   */
   private static class ProgressableListener implements ProgressListener {
     private final Progressable progress;
 

@@ -125,15 +125,27 @@ public class S3AFileSystem extends FileSystem {
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
   private S3AInputPolicy inputPolicy;
-  private static final AtomicBoolean warnedOfCoreThreadDeprecation =
-      new AtomicBoolean(false);
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
-  private boolean fastUploadEnabled;
   private boolean blockUploadEnabled;
   private String blockOutputBuffer;
   private S3ADataBlocks.AbstractBlockFactory blockFactory;
+
+  /*
+   * Register Deprecated options.
+   */
+  static {
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+        new Configuration.DeprecationDelta("fs.s3a.threads.core",
+            null,
+            "Unsupported option \"fs.s3a.threads.core\" will be ignored"),
+        new Configuration.DeprecationDelta(FAST_UPLOAD,
+            BLOCK_OUTPUT,
+            FAST_UPLOAD + " has been replaced by " + BLOCK_OUTPUT
+            + " with multiple buffering options. Switching to block output.")
+    });
+  }
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
@@ -179,13 +191,7 @@ public class S3AFileSystem extends FileSystem {
                     }
                   });
 
-      if (conf.get("fs.s3a.threads.core") != null &&
-          warnedOfCoreThreadDeprecation.compareAndSet(false, true)) {
-        LoggerFactory.getLogger(
-            "org.apache.hadoop.conf.Configuration.deprecation")
-            .warn("Unsupported option \"fs.s3a.threads.core\"" +
-                " will be ignored {}", conf.get("fs.s3a.threads.core"));
-      }
+
       int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
       if (maxThreads < 2) {
         LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
@@ -218,21 +224,15 @@ public class S3AFileSystem extends FileSystem {
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 
       blockUploadEnabled = conf.getBoolean(BLOCK_OUTPUT, false);
+      blockOutputBuffer = conf.getTrimmed(BLOCK_OUTPUT_BUFFER,
+          DEFAULT_BLOCK_OUTPUT_BUFFER);
+
       if (blockUploadEnabled) {
-        blockOutputBuffer = conf.getTrimmed(BLOCK_OUTPUT_BUFFER,
-            DEFAULT_BLOCK_OUTPUT_BUFFER);
         partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
         blockFactory = S3ADataBlocks.createFactory(blockOutputBuffer);
         blockFactory.init(this);
         LOG.debug("Uploading data via Block Upload, buffer = {}",
             blockOutputBuffer);
-      } else {
-        fastUploadEnabled = getConf().getBoolean(FAST_UPLOAD,
-            DEFAULT_FAST_UPLOAD);
-        if (fastUploadEnabled) {
-          partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
-
-        }
       }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
@@ -549,18 +549,6 @@ public class S3AFileSystem extends FileSystem {
               blockFactory,
               instrumentation.newOutputStreamStatistics()),
           null);
-    } else if (fastUploadEnabled) {
-      output = new FSDataOutputStream(
-          new S3AFastOutputStream(s3,
-              this,
-              bucket,
-              key,
-              progress,
-              cannedACL,
-              partSize,
-              multiPartThreshold,
-              threadPoolExecutor),
-          statistics);
     } else {
 
       // We pass null to FSDataOutputStream so it won't count writes that
@@ -1805,7 +1793,6 @@ public class S3AFileSystem extends FileSystem {
     sb.append(", workingDir=").append(workingDir);
     sb.append(", inputPolicy=").append(inputPolicy);
     sb.append(", partSize=").append(partSize);
-    sb.append(", fastUpload=").append(fastUploadEnabled);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);
     if (cannedACL != null) {
@@ -1820,7 +1807,7 @@ public class S3AFileSystem extends FileSystem {
           .append('\'');
     }
     if (blockFactory != null) {
-      sb.append("Block Upload via ").append(blockFactory);
+      sb.append("Block Upload enabled via ").append(blockFactory);
     }
     sb.append(", statistics {")
         .append(statistics)

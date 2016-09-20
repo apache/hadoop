@@ -169,7 +169,6 @@
                   <excludes>
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
                     <exclude>**/ITestS3ABlockingThreadPool.java</exclude>
-                    <exclude>**/ITestS3AFastOutputStream.java</exclude>
                     <exclude>**/ITestS3AFileSystemContract.java</exclude>
                     <exclude>**/ITestS3AMiniYarnCluster.java</exclude>
                     <exclude>**/ITest*Root*.java</exclude>
@@ -228,6 +227,11 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
+                  <systemPropertyVariables>
+                    <!-- Propagate scale parameters -->
+                    <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
+                    <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                  </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
                 </configuration>
               </execution>
