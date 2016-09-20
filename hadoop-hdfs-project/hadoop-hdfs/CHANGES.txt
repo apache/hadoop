@@ -157,6 +157,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10512. VolumeScanner may terminate due to NPE in 
     DataNode.reportBadBlocks. Contributed by Wei-Chiu Chuang and Yiqun Lin.
 
+    HDFS-10879. TestEncryptionZonesWithKMS#testReadWrite fails intermittently.
+    (xiaochen)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
