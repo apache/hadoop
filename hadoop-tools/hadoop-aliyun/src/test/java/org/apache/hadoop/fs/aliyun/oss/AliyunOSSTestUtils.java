@@ -48,7 +48,7 @@ public final class AliyunOSSTestUtils {
     String fsname = conf.getTrimmed(
         TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME, "");
 
-    boolean liveTest = !StringUtils.isEmpty(fsname);
+    boolean liveTest = StringUtils.isNotEmpty(fsname);
     URI testURI = null;
     if (liveTest) {
       testURI = URI.create(fsname);

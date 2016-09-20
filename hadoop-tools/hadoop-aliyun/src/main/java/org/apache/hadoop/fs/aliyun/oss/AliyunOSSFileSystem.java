@@ -24,6 +24,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -124,9 +126,6 @@ public class AliyunOSSFileSystem extends FileSystem {
     Path f = status.getPath();
     String key = pathToKey(f);
     if (status.isDirectory()) {
-      if (!key.endsWith("/")) {
-        key += "/";
-      }
       if (!recursive) {
         FileStatus[] statuses = listStatus(status.getPath());
         // Check whether it is an empty directory or not
@@ -135,6 +134,7 @@ public class AliyunOSSFileSystem extends FileSystem {
               ": It is not empty!");
         } else {
           // Delete empty directory without '-r'
+          key = AliyunOSSUtils.maybeAddTrailingSlash(key);
           store.deleteObject(key);
         }
       } else {
@@ -149,15 +149,9 @@ public class AliyunOSSFileSystem extends FileSystem {
   }
 
   private void createFakeDirectoryIfNecessary(Path f) throws IOException {
-    try {
-      Path pPath = f.getParent();
-      FileStatus pStatus = getFileStatus(pPath);
-      if (pStatus.isFile()) {
-        throw new IOException("Path " + pPath +
-            " is assumed to be a directory!");
-      }
-    } catch (FileNotFoundException fnfe) {
-      // Make sure the parent directory exists
+    String key = pathToKey(f);
+    if (StringUtils.isNotEmpty(key) && !exists(f)) {
+      LOG.debug("Creating new fake directory at {}", f);
       mkdir(pathToKey(f.getParent()));
     }
   }
@@ -175,14 +169,14 @@ public class AliyunOSSFileSystem extends FileSystem {
     ObjectMetadata meta = store.getObjectMetadata(key);
     // If key not found and key does not end with "/"
     if (meta == null && !key.endsWith("/")) {
-      // Case: dir + "/"
+      // In case of 'dir + "/"'
       key += "/";
       meta = store.getObjectMetadata(key);
     }
     if (meta == null) {
-      ObjectListing listing = store.listObjects(key, 1, "/", null);
-      if (!listing.getObjectSummaries().isEmpty() ||
-          !listing.getCommonPrefixes().isEmpty()) {
+      ObjectListing listing = store.listObjects(key, 1, null, false);
+      if (CollectionUtils.isNotEmpty(listing.getObjectSummaries()) ||
+          CollectionUtils.isNotEmpty(listing.getCommonPrefixes())) {
         return new FileStatus(0, true, 1, 0, 0, qualifiedPath);
       } else {
         throw new FileNotFoundException(path + ": No such file or directory!");
@@ -251,7 +245,7 @@ public class AliyunOSSFileSystem extends FileSystem {
    */
   private boolean objectRepresentsDirectory(final String name,
       final long size) {
-    return !name.isEmpty() && name.endsWith("/") && size == 0L;
+    return StringUtils.isNotEmpty(name) && name.endsWith("/") && size == 0L;
   }
 
   /**
@@ -263,10 +257,6 @@ public class AliyunOSSFileSystem extends FileSystem {
   private String pathToKey(Path path) {
     if (!path.isAbsolute()) {
       path = new Path(workingDir, path);
-    }
-
-    if (path.toUri().getScheme() != null && path.toUri().getPath().isEmpty()) {
-      return "";
     }
 
     return path.toUri().getPath().substring(1);
@@ -287,26 +277,23 @@ public class AliyunOSSFileSystem extends FileSystem {
     final FileStatus fileStatus = getFileStatus(path);
 
     if (fileStatus.isDirectory()) {
-      if (!key.endsWith("/")) {
-        key = key + "/";
-      }
-
       if (LOG.isDebugEnabled()) {
         LOG.debug("listStatus: doing listObjects for directory " + key);
       }
 
-      ObjectListing objects = store.listObjects(key, maxKeys, "/", null);
+      ObjectListing objects = store.listObjects(key, maxKeys, null, false);
       while (true) {
         statistics.incrementReadOps(1);
         for (OSSObjectSummary objectSummary : objects.getObjectSummaries()) {
-          Path keyPath = keyToPath(objectSummary.getKey())
-              .makeQualified(uri, workingDir);
-          if (keyPath.equals(path)) {
+          String objKey = objectSummary.getKey();
+          if (objKey.equals(key + "/")) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Ignoring: " + keyPath);
+              LOG.debug("Ignoring: " + objKey);
             }
             continue;
           } else {
+            Path keyPath = keyToPath(objectSummary.getKey())
+                .makeQualified(uri, workingDir);
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding: fi: " + keyPath);
             }
@@ -317,10 +304,13 @@ public class AliyunOSSFileSystem extends FileSystem {
         }
 
         for (String prefix : objects.getCommonPrefixes()) {
-          Path keyPath = keyToPath(prefix).makeQualified(uri, workingDir);
-          if (keyPath.equals(path)) {
+          if (prefix.equals(key + "/")) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Ignoring: " + prefix);
+            }
             continue;
           } else {
+            Path keyPath = keyToPath(prefix).makeQualified(uri, workingDir);
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding: rd: " + keyPath);
             }
@@ -332,8 +322,8 @@ public class AliyunOSSFileSystem extends FileSystem {
           if (LOG.isDebugEnabled()) {
             LOG.debug("listStatus: list truncated - getting next batch");
           }
-          objects = store.listObjects(key, maxKeys, "/",
-              objects.getNextMarker());
+          String nextMarker = objects.getNextMarker();
+          objects = store.listObjects(key, maxKeys, nextMarker, false);
           statistics.incrementReadOps(1);
         } else {
           break;
@@ -358,10 +348,12 @@ public class AliyunOSSFileSystem extends FileSystem {
    */
   private boolean mkdir(final String key) throws IOException {
     String dirName = key;
-    if (!key.endsWith("/")) {
-      dirName += "/";
+    if (StringUtils.isNotEmpty(key)) {
+      if (!key.endsWith("/")) {
+        dirName += "/";
+      }
+      store.storeEmptyFile(dirName);
     }
-    store.storeEmptyFile(dirName);
     return true;
   }
 
@@ -506,16 +498,11 @@ public class AliyunOSSFileSystem extends FileSystem {
    * @param dstPath destination path.
    * @return true if directory is successfully copied.
    */
-  private boolean copyDirectory(Path srcPath, Path dstPath) {
-    String srcKey = pathToKey(srcPath);
-    String dstKey = pathToKey(dstPath);
-
-    if (!srcKey.endsWith("/")) {
-      srcKey = srcKey + "/";
-    }
-    if (!dstKey.endsWith("/")) {
-      dstKey = dstKey + "/";
-    }
+  private boolean copyDirectory(Path srcPath, Path dstPath) throws IOException {
+    String srcKey = AliyunOSSUtils
+        .maybeAddTrailingSlash(pathToKey(srcPath));
+    String dstKey = AliyunOSSUtils
+        .maybeAddTrailingSlash(pathToKey(dstPath));
 
     if (dstKey.startsWith(srcKey)) {
       if (LOG.isDebugEnabled()) {
@@ -524,7 +511,8 @@ public class AliyunOSSFileSystem extends FileSystem {
       return false;
     }
 
-    ObjectListing objects = store.listObjects(srcKey, maxKeys, null, null);
+    store.storeEmptyFile(dstKey);
+    ObjectListing objects = store.listObjects(srcKey, maxKeys, null, true);
     statistics.incrementReadOps(1);
     // Copy files from src folder to dst
     while (true) {
@@ -534,8 +522,8 @@ public class AliyunOSSFileSystem extends FileSystem {
         store.copyFile(objectSummary.getKey(), newKey);
       }
       if (objects.isTruncated()) {
-        objects = store.listObjects(srcKey, maxKeys, null,
-            objects.getNextMarker());
+        String nextMarker = objects.getNextMarker();
+        objects = store.listObjects(srcKey, maxKeys, nextMarker, true);
         statistics.incrementReadOps(1);
       } else {
         break;

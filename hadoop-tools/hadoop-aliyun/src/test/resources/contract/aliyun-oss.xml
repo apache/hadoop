@@ -99,6 +99,16 @@
     </property>
 
     <property>
+        <name>fs.contract.test.root-tests-enabled</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>fs.contract.supports-getfilestatus</name>
+        <value>true</value>
+    </property>
+
+    <property>
         <name>fs.oss.multipart.download.size</name>
         <value>102400</value>
     </property>

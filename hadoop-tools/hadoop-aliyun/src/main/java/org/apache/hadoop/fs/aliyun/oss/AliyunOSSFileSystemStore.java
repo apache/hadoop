@@ -42,6 +42,8 @@ import com.aliyun.oss.model.UploadPartCopyRequest;
 import com.aliyun.oss.model.UploadPartCopyResult;
 import com.aliyun.oss.model.UploadPartRequest;
 import com.aliyun.oss.model.UploadPartResult;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
@@ -89,7 +91,7 @@ public class AliyunOSSFileSystemStore {
 
     String proxyHost = conf.getTrimmed(PROXY_HOST_KEY, "");
     int proxyPort = conf.getInt(PROXY_PORT_KEY, -1);
-    if (!proxyHost.isEmpty()) {
+    if (StringUtils.isNotEmpty(proxyHost)) {
       clientConf.setProxyHost(proxyHost);
       if (proxyPort >= 0) {
         clientConf.setProxyPort(proxyPort);
@@ -123,7 +125,7 @@ public class AliyunOSSFileSystemStore {
 
     String endPoint = conf.getTrimmed(ENDPOINT_KEY, "");
     CredentialsProvider provider =
-        AliyunOSSUtils.getCredentialsProvider(uri, conf);
+        AliyunOSSUtils.getCredentialsProvider(conf);
     ossClient = new OSSClient(endPoint, provider, clientConf);
     uploadPartSize = conf.getLong(MULTIPART_UPLOAD_SIZE_KEY,
         MULTIPART_UPLOAD_SIZE_DEFAULT);
@@ -153,7 +155,7 @@ public class AliyunOSSFileSystemStore {
     }
 
     String cannedACLName = conf.get(CANNED_ACL_KEY, CANNED_ACL_DEFAULT);
-    if (!cannedACLName.isEmpty()) {
+    if (StringUtils.isNotEmpty(cannedACLName)) {
       CannedAccessControlList cannedACL =
           CannedAccessControlList.valueOf(cannedACLName);
       ossClient.setBucketAcl(bucketName, cannedACL);
@@ -179,11 +181,13 @@ public class AliyunOSSFileSystemStore {
    * @param keysToDelete collection of keys to delete.
    */
   public void deleteObjects(List<String> keysToDelete) {
-    DeleteObjectsRequest deleteRequest =
-        new DeleteObjectsRequest(bucketName);
-    deleteRequest.setKeys(keysToDelete);
-    ossClient.deleteObjects(deleteRequest);
-    statistics.incrementWriteOps(keysToDelete.size());
+    if (CollectionUtils.isNotEmpty(keysToDelete)) {
+      DeleteObjectsRequest deleteRequest =
+          new DeleteObjectsRequest(bucketName);
+      deleteRequest.setKeys(keysToDelete);
+      ossClient.deleteObjects(deleteRequest);
+      statistics.incrementWriteOps(keysToDelete.size());
+    }
   }
 
   /**
@@ -192,8 +196,10 @@ public class AliyunOSSFileSystemStore {
    * @param key directory key to delete.
    */
   public void deleteDirs(String key) {
+    key = AliyunOSSUtils.maybeAddTrailingSlash(key);
     ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
     listRequest.setPrefix(key);
+    listRequest.setDelimiter(null);
     listRequest.setMaxKeys(maxKeys);
 
     while (true) {
@@ -299,7 +305,7 @@ public class AliyunOSSFileSystemStore {
     InitiateMultipartUploadRequest initiateMultipartUploadRequest =
         new InitiateMultipartUploadRequest(bucketName, dstKey);
     ObjectMetadata meta = new ObjectMetadata();
-    if (!serverSideEncryptionAlgorithm.isEmpty()) {
+    if (StringUtils.isNotEmpty(serverSideEncryptionAlgorithm)) {
       meta.setServerSideEncryption(serverSideEncryptionAlgorithm);
     }
     initiateMultipartUploadRequest.setObjectMetadata(meta);
@@ -353,7 +359,7 @@ public class AliyunOSSFileSystemStore {
     FileInputStream fis = new FileInputStream(object);
     ObjectMetadata meta = new ObjectMetadata();
     meta.setContentLength(object.length());
-    if (!serverSideEncryptionAlgorithm.isEmpty()) {
+    if (StringUtils.isNotEmpty(serverSideEncryptionAlgorithm)) {
       meta.setServerSideEncryption(serverSideEncryptionAlgorithm);
     }
     try {
@@ -384,7 +390,7 @@ public class AliyunOSSFileSystemStore {
     InitiateMultipartUploadRequest initiateMultipartUploadRequest =
         new InitiateMultipartUploadRequest(bucketName, key);
     ObjectMetadata meta = new ObjectMetadata();
-    if (!serverSideEncryptionAlgorithm.isEmpty()) {
+    if (StringUtils.isNotEmpty(serverSideEncryptionAlgorithm)) {
       meta.setServerSideEncryption(serverSideEncryptionAlgorithm);
     }
     initiateMultipartUploadRequest.setObjectMetadata(meta);
@@ -435,12 +441,14 @@ public class AliyunOSSFileSystemStore {
    *
    * @param prefix prefix.
    * @param maxListingLength max no. of entries
-   * @param delimiter delimiter.
    * @param marker last key in any previous search.
+   * @param recursive whether to list directory recursively.
    * @return a list of matches.
    */
   public ObjectListing listObjects(String prefix, int maxListingLength,
-                                   String delimiter, String marker) {
+                                   String marker, boolean recursive) {
+    String delimiter = recursive ? null : "/";
+    prefix = AliyunOSSUtils.maybeAddTrailingSlash(prefix);
     ListObjectsRequest listRequest = new ListObjectsRequest(bucketName);
     listRequest.setPrefix(prefix);
     listRequest.setDelimiter(delimiter);
@@ -488,7 +496,7 @@ public class AliyunOSSFileSystemStore {
   public void purge(String prefix) {
     String key;
     try {
-      ObjectListing objects = listObjects(prefix, maxKeys, null, null);
+      ObjectListing objects = listObjects(prefix, maxKeys, null, true);
       for (OSSObjectSummary object : objects.getObjectSummaries()) {
         key = object.getKey();
         ossClient.deleteObject(bucketName, key);

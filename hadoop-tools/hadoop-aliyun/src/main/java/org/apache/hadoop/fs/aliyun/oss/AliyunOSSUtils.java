@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 
 import com.aliyun.oss.common.auth.CredentialsProvider;
 import org.apache.commons.lang.StringUtils;
@@ -106,16 +105,13 @@ final public class AliyunOSSUtils {
    * Create credential provider specified by configuration, or create default
    * credential provider if not specified.
    *
-   * @param name the uri of the file system
    * @param conf configuration
    * @return a credential provider
    * @throws IOException on any problem. Class construction issues may be
    * nested inside the IOE.
    */
-  public static CredentialsProvider getCredentialsProvider(URI name,
-      Configuration conf) throws IOException {
-    URI uri = java.net.URI.create(
-        name.getScheme() + "://" + name.getAuthority());
+  public static CredentialsProvider getCredentialsProvider(Configuration conf)
+      throws IOException {
     CredentialsProvider credentials;
 
     String className = conf.getTrimmed(ALIYUN_OSS_CREDENTIALS_PROVIDER_KEY);
@@ -151,5 +147,21 @@ final public class AliyunOSSUtils {
     }
 
     return credentials;
+  }
+
+  /**
+   * Turns a path (relative or otherwise) into an OSS key, adding a trailing
+   * "/" if the path is not the root <i>and</i> does not already have a "/"
+   * at the end.
+   *
+   * @param key OSS key or ""
+   * @return the with a trailing "/", or, if it is the root key, "".
+   */
+  public static String maybeAddTrailingSlash(String key) {
+    if (StringUtils.isNotEmpty(key) && !key.endsWith("/")) {
+      return key + '/';
+    } else {
+      return key;
+    }
   }
 }
