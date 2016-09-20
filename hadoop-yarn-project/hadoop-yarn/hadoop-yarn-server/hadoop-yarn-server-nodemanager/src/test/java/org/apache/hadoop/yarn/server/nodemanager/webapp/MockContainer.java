@@ -205,4 +205,14 @@ public class MockContainer implements Container {
   public boolean isReInitializing() {
     return false;
   }
+
+  @Override
+  public boolean canRollback() {
+    return false;
+  }
+
+  @Override
+  public void commitUpgrade() {
+
+  }
 }

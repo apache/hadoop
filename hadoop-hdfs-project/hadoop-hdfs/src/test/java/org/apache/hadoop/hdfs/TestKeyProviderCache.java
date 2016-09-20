@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
-import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -94,26 +94,26 @@ public class TestKeyProviderCache {
   public void testCache() throws Exception {
     KeyProviderCache kpCache = new KeyProviderCache(10000);
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "dummy://foo:bar@test_provider1");
     KeyProvider keyProvider1 = kpCache.get(conf);
     Assert.assertNotNull("Returned Key Provider is null !!", keyProvider1);
 
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "dummy://foo:bar@test_provider1");
     KeyProvider keyProvider2 = kpCache.get(conf);
 
     Assert.assertTrue("Different KeyProviders returned !!",
         keyProvider1 == keyProvider2);
 
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "dummy://test_provider3");
     KeyProvider keyProvider3 = kpCache.get(conf);
 
     Assert.assertFalse("Same KeyProviders returned !!",
         keyProvider1 == keyProvider3);
 
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "dummy://hello:there@test_provider1");
     KeyProvider keyProvider4 = kpCache.get(conf);
 

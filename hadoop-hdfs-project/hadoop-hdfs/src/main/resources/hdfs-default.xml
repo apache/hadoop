@@ -2757,14 +2757,6 @@
 </property>
 
 <property>
-  <name>dfs.encryption.key.provider.uri</name>
-  <description>
-    The KeyProvider to use when interacting with encryption keys used
-    when reading and writing to an encryption zone.
-  </description>
-</property>
-
-<property>
   <name>dfs.storage.policy.enabled</name>
   <value>true</value>
   <description>

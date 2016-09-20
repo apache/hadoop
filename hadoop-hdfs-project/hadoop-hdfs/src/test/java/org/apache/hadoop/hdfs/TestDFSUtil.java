@@ -59,6 +59,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1031,16 +1032,19 @@ public class TestDFSUtil {
   @Test
   public void testEncryptionProbe() throws Throwable {
     Configuration conf = new Configuration(false);
-    conf.unset(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI);
+    conf.unset(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
     assertFalse("encryption enabled on no provider key",
         DFSUtilClient.isHDFSEncryptionEnabled(conf));
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        "");
     assertFalse("encryption enabled on empty provider key",
         DFSUtilClient.isHDFSEncryptionEnabled(conf));
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "\n\t\n");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        "\n\t\n");
     assertFalse("encryption enabled on whitespace provider key",
         DFSUtilClient.isHDFSEncryptionEnabled(conf));
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, "http://hadoop.apache.org");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        "http://hadoop.apache.org");
     assertTrue("encryption disabled on valid provider key",
         DFSUtilClient.isHDFSEncryptionEnabled(conf));
 
