@@ -566,6 +566,8 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
+    out.println("  <defaultQueueSchedulingPolicy>drf" +
+        "</defaultQueueSchedulingPolicy>");
     out.println("  <queue name=\"queueA\">");
     out.println("    <aclSubmitReservations>" +
             "queueA_user,common_user " +
