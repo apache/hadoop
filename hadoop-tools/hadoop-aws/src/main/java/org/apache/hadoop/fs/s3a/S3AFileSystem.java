@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -118,6 +117,8 @@ public class S3AFileSystem extends FileSystem {
   private ExecutorService threadPoolExecutor;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
+  private static final Logger PROGRESS =
+      LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
@@ -130,7 +131,7 @@ public class S3AFileSystem extends FileSystem {
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
   private boolean blockUploadEnabled;
   private String blockOutputBuffer;
-  private S3ADataBlocks.AbstractBlockFactory blockFactory;
+  private S3ADataBlocks.BlockFactory blockFactory;
 
   /*
    * Register Deprecated options.
@@ -220,6 +221,7 @@ public class S3AFileSystem extends FileSystem {
 
       serverSideEncryptionAlgorithm =
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 
@@ -229,10 +231,11 @@ public class S3AFileSystem extends FileSystem {
 
       if (blockUploadEnabled) {
         partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
-        blockFactory = S3ADataBlocks.createFactory(blockOutputBuffer);
-        blockFactory.init(this);
-        LOG.debug("Uploading data via Block Upload, buffer = {}",
-            blockOutputBuffer);
+        blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
+        LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={}",
+            blockOutputBuffer, partSize);
+      } else {
+        LOG.debug("Using S3AOutputStream");
       }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
@@ -1057,7 +1060,7 @@ public class S3AFileSystem extends FileSystem {
    * @param bytes bytes successfully uploaded.
    */
   public void incrementPutProgressStatistics(String key, long bytes) {
-    LOG.debug("PUT {}: {} bytes", key, bytes);
+    PROGRESS.debug("PUT {}: {} bytes", key, bytes);
     incrementWriteOperations();
     if (bytes > 0) {
       statistics.incrementBytesWritten(bytes);

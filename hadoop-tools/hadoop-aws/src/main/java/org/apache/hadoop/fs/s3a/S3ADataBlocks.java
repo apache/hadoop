@@ -37,9 +37,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Closed;
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Upload;
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Writing;
 
 /**
  * Set of classes to support output streaming into blocks which are then
@@ -48,16 +51,58 @@ import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
 class S3ADataBlocks {
   static final Logger LOG = LoggerFactory.getLogger(S3ADataBlocks.class);
 
-  static abstract class AbstractBlockFactory implements Closeable {
+  /**
+   * Validate args to a write command.
+   * @param b byte array containing data
+   * @param off offset in array where to start
+   * @param len number of bytes to be written
+   * @throws NullPointerException for a null buffer
+   * @throws IndexOutOfBoundsException if indices are out of range
+   */
+  static void validateWriteArgs(byte[] b, int off, int len)
+      throws IOException {
+    Preconditions.checkNotNull(b);
+    if ((off < 0) || (off > b.length) || (len < 0) ||
+        ((off + len) > b.length) || ((off + len) < 0)) {
+      throw new IndexOutOfBoundsException(
+          "write (b[" + b.length + "], " + off + ", " + len + ')');
+    }
+  }
 
-    protected S3AFileSystem owner;
+  /**
+   * Create a factory.
+   * @param owner factory owner
+   * @param name factory name -the option from {@link Constants}.
+   * @return the factory, ready to be initialized.
+   * @throws IllegalArgumentException if the name is unknown.
+   */
+  static BlockFactory createFactory(S3AFileSystem owner,
+      String name) {
+    switch (name) {
+    case Constants.BLOCK_OUTPUT_BUFFER_ARRAY:
+      return new ArrayBlockFactory(owner);
+    case Constants.BLOCK_OUTPUT_BUFFER_DISK:
+      return new DiskBlockFactory(owner);
+    case Constants.BLOCK_OUTPUT_BYTEBUFFER:
+      return new ByteBufferBlockFactory(owner);
+    default:
+      throw new IllegalArgumentException("Unsupported block buffer" +
+          " \"" + name + '"');
+    }
+  }
+
+  /**
+   * Base class for block factories.
+   */
+  static abstract class BlockFactory implements Closeable {
 
     /**
-     * Bind to the factory owner.
-     * @param fs owner filesystem
+     * Owner.
      */
-    void init(S3AFileSystem fs) {
-      this.owner = fs;
+    protected final S3AFileSystem owner;
+
+    protected BlockFactory(S3AFileSystem owner) {
+      this.owner = owner;
     }
 
     /**
@@ -77,51 +122,17 @@ class S3ADataBlocks {
     }
   }
 
-  static class MemoryBlockFactory extends AbstractBlockFactory {
-
-    @Override
-    void init(S3AFileSystem fs) {
-      super.init(fs);
-    }
-
-    @Override
-    DataBlock create(int limit) throws IOException {
-      return new ByteArrayBlock(limit);
-    }
-
-
-  }
-
-  /**
-   * Buffer blocks to disk.
-   */
-  static class DiskBlockFactory extends AbstractBlockFactory {
-
-    @Override
-    void init(S3AFileSystem fs) {
-      super.init(fs);
-    }
-
-    @Override
-    DataBlock create(int limit) throws IOException {
-      File destFile = owner.getDirectoryAllocator()
-          .createTmpFileForWrite("s3ablock", limit, owner.getConf());
-      return new FileBlock(destFile, limit);
-    }
-  }
-
   /**
    * This represents a block being uploaded.
    */
   static abstract class DataBlock implements Closeable {
 
-    enum DestState {Writing, Upload, Closed}
-
     private volatile DestState state = Writing;
 
-    protected synchronized void enterState(DestState current, DestState next) {
+    protected synchronized void enterState(DestState current, DestState next)
+        throws IOException {
       verifyState(current);
-      LOG.debug("{}: entering state {}" , this, next);
+      LOG.debug("{}: entering state {}", this, next);
       state = next;
     }
 
@@ -130,10 +141,11 @@ class S3ADataBlocks {
      * @param expected expected state.
      * @throws IllegalStateException if the DataBlock is in the wrong state
      */
-    protected void verifyState(DestState expected) {
-      Preconditions.checkState(state == expected,
-          "Expected stream state " + expected + " -but actual state is " + state
-              + " in " + this);
+    protected void verifyState(DestState expected) throws IOException {
+      if (expected != null && state != expected) {
+        throw new IOException("Expected stream state " + expected
+            + " -but actual state is " + state + " in " + this);
+      }
     }
 
     DestState getState() {
@@ -179,7 +191,7 @@ class S3ADataBlocks {
      * @return number of bytes written
      * @throws IOException trouble
      */
-    int write(byte buffer[], int offset, int length) throws IOException {
+    int write(byte[] buffer, int offset, int length) throws IOException {
       verifyState(Writing);
       Preconditions.checkArgument(buffer != null, "Null buffer");
       Preconditions.checkArgument(length >= 0, "length is negative");
@@ -207,7 +219,8 @@ class S3ADataBlocks {
      * @return the stream
      * @throws IOException trouble
      */
-    InputStream openForUpload() throws IOException {
+    InputStream startUpload() throws IOException {
+      LOG.debug("Start datablock upload");
       enterState(Writing, Upload);
       return null;
     }
@@ -219,12 +232,51 @@ class S3ADataBlocks {
      */
     protected synchronized boolean enterClosedState() {
       if (!state.equals(Closed)) {
-        enterState(state, Closed);
+        try {
+          enterState(null, Closed);
+        } catch (IOException ignored) {
+
+        }
         return true;
       } else {
         return false;
       }
     }
+
+    @Override
+    public void close() throws IOException {
+      if (enterClosedState()) {
+        LOG.debug("Closed {}", this);
+        innerClose();
+      }
+    }
+
+    /**
+     * Inner close logic for subclasses to implement.
+     */
+    protected void innerClose() throws IOException {
+
+    }
+
+    enum DestState {Writing, Upload, Closed}
+  }
+
+  // ====================================================================
+
+  /**
+   * Use byte arrays on the heap for storage.
+   */
+  static class ArrayBlockFactory extends BlockFactory {
+
+    ArrayBlockFactory(S3AFileSystem owner) {
+      super(owner);
+    }
+
+    @Override
+    DataBlock create(int limit) throws IOException {
+      return new ByteArrayBlock(limit);
+    }
+
   }
 
   /**
@@ -238,7 +290,7 @@ class S3ADataBlocks {
 
   static class ByteArrayBlock extends DataBlock {
     private ByteArrayOutputStream buffer;
-    private int limit;
+    private final int limit;
     // cache data size so that it is consistent after the buffer is reset.
     private Integer dataSize;
 
@@ -257,8 +309,8 @@ class S3ADataBlocks {
     }
 
     @Override
-    InputStream openForUpload() throws IOException {
-      super.openForUpload();
+    InputStream startUpload() throws IOException {
+      super.startUpload();
       dataSize = buffer.size();
       ByteArrayInputStream bufferData = new ByteArrayInputStream(
           buffer.toByteArray());
@@ -286,29 +338,42 @@ class S3ADataBlocks {
     }
 
     @Override
-    public void close() throws IOException {
-      if (enterClosedState()) {
-        LOG.debug("Closed {}", this);
-        buffer = null;
-      }
+    protected void innerClose() {
+      buffer = null;
+    }
+
+    @Override
+    public String toString() {
+      return "ByteArrayBlock{" +
+          "state=" + getState() +
+          ", buffer=" + buffer +
+          ", limit=" + limit +
+          ", dataSize=" + dataSize +
+          '}';
     }
   }
+
+  // ====================================================================
 
   /**
    * Stream via Direct ByteBuffers; these are allocated off heap
    * via {@link DirectBufferPool}.
    * This is actually the most complex of all the block factories,
    * due to the need to explicitly recycle buffers; in comparison, the
-   * {@link FileBlock} buffer delegates the work of deleting files to
-   * the {@link FileBlock.FileDeletingInputStream}. Here the
+   * {@link DiskBlock} buffer delegates the work of deleting files to
+   * the {@link DiskBlock.FileDeletingInputStream}. Here the
    * input stream {@link ByteBufferInputStream} has a similar task, along
    * with the foundational work of streaming data from a byte array.
    */
 
-  static class ByteBufferBlockFactory extends AbstractBlockFactory {
+  static class ByteBufferBlockFactory extends BlockFactory {
 
-    private final DirectBufferPool bufferPool =new DirectBufferPool();
+    private final DirectBufferPool bufferPool = new DirectBufferPool();
     private final AtomicInteger buffersOutstanding = new AtomicInteger(0);
+
+    ByteBufferBlockFactory(S3AFileSystem owner) {
+      super(owner);
+    }
 
     @Override
     ByteBufferBlock create(int limit) throws IOException {
@@ -337,11 +402,9 @@ class S3ADataBlocks {
 
     @Override
     public String toString() {
-      final StringBuilder sb = new StringBuilder(
-          "ByteBufferBlockFactory{");
-      sb.append(", buffersOutstanding=").append(buffersOutstanding.toString());
-      sb.append('}');
-      return sb.toString();
+      return "ByteBufferBlockFactory{"
+          + "buffersOutstanding=" + buffersOutstanding +
+          '}';
     }
 
     /**
@@ -373,8 +436,8 @@ class S3ADataBlocks {
       }
 
       @Override
-      ByteBufferInputStream openForUpload() throws IOException {
-        super.openForUpload();
+      ByteBufferInputStream startUpload() throws IOException {
+        super.startUpload();
         dataSize = bufferCapacityUsed();
         // set the buffer up from reading from the beginning
         buffer.limit(buffer.position());
@@ -405,23 +468,18 @@ class S3ADataBlocks {
       }
 
       @Override
-      public void close() throws IOException {
-        if (enterClosedState()) {
-          LOG.debug("Closed {}", this);
-          buffer = null;
-        }
+      protected void innerClose() {
+        buffer = null;
       }
 
       @Override
       public String toString() {
-        final StringBuilder sb = new StringBuilder(
-            "ByteBufferBlock{");
-        sb.append("state=").append(getState());
-        sb.append(", dataSize=").append(dataSize());
-        sb.append(", limit=").append(bufferSize);
-        sb.append(", remainingCapacity=").append(remainingCapacity());
-        sb.append('}');
-        return sb.toString();
+        return "ByteBufferBlock{"
+            + "state=" + getState() +
+            ", dataSize=" + dataSize() +
+            ", limit=" + bufferSize +
+            ", remainingCapacity=" + remainingCapacity() +
+            '}';
       }
 
     }
@@ -443,8 +501,11 @@ class S3ADataBlocks {
         this.byteBuffer = byteBuffer;
       }
 
+      /**
+       * Return the buffer to the pool after the stream is closed.
+       */
       @Override
-      public synchronized void close() throws IOException {
+      public synchronized void close() {
         if (byteBuffer != null) {
           LOG.debug("releasing buffer");
           releaseBuffer(byteBuffer);
@@ -571,21 +632,44 @@ class S3ADataBlocks {
     }
   }
 
+  // ====================================================================
+
+  /**
+   * Buffer blocks to disk.
+   */
+  static class DiskBlockFactory extends BlockFactory {
+
+    DiskBlockFactory(S3AFileSystem owner) {
+      super(owner);
+    }
+
+    /**
+     * Create a temp file and a block which writes to it.
+     * @param limit limit of the block.
+     * @return the new block
+     * @throws IOException IO problems
+     */
+    @Override
+    DataBlock create(int limit) throws IOException {
+      File destFile = owner.getDirectoryAllocator()
+          .createTmpFileForWrite("s3ablock", limit, owner.getConf());
+      return new DiskBlock(destFile, limit);
+    }
+  }
+
   /**
    * Stream to a file.
    * This will stop at the limit; the caller is expected to create a new block
    */
-  static class FileBlock extends DataBlock {
+  static class DiskBlock extends DataBlock {
 
-    private File bufferFile;
-
-    private int limit;
     protected int bytesWritten;
-
+    private File bufferFile;
+    private int limit;
     private BufferedOutputStream out;
     private InputStream uploadStream;
 
-    public FileBlock(File bufferFile, int limit)
+    DiskBlock(File bufferFile, int limit)
         throws FileNotFoundException {
       this.limit = limit;
       this.bufferFile = bufferFile;
@@ -618,10 +702,11 @@ class S3ADataBlocks {
     }
 
     @Override
-    InputStream openForUpload() throws IOException {
-      super.openForUpload();
+    InputStream startUpload() throws IOException {
+      super.startUpload();
       try {
         out.flush();
+        out.close();
       } finally {
         out.close();
         out = null;
@@ -630,20 +715,27 @@ class S3ADataBlocks {
       return new FileDeletingInputStream(uploadStream);
     }
 
+    /**
+     * The close operation will delete the destination file if it still
+     * exists.
+     * @throws IOException IO problems
+     */
     @Override
-    public synchronized void close() throws IOException {
+    protected void innerClose() throws IOException {
       final DestState state = getState();
       LOG.debug("Closing {}", this);
-      enterClosedState();
-      final boolean bufferExists = bufferFile.exists();
       switch (state) {
       case Writing:
-        if (bufferExists) {
+        if (bufferFile.exists()) {
           // file was not uploaded
           LOG.debug("Deleting buffer file as upload did not start");
-          bufferFile.delete();
+          boolean deleted = bufferFile.delete();
+          if (!deleted && bufferFile.exists()) {
+            LOG.warn("Failed to delete buffer file {}", bufferFile);
+          }
         }
         break;
+
       case Upload:
         LOG.debug("Buffer file {} exists —close upload stream", bufferFile);
         break;
@@ -653,6 +745,10 @@ class S3ADataBlocks {
       }
     }
 
+    /**
+     * Flush operation will flush to disk.
+     * @throws IOException IOE raised on FileOutputStream
+     */
     @Override
     void flush() throws IOException {
       verifyState(Writing);
@@ -661,35 +757,40 @@ class S3ADataBlocks {
 
     @Override
     public String toString() {
-      final StringBuilder sb = new StringBuilder(
-          "FileBlock{");
-      sb.append("destFile=").append(bufferFile);
-      sb.append(", state=").append(getState());
-      sb.append(", dataSize=").append(dataSize());
-      sb.append(", limit=").append(limit);
-      sb.append('}');
-      return sb.toString();
+      String sb = "FileBlock{" + "destFile=" + bufferFile +
+          ", state=" + getState() +
+          ", dataSize=" + dataSize() +
+          ", limit=" + limit +
+          '}';
+      return sb;
     }
 
     /**
      * An input stream which deletes the buffer file when closed.
      */
     private class FileDeletingInputStream extends ForwardingInputStream {
+      private final AtomicBoolean closed = new AtomicBoolean(false);
 
       FileDeletingInputStream(InputStream source) {
         super(source);
       }
 
+      /**
+       * Delete the input file when closed
+       * @throws IOException IO problem
+       */
       @Override
       public void close() throws IOException {
         super.close();
-        bufferFile.delete();
+        if (!closed.getAndSet(true)) {
+          bufferFile.delete();
+        }
       }
     }
   }
 
   /**
-   * Stream which forwards everything to its inner class.
+   * Stream which forwards everything to another stream.
    * For ease of subclassing.
    */
   @SuppressWarnings({
@@ -700,7 +801,7 @@ class S3ADataBlocks {
 
     protected final InputStream source;
 
-    public ForwardingInputStream(InputStream source) {
+    ForwardingInputStream(InputStream source) {
       this.source = source;
     }
 
@@ -725,7 +826,7 @@ class S3ADataBlocks {
     }
 
     public void close() throws IOException {
-      LOG.debug("Closing inner stream");
+      LOG.debug("Closing source stream");
       source.close();
     }
 
@@ -741,42 +842,5 @@ class S3ADataBlocks {
       return source.markSupported();
     }
 
-  }
-
-  /**
-   * Validate args to write command.
-   * @param b byte array containing data
-   * @param off offset in array where to start
-   * @param len number of bytes to be written
-   * @throws NullPointerException for a null buffer
-   * @throws IndexOutOfBoundsException if indices are out of range
-   */
-  static void validateWriteArgs(byte[] b, int off, int len)
-      throws IOException {
-    Preconditions.checkNotNull(b);
-    if ((off < 0) || (off > b.length) || (len < 0) ||
-        ((off + len) > b.length) || ((off + len) < 0)) {
-      throw new IndexOutOfBoundsException();
-    }
-  }
-
-  /**
-   * Create a factory.
-   * @param name factory name -the option from {@link Constants}.
-   * @return the factory, ready to be initialized.
-   * @throws IllegalArgumentException if the name is unknown.
-   */
-  static AbstractBlockFactory createFactory(String name) {
-    switch (name) {
-    case Constants.BLOCK_OUTPUT_BUFFER_ARRAY:
-      return new MemoryBlockFactory();
-    case Constants.BLOCK_OUTPUT_BUFFER_DISK:
-      return new DiskBlockFactory();
-    case Constants.BLOCK_OUTPUT_BYTEBUFFER:
-      return new ByteBufferBlockFactory();
-    default:
-      throw new IllegalArgumentException("Unsupported block buffer" +
-          " \"" + name + "\"");
-    }
   }
 }

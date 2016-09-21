@@ -1101,7 +1101,7 @@
 </property>
 
 <property>
-  <name>fs.s3a.block.upload</name>
+  <name>fs.s3a.block.output</name>
   <value>false</value>
   <description>
     Use the incremental block upload mechanism with
@@ -1118,7 +1118,7 @@
   <value>disk</value>
   <description>
     Buffering mechanism to use when using S3A Block upload
-    (fs.s3a.block.upload=true). Values: disk, array, bytebuffer.
+    (fs.s3a.block.output=true). Values: disk, array, bytebuffer.
 
     "disk" will use the directories listed in fs.s3a.buffer.dir as
     the location(s) to save data prior to being uploaded.
@@ -1133,7 +1133,7 @@
     To avoid running out of memory, keep the fs.s3a.threads.max and
     fs.s3a.max.total.tasks values low.
 
-    No effect if fs.s3a.block.upload is false.
+    No effect if fs.s3a.block.output is false.
   </description>
 </property>
 

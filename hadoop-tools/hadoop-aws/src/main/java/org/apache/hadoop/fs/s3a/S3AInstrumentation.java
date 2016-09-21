@@ -118,6 +118,7 @@ public class S3AInstrumentation {
  private static final Statistic[] GAUGES_TO_CREATE = {
      OBJECT_PUT_REQUESTS_ACTIVE,
      OBJECT_PUT_BYTES_PENDING,
+     STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
      STREAM_WRITE_BLOCK_UPLOADS_PENDING,
      STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
      STREAM_WRITE_BANDWIDTH,
@@ -299,7 +300,7 @@ public class S3AInstrumentation {
   public MutableGaugeLong lookupGauge(String name) {
     MutableMetric metric = lookupMetric(name);
     if (metric == null) {
-      LOG.debug("No metric {}", name);
+      LOG.debug("No gauge {}", name);
     }
     return (MutableGaugeLong) metric;
   }

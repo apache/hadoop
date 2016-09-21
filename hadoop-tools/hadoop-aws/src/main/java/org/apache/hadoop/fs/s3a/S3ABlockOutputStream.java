@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -93,7 +94,7 @@ class S3ABlockOutputStream extends OutputStream {
   private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
 
-  /** Retry policy for multipart commits; not all AWS SDK versions retry */
+  /** Retry policy for multipart commits; not all AWS SDK versions retry that. */
   private final RetryPolicy retryPolicy =
       RetryPolicies.retryUpToMaximumCountWithProportionalSleep(
           5,
@@ -102,15 +103,15 @@ class S3ABlockOutputStream extends OutputStream {
   /**
    * Factory for blocks.
    */
-  private final S3ADataBlocks.AbstractBlockFactory blockFactory;
+  private final S3ADataBlocks.BlockFactory blockFactory;
   /** Preallocated byte buffer for writing single characters. */
   private final byte[] singleCharWrite = new byte[1];
 
-  /** Multipart upload details; null means none started */
+  /** Multipart upload details; null means none started. */
   private MultiPartUpload multiPartUpload;
 
   /** Closed flag. */
-  private volatile boolean closed;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /** Current data block. Null means none currently active */
   private S3ADataBlocks.DataBlock currentBlock;
@@ -123,7 +124,7 @@ class S3ABlockOutputStream extends OutputStream {
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
-   * threads; different {@link S3ADataBlocks.AbstractBlockFactory}
+   * threads; different {@link S3ADataBlocks.BlockFactory}
    * instances can control where data is buffered.
    *
    * @param fs S3AFilesystem
@@ -140,7 +141,7 @@ class S3ABlockOutputStream extends OutputStream {
       String key,
       Progressable progress,
       long blockSize,
-      S3ADataBlocks.AbstractBlockFactory blockFactory,
+      S3ADataBlocks.BlockFactory blockFactory,
       S3AInstrumentation.OutputStreamStatistics statistics)
       throws IOException {
     this.fs = fs;
@@ -187,8 +188,8 @@ class S3ABlockOutputStream extends OutputStream {
    * @throws IOException if the filesystem is closed.
    */
   void checkOpen() throws IOException {
-    if (closed) {
-      throw new IOException("Filesystem closed");
+    if (closed.get()) {
+      throw new IOException("Filesystem " + bucket + " closed");
     }
   }
 
@@ -266,11 +267,12 @@ class S3ABlockOutputStream extends OutputStream {
     if (multiPartUpload == null) {
       multiPartUpload = initiateMultiPartUpload();
     }
-    multiPartUpload.uploadBlockAsync(currentBlock);
-    // close the block
-    currentBlock.close();
-    // set it to null, so the next write will create a new block.
-    currentBlock = null;
+    try {
+      multiPartUpload.uploadBlockAsync(currentBlock);
+    } finally {
+      // set the block to null, so the next write will create a new block.
+      currentBlock = null;
+    }
   }
 
   /**
@@ -284,18 +286,19 @@ class S3ABlockOutputStream extends OutputStream {
    */
   @Override
   public synchronized void close() throws IOException {
-    if (closed) {
+    if (closed.getAndSet(true)) {
+      // already closed
+      LOG.debug("Ignoring close() as stream is already closed");
       return;
     }
-    closed = true;
     LOG.debug("{}: Closing block #{}: current block= {}, data to upload = {}",
         this,
         blockCount,
         currentBlock == null ? "(none)" : currentBlock,
-        currentBlock == null ? 0 : currentBlock.dataSize() );
+        currentBlock == null ? 0 : currentBlock.dataSize());
     try {
       if (multiPartUpload == null) {
-        if (currentBlock != null){
+        if (currentBlock != null) {
           // no uploads of data have taken place, put the single block up.
           putObject();
         }
@@ -304,7 +307,7 @@ class S3ABlockOutputStream extends OutputStream {
         // put up the current then wait
         if (currentBlock != null && currentBlock.hasData()) {
           //send last part
-          multiPartUpload.uploadBlockAsync(currentBlock);
+          uploadCurrentBlock();
         }
         // wait for the partial uploads to finish
         final List<PartETag> partETags =
@@ -365,7 +368,7 @@ class S3ABlockOutputStream extends OutputStream {
     final PutObjectRequest putObjectRequest =
         fs.newPutObjectRequest(key,
             om,
-            block.openForUpload());
+            block.startUpload());
     long transferQueueTime = now();
     BlockUploadProgress callback =
         new BlockUploadProgress(
@@ -435,6 +438,7 @@ class S3ABlockOutputStream extends OutputStream {
 
     /**
      * Upload a block of data.
+     * This will take the block
      * @param block block to upload
      * @throws IOException upload failure
      */
@@ -442,7 +446,7 @@ class S3ABlockOutputStream extends OutputStream {
         throws IOException {
       LOG.debug("Queueing upload of {}", block);
       final int size = block.dataSize();
-      final InputStream uploadStream = block.openForUpload();
+      final InputStream uploadStream = block.startUpload();
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request =
           new UploadPartRequest()
@@ -517,11 +521,13 @@ class S3ABlockOutputStream extends OutputStream {
         throws IOException {
       int retryCount = 0;
       AmazonClientException lastException;
+      String operation =
+          String.format("Completing multi-part upload for key '%s'," +
+                  " id '%s' with %s partitions ",
+              key, uploadId, partETags.size());
       do {
         try {
-          LOG.debug("Completing multi-part upload for key '{}'," +
-                  " id '{}' with {} partitions " ,
-                  key, uploadId, partETags.size());
+          LOG.debug(operation);
           return getS3Client().completeMultipartUpload(
               new CompleteMultipartUploadRequest(bucket,
                   key,
@@ -531,11 +537,10 @@ class S3ABlockOutputStream extends OutputStream {
           lastException = e;
           statistics.exceptionInMultipartComplete();
         }
-      } while (shouldRetry(lastException, retryCount++));
+      } while (shouldRetry(operation, lastException, retryCount++));
       // this point is only reached if the operation failed more than
       // the allowed retry count
-      throw translateException("Completing multi-part upload", key,
-          lastException);
+      throw translateException(operation, key, lastException);
     }
 
     /**
@@ -545,18 +550,20 @@ class S3ABlockOutputStream extends OutputStream {
       int retryCount = 0;
       AmazonClientException lastException;
       fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
+      String operation =
+          String.format("Aborting multi-part upload for key '%s', id '%s",
+          key, uploadId);
       do {
         try {
-          LOG.debug("Aborting multi-part upload for key '{}', id '{}'",
-              key, uploadId);
-          getS3Client().abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
-              key, uploadId));
+          LOG.debug(operation);
+          getS3Client().abortMultipartUpload(
+              new AbortMultipartUploadRequest(bucket, key, uploadId));
           return;
         } catch (AmazonClientException e) {
           lastException = e;
           statistics.exceptionInMultipartAbort();
         }
-      } while (shouldRetry(lastException, retryCount++));
+      } while (shouldRetry(operation, lastException, retryCount++));
       // this point is only reached if the operation failed more than
       // the allowed retry count
       LOG.warn("Unable to abort multipart upload, you may need to purge  " +
@@ -568,19 +575,31 @@ class S3ABlockOutputStream extends OutputStream {
      * be attempted again.
      * If a retry is advised, the exception is automatically logged and
      * the filesystem statistic {@link Statistic#IGNORED_ERRORS} incremented.
+     * The method then sleeps for the sleep time suggested by the sleep policy;
+     * if the sleep is interrupted then {@code Thread.interrupted()} is set
+     * to indicate the thread was interrupted; then false is returned.
+     *
+     * @param operation operation for log message
      * @param e exception raised.
      * @param retryCount  number of retries already attempted
      * @return true if another attempt should be made
      */
-    private boolean shouldRetry(AmazonClientException e, int retryCount) {
+    private boolean shouldRetry(String operation,
+        AmazonClientException e,
+        int retryCount) {
       try {
-        boolean retry = retryPolicy.shouldRetry(e, retryCount, 0, true)
-                == RetryPolicy.RetryAction.RETRY;
+        RetryPolicy.RetryAction retryAction =
+            retryPolicy.shouldRetry(e, retryCount, 0, true);
+        boolean retry = retryAction == RetryPolicy.RetryAction.RETRY;
         if (retry) {
           fs.incrementStatistic(IGNORED_ERRORS);
-          LOG.info("Retrying operation after exception " + e, e);
+          LOG.info("Retrying {} after exception ", operation, e);
+          Thread.sleep(retryAction.delayMillis);
         }
         return retry;
+      } catch (InterruptedException ex) {
+        Thread.interrupted();
+        return false;
       } catch (Exception ignored) {
         return false;
       }

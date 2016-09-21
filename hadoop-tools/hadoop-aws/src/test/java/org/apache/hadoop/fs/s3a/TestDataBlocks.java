@@ -48,7 +48,7 @@ public class TestDataBlocks extends Assert {
   @Test
   public void testByteBufferIO() throws Throwable {
     try(S3ADataBlocks.ByteBufferBlockFactory factory =
-        new S3ADataBlocks.ByteBufferBlockFactory()) {
+        new S3ADataBlocks.ByteBufferBlockFactory(null)) {
       int limit = 128;
       S3ADataBlocks.ByteBufferBlockFactory.ByteBufferBlock block
           = factory.create(limit);
@@ -67,7 +67,7 @@ public class TestDataBlocks extends Assert {
 
       // now start the write
       S3ADataBlocks.ByteBufferBlockFactory.ByteBufferInputStream
-          stream = block.openForUpload();
+          stream = block.startUpload();
       assertTrue("!hasRemaining() in " + stream, stream.hasRemaining());
       int expected = bufferLen;
       assertEquals("wrong available() in " + stream,

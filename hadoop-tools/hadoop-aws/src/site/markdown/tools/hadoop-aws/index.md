@@ -990,16 +990,17 @@ This is high-performance incremental file upload mechanism which:
 
     No effect if fs.s3a.block.upload is false.
   </description>
-  
-  <property>
-    <name>fs.s3a.multipart.size</name>
-    <value>104857600</value>
-    <description>
-    How big (in bytes) to split upload or copy operations up into.
-    </description>
-  </property>
-
 </property>
+  
+<property>
+  <name>fs.s3a.multipart.size</name>
+  <value>104857600</value>
+  <description>
+  How big (in bytes) to split upload or copy operations up into.
+  </description>
+</property>
+
+
 ```
 
 **Notes**
@@ -1047,7 +1048,7 @@ increases.
 
 ```xml
 <property>
-  <name>fs.s3a.block.upload</name>
+  <name>fs.s3a.block.output</name>
   <value>true</value>
 </property>
   
@@ -1087,13 +1088,13 @@ kept low.
 
 ```xml
 <property>
-  <name>fs.s3a.block.upload</name>
+  <name>fs.s3a.block.output</name>
   <value>true</value>
 </property>
   
 <property>
   <name>fs.s3a.block.output.buffer</name>
-  <value>array</value>
+  <value>bytebuffer</value>
 </property>
 
 <property>
@@ -1126,7 +1127,7 @@ kept low. As an example: three threads and one queued task will consume
 
 ```xml
 <property>
-  <name>fs.s3a.block.upload</name>
+  <name>fs.s3a.block.output</name>
   <value>true</value>
 </property>
   
