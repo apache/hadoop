@@ -712,6 +712,8 @@ none of the apps match the predicates, an empty list will be returned.
   "eq" means equals, "ne" means not equals and existence of key is not required for a match and "ene" means not equals but existence of key is
   required. We can combine any number of ANDs' and ORs' to create complex expressions.  Brackets can be used to club expressions together.<br/>
   _For example_ : infofilters can be "(((infokey1 eq value1) AND (infokey2 ne value1)) OR (infokey1 ene value3))".<br/>
+  Note : If value is an object then value can be given in the form of JSON format without any space.<br/>
+  _For example_ : infofilters can be (infokey1 eq {"&lt;key&gt;":"&lt;value&gt;","&lt;key&gt;":"&lt;value&gt;"...}).<br/>
   Please note that URL unsafe characters such as spaces will have to be suitably encoded.
 1. `conffilters` - If specified, matched applications must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
@@ -837,6 +839,8 @@ match the predicates, an empty list will be returned.
   "eq" means equals, "ne" means not equals and existence of key is not required for a match and "ene" means not equals but existence of key is
   required. We can combine any number of ANDs' and ORs' to create complex expressions.  Brackets can be used to club expressions together.<br/>
   _For example_ : infofilters can be "(((infokey1 eq value1) AND (infokey2 ne value1)) OR (infokey1 ene value3))".<br/>
+  Note : If value is an object then value can be given in the form of JSON format without any space.<br/>
+  _For example_ : infofilters can be (infokey1 eq {"&lt;key&gt;":"&lt;value&gt;","&lt;key&gt;":"&lt;value&gt;"...}).<br/>
   Please note that URL unsafe characters such as spaces will have to be suitably encoded.
 1. `conffilters` - If specified, matched applications must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
@@ -1035,6 +1039,8 @@ If none of the entities match the predicates, an empty list will be returned.
   "eq" means equals, "ne" means not equals and existence of key is not required for a match and "ene" means not equals but existence of key is
   required. We can combine any number of ANDs' and ORs' to create complex expressions.  Brackets can be used to club expressions together.<br/>
   _For example_ : infofilters can be "(((infokey1 eq value1) AND (infokey2 ne value1)) OR (infokey1 ene value3))".<br/>
+  Note : If value is an object then value can be given in the form of JSON format without any space.<br/>
+  _For example_ : infofilters can be (infokey1 eq {"&lt;key&gt;":"&lt;value&gt;","&lt;key&gt;":"&lt;value&gt;"...}).<br/>
   Please note that URL unsafe characters such as spaces will have to be suitably encoded.
 1. `conffilters` - If specified, matched entities must have exact matches to the given config name and must be either equal or not equal
   to the given config value. Both the config name and value must be strings. conffilters are represented in the same form as infofilters.
