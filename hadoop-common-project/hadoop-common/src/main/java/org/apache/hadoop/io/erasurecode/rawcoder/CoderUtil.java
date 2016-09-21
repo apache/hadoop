@@ -115,6 +115,9 @@ final class CoderUtil {
         buffers[i] = null;
       } else {
         buffers[i] = chunk.getBuffer();
+        if (chunk.isAllZero()) {
+          CoderUtil.resetBuffer(buffers[i], buffers[i].remaining());
+        }
       }
     }
 

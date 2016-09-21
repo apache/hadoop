@@ -240,7 +240,7 @@ public class DFSInputStream extends FSInputStream
       Iterator<LocatedBlock> oldIter = locatedBlocks.getLocatedBlocks().iterator();
       Iterator<LocatedBlock> newIter = newInfo.getLocatedBlocks().iterator();
       while (oldIter.hasNext() && newIter.hasNext()) {
-        if (! oldIter.next().getBlock().equals(newIter.next().getBlock())) {
+        if (!oldIter.next().getBlock().equals(newIter.next().getBlock())) {
           throw new IOException("Blocklist for " + src + " has changed!");
         }
       }
@@ -677,8 +677,8 @@ public class DFSInputStream extends FSInputStream
     if (oneByteBuf == null) {
       oneByteBuf = new byte[1];
     }
-    int ret = read( oneByteBuf, 0, 1 );
-    return ( ret <= 0 ) ? -1 : (oneByteBuf[0] & 0xff);
+    int ret = read(oneByteBuf, 0, 1);
+    return (ret <= 0) ? -1 : (oneByteBuf[0] & 0xff);
   }
 
   /* This is a used by regular read() and handles ChecksumExceptions.
@@ -702,7 +702,7 @@ public class DFSInputStream extends FSInputStream
       // retry as many times as seekToNewSource allows.
       try {
         return reader.readFromBlock(blockReader, len);
-      } catch ( ChecksumException ce ) {
+      } catch (ChecksumException ce) {
         DFSClient.LOG.warn("Found Checksum error for "
             + getCurrentBlock() + " from " + currentNode
             + " at " + ce.getPos());
@@ -710,7 +710,7 @@ public class DFSInputStream extends FSInputStream
         retryCurrentNode = false;
         // we want to remember which block replicas we have tried
         corruptedBlocks.addCorruptedBlock(getCurrentBlock(), currentNode);
-      } catch ( IOException e ) {
+      } catch (IOException e) {
         if (!retryCurrentNode) {
           DFSClient.LOG.warn("Exception while reading from "
               + getCurrentBlock() + " of " + src + " from "
@@ -779,7 +779,9 @@ public class DFSInputStream extends FSInputStream
             DFSClient.LOG.warn("DFS Read", e);
           }
           blockEnd = -1;
-          if (currentNode != null) { addToDeadNodes(currentNode); }
+          if (currentNode != null) {
+            addToDeadNodes(currentNode);
+          }
           if (--retries == 0) {
             throw e;
           }
@@ -1397,10 +1399,10 @@ public class DFSInputStream extends FSInputStream
 
   @Override
   public long skip(long n) throws IOException {
-    if ( n > 0 ) {
+    if (n > 0) {
       long curPos = getPos();
       long fileLen = getFileLength();
-      if( n+curPos > fileLen ) {
+      if (n+curPos > fileLen) {
         n = fileLen - curPos;
       }
       seek(curPos+n);
@@ -1550,7 +1552,7 @@ public class DFSInputStream extends FSInputStream
    * Get statistics about the reads which this DFSInputStream has done.
    */
   public ReadStatistics getReadStatistics() {
-    return new ReadStatistics(readStatistics);
+    return readStatistics;
   }
 
   /**
