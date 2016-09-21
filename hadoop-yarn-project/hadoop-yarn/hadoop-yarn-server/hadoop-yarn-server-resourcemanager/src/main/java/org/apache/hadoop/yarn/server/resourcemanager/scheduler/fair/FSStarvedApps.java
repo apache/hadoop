@@ -55,8 +55,11 @@ public class FSStarvedApps {
 
     @Override
     public int compare(FSAppAttempt app1, FSAppAttempt app2) {
-      return Resources.fitsIn(app1.getStarvation(), app2.getStarvation())
-          ? -1 : 1;
+      int ret = 1;
+      if (Resources.fitsIn(app1.getStarvation(), app2.getStarvation())) {
+        ret = -1;
+      }
+      return ret;
     }
   }
 

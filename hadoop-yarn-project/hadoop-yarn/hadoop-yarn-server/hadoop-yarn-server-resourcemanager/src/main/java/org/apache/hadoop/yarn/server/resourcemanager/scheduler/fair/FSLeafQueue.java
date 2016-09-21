@@ -74,8 +74,8 @@ public class FSLeafQueue extends FSQueue {
   private final ActiveUsersManager activeUsersManager;
   public static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
-  public FSLeafQueue(
-      String name, FairScheduler scheduler, FSParentQueue parent) {
+  public FSLeafQueue(String name, FairScheduler scheduler,
+      FSParentQueue parent) {
     super(name, scheduler, parent);
     this.scheduler = scheduler;
     this.context = scheduler.getContext();
@@ -579,8 +579,8 @@ public class FSLeafQueue extends FSQueue {
   }
 
   /**
-   * Allows setting weight for a dynamically created queue
-   * Currently only used for reservation based queues
+   * Allows setting weight for a dynamically created queue.
+   * Currently only used for reservation based queues.
    * @param weight queue weight
    */
   public void setWeights(float weight) {

@@ -63,7 +63,8 @@ public class FSPreemptionThread extends Thread {
       try{
         starvedApp = context.getStarvedApps().take();
         if (!Resources.isNone(starvedApp.getStarvation())) {
-          List<RMContainer> containers = identifyContainersToPreempt(starvedApp);
+          List<RMContainer> containers =
+              identifyContainersToPreempt(starvedApp);
           if (containers != null) {
             preemptContainers(containers);
           }
