@@ -25,7 +25,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 /**
  * Contract test suite covering Aliyun OSS integration with DistCp.
  */
-public class TestAliyunOSSContractDispCp extends AbstractContractDistCpTest {
+public class TestAliyunOSSContractDistCp extends AbstractContractDistCpTest {
 
   private static final long MULTIPART_SETTING = 8 * 1024 * 1024; // 8 MB
 
