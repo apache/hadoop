@@ -29,6 +29,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,7 +159,8 @@ public abstract class WebApp extends ServletModule {
   public void configureServlets() {
     setup();
 
-    serve("/", "/__stop").with(Dispatcher.class);
+    serve("/", "/__stop", RobotsTextPage.ROBOTS_TXT_PATH)
+        .with(Dispatcher.class);
 
     for (String path : this.servePathSpecs) {
       serve(path).with(Dispatcher.class);
