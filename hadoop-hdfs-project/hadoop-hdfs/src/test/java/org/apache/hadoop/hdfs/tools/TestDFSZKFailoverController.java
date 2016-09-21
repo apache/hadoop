@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
@@ -75,14 +76,21 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
-    
-    conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn1", 10023);
-    conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn2", 10024);
 
+    // Get random port numbers in advance. Because ZKFCs and DFSHAAdmin
+    // needs rpc port numbers of all ZKFCs, Setting 0 does not work here.
+    conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn1",
+        ServerSocketUtil.getPort(10023, 100));
+    conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn2",
+        ServerSocketUtil.getPort(10024, 100));
+
+    // prefer non-ephemeral port to avoid port collision on restartNameNode
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
     .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setIpcPort(10021))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setIpcPort(10022)));
+        .addNN(new MiniDFSNNTopology.NNConf("nn1")
+            .setIpcPort(ServerSocketUtil.getPort(10021, 100)))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2")
+            .setIpcPort(ServerSocketUtil.getPort(10022, 100))));
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
         .numDataNodes(0)
