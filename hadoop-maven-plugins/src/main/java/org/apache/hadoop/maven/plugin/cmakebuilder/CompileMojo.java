@@ -14,6 +14,7 @@
 
 package org.apache.hadoop.maven.plugin.cmakebuilder;
 
+import java.util.Locale;
 import org.apache.hadoop.maven.plugin.util.Exec.OutputBufferThread;
 import org.apache.hadoop.maven.plugin.util.Exec;
 import org.apache.maven.plugin.AbstractMojo;
@@ -83,7 +84,8 @@ public class CompileMojo extends AbstractMojo {
 
   // TODO: support Windows
   private static void validatePlatform() throws MojoExecutionException {
-    if (System.getProperty("os.name").toLowerCase().startsWith("windows")) {
+    if (System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+        .startsWith("windows")) {
       throw new MojoExecutionException("CMakeBuilder does not yet support " +
           "the Windows platform.");
     }

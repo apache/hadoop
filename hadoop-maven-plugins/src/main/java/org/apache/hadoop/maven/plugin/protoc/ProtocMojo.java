@@ -105,6 +105,10 @@ public class ProtocMojo extends AbstractMojo {
     private boolean hasDirectoryChanged(File directory) throws IOException {
       File[] listing = directory.listFiles();
       boolean changed = false;
+      if (listing == null) {
+        // not changed.
+        return false;
+      }
       // Do not exit early, since we need to compute and save checksums
       // for each file within the directory.
       for (File f : listing) {
