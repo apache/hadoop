@@ -42,4 +42,20 @@ public final class MRJobConfUtil {
    */
   private MRJobConfUtil() {
   }
+
+  /**
+   * Get the progress heartbeat interval configuration for mapreduce tasks.
+   * By default, the value of progress heartbeat interval is a proportion of
+   * that of task timeout.
+   * @param conf  the job configuration to read from
+   * @return the value of task progress report interval
+   */
+  public static long getTaskProgressReportInterval(final Configuration conf) {
+    long taskHeartbeatTimeOut = conf.getLong(
+        MRJobConfig.TASK_TIMEOUT, MRJobConfig.DEFAULT_TASK_TIMEOUT_MILLIS);
+    return conf.getLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL,
+        (long) (TASK_REPORT_INTERVAL_TO_TIMEOUT_RATIO * taskHeartbeatTimeOut));
+  }
+
+  public static final float TASK_REPORT_INTERVAL_TO_TIMEOUT_RATIO = 0.01f;
 }

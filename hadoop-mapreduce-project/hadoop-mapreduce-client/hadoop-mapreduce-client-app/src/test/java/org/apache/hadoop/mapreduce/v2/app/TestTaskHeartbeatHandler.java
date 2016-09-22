@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -50,6 +51,9 @@ public class TestTaskHeartbeatHandler {
     
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.TASK_TIMEOUT, 10); //10 ms
+    // set TASK_PROGRESS_REPORT_INTERVAL to a value smaller than TASK_TIMEOUT
+    // so that TASK_TIMEOUT is not overridden
+    conf.setLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL, 5);
     conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 10); //10 ms
     
     hb.init(conf);
@@ -68,4 +72,67 @@ public class TestTaskHeartbeatHandler {
     }
   }
 
+  /**
+   * Test if the final heartbeat timeout is set correctly when task progress
+   * report interval is set bigger than the task timeout in the configuration.
+   */
+  @Test
+  public void testTaskTimeoutConfigSmallerThanTaskProgressReportInterval() {
+    testTaskTimeoutWrtProgressReportInterval(1000L, 5000L);
+  }
+
+  /**
+   * Test if the final heartbeat timeout is set correctly when task progress
+   * report interval is set smaller than the task timeout in the configuration.
+   */
+  @Test
+  public void testTaskTimeoutConfigBiggerThanTaskProgressReportInterval() {
+    testTaskTimeoutWrtProgressReportInterval(5000L, 1000L);
+  }
+
+  /**
+   * Test if the final heartbeat timeout is set correctly when task progress
+   * report interval is not set in the configuration.
+   */
+  @Test
+  public void testTaskTimeoutConfigWithoutTaskProgressReportInterval() {
+    final long taskTimeoutConfiged = 2000L;
+
+    final Configuration conf = new Configuration();
+    conf.setLong(MRJobConfig.TASK_TIMEOUT, taskTimeoutConfiged);
+
+    final long expectedTimeout = taskTimeoutConfiged;
+    verifyTaskTimeoutConfig(conf, expectedTimeout);
+  }
+
+  /**
+   * Test if task timeout is set properly in response to the configuration of
+   * the task progress report interval.
+   */
+  private static void testTaskTimeoutWrtProgressReportInterval(
+      long timeoutConfig, long taskreportInterval) {
+    final Configuration conf = new Configuration();
+    conf.setLong(MRJobConfig.TASK_TIMEOUT, timeoutConfig);
+    conf.setLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL, taskreportInterval);
+
+    // expected task timeout is at least twice as long as task report interval
+    final long expectedTimeout = Math.max(timeoutConfig, taskreportInterval*2);
+    verifyTaskTimeoutConfig(conf, expectedTimeout);
+  }
+
+  /**
+   * Verify task timeout is set as expected in TaskHeartBeatHandler with given
+   * configuration.
+   * @param conf the configuration
+   * @param expectedTimeout expected timeout value
+   */
+  private static void verifyTaskTimeoutConfig(final Configuration conf,
+      final long expectedTimeout) {
+    final TaskHeartbeatHandler hb =
+        new TaskHeartbeatHandler(null, SystemClock.getInstance(), 1);
+    hb.init(conf);
+
+    Assert.assertTrue("The value of the task timeout is incorrect.",
+        hb.getTaskTimeOut() == expectedTimeout);
+  }
 }
