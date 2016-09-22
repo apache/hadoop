@@ -40,5 +40,5 @@ public interface YarnWebParams {
   String NODE_STATE = "node.state";
   String NODE_LABEL = "node.label";
   String WEB_UI_TYPE = "web.ui.type";
-  String NEXT_REFRESH_INTERVAL = "next.fresh.interval";
+  String NEXT_REFRESH_INTERVAL = "next.refresh.interval";
 }
