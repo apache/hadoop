@@ -17,14 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.junit.Assert;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -39,7 +31,9 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -50,8 +44,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptM
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import org.junit.Assert;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FairSchedulerTestBase {
   public final static String TEST_DIR =
@@ -70,9 +72,14 @@ public class FairSchedulerTestBase {
   private static final int SLEEP_DURATION = 10;
   private static final int SLEEP_RETRIES = 1000;
 
+  /**
+   * The list of nodes added to the cluster using the {@link #addNode} method.
+   */
+  protected final List<RMNode> rmNodes = new ArrayList<>();
+
   // Helper methods
   public Configuration createConfiguration() {
-    Configuration conf = new YarnConfiguration();
+    conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
@@ -279,5 +286,19 @@ public class FairSchedulerTestBase {
         app.getCurrentConsumption().getMemorySize());
     Assert.assertEquals(resource.getVirtualCores(),
         app.getCurrentConsumption().getVirtualCores());
+  }
+
+  /**
+   * Add a node to the cluster and track the nodes in {@link #rmNodes}.
+   * @param memory memory capacity of the node
+   * @param cores cpu capacity of the node
+   */
+  protected void addNode(int memory, int cores) {
+    int id = rmNodes.size() + 1;
+    RMNode node =
+        MockNodes.newNodeInfo(1, Resources.createResource(memory, cores), id,
+            "127.0.0." + id);
+    scheduler.handle(new NodeAddedSchedulerEvent(node));
+    rmNodes.add(node);
   }
 }

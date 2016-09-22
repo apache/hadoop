@@ -86,11 +86,6 @@ public class FakeSchedulable implements Schedulable {
   }
 
   @Override
-  public RMContainer preemptContainer() {
-    return null;
-  }
-
-  @Override
   public Resource getFairShare() {
     return this.fairShare;
   }

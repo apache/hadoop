@@ -143,6 +143,10 @@ public class Resources {
   public static Resource none() {
     return NONE;
   }
+
+  public static boolean isNone(Resource other) {
+    return NONE.equals(other);
+  }
   
   public static Resource unbounded() {
     return UNBOUNDED;
