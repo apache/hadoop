@@ -418,9 +418,9 @@ public class FSDirAttrOp {
     // Make sure the directory has sufficient quotas
     short oldBR = file.getPreferredBlockReplication();
 
+    long size = file.computeFileSize(true, true);
     // Ensure the quota does not exceed
     if (oldBR < replication) {
-      long size = file.computeFileSize(true, true);
       fsd.updateCount(iip, 0L, size, oldBR, replication, true);
     }
 
@@ -428,14 +428,10 @@ public class FSDirAttrOp {
     short targetReplication = (short) Math.max(
         replication, file.getPreferredBlockReplication());
 
+    if (oldBR > replication) {
+      fsd.updateCount(iip, 0L, size, oldBR, targetReplication, true);
+    }
     for (BlockInfo b : file.getBlocks()) {
-      if (oldBR == targetReplication) {
-        continue;
-      }
-      if (oldBR > replication) {
-        fsd.updateCount(iip, 0L, b.getNumBytes(), oldBR, targetReplication,
-                        true);
-      }
       bm.setReplication(oldBR, targetReplication, b);
     }
 

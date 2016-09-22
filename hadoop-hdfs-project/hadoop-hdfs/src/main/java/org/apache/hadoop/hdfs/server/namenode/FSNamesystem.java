@@ -186,7 +186,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -207,7 +206,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager.SecretManagerState;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -3292,40 +3290,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final Block commitBlock) throws IOException {
     assert hasWriteLock();
     Preconditions.checkArgument(fileINode.isUnderConstruction());
-    if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock)) {
-      return;
-    }
-
-    // Adjust disk space consumption if required
-    final long diff;
-    final short replicationFactor;
-    if (fileINode.isStriped()) {
-      final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
-          .getErasureCodingPolicy(this, iip);
-      final short numDataUnits = (short) ecPolicy.getNumDataUnits();
-      final short numParityUnits = (short) ecPolicy.getNumParityUnits();
-
-      final long numBlocks = numDataUnits + numParityUnits;
-      final long fullBlockGroupSize =
-          fileINode.getPreferredBlockSize() * numBlocks;
-
-      final BlockInfoStriped striped = new BlockInfoStriped(commitBlock,
-          ecPolicy);
-      final long actualBlockGroupSize = striped.spaceConsumed();
-
-      diff = fullBlockGroupSize - actualBlockGroupSize;
-      replicationFactor = (short) 1;
-    } else {
-      diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();
-      replicationFactor = fileINode.getFileReplication();
-    }
-    if (diff > 0) {
-      try {
-        dir.updateSpaceConsumed(iip, 0, -diff, replicationFactor);
-      } catch (IOException e) {
-        LOG.warn("Unexpected exception while updating disk space.", e);
-      }
-    }
+    blockManager.commitOrCompleteLastBlock(fileINode, commitBlock, iip);
   }
 
   void addCommittedBlocksToPending(final INodeFile pendingFile) {
@@ -3583,7 +3548,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * @param pendingFile open file that needs to be closed
    * @param storedBlock last block
-   * @return Path of the file that was closed.
    * @throws IOException on error
    */
   @VisibleForTesting
@@ -5734,6 +5698,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /** @return the FSDirectory. */
+  @Override
   public FSDirectory getFSDirectory() {
     return dir;
   }
