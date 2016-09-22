@@ -88,7 +88,7 @@ message RemoteEditLogProto {
  */
 message RemoteEditLogManifestProto {
   repeated RemoteEditLogProto logs = 1;
-  required uint64 committedTxnId = 2;
+  optional uint64 committedTxnId = 2;
 }
 
 /**

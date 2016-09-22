@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 /**
  * An enumeration of logs available on a remote NameNode.
@@ -30,9 +31,13 @@ public class RemoteEditLogManifest {
 
   private List<RemoteEditLog> logs;
 
-  private long committedTxnId = -1;
+  private long committedTxnId = HdfsServerConstants.INVALID_TXID;
 
   public RemoteEditLogManifest() {
+  }
+
+  public RemoteEditLogManifest(List<RemoteEditLog> logs) {
+    this(logs, HdfsServerConstants.INVALID_TXID);
   }
 
   public RemoteEditLogManifest(List<RemoteEditLog> logs, long committedTxnId) {
