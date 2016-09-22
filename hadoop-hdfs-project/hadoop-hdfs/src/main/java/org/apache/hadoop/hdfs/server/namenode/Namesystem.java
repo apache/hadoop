@@ -44,6 +44,8 @@ public interface Namesystem extends RwLock, SafeMode {
 
   BlockCollection getBlockCollection(long id);
 
+  FSDirectory getFSDirectory();
+
   void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal);
 
   void checkOperation(OperationCategory read) throws StandbyException;
