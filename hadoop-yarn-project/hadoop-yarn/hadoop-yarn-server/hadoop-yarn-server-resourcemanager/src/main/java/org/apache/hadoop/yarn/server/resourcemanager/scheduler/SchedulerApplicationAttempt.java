@@ -1253,6 +1253,22 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     unconfirmedAllocatedVcores.addAndGet(-res.getVirtualCores());
   }
 
+  @Override
+  public int hashCode() {
+    return getApplicationAttemptId().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (! (o instanceof SchedulerApplicationAttempt)) {
+      return false;
+    }
+
+    SchedulerApplicationAttempt other = (SchedulerApplicationAttempt) o;
+    return (this == other ||
+        this.getApplicationAttemptId().equals(other.getApplicationAttemptId()));
+  }
+
   /**
    * Different state for Application Master, user can see this state from web UI
    */
