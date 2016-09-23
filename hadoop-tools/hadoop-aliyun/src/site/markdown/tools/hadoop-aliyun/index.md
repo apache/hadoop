@@ -167,7 +167,7 @@ please raise your issues with them.
 
     <property>
       <name>fs.oss.paging.maximum</name>
-      <value>500</value>
+      <value>1000</value>
       <description>How many keys to request from Aliyun OSS when doing directory listings at a time.
       </description>
     </property>
@@ -188,11 +188,6 @@ please raise your issues with them.
       <name>fs.oss.multipart.download.size</name>
       <value>102400/value>
       <description>Size in bytes in each request from ALiyun OSS.</description>
-    </property>
-
-    <property>
-      <name>fs.oss.buffer.dir</name>
-      <description>Comma separated list of directories to buffer OSS data before uploading to Aliyun OSS</description>
     </property>
 
     <property>
