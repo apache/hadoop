@@ -83,7 +83,7 @@ import org.apache.hadoop.util.Time;
  * ViewFs is specified with the following URI: <b>viewfs:///</b> 
  * <p>
  * To use viewfs one would typically set the default file system in the
- * config  (i.e. fs.default.name< = viewfs:///) along with the
+ * config  (i.e. fs.defaultFS < = viewfs:///) along with the
  * mount table config variables as described below. 
  * 
  * <p>
