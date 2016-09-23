@@ -179,6 +179,9 @@ public abstract class GenericTestUtils {
       return c;
     }
     
+    public static LogCapturer captureLogs(Logger l) {
+      return new LogCapturer(l);
+    }
 
     private LogCapturer(Logger logger) {
       this.logger = logger;
