@@ -23,6 +23,8 @@ import java.util.ArrayList;
 
 import javax.net.ssl.SSLEngine;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.mortbay.jetty.security.SslSelectChannelConnector;
 
@@ -34,6 +36,8 @@ import org.mortbay.jetty.security.SslSelectChannelConnector;
  */
 @InterfaceAudience.Private
 public class SslSelectChannelConnectorSecure extends SslSelectChannelConnector {
+  public static final Log LOG =
+      LogFactory.getLog(SslSelectChannelConnectorSecure.class);
 
   public SslSelectChannelConnectorSecure() {
     super();
@@ -54,5 +58,30 @@ public class SslSelectChannelConnectorSecure extends SslSelectChannelConnector {
     engine.setEnabledProtocols(nonSSLProtocols.toArray(
         new String[nonSSLProtocols.size()]));
     return engine;
+  }
+
+  /* Override the broken isRunning() method (JETTY-1316). This bug is present
+   * in 6.1.26. For the versions wihout this bug, it adds insignificant
+   * overhead.
+   */
+  @Override
+  public boolean isRunning() {
+    if (super.isRunning()) {
+      return true;
+    }
+    // We might be hitting JETTY-1316. If the internal state changed from
+    // STARTING to STARTED in the middle of the check, the above call may
+    // return false.  Check it one more time.
+    LOG.warn("HttpServer Acceptor: isRunning is false. Rechecking.");
+    try {
+      Thread.sleep(10);
+    } catch (InterruptedException ie) {
+      // Mark this thread as interrupted. Someone up in the call chain
+      // might care.
+      Thread.currentThread().interrupt();
+    }
+    boolean runState = super.isRunning();
+    LOG.warn("HttpServer Acceptor: isRunning is " + runState);
+    return runState;
   }
 }
