@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBloc
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -622,12 +623,13 @@ public class BlockManager {
    * 
    * @param bc block collection
    * @param commitBlock - contains client reported block length and generation
+   * @param iip - INodes in path to bc
    * @return true if the last block is changed to committed state.
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
   public boolean commitOrCompleteLastBlock(BlockCollection bc,
-      Block commitBlock) throws IOException {
+      Block commitBlock, INodesInPath iip) throws IOException {
     if(commitBlock == null)
       return false; // not committing, this is a block allocation retry
     BlockInfoContiguous lastBlock = bc.getLastBlock();
@@ -639,7 +641,7 @@ public class BlockManager {
     final boolean b = commitBlock(
         (BlockInfoContiguousUnderConstruction) lastBlock, commitBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication)
-      completeBlock(bc, bc.numBlocks()-1, false);
+      completeBlock(bc, bc.numBlocks()-1, iip, false);
     return b;
   }
 
@@ -647,11 +649,13 @@ public class BlockManager {
    * Convert a specified block of the file to a complete block.
    * @param bc file
    * @param blkIndex  block index in the file
+   * @param iip - INodes in path to file containing curBlock; if null,
+   *              this will be resolved internally
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
   private BlockInfoContiguous completeBlock(final BlockCollection bc,
-      final int blkIndex, boolean force) throws IOException {
+      final int blkIndex, INodesInPath iip, boolean force) throws IOException {
     if(blkIndex < 0)
       return null;
     BlockInfoContiguous curBlock = bc.getBlocks()[blkIndex];
@@ -666,7 +670,7 @@ public class BlockManager {
     if(!force && ucBlock.getBlockUCState() != BlockUCState.COMMITTED)
       throw new IOException(
           "Cannot complete block: block has not been COMMITTED by the client");
-    BlockInfoContiguous completeBlock = ucBlock.convertToCompleteBlock();
+    BlockInfoContiguous completeBlock = convertToCompleteBlock(ucBlock, iip);
     // replace penultimate block in file
     bc.setBlock(blkIndex, completeBlock);
     
@@ -685,15 +689,34 @@ public class BlockManager {
   }
 
   private BlockInfoContiguous completeBlock(final BlockCollection bc,
-      final BlockInfoContiguous block, boolean force) throws IOException {
+      final BlockInfoContiguous block, INodesInPath iip, boolean force)
+      throws IOException {
     BlockInfoContiguous[] fileBlocks = bc.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
       if(fileBlocks[idx] == block) {
-        return completeBlock(bc, idx, force);
+        return completeBlock(bc, idx, iip, force);
       }
     return block;
   }
   
+  /**
+   * Convert a specified block of the file to a complete block.
+   * Skips validity checking and safe mode block total updates; use
+   * {@link BlockManager#completeBlock} to include these.
+   * @param curBlock - block to be completed
+   * @param iip - INodes in path to file containing curBlock; if null,
+   *              this will be resolved internally
+   * @throws IOException if the block does not have at least a minimal number
+   * of replicas reported from data-nodes.
+   */
+  private BlockInfoContiguous convertToCompleteBlock(
+      BlockInfoContiguousUnderConstruction curBlock, INodesInPath iip)
+      throws IOException {
+    BlockInfoContiguous complete = curBlock.convertToCompleteBlock();
+    namesystem.getFSDirectory().updateSpaceForCompleteBlock(curBlock, iip);
+    return complete;
+  }
+
   /**
    * Force the given block in the given file to be marked as complete,
    * regardless of whether enough replicas are present. This is necessary
@@ -702,7 +725,7 @@ public class BlockManager {
   public BlockInfoContiguous forceCompleteBlock(final BlockCollection bc,
       final BlockInfoContiguousUnderConstruction block) throws IOException {
     block.commitBlock(block);
-    return completeBlock(bc, block, true);
+    return completeBlock(bc, block, null, true);
   }
 
   
@@ -2525,7 +2548,7 @@ public class BlockManager {
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication) {
-      completeBlock(storedBlock.getBlockCollection(), storedBlock, false);
+      completeBlock(storedBlock.getBlockCollection(), storedBlock, null, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that.
@@ -2599,7 +2622,7 @@ public class BlockManager {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
-      storedBlock = completeBlock(bc, storedBlock, false);
+      storedBlock = completeBlock(bc, storedBlock, null, false);
     } else if (storedBlock.isComplete() && result == AddBlockResult.ADDED) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that

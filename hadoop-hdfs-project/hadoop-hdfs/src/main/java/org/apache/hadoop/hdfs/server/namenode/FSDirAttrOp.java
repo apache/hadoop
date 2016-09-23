@@ -382,13 +382,13 @@ public class FSDirAttrOp {
     }
     INodeFile file = inode.asFile();
     final short oldBR = file.getBlockReplication();
+    long size = file.computeFileSize(true, true);
 
     // before setFileReplication, check for increasing block replication.
     // if replication > oldBR, then newBR == replication.
     // if replication < oldBR, we don't know newBR yet.
     if (replication > oldBR) {
-      long dsDelta = file.storagespaceConsumed()/oldBR;
-      fsd.updateCount(iip, 0L, dsDelta, oldBR, replication, true);
+      fsd.updateCount(iip, 0L, size, oldBR, replication, true);
     }
 
     file.setFileReplication(replication, iip.getLatestSnapshotId());
@@ -396,8 +396,7 @@ public class FSDirAttrOp {
     final short newBR = file.getBlockReplication();
     // check newBR < oldBR case.
     if (newBR < oldBR) {
-      long dsDelta = file.storagespaceConsumed()/newBR;
-      fsd.updateCount(iip, 0L, dsDelta, oldBR, newBR, true);
+      fsd.updateCount(iip, 0L, size, oldBR, newBR, true);
     }
 
     if (blockRepls != null) {

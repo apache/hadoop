@@ -37,6 +37,8 @@ public interface Namesystem extends RwLock, SafeMode {
   /** @return the block pool ID */
   public String getBlockPoolId();
 
+  public FSDirectory getFSDirectory();
+
   public boolean isInStandbyState();
 
   public boolean isGenStampInFuture(Block block);

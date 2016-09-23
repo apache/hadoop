@@ -737,6 +737,31 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  /**
+   * Update the cached quota space for a block that is being completed.
+   * Must only be called once, as the block is being completed.
+   * @param completeBlk - Completed block for which to update space
+   * @param inodes - INodes in path to file containing completeBlk; if null
+   *                 this will be resolved internally
+   */
+  public void updateSpaceForCompleteBlock(BlockInfoContiguous completeBlk,
+      INodesInPath inodes) throws IOException {
+    assert namesystem.hasWriteLock();
+    INodesInPath iip = inodes != null ? inodes :
+        INodesInPath.fromINode((INodeFile) completeBlk.getBlockCollection());
+    INodeFile fileINode = iip.getLastINode().asFile();
+    // Adjust disk space consumption if required
+    final long diff =
+        fileINode.getPreferredBlockSize() - completeBlk.getNumBytes();
+    if (diff > 0) {
+      try {
+        updateSpaceConsumed(iip, 0, -diff, fileINode.getFileReplication());
+      } catch (IOException e) {
+        LOG.warn("Unexpected exception while updating disk space.", e);
+      }
+    }
+  }
+
   public EnumCounters<StorageType> getStorageTypeDeltas(byte storagePolicyID,
       long dsDelta, short oldRep, short newRep) {
     EnumCounters<StorageType> typeSpaceDeltas =
