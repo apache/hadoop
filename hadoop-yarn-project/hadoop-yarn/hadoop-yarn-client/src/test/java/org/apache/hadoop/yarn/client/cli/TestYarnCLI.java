@@ -34,8 +34,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
@@ -80,6 +78,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.Times;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -298,7 +297,6 @@ public class TestYarnCLI {
     reports.add(container);
     reports.add(container1);
     reports.add(container2);
-    DateFormat dateFormat=new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy");
     when(client.getContainers(any(ApplicationAttemptId.class))).thenReturn(
         reports);
     sysOutStream.reset();
@@ -312,13 +310,13 @@ public class TestYarnCLI {
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "Container-Id", "Start Time",
         "Finish Time", "State", "Host", "Node Http Address", "LOG-URL");
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "container_1234_0005_01_000001",
-        dateFormat.format(new Date(time1)), dateFormat.format(new Date(time2)),
+        Times.format(time1), Times.format(time2),
         "COMPLETE", "host:1234", "http://host:2345", "logURL");
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "container_1234_0005_01_000002",
-        dateFormat.format(new Date(time1)), dateFormat.format(new Date(time2)),
+        Times.format(time1), Times.format(time2),
         "COMPLETE", "host:1234", "http://host:2345", "logURL");
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "container_1234_0005_01_000003",
-        dateFormat.format(new Date(time1)), "N/A", "RUNNING", "host:1234",
+        Times.format(time1), "N/A", "RUNNING", "host:1234",
         "http://host:2345", "");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
