@@ -990,8 +990,8 @@ public class MapFile {
             reader.getKeyClass().asSubclass(WritableComparable.class),
             reader.getValueClass());
 
-      WritableComparable key = ReflectionUtils.newInstance(reader.getKeyClass()
-        .asSubclass(WritableComparable.class), conf);
+      WritableComparable<?> key = ReflectionUtils.newInstance(
+          reader.getKeyClass().asSubclass(WritableComparable.class), conf);
       Writable value = ReflectionUtils.newInstance(reader.getValueClass()
         .asSubclass(Writable.class), conf);
 
