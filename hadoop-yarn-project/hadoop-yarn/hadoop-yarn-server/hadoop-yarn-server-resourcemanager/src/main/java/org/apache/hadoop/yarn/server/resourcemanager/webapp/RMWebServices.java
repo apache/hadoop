@@ -925,7 +925,7 @@ public class RMWebServices extends WebServices {
       // allow users to kill the app
 
       if (targetState.getState().equals(YarnApplicationState.KILLED.toString())) {
-        return killApp(app, callerUGI, hsr);
+        return killApp(app, callerUGI, hsr, targetState.getDiagnostics());
       }
       throw new BadRequestException("Only '"
           + YarnApplicationState.KILLED.toString()
@@ -1141,7 +1141,8 @@ public class RMWebServices extends WebServices {
   }
 
   protected Response killApp(RMApp app, UserGroupInformation callerUGI,
-      HttpServletRequest hsr) throws IOException, InterruptedException {
+      HttpServletRequest hsr, String diagnostic)
+      throws IOException, InterruptedException {
 
     if (app == null) {
       throw new IllegalArgumentException("app cannot be null");
@@ -1158,6 +1159,9 @@ public class RMWebServices extends WebServices {
                   YarnException {
                 KillApplicationRequest req =
                     KillApplicationRequest.newInstance(appid);
+                  if (diagnostic != null) {
+                    req.setDiagnostics(diagnostic);
+                  }
                 return rm.getClientRMService().forceKillApplication(req);
               }
             });

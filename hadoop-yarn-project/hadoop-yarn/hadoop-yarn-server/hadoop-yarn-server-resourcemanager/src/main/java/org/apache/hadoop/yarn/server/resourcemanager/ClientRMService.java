@@ -775,15 +775,25 @@ public class ClientRMService extends AbstractService implements
       return KillApplicationResponse.newInstance(true);
     }
 
-    String message = "Kill application " + applicationId + " received from "
-        + callerUGI;
+    StringBuilder message = new StringBuilder();
+    message.append("Application ").append(applicationId)
+        .append(" was killed by user ").append(callerUGI.getShortUserName());
+
     InetAddress remoteAddress = Server.getRemoteIp();
     if (null != remoteAddress) {
-      message += " at " + remoteAddress.getHostAddress();
+      message.append(" at ").append(remoteAddress.getHostAddress());
     }
+
+    String diagnostics = org.apache.commons.lang.StringUtils
+        .trimToNull(request.getDiagnostics());
+    if (diagnostics != null) {
+      message.append(" with diagnostic message: ");
+      message.append(diagnostics);
+    }
+
     this.rmContext.getDispatcher().getEventHandler()
-        .handle(new RMAppKillByClientEvent(applicationId, message, callerUGI,
-            remoteAddress));
+        .handle(new RMAppKillByClientEvent(applicationId, message.toString(),
+            callerUGI, remoteAddress));
 
     // For UnmanagedAMs, return true so they don't retry
     return KillApplicationResponse.newInstance(
