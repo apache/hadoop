@@ -46,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
@@ -125,7 +126,7 @@ public class StoragePolicySatisfyWorker {
     return moverThreadPool;
   }
 
-  public void processBlockMovingTasks(long trackID,
+  public void processBlockMovingTasks(long trackID, String blockPoolID,
       List<BlockMovingInfo> blockMovingInfos) {
     Future<Void> moveCallable = null;
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
@@ -133,13 +134,11 @@ public class StoragePolicySatisfyWorker {
           .getSources().length == blkMovingInfo.getTargets().length;
 
       for (int i = 0; i < blkMovingInfo.getSources().length; i++) {
-        BlockMovingTask blockMovingTask =
-            new BlockMovingTask(blkMovingInfo.getBlock(),
-            blkMovingInfo.getSources()[i],
-            blkMovingInfo.getTargets()[i],
+        BlockMovingTask blockMovingTask = new BlockMovingTask(
+            blkMovingInfo.getBlock(), blockPoolID,
+            blkMovingInfo.getSources()[i], blkMovingInfo.getTargets()[i],
             blkMovingInfo.getTargetStorageTypes()[i]);
-        moveCallable = moverExecutorCompletionService
-            .submit(blockMovingTask);
+        moveCallable = moverExecutorCompletionService.submit(blockMovingTask);
         moverTaskFutures.add(moveCallable);
       }
     }
@@ -163,14 +162,16 @@ public class StoragePolicySatisfyWorker {
    * given target.
    */
   private class BlockMovingTask implements Callable<Void> {
-    private final ExtendedBlock block;
+    private final Block block;
     private final DatanodeInfo source;
     private final DatanodeInfo target;
     private final StorageType targetStorageType;
+    private String blockPoolID;
 
-    BlockMovingTask(ExtendedBlock block, DatanodeInfo source,
+    BlockMovingTask(Block block, String blockPoolID, DatanodeInfo source,
         DatanodeInfo target, StorageType targetStorageType) {
       this.block = block;
+      this.blockPoolID = blockPoolID;
       this.source = source;
       this.target = target;
       this.targetStorageType = targetStorageType;
@@ -201,12 +202,12 @@ public class StoragePolicySatisfyWorker {
 
         OutputStream unbufOut = sock.getOutputStream();
         InputStream unbufIn = sock.getInputStream();
-
+        ExtendedBlock extendedBlock = new ExtendedBlock(blockPoolID, block);
         Token<BlockTokenIdentifier> accessToken = datanode.getBlockAccessToken(
-            block, EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
+            extendedBlock, EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
 
         DataEncryptionKeyFactory keyFactory = datanode
-            .getDataEncryptionKeyFactoryForBlock(block);
+            .getDataEncryptionKeyFactoryForBlock(extendedBlock);
         IOStreamPair saslStreams = datanode.getSaslClient().socketSend(sock,
             unbufOut, unbufIn, keyFactory, accessToken, target);
         unbufOut = saslStreams.out;
@@ -215,10 +216,10 @@ public class StoragePolicySatisfyWorker {
             new BufferedOutputStream(unbufOut, ioFileBufferSize));
         in = new DataInputStream(
             new BufferedInputStream(unbufIn, ioFileBufferSize));
-        sendRequest(out, block, accessToken, source, targetStorageType);
+        sendRequest(out, extendedBlock, accessToken, source, targetStorageType);
         receiveResponse(in);
 
-        LOG.debug(
+        LOG.info(
             "Successfully moved block:{} from src:{} to destin:{} for"
                 + " satisfying storageType:{}",
             block, source, target, targetStorageType);

@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
@@ -71,14 +71,14 @@ public class TestStoragePolicySatisfyWorker {
   public void testMoveSingleBlockToAnotherDatanode() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConf(conf);
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(4)
-        .storageTypes(
-            new StorageType[][] {{StorageType.DISK, StorageType.ARCHIVE},
-                {StorageType.DISK, StorageType.ARCHIVE},
-                {StorageType.DISK, StorageType.ARCHIVE},
-                {StorageType.DISK, StorageType.ARCHIVE}})
-        .build();
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(4)
+            .storageTypes(
+                new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+                    {StorageType.DISK, StorageType.ARCHIVE},
+                    {StorageType.ARCHIVE, StorageType.ARCHIVE},
+                    {StorageType.ARCHIVE, StorageType.ARCHIVE}})
+            .build();
     try {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -108,12 +108,12 @@ public class TestStoragePolicySatisfyWorker {
           src);
       List<BlockMovingInfo> blockMovingInfos = new ArrayList<>();
       BlockMovingInfo blockMovingInfo = prepareBlockMovingInfo(
-          lb.getBlock(), lb.getLocations()[0], targetDnInfo,
+          lb.getBlock().getLocalBlock(), lb.getLocations()[0], targetDnInfo,
           lb.getStorageTypes()[0], StorageType.ARCHIVE);
       blockMovingInfos.add(blockMovingInfo);
       INode inode = cluster.getNamesystem().getFSDirectory().getINode(file);
       worker.processBlockMovingTasks(inode.getId(),
-          blockMovingInfos);
+          cluster.getNamesystem().getBlockPoolId(), blockMovingInfos);
       cluster.triggerHeartbeats();
 
       // Wait till NameNode notified about the block location details
@@ -150,7 +150,7 @@ public class TestStoragePolicySatisfyWorker {
     }, 100, timeout);
   }
 
-  BlockMovingInfo prepareBlockMovingInfo(ExtendedBlock block,
+  BlockMovingInfo prepareBlockMovingInfo(Block block,
       DatanodeInfo src, DatanodeInfo destin, StorageType storageType,
       StorageType targetStorageType) {
     return new BlockMovingInfo(block, new DatanodeInfo[] {src},

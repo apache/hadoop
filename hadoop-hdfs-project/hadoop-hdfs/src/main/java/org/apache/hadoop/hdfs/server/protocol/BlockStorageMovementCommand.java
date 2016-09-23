@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.protocol;
 import java.util.Arrays;
 
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 
 /**
  * A BlockStorageMovementCommand is an instruction to a DataNode to move the
@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
  * NameNode about the movement status.
  */
 public class BlockStorageMovementCommand extends DatanodeCommand {
-
   // TODO: constructor needs to be refined based on the block movement data
   // structure.
   BlockStorageMovementCommand(int action) {
@@ -46,13 +45,13 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
    * Stores block to storage info that can be used for block movement.
    */
   public static class BlockMovingInfo {
-    private ExtendedBlock blk;
+    private Block blk;
     private DatanodeInfo[] sourceNodes;
     private StorageType[] sourceStorageTypes;
     private DatanodeInfo[] targetNodes;
     private StorageType[] targetStorageTypes;
 
-    public BlockMovingInfo(ExtendedBlock block,
+    public BlockMovingInfo(Block block,
         DatanodeInfo[] sourceDnInfos, DatanodeInfo[] targetDnInfos,
         StorageType[] srcStorageTypes, StorageType[] targetStorageTypes) {
       this.blk = block;
@@ -62,11 +61,11 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
       this.targetStorageTypes = targetStorageTypes;
     }
 
-    public void addBlock(ExtendedBlock block) {
+    public void addBlock(Block block) {
       this.blk = block;
     }
 
-    public ExtendedBlock getBlock() {
+    public Block getBlock() {
       return this.blk;
     }
 

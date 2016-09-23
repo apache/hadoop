@@ -43,6 +43,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
+import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -205,6 +207,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A set of blocks to be invalidated by this datanode */
   private final LightWeightHashSet<Block> invalidateBlocks =
       new LightWeightHashSet<>();
+
+  /** A queue of blocks for moving its storage placements by this datanode. */
+  private final Queue<List<BlockMovingInfo>> storageMovementBlocks =
+      new LinkedList<>();
 
   /* Variables for maintaining number of blocks scheduled to be written to
    * this storage. This count is approximate and might be slightly bigger
@@ -1064,6 +1070,38 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
     return false;
+  }
+
+  /**
+   * Add the block infos which needs to move its storage locations.
+   *
+   * @param storageMismatchedBlocks
+   *          - storage mismatched block infos
+   */
+  public void addBlocksToMoveStorage(
+      List<BlockMovingInfo> storageMismatchedBlocks) {
+    storageMovementBlocks.offer(storageMismatchedBlocks);
+  }
+
+  /**
+   * @return block infos which needs to move its storage locations.
+   */
+  public List<BlockMovingInfo> getBlocksToMoveStorages() {
+    return storageMovementBlocks.poll();
+  }
+
+  // TODO: we will remove this method once DN side handling integrated. We can
+  // convert the test to check real block movements instead of this ds.
+  @VisibleForTesting
+  public List<BlockMovingInfo> getStorageMovementPendingItems() {
+    List<BlockMovingInfo> flatList = new ArrayList<>();
+    Iterator<List<BlockMovingInfo>> iterator = storageMovementBlocks
+        .iterator();
+    while (iterator.hasNext()) {
+      List<BlockMovingInfo> next = iterator.next();
+      flatList.addAll(next);
+    }
+    return flatList;
   }
 }
 

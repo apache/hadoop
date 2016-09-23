@@ -53,6 +53,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,6 +74,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -1715,5 +1717,44 @@ public class DFSUtil {
       id.readFields(in);
     }
     return id;
+  }
+
+  /**
+   * Remove the overlap between the expected types and the existing types.
+   *
+   * @param expected
+   *          - Expected storage types list.
+   * @param existing
+   *          - Existing storage types list.
+   * @param ignoreNonMovable
+   *          ignore non-movable storage types by removing them from both
+   *          expected and existing storage type list to prevent non-movable
+   *          storage from being moved.
+   * @returns if the existing types or the expected types is empty after
+   *          removing the overlap.
+   */
+  public static boolean removeOverlapBetweenStorageTypes(
+      List<StorageType> expected,
+      List<StorageType> existing, boolean ignoreNonMovable) {
+    for (Iterator<StorageType> i = existing.iterator(); i.hasNext();) {
+      final StorageType t = i.next();
+      if (expected.remove(t)) {
+        i.remove();
+      }
+    }
+    if (ignoreNonMovable) {
+      removeNonMovable(existing);
+      removeNonMovable(expected);
+    }
+    return expected.isEmpty() || existing.isEmpty();
+  }
+
+  private static void removeNonMovable(List<StorageType> types) {
+    for (Iterator<StorageType> i = types.iterator(); i.hasNext();) {
+      final StorageType t = i.next();
+      if (!t.isMovable()) {
+        i.remove();
+      }
+    }
   }
 }
