@@ -35,6 +35,7 @@ import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.Router.Dest;
 import org.apache.hadoop.yarn.webapp.view.ErrorPage;
+import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,6 +118,14 @@ public class Dispatcher extends HttpServlet {
     }
     Controller.RequestContext rc =
         injector.getInstance(Controller.RequestContext.class);
+
+    //short-circuit robots.txt serving for all YARN webapps.
+    if (uri.equals(RobotsTextPage.ROBOTS_TXT_PATH)) {
+      rc.setStatus(HttpServletResponse.SC_FOUND);
+      render(RobotsTextPage.class);
+      return;
+    }
+
     if (setCookieParams(rc, req) > 0) {
       Cookie ec = rc.cookies().get(ERROR_COOKIE);
       if (ec != null) {

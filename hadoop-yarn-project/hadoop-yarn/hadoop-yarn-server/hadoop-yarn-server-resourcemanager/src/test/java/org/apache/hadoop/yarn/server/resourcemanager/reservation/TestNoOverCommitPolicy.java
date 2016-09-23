@@ -23,10 +23,8 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
-import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.MismatchedUserException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.planning.ReservationAgent;
@@ -125,25 +123,6 @@ public class TestNoOverCommitPolicy {
         ReservationSystemTestUtil.getNewReservationId(), null, "u1",
         "dedicated", initTime, initTime + f.length, ReservationSystemTestUtil
             .generateAllocation(initTime, step, f), res, minAlloc), false);
-  }
-
-  @Test(expected = MismatchedUserException.class)
-  public void testUserMismatch() throws IOException, PlanningException {
-    // generate allocation from single tenant that exceed capacity
-    int[] f = generateData(3600, (int) (0.5 * totCont));
-    ReservationDefinition rDef =
-        ReservationSystemTestUtil.createSimpleReservationDefinition(
-            initTime, initTime + f.length + 1, f.length);
-    ReservationId rid = ReservationSystemTestUtil.getNewReservationId();
-
-    plan.addReservation(new InMemoryReservationAllocation(rid, rDef, "u1",
-        "dedicated", initTime, initTime + f.length, ReservationSystemTestUtil
-            .generateAllocation(initTime, step, f), res, minAlloc), false);
-
-    // trying to update a reservation with a mismatching user
-    plan.updateReservation(new InMemoryReservationAllocation(rid, rDef, "u2",
-        "dedicated", initTime, initTime + f.length, ReservationSystemTestUtil
-            .generateAllocation(initTime, step, f), res, minAlloc));
   }
 
   @Test

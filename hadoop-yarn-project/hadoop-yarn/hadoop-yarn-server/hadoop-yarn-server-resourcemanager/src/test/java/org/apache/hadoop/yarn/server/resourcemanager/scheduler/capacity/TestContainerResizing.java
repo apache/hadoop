@@ -828,8 +828,8 @@ public class TestContainerResizing {
         app.getAppAttemptResourceUsage().getPending().getMemorySize());
     // Queue/user/application's usage will be updated
     checkUsedResource(rm1, "default", 0 * GB, null);
-    Assert.assertEquals(0 * GB, ((LeafQueue) cs.getQueue("default"))
-        .getUser("user").getUsed().getMemorySize());
+    // User will be removed
+    Assert.assertNull(((LeafQueue) cs.getQueue("default")).getUser("user"));
     Assert.assertEquals(0 * GB,
         app.getAppAttemptResourceUsage().getReserved().getMemorySize());
     Assert.assertEquals(0 * GB,

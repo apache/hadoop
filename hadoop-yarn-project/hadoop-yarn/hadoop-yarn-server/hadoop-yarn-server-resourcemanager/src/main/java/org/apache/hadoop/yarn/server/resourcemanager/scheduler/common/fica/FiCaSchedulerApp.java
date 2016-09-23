@@ -328,7 +328,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
    * of the resources that will be allocated to and preempted from this
    * application.
    *
-   * @param rc
+   * @param resourceCalculator
    * @param clusterResource
    * @param minimumAllocation
    * @return an allocation

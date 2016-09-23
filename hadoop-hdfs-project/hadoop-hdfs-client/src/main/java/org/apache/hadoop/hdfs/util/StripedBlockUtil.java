@@ -22,7 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -32,7 +31,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.hdfs.DFSStripedOutputStream;
 import org.apache.hadoop.security.token.Token;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,18 +76,6 @@ public class StripedBlockUtil {
       LoggerFactory.getLogger(StripedBlockUtil.class);
 
   /**
-   * Parses a striped block group into individual blocks.
-   * @param bg The striped block group
-   * @param ecPolicy The erasure coding policy
-   * @return An array of the blocks in the group
-   */
-  public static LocatedBlock[] parseStripedBlockGroup(LocatedStripedBlock bg,
-                                               ErasureCodingPolicy ecPolicy) {
-    return parseStripedBlockGroup(bg, ecPolicy.getCellSize(),
-        ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
-  }
-
-  /**
    * This method parses a striped block group into individual blocks.
    *
    * @param bg The striped block group
@@ -112,7 +99,7 @@ public class StripedBlockUtil {
   }
 
   /**
-   * This method creates an internal block at the given index of a block group
+   * This method creates an internal block at the given index of a block group.
    *
    * @param idxInReturnedLocs The index in the stored locations in the
    *                          {@link LocatedStripedBlock} object
@@ -169,7 +156,7 @@ public class StripedBlockUtil {
   }
 
   /**
-   * Get the size of an internal block at the given index of a block group
+   * Get the size of an internal block at the given index of a block group.
    *
    * @param dataSize Size of the block group only counting data blocks
    * @param cellSize The size of a striping cell
@@ -237,7 +224,7 @@ public class StripedBlockUtil {
 
   /**
    * Given a byte's offset in an internal block, calculate the offset in
-   * the block group
+   * the block group.
    */
   public static long offsetInBlkToOffsetInBG(int cellSize, int dataBlkNum,
       long offsetInBlk, int idxInBlockGroup) {
@@ -248,12 +235,12 @@ public class StripedBlockUtil {
   }
 
   /**
-   * Get the next completed striped read task
+   * Get the next completed striped read task.
    *
-   * @return {@link StripingChunkReadResult} indicating the status of the read task
-   *          succeeded, and the block index of the task. If the method times
-   *          out without getting any completed read tasks, -1 is returned as
-   *          block index.
+   * @return {@link StripingChunkReadResult} indicating the status of the read
+   *          task succeeded, and the block index of the task. If the method
+   *          times out without getting any completed read tasks, -1 is
+   *          returned as block index.
    * @throws InterruptedException
    */
   public static StripingChunkReadResult getNextCompletedStripedRead(
@@ -287,7 +274,7 @@ public class StripedBlockUtil {
 
   /**
    * Get the total usage of the striped blocks, which is the total of data
-   * blocks and parity blocks
+   * blocks and parity blocks.
    *
    * @param numDataBlkBytes
    *          Size of the block group only counting data blocks
@@ -305,91 +292,6 @@ public class StripedBlockUtil {
     long numParityBlkBytes = getInternalBlockLength(numDataBlkBytes, cellSize,
         dataBlkNum, parityIndex) * parityBlkNum;
     return numDataBlkBytes + numParityBlkBytes;
-  }
-
-  /**
-   * Initialize the decoding input buffers based on the chunk states in an
-   * {@link AlignedStripe}. For each chunk that was not initially requested,
-   * schedule a new fetch request with the decoding input buffer as transfer
-   * destination.
-   */
-  public static ByteBuffer[] initDecodeInputs(AlignedStripe alignedStripe,
-      int dataBlkNum, int parityBlkNum) {
-    ByteBuffer[] decodeInputs = new ByteBuffer[dataBlkNum + parityBlkNum];
-    for (int i = 0; i < decodeInputs.length; i++) {
-      decodeInputs[i] = ByteBuffer.allocate(
-          (int) alignedStripe.getSpanInBlock());
-    }
-    // read the full data aligned stripe
-    for (int i = 0; i < dataBlkNum; i++) {
-      if (alignedStripe.chunks[i] == null) {
-        alignedStripe.chunks[i] = new StripingChunk(decodeInputs[i]);
-      }
-    }
-    return decodeInputs;
-  }
-
-  /**
-   * Some fetched {@link StripingChunk} might be stored in original application
-   * buffer instead of prepared decode input buffers. Some others are beyond
-   * the range of the internal blocks and should correspond to all zero bytes.
-   * When all pending requests have returned, this method should be called to
-   * finalize decode input buffers.
-   */
-  public static void finalizeDecodeInputs(final ByteBuffer[] decodeInputs,
-                                          AlignedStripe alignedStripe) {
-    for (int i = 0; i < alignedStripe.chunks.length; i++) {
-      final StripingChunk chunk = alignedStripe.chunks[i];
-      if (chunk != null && chunk.state == StripingChunk.FETCHED) {
-        if (chunk.useChunkBuffer()) {
-          chunk.getChunkBuffer().copyTo(decodeInputs[i]);
-        } else {
-          chunk.getByteBuffer().flip();
-        }
-      } else if (chunk != null && chunk.state == StripingChunk.ALLZERO) {
-        //ZERO it. Will be better handled in other following issue.
-        byte[] emptyBytes = new byte[decodeInputs[i].limit()];
-        decodeInputs[i].put(emptyBytes);
-        decodeInputs[i].flip();
-      } else {
-        decodeInputs[i] = null;
-      }
-    }
-  }
-
-  /**
-   * Decode based on the given input buffers and erasure coding policy.
-   */
-  public static void decodeAndFillBuffer(final ByteBuffer[] decodeInputs,
-      AlignedStripe alignedStripe, int dataBlkNum, int parityBlkNum,
-      RawErasureDecoder decoder) {
-    // Step 1: prepare indices and output buffers for missing data units
-    int[] decodeIndices = new int[parityBlkNum];
-    int pos = 0;
-    for (int i = 0; i < dataBlkNum; i++) {
-      if (alignedStripe.chunks[i] != null &&
-          alignedStripe.chunks[i].state == StripingChunk.MISSING){
-        decodeIndices[pos++] = i;
-      }
-    }
-    decodeIndices = Arrays.copyOf(decodeIndices, pos);
-    ByteBuffer[] decodeOutputs = new ByteBuffer[decodeIndices.length];
-    for (int i = 0; i < decodeOutputs.length; i++) {
-      decodeOutputs[i] = ByteBuffer.allocate(
-          (int) alignedStripe.getSpanInBlock());
-    }
-
-    // Step 2: decode into prepared output buffers
-    decoder.decode(decodeInputs, decodeIndices, decodeOutputs);
-
-    // Step 3: fill original application buffer with decoded data
-    for (int i = 0; i < decodeIndices.length; i++) {
-      int missingBlkIdx = decodeIndices[i];
-      StripingChunk chunk = alignedStripe.chunks[missingBlkIdx];
-      if (chunk.state == StripingChunk.MISSING && chunk.useChunkBuffer()) {
-        chunk.getChunkBuffer().copyFrom(decodeOutputs[i]);
-      }
-    }
   }
 
   /**
@@ -485,7 +387,7 @@ public class StripedBlockUtil {
   /**
    * Map the logical byte range to a set of inclusive {@link StripingCell}
    * instances, each representing the overlap of the byte range to a cell
-   * used by {@link DFSStripedOutputStream} in encoding
+   * used by {@link DFSStripedOutputStream} in encoding.
    */
   @VisibleForTesting
   private static StripingCell[] getStripingCellsOfByteRange(
@@ -530,7 +432,7 @@ public class StripedBlockUtil {
     int dataBlkNum = ecPolicy.getNumDataUnits();
     int parityBlkNum = ecPolicy.getNumParityUnits();
 
-    VerticalRange ranges[] = new VerticalRange[dataBlkNum + parityBlkNum];
+    VerticalRange[] ranges = new VerticalRange[dataBlkNum + parityBlkNum];
 
     long earliestStart = Long.MAX_VALUE;
     long latestEnd = -1;
@@ -675,7 +577,7 @@ public class StripedBlockUtil {
   @VisibleForTesting
   static class StripingCell {
     final ErasureCodingPolicy ecPolicy;
-    /** Logical order in a block group, used when doing I/O to a block group */
+    /** Logical order in a block group, used when doing I/O to a block group. */
     final int idxInBlkGroup;
     final int idxInInternalBlk;
     final int idxInStripe;
@@ -738,7 +640,7 @@ public class StripedBlockUtil {
    */
   public static class AlignedStripe {
     public VerticalRange range;
-    /** status of each chunk in the stripe */
+    /** status of each chunk in the stripe. */
     public final StripingChunk[] chunks;
     public int fetchedChunksNum = 0;
     public int missingChunksNum = 0;
@@ -790,9 +692,9 @@ public class StripedBlockUtil {
    * +-----+
    */
   public static class VerticalRange {
-    /** start offset in the block group (inclusive) */
+    /** start offset in the block group (inclusive). */
     public long offsetInBlock;
-    /** length of the stripe range */
+    /** length of the stripe range. */
     public long spanInBlock;
 
     public VerticalRange(long offsetInBlock, long length) {
@@ -801,7 +703,7 @@ public class StripedBlockUtil {
       this.spanInBlock = length;
     }
 
-    /** whether a position is in the range */
+    /** whether a position is in the range. */
     public boolean include(long pos) {
       return pos >= offsetInBlock && pos < offsetInBlock + spanInBlock;
     }
@@ -915,7 +817,7 @@ public class StripedBlockUtil {
     /**
      *  Note: target will be ready-to-read state after the call.
      */
-    void copyTo(ByteBuffer target) {
+    public void copyTo(ByteBuffer target) {
       for (ByteBuffer slice : slices) {
         slice.flip();
         target.put(slice);
@@ -923,7 +825,7 @@ public class StripedBlockUtil {
       target.flip();
     }
 
-    void copyFrom(ByteBuffer src) {
+    public void copyFrom(ByteBuffer src) {
       ByteBuffer tmp;
       int len;
       for (ByteBuffer slice : slices) {
@@ -967,6 +869,28 @@ public class StripedBlockUtil {
     @Override
     public String toString() {
       return "(index=" + index + ", state =" + state + ")";
+    }
+  }
+
+  /** Used to indicate the buffered data's range in the block group. */
+  public static class StripeRange {
+    /** start offset in the block group (inclusive). */
+    final long offsetInBlock;
+    /** length of the stripe range. */
+    final long length;
+
+    public StripeRange(long offsetInBlock, long length) {
+      Preconditions.checkArgument(offsetInBlock >= 0 && length >= 0);
+      this.offsetInBlock = offsetInBlock;
+      this.length = length;
+    }
+
+    public boolean include(long pos) {
+      return pos >= offsetInBlock && pos < offsetInBlock + length;
+    }
+
+    public long getLength() {
+      return length;
     }
   }
 
