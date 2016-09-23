@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,12 +52,17 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public TestName methodName = new TestName();
 
   @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
+  public Timeout testTimeout = createTestTimeout();
 
-  @BeforeClass
-  public static void nameThread() {
+  @Before
+  public void nameThread() {
     Thread.currentThread().setName("JUnit");
   }
+
+  public static final long _1KB = 1024L;
+  public static final long _1MB = _1KB * _1KB;
+  public static final long _10MB = _1MB * 10;
+  public static final long _1GB = _1KB * _1MB;
 
   /**
    * The number of operations to perform: {@value}.
@@ -103,6 +110,31 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
       "s3.amazonaws.com";
 
   /**
+   * Name of the property to define the timeout for scale tests: {@value}.
+   * Measured in seconds.
+   */
+  public static final String KEY_TEST_TIMEOUT = S3A_SCALE_TEST + "timeout";
+
+  /**
+   * Name of the property to define the file size for the huge file
+   * tests: {@value}. Measured in MB.
+   */
+  public static final String KEY_HUGE_FILESIZE = S3A_SCALE_TEST + "huge.filesize";
+
+  /**
+   * Name of the property to define the partition size for the huge file
+   * tests: {@value}. Measured in MB.
+   */
+  public static final String KEY_HUGE_PARTITION_SIZE =
+      S3A_SCALE_TEST + "huge.partition.size";
+
+  /**
+   * The default huge size is small —full 5GB+ scale tests are something
+   * to run in long test runs on EC2 VMs. {@value}.
+   */
+  public static final long DEFAULT_HUGE_FILESIZE = 10L;
+
+  /**
    * The default number of operations to perform: {@value}.
    */
   public static final long DEFAULT_OPERATION_COUNT = 2005;
@@ -112,6 +144,11 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
    * directory performance/scale tests.
    */
   public static final int DEFAULT_DIRECTORY_COUNT = 2;
+
+  /**
+   * Default scale test timeout in seconds: {@value}.
+   */
+  public static final long DEFAULT_TEST_TIMEOUT = 30 * 60;
 
   protected S3AFileSystem fs;
 
@@ -139,9 +176,16 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   @Before
   public void setUp() throws Exception {
-    conf = createConfiguration();
+    demandCreateConfiguration();
     LOG.debug("Scale test operation count = {}", getOperationCount());
-    fs = S3ATestUtils.createTestFileSystem(conf);
+    // multipart purges are disabled on the scale tests
+    fs = S3ATestUtils.createTestFileSystem(conf, false);
+  }
+
+  private void demandCreateConfiguration() {
+    if (conf == null) {
+      conf = createConfiguration();
+    }
   }
 
   @After
@@ -157,6 +201,29 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   protected long getOperationCount() {
     return getConf().getLong(KEY_OPERATION_COUNT, DEFAULT_OPERATION_COUNT);
+  }
+
+  /**
+   * Create the timeout for tests. Some large tests may need a larger value.
+   * @return the test timeout to use
+   */
+  protected Timeout createTestTimeout() {
+    return new Timeout((int)getTestProperty(KEY_TEST_TIMEOUT,
+        DEFAULT_TEST_TIMEOUT) * 1000);
+  }
+
+  /**
+   * Get a test property which can defined first as a system property
+   * and then potentially overridden in a configuration property.
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  protected long getTestProperty(String key, long defVal) {
+    demandCreateConfiguration();
+    String propval = System.getProperty(key, Long.toString(defVal));
+    long longVal =  propval!=null? Long.valueOf(propval): defVal;
+    return getConf().getLong(key, longVal);
   }
 
   /**
@@ -189,4 +256,17 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     }
   }
 
+  /**
+   * Get the gauge value of a statistic. Raises an assertion if
+   * there is no such gauge.
+   * @param statistic statistic to look up
+   * @return the value.
+   */
+  public long gaugeValue(Statistic statistic) {
+    S3AInstrumentation instrumentation = fs.getInstrumentation();
+    MutableGaugeLong gauge = instrumentation.lookupGauge(statistic.getSymbol());
+    assertNotNull("No gauge " + statistic
+        + " in " + instrumentation.dump("", " = ", "\n", true), gauge);
+    return gauge.value();
+  }
 }

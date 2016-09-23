@@ -1056,13 +1056,21 @@
   <name>fs.s3a.multipart.purge</name>
   <value>false</value>
   <description>True if you want to purge existing multipart uploads that may not have been
-     completed/aborted correctly</description>
+    completed/aborted correctly. The corresponding purge age is defined in
+    fs.s3a.multipart.purge.age.
+    If set, when the filesystem is instantiated then all outstanding uploads
+    older than the purge age will be terminated -across the entire bucket.
+    This will impact multipart uploads by other applications and users. so should
+    be used sparingly, with an age value chosen to stop failed uploads, without
+    breaking ongoing operations.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge</description>
+  <description>Minimum age in seconds of multipart uploads to purge.
+  </description>
 </property>
 
 <property>
@@ -1093,12 +1101,40 @@
 </property>
 
 <property>
-  <name>fs.s3a.fast.upload</name>
+  <name>fs.s3a.block.output</name>
   <value>false</value>
-  <description>Upload directly from memory instead of buffering to
-    disk first. Memory usage and parallelism can be controlled as up to
-    fs.s3a.multipart.size memory is consumed for each (part)upload actively
-    uploading (fs.s3a.threads.max) or queueing (fs.s3a.max.total.tasks)</description>
+  <description>
+    Use the incremental block upload mechanism with
+    the buffering mechanism set in fs.s3a.block.output.buffer.
+    The number of threads performing uploads in the filesystem is defined
+    by fs.s3a.threads.max; the queue of waiting uploads limited by
+    fs.s3a.max.total.tasks.
+    The size of each buffer is set by fs.s3a.multipart.size.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>disk</value>
+  <description>
+    Buffering mechanism to use when using S3A Block upload
+    (fs.s3a.block.output=true). Values: disk, array, bytebuffer.
+
+    "disk" will use the directories listed in fs.s3a.buffer.dir as
+    the location(s) to save data prior to being uploaded.
+
+    "array" uses arrays in the JVM heap
+
+    "bytebuffer" uses off-heap memory within the JVM.
+
+    Both "array" and "bytebuffer" will consume memory proportional
+    to the partition size * active+pending block uploads.
+
+    To avoid running out of memory, keep the fs.s3a.threads.max and
+    fs.s3a.max.total.tasks values low.
+
+    No effect if fs.s3a.block.output is false.
+  </description>
 </property>
 
 <property>
@@ -1107,13 +1143,6 @@
   <description>Bytes to read ahead during a seek() before closing and
   re-opening the S3 HTTP connection. This option will be overridden if
   any call to setReadahead() is made to an open stream.</description>
-</property>
-
-<property>
-  <name>fs.s3a.fast.buffer.size</name>
-  <value>1048576</value>
-  <description>Size of initial memory buffer in bytes allocated for an
-    upload. No effect if fs.s3a.fast.upload is false.</description>
 </property>
 
 <property>

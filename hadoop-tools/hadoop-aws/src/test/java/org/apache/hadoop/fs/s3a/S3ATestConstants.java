@@ -73,4 +73,5 @@ public interface S3ATestConstants {
    * Run the encryption tests?
    */
   String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
+
 }

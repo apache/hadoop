@@ -45,15 +45,13 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AOutputStream extends OutputStream {
-  private OutputStream backupStream;
-  private File backupFile;
+  private final OutputStream backupStream;
+  private final File backupFile;
   private boolean closed;
-  private String key;
-  private Progressable progress;
-  private long partSize;
-  private long partSizeThreshold;
-  private S3AFileSystem fs;
-  private LocalDirAllocator lDirAlloc;
+  private final String key;
+  private final Progressable progress;
+  private final S3AFileSystem fs;
+  private final LocalDirAllocator lDirAlloc;
 
   public static final Logger LOG = S3AFileSystem.LOG;
 
@@ -64,14 +62,7 @@ public class S3AOutputStream extends OutputStream {
     this.progress = progress;
     this.fs = fs;
 
-    partSize = fs.getPartitionSize();
-    partSizeThreshold = fs.getMultiPartThreshold();
-
-    if (conf.get(BUFFER_DIR, null) != null) {
-      lDirAlloc = new LocalDirAllocator(BUFFER_DIR);
-    } else {
-      lDirAlloc = new LocalDirAllocator("${hadoop.tmp.dir}/s3a");
-    }
+    lDirAlloc = fs.getDirectoryAllocator();
 
     backupFile = lDirAlloc.createTmpFileForWrite("output-",
         LocalDirAllocator.SIZE_UNKNOWN, conf);
@@ -84,8 +75,19 @@ public class S3AOutputStream extends OutputStream {
         new FileOutputStream(backupFile));
   }
 
+  /**
+   * Check for the filesystem being open.
+   * @throws IOException if the filesystem is closed.
+   */
+  void checkOpen() throws IOException {
+    if (closed) {
+      throw new IOException("Filesystem closed");
+    }
+  }
+
   @Override
   public void flush() throws IOException {
+    checkOpen();
     backupStream.flush();
   }
 
@@ -97,9 +99,6 @@ public class S3AOutputStream extends OutputStream {
 
     backupStream.close();
     LOG.debug("OutputStream for key '{}' closed. Now beginning upload", key);
-    LOG.debug("Minimum upload part size: {} threshold {}" , partSize,
-        partSizeThreshold);
-
 
     try {
       final ObjectMetadata om = fs.newObjectMetadata();
@@ -133,11 +132,13 @@ public class S3AOutputStream extends OutputStream {
 
   @Override
   public void write(int b) throws IOException {
+    checkOpen();
     backupStream.write(b);
   }
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
+    checkOpen();
     backupStream.write(b, off, len);
   }
 

@@ -34,6 +34,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
     fc = S3ATestUtils.createTestFileContext(conf);
     fc.mkdir(fileContextTestHelper.getTestRootPath(fc, "test"),
         FileContext.DEFAULT_PERM, true);
+    FileContext.clearStatistics();
   }
 
   @After

@@ -51,7 +51,7 @@ public class ITestS3ABlockingThreadPool {
     conf = new Configuration();
     conf.setLong(Constants.MIN_MULTIPART_THRESHOLD, 5 * 1024 * 1024);
     conf.setLong(Constants.MULTIPART_SIZE, 5 * 1024 * 1024);
-    conf.setInt(Constants.MAX_THREADS, 2);
+    conf.setInt(Constants.MAX_THREADS, 1);
     conf.setInt(Constants.MAX_TOTAL_TASKS, 1);
   }
 
@@ -71,7 +71,9 @@ public class ITestS3ABlockingThreadPool {
 
   @Test
   public void testFastMultiPartUpload() throws Exception {
-    conf.setBoolean(Constants.FAST_UPLOAD, true);
+    conf.setBoolean(Constants.BLOCK_OUTPUT, true);
+    conf.set(Constants.BLOCK_OUTPUT_BUFFER,
+        Constants.BLOCK_OUTPUT_BYTEBUFFER);
     fs = S3ATestUtils.createTestFileSystem(conf);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 16 * 1024 *
         1024);

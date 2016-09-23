@@ -19,30 +19,38 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +58,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
@@ -82,6 +91,7 @@ public class S3AFastOutputStream extends OutputStream {
   private boolean closed;
   private ByteArrayOutputStream buffer;
   private int bufferLimit;
+  private final RetryPolicy retryPolicy;
 
 
   /**
@@ -94,7 +104,9 @@ public class S3AFastOutputStream extends OutputStream {
    * @param fs S3AFilesystem
    * @param bucket S3 bucket name
    * @param key S3 key name
-   * @param progress report progress in order to prevent timeouts
+   * @param progress report progress in order to prevent timeouts. If
+   * this class implements {@code ProgressListener} then it will be
+   * directly wired up to the AWS client, so receive detailed progress information.
    * @param cannedACL used CannedAccessControlList
    * @param partSize size of a single part in a multi-part upload (except
    * last part)
@@ -148,9 +160,23 @@ public class S3AFastOutputStream extends OutputStream {
     this.buffer = new ByteArrayOutputStream(initialBufferSize);
     this.executorService = MoreExecutors.listeningDecorator(threadPoolExecutor);
     this.multiPartUpload = null;
-    this.progressListener = new ProgressableListener(progress);
+    this.progressListener = (progress instanceof ProgressListener) ?
+        (ProgressListener) progress
+        : new ProgressableListener(progress);
+    this.retryPolicy = RetryPolicies.retryUpToMaximumCountWithProportionalSleep(
+        5, 2000, TimeUnit.MILLISECONDS);
     LOG.debug("Initialized S3AFastOutputStream for bucket '{}' key '{}'",
         bucket, key);
+  }
+
+  /**
+   * Check for the filesystem being open.
+   * @throws IOException if the filesystem is closed.
+   */
+  void checkOpen() throws IOException {
+    if (closed) {
+      throw new IOException("Filesystem closed");
+    }
   }
 
   /**
@@ -161,6 +187,7 @@ public class S3AFastOutputStream extends OutputStream {
    */
   @Override
   public synchronized void write(int b) throws IOException {
+    checkOpen();
     buffer.write(b);
     if (buffer.size() == bufferLimit) {
       uploadBuffer();
@@ -180,6 +207,7 @@ public class S3AFastOutputStream extends OutputStream {
   @Override
   public synchronized void write(byte[] b, int off, int len)
       throws IOException {
+    checkOpen();
     if (b == null) {
       throw new NullPointerException();
     } else if ((off < 0) || (off > b.length) || (len < 0) ||
@@ -245,7 +273,6 @@ public class S3AFastOutputStream extends OutputStream {
       } else {
         int size = buffer.size();
         if (size > 0) {
-          fs.incrementPutStartStatistics(size);
           //send last part
           multiPartUpload.uploadPartAsync(new ByteArrayInputStream(buffer
               .toByteArray()), size);
@@ -300,8 +327,7 @@ public class S3AFastOutputStream extends OutputStream {
         executorService.submit(new Callable<PutObjectResult>() {
           @Override
           public PutObjectResult call() throws Exception {
-            fs.incrementPutStartStatistics(size);
-            return client.putObject(putObjectRequest);
+            return fs.putObjectDirect(putObjectRequest);
           }
         });
     //wait for completion
@@ -367,31 +393,84 @@ public class S3AFastOutputStream extends OutputStream {
       }
     }
 
-    private void complete(List<PartETag> partETags) throws IOException {
+    /**
+     * This completes the upload.
+     * Sometimes it fails; here retries are handled to avoid losing all data
+     * on a transient failure.
+     * @param partETags list of partial uploads
+     * @throws IOException on any problem
+     */
+    private CompleteMultipartUploadResult complete(List<PartETag> partETags)
+        throws IOException {
+      int retryCount = 0;
+      AmazonClientException lastException;
+      do {
+        try {
+          LOG.debug("Completing multi-part upload for key '{}', id '{}'",
+              key, uploadId);
+          return client.completeMultipartUpload(
+              new CompleteMultipartUploadRequest(bucket,
+                  key,
+                  uploadId,
+                  partETags));
+        } catch (AmazonClientException e) {
+          lastException = e;
+        }
+      } while (shouldRetry(lastException, retryCount++));
+      // this point is only reached if the operation failed more than
+      // the allowed retry count
+      throw translateException("Completing multi-part upload", key,
+          lastException);
+    }
+
+    /**
+     * Abort a multi-part upload. Retries are attempted on failures.
+     */
+    public void abort() {
+      int retryCount = 0;
+      AmazonClientException lastException;
+      LOG.warn("Aborting multi-part upload with id '{}'", uploadId);
+      fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
+      do {
+        try {
+          LOG.debug("Completing multi-part upload for key '{}', id '{}'",
+              key, uploadId);
+          client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
+              key, uploadId));
+          return;
+        } catch (AmazonClientException e) {
+          lastException = e;
+        }
+      } while (shouldRetry(lastException, retryCount++));
+      // this point is only reached if the operation failed more than
+      // the allowed retry count
+      LOG.warn("Unable to abort multipart upload, you may need to purge  " +
+          "uploaded parts: {}", lastException, lastException);
+    }
+
+    /**
+     * Predicate to determine whether a failed operation should
+     * be attempted again.
+     * If a retry is advised, the exception is automatically logged and
+     * the filesystem statistic {@link Statistic#IGNORED_ERRORS} incremented.
+     * @param e exception raised.
+     * @param retryCount  number of retries already attempted
+     * @return true if another attempt should be made
+     */
+    private boolean shouldRetry(AmazonClientException e, int retryCount) {
       try {
-        LOG.debug("Completing multi-part upload for key '{}', id '{}'",
-            key, uploadId);
-        client.completeMultipartUpload(
-            new CompleteMultipartUploadRequest(bucket,
-                key,
-                uploadId,
-                partETags));
-      } catch (AmazonClientException e) {
-        throw translateException("Completing multi-part upload", key, e);
+        boolean retry = retryPolicy.shouldRetry(e, retryCount, 0, true)
+                == RetryPolicy.RetryAction.RETRY;
+        if (retry) {
+          fs.incrementStatistic(IGNORED_ERRORS);
+          LOG.info("Retrying operation after exception " + e, e);
+        }
+        return retry;
+      } catch (Exception ignored) {
+        return false;
       }
     }
 
-    public void abort() {
-      LOG.warn("Aborting multi-part upload with id '{}'", uploadId);
-      try {
-        fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
-        client.abortMultipartUpload(new AbortMultipartUploadRequest(bucket,
-            key, uploadId));
-      } catch (Exception e2) {
-        LOG.warn("Unable to abort multipart upload, you may need to purge  " +
-            "uploaded parts: {}", e2, e2);
-      }
-    }
   }
 
   private static class ProgressableListener implements ProgressListener {
@@ -407,4 +486,5 @@ public class S3AFastOutputStream extends OutputStream {
       }
     }
   }
+
 }

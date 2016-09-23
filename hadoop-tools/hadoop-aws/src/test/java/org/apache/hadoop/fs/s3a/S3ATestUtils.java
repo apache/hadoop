@@ -53,8 +53,25 @@ public class S3ATestUtils {
    */
   public static S3AFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
-    String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
+    return createTestFileSystem(conf, true);
+  }
 
+  /**
+   * Create the test filesystem with or without multipart purging
+   *
+   * If the test.fs.s3a.name property is not set, this will
+   * trigger a JUnit failure.
+   * @param conf configuration
+   * @param purge flag to enable Multipart purging
+   * @return the FS
+   * @throws IOException IO Problems
+   * @throws AssumptionViolatedException if the FS is not named
+   */
+  public static S3AFileSystem createTestFileSystem(Configuration conf,
+      boolean purge)
+      throws IOException {
+
+    String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
 
     boolean liveTest = !StringUtils.isEmpty(fsname);
     URI testURI = null;
@@ -70,8 +87,12 @@ public class S3ATestUtils {
     }
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
-    conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
-    conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 0);
+    if (purge) {
+      conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
+      // but a long delay so that parallel multipart tests don't
+      // suddenly start timing out
+      conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 30 * 60);
+    }
     fs1.initialize(testURI, conf);
     return fs1;
   }

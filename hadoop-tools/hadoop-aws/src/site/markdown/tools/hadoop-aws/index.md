@@ -881,8 +881,321 @@ Seoul
 If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
 or as a 400 Bad Request.
 
-### S3AFastOutputStream
- **Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
+### Improving S3A Upload Performance/Reducing Delays
+
+Because of the nature of the S3 object store, data written to an S3A `OutputStream` 
+is not written incrementally —instead, by default, it is buffered to disk
+until the stream is closed in its `close()` method. 
+
+This has time implications:
+
+* The execution time for `OutputStream.close()` is proportional to the amount of data
+buffered and inversely proportional to the bandwidth. That is `O(data/bandwidth)`.
+* The bandwidth is that available from the host to S3: other work in the same
+process, server or network at the time of upload may increase the upload time,
+hence the duration of the `close()` call.
+* If a process uploading data fails before `OutputStream.close()` is called,
+all data is lost.
+* The disks hosting temporary directories defined in `fs.s3a.buffer.dir` must
+have the capacity to store the entire buffered file.
+
+Put succinctly: the further the process is from the S3 endpoint, or the smaller
+the EC-hosted VM is, the longer it will take work to complete.
+
+This can create problems in application code:
+
+* Application code often assumes that the `close()` call is fast and so does not
+need to be executed in a separate thread: the delays can create bottlenecks in
+operations.
+
+* Very slow uploads sometimes cause applications to time out.
+ 
+* Large uploads may consume more disk capacity than is available in
+the temporary disk.
+
+There is ongoing work to address these issues, primarily through 
+supporting incremental uploads of large objects, uploading intermediate
+blocks of data (in S3 terms, "parts of a multipart upload). This can make more
+effective use of bandwidth during the write sequence, and may reduce the delay
+during the final `close()` call to that needed to upload *all outstanding
+data*, rather than *all data generated.* 
+
+This work began in Hadoop 2.7 with the `S3AFastOutputStream`
+[HADOOP-11183](https://issues.apache.org/jira/browse/HADOOP-11183), and
+has continued with ` S3ABlockOutputStream`
+[HADOOP-13560](https://issues.apache.org/jira/browse/HADOOP-13560).
+
+#### Stabilizing: S3ABlockOutputStream
+
+
+**New in Hadoop 2.9+; replaces the "fast" upload of Hadoop 2.7**
+
+The default mechanism for file uploads in S3 buffers the entire output to
+a file, then uploads it in the final `OutputStream.close()` call, a call
+which then takes time proportional to the data to upload.
+
+The Block output stream, `S3ABlockOutputStream` writes the file in blocks
+as the amount of data written exceeds the partition size defined in
+`fs.s3a.multipart.size`.
+
+This is high-performance incremental file upload mechanism which:
+
+1. Always uploads large files as blocks with the size set by
+   `fs.s3a.multipart.size`. That is: the threshold at which multipart uploads
+   begin and the size of each upload are identical.
+1. Uploads blocks in parallel in background threads.
+1. Begins uploading blocks as soon as the buffered data exceeds this partition
+   size.
+1. Can buffer data to disk (default) or in memory.
+1. When buffering data to disk, uses the directory/directories listed in
+   `fs.s3a.buffer.dir`. The size of data which can be buffered is limited
+   to the available disk space.
+1. Generates output statistics as metrics on the filesystem, including
+   statistics of active and pending block uploads.
+
+
+```xml
+<property>
+  <name>fs.s3a.block.upload</name>
+  <value>true</value>
+  <description>
+    Use the incremental block upload mechanism with
+    the buffering mechanism set in fs.s3a.block.output.buffer.
+    The number of threads performing uploads in the filesystem is defined
+    by fs.s3a.threads.max; the queue of waiting uploads limited by
+    fs.s3a.max.total.tasks.
+    The size of each buffer is set by fs.s3a.multipart.size.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>disk</value>
+  <description>
+    Buffering mechanism to use when using S3A Block upload
+    (fs.s3a.block.upload=true). Values: disk, array, bytebuffer.
+
+    "disk" will use the directories listed in fs.s3a.buffer.dir as
+    the location(s) to save data prior to being uploaded.
+
+    "array" uses arrays in the JVM heap
+
+    "bytebuffer" uses off-heap memory within the JVM.
+
+    Both "array" and "bytebuffer" will consume memory proportional
+    to the partition size * active+pending block uploads.
+
+    To avoid running out of memory, keep the fs.s3a.threads.max and
+    fs.s3a.max.total.tasks values low.
+
+    No effect if fs.s3a.block.upload is false.
+  </description>
+</property>
+  
+<property>
+  <name>fs.s3a.multipart.size</name>
+  <value>104857600</value>
+  <description>
+  How big (in bytes) to split upload or copy operations up into.
+  </description>
+</property>
+
+
+```
+
+**Notes**
+
+* If the amount of data written to a stream is below that set in `fs.s3a.multipart.size`,
+the upload is performed in the `OutputStream.close()` operation —as with
+the original output stream.
+
+* The published Hadoop metrics monitor include live queue length and
+upload operation counts, so identifying when there is a backlog of work/
+a mismatch between data generation rates and network bandwidth. Per-stream
+statistics can also be logged by calling `toString()` on the current stream.
+
+* Incremental writes are not visible; the object can only be listed
+or read when the multipart operation completes in the `close()` call, which
+will block until the upload is completed.
+
+
+##### Disk upload `fs.s3a.block.output.buffer=disk`
+
+When `fs.s3a.block.output.buffer` is set to `disk`, all data is buffered
+to local hard disks in prior to upload. This minimizes the amount of memory
+consumed, and so eliminates heap size as the limiting factor in queued uploads
+—exactly as the original "direct to disk" buffering used when
+`fs.s3a.block.output=false` and `fs.s3a.fast.upload=false`.
+
+Unlike the original buffering, uploads are incremental during the write operation:
+once the size of the output stream exceeds the number of bytes set in `fs.s3a.multipart.size`,
+the upload is queued to a background thread.
+
+This can make more effective use of available bandwidth to upload data
+to S3, and may reduce delays in the `OutputStream.close()` operation.
+
+The available upload bandwidth is generally limited by network capacity —
+rather than the number of threads performing uploads. Having a large value
+of `fs.s3a.threads.max` does not generally reduce upload time or increase
+throughput. Instead the bandwidth is shared between all threads, slowing them
+all down. We recommend a low number of threads, especially when uploading
+over long-haul connections. 
+
+Because the upload data is buffered via disk, there is little risk of heap
+overflow as the queue of pending uploads (limited by `fs.s3a.max.total.tasks`)
+increases.
+
+
+```xml
+<property>
+  <name>fs.s3a.block.output</name>
+  <value>true</value>
+</property>
+  
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>disk</value>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>5</value>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>20</value>
+</property>
+```
+
+
+##### Block Upload with ByteBuffers: `fs.s3a.block.output.buffer=bytebuffer`
+
+When `fs.s3a.block.output.buffer` is set to `bytebuffer`, all data is buffered
+in "Direct" ByteBuffers prior to upload. This *may* be faster than buffering to disk.
+
+These buffers are in the memory of the JVM, albeit not in the Java Heap itself.
+The amount of data which can be buffered is
+limited by the Jva runtime, the operating system, and, for YARN applications,
+the amount of memory requested for each container.
+
+The slower the write bandwidth to S3, the greater the risk of running out
+of memory.
+
+To reduce the risk of this, the number of
+threads performing uploads and the size of queued upload operations must be
+kept low.
+
+```xml
+<property>
+  <name>fs.s3a.block.output</name>
+  <value>true</value>
+</property>
+  
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>bytebuffer</value>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>3</value>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>1</value>
+</property>
+```
+
+
+##### Array upload: `fs.s3a.block.output.buffer=array`
+
+When `fs.s3a.block.output.buffer` is set to `array`, all data is buffered
+in byte arrays in the JVM's heap prior to upload.
+This *may* be faster than buffering to disk.
+
+This `array` option is similar to the in-memory-only stream offered in
+Hadoop 2.7 with `fs.s3a.fast.upload=true`
+
+The amount of data which can be buffered is limited by the available
+size of the JVM heap heap. The slower the write bandwidth to S3, the greater
+the risk of heap overflows. To reduce the risk of this, the number of
+threads performing uploads and the size of queued upload operations must be
+kept low. As an example: three threads and one queued task will consume
+`(3  + 1) * fs.s3a.multipart.size` bytes.
+
+```xml
+<property>
+  <name>fs.s3a.block.output</name>
+  <value>true</value>
+</property>
+  
+<property>
+  <name>fs.s3a.block.output.buffer</name>
+  <value>array</value>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>3</value>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>1</value>
+</property>
+```
+
+#### Cleaning up After Incremental Upload Failures: `fs.s3a.multipart.purge`
+
+
+If an incremental streaming operation is interrupted, there may be 
+intermediate partitions uploaded to S3 —which will be billed for.
+
+These charges can be reduced by enabling `fs.s3a.multipart.purge`, 
+and setting a purge time in seconds, such as 86400 seconds —24 hours, after
+which the S3 service automatically deletes outstanding multipart
+upload data from operations which are considered to have failed by virtue
+of having been in progress for longer than this purge time.
+
+```xml
+<property>
+  <name>fs.s3a.multipart.purge</name>
+  <value>true</value>
+  <description>True if you want to purge existing multipart uploads that may not have been
+     completed/aborted correctly</description>
+</property>
+
+<property>
+  <name>fs.s3a.multipart.purge.age</name>
+  <value>86400</value>
+  <description>Minimum age in seconds of multipart uploads to purge</description>
+</property>
+```
+
+If an S3A client is instantited with `fs.s3a.multipart.purge=true`,
+it sets the purge time *for the entire bucket*. That is: it will affect all
+multipart uploads to that bucket, from all applications —and persist until set
+to a a new value. Leaving `fs.s3a.multipart.purge` to its default, `false`,
+means that the client will not make any attempt to reset or change the partition
+rate.
+
+The best practise for using this option is for it to be explicitly set in a
+bucket management process to a value which is known to be greater than the
+maximum duration of any  multipart write, while leaving the configuration option to its
+default, `false` in `core-site.xml`. This eliminates the risk
+that one client unintentionally sets a purge time so low as to break multipart
+uploads being attempted by other applications.
+
+
+#### S3AFastOutputStream
+
+**Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
+
+**Hadoop 2.9+: use the block output mechanism instead**
+
+
 
     <property>
       <name>fs.s3a.fast.upload</name>
@@ -915,6 +1228,12 @@ parts of size `fs.s3a.multipart.size` are used to protect against overflowing
 the available memory. These settings should be tuned to the envisioned
 workflow (some large files, many small ones, ...) and the physical
 limitations of the machine and cluster (memory, network bandwidth).
+
+
+**Note** 
+
+Consult the section *Cleaning up After Incremental Upload Failures* for
+advice on how to manage multipart upload failures.
 
 ### S3A Experimental "fadvise" input policy support
 
@@ -1255,6 +1574,106 @@ can be used:
 
 Using the explicit endpoint for the region is recommended for speed and the
 ability to use the V4 signing API.
+
+
+## "Timeout waiting for connection from pool" when writing to S3A
+
+This happens when using the Fast output stream, `fs.s3a.fast.upload=true` and
+the thread pool runs out of capacity. 
+
+```
+ [s3a-transfer-shared-pool1-t20] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: Timeout waiting for connection from poolorg.apache.http.conn.ConnectionPoolTimeoutException: Timeout waiting for connection from pool
+	at org.apache.http.impl.conn.PoolingClientConnectionManager.leaseConnection(PoolingClientConnectionManager.java:230)
+	at org.apache.http.impl.conn.PoolingClientConnectionManager$1.getConnection(PoolingClientConnectionManager.java:199)
+	at sun.reflect.GeneratedMethodAccessor13.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at com.amazonaws.http.conn.ClientConnectionRequestFactory$Handler.invoke(ClientConnectionRequestFactory.java:70)
+	at com.amazonaws.http.conn.$Proxy10.getConnection(Unknown Source)
+	at org.apache.http.impl.client.DefaultRequestDirector.execute(DefaultRequestDirector.java:424)
+	at org.apache.http.impl.client.AbstractHttpClient.doExecute(AbstractHttpClient.java:884)
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:82)
+	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:55)
+	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:728)
+	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+	at com.amazonaws.services.s3.AmazonS3Client.doUploadPart(AmazonS3Client.java:2921)
+	at com.amazonaws.services.s3.AmazonS3Client.uploadPart(AmazonS3Client.java:2906)
+	at org.apache.hadoop.fs.s3a.S3AFileSystem.uploadPart(S3AFileSystem.java:1025)
+	at org.apache.hadoop.fs.s3a.S3AFastOutputStream$MultiPartUpload$1.call(S3AFastOutputStream.java:360)
+	at org.apache.hadoop.fs.s3a.S3AFastOutputStream$MultiPartUpload$1.call(S3AFastOutputStream.java:355)
+	at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+```
+
+Make sure that `fs.s3a.connection.maximum` is at least larger
+than `fs.s3a.threads.max`.
+
+```xml
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>20</value>
+</property>
+
+<property>
+  <name>fs.s3a.connection.maximum</name>
+  <value>30</value>
+</property>
+```
+
+## "Timeout waiting for connection from pool" when reading from S3A
+
+This happens when more threads are trying to read from an S3A system than
+the maximum number of allocated HTTP connections. 
+
+Set `fs.s3a.connection.maximum` to a larger value (and at least as large as 
+`fs.s3a.threads.max`)
+
+### Out of heap memory when writing to S3A
+
+This can happen when using the block output stream (`fs.s3a.block.output=true`)
+and in-memory buffering (either `fs.s3a.block.output.buffer=array` or
+`fs.s3a.block.output.buffer=bytebuffer`).
+
+More data is being generated than in the JVM than it can upload to S3 —and
+so much data has been buffered that the JVM has run out of memory.
+
+Fixes
+
+1. Increase heap capacity. This is a short term measure —the problem may
+return.
+1. Decrease the values of `fs.s3a.threads.max` and `fs.s3a.max.total.tasks`
+ so that less uploads can be pending. You may need to decrease the value
+of `fs.s3a.multipart.size` to reduce the amount of memory buffered in each
+queued operation.
+1. Switch to disk buffering: `fs.s3a.block.output.buffer=disk`. The upper limit
+on buffered data becomes limited to that of disk capacity.
+
+If using disk buffering, the number of total tasks can be kept high, as
+pending uploads consume little memory. Keeping the thread count low can
+reduce bandwidth requirements on the uploads
+
+## When writing to S3A: "java.io.FileNotFoundException: Completing multi-part upload"
+
+
+```
+java.io.FileNotFoundException: Completing multi-part upload on fork-5/test/multipart/1c397ca6-9dfb-4ac1-9cf7-db666673246b: com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed. (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: 84FF8057174D9369), S3 Extended Request ID: Ij5Yn6Eq/qIERH4Z6Io3YL2t9/qNZ7z9gjPb1FrTtTovZ8k1MXqh+zCYYjqmfJ/fCY6E1+JR9jA=
+	at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1182)
+	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:770)
+	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+	at com.amazonaws.services.s3.AmazonS3Client.completeMultipartUpload(AmazonS3Client.java:2705)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.complete(S3ABlockOutputStream.java:473)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$200(S3ABlockOutputStream.java:382)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.close(S3ABlockOutputStream.java:272)
+	at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:72)
+	at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
+``
 
 ## Visible S3 Inconsistency
 
@@ -1633,7 +2052,7 @@ tests or the `it.test` property for integration tests.
 
     mvn clean test -Dtest=TestS3AInputPolicies
 
-    mvn clean verify -Dit.test=ITestS3AFileContextStatistics
+    mvn clean verify -Dit.test=ITestS3AFileContextStatistics -Dtest=none
 
     mvn clean verify -Dtest=TestS3A* -Dit.test=ITestS3A*
 
@@ -1731,7 +2150,7 @@ endpoint:
 </property>
 ```
 
-#### Scale test operation count
+#### Scale tests
 
 Some scale tests perform multiple operations (such as creating many directories).
 
@@ -1767,6 +2186,37 @@ smaller to achieve faster test runs.
         <name>scale.test.distcp.file.size.kb</name>
         <value>10240</value>
       </property>
+
+S3A specific scale test properties are
+
+##### `fs.s3a.scale.test.huge.filesize`: size in MB for "Huge file tests".
+
+The Huge File tests validate S3A's ability to handle large files —the property
+`fs.s3a.scale.test.huge.filesize` declares the file size to use.
+
+```xml
+<property>
+  <name>fs.s3a.scale.test.huge.filesize</name>
+  <value>20</value>
+</property>
+```
+
+Amazon S3 handles files larger than 5GB differently than smaller ones.
+Setting the huge filesize to a number greater than 5120) validates support
+for huge files.
+
+```xml
+<property>
+  <name>fs.s3a.scale.test.huge.filesize</name>
+  <value>5130</value>
+</property>
+```
+
+1. Tests at this scale are slow: they are best executed from hosts running in
+the cloud infrastructure where the S3 endpoint is based.
+1. The tests are executed in an order to only clean up created files after
+the end of all the tests. If the tests are interrupted, the test data will remain.
+
 
 
 ### Testing against non AWS S3 endpoints.

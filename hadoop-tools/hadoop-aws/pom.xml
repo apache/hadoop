@@ -35,6 +35,11 @@
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
     <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
+
+    <!-- Size in MB of huge files. If set in auth-keys.xml, this value is ignored. -->
+    <fs.s3a.scale.test.huge.filesize>5</fs.s3a.scale.test.huge.filesize>
+    <!-- Timeout in seconds for scale tests. If set in auth-keys.xml, this value is ignored. -->
+    <fs.s3a.scale.test.timeout>1800</fs.s3a.scale.test.timeout>
   </properties>
 
   <profiles>
@@ -142,6 +147,9 @@
                     <!-- substitution.  Putting a prefix in front of it like -->
                     <!-- "fork-" makes it work. -->
                     <test.unique.fork.id>fork-${surefire.forkNumber}</test.unique.fork.id>
+                    <!-- Propagate scale parameters -->
+                    <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
+                    <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -160,10 +168,10 @@
                   <excludes>
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
                     <exclude>**/ITestS3ABlockingThreadPool.java</exclude>
-                    <exclude>**/ITestS3AFastOutputStream.java</exclude>
                     <exclude>**/ITestS3AFileSystemContract.java</exclude>
                     <exclude>**/ITestS3AMiniYarnCluster.java</exclude>
                     <exclude>**/ITest*Root*.java</exclude>
+                    <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -174,6 +182,11 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
+                  <systemPropertyVariables>
+                    <!-- Propagate scale parameters -->
+                    <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
+                    <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                  </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
                   <includes>
@@ -183,6 +196,8 @@
                     <include>**/ITestS3AFileSystemContract.java</include>
                     <include>**/ITestS3AMiniYarnCluster.java</include>
                     <include>**/ITest*Root*.java</include>
+                    <include>**/ITestS3AFileContextStatistics.java</include>
+                    <include>**/STest*.java</include>
                   </includes>
                 </configuration>
               </execution>
@@ -210,6 +225,11 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
+                  <systemPropertyVariables>
+                    <!-- Propagate scale parameters -->
+                    <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
+                    <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                  </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
                 </configuration>
               </execution>
