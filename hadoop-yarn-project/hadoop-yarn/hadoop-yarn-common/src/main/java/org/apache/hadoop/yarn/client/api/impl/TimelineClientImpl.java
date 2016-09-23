@@ -265,8 +265,7 @@ public class TimelineClientImpl extends TimelineClient {
         public boolean shouldRetryOn(Exception e) {
           // Only retry on connection exceptions
           return (e instanceof ClientHandlerException)
-              && (e.getCause() instanceof ConnectException ||
-                  e.getCause() instanceof SocketTimeoutException);
+              && (e.getCause() instanceof ConnectException);
         }
       };
       try {
