@@ -45,6 +45,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
@@ -68,6 +69,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.InvalidRequestException;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -121,6 +123,9 @@ public class S3AFileSystem extends FileSystem {
   private ExecutorService threadPoolExecutor;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
+  private static final Logger PROGRESS =
+      LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
+  private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
   private S3AInstrumentation instrumentation;
@@ -133,6 +138,24 @@ public class S3AFileSystem extends FileSystem {
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
+  private boolean blockUploadEnabled;
+  private String blockOutputBuffer;
+  private S3ADataBlocks.BlockFactory blockFactory;
+
+  /*
+   * Register Deprecated options.
+   */
+  static {
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+        new Configuration.DeprecationDelta("fs.s3a.threads.core",
+            null,
+            "Unsupported option \"fs.s3a.threads.core\" will be ignored"),
+        new Configuration.DeprecationDelta(FAST_UPLOAD,
+            BLOCK_OUTPUT,
+            FAST_UPLOAD + " has been replaced by " + BLOCK_OUTPUT
+            + " with multiple buffering options. Switching to block output.")
+    });
+  }
 
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
@@ -159,18 +182,10 @@ public class S3AFileSystem extends FileSystem {
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
-      partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-      if (partSize < 5 * 1024 * 1024) {
-        LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
-        partSize = 5 * 1024 * 1024;
-      }
-
-      multiPartThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
+      partSize = getMultipartSizeProperty(conf, MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+      multiPartThreshold = getMultipartSizeProperty(conf, MIN_MULTIPART_THRESHOLD,
           DEFAULT_MIN_MULTIPART_THRESHOLD);
-      if (multiPartThreshold < 5 * 1024 * 1024) {
-        LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
-        multiPartThreshold = 5 * 1024 * 1024;
-      }
+
       //check but do not store the block size
       longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
@@ -186,13 +201,7 @@ public class S3AFileSystem extends FileSystem {
                     }
                   });
 
-      if (conf.get("fs.s3a.threads.core") != null &&
-          warnedOfCoreThreadDeprecation.compareAndSet(false, true)) {
-        LoggerFactory.getLogger(
-            "org.apache.hadoop.conf.Configuration.deprecation")
-            .warn("Unsupported option \"fs.s3a.threads.core\"" +
-                " will be ignored {}", conf.get("fs.s3a.threads.core"));
-      }
+
       int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
       if (maxThreads < 2) {
         LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
@@ -215,11 +224,28 @@ public class S3AFileSystem extends FileSystem {
       verifyBucketExists();
 
       initMultipartUploads(conf);
+      String bufferDir = conf.get(BUFFER_DIR) != null
+          ? BUFFER_DIR : "hadoop.tmp.dir";
+      directoryAllocator = new LocalDirAllocator(bufferDir);
 
       serverSideEncryptionAlgorithm =
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+      LOG.debug("Using encryption {}", serverSideEncryptionAlgorithm);
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
+
+      blockUploadEnabled = conf.getBoolean(BLOCK_OUTPUT, false);
+      blockOutputBuffer = conf.getTrimmed(BLOCK_OUTPUT_BUFFER,
+          DEFAULT_BLOCK_OUTPUT_BUFFER);
+
+      if (blockUploadEnabled) {
+        partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
+        blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
+        LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={}",
+            blockOutputBuffer, partSize);
+      } else {
+        LOG.debug("Using S3AOutputStream");
+      }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -343,6 +369,38 @@ public class S3AFileSystem extends FileSystem {
   @InterfaceStability.Unstable
   public S3AInputPolicy getInputPolicy() {
     return inputPolicy;
+  }
+
+  /**
+   * Round-robin directory allocator
+   * @return allocator of directories for output streams.
+   */
+  LocalDirAllocator getDirectoryAllocator() {
+    return directoryAllocator;
+  }
+
+  /**
+   * Get the bucket of this filesystem
+   * @return the bucket
+   */
+  public String getBucket() {
+    return bucket;
+  }
+
+  /**
+   * Get the thread pool of this FS
+   * @return the (blocking) thread pool.
+   */
+  public ExecutorService getThreadPoolExecutor() {
+    return threadPoolExecutor;
+  }
+
+  /**
+   * ACL list if set.
+   * @return an ACL list or null.
+   */
+  public CannedAccessControlList getCannedACL() {
+    return cannedACL;
   }
 
   /**
@@ -493,28 +551,29 @@ public class S3AFileSystem extends FileSystem {
 
     }
     instrumentation.fileCreated();
-    if (getConf().getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD)) {
-      return new FSDataOutputStream(
-          new S3AFastOutputStream(s3,
-              this,
-              bucket,
+    FSDataOutputStream output;
+    if (blockUploadEnabled) {
+      output = new FSDataOutputStream(
+          new S3ABlockOutputStream(this,
               key,
               progress,
-              cannedACL,
               partSize,
-              multiPartThreshold,
-              threadPoolExecutor),
-          statistics);
+              blockFactory,
+              instrumentation.newOutputStreamStatistics()),
+          null);
+    } else {
+
+      // We pass null to FSDataOutputStream so it won't count writes that
+      // are being buffered to a file
+      output = new FSDataOutputStream(
+          new S3AOutputStream(getConf(),
+              this,
+              key,
+              progress
+          ),
+          null);
     }
-    // We pass null to FSDataOutputStream so it won't count writes that
-    // are being buffered to a file
-    return new FSDataOutputStream(
-        new S3AOutputStream(getConf(),
-            this,
-            key,
-            progress
-        ),
-        null);
+    return output;
   }
 
   /**
@@ -758,6 +817,33 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Decrement a gauge by a specific value.
+   * @param statistic The operation to decrement
+   * @param count the count to decrement
+   */
+  protected void decrementGauge(Statistic statistic, long count) {
+    instrumentation.decrementGauge(statistic, count);
+  }
+
+  /**
+   * Increment a gauge by a specific value.
+   * @param statistic The operation to increment
+   * @param count the count to increment
+   */
+  protected void incrementGauge(Statistic statistic, long count) {
+    instrumentation.incrementGauge(statistic, count);
+  }
+
+  /**
+   * Get the storage statistics of this filesystem.
+   * @return the storage statistics
+   */
+  @Override
+  public S3AStorageStatistics getStorageStatistics() {
+    return storageStatistics;
+  }
+
+  /**
    * Request object metadata; increments counters in the process.
    * @param key key
    * @return the metadata
@@ -926,7 +1012,39 @@ public class S3AFileSystem extends FileSystem {
       len = putObjectRequest.getMetadata().getContentLength();
     }
     incrementPutStartStatistics(len);
-    return transfers.upload(putObjectRequest);
+    try {
+      Upload upload = transfers.upload(putObjectRequest);
+      incrementPutCompletedStatistics(true, len);
+      return upload;
+    } catch (AmazonClientException e) {
+      incrementPutCompletedStatistics(false, len);
+      throw e;
+    }
+  }
+
+  /**
+   * PUT an object directly (i.e. not via the transfer manager).
+   * Byte length is calculated from the file length, or, if there is no
+   * file, from the content length of the header.
+   * @param putObjectRequest the request
+   * @return the upload initiated
+   */
+  public PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest) {
+    long len;
+    if (putObjectRequest.getFile() != null) {
+      len = putObjectRequest.getFile().length();
+    } else {
+      len = putObjectRequest.getMetadata().getContentLength();
+    }
+    incrementPutStartStatistics(len);
+    try {
+      PutObjectResult result = s3.putObject(putObjectRequest);
+      incrementPutCompletedStatistics(true, len);
+      return result;
+    } catch (AmazonClientException e) {
+      incrementPutCompletedStatistics(false, len);
+      throw e;
+    }
   }
 
   /**
@@ -936,8 +1054,16 @@ public class S3AFileSystem extends FileSystem {
    * @return the result of the operation.
    */
   public UploadPartResult uploadPart(UploadPartRequest request) {
-    incrementPutStartStatistics(request.getPartSize());
-    return s3.uploadPart(request);
+    long len = request.getPartSize();
+    incrementPutStartStatistics(len);
+    try {
+      UploadPartResult uploadPartResult = s3.uploadPart(request);
+      incrementPutCompletedStatistics(true, len);
+      return uploadPartResult;
+    } catch (AmazonClientException e) {
+      incrementPutCompletedStatistics(false, len);
+      throw e;
+    }
   }
 
   /**
@@ -950,9 +1076,28 @@ public class S3AFileSystem extends FileSystem {
     LOG.debug("PUT start {} bytes", bytes);
     incrementWriteOperations();
     incrementStatistic(OBJECT_PUT_REQUESTS);
+    incrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
+    if (bytes > 0) {
+      incrementGauge(OBJECT_PUT_BYTES_PENDING, bytes);
+    }
+  }
+
+  /**
+   * At the end of a put/multipart upload operation, update the
+   * relevant counters and gauges.
+   *
+   * @param success did the operation succeed?
+   * @param bytes bytes in the request.
+   */
+  public void incrementPutCompletedStatistics(boolean success, long bytes) {
+    LOG.debug("PUT completed success={}; {} bytes", success, bytes);
+    incrementWriteOperations();
     if (bytes > 0) {
       incrementStatistic(OBJECT_PUT_BYTES, bytes);
+      decrementGauge(OBJECT_PUT_BYTES_PENDING, bytes);
     }
+    incrementStatistic(OBJECT_PUT_REQUESTS_COMPLETED);
+    decrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
   }
 
   /**
@@ -963,7 +1108,7 @@ public class S3AFileSystem extends FileSystem {
    * @param bytes bytes successfully uploaded.
    */
   public void incrementPutProgressStatistics(String key, long bytes) {
-    LOG.debug("PUT {}: {} bytes", key, bytes);
+    PROGRESS.debug("PUT {}: {} bytes", key, bytes);
     incrementWriteOperations();
     if (bytes > 0) {
       statistics.incrementBytesWritten(bytes);
@@ -1750,6 +1895,9 @@ public class S3AFileSystem extends FileSystem {
       sb.append(", serverSideEncryptionAlgorithm='")
           .append(serverSideEncryptionAlgorithm)
           .append('\'');
+    }
+    if (blockFactory != null) {
+      sb.append("Block Upload enabled via ").append(blockFactory);
     }
     sb.append(", statistics {")
         .append(statistics)
