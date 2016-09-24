@@ -192,5 +192,5 @@ Following label-related fields can be seen on web UI:
 Useful links
 ------------
 
-* [YARN Capacity Scheduler](http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html), if you need more understanding about how to configure Capacity Scheduler
+* [YARN Capacity Scheduler](./CapacityScheduler.html), if you need more understanding about how to configure Capacity Scheduler
 * Write YARN application using node labels, you can see following two links as examples: [YARN distributed shell](https://issues.apache.org/jira/browse/YARN-2502), [Hadoop MapReduce](https://issues.apache.org/jira/browse/MAPREDUCE-6304)

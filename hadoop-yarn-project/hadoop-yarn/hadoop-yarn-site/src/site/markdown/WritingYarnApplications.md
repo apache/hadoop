@@ -577,11 +577,11 @@ Setting `-Djava.library.path` on the command line while launching a container ca
 Useful Links
 ------------
 
-* [YARN Architecture](http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/YARN.html)
+* [YARN Architecture](./YARN.html)
 
-* [YARN Capacity Scheduler](http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html)
+* [YARN Capacity Scheduler](./CapacityScheduler.html)
 
-* [YARN Fair Scheduler](http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/FairScheduler.html)
+* [YARN Fair Scheduler](./FairScheduler.html)
 
 Sample Code
 -----------
