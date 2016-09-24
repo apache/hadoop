@@ -25,7 +25,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-
 /**
  * Unit tests for {@link S3ADataBlocks}.
  */
@@ -48,8 +47,8 @@ public class TestDataBlocks extends Assert {
    */
   @Test
   public void testByteBufferIO() throws Throwable {
-    try(S3ADataBlocks.ByteBufferBlockFactory factory =
-        new S3ADataBlocks.ByteBufferBlockFactory(null)) {
+    try (S3ADataBlocks.ByteBufferBlockFactory factory =
+             new S3ADataBlocks.ByteBufferBlockFactory(null)) {
       int limit = 128;
       S3ADataBlocks.ByteBufferBlockFactory.ByteBufferBlock block
           = factory.create(limit);
@@ -75,7 +74,7 @@ public class TestDataBlocks extends Assert {
           expected, stream.available());
 
       assertEquals('t', stream.read());
-      expected --;
+      expected--;
       assertEquals("wrong available() in " + stream,
           expected, stream.available());
 

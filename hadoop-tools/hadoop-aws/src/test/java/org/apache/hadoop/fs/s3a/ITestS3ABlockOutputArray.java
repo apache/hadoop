@@ -21,13 +21,16 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER_ARRAY;
+import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 
 /**
  * Tests small file upload functionality for

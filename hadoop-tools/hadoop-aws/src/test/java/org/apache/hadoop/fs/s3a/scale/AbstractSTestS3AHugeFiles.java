@@ -38,9 +38,19 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.bandwidth;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
+import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SOCKET_RECV_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.SOCKET_SEND_BUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyInt;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyLong;
 
 /**
  * Scale test which creates a huge file.
@@ -69,7 +79,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-
 
     final Path testPath = getTestPath();
     scaleTestDir = new Path(testPath, "scale");
@@ -112,7 +121,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   @Test
   public void test_010_CreateHugeFile() throws IOException {
-    long mb = getTestPropertyLong(getConf(), KEY_HUGE_FILESIZE, DEFAULT_HUGE_FILESIZE);
+    long mb = getTestPropertyLong(getConf(), KEY_HUGE_FILESIZE,
+        DEFAULT_HUGE_FILESIZE);
     long filesize = _1MB * mb;
 
     describe("Creating file %s of size %d MB" +
@@ -121,12 +131,11 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
     byte[] data = new byte[uploadBlockSize];
     for (int i = 0; i < uploadBlockSize; i++) {
-      data[i] = (byte)(i % 256);
+      data[i] = (byte) (i % 256);
     }
 
-    assertEquals (
-        "File size set in " + KEY_HUGE_FILESIZE+ " = " + filesize
-        +" is not a multiple of " + uploadBlockSize,
+    assertEquals("File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
+            + " is not a multiple of " + uploadBlockSize,
         0, filesize % uploadBlockSize);
     long blocks = filesize / uploadBlockSize;
     long blocksPerMB = _1MB / uploadBlockSize;
@@ -143,7 +152,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
     long blocksPer10MB = blocksPerMB * 10;
-    try(FSDataOutputStream out = fs.create(hugefile,
+    try (FSDataOutputStream out = fs.create(hugefile,
         true,
         uploadBlockSize,
         new ProgressCallback())) {
@@ -183,7 +192,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Long putByteCount = storageStatistics.getLong(putBytes);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,
-        putByteCount  / (putRequestCount * _1MB));
+        putByteCount / (putRequestCount * _1MB));
     LOG.info("Time per PUT {} nS",
         toHuman(timer.nanosPerOperation(putRequestCount)));
     S3AFileStatus status = fs.getFileStatus(hugefile);
@@ -297,7 +306,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     bandwidth(timer, filesize);
     logFSState();
   }
-
 
   @Test
   public void test_100_renameHugeFile() throws Throwable {

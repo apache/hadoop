@@ -61,8 +61,6 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   public static final int _1KB = 1024;
   public static final int _1MB = _1KB * _1KB;
-  public static final long _10MB = _1MB * 10L;
-  public static final long _1GB = _1KB * _1MB;
 
   /**
    * The number of operations to perform: {@value}.
@@ -166,7 +164,7 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   private Configuration conf;
 
-  protected boolean enabled;
+  private boolean enabled;
 
   /**
    * Configuration generator. May be overridden to inject
@@ -184,6 +182,7 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public Configuration getConf() {
     return conf;
   }
+
 
   /**
    * Setup. This triggers creation of the configuration.
@@ -283,5 +282,9 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     assertNotNull("No gauge " + statistic
         + " in " + instrumentation.dump("", " = ", "\n", true), gauge);
     return gauge.value();
+  }
+
+  protected boolean isEnabled() {
+    return enabled;
   }
 }

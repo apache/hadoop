@@ -94,7 +94,9 @@ class S3ABlockOutputStream extends OutputStream {
   private final ProgressListener progressListener;
   private final ListeningExecutorService executorService;
 
-  /** Retry policy for multipart commits; not all AWS SDK versions retry that. */
+  /**
+   * Retry policy for multipart commits; not all AWS SDK versions retry that.
+   */
   private final RetryPolicy retryPolicy =
       RetryPolicies.retryUpToMaximumCountWithProportionalSleep(
           5,
@@ -132,7 +134,8 @@ class S3ABlockOutputStream extends OutputStream {
    * @param key S3 object to work on.
    * @param progress report progress in order to prevent timeouts. If
    * this class implements {@code ProgressListener} then it will be
-   * directly wired up to the AWS client, so receive detailed progress information.
+   * directly wired up to the AWS client, so receive detailed progress
+   * information.
    * @param blockSize size of a single block.
    * @param blockFactory factory for creating stream destinations
    * @param statistics stats for this stream
@@ -160,7 +163,7 @@ class S3ABlockOutputStream extends OutputStream {
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    LOG.debug("Initialized S3AFastOutputStream for bucket '{}' key '{}' " +
+    LOG.debug("Initialized S3ABlockOutputStream for bucket '{}' key '{}' " +
             "output to {}", bucket, key, activeBlock);
     maybeCreateBlock();
   }
@@ -374,7 +377,7 @@ class S3ABlockOutputStream extends OutputStream {
   }
 
   /**
-   * Start the multipart upload process
+   * Start the multipart upload process.
    * @return the upload result containing the ID
    * @throws IOException
    */
@@ -387,7 +390,8 @@ class S3ABlockOutputStream extends OutputStream {
     initiateMPURequest.setCannedACL(cannedACL);
     try {
       return new MultiPartUpload(
-          getS3Client().initiateMultipartUpload(initiateMPURequest).getUploadId());
+          getS3Client().initiateMultipartUpload(initiateMPURequest)
+              .getUploadId());
     } catch (AmazonClientException ace) {
       throw translateException("initiate MultiPartUpload", key, ace);
     }
@@ -654,7 +658,7 @@ class S3ABlockOutputStream extends OutputStream {
    * The upload progress listener registered for events.
    * It updates statistics and handles the end of the upload
    */
-  private class BlockUploadProgress implements ProgressListener {
+  private final class BlockUploadProgress implements ProgressListener {
     private final S3ADataBlocks.DataBlock block;
     private final ProgressListener nextListener;
     private final long transferQueueTime;
@@ -680,7 +684,7 @@ class S3ABlockOutputStream extends OutputStream {
       ProgressEventType eventType = progressEvent.getEventType();
       long bytesTransferred = progressEvent.getBytesTransferred();
 
-      int blockSize = block.dataSize();
+      int size = block.dataSize();
       switch (eventType) {
 
       case REQUEST_BYTE_TRANSFER_EVENT:
@@ -691,16 +695,16 @@ class S3ABlockOutputStream extends OutputStream {
       case TRANSFER_PART_STARTED_EVENT:
         transferStartTime = now();
         statistics.blockUploadStarted(transferStartTime - transferQueueTime,
-            blockSize);
+            size);
         incrementWriteOperations();
         break;
 
       case TRANSFER_PART_COMPLETED_EVENT:
-        statistics.blockUploadCompleted(now() - transferStartTime, blockSize);
+        statistics.blockUploadCompleted(now() - transferStartTime, size);
         break;
 
       case TRANSFER_PART_FAILED_EVENT:
-        statistics.blockUploadFailed(now() - transferStartTime, blockSize);
+        statistics.blockUploadFailed(now() - transferStartTime, size);
         break;
 
       default:

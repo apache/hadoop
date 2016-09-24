@@ -31,8 +31,11 @@ import java.net.URI;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.PURGE_EXISTING_MULTIPART;
+import static org.apache.hadoop.fs.s3a.Constants.PURGE_EXISTING_MULTIPART_AGE;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_ENCRYPTION_TESTS;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
 
 /**
  * Utilities for the S3A tests.
@@ -252,8 +255,8 @@ public class S3ATestUtils {
       String defVal) {
     String confVal = conf != null ? conf.getTrimmed(key, defVal) : defVal;
     String propval = System.getProperty(key);
-    return StringUtils.isNotEmpty(propval) && ! "unset".equals(propval)
-        ? propval : confVal ;
+    return StringUtils.isNotEmpty(propval) && !"unset".equals(propval)
+        ? propval : confVal;
   }
 
   /**

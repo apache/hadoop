@@ -142,9 +142,7 @@ public enum Statistic {
   STREAM_WRITE_BANDWIDTH("stream_write_bandwidth",
       "Gauge of inferred bandwidth"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
-      "Total queue duration of all block uploads"),
-
-  ;
+      "Total queue duration of all block uploads");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

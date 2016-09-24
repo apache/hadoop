@@ -182,9 +182,10 @@ public class S3AFileSystem extends FileSystem {
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
       listing = new Listing(this);
-      partSize = getMultipartSizeProperty(conf, MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-      multiPartThreshold = getMultipartSizeProperty(conf, MIN_MULTIPART_THRESHOLD,
-          DEFAULT_MIN_MULTIPART_THRESHOLD);
+      partSize = getMultipartSizeProperty(conf,
+          MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+      multiPartThreshold = getMultipartSizeProperty(conf,
+          MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
 
       //check but do not store the block size
       longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
@@ -372,7 +373,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Round-robin directory allocator
+   * Round-robin directory allocator.
    * @return allocator of directories for output streams.
    */
   LocalDirAllocator getDirectoryAllocator() {
@@ -380,7 +381,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Get the bucket of this filesystem
+   * Get the bucket of this filesystem.
    * @return the bucket
    */
   public String getBucket() {
@@ -388,7 +389,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Get the thread pool of this FS
+   * Get the thread pool of this FS.
    * @return the (blocking) thread pool.
    */
   public ExecutorService getThreadPoolExecutor() {

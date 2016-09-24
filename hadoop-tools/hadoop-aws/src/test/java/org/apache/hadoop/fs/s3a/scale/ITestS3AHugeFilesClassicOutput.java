@@ -19,11 +19,8 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.Constants;
 
 import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER_ARRAY;
 
 /**
  * Use classic output for writing things; tweaks the configuration to do

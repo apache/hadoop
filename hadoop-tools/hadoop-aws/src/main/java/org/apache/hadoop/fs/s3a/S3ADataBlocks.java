@@ -48,8 +48,12 @@ import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Writing
  * Set of classes to support output streaming into blocks which are then
  * uploaded as partitions.
  */
-class S3ADataBlocks {
-  static final Logger LOG = LoggerFactory.getLogger(S3ADataBlocks.class);
+final class S3ADataBlocks {
+
+  private static final Logger LOG = LoggerFactory.getLogger(S3ADataBlocks.class);
+
+  private S3ADataBlocks() {
+  }
 
   /**
    * Validate args to a write command.
@@ -282,7 +286,7 @@ class S3ADataBlocks {
   /**
    * Stream to memory via a {@code ByteArrayOutputStream}.
    *
-   * This was taken from {@link S3AFastOutputStream} and has the
+   * This was taken from {@code S3AFastOutputStream} and has the
    * same problem which surfaced there: it consumes heap space
    * proportional to the mismatch between writes to the stream and
    * the JVM-wide upload bandwidth to the S3 endpoint.
@@ -393,7 +397,7 @@ class S3ADataBlocks {
     }
 
     /**
-     * Get count of outstanding buffers
+     * Get count of outstanding buffers.
      * @return the current buffer count
      */
     public int getOutstandingBufferCount() {
@@ -592,8 +596,8 @@ class S3ADataBlocks {
        * @param offset offset within the buffer
        * @param length length of bytes to read
        * @throws EOFException if the position is negative
-       * @throws IndexOutOfBoundsException if there isn't space for the amount of
-       * data requested.
+       * @throws IndexOutOfBoundsException if there isn't space for the
+       * amount of data requested.
        * @throws IllegalArgumentException other arguments are invalid.
        */
       public synchronized int read(byte[] buffer, int offset, int length)
@@ -743,6 +747,11 @@ class S3ADataBlocks {
 
       case Closed:
         // no-op
+        break;
+
+      default:
+        // this state can never be reached, but checkstyle complains, so
+        // it is here.
       }
     }
 
@@ -769,7 +778,7 @@ class S3ADataBlocks {
     /**
      * An input stream which deletes the buffer file when closed.
      */
-    private class FileDeletingInputStream extends ForwardingInputStream {
+    private final class FileDeletingInputStream extends ForwardingInputStream {
       private final AtomicBoolean closed = new AtomicBoolean(false);
 
       FileDeletingInputStream(InputStream source) {
@@ -777,14 +786,16 @@ class S3ADataBlocks {
       }
 
       /**
-       * Delete the input file when closed
+       * Delete the input file when closed.
        * @throws IOException IO problem
        */
       @Override
       public void close() throws IOException {
         super.close();
         if (!closed.getAndSet(true)) {
-          bufferFile.delete();
+          if (!bufferFile.delete()) {
+            LOG.warn("delete({}) returned false", bufferFile.getAbsoluteFile());
+          }
         }
       }
     }
