@@ -174,6 +174,20 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
+   * Kill an application identified by given ID.
+   * </p>
+   * @param applicationId {@link ApplicationId} of the application that needs to
+   *          be killed
+   * @param diagnostics for killing an application.
+   * @throws YarnException in case of errors or if YARN rejects the request due
+   *           to access-control restrictions.
+   * @throws IOException
+   */
+  public abstract void killApplication(ApplicationId applicationId,
+      String diagnostics) throws YarnException, IOException;
+
+  /**
+   * <p>
    * Get a report of the given Application.
    * </p>
    * 

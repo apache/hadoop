@@ -400,9 +400,20 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public void killApplication(ApplicationId applicationId)
       throws YarnException, IOException {
+    killApplication(applicationId, null);
+  }
+
+  @Override
+  public void killApplication(ApplicationId applicationId, String diagnostics)
+      throws YarnException, IOException {
+
     KillApplicationRequest request =
         Records.newRecord(KillApplicationRequest.class);
     request.setApplicationId(applicationId);
+
+    if (diagnostics != null) {
+      request.setDiagnostics(diagnostics);
+    }
 
     try {
       int pollCount = 0;
@@ -417,14 +428,15 @@ public class YarnClientImpl extends YarnClient {
         }
 
         long elapsedMillis = System.currentTimeMillis() - startTime;
-        if (enforceAsyncAPITimeout() &&
-            elapsedMillis >= this.asyncApiPollTimeoutMillis) {
-          throw new YarnException("Timed out while waiting for application " +
-            applicationId + " to be killed.");
+        if (enforceAsyncAPITimeout()
+            && elapsedMillis >= this.asyncApiPollTimeoutMillis) {
+          throw new YarnException("Timed out while waiting for application "
+              + applicationId + " to be killed.");
         }
 
         if (++pollCount % 10 == 0) {
-          LOG.info("Waiting for application " + applicationId + " to be killed.");
+          LOG.info(
+              "Waiting for application " + applicationId + " to be killed.");
         }
         Thread.sleep(asyncApiPollIntervalMillis);
       }

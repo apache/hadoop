@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class AppState {
 
   String state;
+  private String diagnostics;
 
   public AppState() {
   }
@@ -43,4 +44,11 @@ public class AppState {
     return this.state;
   }
 
+  public String getDiagnostics() {
+    return diagnostics;
+  }
+
+  public void setDiagnostics(String diagnostics) {
+    this.diagnostics = diagnostics;
+  }
 }
