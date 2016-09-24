@@ -131,14 +131,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -180,7 +182,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -925,7 +926,7 @@ public class RMWebServices extends WebServices {
       // allow users to kill the app
 
       if (targetState.getState().equals(YarnApplicationState.KILLED.toString())) {
-        return killApp(app, callerUGI, hsr);
+        return killApp(app, callerUGI, hsr, targetState.getDiagnostics());
       }
       throw new BadRequestException("Only '"
           + YarnApplicationState.KILLED.toString()
@@ -1141,7 +1142,8 @@ public class RMWebServices extends WebServices {
   }
 
   protected Response killApp(RMApp app, UserGroupInformation callerUGI,
-      HttpServletRequest hsr) throws IOException, InterruptedException {
+      HttpServletRequest hsr, final String diagnostic)
+      throws IOException, InterruptedException {
 
     if (app == null) {
       throw new IllegalArgumentException("app cannot be null");
@@ -1158,6 +1160,9 @@ public class RMWebServices extends WebServices {
                   YarnException {
                 KillApplicationRequest req =
                     KillApplicationRequest.newInstance(appid);
+                  if (diagnostic != null) {
+                    req.setDiagnostics(diagnostic);
+                  }
                 return rm.getClientRMService().forceKillApplication(req);
               }
             });

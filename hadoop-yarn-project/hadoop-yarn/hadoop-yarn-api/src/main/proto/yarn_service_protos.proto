@@ -155,6 +155,7 @@ message FailApplicationAttemptResponseProto {
 
 message KillApplicationRequestProto {
   optional ApplicationIdProto application_id = 1;
+  optional string diagnostics = 2;
 }
 
 message KillApplicationResponseProto {
