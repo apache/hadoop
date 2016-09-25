@@ -291,9 +291,10 @@ public class YarnClientImpl extends YarnClient {
         try {
           Thread.sleep(submitPollIntervalMillis);
         } catch (InterruptedException ie) {
-          LOG.error("Interrupted while waiting for application "
-              + applicationId
-              + " to be successfully submitted.");
+          String msg = "Interrupted while waiting for application "
+              + applicationId + " to be successfully submitted.";
+          LOG.error(msg);
+          throw new YarnException(msg, ie);
         }
       } catch (ApplicationNotFoundException ex) {
         // FailOver or RM restart happens before RMStateStore saves
@@ -409,8 +410,10 @@ public class YarnClientImpl extends YarnClient {
         Thread.sleep(asyncApiPollIntervalMillis);
       }
     } catch (InterruptedException e) {
-      LOG.error("Interrupted while waiting for application " + applicationId
-          + " to be killed.");
+      String msg = "Interrupted while waiting for application "
+          + applicationId + " to be killed.";
+      LOG.error(msg);
+      throw new YarnException(msg, e);
     }
   }
 
