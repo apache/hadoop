@@ -748,17 +748,14 @@ public class ZKRMStateStore extends RMStateStore {
     String nodeCreatePath =
         getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
             + delegationKey.getKeyId());
-    ByteArrayOutputStream os = new ByteArrayOutputStream();
-    DataOutputStream fsOut = new DataOutputStream(os);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing RMDelegationKey_" + delegationKey.getKeyId());
     }
-    delegationKey.write(fsOut);
-    try {
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    try(DataOutputStream fsOut = new DataOutputStream(os)) {
+      delegationKey.write(fsOut);
       safeCreate(nodeCreatePath, os.toByteArray(), zkAcl,
           CreateMode.PERSISTENT);
-    } finally {
-      os.close();
     }
   }
 
