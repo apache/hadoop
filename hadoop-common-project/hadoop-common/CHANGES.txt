@@ -37,6 +37,10 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13579. Fix source-level compatibility after HADOOP-11252.
     (Tsuyoshi Ozawa via aajisaka)
 
+    HADOOP-12597. In kms-site.xml configuration
+    "hadoop.security.keystore.JavaKeyStoreProvider.password" should be updated with
+    new name. (Contributed by Surendra Singh Lilhore via Brahma Reddy Battula)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
