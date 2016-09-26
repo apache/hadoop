@@ -369,7 +369,75 @@ public class TestContainerManager extends BaseContainerManagerTest {
       DefaultContainerExecutor.containerIsAlive(pid));
   }
 
-  private String[] testContainerUpgradeSuccess(boolean autoCommit)
+  @Test
+  public void testContainerRestart() throws IOException, InterruptedException,
+      YarnException {
+    containerManager.start();
+    // ////// Construct the Container-id
+    ContainerId cId = createContainerId(0);
+    File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
+    String pid = prepareInitialContainer(cId, oldStartFile);
+
+    // Test that the container can restart
+    // Also, Since there was no rollback context present before the
+    // restart, rollback should NOT be possible after the restart
+    doRestartTests(cId, oldStartFile, "Hello World!", pid, false);
+  }
+
+  private String doRestartTests(ContainerId cId, File oldStartFile,
+      String testString, String pid, boolean canRollback)
+      throws YarnException, IOException, InterruptedException {
+    int beforeRestart = metrics.getRunningContainers();
+    Container container =
+        containerManager.getContext().getContainers().get(cId);
+    Assert.assertFalse(container.isReInitializing());
+    containerManager.restartContainer(cId);
+    Assert.assertTrue(container.isReInitializing());
+
+    // Wait for original process to die and the new process to restart
+    int timeoutSecs = 0;
+    while (DefaultContainerExecutor.containerIsAlive(pid)
+        && (metrics.getRunningContainers() == beforeRestart)
+        && container.isReInitializing()
+        && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for Original process to die.." +
+          "and new process to start!!");
+    }
+
+    Assert.assertFalse("Old Process Still alive!!",
+        DefaultContainerExecutor.containerIsAlive(pid));
+
+    String newPid = null;
+    timeoutSecs = 0;
+    while (timeoutSecs++ < 20) {
+      LOG.info("Waiting for New process file to be created!!");
+      // Now verify the contents of the file
+      BufferedReader reader =
+          new BufferedReader(new FileReader(oldStartFile));
+      Assert.assertEquals(testString, reader.readLine());
+      // Get the pid of the process
+      newPid = reader.readLine().trim();
+      // No more lines
+      Assert.assertEquals(null, reader.readLine());
+      reader.close();
+      if (!newPid.equals(pid)) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+
+    // Assert both pids are different
+    Assert.assertNotEquals(pid, newPid);
+
+    // Container cannot rollback from a restart
+    Assert.assertEquals(canRollback, container.canRollback());
+
+    return newPid;
+  }
+
+  private String[] testContainerReInitSuccess(boolean autoCommit)
       throws IOException, InterruptedException, YarnException {
     containerManager.start();
     // ////// Construct the Container-id
@@ -412,10 +480,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerUpgradeSuccessAutoCommit() throws IOException,
       InterruptedException, YarnException {
-    testContainerUpgradeSuccess(true);
+    testContainerReInitSuccess(true);
     // Should not be able to Commit (since already auto committed)
     try {
-      containerManager.commitReInitialization(createContainerId(0));
+      containerManager.commitLastReInitialization(createContainerId(0));
       Assert.fail();
     } catch (Exception e) {
       Assert.assertTrue(e.getMessage().contains("Nothing to Commit"));
@@ -425,12 +493,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerUpgradeSuccessExplicitCommit() throws IOException,
       InterruptedException, YarnException {
-    testContainerUpgradeSuccess(false);
+    testContainerReInitSuccess(false);
     ContainerId cId = createContainerId(0);
-    containerManager.commitReInitialization(cId);
+    containerManager.commitLastReInitialization(cId);
     // Should not be able to Rollback once committed
     try {
-      containerManager.rollbackReInitialization(cId);
+      containerManager.rollbackLastReInitialization(cId);
       Assert.fail();
     } catch (Exception e) {
       Assert.assertTrue(e.getMessage().contains("Nothing to rollback to"));
@@ -440,27 +508,38 @@ public class TestContainerManager extends BaseContainerManagerTest {
   @Test
   public void testContainerUpgradeSuccessExplicitRollback() throws IOException,
       InterruptedException, YarnException {
-    String[] pids = testContainerUpgradeSuccess(false);
+    String[] pids = testContainerReInitSuccess(false);
+
+    // Test that the container can be Restarted after the successful upgrrade.
+    // Also, since there is a rollback context present before the restart, it
+    // should be possible to rollback the container AFTER the restart.
+    pids[1] = doRestartTests(createContainerId(0),
+        new File(tmpDir, "start_file_n.txt").getAbsoluteFile(),
+        "Upgrade World!", pids[1], true);
 
     // Delete the old start File..
     File oldStartFile = new File(tmpDir, "start_file_o.txt").getAbsoluteFile();
+
     oldStartFile.delete();
 
     ContainerId cId = createContainerId(0);
     // Explicit Rollback
-    containerManager.rollbackReInitialization(cId);
+    containerManager.rollbackLastReInitialization(cId);
 
+    Container container =
+        containerManager.getContext().getContainers().get(cId);
+    Assert.assertTrue(container.isReInitializing());
     // Original should be dead anyway
     Assert.assertFalse("Original Process is still alive!",
         DefaultContainerExecutor.containerIsAlive(pids[0]));
 
-    // Wait for upgraded process to die
+    // Wait for new container to startup
     int timeoutSecs = 0;
-    while (!DefaultContainerExecutor.containerIsAlive(pids[1])
-        && timeoutSecs++ < 20) {
+    while (container.isReInitializing() && timeoutSecs++ < 20) {
       Thread.sleep(1000);
-      LOG.info("Waiting for Upgraded process to die..");
+      LOG.info("Waiting for ReInitialization to complete..");
     }
+    Assert.assertFalse(container.isReInitializing());
 
     timeoutSecs = 0;
     // Wait for new processStartfile to be created
