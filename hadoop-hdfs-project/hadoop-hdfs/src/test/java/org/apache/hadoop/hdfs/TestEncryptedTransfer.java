@@ -318,6 +318,7 @@ public class TestEncryptedTransfer {
     assertEquals(checksum, fs.getFileChecksum(TEST_PATH));
   }
 
+  @Test
   public void testLongLivedClientPipelineRecovery()
       throws IOException, InterruptedException, TimeoutException {
     if (resolverClazz != null) {
