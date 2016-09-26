@@ -437,6 +437,12 @@ public class BlockTokenSecretManager extends
   }
   
   @VisibleForTesting
+  public synchronized boolean hasKey(int keyId) {
+    BlockKey key = allKeys.get(keyId);
+    return key != null;
+  }
+
+  @VisibleForTesting
   public synchronized int getSerialNoForTesting() {
     return serialNo;
   }
