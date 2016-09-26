@@ -773,21 +773,23 @@ Azure WASB and OpenStack Swift.
 hadoop fs -mkdir s3a://bucket/datasets/
 
 # Upload a file from the cluster filesystem
-hadoop fs -put /datasets/example.orc s3a://bucket/datasets/
+hadoop fs -put -d /datasets/example.orc s3a://bucket/datasets/
+
+# touch a file
+hadoop fs -touchz wasb://yourcontainer@youraccount.blob.core.windows.net/touched
 ```
 
 Unlike a normal filesystem, renaming files and directories in an object store
 usually takes time proportional to the size of the objects being manipulated.
 As many of the filesystem shell operations
-use renaming as the final stage in operations; skipping this stage
-long delays.
+use renaming as the final stage in operations, skipping that stage
+can avoid long delays.
  
 In particular, the `put` and `copyFromLocal` commands should
 both have the `-d` options set for a direct upload.
 
 
 ```bash
-
 # Upload a file from the cluster filesystem
 hadoop fs -put -d /datasets/example.orc s3a://bucket/datasets/
 
@@ -797,20 +799,16 @@ hadoop fs -copyFromLocal -d -f ~/datasets/devices.orc s3a://bucket/datasets/
 # create a file from stdin
 echo "hello" | hadoop fs -put -d -f - wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
 
-# touch a file
-hadoop fs -touchz wasb://yourcontainer@youraccount.blob.core.windows.net/touched
-
 ```
 
-Objects can be downloaded and viewed
+Objects can be downloaded and viewed:
 
 ```bash
 # copy a directory to the local filesystem
-hadoop fs -copyToLocal s3a://hwdev-steve-ireland-new/datasets/
+hadoop fs -copyToLocal s3a://bucket/datasets/
 
 # copy a file from the object store to the cluster filesystem.
 hadoop fs -get wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt /examples
-
 
 # print the object
 hadoop fs -cat wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
@@ -819,10 +817,10 @@ hadoop fs -cat wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
 hadoop fs -text wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
 
 ## download log files into a local file
-hadoop fs -getmerge s3a://wasb://yourcontainer@youraccount.blob.core.windows.net/logs\* log.txt
+hadoop fs -getmerge wasb://yourcontainer@youraccount.blob.core.windows.net/logs\* log.txt
 ```
 
-Operations which list many files tend to be significantly slower than when
+Commands which list many files tend to be significantly slower than when
 working with HDFS or other filesystems
 
 ```bash
@@ -830,22 +828,22 @@ hadoop fs -count s3a://bucket/
 hadoop fs -du s3a://bucket/
 ```
 
-Other slow operations include `find`, `mv` and `rm`.
+Other slow commands include `find`, `mv`, `cp` and `rm`.
 
-Find: `-find`
+**Find**
 
 This can be very slow on a large store with many directories under the path
-supplied
+supplied.
 
 ```bash
-# enumerate all files in the object store.
+# enumerate all files in the object store's container.
 hadoop fs -find s3a://bucket/ -print
 
 # remember to escape the wildcards to stop the shell trying to expand them first
 hadoop fs -find s3a://bucket/datasets/ -name \*.txt -print
 ```
 
-Rename: `-mv` 
+**Rename**
 
 The time to rename a file depends on its size.
 
@@ -859,13 +857,13 @@ hadoop fs -mv s3a://bucket/datasets s3a://bucket/historical
 If the operation is interrupted, the object store will be in an undefined
 state. 
 
-Copy: `-cp`
+**Copy**
 
 ```bash
 hadoop fs -cp s3a://bucket/datasets s3a://bucket/historical 
 ```
 
-The copy operation reads each file and then writes it back to the filesystem;
+The copy operation reads each file and then writes it back to the object store;
 the time to complete depends on the amount of data to copy, and the bandwidth
 in both directions between the local computer and the object store.
 
@@ -875,13 +873,13 @@ Deleting objects
 ----------------
 
 The `rm` command will delete objects and directories full of objects.
-If the object store is *eventually consistent*, then `fs ls` commands
-and other accessors may briefly return the details of the object; this
+If the object store is *eventually consistent*, `fs ls` commands
+and other accessors may briefly return the details of the now-deleted objects; this
 is an artifact of object stores which cannot be avoided.
 
 If the filesystem client is configured to copy files to a trash directory,
-this will be in the bucket; the `rm` operation will take time proportional
-to the size of the data, and the deleted files will continue to incur
+this will be in the bucket; the `rm` operation will then take time proportional
+to the size of the data. Furthermore, the deleted files will continue to incur
 storage costs.
 
 To avoid this, use the the `-skipTrash` option.
@@ -915,14 +913,21 @@ Timestamps
 ----------
 
 Timestamps of objects and directories in Object Stores
-may not follow the behavior of filesystem files and directories.
+may not follow the behavior of files and directories in HDFS.
 
-1. The create time of a object will be the time it was created on the object
-store; this will be at the end of the write process, not the beginning.
-1. If an object is overwritten, the modification time will generally be updated.
-1. Directories may or may not have valid timestamps.
+1. The creation and initial modification times of an object will be the
+time it was created on the object store; this will be at the end of the write process,
+not the beginning.
+1. The timestamp will be taken from the object store infrastructure's clock, not that of
+the client.
+1. If an object is overwritten, the modification time will be updated.
+1. Directories may or may not have valid timestamps. They are unlikely
+to have their modification times updated when an object underneath is updated.
 1. The `atime` access time feature is not supported by any of the object stores
 found in the Apache Hadoop codebase.
+
+Consult the `DistCp` documentation for details on how this may affect the
+`distcp -update` operation.
 
 Security model and operations
 -----------------------------
@@ -931,25 +936,26 @@ The security and permissions models of object stores are usually very different
 from those of a Unix-style filesystem; operations which query or manipulate
 permissions are generally unsupported.
 
-Operations to which this applies includes: `chgrp`, `chmod`, `chown`,
+Operations to which this applies include: `chgrp`, `chmod`, `chown`,
 `getfacl`, and `setfacl`. The related attribute commands `getfattr` and`setfattr`
-are often also unavailable.
+are also usually unavailable.
 
-* Filesystem commands which list permissions and user/group details, usually
-mock permission, owner and group details.
+* Filesystem commands which list permission and user/group details, usually
+simulate these details.
 
 * Operations which try to preserve permissions (example `fs -put -p`)
-do not preserve permissions for this reason.
+do not preserve permissions for this reason. (Special case: `wasb://`, which preserves
+permissions but does not enforce them).
 
-When interacting with read-only object stores, the permissions found in list
-and stat commands may indicate that the user has write access, when in fact they do not
+When interacting with read-only object stores, the permissions found in "list"
+and "stat" commands may indicate that the user has write access, when in fact they do not.
 
-Object stores do often have sophisticated permissions models of their own;
-these will have to manipulated through store-specific tooling.
+Object stores usually have permissions models of their own,
+models can be manipulated through store-specific tooling.
 Be aware that some of the permissions which an object store may provide
-(such as write access only, or different permissions on the root path) may
+(such as write-only paths, or different permissions on the root path) may
 be incompatible with the Hadoop filesystem clients. These tend to require full
-read and write access to the entire object store into which they write data.
+read and write access to the entire object store bucket/container into which they write data.
 
 As an example of how permissions are mocked, here is a listing of Amazon's public,
 read-only bucket of landsat images:
@@ -970,9 +976,10 @@ drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/test
 
 ```
 
-1. All files are declared as having full read/write permissions.
-1. All directories have full `rwx` permissions.
-1. The owner of all files and directories is declared to be the current user (`mapred).
+1. All files are listed as having full read/write permissions.
+1. All directories appear to have full `rwx` permissions.
+1. The replication count of all files is "1".
+1. The owner of all files and directories is declared to be the current user (`mapred`).
 1. The timestamp of all directories is actually that of the time the `-ls` operation
 was executed. This is because these directories are not actual objects in the store;
 they are simulated directories based on the existence of objects under their paths.
@@ -988,7 +995,7 @@ rm: s3a://landsat-pds/scene_list.gz: delete on s3a://landsat-pds/scene_list.gz:
   S3 Extended Request ID: wi3veOXFuFqWBUCJgV3Z+NQVj9gWgZVdXlPU4KBbYMsw/gA+hyhRXcaQ+PogOsDgHh31HlTCebQ=
 ```
 
-This demonstrates that the listed permissions of entries in an object store cannot
+This demonstrates that the listed permissions cannot
 be taken as evidence of write access; only object manipulation can determine
 this.
 

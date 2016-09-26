@@ -512,23 +512,32 @@ hadoop distcp wasb://updates@example.blob.core.windows.net/current \
   wasb://updates@example.blob.core.windows.net/old
 ```
 
-
-
-Because object stores are slow to list files, we recommend a high
-`-numListstatusThreads` option.
+And to use `-update` to only copy changed files.
 
 ```bash
-hadoop distcp -numListstatusThreads 20  \
+hadoop distcp -update -numListstatusThreads 20  \
   swift://history.cluster1/2016 \
-  /hdfs://nn1:8020/history/2016
+  hdfs://nn1:8020/history/2016
 ```
+
+Because object stores are slow to list files, consider setting the `-numListstatusThreads` option when performing a `-update` operation
+on a large directory tree (the limit is 40 threads).
+
+When `DistCp -update` is used with objec stores,
+generally only the modification time and length of the individual files are compared,
+not any checksums. The fact that most object stores do have valid timestamps
+for directories is irrelevant; only the file timestamps are compared.
+However, it is important to have the clock of the client computers close
+to that of the infrastructure, so that timestamps are consistent between
+the client/HDFS cluster and that of the object store. Otherwise, changed files may be
+missed/copied too often.
 
 **Notes**
 
 * The `-atomic` option causes a rename of the temporary data, so significantly
 increases the time to commit work at the end of the operation. Furthermore,
-as most Object Stores do not offer atomic renames of directories, the `-atomic`
-operation doesn't actually deliver what is promised. *Avoid*.
+as Object Stores other than (optionally) `wasb://` do not offer atomic renames of directories
+the `-atomic` operation doesn't actually deliver what is promised. *Avoid*.
 
 * The `-append` option is not supported.
 
@@ -538,7 +547,8 @@ operation doesn't actually deliver what is promised. *Avoid*.
 flag.
 
 * All `-p` options, including those to preserve permissions, user and group information, attributes
-checksums and replication are ignored.
+checksums and replication are generally ignored. The `wasb://` connector will
+preserve the information, but not enforce the permissions.
 
 * Some object store connectors offer an option for in-memory buffering of
 output —for example the S3A connector. Using such option while copying
