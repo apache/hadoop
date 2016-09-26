@@ -37,62 +37,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.hadoop.fs.s3a.Statistic.DIRECTORIES_CREATED;
-import static org.apache.hadoop.fs.s3a.Statistic.DIRECTORIES_DELETED;
-import static org.apache.hadoop.fs.s3a.Statistic.FILES_COPIED;
-import static org.apache.hadoop.fs.s3a.Statistic.FILES_COPIED_BYTES;
-import static org.apache.hadoop.fs.s3a.Statistic.FILES_CREATED;
-import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETED;
-import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_COPY_FROM_LOCAL_FILE;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_EXISTS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_GLOB_STATUS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_IS_DIRECTORY;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_IS_FILE;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_LIST_FILES;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_LIST_LOCATED_STATUS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_LIST_STATUS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_MKDIRS;
-import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_RENAME;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_CONTINUE_LIST_REQUESTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_COPY_REQUESTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_BYTES;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_BYTES_PENDING;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS_ACTIVE;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_PUT_REQUESTS_COMPLETED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_ABORTED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_ABORT_BYTES_DISCARDED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_BACKWARD_SEEK_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_CLOSED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_CLOSE_BYTES_READ;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_CLOSE_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_FORWARD_SEEK_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_OPENED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_EXCEPTIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_FULLY_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_OPERATIONS_INCOMPLETE;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_BYTES_BACKWARDS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_BYTES_READ;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_BYTES_SKIPPED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BANDWIDTH;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_ABORTED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_ACTIVE;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_COMMITTED;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_BLOCK_UPLOADS_PENDING;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_FAILURES;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_QUEUE_DURATION;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_TOTAL_DATA;
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_WRITE_TOTAL_TIME;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
  * Instrumentation of S3a.
@@ -760,10 +705,12 @@ public class S3AInstrumentation {
       blockUploadsCompleted.incrementAndGet();
     }
 
-    /** A block upload has failed. */
+    /**
+     *  A block upload has failed.
+     *  A final transfer completed event is still expected, so this
+     *  does not decrement the active block counter.
+     */
     void blockUploadFailed(long duration, int blockSize) {
-      this.transferDuration.addAndGet(duration);
-      blocksActive.decrementAndGet();
       blockUploadsFailed.incrementAndGet();
     }
 
@@ -774,14 +721,27 @@ public class S3AInstrumentation {
       incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, -byteCount);
     }
 
+    /**
+     * Note an exception in a multipart complete.
+     */
     void exceptionInMultipartComplete() {
       exceptionsInMultipartFinalize.incrementAndGet();
     }
 
+    /**
+     * Note an exception in a multipart abort.
+     */
     void exceptionInMultipartAbort() {
       exceptionsInMultipartFinalize.incrementAndGet();
     }
 
+    /**
+     * Get the number of bytes pending upload
+     * @return
+     */
+    public long getBytesPendingUpload() {
+      return bytesPendingUpload.get();
+    }
 
     /**
      * Output stream has closed.
@@ -791,7 +751,7 @@ public class S3AInstrumentation {
     public void close() {
       if (bytesPendingUpload.get() > 0) {
         LOG.warn("Closing output stream statistics while data is still marked" +
-            " as pending upload");
+            " as pending upload in {}", this);
       }
       mergeOutputStreamStatistics(this);
     }
@@ -822,6 +782,8 @@ public class S3AInstrumentation {
       sb.append(", blockUploadsFailed=").append(blockUploadsFailed);
       sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
       sb.append(", bytesUploaded=").append(bytesUploaded);
+      sb.append(", exceptionsInMultipartFinalize=").append(
+          exceptionsInMultipartFinalize);
       sb.append(", transferDuration=").append(transferDuration).append(" ms");
       sb.append(", queueDuration=").append(queueDuration).append(" ms");
       sb.append(", averageQueueTime=").append(averageQueueTime()).append(" ms");

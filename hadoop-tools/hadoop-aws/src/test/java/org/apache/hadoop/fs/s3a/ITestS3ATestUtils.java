@@ -19,77 +19,80 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase.KEY_SCALE_TESTS_ENABLED;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 
 /**
- * Test the test utils. Why an integration test: it's needed to
+ * Test the test utils. Why an integration test? it's needed to
  * verify property pushdown.
  */
 public class ITestS3ATestUtils extends Assert {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATestUtils.class);
+  public static final String KEY = "undefined.property";
+
+  @Before
+  public void clear() {
+    System.clearProperty(KEY);
+  }
+
+  @Test
+  public void testGetTestProperty() throws Throwable {
+    Configuration conf = new Configuration(false);
+    assertEquals("a", getTestProperty(conf, KEY, "a"));
+    conf.set(KEY, "\t b \n");
+    assertEquals("b", getTestProperty(conf, KEY, "a"));
+    System.setProperty(KEY, "c");
+    assertEquals("c", getTestProperty(conf, KEY, "a"));
+    unsetSysprop();
+    assertEquals("b", getTestProperty(conf, KEY, "a"));
+  }
 
   @Test
   public void testGetTestPropertyLong() throws Throwable {
     Configuration conf = new Configuration(false);
-    String key = "undefined.property";
-    System.clearProperty(key);
-    assertEquals(1, getTestPropertyLong(conf, key, 1));
-    conf.setInt(key, 2);
-    assertEquals(2, getTestPropertyLong(conf, key, 1));
-    System.setProperty(key, "3");
-    assertEquals(3, getTestPropertyLong(conf, key, 1));
+    assertEquals(1, getTestPropertyLong(conf, KEY, 1));
+    conf.setInt(KEY, 2);
+    assertEquals(2, getTestPropertyLong(conf, KEY, 1));
+    System.setProperty(KEY, "3");
+    assertEquals(3, getTestPropertyLong(conf, KEY, 1));
   }
 
   @Test
   public void testGetTestPropertyInt() throws Throwable {
     Configuration conf = new Configuration(false);
-    String key = "undefined.property";
-    System.clearProperty(key);
-    assertEquals(1, getTestPropertyInt(conf, key, 1));
-    conf.setInt(key, 2);
-    assertEquals(2, getTestPropertyInt(conf, key, 1));
-    System.setProperty(key, "3");
-    assertEquals(3, getTestPropertyInt(conf, key, 1));
-    conf.unset(key);
-    assertEquals(3, getTestPropertyInt(conf, key, 1));
+    assertEquals(1, getTestPropertyInt(conf, KEY, 1));
+    conf.setInt(KEY, 2);
+    assertEquals(2, getTestPropertyInt(conf, KEY, 1));
+    System.setProperty(KEY, "3");
+    assertEquals(3, getTestPropertyInt(conf, KEY, 1));
+    conf.unset(KEY);
+    assertEquals(3, getTestPropertyInt(conf, KEY, 1));
+    unsetSysprop();
+    assertEquals(5, getTestPropertyInt(conf, KEY, 5));
   }
 
   @Test
   public void testGetTestPropertyBool() throws Throwable {
     Configuration conf = new Configuration(false);
-    String key = "undefined.property";
-    System.clearProperty(key);
-    assertTrue(getTestPropertyBool(conf, key, true));
-    conf.setBoolean(key, false);
-    assertFalse(getTestPropertyBool(conf, key, true));
-    System.setProperty(key, "true");
-    assertTrue(getTestPropertyBool(conf, key, true));
+    assertTrue(getTestPropertyBool(conf, KEY, true));
+    conf.set(KEY, "\tfalse \n");
+    assertFalse(getTestPropertyBool(conf, KEY, true));
+    System.setProperty(KEY, "true");
+    assertTrue(getTestPropertyBool(conf, KEY, true));
+    unsetSysprop();
+    assertEquals("false", getTestProperty(conf, KEY, "true"));
+    conf.unset(KEY);
+    assertTrue(getTestPropertyBool(conf, KEY, true));
   }
 
-  @Test
-  public void testMavenPassdown() throws Throwable {
-    Properties props = System.getProperties();
-    List<String> keys = new ArrayList<>(props.stringPropertyNames());
-    java.util.Collections.sort(keys);
-    for (String key : keys) {
-      if (key.contains("test") && !key.contains("surefire")) {
-        LOG.info("{} = {}", key, props.getProperty(key));
-      }
-    }
-    String p = props.getProperty(KEY_SCALE_TESTS_ENABLED);
-    assertNotNull("Not set " + KEY_SCALE_TESTS_ENABLED, p);
-    assertTrue("Not a boolean: " + p, "true".equals(p) || "false".equals(p));
+  protected void unsetSysprop() {
+    System.setProperty(KEY, UNSET_PROPERTY);
   }
 
 }

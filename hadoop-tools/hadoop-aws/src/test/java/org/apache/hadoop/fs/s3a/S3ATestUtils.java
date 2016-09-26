@@ -43,6 +43,12 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
 public class S3ATestUtils {
 
   /**
+   * Value to set a system property to (in maven) to declare that
+   * a property has been unset.
+   */
+  public static final String UNSET_PROPERTY = "unset";
+
+  /**
    * Create the test filesystem.
    *
    * If the test.fs.s3a.name property is not set, this will
@@ -255,7 +261,7 @@ public class S3ATestUtils {
       String defVal) {
     String confVal = conf != null ? conf.getTrimmed(key, defVal) : defVal;
     String propval = System.getProperty(key);
-    return StringUtils.isNotEmpty(propval) && !"unset".equals(propval)
+    return StringUtils.isNotEmpty(propval) && !UNSET_PROPERTY.equals(propval)
         ? propval : confVal;
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -35,8 +35,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 
 /**
@@ -47,7 +47,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 public class S3AOutputStream extends OutputStream {
   private final OutputStream backupStream;
   private final File backupFile;
-  private boolean closed;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
   private final String key;
   private final Progressable progress;
   private final S3AFileSystem fs;
@@ -56,7 +56,9 @@ public class S3AOutputStream extends OutputStream {
   public static final Logger LOG = S3AFileSystem.LOG;
 
   public S3AOutputStream(Configuration conf,
-      S3AFileSystem fs, String key, Progressable progress)
+      S3AFileSystem fs,
+      String key,
+      Progressable progress)
       throws IOException {
     this.key = key;
     this.progress = progress;
@@ -66,7 +68,6 @@ public class S3AOutputStream extends OutputStream {
 
     backupFile = lDirAlloc.createTmpFileForWrite("output-",
         LocalDirAllocator.SIZE_UNKNOWN, conf);
-    closed = false;
 
     LOG.debug("OutputStream for key '{}' writing to tempfile: {}",
         key, backupFile);
@@ -80,8 +81,8 @@ public class S3AOutputStream extends OutputStream {
    * @throws IOException if the filesystem is closed.
    */
   void checkOpen() throws IOException {
-    if (closed) {
-      throw new IOException("Filesystem closed");
+    if (closed.get()) {
+      throw new IOException("Output Stream closed");
     }
   }
 
@@ -92,8 +93,8 @@ public class S3AOutputStream extends OutputStream {
   }
 
   @Override
-  public synchronized void close() throws IOException {
-    if (closed) {
+  public void close() throws IOException {
+    if (closed.getAndSet(true)) {
       return;
     }
 
@@ -125,7 +126,6 @@ public class S3AOutputStream extends OutputStream {
         LOG.warn("Could not delete temporary s3a file: {}", backupFile);
       }
       super.close();
-      closed = true;
     }
     LOG.debug("OutputStream for key '{}' upload complete", key);
   }

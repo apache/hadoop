@@ -18,8 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
+import org.junit.Assume;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -29,28 +41,11 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Assume;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
-import static org.apache.hadoop.fs.contract.ContractTestUtils.bandwidth;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.SOCKET_RECV_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.SOCKET_SEND_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyInt;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyLong;
+import static com.amazonaws.event.ProgressEventType.TRANSFER_PART_FAILED_EVENT;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 
 /**
  * Scale test which creates a huge file.
@@ -152,10 +147,11 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
     long blocksPer10MB = blocksPerMB * 10;
+    ProgressCallback progress = new ProgressCallback();
     try (FSDataOutputStream out = fs.create(hugefile,
         true,
         uploadBlockSize,
-        new ProgressCallback())) {
+        progress)) {
 
       for (long block = 1; block <= blocks; block++) {
         out.write(data);
@@ -195,7 +191,10 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         putByteCount / (putRequestCount * _1MB));
     LOG.info("Time per PUT {} nS",
         toHuman(timer.nanosPerOperation(putRequestCount)));
+    progress.verifyNoFailures("Put file " + hugefile + " of size " + filesize);
+    ContractTestUtils.assertPathExists(fs, "Huge file", hugefile);
     S3AFileStatus status = fs.getFileStatus(hugefile);
+    ContractTestUtils.assertIsFile(hugefile, status);
     assertEquals("File size in " + status, filesize, status.getLen());
     assertEquals("active put requests in \n" + fs,
         0, gaugeValue(putRequestsActive));
@@ -206,25 +205,40 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
    */
   private class ProgressCallback implements Progressable,
       ProgressListener {
-    private int counter = 0;
+    private AtomicLong bytesTransferred = new AtomicLong(0);
+    private AtomicInteger failures = new AtomicInteger(0);
 
     @Override
     public void progress() {
-      counter++;
-    }
-
-    public int getCounter() {
-      return counter;
     }
 
     @Override
     public void progressChanged(ProgressEvent progressEvent) {
-      counter++;
-      if (progressEvent.getEventType().isByteCountEvent()) {
+      ProgressEventType eventType = progressEvent.getEventType();
+      if (eventType.isByteCountEvent()) {
+        bytesTransferred.addAndGet(progressEvent.getBytesTransferred());
         LOG.debug("Event {}", progressEvent);
       } else {
         LOG.info("Event {}", progressEvent);
       }
+      if (eventType == TRANSFER_PART_FAILED_EVENT) {
+        // failure
+        failures.incrementAndGet();
+        LOG.warn("Transfer failure");
+      }
+    }
+
+    @Override
+    public String toString() {
+      String sb = "ProgressCallback{"
+          + "bytesTransferred=" + bytesTransferred +
+          ", failures=" + failures +
+          '}';
+      return sb;
+    }
+
+    private void verifyNoFailures(String operation) {
+      assertEquals("Failures in " + operation +": " + this, 0, failures.get());
     }
   }
 

@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.util.DirectBufferPool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,9 +34,14 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Closed;
-import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Upload;
-import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.Writing;
+import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.util.DirectBufferPool;
+
+import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
 
 /**
  * Set of classes to support output streaming into blocks which are then

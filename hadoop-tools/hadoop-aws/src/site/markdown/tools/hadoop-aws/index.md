@@ -925,7 +925,7 @@ This work began in Hadoop 2.7 with the `S3AFastOutputStream`
 has continued with ` S3ABlockOutputStream`
 [HADOOP-13560](https://issues.apache.org/jira/browse/HADOOP-13560).
 
-#### Stabilizing: S3ABlockOutputStream
+#### <a href="s3a_block_output"></a>Stabilizing: S3ABlockOutputStream
 
 
 **New in Hadoop 2.9+; replaces the "fast" upload of Hadoop 2.7**
@@ -1019,7 +1019,7 @@ or read when the multipart operation completes in the `close()` call, which
 will block until the upload is completed.
 
 
-##### Disk upload `fs.s3a.block.output.buffer=disk`
+##### <a href="s3a_block_output_disk"></a>Disk upload `fs.s3a.block.output.buffer=disk`
 
 When `fs.s3a.block.output.buffer` is set to `disk`, all data is buffered
 to local hard disks in prior to upload. This minimizes the amount of memory
@@ -1069,14 +1069,16 @@ increases.
 ```
 
 
-##### Block Upload with ByteBuffers: `fs.s3a.block.output.buffer=bytebuffer`
+##### <a href="s3a_block_output_bytebuffer"></a>Block Upload with ByteBuffers: `fs.s3a.block.output.buffer=bytebuffer`
 
 When `fs.s3a.block.output.buffer` is set to `bytebuffer`, all data is buffered
-in "Direct" ByteBuffers prior to upload. This *may* be faster than buffering to disk.
+in "Direct" ByteBuffers prior to upload. This *may* be faster than buffering to disk,
+and, if disk space is small (for example, tiny EC2 VMs), there may not
+be much disk space to buffer with.
 
-These buffers are in the memory of the JVM, albeit not in the Java Heap itself.
+The ByteBuffers are created in the memory of the JVM, but not in the Java Heap itself.
 The amount of data which can be buffered is
-limited by the Jva runtime, the operating system, and, for YARN applications,
+limited by the Java runtime, the operating system, and, for YARN applications,
 the amount of memory requested for each container.
 
 The slower the write bandwidth to S3, the greater the risk of running out
@@ -1109,7 +1111,19 @@ kept low.
 ```
 
 
-##### Array upload: `fs.s3a.block.output.buffer=array`
+However, non-trivial memory tuning is needed for optimal results and careless
+settings could cause memory overflow. Up to `fs.s3a.threads.max` parallel
+(part)uploads are active. Furthermore, up to `fs.s3a.max.total.tasks`
+additional part(uploads) can be waiting (and thus memory buffers are created).
+The memory buffer is uploaded as a single upload if it is not larger than
+`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiated and
+parts of size `fs.s3a.multipart.size` are used to protect against overflowing
+the available memory. These settings should be tuned to the envisioned
+workflow (some large files, many small ones, ...) and the physical
+limitations of the machine and cluster (memory, network bandwidth).
+
+
+##### <a href="s3a_block_output_array"></a>Array upload: `fs.s3a.block.output.buffer=array`
 
 When `fs.s3a.block.output.buffer` is set to `array`, all data is buffered
 in byte arrays in the JVM's heap prior to upload.
@@ -1147,11 +1161,11 @@ kept low. As an example: three threads and one queued task will consume
 </property>
 ```
 
-#### Cleaning up After Incremental Upload Failures: `fs.s3a.multipart.purge`
+#### <a href="s3a_multipart_purge"></a>Cleaning up After Incremental Upload Failures: `fs.s3a.multipart.purge`
 
 
 If an incremental streaming operation is interrupted, there may be 
-intermediate partitions uploaded to S3 —which will be billed for.
+intermediate partitions uploaded to S3 —data which will be billed for.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`, 
 and setting a purge time in seconds, such as 86400 seconds —24 hours, after
@@ -1191,43 +1205,23 @@ uploads being attempted by other applications.
 
 #### S3AFastOutputStream
 
-**Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
-
 **Hadoop 2.9+: use the block output mechanism instead**
 
+```xml
+<property>
+  <name>fs.s3a.fast.upload</name>
+  <value>false</value>
+  <description>Upload directly from memory instead of buffering to
+  disk first. Memory usage and parallelism can be controlled as up to
+  fs.s3a.multipart.size memory is consumed for each (part)upload actively
+  uploading (fs.s3a.threads.max) or queueing (fs.s3a.max.total.tasks)</description>
+</property>
+```
 
-
-    <property>
-      <name>fs.s3a.fast.upload</name>
-      <value>false</value>
-      <description>Upload directly from memory instead of buffering to
-      disk first. Memory usage and parallelism can be controlled as up to
-      fs.s3a.multipart.size memory is consumed for each (part)upload actively
-      uploading (fs.s3a.threads.max) or queueing (fs.s3a.max.total.tasks)</description>
-    </property>
-
-    <property>
-      <name>fs.s3a.fast.buffer.size</name>
-      <value>1048576</value>
-      <description>Size (in bytes) of initial memory buffer allocated for an
-      upload. No effect if fs.s3a.fast.upload is false.</description>
-    </property>
-
-Writes are buffered in memory instead of to a file on local disk. This
-removes the throughput bottleneck of the local disk write and read cycle
-before starting the actual upload. Furthermore, it allows handling files that
-are larger than the remaining local disk space.
-
-However, non-trivial memory tuning is needed for optimal results and careless
-settings could cause memory overflow. Up to `fs.s3a.threads.max` parallel
-(part)uploads are active. Furthermore, up to `fs.s3a.max.total.tasks`
-additional part(uploads) can be waiting (and thus memory buffers are created).
-The memory buffer is uploaded as a single upload if it is not larger than
-`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiated and
-parts of size `fs.s3a.multipart.size` are used to protect against overflowing
-the available memory. These settings should be tuned to the envisioned
-workflow (some large files, many small ones, ...) and the physical
-limitations of the machine and cluster (memory, network bandwidth).
+This "fast" output stream offered incremental partition writes with all data buffered
+on-heap. It has been superceded by the Block output stream; use the 
+[byte array](#s3a_block_output_array) buffer to replicate the same behavior:
+storage of all data in memory.
 
 
 **Note** 
@@ -1572,36 +1566,36 @@ ability to use the V4 signing API.
 
 ## "Timeout waiting for connection from pool" when writing to S3A
 
-This happens when using the Fast output stream, `fs.s3a.fast.upload=true` and
+This happens when using the Block output stream, `fs.s3a.fast.upload=true` and
 the thread pool runs out of capacity. 
 
 ```
- [s3a-transfer-shared-pool1-t20] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: Timeout waiting for connection from poolorg.apache.http.conn.ConnectionPoolTimeoutException: Timeout waiting for connection from pool
-	at org.apache.http.impl.conn.PoolingClientConnectionManager.leaseConnection(PoolingClientConnectionManager.java:230)
-	at org.apache.http.impl.conn.PoolingClientConnectionManager$1.getConnection(PoolingClientConnectionManager.java:199)
-	at sun.reflect.GeneratedMethodAccessor13.invoke(Unknown Source)
-	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-	at java.lang.reflect.Method.invoke(Method.java:498)
-	at com.amazonaws.http.conn.ClientConnectionRequestFactory$Handler.invoke(ClientConnectionRequestFactory.java:70)
-	at com.amazonaws.http.conn.$Proxy10.getConnection(Unknown Source)
-	at org.apache.http.impl.client.DefaultRequestDirector.execute(DefaultRequestDirector.java:424)
-	at org.apache.http.impl.client.AbstractHttpClient.doExecute(AbstractHttpClient.java:884)
-	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:82)
-	at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:55)
-	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:728)
-	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
-	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
-	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
-	at com.amazonaws.services.s3.AmazonS3Client.doUploadPart(AmazonS3Client.java:2921)
-	at com.amazonaws.services.s3.AmazonS3Client.uploadPart(AmazonS3Client.java:2906)
-	at org.apache.hadoop.fs.s3a.S3AFileSystem.uploadPart(S3AFileSystem.java:1025)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload$1.call(S3ABlockOutputStream.java:360)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload$1.call(S3ABlockOutputStream.java:355)
-	at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:745)
+[s3a-transfer-shared-pool1-t20] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: Timeout waiting for connection from poolorg.apache.http.conn.ConnectionPoolTimeoutException: Timeout waiting for connection from pool
+  at org.apache.http.impl.conn.PoolingClientConnectionManager.leaseConnection(PoolingClientConnectionManager.java:230)
+  at org.apache.http.impl.conn.PoolingClientConnectionManager$1.getConnection(PoolingClientConnectionManager.java:199)
+  at sun.reflect.GeneratedMethodAccessor13.invoke(Unknown Source)
+  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+  at java.lang.reflect.Method.invoke(Method.java:498)
+  at com.amazonaws.http.conn.ClientConnectionRequestFactory$Handler.invoke(ClientConnectionRequestFactory.java:70)
+  at com.amazonaws.http.conn.$Proxy10.getConnection(Unknown Source)
+  at org.apache.http.impl.client.DefaultRequestDirector.execute(DefaultRequestDirector.java:424)
+  at org.apache.http.impl.client.AbstractHttpClient.doExecute(AbstractHttpClient.java:884)
+  at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:82)
+  at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:55)
+  at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:728)
+  at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+  at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+  at com.amazonaws.services.s3.AmazonS3Client.doUploadPart(AmazonS3Client.java:2921)
+  at com.amazonaws.services.s3.AmazonS3Client.uploadPart(AmazonS3Client.java:2906)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.uploadPart(S3AFileSystem.java:1025)
+  at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload$1.call(S3ABlockOutputStream.java:360)
+  at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload$1.call(S3ABlockOutputStream.java:355)
+  at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+  at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+  at java.lang.Thread.run(Thread.java:745)
 ```
 
 Make sure that `fs.s3a.connection.maximum` is at least larger
@@ -1656,18 +1650,56 @@ reduce bandwidth requirements on the uploads
 
 ```
 java.io.FileNotFoundException: Completing multi-part upload on fork-5/test/multipart/1c397ca6-9dfb-4ac1-9cf7-db666673246b: com.amazonaws.services.s3.model.AmazonS3Exception: The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed. (Service: Amazon S3; Status Code: 404; Error Code: NoSuchUpload; Request ID: 84FF8057174D9369), S3 Extended Request ID: Ij5Yn6Eq/qIERH4Z6Io3YL2t9/qNZ7z9gjPb1FrTtTovZ8k1MXqh+zCYYjqmfJ/fCY6E1+JR9jA=
-	at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1182)
-	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:770)
-	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
-	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
-	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
-	at com.amazonaws.services.s3.AmazonS3Client.completeMultipartUpload(AmazonS3Client.java:2705)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.complete(S3ABlockOutputStream.java:473)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$200(S3ABlockOutputStream.java:382)
-	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.close(S3ABlockOutputStream.java:272)
-	at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:72)
-	at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
-``
+  at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1182)
+  at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:770)
+  at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+  at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+  at com.amazonaws.services.s3.AmazonS3Client.completeMultipartUpload(AmazonS3Client.java:2705)
+  at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.complete(S3ABlockOutputStream.java:473)
+  at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$200(S3ABlockOutputStream.java:382)
+  at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.close(S3ABlockOutputStream.java:272)
+  at org.apache.hadoop.fs.FSDataOutputStream$PositionCache.close(FSDataOutputStream.java:72)
+  at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
+```
+
+### When writing to S3A, HTTP Exceptions logged at info from `AmazonHttpClient`
+
+```
+2016-09-26 18:34:41,254 [s3a-transfer-shared-pool4-t6] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: hwdev-steve-ireland-new.s3.amazonaws.com:443 failed to respond
+org.apache.http.NoHttpResponseException: bucket.s3.amazonaws.com:443 failed to respond
+  at org.apache.http.impl.conn.DefaultHttpResponseParser.parseHead(DefaultHttpResponseParser.java:143)
+  at org.apache.http.impl.conn.DefaultHttpResponseParser.parseHead(DefaultHttpResponseParser.java:57)
+  at org.apache.http.impl.io.AbstractMessageParser.parse(AbstractMessageParser.java:261)
+  at org.apache.http.impl.AbstractHttpClientConnection.receiveResponseHeader(AbstractHttpClientConnection.java:283)
+  at org.apache.http.impl.conn.DefaultClientConnection.receiveResponseHeader(DefaultClientConnection.java:259)
+  at org.apache.http.impl.conn.ManagedClientConnectionImpl.receiveResponseHeader(ManagedClientConnectionImpl.java:209)
+  at org.apache.http.protocol.HttpRequestExecutor.doReceiveResponse(HttpRequestExecutor.java:272)
+  at com.amazonaws.http.protocol.SdkHttpRequestExecutor.doReceiveResponse(SdkHttpRequestExecutor.java:66)
+  at org.apache.http.protocol.HttpRequestExecutor.execute(HttpRequestExecutor.java:124)
+  at org.apache.http.impl.client.DefaultRequestDirector.tryExecute(DefaultRequestDirector.java:686)
+  at org.apache.http.impl.client.DefaultRequestDirector.execute(DefaultRequestDirector.java:488)
+  at org.apache.http.impl.client.AbstractHttpClient.doExecute(AbstractHttpClient.java:884)
+  at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:82)
+  at org.apache.http.impl.client.CloseableHttpClient.execute(CloseableHttpClient.java:55)
+  at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:728)
+  at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
+  at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
+  at com.amazonaws.services.s3.AmazonS3Client.copyPart(AmazonS3Client.java:1731)
+  at com.amazonaws.services.s3.transfer.internal.CopyPartCallable.call(CopyPartCallable.java:41)
+  at com.amazonaws.services.s3.transfer.internal.CopyPartCallable.call(CopyPartCallable.java:28)
+  at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+  at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+  at java.lang.Thread.run(Thread.java:745)
+```
+
+These are HTTP IO exceptions caught and logged inside the AWS SDK. The client
+will attempt to retry the operation; it may just be a transient event. If there
+are many such exceptions in logs, it may be a symptom of connectivity or network
+problems.
 
 ## Visible S3 Inconsistency
 
