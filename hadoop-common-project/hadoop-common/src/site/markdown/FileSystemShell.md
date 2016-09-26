@@ -773,7 +773,7 @@ Azure WASB and OpenStack Swift.
 hadoop fs -mkdir s3a://bucket/datasets/
 
 # Upload a file from the cluster filesystem
-hadoop fs -put -d /datasets/example.orc s3a://bucket/datasets/
+hadoop fs -put /datasets/example.orc s3a://bucket/datasets/
 
 # touch a file
 hadoop fs -touchz wasb://yourcontainer@youraccount.blob.core.windows.net/touched
@@ -958,7 +958,7 @@ be incompatible with the Hadoop filesystem clients. These tend to require full
 read and write access to the entire object store bucket/container into which they write data.
 
 As an example of how permissions are mocked, here is a listing of Amazon's public,
-read-only bucket of landsat images:
+read-only bucket of Landsat images:
 
 ```bash
 $ hadoop fs -ls s3a://landsat-pds/
@@ -973,7 +973,6 @@ drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/runs
 drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/tarq
 drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/tarq_corrupt
 drwxrwxrwx   - mapred          0 2016-09-26 12:16 s3a://landsat-pds/test
-
 ```
 
 1. All files are listed as having full read/write permissions.
