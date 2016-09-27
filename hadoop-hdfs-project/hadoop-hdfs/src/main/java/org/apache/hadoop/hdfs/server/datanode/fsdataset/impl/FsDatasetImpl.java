@@ -271,7 +271,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private boolean blockPinningEnabled;
   private final int maxDataLength;
 
-  private final AutoCloseableLock datasetLock;
+  @VisibleForTesting
+  final AutoCloseableLock datasetLock;
   private final Condition datasetLockCondition;
   
   /**
@@ -313,7 +314,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     storageMap = new ConcurrentHashMap<String, DatanodeStorage>();
-    volumeMap = new ReplicaMap(this);
+    volumeMap = new ReplicaMap(datasetLock);
     ramDiskReplicaTracker = RamDiskReplicaTracker.getInstance(conf, this);
 
     @SuppressWarnings("unchecked")
@@ -434,7 +435,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     FsVolumeImpl fsVolume = new FsVolumeImpl(
         this, sd.getStorageUuid(), dir, this.conf, storageType);
     FsVolumeReference ref = fsVolume.obtainReference();
-    ReplicaMap tempVolumeMap = new ReplicaMap(this);
+    ReplicaMap tempVolumeMap = new ReplicaMap(datasetLock);
     fsVolume.getVolumeMap(tempVolumeMap, ramDiskReplicaTracker);
 
     activateVolume(tempVolumeMap, sd, storageType, ref);
@@ -468,7 +469,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     StorageType storageType = location.getStorageType();
     final FsVolumeImpl fsVolume =
         createFsVolume(sd.getStorageUuid(), sd.getCurrentDir(), storageType);
-    final ReplicaMap tempVolumeMap = new ReplicaMap(fsVolume);
+    final ReplicaMap tempVolumeMap = new ReplicaMap(new AutoCloseableLock());
     ArrayList<IOException> exceptions = Lists.newArrayList();
 
     for (final NamespaceInfo nsInfo : nsInfos) {
@@ -2474,7 +2475,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       Block block, long recoveryId, long xceiverStopTimeout) throws IOException {
     while (true) {
       try {
-        synchronized (map.getMutex()) {
+        try (AutoCloseableLock lock = map.getLock().acquire()) {
           return initReplicaRecoveryImpl(bpid, map, block, recoveryId);
         }
       } catch (MustStopExistingWriter e) {
