@@ -31,11 +31,8 @@ import java.net.URI;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
-import static org.apache.hadoop.fs.s3a.Constants.PURGE_EXISTING_MULTIPART;
-import static org.apache.hadoop.fs.s3a.Constants.PURGE_EXISTING_MULTIPART_AGE;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_ENCRYPTION_TESTS;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_FS_S3A_NAME;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Utilities for the S3A tests.

@@ -62,7 +62,7 @@ public class ITestS3AFastOutputStream {
 
   @Test
   public void testRegularUpload() throws IOException {
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024);
   }
 
 }

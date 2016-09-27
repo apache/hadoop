@@ -62,101 +62,6 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public static final int _1KB = 1024;
   public static final int _1MB = _1KB * _1KB;
 
-  /**
-   * The number of operations to perform: {@value}.
-   */
-  public static final String KEY_OPERATION_COUNT =
-      SCALE_TEST + "operation.count";
-
-  /**
-   * The number of directory operations to perform: {@value}.
-   */
-  public static final String KEY_DIRECTORY_COUNT =
-      SCALE_TEST + "directory.count";
-
-  /**
-   * The readahead buffer: {@value}.
-   */
-  public static final String KEY_READ_BUFFER_SIZE =
-      S3A_SCALE_TEST + "read.buffer.size";
-
-  public static final int DEFAULT_READ_BUFFER_SIZE = 16384;
-
-  /**
-   * Key for a multi MB test file: {@value}.
-   */
-  public static final String KEY_CSVTEST_FILE =
-      S3A_SCALE_TEST + "csvfile";
-  /**
-   * Default path for the multi MB test file: {@value}.
-   */
-  public static final String DEFAULT_CSVTEST_FILE
-      = "s3a://landsat-pds/scene_list.gz";
-
-  /**
-   * Endpoint for the S3 CSV/scale tests. This defaults to
-   * being us-east.
-   */
-  public static final String KEY_CSVTEST_ENDPOINT =
-      S3A_SCALE_TEST + "csvfile.endpoint";
-
-  /**
-   * Endpoint for the S3 CSV/scale tests. This defaults to
-   * being us-east.
-   */
-  public static final String DEFAULT_CSVTEST_ENDPOINT =
-      "s3.amazonaws.com";
-
-  /**
-   * Name of the property to define the timeout for scale tests: {@value}.
-   * Measured in seconds.
-   */
-  public static final String KEY_TEST_TIMEOUT = S3A_SCALE_TEST + "timeout";
-
-  /**
-   * Name of the property to define the file size for the huge file
-   * tests: {@value}. Measured in MB.
-   */
-  public static final String KEY_HUGE_FILESIZE =
-      S3A_SCALE_TEST + "huge.filesize";
-
-  /**
-   * Name of the property to define the partition size for the huge file
-   * tests: {@value}. Measured in MB.
-   */
-  public static final String KEY_HUGE_PARTITION_SIZE =
-      S3A_SCALE_TEST + "huge.partitionsize";
-
-  public static final String KEY_SCALE_TESTS_ENABLED = S3A_SCALE_TEST +
-      "enabled";
-
-  /**
-   * The default huge size is small —full 5GB+ scale tests are something
-   * to run in long test runs on EC2 VMs. {@value}.
-   */
-  public static final long DEFAULT_HUGE_FILESIZE = 10L;
-
-  /**
-   * The default number of operations to perform: {@value}.
-   */
-  public static final long DEFAULT_OPERATION_COUNT = 2005;
-
-  /**
-   * Default number of directories to create when performing
-   * directory performance/scale tests.
-   */
-  public static final int DEFAULT_DIRECTORY_COUNT = 2;
-
-  /**
-   * Default scale test timeout in seconds: {@value}.
-   */
-  public static final int DEFAULT_TEST_TIMEOUT = 30 * 60;
-
-  /**
-   * Default policy on scale tests: {@value}.
-   */
-  public static final boolean DEFAULT_SCALE_TESTS_ENABLED = false;
-
   protected S3AFileSystem fs;
 
   protected static final Logger LOG =
@@ -182,7 +87,6 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   public Configuration getConf() {
     return conf;
   }
-
 
   /**
    * Setup. This triggers creation of the configuration.
@@ -235,9 +139,17 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   protected Timeout createTestTimeout() {
     demandCreateConfiguration();
     return new Timeout(
-        getTestPropertyInt(null,
+        getTestTimeoutSeconds() * 1000);
+  }
+
+  /**
+   * Get the test timeout in seconds.
+   * @return the test timeout as set in system properties or the default.
+   */
+  protected static int getTestTimeoutSeconds() {
+    return getTestPropertyInt(null,
         KEY_TEST_TIMEOUT,
-        DEFAULT_TEST_TIMEOUT) * 1000);
+        DEFAULT_TEST_TIMEOUT);
   }
 
   /**
@@ -286,5 +198,14 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   protected boolean isEnabled() {
     return enabled;
+  }
+
+  /**
+   * Flag to indicate that this test is being used sequentially. This
+   * is used by some of the scale tests to validate test time expectations.
+   * @return true if the build indicates this test is being run in parallel.
+   */
+  protected boolean isParallelExecution() {
+    return Boolean.getBoolean(S3ATestConstants.KEY_PARALLEL_TEST_EXECUTION);
   }
 }
