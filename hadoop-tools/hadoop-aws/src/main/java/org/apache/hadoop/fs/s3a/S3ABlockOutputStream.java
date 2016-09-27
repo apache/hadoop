@@ -69,8 +69,8 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 @InterfaceStability.Unstable
 class S3ABlockOutputStream extends OutputStream {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      S3ABlockOutputStream.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(S3ABlockOutputStream.class);
 
   /** Owner FileSystem. */
   private final S3AFileSystem fs;
@@ -319,11 +319,10 @@ class S3ABlockOutputStream extends OutputStream {
     }
     S3ADataBlocks.DataBlock block = getActiveBlock();
     boolean hasBlock = hasActiveBlock();
-    LOG.debug("{}: Closing block #{}: current block= {}, data to upload = {}",
+    LOG.debug("{}: Closing block #{}: current block= {}",
         this,
         blockCount,
-        hasBlock ? "(none)" : block,
-        hasBlock ? 0 : block.dataSize());
+        hasBlock ? block : "(none)");
     try {
       if (multiPartUpload == null) {
         if (hasBlock) {
@@ -409,7 +408,8 @@ class S3ABlockOutputStream extends OutputStream {
         "S3ABlockOutputStream{");
     sb.append(writeOperationState.toString());
     sb.append(", blockSize=").append(blockSize);
-    S3ADataBlocks.DataBlock block = getActiveBlock();
+    // unsynced access; risks consistency in exchange for no risk of deadlock.
+    S3ADataBlocks.DataBlock block = activeBlock;
     if (block != null) {
       sb.append(", activeBlock=").append(block);
     }

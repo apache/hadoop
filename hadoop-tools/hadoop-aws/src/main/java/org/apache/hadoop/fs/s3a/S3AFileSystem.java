@@ -207,7 +207,6 @@ public class S3AFileSystem extends FileSystem {
                     }
                   });
 
-
       int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
       if (maxThreads < 2) {
         LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");

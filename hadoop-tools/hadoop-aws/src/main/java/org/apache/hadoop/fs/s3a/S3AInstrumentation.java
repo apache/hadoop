@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
@@ -27,8 +30,6 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.net.URI;
@@ -123,7 +124,6 @@ public class S3AInstrumentation {
       STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
       STREAM_WRITE_BLOCK_UPLOADS_PENDING,
       STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
-      STREAM_WRITE_BANDWIDTH,
   };
 
   public S3AInstrumentation(URI name) {
@@ -762,7 +762,7 @@ public class S3AInstrumentation {
     }
 
     double effectiveBandwidth() {
-      double duration = totalUploadDuration()/1000.0;
+      double duration = totalUploadDuration() / 1000.0;
       return duration > 0 ?
           (bytesUploaded.get() / duration) : 0;
     }

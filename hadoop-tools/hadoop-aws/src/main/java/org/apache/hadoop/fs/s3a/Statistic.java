@@ -139,8 +139,6 @@ public enum Statistic {
       "Count of total time taken for uploads to complete"),
   STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
       "Count of total data uploaded in block output"),
-  STREAM_WRITE_BANDWIDTH("stream_write_bandwidth",
-      "Gauge of inferred bandwidth"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads");
 
