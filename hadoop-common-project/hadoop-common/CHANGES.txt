@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.6.5 - UNRELEASED
+Release 2.6.5 - 2016-10-03
 
   INCOMPATIBLE CHANGES
 
