@@ -29,6 +29,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-8915. TestFSNamesystem.testFSLockGetWaiterCount fails intermittently.
     (Masatake Iwasaki via kihwal)
 
+    HDFS-9885. Correct the distcp counters name while displaying counters.
+    (Contributed by Surendra Singh Lilhore via Brahma Reddy Battula)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
