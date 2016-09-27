@@ -474,9 +474,9 @@ public class TestRMAdminCLI {
               "[-removeFromClusterNodeLabels <label1,label2,label3>] " +
               "[-replaceLabelsOnNode " +
               "<\"node1[:port]=label1,label2 node2[:port]=label1\">] " +
-              "[-directlyAccessNodeLabelStore] [-updateNodeResource " +
-              "[NodeID] [MemSize] [vCores] ([OvercommitTimeout]) " +
-              "[-help [cmd]]"));
+              "[-directlyAccessNodeLabelStore] [-refreshClusterMaxPriority] " +
+              "[-updateNodeResource [NodeID] [MemSize] [vCores] " +
+              "([OvercommitTimeout]) [-help [cmd]]"));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -567,8 +567,8 @@ public class TestRMAdminCLI {
                   + "label2(exclusive=false),label3\">]"
               + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
               + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore] "
-              + "[-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) "
-              + "[-transitionToActive [--forceactive] <serviceId>] "
+              + "[-refreshClusterMaxPriority] [-updateNodeResource [NodeID] [MemSize] [vCores] "
+              + "([OvercommitTimeout]) [-transitionToActive [--forceactive] <serviceId>] "
               + "[-transitionToStandby <serviceId>] "
               + "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";
       String actualHelpMsg = dataOut.toString();
