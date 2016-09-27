@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security;
 
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -24,6 +25,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
@@ -60,6 +62,11 @@ public class TestPermission {
   final private static Random RAN = new Random();
   final private static String USER_NAME = "user" + RAN.nextInt();
   final private static String[] GROUP_NAMES = {"group1", "group2"};
+  final private static String NOUSER = "nouser";
+  final private static String NOGROUP = "nogroup";
+
+  private FileSystem nnfs;
+  private FileSystem userfs;
 
   static FsPermission checkPermission(FileSystem fs,
       String path, FsPermission expected) throws IOException {
@@ -71,6 +78,12 @@ public class TestPermission {
       assertEquals(expected.toShort(), s.getPermission().toShort());
     }
     return s.getPermission();
+  }
+
+  static Path createFile(FileSystem fs, String filename) throws IOException {
+    Path path = new Path(ROOT_PATH, filename);
+    fs.create(path);
+    return path;
   }
 
   /**
@@ -190,16 +203,9 @@ public class TestPermission {
     cluster.waitActive();
 
     try {
-      FileSystem nnfs = FileSystem.get(conf);
+      nnfs = FileSystem.get(conf);
       // test permissions on files that do not exist
       assertFalse(nnfs.exists(CHILD_FILE1));
-      try {
-        nnfs.setOwner(CHILD_FILE1, "foo", "bar");
-        assertTrue(false);
-      }
-      catch(java.io.FileNotFoundException e) {
-        LOG.info("GOOD: got " + e);
-      }
       try {
         nnfs.setPermission(CHILD_FILE1, new FsPermission((short)0777));
         assertTrue(false);
@@ -262,7 +268,7 @@ public class TestPermission {
       UserGroupInformation userGroupInfo = 
         UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES );
       
-      FileSystem userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
+      userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
 
       // make sure mkdir of a existing directory that is not owned by 
       // this user does not throw an exception.
@@ -286,17 +292,114 @@ public class TestPermission {
       // test permissions on files that do not exist
       assertFalse(userfs.exists(CHILD_FILE3));
       try {
-        userfs.setOwner(CHILD_FILE3, "foo", "bar");
-        fail("setOwner should fail for non-exist file");
-      } catch (java.io.FileNotFoundException ignored) {
-      }
-      try {
         userfs.setPermission(CHILD_FILE3, new FsPermission((short) 0777));
         fail("setPermission should fail for non-exist file");
       } catch (java.io.FileNotFoundException ignored) {
       }
+
+      // Make sure any user can create file in root.
+      nnfs.setPermission(ROOT_PATH, new FsPermission("777"));
+
+      testSuperCanChangeOwnerGroup();
+      testNonSuperCanChangeToOwnGroup();
+      testNonSuperCannotChangeToOtherGroup();
+      testNonSuperCannotChangeGroupForOtherFile();
+      testNonSuperCannotChangeGroupForNonExistentFile();
+      testNonSuperCannotChangeOwner();
+      testNonSuperCannotChangeOwnerForOtherFile();
+      testNonSuperCannotChangeOwnerForNonExistentFile();
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  private void testSuperCanChangeOwnerGroup() throws Exception {
+    Path file = createFile(userfs, "testSuperCanChangeOwnerGroup");
+    nnfs.setOwner(file, NOUSER, NOGROUP);
+    FileStatus status = nnfs.getFileStatus(file);
+    assertThat("A super user can change owner", status.getOwner(),
+        is(NOUSER));
+    assertThat("A super user can change group", status.getGroup(),
+        is(NOGROUP));
+  }
+
+  private void testNonSuperCanChangeToOwnGroup() throws Exception {
+    Path file = createFile(userfs, "testNonSuperCanChangeToOwnGroup");
+    userfs.setOwner(file, null, GROUP_NAMES[1]);
+    assertThat("A non-super user can change a file to own group",
+        nnfs.getFileStatus(file).getGroup(), is(GROUP_NAMES[1]));
+  }
+
+  private void testNonSuperCannotChangeToOtherGroup() throws Exception {
+    Path file = createFile(userfs, "testNonSuperCannotChangeToOtherGroup");
+    try {
+      userfs.setOwner(file, null, NOGROUP);
+      fail("Expect ACE when a non-super user tries to change a file to a " +
+          "group where the user does not belong.");
+    } catch (AccessControlException e) {
+      assertThat(e.getMessage(), startsWith("User does not belong to"));
+    }
+  }
+
+  private void testNonSuperCannotChangeGroupForOtherFile() throws Exception {
+    Path file = createFile(nnfs, "testNonSuperCannotChangeGroupForOtherFile");
+    nnfs.setPermission(file, new FsPermission("777"));
+    try {
+      userfs.setOwner(file, null, GROUP_NAMES[1]);
+      fail("Expect ACE when a non-super user tries to set group for a file " +
+          "not owned");
+    } catch (AccessControlException e) {
+      assertThat(e.getMessage(), startsWith("Permission denied"));
+    }
+  }
+
+  private void testNonSuperCannotChangeGroupForNonExistentFile()
+      throws Exception {
+    Path file = new Path(ROOT_PATH,
+        "testNonSuperCannotChangeGroupForNonExistentFile");
+    try {
+      userfs.setOwner(file, null, GROUP_NAMES[1]);
+      fail("Expect FNFE when a non-super user tries to change group for a " +
+          "non-existent file");
+    } catch (FileNotFoundException e) {
+    }
+  }
+
+  private void testNonSuperCannotChangeOwner() throws Exception {
+    Path file = createFile(userfs, "testNonSuperCannotChangeOwner");
+    try {
+      userfs.setOwner(file, NOUSER, null);
+      fail("Expect ACE when a non-super user tries to change owner");
+    } catch (AccessControlException e) {
+      assertThat(e.getMessage(), startsWith(
+          "Non-super user cannot change owner"));
+    }
+  }
+
+  private void testNonSuperCannotChangeOwnerForOtherFile() throws Exception {
+    Path file = createFile(nnfs, "testNonSuperCannotChangeOwnerForOtherFile");
+    nnfs.setPermission(file, new FsPermission("777"));
+    try {
+      userfs.setOwner(file, USER_NAME, null);
+      fail("Expect ACE when a non-super user tries to own a file");
+    } catch (AccessControlException e) {
+      assertThat(e.getMessage(), startsWith("Permission denied"));
+    }
+  }
+
+  private void testNonSuperCannotChangeOwnerForNonExistentFile()
+      throws Exception {
+    Path file = new Path(ROOT_PATH,
+        "testNonSuperCannotChangeOwnerForNonExistentFile");
+    assertFalse(userfs.exists(file));
+    try {
+      userfs.setOwner(file, NOUSER, null);
+      fail("Expect ACE or FNFE when a non-super user tries to change owner " +
+          "for a non-existent file");
+    } catch (AccessControlException e) {
+      assertThat(e.getMessage(), startsWith(
+          "Non-super user cannot change owner"));
+    } catch (FileNotFoundException e) {
     }
   }
 
