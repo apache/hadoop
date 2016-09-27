@@ -281,7 +281,7 @@
                     <mkdir dir="${project.build.directory}/site/jdiff/xml"/>
 
                     <javadoc maxmemory="${jdiff.javadoc.maxmemory}" verbose="yes">
-                      <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+                      <doclet name="org.apache.hadoop.classification.tools.IncludePublicAnnotationsJDiffDoclet"
                               path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar">
                         <param name="-apidir" value="${project.build.directory}/site/jdiff/xml"/>
                         <param name="-apiname" value="${project.name} ${project.version}"/>
@@ -296,7 +296,7 @@
                              destdir="${project.build.directory}/site/jdiff/xml"
                              sourceFiles="${basedir}/dev-support/jdiff/Null.java"
                              maxmemory="${jdiff.javadoc.maxmemory}">
-                      <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+                      <doclet name="org.apache.hadoop.classification.tools.IncludePublicAnnotationsJDiffDoclet"
                               path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar:${project.build.directory}/xerces.jar">
                         <param name="-oldapi" value="${project.name} ${jdiff.stable.api}"/>
                         <param name="-newapi" value="${project.name} ${project.version}"/>
