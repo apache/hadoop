@@ -386,6 +386,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.read-lock-reporting-threshold-ms";
   public static final long    DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
 
+  // Threshold for how long the lock warnings must be suppressed
+  public static final String DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY =
+      "dfs.lock.suppress.warning.interval";
+  public static final long DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT =
+      10000; //ms
+
   //Following keys have no defaults
   public static final String  DFS_DATANODE_DATA_DIR_KEY = "dfs.datanode.data.dir";
   public static final String  DFS_NAMENODE_HTTPS_PORT_KEY = "dfs.https.port";
