@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -285,10 +285,54 @@ public abstract class MetadataStoreTestBase extends Assert {
         ms.listChildren(new Path("/a1/b1x")));
   }
 
-  @Ignore
+  @Test
   public void testMove() throws Exception {
-    // TODO
-    throw new RuntimeException("TODO: implement move and tests.");
+    // Create test dir structure
+    createNewDirs("/a1", "/a2", "/a3");
+    createNewDirs("/a1/b1", "/a1/b2");
+    putListStatusFiles("/a1/b1", false, "/a1/b1/file1", "/a1/b1/file2");
+
+    // Assert root listing as expected
+    DirListingMetadata dirMeta = ms.listChildren(new Path("/"));
+    assertNotNull("Listing root", dirMeta);
+    Collection<PathMetadata> entries = dirMeta.getListing();
+    assertListingsEqual(entries, "/a1", "/a2", "/a3");
+
+    // Assert src listing as expected
+    dirMeta = ms.listChildren(new Path("/a1/b1"));
+    assertNotNull("Listing /a1/b1", dirMeta);
+    entries = dirMeta.getListing();
+    assertListingsEqual(entries, "/a1/b1/file1", "/a1/b1/file2");
+
+    // Do the move(): rename(/a1/b1, /b1)
+    Collection<Path> srcPaths = Arrays.asList(new Path("/a1/b1"),
+        new Path("/a1/b1/file1"), new Path("/a1/b1/file2"));
+
+    ArrayList<PathMetadata> destMetas = new ArrayList<>();
+    destMetas.add(new PathMetadata(makeDirStatus("/b1")));
+    destMetas.add(new PathMetadata(makeFileStatus("/b1/file1", 100)));
+    destMetas.add(new PathMetadata(makeFileStatus("/b1/file2", 100)));
+    ms.move(srcPaths, destMetas);
+
+    // Assert src is no longer there
+    dirMeta = ms.listChildren(new Path("/a1"));
+    assertNotNull("Listing /a1", dirMeta);
+    entries = dirMeta.getListing();
+    assertListingsEqual(entries, "/a1/b2");
+
+    PathMetadata meta = ms.get(new Path("/a1/b1/file1"));
+    // TODO allow return of PathMetadata with isDeleted == true
+    assertNull("Src path deleted", meta);
+
+    // Assert dest looks right
+    meta = ms.get(new Path("/b1/file1"));
+    assertNotNull("dest file not null", meta);
+    verifyBasicFileStatus(meta);
+
+    dirMeta = ms.listChildren(new Path("/b1"));
+    assertNotNull("dest listing not null", dirMeta);
+    entries = dirMeta.getListing();
+    assertListingsEqual(entries, "/b1/file1", "/b1/file2");
   }
 
 
@@ -296,8 +340,18 @@ public abstract class MetadataStoreTestBase extends Assert {
    * Helper functions.
    */
 
+  /** Builds array of Path objects based on parent dir and filenames. */
+  private Path[] buildPaths(String parent, String... paths) {
+
+    Path[] output = new Path[paths.length];
+    for (int i = 0; i < paths.length; i++) {
+      output[i] = new Path(parent, paths[i]);
+    }
+    return output;
+  }
+
   /** Modifies paths input array and returns it. */
-  private String[] buildPaths(String parent, String ...paths) {
+  private String[] buildPathStrings(String parent, String... paths) {
     for (int i = 0; i < paths.length; i++) {
       Path p = new Path(parent, paths[i]);
       paths[i] = p.toString();
@@ -306,13 +360,14 @@ public abstract class MetadataStoreTestBase extends Assert {
   }
 
   private void commonTestPutListStatus(final String parent) throws IOException {
-    putListStatusFiles(parent, true, buildPaths(parent, "file1", "file2",
+    putListStatusFiles(parent, true, buildPathStrings(parent, "file1", "file2",
         "file3"));
     DirListingMetadata dirMeta = ms.listChildren(new Path(parent));
     assertNotNull("list after putListStatus", dirMeta);
     Collection<PathMetadata> entries = dirMeta.getListing();
     assertNotNull("listStatus has entries", entries);
-    assertListingsEqual(entries, buildPaths(parent, "file1", "file2", "file3"));
+    assertListingsEqual(entries, buildPathStrings(parent, "file1", "file2",
+        "file3"));
   }
 
   private void setupListStatus() throws IOException {

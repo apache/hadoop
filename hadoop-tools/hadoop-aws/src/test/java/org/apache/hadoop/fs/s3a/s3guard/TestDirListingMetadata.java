@@ -122,7 +122,7 @@ public class TestDirListingMetadata {
     assertNotNull(meta.getListing());
     assertTrue(meta.getListing().isEmpty());
     assertFalse(meta.isAuthoritative());
-    meta.setAuthoritative();
+    meta.setAuthoritative(true);
     assertTrue(meta.isAuthoritative());
   }
 

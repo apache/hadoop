@@ -97,9 +97,10 @@ public class DirListingMetadata {
 
   /**
    * Marks this directory listing as full and authoritative.
+   * @param authoritative see {@link #isAuthoritative()}.
    */
-  public void setAuthoritative() {
-    isAuthoritative = true;
+  public void setAuthoritative(boolean authoritative) {
+    this.isAuthoritative = authoritative;
   }
 
   /**

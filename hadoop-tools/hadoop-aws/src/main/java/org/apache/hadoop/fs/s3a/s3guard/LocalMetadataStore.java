@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -94,7 +95,7 @@ public class LocalMetadataStore implements MetadataStore {
     // Remove target file/dir
     fileHash.remove(path);
 
-    // Update parent dir listing, if any
+    // Update this and parent dir listing, if any
     dirHashDeleteFile(path);
 
     if (recursive) {
@@ -116,9 +117,39 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void move(Path src, Path dst) throws IOException {
-    // TODO implement me
-    throw new IOException("LocalMetadataStore#move() not implemented yet");
+  public void move(Collection<Path> pathsToDelete,
+      Collection<PathMetadata> pathsToCreate) throws IOException {
+
+    Preconditions.checkNotNull(pathsToDelete, "pathsToDelete is null");
+    Preconditions.checkNotNull(pathsToCreate, "pathsToCreate is null");
+    Preconditions.checkArgument(pathsToDelete.size() == pathsToCreate.size(),
+        "Must supply same number of paths to delete/create.");
+
+    // I feel dirty for using reentrant lock. :-|
+    synchronized (this) {
+
+      // 1. Delete pathsToDelete
+      for (Path p : pathsToDelete) {
+        delete(p);
+      }
+
+      // 2. Create new destination path metadata
+      for (PathMetadata meta : pathsToCreate) {
+        put(meta);
+      }
+
+      // 3. We now know full contents of all dirs in destination subtree
+      for (PathMetadata meta : pathsToCreate) {
+        FileStatus status = meta.getFileStatus();
+        if (status == null || status.isDirectory()) {
+          continue;
+        }
+        DirListingMetadata dir = listChildren(status.getPath());
+        if (dir != null) {  // could be evicted already
+          dir.setAuthoritative(true);
+        }
+      }
+    }
   }
 
   @Override
@@ -205,6 +236,11 @@ public class LocalMetadataStore implements MetadataStore {
    * Update dirHash to reflect deletion of file 'f'.  Call with lock held.
    */
   private void dirHashDeleteFile(Path path) {
+
+    /* If this path is a dir, remove its listing */
+    dirHash.remove(path);
+
+    /* Remove this path from parent's dir listing */
     Path parent = path.getParent();
     if (parent != null) {
       DirListingMetadata dir = dirHash.get(parent);
