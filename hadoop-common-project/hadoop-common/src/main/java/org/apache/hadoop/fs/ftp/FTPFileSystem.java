@@ -105,13 +105,13 @@ public class FTPFileSystem extends FileSystem {
     // get port information from uri, (overrides info in conf)
     int port = uri.getPort();
     port = (port == -1) ? FTP.DEFAULT_PORT : port;
-    conf.setInt("fs.ftp.host.port", port);
+    conf.setInt(FS_FTP_HOST_PORT, port);
 
     // get user/password information from URI (overrides info in conf)
     String userAndPassword = uri.getUserInfo();
     if (userAndPassword == null) {
-      userAndPassword = (conf.get("fs.ftp.user." + host, null) + ":" + conf
-          .get("fs.ftp.password." + host, null));
+      userAndPassword = (conf.get(FS_FTP_USER_PREFIX + host, null) + ":" + conf
+          .get(FS_FTP_PASSWORD_PREFIX + host, null));
     }
     String[] userPasswdInfo = userAndPassword.split(":");
     Preconditions.checkState(userPasswdInfo.length > 1,

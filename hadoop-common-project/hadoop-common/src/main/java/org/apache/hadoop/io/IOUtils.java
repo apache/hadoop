@@ -38,6 +38,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ChunkedArrayList;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 /**
  * An utility class for I/O related functionality. 
  */
@@ -105,7 +108,8 @@ public class IOUtils {
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf)
     throws IOException {
-    copyBytes(in, out, conf.getInt("io.file.buffer.size", 4096), true);
+    copyBytes(in, out, conf.getInt(
+        IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT), true);
   }
   
   /**
@@ -119,7 +123,8 @@ public class IOUtils {
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf, boolean close)
     throws IOException {
-    copyBytes(in, out, conf.getInt("io.file.buffer.size", 4096),  close);
+    copyBytes(in, out, conf.getInt(
+        IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT),  close);
   }
 
   /**

@@ -51,6 +51,13 @@ import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Time;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SEQFILE_COMPRESS_BLOCKSIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SEQFILE_COMPRESS_BLOCKSIZE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSUM_ERRORS_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSUM_ERRORS_KEY;
+
 /** 
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
  * pairs.
@@ -1513,7 +1520,9 @@ public class SequenceFile {
                         Option... options) throws IOException {
       super(conf, options);
       compressionBlockSize = 
-        conf.getInt("io.seqfile.compress.blocksize", 1000000);
+        conf.getInt(IO_SEQFILE_COMPRESS_BLOCKSIZE_KEY,
+            IO_SEQFILE_COMPRESS_BLOCKSIZE_DEFAULT
+        );
       keySerializer.close();
       keySerializer.open(keyBuffer);
       uncompressedValSerializer.close();
@@ -1637,7 +1646,7 @@ public class SequenceFile {
 
   /** Get the configured buffer size */
   private static int getBufferSize(Configuration conf) {
-    return conf.getInt("io.file.buffer.size", 4096);
+    return conf.getInt(IO_FILE_BUFFER_SIZE_KEY, IO_FILE_BUFFER_SIZE_DEFAULT);
   }
 
   /** Reads key/value pairs from a sequence-format file. */
@@ -2655,7 +2664,8 @@ public class SequenceFile {
 
     private void handleChecksumException(ChecksumException e)
       throws IOException {
-      if (this.conf.getBoolean("io.skip.checksum.errors", false)) {
+      if (this.conf.getBoolean(
+          IO_SKIP_CHECKSUM_ERRORS_KEY, IO_SKIP_CHECKSUM_ERRORS_DEFAULT)) {
         LOG.warn("Bad checksum at "+getPosition()+". Skipping entries.");
         sync(getPosition()+this.conf.getInt("io.bytes.per.checksum", 512));
       } else {

@@ -35,6 +35,9 @@ import org.apache.hadoop.io.compress.bzip2.CBZip2InputStream;
 import org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 /**
  * This class provides output and input streams for bzip2 compression
  * and decompression.  It uses the native bzip2 library on the system
@@ -120,7 +123,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       Compressor compressor) throws IOException {
     return Bzip2Factory.isNativeBzip2Loaded(conf) ?
       new CompressorStream(out, compressor, 
-                           conf.getInt("io.file.buffer.size", 4*1024)) :
+                           conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                   IO_FILE_BUFFER_SIZE_DEFAULT)) :
       new BZip2CompressionOutputStream(out);
   }
 
@@ -174,7 +178,8 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
       Decompressor decompressor) throws IOException {
     return Bzip2Factory.isNativeBzip2Loaded(conf) ? 
       new DecompressorStream(in, decompressor,
-                             conf.getInt("io.file.buffer.size", 4*1024)) :
+                             conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                 IO_FILE_BUFFER_SIZE_DEFAULT)) :
       new BZip2CompressionInputStream(in);
   }
 
