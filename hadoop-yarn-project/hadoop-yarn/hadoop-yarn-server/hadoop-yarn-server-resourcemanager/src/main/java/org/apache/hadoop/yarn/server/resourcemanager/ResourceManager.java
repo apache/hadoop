@@ -320,7 +320,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   public CuratorFramework createAndStartCurator(Configuration conf)
-      throws Exception {
+      throws IOException {
     String zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
     if (zkHostPort == null) {
       throw new YarnRuntimeException(
