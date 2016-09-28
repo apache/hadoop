@@ -445,6 +445,8 @@ Usage:
          [-query <datanode>]
          [-cancel <planfile>]
          [-cancel <planID> -node <datanode>]
+         [-report -node [<DataNodeID|IP|Hostname>,...]]
+         [-report -node -top <topnum>]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -452,7 +454,7 @@ Usage:
 |-execute| Executes a given plan on a datanode|
 |-query| Gets the current diskbalancer status from a datanode|
 |-cancel| Cancels a running plan|
-
+|-report| Reports the volume information from datanode(s)|
 
 Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for more information on this command.
 
