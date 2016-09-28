@@ -648,20 +648,6 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Check whether the path specifies a directory
-   */
-  boolean isDir(String src) throws UnresolvedLinkException {
-    src = normalizePath(src);
-    readLock();
-    try {
-      INode node = getINode(src, false);
-      return node != null && node.isDirectory();
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
    * Tell the block manager to update the replication factors when delete
    * happens. Deleting a file or a snapshot might decrease the replication
    * factor of the blocks as the blocks are always replicated to the highest
