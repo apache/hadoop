@@ -302,6 +302,10 @@ public class HistoryFileManager extends AbstractService {
     public boolean isFull() {
       return cache.size() >= maxSize;
     }
+
+    public int size() {
+      return cache.size();
+    }
   }
 
   /**
@@ -612,6 +616,9 @@ public class HistoryFileManager extends AbstractService {
     while (!done &&
         ((timeOutMillis == -1) || (clock.getTime() - start < timeOutMillis))) {
       done = tryCreatingHistoryDirs(counter++ % 3 == 0); // log every 3 attempts, 30sec
+      if (done) {
+        break;
+      }
       try {
         Thread.sleep(intervalCheckMillis);
       } catch (InterruptedException ex) {
@@ -760,15 +767,29 @@ public class HistoryFileManager extends AbstractService {
     List<FileStatus> timestampedDirList = findTimestampedDirectories();
     // Sort first just so insertion is in a consistent order
     Collections.sort(timestampedDirList);
+    LOG.info("Found " + timestampedDirList.size() + " directories to load");
     for (FileStatus fs : timestampedDirList) {
       // TODO Could verify the correct format for these directories.
       addDirectoryToSerialNumberIndex(fs.getPath());
     }
+    final double maxCacheSize = (double) jobListCache.maxSize;
+    int prevCacheSize = jobListCache.size();
     for (int i= timestampedDirList.size() - 1;
         i >= 0 && !jobListCache.isFull(); i--) {
       FileStatus fs = timestampedDirList.get(i); 
       addDirectoryToJobListCache(fs.getPath());
+
+      int currCacheSize = jobListCache.size();
+      if((currCacheSize - prevCacheSize)/maxCacheSize >= 0.05) {
+        LOG.info(currCacheSize * 100.0 / maxCacheSize +
+            "% of cache is loaded.");
+      }
+      prevCacheSize = currCacheSize;
     }
+    final double loadedPercent = maxCacheSize == 0.0 ?
+        100 : prevCacheSize * 100.0 / maxCacheSize;
+    LOG.info("Existing job initialization finished. " +
+        loadedPercent + "% of cache is occupied.");
   }
 
   private void removeDirectoryFromSerialNumberIndex(Path serialDirPath) {
