@@ -412,7 +412,8 @@ public class ZKRMStateStore extends RMStateStore {
             ReservationAllocationStateProto.parseFrom(reservationData);
 
         if (!rmState.getReservationState().containsKey(planName)) {
-          rmState.getReservationState().put(planName, new HashMap<>());
+          rmState.getReservationState().put(planName,
+              new HashMap<ReservationId, ReservationAllocationStateProto>());
         }
 
         ReservationId reservationId =
