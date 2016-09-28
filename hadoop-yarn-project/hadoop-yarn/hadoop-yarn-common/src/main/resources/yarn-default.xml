@@ -1365,6 +1365,12 @@
   </property>
 
   <property>
+    <description>Enable container monitor</description>
+    <name>yarn.nodemanager.container-monitor.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>How often to monitor containers. If not set, the value for
     yarn.nodemanager.resource-monitor.interval-ms will be used.</description>
     <name>yarn.nodemanager.container-monitor.interval-ms</name>
