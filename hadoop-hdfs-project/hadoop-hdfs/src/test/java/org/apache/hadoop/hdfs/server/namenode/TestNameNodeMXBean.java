@@ -46,6 +46,7 @@ import javax.management.ObjectName;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.net.BindException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
@@ -56,6 +57,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Class for testing {@link NameNodeMXBean} implementation
@@ -422,17 +424,29 @@ public class TestNameNodeMXBean {
   public void testNNDirectorySize() throws Exception{
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    // Have to specify IPC ports so the NNs can talk to each other.
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-            .addNN(new MiniDFSNNTopology.NNConf("nn1")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100)))
-            .addNN(new MiniDFSNNTopology.NNConf("nn2")
-                .setIpcPort(ServerSocketUtil.getPort(0, 100))));
+    MiniDFSCluster cluster = null;
+    for (int i = 0; i < 5; i++) {
+      try{
+        // Have to specify IPC ports so the NNs can talk to each other.
+        int[] ports = ServerSocketUtil.getPorts(2);
+        MiniDFSNNTopology topology = new MiniDFSNNTopology()
+            .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+                .addNN(new MiniDFSNNTopology.NNConf("nn1").setIpcPort(ports[0]))
+                .addNN(
+                    new MiniDFSNNTopology.NNConf("nn2").setIpcPort(ports[1])));
 
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(topology).numDataNodes(0)
-        .build();
+        cluster = new MiniDFSCluster.Builder(conf)
+            .nnTopology(topology).numDataNodes(0)
+            .build();
+        break;
+      } catch (BindException e) {
+        // retry if race on ports given by ServerSocketUtil#getPorts
+        continue;
+      }
+    }
+    if (cluster == null) {
+      fail("failed to start mini cluster.");
+    }
     FileSystem fs = null;
     try {
       cluster.waitActive();
