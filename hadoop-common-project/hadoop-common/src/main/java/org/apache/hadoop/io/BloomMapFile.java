@@ -37,6 +37,11 @@ import org.apache.hadoop.util.bloom.Filter;
 import org.apache.hadoop.util.bloom.Key;
 import org.apache.hadoop.util.hash.Hash;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOOM_ERROR_RATE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOOM_ERROR_RATE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOOM_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_MAPFILE_BLOOM_SIZE_KEY;
+
 /**
  * This class extends {@link MapFile} and provides very much the same
  * functionality. However, it uses dynamic Bloom filters to provide
@@ -159,13 +164,15 @@ public class BloomMapFile {
     }
 
     private synchronized void initBloomFilter(Configuration conf) {
-      numKeys = conf.getInt("io.mapfile.bloom.size", 1024 * 1024);
+      numKeys = conf.getInt(
+          IO_MAPFILE_BLOOM_SIZE_KEY, IO_MAPFILE_BLOOM_SIZE_DEFAULT);
       // vector size should be <code>-kn / (ln(1 - c^(1/k)))</code> bits for
       // single key, where <code> is the number of hash functions,
       // <code>n</code> is the number of keys and <code>c</code> is the desired
       // max. error rate.
       // Our desired error rate is by default 0.005, i.e. 0.5%
-      float errorRate = conf.getFloat("io.mapfile.bloom.error.rate", 0.005f);
+      float errorRate = conf.getFloat(
+          IO_MAPFILE_BLOOM_ERROR_RATE_KEY, IO_MAPFILE_BLOOM_ERROR_RATE_DEFAULT);
       vectorSize = (int)Math.ceil((double)(-HASH_COUNT * numKeys) /
           Math.log(1.0 - Math.pow(errorRate, 1.0/HASH_COUNT)));
       bloomFilter = new DynamicBloomFilter(vectorSize, HASH_COUNT,

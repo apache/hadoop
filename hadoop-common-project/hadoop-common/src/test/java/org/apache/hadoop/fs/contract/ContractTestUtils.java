@@ -47,6 +47,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 /**
  * Utilities used across test cases.
  */
@@ -54,8 +57,6 @@ public class ContractTestUtils extends Assert {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ContractTestUtils.class);
-
-  public static final String IO_FILE_BUFFER_SIZE = "io.file.buffer.size";
 
   // For scale testing, we can repeatedly write small chunk data to generate
   // a large file.
@@ -150,8 +151,8 @@ public class ContractTestUtils extends Assert {
     FSDataOutputStream out = fs.create(path,
                                        overwrite,
                                        fs.getConf()
-                                         .getInt(IO_FILE_BUFFER_SIZE,
-                                                 4096),
+                                         .getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                             IO_FILE_BUFFER_SIZE_DEFAULT),
                                        (short) 1,
                                        buffersize);
     out.write(src, 0, len);

@@ -27,6 +27,8 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.zlib.*;
 import org.apache.hadoop.io.compress.zlib.ZlibDecompressor.ZlibDirectDecompressor;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
@@ -117,8 +119,8 @@ public class GzipCodec extends DefaultCodec {
   throws IOException {
     return (compressor != null) ?
                new CompressorStream(out, compressor,
-                                    conf.getInt("io.file.buffer.size", 
-                                                4*1024)) :
+                                    conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                            IO_FILE_BUFFER_SIZE_DEFAULT)) :
                createOutputStream(out);
   }
 
@@ -151,7 +153,8 @@ public class GzipCodec extends DefaultCodec {
       decompressor = createDecompressor();  // always succeeds (or throws)
     }
     return new DecompressorStream(in, decompressor,
-                                  conf.getInt("io.file.buffer.size", 4*1024));
+                                  conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                      IO_FILE_BUFFER_SIZE_DEFAULT));
   }
 
   @Override
