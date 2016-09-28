@@ -328,7 +328,7 @@ Options:
 (assuming the permissions can be propagated across filesystems)
 * `-f` : Overwrites the destination if it already exists.
 * `-ignorecrc` : Skip CRC checks on the file(s) downloaded.
-* `crc`: write CRC checksums for the files downloaded.
+* `-crc`: write CRC checksums for the files downloaded.
 
 getfacl
 -------
@@ -496,7 +496,7 @@ Returns 0 on success and -1 on error.
 put
 ---
 
-Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] <localsrc> ... <dst>`
+Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [ - | <localsrc1>  .. ]. <dst>`
 
 Copy single src, or multiple srcs from local file system to the destination file system.
 Also reads input from stdin and writes to destination file system if the source is set to "-"
@@ -793,10 +793,12 @@ both have the `-d` options set for a direct upload.
 # Upload a file from the cluster filesystem
 hadoop fs -put -d /datasets/example.orc s3a://bucket/datasets/
 
-# Upload a file from the local filesystem
+# Upload a file from under the user's home directory in the local filesystem.
+# Note it is the shell expanding the "~", not the hadoop fs command
 hadoop fs -copyFromLocal -d -f ~/datasets/devices.orc s3a://bucket/datasets/
 
 # create a file from stdin
+# the special "-" source means "use stdin"
 echo "hello" | hadoop fs -put -d -f - wasb://yourcontainer@youraccount.blob.core.windows.net/hello.txt
 
 ```
