@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
 
@@ -497,7 +499,8 @@ abstract class CommandWithDestination extends FsCommand {
                         FsPermission.getFileDefault().applyUMask(
                             FsPermission.getUMask(getConf())),
                         createFlags,
-                        getConf().getInt("io.file.buffer.size", 4096),
+                        getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+                            IO_FILE_BUFFER_SIZE_DEFAULT),
                         lazyPersist ? 1 : getDefaultReplication(item.path),
                         getDefaultBlockSize(),
                         null,

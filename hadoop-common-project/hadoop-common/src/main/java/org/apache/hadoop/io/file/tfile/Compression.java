@@ -36,6 +36,10 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 /**
  * Compression related stuff.
  */
@@ -124,7 +128,8 @@ final class Compression {
         } else {
           bis1 = downStream;
         }
-        conf.setInt("io.compression.codec.lzo.buffersize", 64 * 1024);
+        conf.setInt(IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
         CompressionInputStream cis =
             codec.createInputStream(bis1, decompressor);
         BufferedInputStream bis2 = new BufferedInputStream(cis, DATA_IBUF_SIZE);
@@ -146,7 +151,8 @@ final class Compression {
         } else {
           bos1 = downStream;
         }
-        conf.setInt("io.compression.codec.lzo.buffersize", 64 * 1024);
+        conf.setInt(IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
         CompressionOutputStream cos =
             codec.createOutputStream(bos1, compressor);
         BufferedOutputStream bos2 =
@@ -175,7 +181,7 @@ final class Compression {
           int downStreamBufferSize) throws IOException {
         // Set the internal buffer size to read from down stream.
         if (downStreamBufferSize > 0) {
-          codec.getConf().setInt("io.file.buffer.size", downStreamBufferSize);
+          codec.getConf().setInt(IO_FILE_BUFFER_SIZE_KEY, downStreamBufferSize);
         }
         CompressionInputStream cis =
             codec.createInputStream(downStream, decompressor);
@@ -193,7 +199,7 @@ final class Compression {
         } else {
           bos1 = downStream;
         }
-        codec.getConf().setInt("io.file.buffer.size", 32 * 1024);
+        codec.getConf().setInt(IO_FILE_BUFFER_SIZE_KEY, 32 * 1024);
         CompressionOutputStream cos =
             codec.createOutputStream(bos1, compressor);
         BufferedOutputStream bos2 =

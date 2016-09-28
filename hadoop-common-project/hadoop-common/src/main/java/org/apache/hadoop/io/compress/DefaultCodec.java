@@ -31,6 +31,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DefaultCodec implements Configurable, CompressionCodec, DirectDecompressionCodec {
@@ -60,7 +63,8 @@ public class DefaultCodec implements Configurable, CompressionCodec, DirectDecom
                                                     Compressor compressor) 
   throws IOException {
     return new CompressorStream(out, compressor, 
-                                conf.getInt("io.file.buffer.size", 4*1024));
+                                conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                        IO_FILE_BUFFER_SIZE_DEFAULT));
   }
 
   @Override
@@ -85,7 +89,8 @@ public class DefaultCodec implements Configurable, CompressionCodec, DirectDecom
                                                   Decompressor decompressor) 
   throws IOException {
     return new DecompressorStream(in, decompressor, 
-                                  conf.getInt("io.file.buffer.size", 4*1024));
+                                  conf.getInt(IO_FILE_BUFFER_SIZE_KEY,
+                                      IO_FILE_BUFFER_SIZE_DEFAULT));
   }
 
   @Override
