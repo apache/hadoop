@@ -169,6 +169,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10301. Remove FBR tracking state to fix false zombie storage
     detection for interleaving block reports. (Vinitha Gankidi via shv)
 
+    HDFS-9444. Add utility to find set of available ephemeral ports to
+    ServerSocketUtil. (Masatake Iwasaki via Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
