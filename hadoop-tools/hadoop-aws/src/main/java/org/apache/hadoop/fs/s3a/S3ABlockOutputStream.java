@@ -311,7 +311,7 @@ class S3ABlockOutputStream extends OutputStream {
    * @throws IOException on any failure.
    */
   @Override
-  public synchronized void close() throws IOException {
+  public void close() throws IOException {
     if (closed.getAndSet(true)) {
       // already closed
       LOG.debug("Ignoring close() as stream is already closed");
@@ -422,7 +422,7 @@ class S3ABlockOutputStream extends OutputStream {
   }
 
   /**
-   * Current time in nanoseconds.
+   * Current time in milliseconds.
    * @return time
    */
   private long now() {
