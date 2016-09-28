@@ -24,10 +24,20 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 public class AggregateAppResourceUsage {
   long memorySeconds;
   long vcoreSeconds;
+  long GPUSeconds;
 
   public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds) {
+    // Assert! This is only called by testing, and never by YARN itself.
+    assert false;
+
     this.memorySeconds = memorySeconds;
     this.vcoreSeconds = vcoreSeconds;
+  }
+
+  public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds, long GPUSeconds) {
+    this.memorySeconds = memorySeconds;
+    this.vcoreSeconds = vcoreSeconds;
+    this.GPUSeconds = GPUSeconds;
   }
 
   /**
@@ -56,5 +66,19 @@ public class AggregateAppResourceUsage {
    */
   public void setVcoreSeconds(long vcoreSeconds) {
     this.vcoreSeconds = vcoreSeconds;
+  }
+
+  /**
+   * @return the GPUSeconds
+   */
+  public long getGPUSeconds() {
+    return GPUSeconds;
+  }
+
+  /**
+   * @param GPUSeconds the GPUSeconds to set
+   */
+  public void setGPUSeconds(long GPUSeconds) {
+    this.GPUSeconds = GPUSeconds;
   }
 }

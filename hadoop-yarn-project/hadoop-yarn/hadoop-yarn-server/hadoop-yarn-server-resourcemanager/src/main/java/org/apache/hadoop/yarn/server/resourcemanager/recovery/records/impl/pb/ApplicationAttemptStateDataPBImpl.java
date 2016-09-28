@@ -251,6 +251,12 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
+  public long getGPUSeconds() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getGPUSeconds();
+  }
+
+  @Override
   public void setMemorySeconds(long memorySeconds) {
     maybeInitBuilder();
     builder.setMemorySeconds(memorySeconds);
@@ -260,6 +266,12 @@ public class ApplicationAttemptStateDataPBImpl extends
   public void setVcoreSeconds(long vcoreSeconds) {
     maybeInitBuilder();
     builder.setVcoreSeconds(vcoreSeconds);
+  }
+
+  @Override
+  public void setGPUSeconds(long GPUSeconds) {
+    maybeInitBuilder();
+    builder.setGPUSeconds(GPUSeconds);
   }
 
   @Override

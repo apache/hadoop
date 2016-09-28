@@ -37,6 +37,9 @@ public abstract class ApplicationResourceUsageReport {
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources, long memorySeconds,
       long vcoreSeconds) {
+    // Assert! This is only called by testing, and never by YARN itself.
+    assert false;
+
     ApplicationResourceUsageReport report =
         Records.newRecord(ApplicationResourceUsageReport.class);
     report.setNumUsedContainers(numUsedContainers);
@@ -46,6 +49,25 @@ public abstract class ApplicationResourceUsageReport {
     report.setNeededResources(neededResources);
     report.setMemorySeconds(memorySeconds);
     report.setVcoreSeconds(vcoreSeconds);
+    return report;
+  }
+
+  @Private
+  @Unstable
+  public static ApplicationResourceUsageReport newInstance(
+      int numUsedContainers, int numReservedContainers, Resource usedResources,
+      Resource reservedResources, Resource neededResources, long memorySeconds,
+      long vcoreSeconds, long GPUSeconds) {
+    ApplicationResourceUsageReport report =
+        Records.newRecord(ApplicationResourceUsageReport.class);
+    report.setNumUsedContainers(numUsedContainers);
+    report.setNumReservedContainers(numReservedContainers);
+    report.setUsedResources(usedResources);
+    report.setReservedResources(reservedResources);
+    report.setNeededResources(neededResources);
+    report.setMemorySeconds(memorySeconds);
+    report.setVcoreSeconds(vcoreSeconds);
+    report.setGPUSeconds(GPUSeconds);
     return report;
   }
 
@@ -152,4 +174,22 @@ public abstract class ApplicationResourceUsageReport {
   @Public
   @Unstable
   public abstract long getVcoreSeconds();
+
+  /**
+   * Set the aggregated number of GPUs that the application has allocated
+   * times the number of seconds the application has been running.
+   * @param GPU_seconds the aggregated number of GPU seconds
+   */
+  @Private
+  @Unstable
+  public abstract void setGPUSeconds(long GPU_seconds);
+
+  /**
+   * Get the aggregated number of GPUs that the application has allocated
+   * times the number of seconds the application has been running.
+   * @return the aggregated number of GPU seconds
+   */
+  @Public
+  @Unstable
+  public abstract long getGPUSeconds();
 }

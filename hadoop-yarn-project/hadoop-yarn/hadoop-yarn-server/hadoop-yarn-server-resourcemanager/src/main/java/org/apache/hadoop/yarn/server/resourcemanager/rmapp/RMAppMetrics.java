@@ -26,15 +26,31 @@ public class RMAppMetrics {
   final int numAMContainersPreempted;
   final long memorySeconds;
   final long vcoreSeconds;
+  final long GPUSeconds;
 
   public RMAppMetrics(Resource resourcePreempted,
       int numNonAMContainersPreempted, int numAMContainersPreempted,
       long memorySeconds, long vcoreSeconds) {
+    // Assert! This is only called by testing, and never by YARN itself.
+    assert false;
+
     this.resourcePreempted = resourcePreempted;
     this.numNonAMContainersPreempted = numNonAMContainersPreempted;
     this.numAMContainersPreempted = numAMContainersPreempted;
     this.memorySeconds = memorySeconds;
     this.vcoreSeconds = vcoreSeconds;
+    this.GPUSeconds = 0;
+  }
+
+  public RMAppMetrics(Resource resourcePreempted,
+      int numNonAMContainersPreempted, int numAMContainersPreempted,
+      long memorySeconds, long vcoreSeconds, long GPUSeconds) {
+    this.resourcePreempted = resourcePreempted;
+    this.numNonAMContainersPreempted = numNonAMContainersPreempted;
+    this.numAMContainersPreempted = numAMContainersPreempted;
+    this.memorySeconds = memorySeconds;
+    this.vcoreSeconds = vcoreSeconds;
+    this.GPUSeconds = GPUSeconds;
   }
 
   public Resource getResourcePreempted() {
@@ -55,5 +71,9 @@ public class RMAppMetrics {
 
   public long getVcoreSeconds() {
     return vcoreSeconds;
+  }
+
+  public long getGPUSeconds() {
+    return GPUSeconds;
   }
 }

@@ -223,6 +223,18 @@ extends ApplicationResourceUsageReport {
     ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getVcoreSeconds());
   }
+
+  @Override
+  public synchronized void setGPUSeconds(long GPU_seconds) {
+    maybeInitBuilder();
+    builder.setGPUSeconds(GPU_seconds);
+  }
+
+  @Override
+  public synchronized long getGPUSeconds() {
+    ApplicationResourceUsageReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getGPUSeconds());
+  }
   
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);

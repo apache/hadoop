@@ -51,10 +51,23 @@ public class Resources {
     }
 
     @Override
+    public int getGPUs() {
+      return 0;
+    }
+
+    @Override
+    public void setGPUs(int GPUs) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
         diff = 0 - o.getVirtualCores();
+        if (diff == 0) {
+          diff = 0 - o.getGPUs();
+        }
       }
       return diff;
     }
@@ -84,10 +97,23 @@ public class Resources {
     }
 
     @Override
+    public int getGPUs() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setGPUs(int GPUs) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
     public int compareTo(Resource o) {
       int diff = 0 - o.getMemory();
       if (diff == 0) {
         diff = 0 - o.getVirtualCores();
+        if (diff == 0) {
+          diff = 0 - o.getGPUs();
+        }
       }
       return diff;
     }
@@ -95,13 +121,24 @@ public class Resources {
   };
 
   public static Resource createResource(int memory) {
-    return createResource(memory, (memory > 0) ? 1 : 0);
+    return createResource(memory, (memory > 0) ? 1 : 0, (memory > 0) ? 1 : 0);
   }
 
   public static Resource createResource(int memory, int cores) {
+    // Assert! This is only called by testing, and never by YARN itself.
+    assert false;
+
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     resource.setVirtualCores(cores);
+    return resource;
+  }
+
+  public static Resource createResource(int memory, int cores, int GPUs) {
+    Resource resource = Records.newRecord(Resource.class);
+    resource.setMemory(memory);
+    resource.setVirtualCores(cores);
+    resource.setGPUs(GPUs);
     return resource;
   }
 
@@ -114,12 +151,13 @@ public class Resources {
   }
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory(), res.getVirtualCores());
+    return createResource(res.getMemory(), res.getVirtualCores(), res.getGPUs());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() + rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
+    lhs.setGPUs(lhs.getGPUs() + rhs.getGPUs());
     return lhs;
   }
 
@@ -130,6 +168,7 @@ public class Resources {
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() - rhs.getMemory());
     lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
+    lhs.setGPUs(lhs.getGPUs() - rhs.getGPUs());
     return lhs;
   }
 
@@ -144,6 +183,7 @@ public class Resources {
   public static Resource multiplyTo(Resource lhs, double by) {
     lhs.setMemory((int)(lhs.getMemory() * by));
     lhs.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    lhs.setGPUs((int)(lhs.getGPUs() * by));
     return lhs;
   }
 
@@ -165,6 +205,7 @@ public class Resources {
     Resource out = clone(lhs);
     out.setMemory((int)(lhs.getMemory() * by));
     out.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    out.setGPUs((int)(lhs.getGPUs() * by));
     return out;
   }
   
@@ -253,16 +294,19 @@ public class Resources {
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
     return smaller.getMemory() <= bigger.getMemory() &&
-        smaller.getVirtualCores() <= bigger.getVirtualCores();
+        smaller.getVirtualCores() <= bigger.getVirtualCores() &&
+        smaller.getGPUs() <= bigger.getGPUs();
   }
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
-        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()));
+        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()),
+        Math.min(lhs.getGPUs(), rhs.getGPUs()));
   }
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
     return createResource(Math.max(lhs.getMemory(), rhs.getMemory()),
-        Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()));
+        Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()),
+        Math.max(lhs.getGPUs(), rhs.getGPUs()));
   }
 }
