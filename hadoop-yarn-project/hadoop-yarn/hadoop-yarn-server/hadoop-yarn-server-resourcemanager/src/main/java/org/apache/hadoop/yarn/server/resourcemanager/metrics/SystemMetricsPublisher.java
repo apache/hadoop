@@ -283,6 +283,8 @@ public class SystemMetricsPublisher extends CompositeService {
         appMetrics.getVcoreSeconds());
     entity.addOtherInfo(ApplicationMetricsConstants.APP_MEM_METRICS,
         appMetrics.getMemorySeconds());
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_GPU_METRICS,
+        appMetrics.getGPUSeconds());
     
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
@@ -382,6 +384,8 @@ public class SystemMetricsPublisher extends CompositeService {
         event.getAllocatedResource().getMemory());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO,
         event.getAllocatedResource().getVirtualCores());
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_GPU_ENTITY_INFO,
+        event.getAllocatedResource().getGPUs());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
         event.getAllocatedNode().getHost());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO,

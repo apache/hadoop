@@ -291,8 +291,10 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
                 ApplicationMetricsConstants.APP_CPU_METRICS).toString());
         long memorySeconds=Long.parseLong(entityInfo.get(
                 ApplicationMetricsConstants.APP_MEM_METRICS).toString());
+        long GPUSeconds=Long.parseLong(entityInfo.get(
+                ApplicationMetricsConstants.APP_GPU_METRICS).toString());
         appResources=ApplicationResourceUsageReport
-            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds);
+            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds, GPUSeconds);
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -431,6 +433,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       TimelineEntity entity, String serverHttpAddress, String user) {
     int allocatedMem = 0;
     int allocatedVcore = 0;
+    int allocatedGPU = 0;
     String allocatedHost = null;
     int allocatedPort = -1;
     int allocatedPriority = 0;
@@ -451,6 +454,11 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           .containsKey(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO)) {
         allocatedVcore = (Integer) entityInfo.get(
                 ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO);
+      }
+      if (entityInfo
+          .containsKey(ContainerMetricsConstants.ALLOCATED_GPU_ENTITY_INFO)) {
+        allocatedGPU = (Integer) entityInfo.get(
+                ContainerMetricsConstants.ALLOCATED_GPU_ENTITY_INFO);
       }
       if (entityInfo
           .containsKey(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO)) {
@@ -521,7 +529,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         user);
     return ContainerReport.newInstance(
         ConverterUtils.toContainerId(entity.getEntityId()),
-        Resource.newInstance(allocatedMem, allocatedVcore),
+        Resource.newInstance(allocatedMem, allocatedVcore, allocatedGPU),
         NodeId.newInstance(allocatedHost, allocatedPort),
         Priority.newInstance(allocatedPriority),
         createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,

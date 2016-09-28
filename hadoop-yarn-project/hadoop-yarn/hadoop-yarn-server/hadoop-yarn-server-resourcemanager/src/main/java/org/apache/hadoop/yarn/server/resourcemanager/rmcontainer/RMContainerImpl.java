@@ -574,8 +574,10 @@ public class RMContainerImpl implements RMContainer {
                               * usedMillis / DateUtils.MILLIS_PER_SECOND;
         long vcoreSeconds = resource.getVirtualCores()
                              * usedMillis / DateUtils.MILLIS_PER_SECOND;
+        long GPUSeconds = resource.getGPUs()
+                             * usedMillis / DateUtils.MILLIS_PER_SECOND;
         rmAttempt.getRMAppAttemptMetrics()
-                  .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds);
+                  .updateAggregateAppResourceUsage(memorySeconds,vcoreSeconds,GPUSeconds);
       }
     }
   }

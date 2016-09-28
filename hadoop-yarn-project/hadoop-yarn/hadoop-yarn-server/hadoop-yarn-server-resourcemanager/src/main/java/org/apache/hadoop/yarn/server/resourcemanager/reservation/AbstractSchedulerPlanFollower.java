@@ -92,7 +92,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     Set<ReservationAllocation> currentReservations =
         plan.getReservationsAtTime(now);
     Set<String> curReservationNames = new HashSet<String>();
-    Resource reservedResources = Resource.newInstance(0, 0);
+    Resource reservedResources = Resource.newInstance(0, 0, 0);
     int numRes = getReservedResources(now, currentReservations,
         curReservationNames, reservedResources);
 
@@ -161,7 +161,8 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         Resource capToAssign = res.getResourcesAtTime(now);
         float targetCapacity = 0f;
         if (planResources.getMemory() > 0
-            && planResources.getVirtualCores() > 0) {
+            && planResources.getVirtualCores() > 0
+            && planResources.getGPUs() > 0) {
           targetCapacity =
               calculateReservationToPlanRatio(clusterResources,
                   planResources,

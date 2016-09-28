@@ -125,7 +125,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     
     protected Node(NodeId nodeid) {
       labels = null;
-      resource = Resource.newInstance(0, 0);
+      resource = Resource.newInstance(0, 0, 0);
       running = false;
       nodeId = nodeid;
     }

@@ -39,6 +39,9 @@ public class ContainerMetricsConstants {
   public static final String ALLOCATED_VCORE_ENTITY_INFO =
       "YARN_CONTAINER_ALLOCATED_VCORE";
 
+  public static final String ALLOCATED_GPU_ENTITY_INFO =
+      "YARN_CONTAINER_ALLOCATED_GPU";
+
   public static final String ALLOCATED_HOST_ENTITY_INFO =
       "YARN_CONTAINER_ALLOCATED_HOST";
 

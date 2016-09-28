@@ -121,7 +121,7 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   @Override
   public Resource getResourcesAtTime(long tick) {
     if (tick < startTime || tick >= endTime) {
-      return Resource.newInstance(0, 0);
+      return Resource.newInstance(0, 0, 0);
     }
     return Resources.clone(resourcesOverTime.getCapacityAtTime(tick));
   }
