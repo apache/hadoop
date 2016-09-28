@@ -2810,7 +2810,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Deprecated
   boolean renameTo(String src, String dst, boolean logRetryCache)
       throws IOException {
-    FSDirRenameOp.RenameOldResult ret = null;
+    FSDirRenameOp.RenameResult ret = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2822,7 +2822,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       writeUnlock();
     }
-    boolean success = ret != null && ret.success;
+    boolean success = ret.success;
     if (success) {
       getEditLog().logSync();
     }
@@ -2834,7 +2834,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void renameTo(final String src, final String dst,
                 boolean logRetryCache, Options.Rename... options)
       throws IOException {
-    Map.Entry<BlocksMapUpdateInfo, HdfsFileStatus> res = null;
+    FSDirRenameOp.RenameResult res = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2850,15 +2850,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     getEditLog().logSync();
 
-    BlocksMapUpdateInfo collectedBlocks = res.getKey();
-    HdfsFileStatus auditStat = res.getValue();
+    BlocksMapUpdateInfo collectedBlocks = res.collectedBlocks;
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
       removeBlocks(collectedBlocks);
       collectedBlocks.clear();
     }
 
     logAuditEvent(true, "rename (options=" + Arrays.toString(options) +
-        ")", src, dst, auditStat);
+        ")", src, dst, res.auditStat);
   }
 
   /**
