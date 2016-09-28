@@ -124,6 +124,7 @@ public class S3AFileSystem extends FileSystem {
   private S3AInputPolicy inputPolicy;
   private static final AtomicBoolean warnedOfCoreThreadDeprecation =
       new AtomicBoolean(false);
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
@@ -1423,7 +1424,11 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException IO problem
    */
   @Override
-  public synchronized void close() throws IOException {
+  public void close() throws IOException {
+    if (closed.getAndSet(true)) {
+      // already closed
+      return;
+    }
     try {
       super.close();
     } finally {
