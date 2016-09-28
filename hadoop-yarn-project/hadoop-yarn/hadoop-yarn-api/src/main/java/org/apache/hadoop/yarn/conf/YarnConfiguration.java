@@ -171,6 +171,9 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES =
       YARN_PREFIX + "scheduler.minimum-allocation-vcores";
     public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES = 1;
+  public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS =
+      YARN_PREFIX + "scheduler.minimum-allocation-gpus";
+  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS = 1;
 
   /** Maximum request grant-able by the RM scheduler. */
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
@@ -179,6 +182,9 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES =
       YARN_PREFIX + "scheduler.maximum-allocation-vcores";
   public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES = 4;
+  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS =
+      YARN_PREFIX + "scheduler.maximum-allocation-gpus";
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS = 4;
 
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
@@ -844,6 +850,16 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "resource.percentage-physical-cpu-limit";
   public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT =
       100;
+
+  /** Number of GPUs which can be allocated for containers.*/
+  public static final String NM_GPUS = NM_PREFIX + "resource.GPUs";
+  public static final int DEFAULT_NM_GPUS = 8;
+
+  /** Percentage of overall GPU which can be allocated for containers. */
+  public static final String NM_RESOURCE_PERCENTAGE_GPU_LIMIT =
+          NM_PREFIX + "resource.percentage-GPU-limit";
+  public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_GPU_LIMIT =
+          100;
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
@@ -1075,7 +1091,7 @@ public class YarnConfiguration extends Configuration {
       20;
 
   /**
-   * Indicates if memory and CPU limits will be set for the Windows Job
+   * Indicates if memory, CPU, and GPU limits will be set for the Windows Job
    * Object for the containers launched by the default container executor.
    */
   public static final String NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED =
@@ -1085,6 +1101,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED =
       NM_PREFIX + "windows-container.cpu-limit.enabled";
   public static final boolean DEFAULT_NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED = false;
+
+  public static final String NM_WINDOWS_CONTAINER_GPU_LIMIT_ENABLED =
+      NM_PREFIX + "windows-container.GPU-limit.enabled";
+  public static final boolean DEFAULT_NM_WINDOWS_CONTAINER_GPU_LIMIT_ENABLED = false;
 
   /** 
   /* The Windows group that the windows-secure-container-executor should run as.

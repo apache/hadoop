@@ -148,7 +148,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         conf.getInt(
             YarnConfiguration.NM_VCORES, YarnConfiguration.DEFAULT_NM_VCORES);
 
-    this.totalResource = Resource.newInstance(memoryMb, virtualCores);
+    int GPUs =
+        conf.getInt(
+            YarnConfiguration.NM_GPUS, YarnConfiguration.DEFAULT_NM_GPUS);
+
+    this.totalResource = Resource.newInstance(memoryMb, virtualCores, GPUs);
     metrics.addResource(totalResource);
     this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
