@@ -965,7 +965,8 @@ public class S3AFileSystem extends FileSystem {
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, InputStream inputStream) {
+      ObjectMetadata metadata,
+      InputStream inputStream) {
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         inputStream, metadata);
     putObjectRequest.setCannedAcl(cannedACL);
@@ -996,7 +997,9 @@ public class S3AFileSystem extends FileSystem {
    */
   public ObjectMetadata newObjectMetadata(long length) {
     final ObjectMetadata om = newObjectMetadata();
-    om.setContentLength(length);
+    if (length >= 0) {
+      om.setContentLength(length);
+    }
     return om;
   }
 
@@ -1638,7 +1641,7 @@ public class S3AFileSystem extends FileSystem {
     LocalFileSystem local = getLocal(getConf());
     File srcfile = local.pathToFile(src);
 
-    final ObjectMetadata om = newObjectMetadata();
+    final ObjectMetadata om = newObjectMetadata(srcfile.length());
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
     Upload up = putObject(putObjectRequest);
     ProgressableProgressListener listener = new ProgressableProgressListener(
@@ -2146,11 +2149,11 @@ public class S3AFileSystem extends FileSystem {
      * The metadata is assumed to have been configured with the size of the
      * operation.
      * @param inputStream source data.
+     * @param length size, if known. Use -1 for not known
      * @return the request
      */
-    PutObjectRequest newPutRequest(
-        InputStream inputStream) {
-      return newPutObjectRequest(key, newObjectMetadata(), inputStream);
+    PutObjectRequest newPutRequest(InputStream inputStream, long length) {
+      return newPutObjectRequest(key, newObjectMetadata(length), inputStream);
     }
 
     /**
@@ -2172,10 +2175,11 @@ public class S3AFileSystem extends FileSystem {
      * Create a new object metadata instance.
      * Any standard metadata headers are added here, for example:
      * encryption.
+     * @param length size, if known. Use -1 for not known
      * @return a new metadata instance
      */
-    public ObjectMetadata newObjectMetadata() {
-      return S3AFileSystem.this.newObjectMetadata();
+    public ObjectMetadata newObjectMetadata(long length) {
+      return S3AFileSystem.this.newObjectMetadata(length);
     }
 
     /**
@@ -2188,7 +2192,7 @@ public class S3AFileSystem extends FileSystem {
       final InitiateMultipartUploadRequest initiateMPURequest =
           new InitiateMultipartUploadRequest(bucket,
               key,
-              newObjectMetadata());
+              newObjectMetadata(-1));
       initiateMPURequest.setCannedACL(cannedACL);
       try {
         return s3.initiateMultipartUpload(initiateMPURequest)

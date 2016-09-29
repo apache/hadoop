@@ -369,18 +369,18 @@ class S3ABlockOutputStream extends OutputStream {
   private void putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationState);
 
-    final ObjectMetadata om = writeOperationState.newObjectMetadata();
     final S3ADataBlocks.DataBlock block = getActiveBlock();
-    final int size = block.dataSize();
-    om.setContentLength(size);
+    int size = block.dataSize();
     final PutObjectRequest putObjectRequest =
-        writeOperationState.newPutRequest(block.startUpload());
+        writeOperationState.newPutRequest(
+            block.startUpload(),
+            size);
     long transferQueueTime = now();
     BlockUploadProgress callback =
         new BlockUploadProgress(
             block, progressListener, transferQueueTime);
     putObjectRequest.setGeneralProgressListener(callback);
-    statistics.blockUploadQueued(block.dataSize());
+    statistics.blockUploadQueued(size);
     ListenableFuture<PutObjectResult> putObjectResult =
         executorService.submit(new Callable<PutObjectResult>() {
           @Override
@@ -395,7 +395,7 @@ class S3ABlockOutputStream extends OutputStream {
     try {
       putObjectResult.get();
     } catch (InterruptedException ie) {
-      LOG.warn("Interrupted object upload: {}", ie, ie);
+      LOG.warn("Interrupted object upload", ie);
       Thread.currentThread().interrupt();
     } catch (ExecutionException ee) {
       throw extractException("regular upload", key, ee);
@@ -459,8 +459,8 @@ class S3ABlockOutputStream extends OutputStream {
           writeOperationState.newUploadPartRequest(
               uploadId,
               uploadStream,
-              currentPartNumber, size
-          );
+              currentPartNumber,
+              size);
       long transferQueueTime = now();
       BlockUploadProgress callback =
           new BlockUploadProgress(

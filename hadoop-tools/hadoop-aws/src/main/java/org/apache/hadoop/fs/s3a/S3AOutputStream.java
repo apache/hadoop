@@ -102,7 +102,7 @@ public class S3AOutputStream extends OutputStream {
     LOG.debug("OutputStream for key '{}' closed. Now beginning upload", key);
 
     try {
-      final ObjectMetadata om = fs.newObjectMetadata();
+      final ObjectMetadata om = fs.newObjectMetadata(backupFile.length());
       Upload upload = fs.putObject(
           fs.newPutObjectRequest(
               key,
