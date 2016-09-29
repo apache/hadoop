@@ -1533,6 +1533,12 @@ public class YarnConfiguration extends Configuration {
       false;
 
 
+  // Configurations for applicaiton life time monitor feature
+  public static final String RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
+      RM_PREFIX + "application-timeouts.lifetime-monitor.interval-ms";
+
+  public static final long DEFAULT_RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
+      60000;
 
   /**
    * Interval of time the linux container executor should try cleaning up

@@ -365,6 +365,16 @@ message ApplicationSubmissionContextProto {
   optional ReservationIdProto reservation_id = 15;
   optional string node_label_expression = 16;
   optional ResourceRequestProto am_container_resource_request = 17;
+  repeated ApplicationTimeoutMapProto application_timeouts = 18;
+}
+
+enum ApplicationTimeoutTypeProto {
+  APP_TIMEOUT_LIFETIME = 1;
+}
+
+message ApplicationTimeoutMapProto {
+  optional ApplicationTimeoutTypeProto application_timeout_type = 1;
+  optional int64 timeout = 2;
 }
 
 message LogAggregationContextProto {

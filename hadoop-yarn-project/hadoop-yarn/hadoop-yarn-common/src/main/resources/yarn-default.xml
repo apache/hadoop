@@ -3075,4 +3075,13 @@
     <name>yarn.resourcemanager.node-removal-untracked.timeout-ms</name>
     <value>60000</value>
   </property>
+
+  <property>
+    <description>
+    The RMAppLifetimeMonitor Service uses this value as lifetime monitor interval
+    </description>
+    <name>yarn.resourcemanager.application-timeouts.lifetime-monitor.interval-ms</name>
+    <value>60000</value>
+  </property>
+
 </configuration>

@@ -44,8 +44,8 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   private Thread checkerThread;
   private volatile boolean stopped;
   public static final int DEFAULT_EXPIRE = 5*60*1000;//5 mins
-  private int expireInterval = DEFAULT_EXPIRE;
-  private int monitorInterval = expireInterval/3;
+  private long expireInterval = DEFAULT_EXPIRE;
+  private long monitorInterval = expireInterval / 3;
 
   private final Clock clock;
 
@@ -85,7 +85,12 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
     this.expireInterval = expireInterval;
   }
 
-  protected void setMonitorInterval(int monitorInterval) {
+  protected long getExpireInterval(O o) {
+    // by-default return for all the registered object interval.
+    return this.expireInterval;
+  }
+
+  protected void setMonitorInterval(long monitorInterval) {
     this.monitorInterval = monitorInterval;
   }
 
@@ -97,7 +102,11 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   }
 
   public synchronized void register(O ob) {
-    running.put(ob, clock.getTime());
+    register(ob, clock.getTime());
+  }
+
+  public synchronized void register(O ob, long monitorStartTime) {
+    running.put(ob, monitorStartTime);
   }
 
   public synchronized void unregister(O ob) {
@@ -117,19 +126,20 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
     public void run() {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
         synchronized (AbstractLivelinessMonitor.this) {
-          Iterator<Map.Entry<O, Long>> iterator = 
-            running.entrySet().iterator();
+          Iterator<Map.Entry<O, Long>> iterator = running.entrySet().iterator();
 
-          //avoid calculating current time everytime in loop
+          // avoid calculating current time everytime in loop
           long currentTime = clock.getTime();
 
           while (iterator.hasNext()) {
             Map.Entry<O, Long> entry = iterator.next();
-            if (currentTime > entry.getValue() + expireInterval) {
+            O key = entry.getKey();
+            long interval = getExpireInterval(key);
+            if (currentTime > entry.getValue() + interval) {
               iterator.remove();
-              expire(entry.getKey());
-              LOG.info("Expired:" + entry.getKey().toString() + 
-                      " Timed out after " + expireInterval/1000 + " secs");
+              expire(key);
+              LOG.info("Expired:" + entry.getKey().toString()
+                  + " Timed out after " + interval / 1000 + " secs");
             }
           }
         }

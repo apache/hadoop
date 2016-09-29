@@ -368,7 +368,7 @@ public class TestPBImplRecords {
       return bytes[rand.nextInt(4)];
     } else if (type.equals(int.class) || type.equals(Integer.class)) {
       return rand.nextInt(1000000);
-    } else if (type.equals(long.class)) {
+    } else if (type.equals(long.class) || type.equals(Long.class)) {
       return Long.valueOf(rand.nextInt(1000000));
     } else if (type.equals(float.class)) {
       return rand.nextFloat();
