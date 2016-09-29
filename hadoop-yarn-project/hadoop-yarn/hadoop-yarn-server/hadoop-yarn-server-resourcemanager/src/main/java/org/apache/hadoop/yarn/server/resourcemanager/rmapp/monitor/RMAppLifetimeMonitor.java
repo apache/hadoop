@@ -100,7 +100,10 @@ public class RMAppLifetimeMonitor
       ApplicationTimeoutType timeoutType, long monitorStartTime, long timeout) {
     RMAppToMonitor appToMonitor = new RMAppToMonitor(appId, timeoutType);
     register(appToMonitor, monitorStartTime);
-    monitoredApps.putIfAbsent(appToMonitor, timeout);
+    Long oldTimeout = monitoredApps.get(appToMonitor);
+    if (oldTimeout == null) {
+      monitoredApps.put(appToMonitor, timeout);
+    }
   }
 
   @Override
