@@ -20,6 +20,9 @@ Release 2.7.4 - UNRELEASED
 
     MAPREDUCE-4784. TestRecovery occasionally fails (Haibo Chen via jlowe)
 
+    MAPREDUCE-6771. RMContainerAllocator sends container diagnostics event
+    after corresponding completion event (Haibo Chen via jlowe)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
