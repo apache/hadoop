@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -28,9 +30,11 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,15 +60,13 @@ public class OpportunisticContainerContext {
   private ContainerIdGenerator containerIdGenerator =
       new ContainerIdGenerator();
 
-  private Map<String, NodeId> nodeMap = new LinkedHashMap<>();
+  private volatile List<NodeId> nodeList = new LinkedList<>();
+  private final Map<String, NodeId> nodeMap = new LinkedHashMap<>();
 
-  // Mapping of NodeId to NodeTokens. Populated either from RM response or
-  // generated locally if required.
-  private Map<NodeId, NMToken> nodeTokens = new HashMap<>();
   private final Set<String> blacklist = new HashSet<>();
 
   // This maintains a map of outstanding OPPORTUNISTIC Reqs. Key-ed by Priority,
-  // Resource Name (Host/rack/any) and capability. This mapping is required
+  // Resource Name (host/rack/any) and capability. This mapping is required
   // to match a received Container to an outstanding OPPORTUNISTIC
   // ResourceRequest (ask).
   private final TreeMap<Priority, Map<Resource, ResourceRequest>>
@@ -74,7 +76,7 @@ public class OpportunisticContainerContext {
     return containersAllocated;
   }
 
-  public OpportunisticContainerAllocator.AllocationParams getAppParams() {
+  public AllocationParams getAppParams() {
     return appParams;
   }
 
@@ -88,11 +90,29 @@ public class OpportunisticContainerContext {
   }
 
   public Map<String, NodeId> getNodeMap() {
-    return nodeMap;
+    return Collections.unmodifiableMap(nodeMap);
   }
 
-  public Map<NodeId, NMToken> getNodeTokens() {
-    return nodeTokens;
+  public synchronized void updateNodeList(List<NodeId> newNodeList) {
+    // This is an optimization for centralized placement. The
+    // OppContainerAllocatorAMService has a cached list of nodes which it sets
+    // here. The nodeMap needs to be updated only if the backing node list is
+    // modified.
+    if (newNodeList != nodeList) {
+      nodeList = newNodeList;
+      nodeMap.clear();
+      for (NodeId n : nodeList) {
+        nodeMap.put(n.getHost(), n);
+      }
+    }
+  }
+
+  public void updateAllocationParams(Resource minResource, Resource maxResource,
+      Resource incrResource, int containerTokenExpiryInterval) {
+    appParams.setMinResource(minResource);
+    appParams.setMaxResource(maxResource);
+    appParams.setIncrementResource(incrResource);
+    appParams.setContainerTokenExpiryInterval(containerTokenExpiryInterval);
   }
 
   public Set<String> getBlacklist() {
@@ -102,6 +122,15 @@ public class OpportunisticContainerContext {
   public TreeMap<Priority, Map<Resource, ResourceRequest>>
       getOutstandingOpReqs() {
     return outstandingOpReqs;
+  }
+
+  public void updateCompletedContainers(AllocateResponse allocateResponse) {
+    for (ContainerStatus cs :
+        allocateResponse.getCompletedContainersStatuses()) {
+      if (cs.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+        containersAllocated.remove(cs.getContainerId());
+      }
+    }
   }
 
   /**
