@@ -668,7 +668,7 @@ public class S3AFileSystem extends FileSystem {
           copyFile(summary.getKey(), newDstKey, summary.getSize());
 
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            removeKeys(keysToDelete, true);
+            removeKeys(keysToDelete, true, false);
           }
         }
 
@@ -676,7 +676,7 @@ public class S3AFileSystem extends FileSystem {
           objects = continueListObjects(objects);
         } else {
           if (!keysToDelete.isEmpty()) {
-            removeKeys(keysToDelete, false);
+            removeKeys(keysToDelete, false, false);
           }
           break;
         }
@@ -924,17 +924,25 @@ public class S3AFileSystem extends FileSystem {
    * @param keysToDelete collection of keys to delete on the s3-backend
    * @param clearKeys clears the keysToDelete-list after processing the list
    *            when set to true
+   * @param deleteFakeDir indicates whether this is for deleting fake dirs
    */
   private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-          boolean clearKeys) throws AmazonClientException {
+      boolean clearKeys, boolean deleteFakeDir) throws AmazonClientException {
+    if (keysToDelete.isEmpty()) {
+      // no keys
+      return;
+    }
     if (enableMultiObjectsDelete) {
       deleteObjects(new DeleteObjectsRequest(bucket).withKeys(keysToDelete));
-      instrumentation.fileDeleted(keysToDelete.size());
     } else {
       for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
         deleteObject(keyVersion.getKey());
       }
+    }
+    if (!deleteFakeDir) {
       instrumentation.fileDeleted(keysToDelete.size());
+    } else {
+      instrumentation.fakeDirsDeleted(keysToDelete.size());
     }
     if (clearKeys) {
       keysToDelete.clear();
@@ -1017,7 +1025,7 @@ public class S3AFileSystem extends FileSystem {
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              removeKeys(keys, true);
+              removeKeys(keys, true, false);
             }
           }
 
@@ -1025,7 +1033,7 @@ public class S3AFileSystem extends FileSystem {
             objects = continueListObjects(objects);
           } else {
             if (!keys.isEmpty()) {
-              removeKeys(keys, false);
+              removeKeys(keys, false, false);
             }
             break;
           }
@@ -1504,36 +1512,29 @@ public class S3AFileSystem extends FileSystem {
   /**
    * Delete mock parent directories which are no longer needed.
    * This code swallows IO exceptions encountered
-   * @param f path
+   * @param path path
    */
-  private void deleteUnnecessaryFakeDirectories(Path f) {
-    while (true) {
-      String key = "";
-      try {
-        key = pathToKey(f);
-        if (key.isEmpty()) {
-          break;
+  private void deleteUnnecessaryFakeDirectories(Path path) {
+    List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
+    while (!path.isRoot()) {
+      String key = pathToKey(path);
+      key = (key.endsWith("/")) ? key : (key + "/");
+      keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+      path = path.getParent();
+    }
+    try {
+      removeKeys(keysToRemove, false, true);
+    } catch(AmazonClientException e) {
+      instrumentation.errorIgnored();
+      if (LOG.isDebugEnabled()) {
+        StringBuilder sb = new StringBuilder();
+        for(DeleteObjectsRequest.KeyVersion kv : keysToRemove) {
+          sb.append(kv.getKey()).append(",");
         }
-
-        S3AFileStatus status = getFileStatus(f);
-
-        if (status.isDirectory() && status.isEmptyDirectory()) {
-          LOG.debug("Deleting fake directory {}/", key);
-          deleteObject(key + "/");
-        }
-      } catch (IOException | AmazonClientException e) {
-        LOG.debug("While deleting key {} ", key, e);
-        instrumentation.errorIgnored();
+        LOG.debug("While deleting keys {} ", sb.toString(), e);
       }
-
-      if (f.isRoot()) {
-        break;
-      }
-
-      f = f.getParent();
     }
   }
-
 
   private void createFakeDirectory(final String objectName)
       throws AmazonClientException, AmazonServiceException,

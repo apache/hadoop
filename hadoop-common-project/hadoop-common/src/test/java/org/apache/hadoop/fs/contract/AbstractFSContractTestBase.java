@@ -359,7 +359,7 @@ public abstract class AbstractFSContractTestBase extends Assert
     assertEquals(text + " wrong read result " + result, -1, result);
   }
 
-  boolean rename(Path src, Path dst) throws IOException {
+  protected boolean rename(Path src, Path dst) throws IOException {
     return getFileSystem().rename(src, dst);
   }
 
