@@ -50,7 +50,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
@@ -897,32 +896,6 @@ public class TestUserGroupInformation {
     // Ensure only non-private tokens are returned
     Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
     assertEquals(1, tokens.size());
-  }
-
-  @Test(timeout = 30000)
-  public void testCopySubjectAndUgi() throws IOException {
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.SIMPLE, conf);
-    UserGroupInformation.setConfiguration(conf);
-    UserGroupInformation u1 = UserGroupInformation.getLoginUser();
-    assertNotNull(u1);
-    @SuppressWarnings("unchecked")
-    Token<? extends TokenIdentifier> tmpToken = mock(Token.class);
-    u1.addToken(tmpToken);
-
-    UserGroupInformation u2 = u1.copySubjectAndUgi();
-    assertEquals(u1.getAuthenticationMethod(), u2.getAuthenticationMethod());
-    assertNotSame(u1.getSubject(), u2.getSubject());
-    Credentials c1 = u1.getCredentials(), c2 = u2.getCredentials();
-    List<Text> sc1 = c1.getAllSecretKeys(), sc2 = c2.getAllSecretKeys();
-    assertArrayEquals(sc1.toArray(new Text[0]), sc2.toArray(new Text[0]));
-    Collection<Token<? extends TokenIdentifier>> ts1 = c1.getAllTokens(),
-        ts2 = c2.getAllTokens();
-    assertArrayEquals(ts1.toArray(new Token[0]), ts2.toArray(new Token[0]));
-    @SuppressWarnings("unchecked")
-    Token<? extends TokenIdentifier> token = mock(Token.class);
-    u2.addToken(token);
-    assertTrue(u2.getCredentials().getAllTokens().contains(token));
-    assertFalse(u1.getCredentials().getAllTokens().contains(token));
   }
 
   /**
