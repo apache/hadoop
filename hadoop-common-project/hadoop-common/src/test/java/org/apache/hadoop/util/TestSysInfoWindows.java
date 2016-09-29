@@ -141,8 +141,13 @@ public class TestSysInfoWindows {
   @Test(timeout = 10000)
   public void errorInGetSystemInfo() {
     SysInfoWindowsMock tester = new SysInfoWindowsMock();
-    // info str derived from windows shell command has \r\n termination
+    // info str derived from windows shell command is null
     tester.setSysinfoString(null);
+    // call a method to refresh values
+    tester.getAvailablePhysicalMemorySize();
+
+    // info str derived from windows shell command with no \r\n termination
+    tester.setSysinfoString("");
     // call a method to refresh values
     tester.getAvailablePhysicalMemorySize();
   }

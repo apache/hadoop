@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
@@ -258,6 +260,23 @@ public class ProtoUtils {
       ApplicationAccessTypeProto e) {
     return ApplicationAccessType.valueOf(e.name().replace(
         APP_ACCESS_TYPE_PREFIX, ""));
+  }
+
+  /*
+   * ApplicationTimeoutType
+   */
+  private static String APP_TIMEOUT_TYPE_PREFIX = "APP_TIMEOUT_";
+
+  public static ApplicationTimeoutTypeProto convertToProtoFormat(
+      ApplicationTimeoutType e) {
+    return ApplicationTimeoutTypeProto
+        .valueOf(APP_TIMEOUT_TYPE_PREFIX + e.name());
+  }
+
+  public static ApplicationTimeoutType convertFromProtoFormat(
+      ApplicationTimeoutTypeProto e) {
+    return ApplicationTimeoutType
+        .valueOf(e.name().replace(APP_TIMEOUT_TYPE_PREFIX, ""));
   }
   
   /*

@@ -226,7 +226,7 @@ public class RunJar {
 
     unJar(file, workDir);
 
-    ClassLoader loader = createClassLoader(workDir);
+    ClassLoader loader = createClassLoader(file, workDir);
 
     Thread.currentThread().setContextClassLoader(loader);
     Class<?> mainClass = Class.forName(mainClassName, true, loader);
@@ -250,13 +250,14 @@ public class RunJar {
    * the user jar as well as the HADOOP_CLASSPATH. Otherwise, it creates a
    * classloader that simply adds the user jar to the classpath.
    */
-  private ClassLoader createClassLoader(final File workDir)
+  private ClassLoader createClassLoader(File file, final File workDir)
       throws MalformedURLException {
     ClassLoader loader;
     // see if the client classloader is enabled
     if (useClientClassLoader()) {
       StringBuilder sb = new StringBuilder();
       sb.append(workDir).append("/").
+          append(File.pathSeparator).append(file).
           append(File.pathSeparator).append(workDir).append("/classes/").
           append(File.pathSeparator).append(workDir).append("/lib/*");
       // HADOOP_CLASSPATH is added to the client classpath
@@ -276,6 +277,7 @@ public class RunJar {
     } else {
       List<URL> classPath = new ArrayList<>();
       classPath.add(new File(workDir + "/").toURI().toURL());
+      classPath.add(file.toURI().toURL());
       classPath.add(new File(workDir, "classes/").toURI().toURL());
       File[] libs = new File(workDir, "lib").listFiles();
       if (libs != null) {

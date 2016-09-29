@@ -564,4 +564,14 @@
     </Or>
     <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD" />
   </Match>
+
+  <!-- Ignore VO_VOLATILE_INCREMENT, they will be protected by writeLock -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue$User" />
+    <Or>
+      <Field name="pendingApplications" />
+      <Field name="activeApplications" />
+    </Or>
+    <Bug pattern="VO_VOLATILE_INCREMENT" />
+  </Match>
 </FindBugsFilter>

@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -59,7 +60,27 @@ public class TestBlockTokenWithDFSStriped extends TestBlockTokenWithDFS {
   @Override
   public void testRead() throws Exception {
     conf = getConf();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
+
+    /*
+     * prefer non-ephemeral port to avoid conflict with tests using
+     * ephemeral ports on MiniDFSCluster#restartDataNode(true).
+     */
+    Configuration[] overlays = new Configuration[numDNs];
+    for (int i = 0; i < overlays.length; i++) {
+      int offset = i * 10;
+      Configuration c = new Configuration();
+      c.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:"
+          + ServerSocketUtil.getPort(19866 + offset, 100));
+      c.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:"
+          + ServerSocketUtil.getPort(19867 + offset, 100));
+      overlays[i] = c;
+    }
+
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+        .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
+        .numDataNodes(numDNs)
+        .build();
     cluster.getFileSystem().getClient()
         .setErasureCodingPolicy("/", null);
     try {

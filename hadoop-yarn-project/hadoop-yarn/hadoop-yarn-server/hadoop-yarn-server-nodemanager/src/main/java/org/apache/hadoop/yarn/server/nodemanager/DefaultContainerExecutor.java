@@ -89,7 +89,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   protected void copyFile(Path src, Path dst, String owner) throws IOException {
-    lfs.util().copy(src, dst);
+    lfs.util().copy(src, dst, false, true);
   }
   
   protected void setScriptExecutable(Path script, String owner) throws IOException {

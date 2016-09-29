@@ -23,6 +23,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -42,6 +43,8 @@ import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -137,6 +140,27 @@ public class TestDiskBalancerCommand {
         is(allOf(containsString("30/32 null[null:0]"),
             containsString("a87654a9-54c7-4693-8dd9-c9c7021dc340"),
             containsString("9 volumes with node data density 1.97"))));
+  }
+
+  /**
+   * This test simulates DiskBalancerCLI Report command run from a shell
+   * with a generic option 'fs'.
+   * @throws Exception
+   */
+  @Test(timeout = 60000)
+  public void testReportWithGenericOptionFS() throws Exception {
+    final String topReportArg = "5";
+    final String reportArgs = String.format("-%s file:%s -%s -%s %s",
+        "fs", clusterJson.getPath(),
+        REPORT, "top", topReportArg);
+    final String cmdLine = String.format("%s", reportArgs);
+    final List<String> outputs = runCommand(cmdLine);
+
+    assertThat(outputs.get(0), containsString("Processing report command"));
+    assertThat(outputs.get(1),
+        is(allOf(containsString("Reporting top"), containsString(topReportArg),
+            containsString(
+                "DataNode(s) benefiting from running DiskBalancer"))));
   }
 
   /* test more than 64 DataNode(s) as total, e.g., -report -top 128 */
@@ -388,11 +412,11 @@ public class TestDiskBalancerCommand {
   private List<String> runCommandInternal(final String cmdLine) throws
       Exception {
     String[] cmds = StringUtils.split(cmdLine, ' ');
-    DiskBalancerCLI db = new DiskBalancerCLI(conf);
-
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
-    db.run(cmds, out);
+
+    Tool diskBalancerTool = new DiskBalancerCLI(conf, out);
+    ToolRunner.run(conf, diskBalancerTool, cmds);
 
     Scanner scanner = new Scanner(bufOut.toString());
     List<String> outputs = Lists.newArrayList();
@@ -456,5 +480,53 @@ public class TestDiskBalancerCommand {
     command.setCluster(diskBalancerCluster);
     List<DiskBalancerDataNode> nodeList = command.getNodes(listArg.toString());
     assertEquals(nodeNum, nodeList.size());
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithMultipleNodes() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String dataNodeUuid2 = cluster.getDataNodes().get(1).getDatanodeUuid();
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, dataNodeUuid2);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(dataNodeUuid2))));
+    // Since the order of input nodes will be disrupted when parse
+    // the node string, we should compare UUID with both output lines.
+    assertTrue(outputs.get(2).contains(dataNodeUuid1)
+        || outputs.get(6).contains(dataNodeUuid1));
+    assertTrue(outputs.get(2).contains(dataNodeUuid2)
+        || outputs.get(6).contains(dataNodeUuid2));
+  }
+
+  @Test(timeout = 60000)
+  public void testReportCommandWithInvalidNode() throws Exception {
+    String dataNodeUuid1 = cluster.getDataNodes().get(0).getDatanodeUuid();
+    String invalidNode = "invalidNode";
+    final String planArg = String.format("-%s -%s %s,%s",
+        REPORT, NODE, dataNodeUuid1, invalidNode);
+    final String cmdLine = String.format("hdfs diskbalancer %s", planArg);
+    List<String> outputs = runCommand(cmdLine, cluster);
+
+    assertThat(
+        outputs.get(0),
+        containsString("Processing report command"));
+    assertThat(
+        outputs.get(1),
+        is(allOf(containsString("Reporting volume information for DataNode"),
+            containsString(dataNodeUuid1), containsString(invalidNode))));
+
+    String invalidNodeInfo =
+        String.format("The node(s) '%s' not found. "
+            + "Please make sure that '%s' exists in the cluster."
+            , invalidNode, invalidNode);
+    assertTrue(outputs.get(2).contains(invalidNodeInfo));
   }
 }

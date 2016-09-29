@@ -534,18 +534,6 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE = 10;
 
-  /**
-   * The {@code AMLauncher.createAMContainerLaunchContext()} method will log the
-   * command being executed to the RM log if this property is true. Commands
-   * may contain sensitive information, such as application or service
-   * passwords, making logging the commands a security risk. In cases where
-   * the cluster may be running applications with such commands, this property
-   * should be set to false. Commands are only logged at the debug level.
-   */
-  public static final String RM_AMLAUNCHER_LOG_COMMAND =
-      RM_PREFIX + "amlauncher.log.command";
-  public static final boolean DEFAULT_RM_AMLAUNCHER_LOG_COMMAND = false;
-
   //RM delegation token related keys
   public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";
@@ -1106,7 +1094,7 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_VMEM_PMEM_RATIO =
     NM_PREFIX + "vmem-pmem-ratio";
   public static final float DEFAULT_NM_VMEM_PMEM_RATIO = 2.1f;
-  
+
   /** Number of Virtual CPU Cores which can be allocated for containers.*/
   public static final String NM_VCORES = NM_PREFIX + "resource.cpu-vcores";
   public static final int DEFAULT_NM_VCORES = 8;
@@ -1258,6 +1246,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_RESOURCE_MON_INTERVAL_MS =
       NM_PREFIX + "resource-monitor.interval-ms";
   public static final int DEFAULT_NM_RESOURCE_MON_INTERVAL_MS = 3000;
+
+  public static final String NM_CONTAINER_MONITOR_ENABLED =
+      NM_PREFIX + "container-monitor.enabled";
+  public static final boolean DEFAULT_NM_CONTAINER_MONITOR_ENABLED = true;
 
   /** How often to monitor containers.*/
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
@@ -1541,6 +1533,12 @@ public class YarnConfiguration extends Configuration {
       false;
 
 
+  // Configurations for applicaiton life time monitor feature
+  public static final String RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
+      RM_PREFIX + "application-timeouts.lifetime-monitor.interval-ms";
+
+  public static final long DEFAULT_RM_APPLICATION_LIFETIME_MONITOR_INTERVAL_MS =
+      60000;
 
   /**
    * Interval of time the linux container executor should try cleaning up

@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+
 /**
  * A class that provides a line reader from an input stream.
  * Depending on the constructor used, lines will either be terminated by:
@@ -89,7 +91,7 @@ public class LineReader implements Closeable {
    * @throws IOException
    */
   public LineReader(InputStream in, Configuration conf) throws IOException {
-    this(in, conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE));
+    this(in, conf.getInt(IO_FILE_BUFFER_SIZE_KEY, DEFAULT_BUFFER_SIZE));
   }
 
   /**
@@ -136,7 +138,7 @@ public class LineReader implements Closeable {
   public LineReader(InputStream in, Configuration conf,
       byte[] recordDelimiterBytes) throws IOException {
     this.in = in;
-    this.bufferSize = conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE);
+    this.bufferSize = conf.getInt(IO_FILE_BUFFER_SIZE_KEY, DEFAULT_BUFFER_SIZE);
     this.buffer = new byte[this.bufferSize];
     this.recordDelimiterBytes = recordDelimiterBytes;
   }

@@ -24,6 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.namenode.CacheManager;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 
@@ -45,6 +46,11 @@ public class StorageContainerNameService implements Namesystem, Closeable {
   @Override
   public BlockCollection getBlockCollection(long id) {
     // TBD
+    return null;
+  }
+
+  @Override
+  public FSDirectory getFSDirectory() {
     return null;
   }
 

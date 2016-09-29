@@ -76,4 +76,14 @@ public interface Container extends EventHandler<ContainerEvent> {
   Priority getPriority();
 
   ResourceSet getResourceSet();
+
+  boolean isRunning();
+
+  void setIsReInitializing(boolean isReInitializing);
+
+  boolean isReInitializing();
+
+  boolean canRollback();
+
+  void commitUpgrade();
 }

@@ -38,6 +38,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.webapp.view.HtmlPage;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI;
+import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 import org.apache.hadoop.yarn.webapp.view.TextPage;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -255,6 +256,31 @@ public class TestWebApp {
       assertEquals(404, getResponseCode(baseUrl +"test/goo"));
       assertEquals(200, getResponseCode(baseUrl +"ws/v1/test"));
       assertTrue(getContent(baseUrl +"ws/v1/test").contains("myInfo"));
+    } finally {
+      app.stop();
+    }
+  }
+
+  @Test public void testRobotsText() throws Exception {
+    WebApp app =
+        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
+          @Override
+          public void setup() {
+            bind(MyTestJAXBContextResolver.class);
+            bind(MyTestWebService.class);
+          }
+        });
+    String baseUrl = baseUrl(app);
+    try {
+      //using system line separator here since that is what
+      // TextView (via PrintWriter) seems to use.
+      String[] robotsTxtOutput = getContent(baseUrl +
+          RobotsTextPage.ROBOTS_TXT).trim().split(System.getProperty("line"
+          + ".separator"));
+
+      assertEquals(2, robotsTxtOutput.length);
+      assertEquals("User-agent: *", robotsTxtOutput[0]);
+      assertEquals("Disallow: /", robotsTxtOutput[1]);
     } finally {
       app.stop();
     }

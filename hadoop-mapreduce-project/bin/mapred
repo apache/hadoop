@@ -69,8 +69,6 @@ function mapredcmd_case
     historyserver)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
-      hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
       if [ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]; then
         # shellcheck disable=SC2034
         HADOOP_HEAPSIZE_MAX="${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}"
@@ -79,31 +77,21 @@ function mapredcmd_case
     ;;
     hsadmin)
       HADOOP_CLASSNAME=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     job)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.JobClient
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     pipes)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.pipes.Submitter
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     queue)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.JobQueueClient
     ;;
     sampler)
       HADOOP_CLASSNAME=org.apache.hadoop.mapred.lib.InputSampler
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     version)
       HADOOP_CLASSNAME=org.apache.hadoop.util.VersionInfo
-      hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-      HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"
@@ -141,6 +129,8 @@ fi
 HADOOP_SUBCMD=$1
 shift
 
+hadoop_verify_user "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 HADOOP_SUBCMD_ARGS=("$@")
 
 if declare -f mapred_subcommand_"${HADOOP_SUBCMD}" >/dev/null 2>&1; then
@@ -150,15 +140,20 @@ else
   mapredcmd_case "${HADOOP_SUBCMD}" "${HADOOP_SUBCMD_ARGS[@]}"
 fi
 
-hadoop_verify_user "${HADOOP_SUBCMD}"
+hadoop_add_client_opts
 
-if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
-  hadoop_common_slave_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"
+if [[ ${HADOOP_WORKER_MODE} = true ]]; then
+  hadoop_common_worker_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"
   exit $?
 fi
 
+hadoop_subcommand_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
 if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
   HADOOP_SECURE_USER="${HADOOP_SUBCMD_SECUREUSER}"
+
+  hadoop_subcommand_secure_opts "${HADOOP_SHELL_EXECNAME}" "${HADOOP_SUBCMD}"
+
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
   priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.out"

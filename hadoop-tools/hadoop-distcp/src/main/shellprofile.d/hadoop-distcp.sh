@@ -32,8 +32,6 @@ function hadoop_subcommand_distcp
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.tools.DistCp
   hadoop_add_to_classpath_tools hadoop-distcp
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 fi
@@ -55,8 +53,6 @@ function mapred_subcommand_distcp
   # shellcheck disable=SC2034
   HADOOP_CLASSNAME=org.apache.hadoop.tools.DistCp
   hadoop_add_to_classpath_tools hadoop-distcp
-  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
-  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
 }
 
 fi

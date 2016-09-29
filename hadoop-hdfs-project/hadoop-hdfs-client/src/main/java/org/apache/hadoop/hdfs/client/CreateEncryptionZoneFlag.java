@@ -68,4 +68,3 @@ public enum CreateEncryptionZoneFlag {
     return mode;
   }
 }
-

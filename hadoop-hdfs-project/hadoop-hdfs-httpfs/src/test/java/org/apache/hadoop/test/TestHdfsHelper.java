@@ -21,10 +21,15 @@ import java.io.File;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
 import org.junit.runners.model.FrameworkMethod;
@@ -129,6 +134,9 @@ public class TestHdfsHelper extends TestDirHelper {
     return new Configuration(conf);
   }
 
+  public static final Path ENCRYPTION_ZONE = new Path("/ez");
+  public static final Path ENCRYPTED_FILE = new Path("/ez/encfile");
+
   private static MiniDFSCluster MINI_DFS = null;
 
   private static synchronized MiniDFSCluster startMiniHdfs(Configuration conf) throws Exception {
@@ -148,14 +156,29 @@ public class TestHdfsHelper extends TestDirHelper {
       conf.set("hadoop.security.authentication", "simple");
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+      FileSystemTestHelper helper = new FileSystemTestHelper();
+      final String jceksPath = JavaKeyStoreProvider.SCHEME_NAME + "://file" +
+          new Path(helper.getTestRootDir(), "test.jks").toUri();
+      conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+          jceksPath);
       MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf);
       builder.numDataNodes(2);
       MiniDFSCluster miniHdfs = builder.build();
-      FileSystem fileSystem = miniHdfs.getFileSystem();
+      final String testkey = "testkey";
+      DFSTestUtil.createKey(testkey, miniHdfs, conf);
+
+      DistributedFileSystem fileSystem = miniHdfs.getFileSystem();
+      fileSystem.getClient().setKeyProvider(miniHdfs.getNameNode()
+          .getNamesystem().getProvider());
+
       fileSystem.mkdirs(new Path("/tmp"));
       fileSystem.mkdirs(new Path("/user"));
       fileSystem.setPermission(new Path("/tmp"), FsPermission.valueOf("-rwxrwxrwx"));
       fileSystem.setPermission(new Path("/user"), FsPermission.valueOf("-rwxrwxrwx"));
+      fileSystem.mkdirs(ENCRYPTION_ZONE);
+      fileSystem.createEncryptionZone(ENCRYPTION_ZONE, testkey);
+      fileSystem.create(ENCRYPTED_FILE).close();
+
       MINI_DFS = miniHdfs;
     }
     return MINI_DFS;

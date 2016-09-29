@@ -28,7 +28,7 @@ HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-aws' in the list.
 
 ### Features
 
-**NOTE: `s3:` is being phased out. Use `s3n:` or `s3a:` instead.**
+**NOTE: `s3:` has been phased out. Use `s3n:` or `s3a:` instead.**
 
 1. The second-generation, `s3n:` filesystem, making it easy to share
 data between hadoop and other applications via the S3 object store.
@@ -86,38 +86,6 @@ these instructions —and be aware that all issues related to S3 integration
 in EMR can only be addressed by Amazon themselves: please raise your issues
 with them.
 
-## S3
-
-The `s3://` filesystem is the original S3 store in the Hadoop codebase.
-It implements an inode-style filesystem atop S3, and was written to
-provide scaleability when S3 had significant limits on the size of blobs.
-It is incompatible with any other application's use of data in S3.
-
-It is now deprecated and will be removed in Hadoop 3. Please do not use,
-and migrate off data which is on it.
-
-### Dependencies
-
-* `jets3t` jar
-* `commons-codec` jar
-* `commons-logging` jar
-* `httpclient` jar
-* `httpcore` jar
-* `java-xmlbuilder` jar
-
-### Authentication properties
-
-    <property>
-      <name>fs.s3.awsAccessKeyId</name>
-      <description>AWS access key ID</description>
-    </property>
-
-    <property>
-      <name>fs.s3.awsSecretAccessKey</name>
-      <description>AWS secret key</description>
-    </property>
-
-
 ## S3N
 
 S3N was the first S3 Filesystem client which used "native" S3 objects, hence
@@ -171,16 +139,16 @@ it should be used wherever possible.
 ### Other properties
 
     <property>
-      <name>fs.s3.buffer.dir</name>
+      <name>fs.s3n.buffer.dir</name>
       <value>${hadoop.tmp.dir}/s3</value>
-      <description>Determines where on the local filesystem the s3:/s3n: filesystem
+      <description>Determines where on the local filesystem the s3n: filesystem
       should store files before sending them to S3
       (or after retrieving them from S3).
       </description>
     </property>
 
     <property>
-      <name>fs.s3.maxRetries</name>
+      <name>fs.s3n.maxRetries</name>
       <value>4</value>
       <description>The maximum number of retries for reading or writing files to
         S3, before we signal failure to the application.
@@ -188,7 +156,7 @@ it should be used wherever possible.
     </property>
 
     <property>
-      <name>fs.s3.sleepTimeSeconds</name>
+      <name>fs.s3n.sleepTimeSeconds</name>
       <value>10</value>
       <description>The number of seconds to sleep between each S3 retry.
       </description>
@@ -1011,7 +979,7 @@ includes `distcp`.
 
 ### `ClassNotFoundException: org.apache.hadoop.fs.s3a.S3AFileSystem`
 
-(or `org.apache.hadoop.fs.s3native.NativeS3FileSystem`, `org.apache.hadoop.fs.s3.S3FileSystem`).
+(or `org.apache.hadoop.fs.s3native.NativeS3FileSystem`).
 
 These are the Hadoop classes, found in the `hadoop-aws` JAR. An exception
 reporting one of these classes is missing means that this JAR is not on
@@ -1023,7 +991,7 @@ the classpath.
 
 This means that one or more of the `aws-*-sdk` JARs are missing. Add them.
 
-### Missing method in AWS class
+### Missing method in `com.amazonaws` class
 
 This can be triggered by incompatibilities between the AWS SDK on the classpath
 and the version which Hadoop was compiled with.
@@ -1047,23 +1015,84 @@ classpath. All Jackson JARs on the classpath *must* be of the same version.
 
 ### Authentication failure
 
-The general cause is: you have the wrong credentials —or somehow
+If Hadoop cannot authenticate with the S3 service endpoint,
+the client retries a number of times before eventually failing.
+When it finally gives up, it will report a message about signature mismatch:
+
+```
+com.amazonaws.services.s3.model.AmazonS3Exception:
+ The request signature we calculated does not match the signature you provided.
+ Check your key and signing method.
+  (Service: Amazon S3; Status Code: 403; Error Code: SignatureDoesNotMatch,
+```
+
+The likely cause is that you either have the wrong credentials or somehow
 the credentials were not readable on the host attempting to read or write
 the S3 Bucket.
 
-There's not much that Hadoop can do for diagnostics here.
 Enabling debug logging for the package `org.apache.hadoop.fs.s3a`
-can help somewhat.
+can help provide more information.
 
-Most common: there's an error in the key or secret.
+The most common cause is that you have the wrong credentials for any of the current
+authentication mechanism(s) —or somehow
+the credentials were not readable on the host attempting to read or write
+the S3 Bucket. However, there are a couple of system configuration problems
+(JVM version, system clock) which also need to be checked.
 
-Otherwise, try to use the AWS command line tools with the same credentials.
-If you set the environment variables, you can take advantage of S3A's support
-of environment-variable authentication by attempting to use the `hdfs fs` command
-to read or write data on S3. That is: comment out the `fs.s3a` secrets and rely on
-the environment variables.
+Most common: there's an error in the configuration properties.
 
-### Authentication failure when using URLs with embedded secrets
+
+1. Make sure that the name of the bucket is the correct one.
+That is: check the URL.
+
+1. Make sure the property names are correct. For S3A, they are
+`fs.s3a.access.key` and `fs.s3a.secret.key` —you cannot just copy the S3N
+properties and replace `s3n` with `s3a`.
+
+1. Make sure the properties are visible to the process attempting to
+talk to the object store. Placing them in `core-site.xml` is the standard
+mechanism.
+
+1. If using session authentication, the session may have expired.
+Generate a new session token and secret.
+
+1. If using environement variable-based authentication, make sure that the
+relevant variables are set in the environment in which the process is running.
+
+The standard first step is: try to use the AWS command line tools with the same
+credentials, through a command such as:
+
+    hdfs fs -ls s3a://my-bucket/
+
+Note the trailing "/" here; without that the shell thinks you are trying to list
+your home directory under the bucket, which will only exist if explicitly created.
+
+
+Attempting to list a bucket using inline credentials is a
+means of verifying that the key and secret can access a bucket;
+
+    hdfs fs -ls s3a://key:secret@my-bucket/
+
+Do escape any `+` or `/` symbols in the secret, as discussed below, and never
+share the URL, logs generated using it, or use such an inline authentication
+mechanism in production.
+
+Finally, if you set the environment variables, you can take advantage of S3A's
+support of environment-variable authentication by attempting the same ls operation.
+That is: unset the `fs.s3a` secrets and rely on the environment variables.
+
+#### Authentication failure due to clock skew
+
+The timestamp is used in signing to S3, so as to
+defend against replay attacks. If the system clock is too far behind *or ahead*
+of Amazon's, requests will be rejected.
+
+This can surface as the situation where
+read requests are allowed, but operations which write to the bucket are denied.
+
+Check the system clock.
+
+#### Authentication failure when using URLs with embedded secrets
 
 If using the (strongly discouraged) mechanism of including the
 AWS Key and secret in a URL, then both "+" and "/" symbols need
@@ -1076,23 +1105,25 @@ encoding problems are not uncommon.
 | `/` | `%2F` |
 
 
-That is, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
+As an example, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
 be represented as
 
 ```
-s3a://user1:a%2Bb%2Fc@bucket
+s3a://user1:a%2Bb%2Fc@bucket/
 ```
 
 This technique is only needed when placing secrets in the URL. Again,
 this is something users are strongly advised against using.
 
-### Authentication failures running on Java 8u60+
+#### Authentication Failures When Running on Java 8u60+
 
 A change in the Java 8 JVM broke some of the `toString()` string generation
 of Joda Time 2.8.0, which stopped the Amazon S3 client from being able to
 generate authentication headers suitable for validation by S3.
 
-Fix: make sure that the version of Joda Time is 2.8.1 or later.
+**Fix**: Make sure that the version of Joda Time is 2.8.1 or later, or
+use a new version of Java 8.
+
 
 ### "Bad Request" exception when working with AWS S3 Frankfurt, Seoul, or other "V4" endpoint
 
@@ -1291,10 +1322,12 @@ expense of sequential read performance and bandwidth.
 The slow performance of `rename()` surfaces during the commit phase of work,
 including
 
-* The MapReduce FileOutputCommitter.
-* DistCp's rename after copy operation.
+* The MapReduce `FileOutputCommitter`.
+* DistCp's rename-after-copy operation.
+* The `hdfs fs -rm` command renaming the file under `.Trash` rather than
+deleting it. Use `-skipTrash` to eliminate that step.
 
-Both these operations can be significantly slower when S3 is the destination
+These operations can be significantly slower when S3 is the destination
 compared to HDFS or other "real" filesystem.
 
 *Improving S3 load-balancing behavior*

@@ -20,8 +20,7 @@ package org.apache.hadoop.hdfs.client;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +29,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The public utility API for HDFS.
@@ -38,7 +38,7 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HdfsUtils {
-  private static final Log LOG = LogFactory.getLog(HdfsUtils.class);
+  public static final Logger LOG = LoggerFactory.getLogger(HdfsUtils.class);
 
   /**
    * Is the HDFS healthy?
@@ -54,7 +54,7 @@ public class HdfsUtils {
       throw new IllegalArgumentException("The scheme is not "
           + HdfsConstants.HDFS_URI_SCHEME + ", uri=" + uri);
     }
-    
+
     final Configuration conf = new Configuration();
     //disable FileSystem cache
     conf.setBoolean(String.format("fs.%s.impl.disable.cache", scheme), true);
@@ -80,7 +80,7 @@ public class HdfsUtils {
       }
       return false;
     } finally {
-      IOUtils.cleanup(LOG, fs);
+      IOUtils.closeQuietly(fs);
     }
   }
 }

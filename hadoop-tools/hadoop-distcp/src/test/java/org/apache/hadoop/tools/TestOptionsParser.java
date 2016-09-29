@@ -107,7 +107,7 @@ public class TestOptionsParser {
     DistCpOptions options = OptionsParser.parse(new String[] {
         "hdfs://localhost:9820/source/first",
         "hdfs://localhost:9820/target/"});
-    Assert.assertEquals(options.getMapBandwidth(), DistCpConstants.DEFAULT_BANDWIDTH_MB, DELTA);
+    Assert.assertEquals(options.getMapBandwidth(), 0, DELTA);
 
     options = OptionsParser.parse(new String[] {
         "-bandwidth",
@@ -389,7 +389,7 @@ public class TestOptionsParser {
         + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
         + "append=false, useDiff=false, fromSnapshot=null, toSnapshot=null, "
         + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
-        + "mapBandwidth=100.0, "
+        + "mapBandwidth=0.0, "
         + "copyStrategy='uniformsize', preserveStatus=[], "
         + "preserveRawXattrs=false, atomicWorkPath=null, logPath=null, "
         + "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, "
@@ -572,6 +572,8 @@ public class TestOptionsParser {
     Configuration conf = new Configuration();
     Assert.assertFalse(conf.getBoolean(DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), false));
     Assert.assertFalse(conf.getBoolean(DistCpOptionSwitch.ATOMIC_COMMIT.getConfigLabel(), false));
+    Assert.assertEquals(
+        conf.getRaw(DistCpOptionSwitch.BANDWIDTH.getConfigLabel()), null);
     DistCpOptions options = OptionsParser.parse(new String[] {
         "-atomic",
         "-i",
@@ -581,7 +583,7 @@ public class TestOptionsParser {
     Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), false));
     Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.ATOMIC_COMMIT.getConfigLabel(), false));
     Assert.assertEquals(conf.getFloat(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), -1),
-        DistCpConstants.DEFAULT_BANDWIDTH_MB, DELTA);
+        -1.0, DELTA);
 
     conf = new Configuration();
     Assert.assertFalse(conf.getBoolean(DistCpOptionSwitch.SYNC_FOLDERS.getConfigLabel(), false));
@@ -600,6 +602,62 @@ public class TestOptionsParser {
     Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.DELETE_MISSING.getConfigLabel(), false));
     Assert.assertEquals(conf.get(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel()), "U");
     Assert.assertEquals(conf.getFloat(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), -1), 11.2, DELTA);
+  }
+
+  @Test
+  public void testOptionsAppendToConfDoesntOverwriteBandwidth() {
+    Configuration conf = new Configuration();
+    Assert.assertEquals(
+        conf.getRaw(DistCpOptionSwitch.BANDWIDTH.getConfigLabel()), null);
+    DistCpOptions options = OptionsParser.parse(new String[] {
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    options.appendToConf(conf);
+    Assert.assertEquals(
+        conf.getFloat(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), -1), -1.0,
+        DELTA);
+
+    conf = new Configuration();
+    Assert.assertEquals(
+        conf.getRaw(DistCpOptionSwitch.BANDWIDTH.getConfigLabel()), null);
+    options = OptionsParser.parse(new String[] {
+        "-update",
+        "-delete",
+        "-pu",
+        "-bandwidth",
+        "77",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    options.appendToConf(conf);
+    Assert.assertEquals(
+        conf.getFloat(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), -1), 77.0,
+        DELTA);
+
+    conf = new Configuration();
+    conf.set(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), "88");
+    Assert.assertEquals(
+        conf.getRaw(DistCpOptionSwitch.BANDWIDTH.getConfigLabel()), "88");
+    options = OptionsParser.parse(new String[] {
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    options.appendToConf(conf);
+    Assert.assertEquals(
+        conf.getFloat(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), -1), 88.0,
+        DELTA);
+
+    conf = new Configuration();
+    conf.set(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), "88.0");
+    Assert.assertEquals(
+        conf.getRaw(DistCpOptionSwitch.BANDWIDTH.getConfigLabel()), "88.0");
+    options = OptionsParser.parse(new String[] {
+        "-bandwidth",
+        "99",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    options.appendToConf(conf);
+    Assert.assertEquals(
+        conf.getFloat(DistCpOptionSwitch.BANDWIDTH.getConfigLabel(), -1), 99.0,
+        DELTA);
   }
 
   @Test

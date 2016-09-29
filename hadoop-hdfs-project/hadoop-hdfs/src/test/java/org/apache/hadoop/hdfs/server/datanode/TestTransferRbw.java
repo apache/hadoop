@@ -57,7 +57,7 @@ public class TestTransferRbw {
       String bpid) throws InterruptedException {
     return (ReplicaBeingWritten)getReplica(datanode, bpid, ReplicaState.RBW);
   }
-  private static ReplicaInPipeline getReplica(final DataNode datanode,
+  private static LocalReplicaInPipeline getReplica(final DataNode datanode,
       final String bpid, final ReplicaState expectedState) throws InterruptedException {
     final Collection<ReplicaInfo> replicas = FsDatasetTestUtil.getReplicas(
         datanode.getFSDataset(), bpid);
@@ -68,7 +68,7 @@ public class TestTransferRbw {
     Assert.assertEquals(1, replicas.size());
     final ReplicaInfo r = replicas.iterator().next();
     Assert.assertEquals(expectedState, r.getState());
-    return (ReplicaInPipeline)r;
+    return (LocalReplicaInPipeline)r;
   }
 
   @Test

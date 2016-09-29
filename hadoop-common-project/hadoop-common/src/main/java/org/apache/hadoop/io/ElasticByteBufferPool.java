@@ -85,7 +85,7 @@ public final class ElasticByteBufferPool implements ByteBufferPool {
   private final TreeMap<Key, ByteBuffer> getBufferTree(boolean direct) {
     return direct ? directBuffers : buffers;
   }
-  
+
   @Override
   public synchronized ByteBuffer getBuffer(boolean direct, int length) {
     TreeMap<Key, ByteBuffer> tree = getBufferTree(direct);

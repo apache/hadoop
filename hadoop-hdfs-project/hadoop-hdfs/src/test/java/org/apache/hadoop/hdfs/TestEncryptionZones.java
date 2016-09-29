@@ -45,7 +45,9 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
+import org.apache.hadoop.crypto.key.kms.server.EagerKeyGeneratorKeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -150,7 +152,8 @@ public class TestEncryptionZones {
     // Set up java key store
     String testRoot = fsHelper.getTestRootDir();
     testRootDir = new File(testRoot).getAbsoluteFile();
-    conf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI, getKeyProviderURI());
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        getKeyProviderURI());
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     // Lower the batch size for testing
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
@@ -733,14 +736,33 @@ public class TestEncryptionZones {
     // Roll the key of the encryption zone
     assertNumZones(1);
     String keyName = dfsAdmin.listEncryptionZones().next().getKeyName();
+    FileEncryptionInfo feInfo1 = getFileEncryptionInfo(encFile1);
     cluster.getNamesystem().getProvider().rollNewVersion(keyName);
+    /**
+     * due to the cache on the server side, client may get old keys.
+     * @see EagerKeyGeneratorKeyProviderCryptoExtension#rollNewVersion(String)
+     */
+    boolean rollSucceeded = false;
+    for (int i = 0; i <= EagerKeyGeneratorKeyProviderCryptoExtension
+        .KMS_KEY_CACHE_SIZE_DEFAULT + CommonConfigurationKeysPublic.
+        KMS_CLIENT_ENC_KEY_CACHE_SIZE_DEFAULT; ++i) {
+      KeyProviderCryptoExtension.EncryptedKeyVersion ekv2 =
+          cluster.getNamesystem().getProvider().generateEncryptedKey(TEST_KEY);
+      if (!(feInfo1.getEzKeyVersionName()
+          .equals(ekv2.getEncryptionKeyVersionName()))) {
+        rollSucceeded = true;
+        break;
+      }
+    }
+    Assert.assertTrue("rollover did not generate a new key even after"
+        + " queue is drained", rollSucceeded);
+
     // Read them back in and compare byte-by-byte
     verifyFilesEqual(fs, baseFile, encFile1, len);
     // Write a new enc file and validate
     final Path encFile2 = new Path(zone, "myfile2");
     DFSTestUtil.createFile(fs, encFile2, len, (short) 1, 0xFEED);
     // FEInfos should be different
-    FileEncryptionInfo feInfo1 = getFileEncryptionInfo(encFile1);
     FileEncryptionInfo feInfo2 = getFileEncryptionInfo(encFile2);
     assertFalse("EDEKs should be different", Arrays
         .equals(feInfo1.getEncryptedDataEncryptionKey(),
@@ -845,9 +867,9 @@ public class TestEncryptionZones {
     // Check KeyProvider state
     // Flushing the KP on the NN, since it caches, and init a test one
     cluster.getNamesystem().getProvider().flush();
-    KeyProvider provider = KeyProviderFactory
-        .get(new URI(conf.getTrimmed(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI)),
-            conf);
+    KeyProvider provider = KeyProviderFactory.get(new URI(conf.getTrimmed(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH)),
+        conf);
     List<String> keys = provider.getKeys();
     assertEquals("Expected NN to have created one key per zone", 1,
         keys.size());
@@ -931,7 +953,8 @@ public class TestEncryptionZones {
   public void testCreateEZWithNoProvider() throws Exception {
     // Unset the key provider and make sure EZ ops don't work
     final Configuration clusterConf = cluster.getConfiguration(0);
-    clusterConf.unset(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI);
+    clusterConf
+        .unset(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
     cluster.restartNameNode(true);
     cluster.waitActive();
     final Path zone1 = new Path("/zone1");
@@ -943,8 +966,9 @@ public class TestEncryptionZones {
       assertExceptionContains("since no key provider is available", e);
     }
     final Path jksPath = new Path(testRootDir.toString(), "test.jks");
-    clusterConf.set(DFSConfigKeys.DFS_ENCRYPTION_KEY_PROVIDER_URI,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
+    clusterConf
+        .set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+            JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri()
     );
     // Try listing EZs as well
     assertNumZones(0);

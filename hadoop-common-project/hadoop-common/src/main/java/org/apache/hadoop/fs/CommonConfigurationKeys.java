@@ -78,11 +78,19 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE */
   public static final int IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT =
       100;
-      
+
+  /** Max request size a server will accept. */
   public static final String IPC_MAXIMUM_DATA_LENGTH =
       "ipc.maximum.data.length";
-  
+  /** Default value for IPC_MAXIMUM_DATA_LENGTH. */
   public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 64 * 1024 * 1024;
+
+  /** Max response size a client will accept. */
+  public static final String IPC_MAXIMUM_RESPONSE_LENGTH =
+      "ipc.maximum.response.length";
+  /** Default value for IPC_MAXIMUM_RESPONSE_LENGTH. */
+  public static final int IPC_MAXIMUM_RESPONSE_LENGTH_DEFAULT =
+      128 * 1024 * 1024;
 
   /** How many calls per handler are allowed in the queue. */
   public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY =

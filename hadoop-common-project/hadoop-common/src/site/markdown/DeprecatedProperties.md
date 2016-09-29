@@ -28,6 +28,7 @@ The following table lists the configuration property names that are deprecated i
 | dfs.data.dir | dfs.datanode.data.dir |
 | dfs.datanode.max.xcievers | dfs.datanode.max.transfer.threads |
 | dfs.df.interval | fs.df.interval |
+| dfs.encryption.key.provider.uri | hadoop.security.key.provider.path |
 | dfs.federation.nameservice.id | dfs.nameservice.id |
 | dfs.federation.nameservices | dfs.nameservices |
 | dfs.http.address | dfs.namenode.http-address |

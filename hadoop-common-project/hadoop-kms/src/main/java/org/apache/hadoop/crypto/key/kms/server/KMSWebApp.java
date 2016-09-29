@@ -28,6 +28,7 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.PropertyConfigurator;
@@ -121,6 +122,7 @@ public class KMSWebApp implements ServletContextListener {
       }
       kmsConf = KMSConfiguration.getKMSConf();
       initLogging(confDir);
+      UserGroupInformation.setConfiguration(kmsConf);
       LOG.info("-------------------------------------------------------------");
       LOG.info("  Java runtime version : {}", System.getProperty(
           "java.runtime.version"));

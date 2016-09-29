@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -326,7 +328,7 @@ public class FSDirectory implements Closeable {
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
-    NameNode.LOG.info("Caching file names occuring more than " + threshold
+    NameNode.LOG.info("Caching file names occurring more than " + threshold
         + " times");
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
@@ -646,20 +648,6 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Check whether the path specifies a directory
-   */
-  boolean isDir(String src) throws UnresolvedLinkException {
-    src = normalizePath(src);
-    readLock();
-    try {
-      INode node = getINode(src, false);
-      return node != null && node.isDirectory();
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
    * Tell the block manager to update the replication factors when delete
    * happens. Deleting a file or a snapshot might decrease the replication
    * factor of the blocks as the blocks are always replicated to the highest
@@ -926,6 +914,51 @@ public class FSDirectory implements Closeable {
       if (inodesInPath.getINode(i).isQuotaSet()) { // a directory with quota
         inodesInPath.getINode(i).asDirectory().getDirectoryWithQuotaFeature()
             .addSpaceConsumed2Cache(counts);
+      }
+    }
+  }
+
+  /**
+   * Update the cached quota space for a block that is being completed.
+   * Must only be called once, as the block is being completed.
+   * @param completeBlk - Completed block for which to update space
+   * @param inodes - INodes in path to file containing completeBlk; if null
+   *                 this will be resolved internally
+   */
+  public void updateSpaceForCompleteBlock(BlockInfo completeBlk,
+      INodesInPath inodes) throws IOException {
+    assert namesystem.hasWriteLock();
+    INodesInPath iip = inodes != null ? inodes :
+        INodesInPath.fromINode(namesystem.getBlockCollection(completeBlk));
+    INodeFile fileINode = iip.getLastINode().asFile();
+    // Adjust disk space consumption if required
+    final long diff;
+    final short replicationFactor;
+    if (fileINode.isStriped()) {
+      final ErasureCodingPolicy ecPolicy =
+          FSDirErasureCodingOp.getErasureCodingPolicy(namesystem, iip);
+      final short numDataUnits = (short) ecPolicy.getNumDataUnits();
+      final short numParityUnits = (short) ecPolicy.getNumParityUnits();
+
+      final long numBlocks = numDataUnits + numParityUnits;
+      final long fullBlockGroupSize =
+          fileINode.getPreferredBlockSize() * numBlocks;
+
+      final BlockInfoStriped striped =
+          new BlockInfoStriped(completeBlk, ecPolicy);
+      final long actualBlockGroupSize = striped.spaceConsumed();
+
+      diff = fullBlockGroupSize - actualBlockGroupSize;
+      replicationFactor = (short) 1;
+    } else {
+      diff = fileINode.getPreferredBlockSize() - completeBlk.getNumBytes();
+      replicationFactor = fileINode.getFileReplication();
+    }
+    if (diff > 0) {
+      try {
+        updateSpaceConsumed(iip, 0, -diff, replicationFactor);
+      } catch (IOException e) {
+        LOG.warn("Unexpected exception while updating disk space.", e);
       }
     }
   }

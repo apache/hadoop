@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -349,7 +350,12 @@ public class TestBlockTokenWithDFS {
     Configuration conf = getConf(numDataNodes);
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+      // prefer non-ephemeral port to avoid port collision on restartNameNode
+      cluster = new MiniDFSCluster.Builder(conf)
+          .nameNodePort(ServerSocketUtil.getPort(19820, 100))
+          .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
+          .numDataNodes(numDataNodes)
+          .build();
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
       doTestRead(conf, cluster, false);

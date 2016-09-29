@@ -306,6 +306,13 @@ function hadoop_bootstrap
   HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}
   HADOOP_TOOLS_LIB_JARS_DIR=${HADOOP_TOOLS_LIB_JARS_DIR:-"${HADOOP_TOOLS_DIR}/lib"}
 
+  # by default, whatever we are about to run doesn't support
+  # daemonization
+  HADOOP_SUBCMD_SUPPORTDAEMONIZATION=false
+
+  # shellcheck disable=SC2034
+  HADOOP_SUBCMD_SECURESERVICE=false
+
   # usage output set to zero
   hadoop_reset_usage
 
@@ -1230,6 +1237,20 @@ function hadoop_translate_cygwin_path
   fi
 }
 
+## @description  Adds the HADOOP_CLIENT_OPTS variable to
+## @description  HADOOP_OPTS if HADOOP_SUBCMD_SUPPORTDAEMONIZATION is false
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+function hadoop_add_client_opts
+{
+  if [[ "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" = false
+     || -z "${HADOOP_SUBCMD_SUPPORTDAEMONIZATION}" ]]; then
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  fi
+}
+
 ## @description  Finish configuring Hadoop specific system properties
 ## @description  prior to executing Java
 ## @audience     private
@@ -1963,14 +1984,127 @@ function hadoop_secure_daemon_handler
 ## @return       will exit on failure conditions
 function hadoop_verify_user
 {
-  local command=$1
-  local uservar="HADOOP_${command}_USER"
+  declare program=$1
+  declare command=$2
+  declare uprogram
+  declare ucommand
+  declare uvar
 
-  if [[ -n ${!uservar} ]]; then
-    if [[ ${!uservar} !=  "${USER}" ]]; then
-      hadoop_error "ERROR: ${command} can only be executed by ${!uservar}."
+  if [[ -z "${BASH_VERSINFO[0]}" ]] \
+     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
+    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
+  else
+    uprogram=${program^^}
+    ucommand=${command^^}
+  fi
+
+  uvar="${uprogram}_${ucommand}_USER"
+
+  if [[ -n ${!uvar} ]]; then
+    if [[ ${!uvar} !=  "${USER}" ]]; then
+      hadoop_error "ERROR: ${command} can only be executed by ${!uvar}."
       exit 1
     fi
+  fi
+}
+
+## @description  Add custom (program)_(command)_OPTS to HADOOP_OPTS.
+## @description  Also handles the deprecated cases from pre-3.x.
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        program
+## @param        subcommand
+## @return       will exit on failure conditions
+function hadoop_subcommand_opts
+{
+  declare program=$1
+  declare command=$2
+  declare uvar
+  declare depvar
+  declare uprogram
+  declare ucommand
+
+  if [[ -z "${program}" || -z "${command}" ]]; then
+    return 1
+  fi
+
+  # bash 4 and up have built-in ways to upper and lower
+  # case the contents of vars.  This is faster than
+  # calling tr.
+
+  if [[ -z "${BASH_VERSINFO[0]}" ]] \
+     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
+    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
+  else
+    uprogram=${program^^}
+    ucommand=${command^^}
+  fi
+
+  uvar="${uprogram}_${ucommand}_OPTS"
+
+  # Let's handle all of the deprecation cases early
+  # HADOOP_NAMENODE_OPTS -> HDFS_NAMENODE_OPTS
+
+  depvar="HADOOP_${ucommand}_OPTS"
+
+  if [[ "${depvar}" != "${uvar}" ]]; then
+    if [[ -n "${!depvar}" ]]; then
+      hadoop_deprecate_envvar "${depvar}" "${uvar}"
+    fi
+  fi
+
+  if [[ -n ${!uvar} ]]; then
+    hadoop_debug "Appending ${uvar} onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${!uvar}"
+    return 0
+  fi
+}
+
+## @description  Add custom (program)_(command)_SECURE_EXTRA_OPTS to HADOOP_OPTS.
+## @description  This *does not* handle the pre-3.x deprecated cases
+## @audience     public
+## @stability    stable
+## @replaceable  yes
+## @param        program
+## @param        subcommand
+## @return       will exit on failure conditions
+function hadoop_subcommand_secure_opts
+{
+  declare program=$1
+  declare command=$2
+  declare uvar
+  declare uprogram
+  declare ucommand
+
+  if [[ -z "${program}" || -z "${command}" ]]; then
+    return 1
+  fi
+
+  # bash 4 and up have built-in ways to upper and lower
+  # case the contents of vars.  This is faster than
+  # calling tr.
+
+  if [[ -z "${BASH_VERSINFO[0]}" ]] \
+     || [[ "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    uprogram=$(echo "${program}" | tr '[:lower:]' '[:upper:]')
+    ucommand=$(echo "${command}" | tr '[:lower:]' '[:upper:]')
+  else
+    uprogram=${program^^}
+    ucommand=${command^^}
+  fi
+
+  # HDFS_DATANODE_SECURE_EXTRA_OPTS
+  # HDFS_NFS3_SECURE_EXTRA_OPTS
+  # ...
+  uvar="${uprogram}_${ucommand}_SECURE_EXTRA_OPTS"
+
+  if [[ -n ${!uvar} ]]; then
+    hadoop_debug "Appending ${uvar} onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${!uvar}"
+    return 0
   fi
 }
 

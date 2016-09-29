@@ -385,6 +385,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
     }
 
+    // fail the submission if configured application timeout value is invalid
+    RMServerUtils.validateApplicationTimeouts(
+        submissionContext.getApplicationTimeouts());
+
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,

@@ -30,6 +30,8 @@ public interface Namesystem extends RwLock, SafeMode {
 
   BlockCollection getBlockCollection(long id);
 
+  FSDirectory getFSDirectory();
+
   void startSecretManagerIfNecessary();
 
   boolean isInSnapshot(long blockCollectionID);

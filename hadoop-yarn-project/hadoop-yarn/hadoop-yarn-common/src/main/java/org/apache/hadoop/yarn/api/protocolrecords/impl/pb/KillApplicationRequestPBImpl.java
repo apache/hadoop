@@ -127,6 +127,24 @@ public class KillApplicationRequestPBImpl extends KillApplicationRequest {
     return ((ApplicationIdPBImpl)t).getProto();
   }
 
+  @Override
+  public String getDiagnostics() {
+    KillApplicationRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasDiagnostics()) {
+      return null;
+    }
+    return (p.getDiagnostics());
+  }
+
+  @Override
+  public void setDiagnostics(String diagnostics) {
+    maybeInitBuilder();
+    if (diagnostics == null) {
+      builder.clearDiagnostics();
+      return;
+    }
+    builder.setDiagnostics(diagnostics);
+  }
 
 
 }  

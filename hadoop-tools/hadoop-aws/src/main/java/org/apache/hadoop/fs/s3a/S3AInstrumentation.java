@@ -75,6 +75,7 @@ public class S3AInstrumentation {
   private final MutableCounterLong numberOfFilesCopied;
   private final MutableCounterLong bytesOfFilesCopied;
   private final MutableCounterLong numberOfFilesDeleted;
+  private final MutableCounterLong numberOfFakeDirectoryDeletes;
   private final MutableCounterLong numberOfDirectoriesCreated;
   private final MutableCounterLong numberOfDirectoriesDeleted;
   private final Map<String, MutableCounterLong> streamMetrics =
@@ -135,6 +136,7 @@ public class S3AInstrumentation {
     numberOfFilesCopied = counter(FILES_COPIED);
     bytesOfFilesCopied = counter(FILES_COPIED_BYTES);
     numberOfFilesDeleted = counter(FILES_DELETED);
+    numberOfFakeDirectoryDeletes = counter(FAKE_DIRECTORIES_DELETED);
     numberOfDirectoriesCreated = counter(DIRECTORIES_CREATED);
     numberOfDirectoriesDeleted = counter(DIRECTORIES_DELETED);
     ignoredErrors = counter(IGNORED_ERRORS);
@@ -293,6 +295,14 @@ public class S3AInstrumentation {
    */
   public void fileDeleted(int count) {
     numberOfFilesDeleted.incr(count);
+  }
+
+  /**
+   * Indicate that fake directory request was made.
+   * @param count number of directory entries included in the delete request.
+   */
+  public void fakeDirsDeleted(int count) {
+    numberOfFakeDirectoryDeletes.incr(count);
   }
 
   /**

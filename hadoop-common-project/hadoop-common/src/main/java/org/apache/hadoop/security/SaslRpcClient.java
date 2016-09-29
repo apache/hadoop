@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.security;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -53,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.GlobPattern;
+import org.apache.hadoop.ipc.Client.IpcStreams;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.ResponseBuffer;
@@ -353,24 +352,16 @@ public class SaslRpcClient {
    * @return AuthMethod used to negotiate the connection
    * @throws IOException
    */
-  public AuthMethod saslConnect(InputStream inS, OutputStream outS)
-      throws IOException {
-    DataInputStream inStream = new DataInputStream(new BufferedInputStream(inS));
-    DataOutputStream outStream = new DataOutputStream(new BufferedOutputStream(
-        outS));
-    
+  public AuthMethod saslConnect(IpcStreams ipcStreams) throws IOException {
     // redefined if/when a SASL negotiation starts, can be queried if the
     // negotiation fails
     authMethod = AuthMethod.SIMPLE;
 
-    sendSaslMessage(outStream, negotiateRequest);
-
+    sendSaslMessage(ipcStreams.out, negotiateRequest);
     // loop until sasl is complete or a rpc error occurs
     boolean done = false;
     do {
-      int rpcLen = inStream.readInt();
-      ByteBuffer bb = ByteBuffer.allocate(rpcLen);
-      inStream.readFully(bb.array());
+      ByteBuffer bb = ipcStreams.readResponse();
 
       RpcWritable.Buffer saslPacket = RpcWritable.Buffer.wrap(bb);
       RpcResponseHeaderProto header =
@@ -447,7 +438,7 @@ public class SaslRpcClient {
         }
       }
       if (response != null) {
-        sendSaslMessage(outStream, response.build());
+        sendSaslMessage(ipcStreams.out, response.build());
       }
     } while (!done);
     return authMethod;
@@ -461,8 +452,10 @@ public class SaslRpcClient {
     ResponseBuffer buf = new ResponseBuffer();
     saslHeader.writeDelimitedTo(buf);
     message.writeDelimitedTo(buf);
-    buf.writeTo(out);
-    out.flush();
+    synchronized (out) {
+      buf.writeTo(out);
+      out.flush();
+    }
   }
 
   /**

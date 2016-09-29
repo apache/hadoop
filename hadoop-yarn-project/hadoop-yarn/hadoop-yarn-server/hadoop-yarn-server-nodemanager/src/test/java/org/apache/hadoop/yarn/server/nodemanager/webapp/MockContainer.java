@@ -190,4 +190,29 @@ public class MockContainer implements Container {
   public void setIpAndHost(String[] ipAndHost) {
 
   }
+
+  @Override
+  public boolean isRunning() {
+    return false;
+  }
+
+  @Override
+  public void setIsReInitializing(boolean isReInitializing) {
+
+  }
+
+  @Override
+  public boolean isReInitializing() {
+    return false;
+  }
+
+  @Override
+  public boolean canRollback() {
+    return false;
+  }
+
+  @Override
+  public void commitUpgrade() {
+
+  }
 }

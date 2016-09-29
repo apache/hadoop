@@ -68,6 +68,8 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
@@ -205,6 +207,9 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     Resource r = Resource.newInstance(1024, 1);
 
     ApplicationId appId = ApplicationId.newInstance(1, 1);
+    MockRMApp m = new MockRMApp(appId.getId(), appId.getClusterTimestamp(),
+        RMAppState.NEW);
+    yarnCluster.getResourceManager().getRMContext().getRMApps().put(appId, m);
     ApplicationAttemptId validAppAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     

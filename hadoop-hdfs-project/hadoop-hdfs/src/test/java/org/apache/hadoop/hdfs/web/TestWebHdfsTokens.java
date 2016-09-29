@@ -127,7 +127,7 @@ public class TestWebHdfsTokens {
     fs.toUrl(op, null);
     verify(fs, never()).getDelegationToken();
     verify(fs, never()).getDelegationToken(null);
-    verify(fs, never()).setDelegationToken((Token<?>)any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
   }
 
   @Test(timeout = 1000)
@@ -160,7 +160,6 @@ public class TestWebHdfsTokens {
     }
   }
   
-  @SuppressWarnings("unchecked") // for any(Token.class)
   @Test
   public void testLazyTokenFetchForWebhdfs() throws Exception {
     MiniDFSCluster cluster = null;
@@ -190,7 +189,6 @@ public class TestWebHdfsTokens {
     }
   }
   
-  @SuppressWarnings("unchecked") // for any(Token.class)
   @Test
   public void testLazyTokenFetchForSWebhdfs() throws Exception {
     MiniDFSCluster cluster = null;
@@ -298,7 +296,6 @@ public class TestWebHdfsTokens {
     }
   }
   
-  @SuppressWarnings("unchecked")
   private void validateLazyTokenFetch(final Configuration clusterConf) throws Exception{
     final String testUser = "DummyUser";
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
@@ -316,7 +313,7 @@ public class TestWebHdfsTokens {
     fs.cancelDelegationToken(token);
     verify(fs, never()).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     Assert.assertNull(fs.getRenewToken());
     reset(fs);
 
@@ -326,7 +323,7 @@ public class TestWebHdfsTokens {
     verify(fs, times(1)).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, times(1)).getDelegationToken(anyString());
-    verify(fs, times(1)).setDelegationToken(any(Token.class));
+    verify(fs, times(1)).setDelegationToken(any());
     token = fs.getRenewToken();
     Assert.assertNotNull(token);      
     Assert.assertEquals(testUser, getTokenOwner(token));
@@ -338,7 +335,7 @@ public class TestWebHdfsTokens {
     verify(fs, times(1)).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, never()).getDelegationToken(anyString());
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     Token<?> token2 = fs.getRenewToken();
     Assert.assertNotNull(token2);
     Assert.assertEquals(fs.getTokenKind(), token.getKind());
@@ -358,7 +355,7 @@ public class TestWebHdfsTokens {
     verify(fs, never()).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, never()).getDelegationToken(anyString());
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     token2 = fs.getRenewToken();
     Assert.assertNotNull(token2);
     Assert.assertEquals(fs.getTokenKind(), token.getKind());
@@ -376,7 +373,7 @@ public class TestWebHdfsTokens {
     verify(fs, never()).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, never()).getDelegationToken(anyString());
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     token2 = fs.getRenewToken();
     Assert.assertNotNull(token2);
     Assert.assertEquals(fs.getTokenKind(), token.getKind());
@@ -390,7 +387,7 @@ public class TestWebHdfsTokens {
     verify(fs, times(2)).getDelegationToken(); // first bad, then good
     verify(fs, times(1)).replaceExpiredDelegationToken();
     verify(fs, times(1)).getDelegationToken(null);
-    verify(fs, times(1)).setDelegationToken(any(Token.class));
+    verify(fs, times(1)).setDelegationToken(any());
     token2 = fs.getRenewToken();
     Assert.assertNotNull(token2);
     Assert.assertNotSame(token, token2);
@@ -407,7 +404,7 @@ public class TestWebHdfsTokens {
     verify(fs, times(2)).getDelegationToken(); // first bad, then good
     verify(fs, times(1)).replaceExpiredDelegationToken();
     verify(fs, times(1)).getDelegationToken(null);
-    verify(fs, times(1)).setDelegationToken(any(Token.class));
+    verify(fs, times(1)).setDelegationToken(any());
     token2 = fs.getRenewToken();
     Assert.assertNotNull(token2);
     Assert.assertNotSame(token, token2);
@@ -420,7 +417,7 @@ public class TestWebHdfsTokens {
     verify(fs, never()).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, never()).getDelegationToken(anyString());
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     verify(fs, times(1)).cancelDelegationToken(eq(token2));
 
     // add a token to ugi for a new fs, verify it uses that token
@@ -449,7 +446,7 @@ public class TestWebHdfsTokens {
     verify(fs, times(1)).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, never()).getDelegationToken(anyString());
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     token2 = fs.getRenewToken();
     Assert.assertNotNull(token2);
     Assert.assertEquals(fs.getTokenKind(), token.getKind());
@@ -469,7 +466,7 @@ public class TestWebHdfsTokens {
       verify(fs, times(1)).getDelegationToken();
       verify(fs, times(1)).replaceExpiredDelegationToken();
       verify(fs, never()).getDelegationToken(anyString());
-      verify(fs, never()).setDelegationToken(any(Token.class));
+      verify(fs, never()).setDelegationToken(any());
       token2 = fs.getRenewToken();
       Assert.assertNotNull(token2);
       Assert.assertEquals(fs.getTokenKind(), token.getKind());
@@ -482,7 +479,7 @@ public class TestWebHdfsTokens {
     verify(fs, never()).getDelegationToken();
     verify(fs, never()).replaceExpiredDelegationToken();
     verify(fs, never()).getDelegationToken(anyString());
-    verify(fs, never()).setDelegationToken(any(Token.class));
+    verify(fs, never()).setDelegationToken(any());
     verify(fs, never()).cancelDelegationToken(any(Token.class));
   } 
   

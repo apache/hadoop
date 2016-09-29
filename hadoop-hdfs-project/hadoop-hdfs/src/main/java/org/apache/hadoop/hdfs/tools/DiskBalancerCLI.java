@@ -135,13 +135,20 @@ public class DiskBalancerCLI extends Configured implements Tool {
   private static final Options CANCEL_OPTIONS = new Options();
   private static final Options REPORT_OPTIONS = new Options();
 
+  private final PrintStream printStream;
+
   /**
    * Construct a DiskBalancer.
    *
    * @param conf
    */
   public DiskBalancerCLI(Configuration conf) {
+    this(conf, System.out);
+  }
+
+  public DiskBalancerCLI(Configuration conf, final PrintStream printStream) {
     super(conf);
+    this.printStream = printStream;
   }
 
   /**
@@ -171,21 +178,9 @@ public class DiskBalancerCLI extends Configured implements Tool {
    */
   @Override
   public int run(String[] args) throws Exception {
-    return run(args, System.out);
-  }
-
-  /**
-   * Execute the command with the given arguments.
-   *
-   * @param args command specific arguments.
-   * @param out  the output stream used for printing
-   * @return exit code.
-   * @throws Exception
-   */
-  public int run(String[] args, final PrintStream out) throws Exception {
     Options opts = getOpts();
     CommandLine cmd = parseArgs(args, opts);
-    return dispatch(cmd, opts, out);
+    return dispatch(cmd, opts);
   }
 
   /**
@@ -443,7 +438,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
    * @param opts options of command line
    * @param out  the output stream used for printing
    */
-  private int dispatch(CommandLine cmd, Options opts, final PrintStream out)
+  private int dispatch(CommandLine cmd, Options opts)
       throws Exception {
     Command currentCommand = null;
     if (cmd.hasOption(DiskBalancerCLI.PLAN)) {
@@ -463,7 +458,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
     }
 
     if (cmd.hasOption(DiskBalancerCLI.REPORT)) {
-      currentCommand = new ReportCommand(getConf(), out);
+      currentCommand = new ReportCommand(getConf(), this.printStream);
     }
 
     if (cmd.hasOption(DiskBalancerCLI.HELP)) {

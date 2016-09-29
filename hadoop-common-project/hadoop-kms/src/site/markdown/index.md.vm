@@ -37,10 +37,10 @@ KMS Client Configuration
 The KMS client `KeyProvider` uses the **kms** scheme, and the embedded URL must be the URL of the KMS. For example, for a KMS running on `http://localhost:9600/kms`, the KeyProvider URI is `kms://http@localhost:9600/kms`. And, for a KMS running on `https://localhost:9600/kms`, the KeyProvider URI is `kms://https@localhost:9600/kms`
 
 The following is an example to configure HDFS NameNode as a KMS client in
-`hdfs-site.xml`:
+`core-site.xml`:
 
     <property>
-      <name>dfs.encryption.key.provider.uri</name>
+      <name>hadoop.security.key.provider.path</name>
       <value>kms://http@localhost:9600/kms</value>
       <description>
         The KeyProvider to use when interacting with encryption keys used
@@ -664,15 +664,15 @@ is to use LoadBalancingKMSClientProvider. Using this approach, a KMS client
 (for example, a HDFS NameNode) is aware of multiple KMS instances, and it sends
 requests to them in a round-robin fashion. LoadBalancingKMSClientProvider is
 implicitly used when more than one URI is specified in
-`dfs.encryption.key.provider.uri`.
+`hadoop.security.key.provider.path`.
 
-The following example in `hdfs-site.xml` configures two KMS
+The following example in `core-site.xml` configures two KMS
 instances, `kms01.example.com` and `kms02.example.com`.
 The hostnames are separated by semi-colons, and all KMS instances must run
 on the same port.
 
     <property>
-      <name>dfs.encryption.key.provider.uri</name>
+      <name>hadoop.security.key.provider.path</name>
       <value>kms://https@kms01.example.com;kms02.example.com:9600/kms</value>
       <description>
         The KeyProvider to use when interacting with encryption keys used

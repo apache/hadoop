@@ -76,6 +76,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
   private final byte[] key;
   private final byte[] initIV;
   private byte[] iv;
+  private boolean closeOutputStream;
   
   public CryptoOutputStream(OutputStream out, CryptoCodec codec, 
       int bufferSize, byte[] key, byte[] iv) throws IOException {
@@ -84,6 +85,13 @@ public class CryptoOutputStream extends FilterOutputStream implements
   
   public CryptoOutputStream(OutputStream out, CryptoCodec codec, 
       int bufferSize, byte[] key, byte[] iv, long streamOffset) 
+      throws IOException {
+    this(out, codec, bufferSize, key, iv, streamOffset, true);
+  }
+
+  public CryptoOutputStream(OutputStream out, CryptoCodec codec,
+      int bufferSize, byte[] key, byte[] iv, long streamOffset,
+      boolean closeOutputStream)
       throws IOException {
     super(out);
     CryptoStreamUtils.checkCodec(codec);
@@ -95,6 +103,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
     inBuffer = ByteBuffer.allocateDirect(this.bufferSize);
     outBuffer = ByteBuffer.allocateDirect(this.bufferSize);
     this.streamOffset = streamOffset;
+    this.closeOutputStream = closeOutputStream;
     try {
       encryptor = codec.createEncryptor();
     } catch (GeneralSecurityException e) {
@@ -110,8 +119,14 @@ public class CryptoOutputStream extends FilterOutputStream implements
   
   public CryptoOutputStream(OutputStream out, CryptoCodec codec, 
       byte[] key, byte[] iv, long streamOffset) throws IOException {
+    this(out, codec, key, iv, streamOffset, true);
+  }
+
+  public CryptoOutputStream(OutputStream out, CryptoCodec codec,
+      byte[] key, byte[] iv, long streamOffset, boolean closeOutputStream)
+      throws IOException {
     this(out, codec, CryptoStreamUtils.getBufferSize(codec.getConf()), 
-        key, iv, streamOffset);
+        key, iv, streamOffset, closeOutputStream);
   }
   
   public OutputStream getWrappedStream() {
@@ -221,7 +236,10 @@ public class CryptoOutputStream extends FilterOutputStream implements
       return;
     }
     try {
-      super.close();
+      flush();
+      if (closeOutputStream) {
+        super.close();
+      }
       freeBuffers();
     } finally {
       closed = true;

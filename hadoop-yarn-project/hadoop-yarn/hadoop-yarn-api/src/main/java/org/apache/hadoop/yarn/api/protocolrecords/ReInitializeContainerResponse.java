@@ -16,31 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions;
+package org.apache.hadoop.yarn.api.protocolrecords;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
 
 /**
- * Exception thrown when an update to an existing reservation is performed
- * by a user that is not the reservation owner. 
+ * The response to the {@link ReInitializeContainerRequest}.
  */
 @Public
 @Unstable
-public class MismatchedUserException extends PlanningException {
+public abstract class ReInitializeContainerResponse {
 
-  private static final long serialVersionUID = 8313222590561668413L;
-
-  public MismatchedUserException(String message) {
-    super(message);
+  @Private
+  @Unstable
+  public static ReInitializeContainerResponse newInstance() {
+    return Records.newRecord(ReInitializeContainerResponse.class);
   }
-
-  public MismatchedUserException(Throwable cause) {
-    super(cause);
-  }
-
-  public MismatchedUserException(String message, Throwable cause) {
-    super(message, cause);
-  }
-
 }

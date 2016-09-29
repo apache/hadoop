@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -386,8 +387,8 @@ public class TestDefaultContainerExecutor {
           }
         }
         return null;
-      }
-    }).when(mockUtil).copy(any(Path.class), any(Path.class));
+      }}).when(mockUtil).copy(any(Path.class), any(Path.class),
+        anyBoolean(), anyBoolean());
 
     doAnswer(new Answer() {
       @Override
@@ -478,7 +479,8 @@ public class TestDefaultContainerExecutor {
     }
 
     // Verify that the calls happen the expected number of times
-    verify(mockUtil, times(1)).copy(any(Path.class), any(Path.class));
+    verify(mockUtil, times(1)).copy(any(Path.class), any(Path.class),
+        anyBoolean(), anyBoolean());
     verify(mockLfs, times(2)).getFsStatus(any(Path.class));
   }
 

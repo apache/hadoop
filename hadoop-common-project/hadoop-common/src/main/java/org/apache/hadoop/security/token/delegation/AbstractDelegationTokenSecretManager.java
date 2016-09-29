@@ -528,7 +528,7 @@ extends AbstractDelegationTokenIdentifier>
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-    LOG.info("Token cancelation requested for identifier: "+id);
+    LOG.info("Token cancellation requested for identifier: " + id);
     
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner");
