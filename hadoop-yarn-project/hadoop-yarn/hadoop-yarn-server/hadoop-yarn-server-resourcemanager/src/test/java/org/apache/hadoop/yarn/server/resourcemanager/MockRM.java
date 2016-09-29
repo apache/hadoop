@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -460,7 +461,7 @@ public class MockRM extends ResourceManager {
     return submitApp(resource, name, user, acls, false, queue,
       super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true, false,
-      false, null, 0, null, true, priority, amLabel);
+        false, null, 0, null, true, priority, amLabel, null);
   }
 
   public RMApp submitApp(Resource resource, String name, String user,
@@ -561,7 +562,7 @@ public class MockRM extends ResourceManager {
     return submitApp(capability, name, user, acls, unmanaged, queue,
       maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
       isAppIdProvided, applicationId, attemptFailuresValidityInterval,
-      logAggregationContext, cancelTokensWhenComplete, priority, "");
+        logAggregationContext, cancelTokensWhenComplete, priority, "", null);
   }
 
   public RMApp submitApp(Resource capability, String name, String user,
@@ -570,7 +571,8 @@ public class MockRM extends ResourceManager {
       boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
       ApplicationId applicationId, long attemptFailuresValidityInterval,
       LogAggregationContext logAggregationContext,
-      boolean cancelTokensWhenComplete, Priority priority, String amLabel)
+      boolean cancelTokensWhenComplete, Priority priority, String amLabel,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts)
       throws Exception {
     ApplicationId appId = isAppIdProvided ? applicationId : null;
     ApplicationClientProtocol client = getClientRMService();
@@ -587,6 +589,9 @@ public class MockRM extends ResourceManager {
     sub.setApplicationId(appId);
     sub.setApplicationName(name);
     sub.setMaxAppAttempts(maxAppAttempts);
+    if (applicationTimeouts != null && applicationTimeouts.size() > 0) {
+      sub.setApplicationTimeouts(applicationTimeouts);
+    }
     if (unmanaged) {
       sub.setUnmanagedAM(true);
     }
@@ -1072,5 +1077,16 @@ public class MockRM extends ResourceManager {
     Assert.assertTrue("app is not removed from scheduler (timeout).",
         !apps.containsKey(appId));
     LOG.info("app is removed from scheduler, " + appId);
+  }
+
+  public RMApp submitApp(int masterMemory, Priority priority,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts) throws Exception {
+    Resource resource = Resource.newInstance(masterMemory, 0);
+    return submitApp(
+        resource, "", UserGroupInformation.getCurrentUser().getShortUserName(),
+        null, false, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null, true,
+        false, false, null, 0, null, true, priority, null, applicationTimeouts);
   }
 }

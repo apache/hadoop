@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -535,4 +536,24 @@ public abstract class ApplicationSubmissionContext {
   @Public
   @Unstable
   public abstract void setReservationID(ReservationId reservationID);
+
+  /**
+   * Get <code>ApplicationTimeouts</code> of the application. Timeout value is
+   * in seconds.
+   * @return all <code>ApplicationTimeouts</code> of the application.
+   */
+  @Public
+  @Unstable
+  public abstract Map<ApplicationTimeoutType, Long> getApplicationTimeouts();
+
+  /**
+   * Set the <code>ApplicationTimeouts</code> for the application in seconds.
+   * All pre-existing Map entries are cleared before adding the new Map.
+   * @param applicationTimeouts <code>ApplicationTimeouts</code>s for the
+   *          application
+   */
+  @Public
+  @Unstable
+  public abstract void setApplicationTimeouts(
+      Map<ApplicationTimeoutType, Long> applicationTimeouts);
 }
