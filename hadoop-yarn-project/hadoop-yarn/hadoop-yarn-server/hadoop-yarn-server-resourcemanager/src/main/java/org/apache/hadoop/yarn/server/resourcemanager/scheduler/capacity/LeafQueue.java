@@ -721,7 +721,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   private static final CSAssignment NULL_ASSIGNMENT =
-      new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
+      new CSAssignment(Resources.createResource(0, 0, 0), NodeType.NODE_LOCAL);
   
   private static final CSAssignment SKIP_ASSIGNMENT = new CSAssignment(true);
   
@@ -996,7 +996,7 @@ public class LeafQueue extends AbstractCSQueue {
     //   with miniscule capacity (< 1 slot) make progress
     // * If we're running over capacity, then its
     //   (usedResources + required) (which extra resources we are allocating)
-    Resource queueCapacity = Resource.newInstance(0, 0);
+    Resource queueCapacity = Resource.newInstance(0, 0, 0);
     if (requestedLabels != null && !requestedLabels.isEmpty()) {
       // if we have multiple labels to request, we will choose to use the first
       // label
@@ -1721,7 +1721,7 @@ public class LeafQueue extends AbstractCSQueue {
   @VisibleForTesting
   public static class User {
     ResourceUsage userResourceUsage = new ResourceUsage();
-    volatile Resource userResourceLimit = Resource.newInstance(0, 0);
+    volatile Resource userResourceLimit = Resource.newInstance(0, 0, 0);
     int pendingApplications = 0;
     int activeApplications = 0;
 
@@ -1827,7 +1827,7 @@ public class LeafQueue extends AbstractCSQueue {
 
   // return a single Resource capturing the overal amount of pending resources
   public synchronized Resource getTotalResourcePending() {
-    Resource ret = BuilderUtils.newResource(0, 0);
+    Resource ret = BuilderUtils.newResource(0, 0, 0);
     for (FiCaSchedulerApp f : activeApplications) {
       Resources.addTo(ret, f.getTotalPendingRequests());
     }

@@ -145,7 +145,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
   public Resource divideAndCeil(Resource numerator, int denominator) {
     return Resources.createResource(
         divideAndCeil(numerator.getMemory(), denominator),
-        divideAndCeil(numerator.getVirtualCores(), denominator)
+        divideAndCeil(numerator.getVirtualCores(), denominator),
+        0
         );
   }
 
@@ -163,14 +164,15 @@ public class DominantResourceCalculator extends ResourceCalculator {
         stepFactor.getVirtualCores()),
       maximumResource.getVirtualCores());
     return Resources.createResource(normalizedMemory,
-      normalizedCores);
+      normalizedCores, 0);
   }
 
   @Override
   public Resource roundUp(Resource r, Resource stepFactor) {
     return Resources.createResource(
         roundUp(r.getMemory(), stepFactor.getMemory()), 
-        roundUp(r.getVirtualCores(), stepFactor.getVirtualCores())
+        roundUp(r.getVirtualCores(), stepFactor.getVirtualCores()),
+        0
         );
   }
 
@@ -178,7 +180,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
   public Resource roundDown(Resource r, Resource stepFactor) {
     return Resources.createResource(
         roundDown(r.getMemory(), stepFactor.getMemory()),
-        roundDown(r.getVirtualCores(), stepFactor.getVirtualCores())
+        roundDown(r.getVirtualCores(), stepFactor.getVirtualCores()),
+        0
         );
   }
 
@@ -190,7 +193,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
             (int)Math.ceil(r.getMemory() * by), stepFactor.getMemory()),
         roundUp(
             (int)Math.ceil(r.getVirtualCores() * by), 
-            stepFactor.getVirtualCores())
+            stepFactor.getVirtualCores()),
+        0
         );
   }
 
@@ -205,7 +209,8 @@ public class DominantResourceCalculator extends ResourceCalculator {
         roundDown(
             (int)(r.getVirtualCores() * by), 
             stepFactor.getVirtualCores()
-            )
+            ),
+        0
         );
   }
 

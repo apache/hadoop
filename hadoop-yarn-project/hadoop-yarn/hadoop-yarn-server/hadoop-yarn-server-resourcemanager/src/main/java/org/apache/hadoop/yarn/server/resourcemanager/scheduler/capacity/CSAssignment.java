@@ -51,7 +51,7 @@ public class CSAssignment {
   }
   
   public CSAssignment(boolean skipped) {
-    this.resource = Resources.createResource(0, 0);
+    this.resource = Resources.createResource(0, 0, 0);
     this.type = NodeType.NODE_LOCAL;
     this.application = null;
     this.excessReservation = null;
