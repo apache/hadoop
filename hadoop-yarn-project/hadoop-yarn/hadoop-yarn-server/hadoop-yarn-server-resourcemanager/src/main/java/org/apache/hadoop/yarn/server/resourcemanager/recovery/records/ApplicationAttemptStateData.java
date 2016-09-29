@@ -40,32 +40,6 @@ public abstract class ApplicationAttemptStateData {
       Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
-      long finishTime, long memorySeconds, long vcoreSeconds) {
-    // Assert! This is called by testing, and never by YARN itself.
-    assert false;
-
-    ApplicationAttemptStateData attemptStateData =
-        Records.newRecord(ApplicationAttemptStateData.class);
-    attemptStateData.setAttemptId(attemptId);
-    attemptStateData.setMasterContainer(container);
-    attemptStateData.setAppAttemptTokens(attemptTokens);
-    attemptStateData.setState(finalState);
-    attemptStateData.setFinalTrackingUrl(finalTrackingUrl);
-    attemptStateData.setDiagnostics(diagnostics == null ? "" : diagnostics);
-    attemptStateData.setStartTime(startTime);
-    attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
-    attemptStateData.setAMContainerExitStatus(exitStatus);
-    attemptStateData.setFinishTime(finishTime);
-    attemptStateData.setMemorySeconds(memorySeconds);
-    attemptStateData.setVcoreSeconds(vcoreSeconds);
-    return attemptStateData;
-  }
-
-  public static ApplicationAttemptStateData newInstance(
-      ApplicationAttemptId attemptId, Container container,
-      Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
-      String finalTrackingUrl, String diagnostics,
-      FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
       long finishTime, long memorySeconds, long vcoreSeconds, long GPUSeconds) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);

@@ -53,18 +53,6 @@ public abstract class Resource implements Comparable<Resource> {
 
   @Public
   @Stable
-  public static Resource newInstance(int memory, int vCores) {
-    // Assert! this function is only used by testing and never called by YARN itself
-    assert false;
-
-    Resource resource = Records.newRecord(Resource.class);
-    resource.setMemory(memory);
-    resource.setVirtualCores(vCores);
-    return resource;
-  }
-
-  @Public
-  @Stable
   public static Resource newInstance(int memory, int vCores, int GPUs) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);

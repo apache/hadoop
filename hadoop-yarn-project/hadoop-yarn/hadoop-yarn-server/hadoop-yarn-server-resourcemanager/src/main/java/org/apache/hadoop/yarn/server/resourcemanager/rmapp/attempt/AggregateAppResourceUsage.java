@@ -26,14 +26,6 @@ public class AggregateAppResourceUsage {
   long vcoreSeconds;
   long GPUSeconds;
 
-  public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds) {
-    // Assert! This is only called by testing, and never by YARN itself.
-    assert false;
-
-    this.memorySeconds = memorySeconds;
-    this.vcoreSeconds = vcoreSeconds;
-  }
-
   public AggregateAppResourceUsage(long memorySeconds, long vcoreSeconds, long GPUSeconds) {
     this.memorySeconds = memorySeconds;
     this.vcoreSeconds = vcoreSeconds;

@@ -36,27 +36,6 @@ public abstract class ApplicationResourceUsageReport {
   public static ApplicationResourceUsageReport newInstance(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources, long memorySeconds,
-      long vcoreSeconds) {
-    // Assert! This is only called by testing, and never by YARN itself.
-    assert false;
-
-    ApplicationResourceUsageReport report =
-        Records.newRecord(ApplicationResourceUsageReport.class);
-    report.setNumUsedContainers(numUsedContainers);
-    report.setNumReservedContainers(numReservedContainers);
-    report.setUsedResources(usedResources);
-    report.setReservedResources(reservedResources);
-    report.setNeededResources(neededResources);
-    report.setMemorySeconds(memorySeconds);
-    report.setVcoreSeconds(vcoreSeconds);
-    return report;
-  }
-
-  @Private
-  @Unstable
-  public static ApplicationResourceUsageReport newInstance(
-      int numUsedContainers, int numReservedContainers, Resource usedResources,
-      Resource reservedResources, Resource neededResources, long memorySeconds,
       long vcoreSeconds, long GPUSeconds) {
     ApplicationResourceUsageReport report =
         Records.newRecord(ApplicationResourceUsageReport.class);

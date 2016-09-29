@@ -381,25 +381,6 @@ public class BuilderUtils {
   
   public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
       int numUsedContainers, int numReservedContainers, Resource usedResources,
-      Resource reservedResources, Resource neededResources, long memorySeconds, 
-      long vcoreSeconds) {
-    // Assert! This is only called by testing, and never by YARN itself
-    assert false;
-
-    ApplicationResourceUsageReport report =
-        recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
-    report.setNumUsedContainers(numUsedContainers);
-    report.setNumReservedContainers(numReservedContainers);
-    report.setUsedResources(usedResources);
-    report.setReservedResources(reservedResources);
-    report.setNeededResources(neededResources);
-    report.setMemorySeconds(memorySeconds);
-    report.setVcoreSeconds(vcoreSeconds);
-    return report;
-  }
-
-  public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
-      int numUsedContainers, int numReservedContainers, Resource usedResources,
       Resource reservedResources, Resource neededResources, long memorySeconds,
       long vcoreSeconds, long GPUSeconds) {
     ApplicationResourceUsageReport report =
@@ -413,16 +394,6 @@ public class BuilderUtils {
     report.setVcoreSeconds(vcoreSeconds);
     report.setGPUSeconds(GPUSeconds);
     return report;
-  }
-
-  public static Resource newResource(int memory, int vCores) {
-    // Assert! This is only called by testing, and never by YARN itself
-    assert false;
-
-    Resource resource = recordFactory.newRecordInstance(Resource.class);
-    resource.setMemory(memory);
-    resource.setVirtualCores(vCores);
-    return resource;
   }
 
   public static Resource newResource(int memory, int vCores, int GPUs) {
