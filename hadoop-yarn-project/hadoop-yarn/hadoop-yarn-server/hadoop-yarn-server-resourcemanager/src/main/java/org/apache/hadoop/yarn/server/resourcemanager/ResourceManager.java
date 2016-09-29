@@ -1160,6 +1160,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     Configuration config = this.rmContext.getYarnConfiguration();
     if (YarnConfiguration.isOpportunisticContainerAllocationEnabled(config)
         || YarnConfiguration.isDistSchedulingEnabled(config)) {
+      if (YarnConfiguration.isDistSchedulingEnabled(config) &&
+          !YarnConfiguration
+              .isOpportunisticContainerAllocationEnabled(config)) {
+        throw new YarnRuntimeException(
+            "Invalid parameters: opportunistic container allocation has to " +
+                "be enabled when distributed scheduling is enabled.");
+      }
       OpportunisticContainerAllocatorAMService
           oppContainerAllocatingAMService =
           new OpportunisticContainerAllocatorAMService(this.rmContext,
@@ -1169,9 +1176,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
               OpportunisticContainerAllocatorAMService.class.getName());
       // Add an event dispatcher for the
       // OpportunisticContainerAllocatorAMService to handle node
-      // updates/additions and removals.
-      // Since the SchedulerEvent is currently a super set of theses,
-      // we register interest for it..
+      // additions, updates and removals. Since the SchedulerEvent is currently
+      // a super set of theses, we register interest for it.
       addService(oppContainerAllocEventDispatcher);
       rmDispatcher.register(SchedulerEventType.class,
           oppContainerAllocEventDispatcher);
