@@ -188,4 +188,89 @@ public class ITestS3AFileOperationCost extends AbstractFSContractTestBase {
       tmpFile.delete();
     }
   }
+
+  private void reset(MetricDiff... diffs) {
+    for (MetricDiff diff : diffs) {
+      diff.reset();
+    }
+  }
+
+  @Test
+  public void testFakeDirectoryDeletion() throws Throwable {
+    describe("Verify whether create file works after renaming a file. "
+        + "In S3, rename deletes any fake directories as a part of "
+        + "clean up activity");
+    S3AFileSystem fs = getFileSystem();
+    Path srcBaseDir = path("src");
+    mkdirs(srcBaseDir);
+    MetricDiff deleteRequests =
+        new MetricDiff(fs, Statistic.OBJECT_DELETE_REQUESTS);
+    MetricDiff directoriesDeleted =
+        new MetricDiff(fs, Statistic.DIRECTORIES_DELETED);
+    MetricDiff fakeDirectoriesDeleted =
+        new MetricDiff(fs, Statistic.FAKE_DIRECTORIES_DELETED);
+    MetricDiff directoriesCreated =
+        new MetricDiff(fs, Statistic.DIRECTORIES_CREATED);
+
+    Path srcDir = new Path(srcBaseDir, "1/2/3/4/5/6");
+    Path srcFilePath = new Path(srcDir, "source.txt");
+    int srcDirDepth = directoriesInPath(srcDir);
+    // one dir created, one removed
+    mkdirs(srcDir);
+    String state = "after mkdir(srcDir)";
+    directoriesCreated.assertDiffEquals(state, 1);
+/*  TODO: uncomment once HADOOP-13222 is in
+    deleteRequests.assertDiffEquals(state, 1);
+    directoriesDeleted.assertDiffEquals(state, 0);
+    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth);
+*/
+    reset(deleteRequests, directoriesCreated, directoriesDeleted,
+        fakeDirectoriesDeleted);
+
+    // creating a file should trigger demise of the src dir
+    touch(fs, srcFilePath);
+    state = "after touch(fs, srcFilePath)";
+    deleteRequests.assertDiffEquals(state, 1);
+    directoriesCreated.assertDiffEquals(state, 0);
+    directoriesDeleted.assertDiffEquals(state, 0);
+    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth);
+
+    reset(deleteRequests, directoriesCreated, directoriesDeleted,
+        fakeDirectoriesDeleted);
+
+    Path destBaseDir = path("dest");
+    Path destDir = new Path(destBaseDir, "1/2/3/4/5/6");
+    Path destFilePath = new Path(destDir, "dest.txt");
+    mkdirs(destDir);
+    state = "after mkdir(destDir)";
+
+    int destDirDepth = directoriesInPath(destDir);
+    directoriesCreated.assertDiffEquals(state, 1);
+/*  TODO: uncomment once HADOOP-13222 is in
+    deleteRequests.assertDiffEquals(state,1);
+    directoriesDeleted.assertDiffEquals(state,0);
+    fakeDirectoriesDeleted.assertDiffEquals(state,destDirDepth);
+*/
+    reset(deleteRequests, directoriesCreated, directoriesDeleted,
+        fakeDirectoriesDeleted);
+
+    fs.rename(srcFilePath, destFilePath);
+    state = "after rename(srcFilePath, destFilePath)";
+    directoriesCreated.assertDiffEquals(state, 1);
+    // one for the renamed file, one for the parent
+    deleteRequests.assertDiffEquals(state, 2);
+    directoriesDeleted.assertDiffEquals(state, 0);
+    fakeDirectoriesDeleted.assertDiffEquals(state, destDirDepth);
+
+    reset(deleteRequests, directoriesCreated, directoriesDeleted,
+        fakeDirectoriesDeleted);
+
+    assertIsFile(destFilePath);
+    assertIsDirectory(srcDir);
+  }
+
+  private int directoriesInPath(Path path) {
+    return path.isRoot() ? 0 : 1 + directoriesInPath(path.getParent());
+  }
+
 }
