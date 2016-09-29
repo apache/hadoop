@@ -70,6 +70,31 @@ public final class OzoneConfigKeys {
       "ozone.scm.handler.count.key";
   public static final int OZONE_SCM_HANDLER_COUNT_DEFAULT = 10;
 
+  public static final String OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS =
+      "ozone.scm.heartbeat.interval.seconds";
+  public static final int OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT =
+      30;
+
+  public static final String OZONE_SCM_DEADNODE_INTERVAL_MS =
+      "ozone.scm.dead.node.interval.ms";
+  public static final long OZONE_SCM_DEADNODE_INTERVAL_DEFAULT =
+      OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 20L;
+
+  public static final String OZONE_SCM_MAX_HB_COUNT_TO_PROCESS =
+      "ozone.scm.max.hb.count.to.process";
+  public static final int OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT = 5000;
+
+  public static final String OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS =
+      "ozone.scm.heartbeat.thread.interval.ms";
+  public static final long OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS_DEFAULT =
+      3000;
+
+  public static final String OZONE_SCM_STALENODE_INTERVAL_MS =
+      "ozone.scm.stale.node.interval.ms";
+  public static final long OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
+      OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 3L;
+
+
   /**
    * There is no need to instantiate this class.
    */
