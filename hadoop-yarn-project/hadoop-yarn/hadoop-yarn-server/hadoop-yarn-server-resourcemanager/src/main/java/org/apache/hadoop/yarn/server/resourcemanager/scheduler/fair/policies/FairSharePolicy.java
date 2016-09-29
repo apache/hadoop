@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
-import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.GPUResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -41,8 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class FairSharePolicy extends SchedulingPolicy {
   @VisibleForTesting
   public static final String NAME = "fair";
-  private static final DefaultResourceCalculator RESOURCE_CALCULATOR =
-      new DefaultResourceCalculator();
+  private static final GPUResourceCalculator RESOURCE_CALCULATOR =
+      new GPUResourceCalculator();
   private FairShareComparator comparator = new FairShareComparator();
 
   @Override
