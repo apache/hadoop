@@ -78,6 +78,8 @@ class NodesPage extends RmView {
               .th(".mem", "Mem Avail")
               .th(".vcores", "VCores Used")
               .th(".vcores", "VCores Avail")
+              .th(".GPUs", "GPUs Used")
+              .th(".GPUs", "GPUs Avail")
               .th(".nodeManagerVersion", "Version")._()._().tbody();
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
@@ -144,6 +146,8 @@ class NodesPage extends RmView {
             ._(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))._()
             .td(String.valueOf(info.getUsedVirtualCores()))
             .td(String.valueOf(info.getAvailableVirtualCores()))
+            .td(String.valueOf(info.getUsedGPUs()))
+            .td(String.valueOf(info.getAvailableGPUs()))
             .td(ni.getNodeManagerVersion())._();
       }
       tbody._()._();
