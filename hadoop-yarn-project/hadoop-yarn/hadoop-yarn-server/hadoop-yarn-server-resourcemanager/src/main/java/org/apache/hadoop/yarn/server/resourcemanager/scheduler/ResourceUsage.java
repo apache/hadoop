@@ -71,7 +71,7 @@ public class ResourceUsage {
     public UsageByLabel(String label) {
       resArr = new Resource[ResourceType.values().length];
       for (int i = 0; i < resArr.length; i++) {
-        resArr[i] = Resource.newInstance(0, 0);
+        resArr[i] = Resource.newInstance(0, 0, 0);
       };
     }
     

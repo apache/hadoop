@@ -73,7 +73,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private ResourceWeights resourceWeights;
   private Resource demand = Resources.createResource(0);
   private FairScheduler scheduler;
-  private Resource fairShare = Resources.createResource(0, 0);
+  private Resource fairShare = Resources.createResource(0, 0, 0);
   private Resource preemptedResources = Resources.createResource(0);
   private RMContainerComparator comparator = new RMContainerComparator();
   private final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
@@ -416,6 +416,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   public void clearPreemptedResources() {
     preemptedResources.setMemory(0);
     preemptedResources.setVirtualCores(0);
+    preemptedResources.setGPUs(0);
   }
 
   /**

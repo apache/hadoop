@@ -76,7 +76,7 @@ public class FSLeafQueue extends FSQueue {
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
     this.lastTimeAtFairShareThreshold = scheduler.getClock().getTime();
     activeUsersManager = new ActiveUsersManager(getMetrics());
-    amResourceUsage = Resource.newInstance(0, 0);
+    amResourceUsage = Resource.newInstance(0, 0, 0);
   }
   
   public void addApp(FSAppAttempt app, boolean runnable) {

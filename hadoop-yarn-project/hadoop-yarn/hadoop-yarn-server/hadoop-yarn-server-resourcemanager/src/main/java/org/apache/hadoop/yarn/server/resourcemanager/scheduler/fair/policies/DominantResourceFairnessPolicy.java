@@ -99,7 +99,7 @@ public class DominantResourceFairnessPolicy extends SchedulingPolicy {
     Resource headroom = Resources.createResource(
         Math.min(maxAvailable.getMemory(), queueAvailableMemory),
         Math.min(maxAvailable.getVirtualCores(),
-            queueAvailableCPU));
+            queueAvailableCPU), 0);
     return headroom;
   }
 

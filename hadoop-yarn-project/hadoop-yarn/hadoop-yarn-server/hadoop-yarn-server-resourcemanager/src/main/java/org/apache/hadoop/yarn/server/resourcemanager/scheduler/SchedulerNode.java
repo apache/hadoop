@@ -52,8 +52,8 @@ public abstract class SchedulerNode {
 
   private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
 
-  private Resource availableResource = Resource.newInstance(0, 0);
-  private Resource usedResource = Resource.newInstance(0, 0);
+  private Resource availableResource = Resource.newInstance(0, 0, 0);
+  private Resource usedResource = Resource.newInstance(0, 0, 0);
   private Resource totalResourceCapability;
   private RMContainer reservedContainer;
   private volatile int numContainers;
