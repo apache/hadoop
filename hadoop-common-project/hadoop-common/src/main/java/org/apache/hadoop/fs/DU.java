@@ -31,12 +31,13 @@ import java.io.IOException;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class DU extends CachingGetSpaceUsed {
-  private DUShell duShell;
+  private final DUShell duShell;
 
   @VisibleForTesting
-  public DU(File path, long interval, long jitter, long initialUsed)
+   public DU(File path, long interval, long jitter, long initialUsed)
       throws IOException {
     super(path, interval, jitter, initialUsed);
+    this.duShell = new DUShell();
   }
 
   public DU(CachingGetSpaceUsed.Builder builder) throws IOException {
@@ -48,9 +49,6 @@ public class DU extends CachingGetSpaceUsed {
 
   @Override
   protected synchronized void refresh() {
-    if (duShell == null) {
-      duShell = new DUShell();
-    }
     try {
       duShell.startRefresh();
     } catch (IOException ioe) {
