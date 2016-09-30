@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
-import org.apache.hadoop.util.FakeTimer;
 import static org.hamcrest.CoreMatchers.either;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.*;
@@ -31,7 +30,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.util.Collection;
 
-import com.google.common.base.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
@@ -45,22 +43,12 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.apache.log4j.Level;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 
 public class TestFSNamesystem {
 
@@ -165,59 +153,6 @@ public class TestFSNamesystem {
     assertTrue("Replication queues weren't being populated after entering "
       + "safemode 2nd time", bm.isPopulatingReplQueues());
   }
-  
-  @Test
-  public void testFsLockFairness() throws IOException, InterruptedException{
-    Configuration conf = new Configuration();
-
-    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
-    FSImage fsImage = Mockito.mock(FSImage.class);
-    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
-
-    conf.setBoolean("dfs.namenode.fslock.fair", true);
-    FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
-    assertTrue(fsNamesystem.getFsLockForTests().isFair());
-    
-    conf.setBoolean("dfs.namenode.fslock.fair", false);
-    fsNamesystem = new FSNamesystem(conf, fsImage);
-    assertFalse(fsNamesystem.getFsLockForTests().isFair());
-  }  
-  
-  @Test
-  public void testFSNamesystemLockCompatibility() {
-    FSNamesystemLock rwLock = new FSNamesystemLock(true);
-
-    assertEquals(0, rwLock.getReadHoldCount());
-    rwLock.readLock().lock();
-    assertEquals(1, rwLock.getReadHoldCount());
-
-    rwLock.readLock().lock();
-    assertEquals(2, rwLock.getReadHoldCount());
-
-    rwLock.readLock().unlock();
-    assertEquals(1, rwLock.getReadHoldCount());
-
-    rwLock.readLock().unlock();
-    assertEquals(0, rwLock.getReadHoldCount());
-
-    assertFalse(rwLock.isWriteLockedByCurrentThread());
-    assertEquals(0, rwLock.getWriteHoldCount());
-    rwLock.writeLock().lock();
-    assertTrue(rwLock.isWriteLockedByCurrentThread());
-    assertEquals(1, rwLock.getWriteHoldCount());
-    
-    rwLock.writeLock().lock();
-    assertTrue(rwLock.isWriteLockedByCurrentThread());
-    assertEquals(2, rwLock.getWriteHoldCount());
-
-    rwLock.writeLock().unlock();
-    assertTrue(rwLock.isWriteLockedByCurrentThread());
-    assertEquals(1, rwLock.getWriteHoldCount());
-
-    rwLock.writeLock().unlock();
-    assertFalse(rwLock.isWriteLockedByCurrentThread());
-    assertEquals(0, rwLock.getWriteHoldCount());
-  }
 
   @Test
   public void testReset() throws Exception {
@@ -255,233 +190,6 @@ public class TestFSNamesystem {
         FSNamesystem.getEffectiveLayoutVersion(false, -62, -61, -63));
     assertEquals(-63,
         FSNamesystem.getEffectiveLayoutVersion(false, -63, -61, -63));
-  }
-
-  @Test
-  public void testFSLockGetWaiterCount() throws InterruptedException {
-    final int threadCount = 3;
-    final CountDownLatch latch = new CountDownLatch(threadCount);
-    final FSNamesystemLock rwLock = new FSNamesystemLock(true);
-    rwLock.writeLock().lock();
-    ExecutorService helper = Executors.newFixedThreadPool(threadCount);
-
-    for (int x = 0; x < threadCount; x++) {
-      helper.execute(new Runnable() {
-        @Override
-        public void run() {
-          latch.countDown();
-          rwLock.readLock().lock();
-        }
-      });
-    }
-
-    latch.await();
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          return (threadCount == rwLock.getQueueLength());
-        }
-      }, 10, 1000);
-    } catch (TimeoutException e) {
-      fail("Expected number of blocked thread not found");
-    }
-  }
-
-  /**
-   * Test when FSNamesystem write lock is held for a long time,
-   * logger will report it.
-   */
-  @Test(timeout=45000)
-  public void testFSWriteLockLongHoldingReport() throws Exception {
-    final long writeLockReportingThreshold = 100L;
-    final long writeLockSuppressWarningInterval = 10000L;
-    Configuration conf = new Configuration();
-    conf.setLong(DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
-        writeLockReportingThreshold);
-    conf.setTimeDuration(DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
-        writeLockSuppressWarningInterval, TimeUnit.MILLISECONDS);
-    FSImage fsImage = Mockito.mock(FSImage.class);
-    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
-    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
-    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-
-    FakeTimer timer = new FakeTimer();
-    fsn.setTimer(timer);
-    timer.advance(writeLockSuppressWarningInterval);
-
-    LogCapturer logs = LogCapturer.captureLogs(FSNamesystem.LOG);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.INFO);
-
-    // Don't report if the write lock is held for a short time
-    fsn.writeLock();
-    fsn.writeUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-
-    // Report the first write lock warning if it is held for a long time
-    fsn.writeLock();
-    timer.advance(writeLockReportingThreshold + 10);
-    logs.clearOutput();
-    fsn.writeUnlock();
-    assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-
-    // Track but do not Report if the write lock is held (interruptibly) for
-    // a long time but time since last report does not exceed the suppress
-    // warning interval
-    fsn.writeLockInterruptibly();
-    timer.advance(writeLockReportingThreshold + 10);
-    logs.clearOutput();
-    fsn.writeUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-
-    // Track but do not Report if it's held for a long time when re-entering
-    // write lock but time since last report does not exceed the suppress
-    // warning interval
-    fsn.writeLock();
-    timer.advance(writeLockReportingThreshold/ 2 + 1);
-    fsn.writeLockInterruptibly();
-    timer.advance(writeLockReportingThreshold/ 2 + 1);
-    fsn.writeLock();
-    timer.advance(writeLockReportingThreshold/ 2);
-    logs.clearOutput();
-    fsn.writeUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-    logs.clearOutput();
-    fsn.writeUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-    logs.clearOutput();
-    fsn.writeUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-
-    // Report if it's held for a long time and time since last report exceeds
-    // the supress warning interval
-    timer.advance(writeLockSuppressWarningInterval);
-    fsn.writeLock();
-    timer.advance(writeLockReportingThreshold + 100);
-    logs.clearOutput();
-    fsn.writeUnlock();
-    assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName()));
-    assertTrue(logs.getOutput().contains("Number of suppressed write-lock " +
-        "reports: 2"));
-  }
-
-  /**
-   * Test when FSNamesystem read lock is held for a long time,
-   * logger will report it.
-   */
-  @Test(timeout=45000)
-  public void testFSReadLockLongHoldingReport() throws Exception {
-    final long readLockReportingThreshold = 100L;
-    final long readLockSuppressWarningInterval = 10000L;
-    final String readLockLogStmt = "FSNamesystem read lock held for ";
-    Configuration conf = new Configuration();
-    conf.setLong(
-        DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
-        readLockReportingThreshold);
-    conf.setTimeDuration(DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
-        readLockSuppressWarningInterval, TimeUnit.MILLISECONDS);
-    FSImage fsImage = Mockito.mock(FSImage.class);
-    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
-    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
-    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-
-    FakeTimer timer = new FakeTimer();
-    fsn.setTimer(timer);
-    timer.advance(readLockSuppressWarningInterval);
-
-    LogCapturer logs = LogCapturer.captureLogs(FSNamesystem.LOG);
-    GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.INFO);
-
-    // Don't report if the read lock is held for a short time
-    fsn.readLock();
-    fsn.readUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()) &&
-        logs.getOutput().contains(readLockLogStmt));
-
-    // Report the first read lock warning if it is held for a long time
-    fsn.readLock();
-    timer.advance(readLockReportingThreshold + 10);
-    logs.clearOutput();
-    fsn.readUnlock();
-    assertTrue(logs.getOutput().contains(GenericTestUtils.getMethodName())
-        && logs.getOutput().contains(readLockLogStmt));
-
-    // Track but do not Report if the write lock is held for a long time but
-    // time since last report does not exceed the suppress warning interval
-    fsn.readLock();
-    timer.advance(readLockReportingThreshold + 10);
-    logs.clearOutput();
-    fsn.readUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName())
-        && logs.getOutput().contains(readLockLogStmt));
-
-    // Track but do not Report if it's held for a long time when re-entering
-    // read lock but time since last report does not exceed the suppress
-    // warning interval
-    fsn.readLock();
-    timer.advance(readLockReportingThreshold / 2 + 1);
-    fsn.readLock();
-    timer.advance(readLockReportingThreshold / 2 + 1);
-    logs.clearOutput();
-    fsn.readUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()) ||
-        logs.getOutput().contains(readLockLogStmt));
-    logs.clearOutput();
-    fsn.readUnlock();
-    assertFalse(logs.getOutput().contains(GenericTestUtils.getMethodName()) &&
-        logs.getOutput().contains(readLockLogStmt));
-
-    // Report if it's held for a long time (and time since last report
-    // exceeds the suppress warning interval) while another thread also has the
-    // read lock. Let one thread hold the lock long enough to activate an
-    // alert, then have another thread grab the read lock to ensure that this
-    // doesn't reset the timing.
-    timer.advance(readLockSuppressWarningInterval);
-    logs.clearOutput();
-    CountDownLatch barrier = new CountDownLatch(1);
-    CountDownLatch barrier2 = new CountDownLatch(1);
-    Thread t1 = new Thread() {
-      @Override
-      public void run() {
-        try {
-          fsn.readLock();
-          timer.advance(readLockReportingThreshold + 1);
-          barrier.countDown(); // Allow for t2 to acquire the read lock
-          barrier2.await(); // Wait until t2 has the read lock
-          fsn.readUnlock();
-        } catch (InterruptedException e) {
-          fail("Interrupted during testing");
-        }
-      }
-    };
-    Thread t2 = new Thread() {
-      @Override
-      public void run() {
-        try {
-          barrier.await(); // Wait until t1 finishes sleeping
-          fsn.readLock();
-          barrier2.countDown(); // Allow for t1 to unlock
-          fsn.readUnlock();
-        } catch (InterruptedException e) {
-          fail("Interrupted during testing");
-        }
-      }
-    };
-    t1.start();
-    t2.start();
-    t1.join();
-    t2.join();
-    // Look for the differentiating class names in the stack trace
-    String stackTracePatternString =
-        String.format("INFO.+%s(.+\n){4}\\Q%%s\\E\\.run", readLockLogStmt);
-    Pattern t1Pattern = Pattern.compile(
-        String.format(stackTracePatternString, t1.getClass().getName()));
-    assertTrue(t1Pattern.matcher(logs.getOutput()).find());
-    Pattern t2Pattern = Pattern.compile(
-        String.format(stackTracePatternString, t2.getClass().getName()));
-    assertFalse(t2Pattern.matcher(logs.getOutput()).find());
-    assertTrue(logs.getOutput().contains("Number of suppressed read-lock " +
-        "reports: 2"));
   }
 
   @Test
