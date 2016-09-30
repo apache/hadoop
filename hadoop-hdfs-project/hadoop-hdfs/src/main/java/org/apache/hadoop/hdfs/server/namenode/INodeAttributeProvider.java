@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
-import com.google.common.annotations.VisibleForTesting;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -87,7 +80,7 @@ public abstract class INodeAttributeProvider {
    */
   public abstract void stop();
 
-  @VisibleForTesting
+  @Deprecated
   String[] getPathElements(String path) {
     path = path.trim();
     if (path.charAt(0) != Path.SEPARATOR_CHAR) {
@@ -115,6 +108,7 @@ public abstract class INodeAttributeProvider {
     return pathElements;
   }
 
+  @Deprecated
   public INodeAttributes getAttributes(String fullPath, INodeAttributes inode) {
     return getAttributes(getPathElements(fullPath), inode);
   }
