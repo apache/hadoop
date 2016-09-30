@@ -915,7 +915,7 @@ the temporary disk.
 
 There is ongoing work to address these issues, primarily through 
 supporting incremental uploads of large objects, uploading intermediate
-blocks of data (in S3 terms, "parts of a multipart upload). This can make more
+blocks of data (in S3 terms, "parts of a multipart upload"). This can make more
 effective use of bandwidth during the write sequence, and may reduce the delay
 during the final `close()` call to that needed to upload *all outstanding
 data*, rather than *all data generated.* 
@@ -1022,7 +1022,7 @@ will block until the upload is completed.
 ##### <a href="s3a_block_output_disk"></a>Disk upload `fs.s3a.block.output.buffer=disk`
 
 When `fs.s3a.block.output.buffer` is set to `disk`, all data is buffered
-to local hard disks in prior to upload. This minimizes the amount of memory
+to local hard disks prior to upload. This minimizes the amount of memory
 consumed, and so eliminates heap size as the limiting factor in queued uploads
 —exactly as the original "direct to disk" buffering used when
 `fs.s3a.block.output=false` and `fs.s3a.fast.upload=false`.
@@ -2182,7 +2182,7 @@ There are a set of tests designed to measure the scalability and performance
 at scale of the S3A tests, *Scale Tests*. Tests include: creating
 and traversing directory trees, uploading large files, renaming them,
 deleting them, seeking through the files, performing random IO, and others.
-This makes them a foundational part of the benchmarking
+This makes them a foundational part of the benchmarking.
 
 By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
@@ -2190,14 +2190,14 @@ parallel execution does not speed these tests up.
 
 #### Enabling the Scale Tests
 
-The tests are enabled if the `scale` profile is enabled in the maven build
+The tests are enabled if the `scale` property is set in the maven build
 this can be done regardless of whether or not the parallel test profile
 is used
 
 ```bash
-mvn verify -Pscale
+mvn verify -Dscale
 
-mvn verify  -Pparallel-tests,scale -DtestsThreadCount=8 
+mvn verify -Dparallel-tests -Dscale -DtestsThreadCount=8
 ```
 
 The most bandwidth intensive tests (those which upload data) always run
@@ -2212,7 +2212,7 @@ Some of the tests can be tuned from the maven build or from the
 configuration file used to run the tests.
 
 ```bash
-mvn verify -Pscale -Dfs.s3a.scale.test.huge.filesize=128
+mvn verify -Dscale -Dfs.s3a.scale.test.huge.filesize=128M
 ```
 
 The algorithm is
@@ -2227,10 +2227,14 @@ the configuration value is used. The `unset` option is used to
 
 Only a few properties can be set this way; more will be added.
 
+| Property | Meaninging |
 |-----------|-------------|
 | `fs.s3a.scale.test.timeout`| Timeout in seconds for scale tests |
-| `fs.s3a.scale.test.huge.filesize`| Size in MB for huge file uploads |
-| `fs.s3a.scale.test.huge.huge.partitionsize`| Size in MB for partitions in huge file uploads |
+| `fs.s3a.scale.test.huge.filesize`| Size for huge file uploads |
+| `fs.s3a.scale.test.huge.huge.partitionsize`| Size for partitions in huge file uploads |
+
+The file and partition sizes are numeric values with a k/m/g/t/p suffix depending
+on the desired size. For example: 128M or 2g
 
 #### Scale test configuration options
 

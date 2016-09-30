@@ -25,9 +25,7 @@ import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-
 import com.google.common.base.Preconditions;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -229,18 +227,6 @@ public final class S3AUtils {
       }
     }
     return builder.toString();
-  }
-
-  /**
-   * Extract the error code of an AmazonServiceException.
-   * @param e any AmazonClientException
-   * @return the error code from the exception, or "" if it is the wrong
-   * type.
-   */
-  public static String extractErrorCode(AmazonClientException e) {
-    return e instanceof AmazonServiceException ?
-        ((AmazonServiceException) e).getErrorCode()
-        : "";
   }
 
   /**

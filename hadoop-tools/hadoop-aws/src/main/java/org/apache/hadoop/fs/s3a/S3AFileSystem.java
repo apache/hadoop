@@ -207,6 +207,13 @@ public class S3AFileSystem extends FileSystem {
                     }
                   });
 
+      if (conf.get("fs.s3a.threads.core") != null &&
+          warnedOfCoreThreadDeprecation.compareAndSet(false, true)) {
+        LoggerFactory.getLogger(
+            "org.apache.hadoop.conf.Configuration.deprecation")
+            .warn("Unsupported option \"fs.s3a.threads.core\"" +
+                " will be ignored {}", conf.get("fs.s3a.threads.core"));
+      }
       int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
       if (maxThreads < 2) {
         LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
@@ -229,9 +236,6 @@ public class S3AFileSystem extends FileSystem {
       verifyBucketExists();
 
       initMultipartUploads(conf);
-      String bufferDir = conf.get(BUFFER_DIR) != null
-          ? BUFFER_DIR : "hadoop.tmp.dir";
-      directoryAllocator = new LocalDirAllocator(bufferDir);
 
       serverSideEncryptionAlgorithm =
           conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM);
@@ -377,11 +381,22 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Round-robin directory allocator.
-   * @return allocator of directories for output streams.
+   * Demand create the directory allocator, then create a temporary file.
+   * {@link LocalDirAllocator#createTmpFileForWrite(String, long, Configuration)}.
+   *  @param pathStr prefix for the temporary file
+   *  @param size the size of the file that is going to be written
+   *  @param conf the Configuration object
+   *  @return a unique temporary file
+   *  @throws IOException IO problems
    */
-  LocalDirAllocator getDirectoryAllocator() {
-    return directoryAllocator;
+  synchronized File createTmpFileForWrite(String pathStr, long size,
+      Configuration conf) throws IOException {
+    if (directoryAllocator == null) {
+      String bufferDir = conf.get(BUFFER_DIR) != null
+          ? BUFFER_DIR : "hadoop.tmp.dir";
+      directoryAllocator = new LocalDirAllocator(bufferDir);
+    }
+    return directoryAllocator.createTmpFileForWrite(pathStr, size, conf);
   }
 
   /**
@@ -965,8 +980,7 @@ public class S3AFileSystem extends FileSystem {
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata,
-      InputStream inputStream) {
+      ObjectMetadata metadata, InputStream inputStream) {
     PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key,
         inputStream, metadata);
     putObjectRequest.setCannedAcl(cannedACL);

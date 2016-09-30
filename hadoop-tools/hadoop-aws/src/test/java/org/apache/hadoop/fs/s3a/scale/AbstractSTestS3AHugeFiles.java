@@ -61,7 +61,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractSTestS3AHugeFiles.class);
   public static final int DEFAULT_UPLOAD_BLOCKSIZE = 64 * _1KB;
-  public static final int DEFAULT_PARTITION_SIZE_MB = 8;
+  public static final String DEFAULT_PARTITION_SIZE = "8M";
   private Path scaleTestDir;
   private Path hugefile;
   private Path hugefileRenamed;
@@ -91,9 +91,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    partitionSize = getTestPropertyInt(conf,
+    partitionSize = (int)getTestPropertyBytes(conf,
         KEY_HUGE_PARTITION_SIZE,
-        DEFAULT_PARTITION_SIZE_MB) * _1MB;
+        DEFAULT_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
         partitionSize > MULTIPART_MIN_SIZE);
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);
@@ -116,9 +116,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_010_CreateHugeFile() throws IOException {
     assertFalse("Please run this test sequentially to avoid timeouts" +
             " and bandwidth problems", isParallelExecution());
-    long filesizeMB = getTestPropertyLong(getConf(), KEY_HUGE_FILESIZE,
+    long filesize = getTestPropertyBytes(getConf(), KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
-    long filesize = _1MB * filesizeMB;
+    long filesizeMB = filesize / _1MB;
 
     // clean up from any previous attempts
     deleteHugeFile();
@@ -136,7 +136,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     int bandwidth = _1MB;
     long upload_time = filesize/ bandwidth;
     assertTrue(String.format("Timeout set in %s seconds is too low;" +
-            " estimating upload time of %d seconds at 1 Mb/s." +
+            " estimating upload time of %d seconds at 1 MB/s." +
             " Rerun tests with -D%s=%d",
             timeout, upload_time, KEY_TEST_TIMEOUT, upload_time * 2),
         upload_time < timeout);
@@ -202,9 +202,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
     timer.end("time to write %d MB in blocks of %d", filesizeMB, uploadBlockSize);
     logFSState();
-    if (filesizeMB > 0) {
-      LOG.info("Time per MB to write = {} nS", toHuman(timer.duration() / filesizeMB));
-    }
     bandwidth(timer, filesize);
     long putRequestCount = storageStatistics.getLong(putRequests);
     Long putByteCount = storageStatistics.getLong(putBytes);

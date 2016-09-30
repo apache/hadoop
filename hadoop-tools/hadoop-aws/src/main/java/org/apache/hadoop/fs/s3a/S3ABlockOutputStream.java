@@ -497,7 +497,7 @@ class S3ABlockOutputStream extends OutputStream {
       try {
         return Futures.allAsList(partETagsFutures).get();
       } catch (InterruptedException ie) {
-        LOG.warn("Interrupted partUpload: {}", ie, ie);
+        LOG.warn("Interrupted partUpload", ie);
         Thread.currentThread().interrupt();
         return null;
       } catch (ExecutionException ee) {
@@ -510,8 +510,8 @@ class S3ABlockOutputStream extends OutputStream {
         }
         //abort multipartupload
         this.abort();
-        throw extractException("Multi-part upload with id '" + uploadId + "'",
-            key, ee);
+        throw extractException("Multi-part upload with id '" + uploadId
+                + "' to " + key, key, ee);
       }
     }
 
@@ -548,6 +548,7 @@ class S3ABlockOutputStream extends OutputStream {
 
     /**
      * Abort a multi-part upload. Retries are attempted on failures.
+     * IOExceptions are caught; this is expected to be run as a cleanup process.
      */
     public void abort() {
       int retryCount = 0;
@@ -569,7 +570,7 @@ class S3ABlockOutputStream extends OutputStream {
       // this point is only reached if the operation failed more than
       // the allowed retry count
       LOG.warn("Unable to abort multipart upload, you may need to purge  " +
-          "uploaded parts: {}", lastException, lastException);
+          "uploaded parts", lastException);
     }
 
     /**
@@ -600,7 +601,7 @@ class S3ABlockOutputStream extends OutputStream {
         }
         return retry;
       } catch (InterruptedException ex) {
-        Thread.interrupted();
+        Thread.currentThread().interrupt();
         return false;
       } catch (Exception ignored) {
         return false;

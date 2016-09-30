@@ -425,8 +425,7 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.unset(Constants.BUFFER_DIR);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    LocalDirAllocator allocator = fs.getDirectoryAllocator();
-    File tmp = allocator.createTmpFileForWrite("out-", 1024, conf);
+    File tmp = fs.createTmpFileForWrite("out-", 1024, conf);
     assertTrue("not found: " + tmp, tmp.exists());
     tmp.delete();
   }
@@ -438,12 +437,11 @@ public class ITestS3AConfiguration {
     dir1.mkdirs();
     dir2.mkdirs();
     conf = new Configuration();
-    conf.set(Constants.BUFFER_DIR, dir1 +", "+dir2);
+    conf.set(Constants.BUFFER_DIR, dir1 +", " + dir2);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    LocalDirAllocator allocator = fs.getDirectoryAllocator();
-    File tmp1 = allocator.createTmpFileForWrite("out-", 1024, conf);
+    File tmp1 = fs.createTmpFileForWrite("out-", 1024, conf);
     tmp1.delete();
-    File tmp2 = allocator.createTmpFileForWrite("out-", 1024, conf);
+    File tmp2 = fs.createTmpFileForWrite("out-", 1024, conf);
     tmp2.delete();
     assertNotEquals("round robin not working",
         tmp1.getParent(), tmp2.getParent());

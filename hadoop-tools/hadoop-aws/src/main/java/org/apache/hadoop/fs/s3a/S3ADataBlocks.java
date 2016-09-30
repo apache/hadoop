@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.BufferUnderflowException;
@@ -55,7 +56,8 @@ final class S3ADataBlocks {
   }
 
   /**
-   * Validate args to a write command.
+   * Validate args to a write command. These are the same validation checks
+   * expected for any implementation of {@code OutputStream.write()}.
    * @param b byte array containing data
    * @param off offset in array where to start
    * @param len number of bytes to be written
@@ -132,8 +134,15 @@ final class S3ADataBlocks {
 
     private volatile DestState state = Writing;
 
-    protected synchronized void enterState(DestState current, DestState next)
-        throws IOException {
+    /**
+     * Enter
+     * @param current
+     * @param next
+     * @throws IllegalStateException
+     */
+    protected synchronized final void enterState(DestState current,
+        DestState next)
+        throws IllegalStateException {
       verifyState(current);
       LOG.debug("{}: entering state {}", this, next);
       state = next;
@@ -144,14 +153,18 @@ final class S3ADataBlocks {
      * @param expected expected state.
      * @throws IllegalStateException if the DataBlock is in the wrong state
      */
-    protected void verifyState(DestState expected) throws IOException {
+    protected final void verifyState(DestState expected) throws IllegalStateException {
       if (expected != null && state != expected) {
-        throw new IOException("Expected stream state " + expected
+        throw new IllegalStateException("Expected stream state " + expected
             + " -but actual state is " + state + " in " + this);
       }
     }
 
-    DestState getState() {
+    /**
+     * Current state.
+     * @return the current state.
+     */
+    final DestState getState() {
       return state;
     }
 
@@ -178,7 +191,7 @@ final class S3ADataBlocks {
     }
 
     /**
-     * The remaining capacity in the blokc before it is full.
+     * The remaining capacity in the block before it is full.
      * @return the number of bytes remaining.
      */
     abstract int remainingCapacity();
@@ -212,7 +225,7 @@ final class S3ADataBlocks {
      * @throws IOException any IO problem.
      */
     void flush() throws IOException {
-
+      verifyState(Writing);
     }
 
     /**
@@ -237,7 +250,7 @@ final class S3ADataBlocks {
       if (!state.equals(Closed)) {
         try {
           enterState(null, Closed);
-        } catch (IOException ignored) {
+        } catch (IllegalStateException ignored) {
 
         }
         return true;
@@ -349,7 +362,6 @@ final class S3ADataBlocks {
     public String toString() {
       return "ByteArrayBlock{" +
           "state=" + getState() +
-          ", buffer=" + buffer +
           ", limit=" + limit +
           ", dataSize=" + dataSize +
           '}';
@@ -416,7 +428,7 @@ final class S3ADataBlocks {
      */
     class ByteBufferBlock extends DataBlock {
       private ByteBuffer buffer;
-      private int bufferSize;
+      private final int bufferSize;
       // cache data size so that it is consistent after the buffer is reset.
       private Integer dataSize;
 
@@ -527,10 +539,9 @@ final class S3ADataBlocks {
       }
 
       public synchronized int read() throws IOException {
-        verifyOpen();
-        try {
+        if (available() > 0) {
           return byteBuffer.get() & 0xFF;
-        } catch (BufferUnderflowException e) {
+        } else {
           return -1;
         }
       }
@@ -606,7 +617,7 @@ final class S3ADataBlocks {
         if (buffer.length - offset < length) {
           throw new IndexOutOfBoundsException(
               FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER
-                  + ": request length=" + length
+                  + ": request length =" + length
                   + ", with offset =" + offset
                   + "; buffer capacity =" + (buffer.length - offset));
         }
@@ -626,7 +637,6 @@ final class S3ADataBlocks {
             "ByteBufferInputStream{");
         sb.append("size=").append(size);
         ByteBuffer buffer = this.byteBuffer;
-        sb.append(", byteBuffer=").append(buffer);
         if (buffer != null) {
           sb.append(", available=").append(buffer.remaining());
         }
@@ -655,7 +665,7 @@ final class S3ADataBlocks {
      */
     @Override
     DataBlock create(int limit) throws IOException {
-      File destFile = owner.getDirectoryAllocator()
+      File destFile = owner
           .createTmpFileForWrite("s3ablock", limit, owner.getConf());
       return new DiskBlock(destFile, limit);
     }
@@ -668,8 +678,8 @@ final class S3ADataBlocks {
   static class DiskBlock extends DataBlock {
 
     protected int bytesWritten;
-    private File bufferFile;
-    private int limit;
+    private final File bufferFile;
+    private final int limit;
     private BufferedOutputStream out;
     private InputStream uploadStream;
 
@@ -677,8 +687,7 @@ final class S3ADataBlocks {
         throws FileNotFoundException {
       this.limit = limit;
       this.bufferFile = bufferFile;
-      out = new BufferedOutputStream(
-          new FileOutputStream(bufferFile));
+      out = new BufferedOutputStream(new FileOutputStream(bufferFile));
     }
 
     @Override
@@ -710,7 +719,6 @@ final class S3ADataBlocks {
       super.startUpload();
       try {
         out.flush();
-        out.close();
       } finally {
         out.close();
         out = null;
@@ -760,13 +768,13 @@ final class S3ADataBlocks {
      */
     @Override
     void flush() throws IOException {
-      verifyState(Writing);
       out.flush();
     }
 
     @Override
     public String toString() {
-      String sb = "FileBlock{" + "destFile=" + bufferFile +
+      String sb = "FileBlock{"
+          + "destFile=" + bufferFile +
           ", state=" + getState() +
           ", dataSize=" + dataSize() +
           ", limit=" + limit +
@@ -777,7 +785,7 @@ final class S3ADataBlocks {
     /**
      * An input stream which deletes the buffer file when closed.
      */
-    private final class FileDeletingInputStream extends ForwardingInputStream {
+    private final class FileDeletingInputStream extends FilterInputStream {
       private final AtomicBoolean closed = new AtomicBoolean(false);
 
       FileDeletingInputStream(InputStream source) {
@@ -790,68 +798,18 @@ final class S3ADataBlocks {
        */
       @Override
       public void close() throws IOException {
-        super.close();
-        if (!closed.getAndSet(true)) {
-          if (!bufferFile.delete()) {
-            LOG.warn("delete({}) returned false", bufferFile.getAbsoluteFile());
+        try {
+          super.close();
+        } finally {
+          if (!closed.getAndSet(true)) {
+            if (!bufferFile.delete()) {
+              LOG.warn("delete({}) returned false",
+                  bufferFile.getAbsoluteFile());
+            }
           }
         }
       }
     }
   }
 
-  /**
-   * Stream which forwards everything to another stream.
-   * For ease of subclassing.
-   */
-  @SuppressWarnings({
-      "NullableProblems",
-      "NonSynchronizedMethodOverridesSynchronizedMethod"
-  })
-  static class ForwardingInputStream extends InputStream {
-
-    protected final InputStream source;
-
-    ForwardingInputStream(InputStream source) {
-      this.source = source;
-    }
-
-    public int read() throws IOException {
-      return source.read();
-    }
-
-    public int read(byte[] b) throws IOException {
-      return source.read(b);
-    }
-
-    public int read(byte[] b, int off, int len) throws IOException {
-      return source.read(b, off, len);
-    }
-
-    public long skip(long n) throws IOException {
-      return source.skip(n);
-    }
-
-    public int available() throws IOException {
-      return source.available();
-    }
-
-    public void close() throws IOException {
-      LOG.debug("Closing source stream");
-      source.close();
-    }
-
-    public void mark(int readlimit) {
-      source.mark(readlimit);
-    }
-
-    public void reset() throws IOException {
-      source.reset();
-    }
-
-    public boolean markSupported() {
-      return source.markSupported();
-    }
-
-  }
 }

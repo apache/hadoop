@@ -51,7 +51,6 @@ public class S3AOutputStream extends OutputStream {
   private final String key;
   private final Progressable progress;
   private final S3AFileSystem fs;
-  private final LocalDirAllocator lDirAlloc;
 
   public static final Logger LOG = S3AFileSystem.LOG;
 
@@ -64,9 +63,8 @@ public class S3AOutputStream extends OutputStream {
     this.progress = progress;
     this.fs = fs;
 
-    lDirAlloc = fs.getDirectoryAllocator();
 
-    backupFile = lDirAlloc.createTmpFileForWrite("output-",
+    backupFile = fs.createTmpFileForWrite("output-",
         LocalDirAllocator.SIZE_UNKNOWN, conf);
 
     LOG.debug("OutputStream for key '{}' writing to tempfile: {}",

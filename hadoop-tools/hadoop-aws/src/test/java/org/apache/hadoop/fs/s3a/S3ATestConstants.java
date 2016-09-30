@@ -119,7 +119,7 @@ public interface S3ATestConstants {
    * The default huge size is small —full 5GB+ scale tests are something
    * to run in long test runs on EC2 VMs. {@value}.
    */
-  long DEFAULT_HUGE_FILESIZE = 10L;
+  String DEFAULT_HUGE_FILESIZE = "10M";
 
   /**
    * The default number of operations to perform: {@value}.
