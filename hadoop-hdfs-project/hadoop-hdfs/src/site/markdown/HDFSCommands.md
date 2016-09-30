@@ -463,7 +463,7 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs erasurecode [generic options]
-         [-setPolicy [-s <policyName>] <path>]
+         [-setPolicy [-p <policyName>] <path>]
          [-getPolicy <path>]
          [-listPolicies]
          [-usage [cmd ...]]

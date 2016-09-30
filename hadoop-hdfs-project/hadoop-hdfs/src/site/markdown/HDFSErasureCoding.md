@@ -125,7 +125,7 @@ Below are the details about each command.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
-      `policyName`: The ErasureCoding policy to be used for files under this directory. This is an optional parameter, specified using ‘-s’ flag. If no policy is specified, the system default ErasureCodingPolicy will be used.
+      `policyName`: The ErasureCoding policy to be used for files under this directory. This is an optional parameter, specified using ‘-p’ flag. If no policy is specified, the system default ErasureCodingPolicy will be used.
 
  *  `[-getPolicy <path>]`
 
