@@ -269,6 +269,7 @@ public:
   virtual int NextCallId() = 0;
 
   virtual const std::string &client_name() const = 0;
+  virtual const std::string &client_id() const = 0;
   virtual const std::string &user_name() const = 0;
   virtual const std::string &protocol_name() const = 0;
   virtual int protocol_version() const = 0;
@@ -380,6 +381,7 @@ class RpcEngine : public LockFreeRpcEngine {
   std::unique_ptr<const RetryPolicy> TEST_GenerateRetryPolicyUsingOptions();
 
   const std::string &client_name() const override { return client_name_; }
+  const std::string &client_id() const override { return client_id_; }
   const std::string &user_name() const override { return auth_info_.getUser(); }
   const std::string &protocol_name() const override { return protocol_name_; }
   int protocol_version() const override { return protocol_version_; }
@@ -394,6 +396,8 @@ protected:
   virtual std::shared_ptr<RpcConnection> NewConnection();
   virtual std::unique_ptr<const RetryPolicy> MakeRetryPolicy(const Options &options);
 
+  static std::string getRandomClientId();
+
   // Remember all of the last endpoints in case we need to reconnect and retry
   std::vector<::asio::ip::tcp::endpoint> last_endpoints_;
 
@@ -401,6 +405,7 @@ private:
   ::asio::io_service * const io_service_;
   const Options options_;
   const std::string client_name_;
+  const std::string client_id_;
   const std::string protocol_name_;
   const int protocol_version_;
   std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
