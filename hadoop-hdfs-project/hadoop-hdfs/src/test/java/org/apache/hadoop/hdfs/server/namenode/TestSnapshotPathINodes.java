@@ -166,6 +166,9 @@ public class TestSnapshotPathINodes {
     assertEquals(sub1.toString(), nodesInPath.getPath(2));
     assertEquals(file1.toString(), nodesInPath.getPath(3));
 
+    assertEquals(file1.getParent().toString(),
+                 nodesInPath.getParentINodesInPath().getPath());
+
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, false);
     assertEquals(nodesInPath.length(), components.length);
     assertSnapshot(nodesInPath, false, null, -1);
@@ -212,6 +215,9 @@ public class TestSnapshotPathINodes {
     // The number of INodes returned should still be components.length
     // since we put a null in the inode array for ".snapshot"
     assertEquals(nodesInPath.length(), components.length);
+    // ensure parent inodes can strip the .snapshot
+    assertEquals(sub1.toString(),
+        nodesInPath.getParentINodesInPath().getPath());
 
     // No SnapshotRoot dir is included in the resolved inodes  
     assertSnapshot(nodesInPath, true, snapshot, -1);

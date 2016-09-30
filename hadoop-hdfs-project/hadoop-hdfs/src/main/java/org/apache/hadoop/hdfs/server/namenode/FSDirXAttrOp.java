@@ -429,11 +429,7 @@ class FSDirXAttrOp {
       throws IOException {
     fsd.readLock();
     try {
-      String src = iip.getPath();
-      INode inode = FSDirectory.resolveLastINode(iip);
-      int snapshotId = iip.getPathSnapshotId();
-      return XAttrStorage.readINodeXAttrs(fsd.getAttributes(src,
-              inode.getLocalNameBytes(), inode, snapshotId));
+      return XAttrStorage.readINodeXAttrs(fsd.getAttributes(iip));
     } finally {
       fsd.readUnlock();
     }

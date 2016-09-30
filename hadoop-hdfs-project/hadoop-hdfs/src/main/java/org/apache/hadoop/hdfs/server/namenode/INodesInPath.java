@@ -399,7 +399,7 @@ public class INodesInPath {
    */
   private INodesInPath getAncestorINodesInPath(int length) {
     Preconditions.checkArgument(length >= 0 && length < inodes.length);
-    Preconditions.checkState(!isSnapshot());
+    Preconditions.checkState(isDotSnapshotDir() || !isSnapshot());
     final INode[] anodes = new INode[length];
     final byte[][] apath = new byte[length][];
     System.arraycopy(this.inodes, 0, anodes, 0, length);
