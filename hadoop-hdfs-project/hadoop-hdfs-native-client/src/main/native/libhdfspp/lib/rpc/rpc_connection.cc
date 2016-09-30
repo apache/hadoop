@@ -102,7 +102,7 @@ static void SetRequestHeader(LockFreeRpcEngine *engine, int call_id,
   rpc_header->set_callid(call_id);
   if (retry_count != kNoRetry)
     rpc_header->set_retrycount(retry_count);
-  rpc_header->set_clientid(engine->client_name());
+  rpc_header->set_clientid(engine->client_id());
 
   req_header->set_methodname(method_name);
   req_header->set_declaringclassprotocolname(engine->protocol_name());

@@ -21,6 +21,10 @@
 
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <exception>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <thread>
 
 namespace hdfs {
 
@@ -56,25 +60,17 @@ std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageL
 
 
 std::string GetRandomClientName() {
-  /**
-   *  The server is requesting a 16-byte UUID:
-   *  https://github.com/c9n/hadoop/blob/master/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/ClientId.java
-   *
-   *  This function generates a 16-byte UUID (version 4):
-   *  https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29
-   **/
-  unsigned char buf[16];
-  RAND_pseudo_bytes(buf, sizeof(buf));
+  std::vector<unsigned char>buf(8);
+  RAND_pseudo_bytes(&buf[0], 8);
 
-  //clear the first four bits of byte 6 then set the second bit
-  buf[6] = (buf[6] & 0x0f) | 0x40;
+  std::ostringstream oss;
+  oss << "DFSClient_"  << getpid() <<  "_" <<
+          std::this_thread::get_id() << "_" <<
+          std::setw(2) << std::hex << std::uppercase << std::setfill('0');
+  for (unsigned char b: buf)
+    oss << static_cast<unsigned>(b);
 
-  //clear the second bit of byte 8 and set the first bit
-  buf[8] = (buf[8] & 0xbf) | 0x80;
-
-  std::stringstream ss;
-  ss << std::string(reinterpret_cast<char *>(buf), sizeof(buf));
-  return ss.str();
+  return oss.str();
 }
 
 std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
