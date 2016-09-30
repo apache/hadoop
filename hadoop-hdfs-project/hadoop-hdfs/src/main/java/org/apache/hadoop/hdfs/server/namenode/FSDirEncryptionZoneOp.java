@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
@@ -184,9 +183,6 @@ final class FSDirEncryptionZoneOp {
     fsd.readLock();
     try {
       iip = fsd.resolvePath(pc, srcArg);
-      if (iip.getLastINode() == null) {
-        throw new FileNotFoundException("Path not found: " + iip.getPath());
-      }
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
       }

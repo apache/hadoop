@@ -328,14 +328,13 @@ public class HdfsAdmin {
    * Get the path of the encryption zone for a given file or directory.
    *
    * @param path The path to get the ez for.
-   *
-   * @return The EncryptionZone of the ez, or null if path is not in an ez.
+   * @return An EncryptionZone, or null if path does not exist or is not in an
+   * ez.
    * @throws IOException            if there was a general IO exception
    * @throws AccessControlException if the caller does not have access to path
-   * @throws FileNotFoundException  if the path does not exist
    */
   public EncryptionZone getEncryptionZoneForPath(Path path)
-    throws IOException, AccessControlException, FileNotFoundException {
+      throws IOException, AccessControlException {
     return dfs.getEZForPath(path);
   }
 
