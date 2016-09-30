@@ -144,4 +144,12 @@ public interface S3ATestConstants {
    */
   boolean DEFAULT_SCALE_TESTS_ENABLED = false;
 
+  String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
+
+  /**
+   * Fork ID passed down from maven if the test is running in parallel.
+   */
+  String TEST_UNIQUE_FORK_ID = "test.unique.fork.id";
+  String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";
+  String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
 }

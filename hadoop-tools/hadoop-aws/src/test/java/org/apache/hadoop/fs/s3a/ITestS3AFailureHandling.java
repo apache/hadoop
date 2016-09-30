@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,19 +35,15 @@ import java.io.FileNotFoundException;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 
 /**
  * Test S3A Failure translation, including a functional test
  * generating errors during stream IO.
  */
-public class ITestS3AFailureHandling extends AbstractFSContractTestBase {
+public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFailureHandling.class);
-
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new S3AContract(conf);
-  }
 
   @Test
   public void testReadFileChanged() throws Throwable {

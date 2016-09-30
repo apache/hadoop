@@ -52,9 +52,6 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     IOUtils.closeStream(getFileSystem());
   }
 
-  @Rule
-  public TestName methodName = new TestName();
-
   @Before
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());

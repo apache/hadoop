@@ -18,13 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,23 +39,13 @@ import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
  * Use metrics to assert about the cost of file status queries.
  * {@link S3AFileSystem#getFileStatus(Path)}.
  */
-public class ITestS3AFileOperationCost extends AbstractFSContractTestBase {
+public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
   private MetricDiff metadataRequests;
   private MetricDiff listRequests;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileOperationCost.class);
-
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new S3AContract(conf);
-  }
-
-  @Override
-  public S3AFileSystem getFileSystem() {
-    return (S3AFileSystem) super.getFileSystem();
-  }
 
   @Override
   public void setup() throws Exception {

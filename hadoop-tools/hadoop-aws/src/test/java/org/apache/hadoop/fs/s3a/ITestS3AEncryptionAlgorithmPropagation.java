@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
 import java.io.IOException;

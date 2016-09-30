@@ -22,7 +22,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
 import java.io.IOException;

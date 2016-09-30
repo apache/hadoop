@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
@@ -35,6 +36,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,18 +48,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  * Base class for scale tests; here is where the common scale configuration
  * keys are defined.
  */
-public class S3AScaleTestBase extends Assert implements S3ATestConstants {
-
-  @Rule
-  public final TestName methodName = new TestName();
+public class S3AScaleTestBase extends AbstractS3ATestBase {
 
   @Rule
   public Timeout testTimeout = createTestTimeout();
-
-  @Before
-  public void nameThread() {
-    Thread.currentThread().setName("JUnit");
-  }
 
   public static final int _1KB = 1024;
   public static final int _1MB = _1KB * _1KB;
@@ -79,6 +73,7 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   protected Configuration createConfiguration() {
     return new Configuration();
   }
+  private Path testPath;
 
   /**
    * Get the configuration used to set up the FS.
@@ -114,18 +109,18 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     if (conf == null) {
       conf = createConfiguration();
     }
-    return conf;
+    return getConfiguration();
   }
 
-  @After
-  public void tearDown() throws Exception {
-    ContractTestUtils.rm(fs, getTestPath(), true, true);
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    testPath = path("/tests3a");
+    fs = getFileSystem();
   }
 
   protected Path getTestPath() {
-    String testUniqueForkId = System.getProperty("test.unique.fork.id");
-    return testUniqueForkId == null ? new Path("/tests3a") :
-        new Path("/" + testUniqueForkId, "tests3a");
+    return testPath;
   }
 
   protected long getOperationCount() {

@@ -40,7 +40,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testListOperations() throws Throwable {
     describe("Test recursive list operations");
-    final Path scaleTestDir = getTestPath();
+    final Path scaleTestDir = path("testListOperations");
     final Path listDir = new Path(scaleTestDir, "lists");
 
     // scale factor.
@@ -137,7 +137,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testTimeToStatEmptyDirectory() throws Throwable {
     describe("Time to stat an empty directory");
-    Path path = new Path(getTestPath(), "empty");
+    Path path = path("empty");
     fs.mkdirs(path);
     timeToStatPath(path);
   }
@@ -145,7 +145,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testTimeToStatNonEmptyDirectory() throws Throwable {
     describe("Time to stat a non-empty directory");
-    Path path = new Path(getTestPath(), "dir");
+    Path path = path("dir");
     fs.mkdirs(path);
     touch(fs, new Path(path, "file"));
     timeToStatPath(path);
@@ -154,7 +154,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testTimeToStatFile() throws Throwable {
     describe("Time to stat a simple file");
-    Path path = new Path(getTestPath(), "file");
+    Path path = path("file");
     touch(fs, path);
     timeToStatPath(path);
   }

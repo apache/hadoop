@@ -50,7 +50,7 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
    */
   @Test
   public void testBulkRenameAndDelete() throws Throwable {
-    final Path scaleTestDir = getTestPath();
+    final Path scaleTestDir = path("testBulkRenameAndDelete");
     final Path srcDir = new Path(scaleTestDir, "src");
     final Path finalDir = new Path(scaleTestDir, "final");
     final long count = getOperationCount();

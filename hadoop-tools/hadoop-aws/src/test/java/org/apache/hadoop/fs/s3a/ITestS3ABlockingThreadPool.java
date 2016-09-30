@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,13 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 
 /**
  * Demonstrate that the threadpool blocks additional client requests if
@@ -49,20 +44,13 @@ public class ITestS3ABlockingThreadPool extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testRegularMultiPartUpload() throws Exception {
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 16 * 1024 *
-        1024);
-  }
-
-  @Test
   public void testFastMultiPartUpload() throws Exception {
     conf.setBoolean(Constants.FAST_UPLOAD, true);
     conf.set(Constants.FAST_UPLOAD_BUFFER,
         Constants.FAST_UPLOAD_BYTEBUFFER);
     fs = S3ATestUtils.createTestFileSystem(conf);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 16 * 1024 *
-        1024);
+    ContractTestUtils.createAndVerifyFile(fs,
+        path("testFastMultiPartUpload"), 16 * 1024 * 1024);
 
   }
 }

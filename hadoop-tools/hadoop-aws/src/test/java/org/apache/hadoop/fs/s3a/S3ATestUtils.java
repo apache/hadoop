@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase;
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
@@ -299,6 +300,19 @@ public class S3ATestUtils {
     if (!configuration.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
       skip("Skipping encryption tests");
     }
+  }
+
+  /**
+   * Create a test path, using the value of
+   * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
+   * @param defVal default value
+   * @return a path
+   */
+  public static Path createTestPath(Path defVal) {
+    String testUniqueForkId = System.getProperty(
+        S3ATestConstants.TEST_UNIQUE_FORK_ID);
+    return testUniqueForkId == null ? defVal :
+        new Path("/" + testUniqueForkId, "test");
   }
 
   /**

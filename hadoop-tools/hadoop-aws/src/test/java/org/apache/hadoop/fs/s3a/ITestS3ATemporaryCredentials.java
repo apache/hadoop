@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -28,9 +28,6 @@ import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
 
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.conf.Configuration;
 
@@ -48,9 +45,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * should only be used against transient filesystems where you don't care about
  * the data.
  */
-public class ITestS3ATemporaryCredentials extends AbstractFSContractTestBase {
-  public static final String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";
-  public static final String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
+public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATemporaryCredentials.class);
@@ -59,11 +54,6 @@ public class ITestS3ATemporaryCredentials extends AbstractFSContractTestBase {
       = TemporaryAWSCredentialsProvider.NAME;
 
   private static final long TEST_FILE_SIZE = 1024;
-
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new S3AContract(conf);
-  }
 
   /**
    * Test use of STS for requesting temporary credentials.
