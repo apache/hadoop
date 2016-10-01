@@ -28,6 +28,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.security.token.delegation.web.HttpUserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 import javax.ws.rs.Consumes;
@@ -68,6 +70,8 @@ public class KMS {
   private KeyProviderCryptoExtension provider;
   private KMSAudit kmsAudit;
 
+  private static final Logger LOG = LoggerFactory.getLogger(KMS.class);
+
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();
     kmsAudit= KMSWebApp.getKMSAudit();
@@ -77,7 +81,7 @@ public class KMS {
       KMSOp operation) throws AccessControlException {
     KMSWebApp.getACLs().assertAccess(aclType, ugi, operation, null);
   }
-  
+
   private void assertAccess(KMSACLs.Type aclType, UserGroupInformation ugi,
       KMSOp operation, String key) throws AccessControlException {
     KMSWebApp.getACLs().assertAccess(aclType, ugi, operation, key);
@@ -100,6 +104,7 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   @SuppressWarnings("unchecked")
   public Response createKey(Map jsonKey) throws Exception {
+    LOG.trace("Entering createKey Method.");
     KMSWebApp.getAdminCallsMeter().mark();
     UserGroupInformation user = HttpUserGroupInformation.get();
     final String name = (String) jsonKey.get(KMSRESTConstants.NAME_FIELD);
@@ -111,6 +116,9 @@ public class KMS {
                  ? (Integer) jsonKey.get(KMSRESTConstants.LENGTH_FIELD) : 0;
     String description = (String)
         jsonKey.get(KMSRESTConstants.DESCRIPTION_FIELD);
+    LOG.debug("Creating key with name {}, cipher being used{}, " +
+            "length of key {}, description of key {}", name, cipher,
+             length, description);
     Map<String, String> attributes = (Map<String, String>)
         jsonKey.get(KMSRESTConstants.ATTRIBUTES_FIELD);
     if (material != null) {
@@ -151,6 +159,7 @@ public class KMS {
     String requestURL = KMSMDCFilter.getURL();
     int idx = requestURL.lastIndexOf(KMSRESTConstants.KEYS_RESOURCE);
     requestURL = requestURL.substring(0, idx);
+    LOG.trace("Exiting createKey Method.");
     return Response.created(getKeyURI(KMSRESTConstants.SERVICE_VERSION, name))
         .type(MediaType.APPLICATION_JSON)
         .header("Location", getKeyURI(requestURL, name)).entity(json).build();
@@ -160,11 +169,12 @@ public class KMS {
   @Path(KMSRESTConstants.KEY_RESOURCE + "/{name:.*}")
   public Response deleteKey(@PathParam("name") final String name)
       throws Exception {
+    LOG.trace("Entering deleteKey method.");
     KMSWebApp.getAdminCallsMeter().mark();
     UserGroupInformation user = HttpUserGroupInformation.get();
     assertAccess(KMSACLs.Type.DELETE, user, KMSOp.DELETE_KEY, name);
     KMSClientProvider.checkNotEmpty(name, "name");
-
+    LOG.debug("Deleting key with name {}.", name);
     user.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -175,7 +185,7 @@ public class KMS {
     });
 
     kmsAudit.ok(user, KMSOp.DELETE_KEY, name, "");
-
+    LOG.trace("Exiting deleteKey method.");
     return Response.ok().build();
   }
 
@@ -185,10 +195,12 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   public Response rolloverKey(@PathParam("name") final String name,
       Map jsonMaterial) throws Exception {
+    LOG.trace("Entering rolloverKey Method.");
     KMSWebApp.getAdminCallsMeter().mark();
     UserGroupInformation user = HttpUserGroupInformation.get();
     assertAccess(KMSACLs.Type.ROLLOVER, user, KMSOp.ROLL_NEW_VERSION, name);
     KMSClientProvider.checkNotEmpty(name, "name");
+    LOG.debug("Rolling key with name {}.", name);
     final String material = (String)
         jsonMaterial.get(KMSRESTConstants.MATERIAL_FIELD);
     if (material != null) {
@@ -216,6 +228,7 @@ public class KMS {
       keyVersion = removeKeyMaterial(keyVersion);
     }
     Map json = KMSServerJSONUtils.toJSON(keyVersion);
+    LOG.trace("Exiting rolloverKey Method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
@@ -224,6 +237,7 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getKeysMetadata(@QueryParam(KMSRESTConstants.KEY)
       List<String> keyNamesList) throws Exception {
+    LOG.trace("Entering getKeysMetadata method.");
     KMSWebApp.getAdminCallsMeter().mark();
     UserGroupInformation user = HttpUserGroupInformation.get();
     final String[] keyNames = keyNamesList.toArray(
@@ -241,6 +255,7 @@ public class KMS {
 
     Object json = KMSServerJSONUtils.toJSON(keyNames, keysMeta);
     kmsAudit.ok(user, KMSOp.GET_KEYS_METADATA, "");
+    LOG.trace("Exiting getKeysMetadata method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
@@ -248,6 +263,7 @@ public class KMS {
   @Path(KMSRESTConstants.KEYS_NAMES_RESOURCE)
   @Produces(MediaType.APPLICATION_JSON)
   public Response getKeyNames() throws Exception {
+    LOG.trace("Entering getKeyNames method.");
     KMSWebApp.getAdminCallsMeter().mark();
     UserGroupInformation user = HttpUserGroupInformation.get();
     assertAccess(KMSACLs.Type.GET_KEYS, user, KMSOp.GET_KEYS);
@@ -262,6 +278,7 @@ public class KMS {
     );
 
     kmsAudit.ok(user, KMSOp.GET_KEYS, "");
+    LOG.trace("Exiting getKeyNames method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
@@ -269,6 +286,9 @@ public class KMS {
   @Path(KMSRESTConstants.KEY_RESOURCE + "/{name:.*}")
   public Response getKey(@PathParam("name") String name)
       throws Exception {
+    LOG.trace("Entering getKey method.");
+    LOG.debug("Getting key information for key with name {}.", name);
+    LOG.trace("Exiting getKey method.");
     return getMetadata(name);
   }
 
@@ -278,10 +298,12 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getMetadata(@PathParam("name") final String name)
       throws Exception {
+    LOG.trace("Entering getMetadata method.");
     UserGroupInformation user = HttpUserGroupInformation.get();
     KMSClientProvider.checkNotEmpty(name, "name");
     KMSWebApp.getAdminCallsMeter().mark();
     assertAccess(KMSACLs.Type.GET_METADATA, user, KMSOp.GET_METADATA, name);
+    LOG.debug("Getting metadata for key with name {}.", name);
 
     KeyProvider.Metadata metadata = user.doAs(
         new PrivilegedExceptionAction<KeyProvider.Metadata>() {
@@ -294,6 +316,7 @@ public class KMS {
 
     Object json = KMSServerJSONUtils.toJSON(name, metadata);
     kmsAudit.ok(user, KMSOp.GET_METADATA, name, "");
+    LOG.trace("Exiting getMetadata method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
@@ -303,10 +326,12 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCurrentVersion(@PathParam("name") final String name)
       throws Exception {
+    LOG.trace("Entering getCurrentVersion method.");
     UserGroupInformation user = HttpUserGroupInformation.get();
     KMSClientProvider.checkNotEmpty(name, "name");
     KMSWebApp.getKeyCallsMeter().mark();
     assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_CURRENT_KEY, name);
+    LOG.debug("Getting key version for key with name {}.", name);
 
     KeyVersion keyVersion = user.doAs(
         new PrivilegedExceptionAction<KeyVersion>() {
@@ -319,6 +344,7 @@ public class KMS {
 
     Object json = KMSServerJSONUtils.toJSON(keyVersion);
     kmsAudit.ok(user, KMSOp.GET_CURRENT_KEY, name, "");
+    LOG.trace("Exiting getCurrentVersion method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
@@ -327,10 +353,12 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getKeyVersion(
       @PathParam("versionName") final String versionName) throws Exception {
+    LOG.trace("Entering getKeyVersion method.");
     UserGroupInformation user = HttpUserGroupInformation.get();
     KMSClientProvider.checkNotEmpty(versionName, "versionName");
     KMSWebApp.getKeyCallsMeter().mark();
     assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_KEY_VERSION);
+    LOG.debug("Getting key with version name {}.", versionName);
 
     KeyVersion keyVersion = user.doAs(
         new PrivilegedExceptionAction<KeyVersion>() {
@@ -345,6 +373,7 @@ public class KMS {
       kmsAudit.ok(user, KMSOp.GET_KEY_VERSION, keyVersion.getName(), "");
     }
     Object json = KMSServerJSONUtils.toJSON(keyVersion);
+    LOG.trace("Exiting getKeyVersion method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
@@ -359,12 +388,16 @@ public class KMS {
           @DefaultValue("1")
           @QueryParam(KMSRESTConstants.EEK_NUM_KEYS) final int numKeys)
           throws Exception {
+    LOG.trace("Entering generateEncryptedKeys method.");
     UserGroupInformation user = HttpUserGroupInformation.get();
     KMSClientProvider.checkNotEmpty(name, "name");
     KMSClientProvider.checkNotNull(edekOp, "eekOp");
+    LOG.debug("Generating encrypted key with name {}," +
+            " the edek Operation is {}.", name, edekOp);
 
     Object retJSON;
     if (edekOp.equals(KMSRESTConstants.EEK_GENERATE)) {
+      LOG.debug("edek Operation is Generate.");
       assertAccess(KMSACLs.Type.GENERATE_EEK, user, KMSOp.GENERATE_EEK, name);
 
       final List<EncryptedKeyVersion> retEdeks =
@@ -375,6 +408,8 @@ public class KMS {
             new PrivilegedExceptionAction<Void>() {
               @Override
               public Void run() throws Exception {
+                  LOG.debug("Generated Encrypted key for {} number of keys.",
+                          numKeys);
                 for (int i = 0; i < numKeys; i++) {
                   retEdeks.add(provider.generateEncryptedKey(name));
                 }
@@ -384,6 +419,7 @@ public class KMS {
         );
 
       } catch (Exception e) {
+        LOG.error("Exception in generateEncryptedKeys:", e);
         throw new IOException(e);
       }
       kmsAudit.ok(user, KMSOp.GENERATE_EEK, name, "");
@@ -392,11 +428,18 @@ public class KMS {
         ((ArrayList)retJSON).add(KMSServerJSONUtils.toJSON(edek));
       }
     } else {
-      throw new IllegalArgumentException("Wrong " + KMSRESTConstants.EEK_OP +
-          " value, it must be " + KMSRESTConstants.EEK_GENERATE + " or " +
-          KMSRESTConstants.EEK_DECRYPT);
+      StringBuilder error;
+      error = new StringBuilder("IllegalArgumentException Wrong ");
+      error.append(KMSRESTConstants.EEK_OP);
+      error.append(" value, it must be ");
+      error.append(KMSRESTConstants.EEK_GENERATE);
+      error.append(" or ");
+      error.append(KMSRESTConstants.EEK_DECRYPT);
+      LOG.error(error.toString());
+      throw new IllegalArgumentException(error.toString());
     }
     KMSWebApp.getGenerateEEKCallsMeter().mark();
+    LOG.trace("Exiting generateEncryptedKeys method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
         .build();
   }
@@ -411,14 +454,17 @@ public class KMS {
       @QueryParam(KMSRESTConstants.EEK_OP) String eekOp,
       Map jsonPayload)
       throws Exception {
+    LOG.trace("Entering decryptEncryptedKey method.");
     UserGroupInformation user = HttpUserGroupInformation.get();
     KMSClientProvider.checkNotEmpty(versionName, "versionName");
     KMSClientProvider.checkNotNull(eekOp, "eekOp");
+    LOG.debug("Decrypting key for {}, the edek Operation is {}.",
+            versionName, eekOp);
 
     final String keyName = (String) jsonPayload.get(
         KMSRESTConstants.NAME_FIELD);
     String ivStr = (String) jsonPayload.get(KMSRESTConstants.IV_FIELD);
-    String encMaterialStr = 
+    String encMaterialStr =
         (String) jsonPayload.get(KMSRESTConstants.MATERIAL_FIELD);
     Object retJSON;
     if (eekOp.equals(KMSRESTConstants.EEK_DECRYPT)) {
@@ -445,11 +491,18 @@ public class KMS {
       retJSON = KMSServerJSONUtils.toJSON(retKeyVersion);
       kmsAudit.ok(user, KMSOp.DECRYPT_EEK, keyName, "");
     } else {
-      throw new IllegalArgumentException("Wrong " + KMSRESTConstants.EEK_OP +
-          " value, it must be " + KMSRESTConstants.EEK_GENERATE + " or " +
-          KMSRESTConstants.EEK_DECRYPT);
+      StringBuilder error;
+      error = new StringBuilder("IllegalArgumentException Wrong ");
+      error.append(KMSRESTConstants.EEK_OP);
+      error.append(" value, it must be ");
+      error.append(KMSRESTConstants.EEK_GENERATE);
+      error.append(" or ");
+      error.append(KMSRESTConstants.EEK_DECRYPT);
+      LOG.error(error.toString());
+      throw new IllegalArgumentException(error.toString());
     }
     KMSWebApp.getDecryptEEKCallsMeter().mark();
+    LOG.trace("Exiting decryptEncryptedKey method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
         .build();
   }
@@ -460,10 +513,12 @@ public class KMS {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getKeyVersions(@PathParam("name") final String name)
       throws Exception {
+    LOG.trace("Entering getKeyVersions method.");
     UserGroupInformation user = HttpUserGroupInformation.get();
     KMSClientProvider.checkNotEmpty(name, "name");
     KMSWebApp.getKeyCallsMeter().mark();
     assertAccess(KMSACLs.Type.GET, user, KMSOp.GET_KEY_VERSIONS, name);
+    LOG.debug("Getting key versions for key {}", name);
 
     List<KeyVersion> ret = user.doAs(
         new PrivilegedExceptionAction<List<KeyVersion>>() {
@@ -476,6 +531,7 @@ public class KMS {
 
     Object json = KMSServerJSONUtils.toJSON(ret);
     kmsAudit.ok(user, KMSOp.GET_KEY_VERSIONS, name, "");
+    LOG.trace("Exiting getKeyVersions method.");
     return Response.ok().type(MediaType.APPLICATION_JSON).entity(json).build();
   }
 
