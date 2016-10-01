@@ -3237,6 +3237,7 @@ The Cluster Reservation API can be used to list reservations. When listing reser
 | deadline | long | The UTC time representation of the latest time within which this reservation can be allocated. |
 | reservation-name | string | A mnemonic name of the reservation (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+| priority | int | An integer representing the priority of the reservation. A lower number for priority indicates a higher priority reservation. Recurring reservations are always higher priority than non-recurring reservations. Priority for non-recurring reservations are only compared with non-recurring reservations. Likewise with recurring reservations. |
 
 ### Elements of the *reservation-requests* object
 
@@ -3500,6 +3501,7 @@ Elements of the *reservation-definition* object
 | deadline | long | The UTC time representation of the latest time within which this reservation can be allocated. |
 | reservation-name | string | A mnemonic name of the reservation (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+| priority | int | An integer representing the priority of the reservation. A lower number for priority indicates a higher priority reservation. Recurring reservations are always higher priority than non-recurring reservations. Priority for non-recurring reservations are only compared with non-recurring reservations. Likewise with recurring reservations. |
 
 Elements of the *reservation-requests* object
 
@@ -3675,6 +3677,7 @@ Elements of the *reservation-definition* object
 | deadline | long | The UTC time representation of the latest time within which this reservation can be allocated. |
 | reservation-name | string | A mnemonic name of the reservation (not a valid identifier). |
 | reservation-requests | object | A list of "stages" or phases of this reservation, each describing resource requirements and duration |
+| priority | int | An integer representing the priority of the reservation. A lower number for priority indicates a higher priority reservation. Recurring reservations are always higher priority than non-recurring reservations. Priority for non-recurring reservations are only compared with non-recurring reservations. Likewise with recurring reservations. |
 
 Elements of the *reservation-requests* object
 
