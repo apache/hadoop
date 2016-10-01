@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A Client for the storageContainer protocol.
@@ -96,7 +97,7 @@ public class XceiverClient implements Closeable {
   @Override
   public void close() {
     if(group != null) {
-      group.shutdownGracefully();
+      group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
     }
 
     if (channelFuture != null) {
