@@ -33,7 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This is a debugging class that can be used by callers to track
- * whether a specific lock is being held for too long and periodically
+ * whether a specifc lock is being held for too long and periodically
  * log a warning and stack trace, if so.
  *
  * The logged warnings are throttled so that logs are not spammed.
@@ -43,10 +43,9 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class InstrumentedReentrantLock implements Lock {
+public class InstrumentedLock implements Lock {
 
-  @VisibleForTesting
-  final ReentrantLock lock;
+  private final Lock lock;
   private final Log logger;
   private final String name;
   private final Timer clock;
@@ -73,23 +72,20 @@ public class InstrumentedReentrantLock implements Lock {
    * @param lockWarningThresholdMs the time threshold to view lock held
    *                               time as being "too long"
    */
-  public InstrumentedReentrantLock(
-      String name, Log logger, long minLoggingGapMs,
+  public InstrumentedLock(String name, Log logger, long minLoggingGapMs,
       long lockWarningThresholdMs) {
     this(name, logger, new ReentrantLock(),
         minLoggingGapMs, lockWarningThresholdMs);
   }
 
-  public InstrumentedReentrantLock(
-      String name, Log logger, ReentrantLock lock,
+  public InstrumentedLock(String name, Log logger, Lock lock,
       long minLoggingGapMs, long lockWarningThresholdMs) {
     this(name, logger, lock,
         minLoggingGapMs, lockWarningThresholdMs, new Timer());
   }
 
   @VisibleForTesting
-  InstrumentedReentrantLock(
-      String name, Log logger, ReentrantLock lock,
+  InstrumentedLock(String name, Log logger, Lock lock,
       long minLoggingGapMs, long lockWarningThresholdMs, Timer clock) {
     this.name = name;
     this.lock = lock;
@@ -104,22 +100,18 @@ public class InstrumentedReentrantLock implements Lock {
   @Override
   public void lock() {
     lock.lock();
-    if (lock.getHoldCount() == 1) {
-      lockAcquireTimestamp = clock.monotonicNow();
-    }
+    lockAcquireTimestamp = clock.monotonicNow();
   }
 
   @Override
   public void lockInterruptibly() throws InterruptedException {
     lock.lockInterruptibly();
-    if (lock.getHoldCount() == 1) {
-      lockAcquireTimestamp = clock.monotonicNow();
-    }
+    lockAcquireTimestamp = clock.monotonicNow();
   }
 
   @Override
   public boolean tryLock() {
-    if (lock.tryLock() && lock.getHoldCount() == 1) {
+    if (lock.tryLock()) {
       lockAcquireTimestamp = clock.monotonicNow();
       return true;
     }
@@ -128,7 +120,7 @@ public class InstrumentedReentrantLock implements Lock {
 
   @Override
   public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-    if (lock.tryLock(time, unit) && lock.getHoldCount() == 1) {
+    if (lock.tryLock(time, unit)) {
       lockAcquireTimestamp = clock.monotonicNow();
       return true;
     }
@@ -137,13 +129,10 @@ public class InstrumentedReentrantLock implements Lock {
 
   @Override
   public void unlock() {
-    final boolean needReport = (lock.getHoldCount() == 1);
     long localLockReleaseTime = clock.monotonicNow();
     long localLockAcquireTime = lockAcquireTimestamp;
     lock.unlock();
-    if (needReport) {
-      check(localLockAcquireTime, localLockReleaseTime);
-    }
+    check(localLockAcquireTime, localLockReleaseTime);
   }
 
   @Override
@@ -192,4 +181,5 @@ public class InstrumentedReentrantLock implements Lock {
       logWarning(lockHeldTime, suppressed);
     }
   }
+
 }

@@ -20,10 +20,9 @@ package org.apache.hadoop.hdfs;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.util.AutoCloseableLock;
-import org.apache.hadoop.util.FakeTimer;
+import org.apache.hadoop.util.Timer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,11 +34,11 @@ import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
 /**
- * A test class for {@link InstrumentedReentrantLock}.
+ * A test class for InstrumentedLock.
  */
-public class TestInstrumentedReentrantLock {
+public class TestInstrumentedLock {
 
-  static final Log LOG = LogFactory.getLog(TestInstrumentedReentrantLock.class);
+  static final Log LOG = LogFactory.getLog(TestInstrumentedLock.class);
 
   @Rule public TestName name = new TestName();
 
@@ -50,8 +49,7 @@ public class TestInstrumentedReentrantLock {
   @Test(timeout=10000)
   public void testMultipleThread() throws Exception {
     String testname = name.getMethodName();
-    final InstrumentedReentrantLock lock =
-        new InstrumentedReentrantLock(testname, LOG, 0, 300);
+    final InstrumentedLock lock = new InstrumentedLock(testname, LOG, 0, 300);
     lock.lock();
     try {
       Thread competingThread = new Thread() {
@@ -75,7 +73,7 @@ public class TestInstrumentedReentrantLock {
   public void testTryWithResourceSyntax() throws Exception {
     String testname = name.getMethodName();
     final AtomicReference<Thread> lockThread = new AtomicReference<>(null);
-    final Lock lock = new InstrumentedReentrantLock(testname, LOG, 0, 300) {
+    final Lock lock = new InstrumentedLock(testname, LOG, 0, 300) {
       @Override
       public void lock() {
         super.lock();
@@ -112,15 +110,19 @@ public class TestInstrumentedReentrantLock {
   @Test(timeout=10000)
   public void testLockLongHoldingReport() throws Exception {
     String testname = name.getMethodName();
-    FakeTimer mclock = new FakeTimer();
-    final int warningThreshold = 500;
-    final int minLoggingGap = warningThreshold * 10;
+    final AtomicLong time = new AtomicLong(0);
+    Timer mclock = new Timer() {
+      @Override
+      public long monotonicNow() {
+        return time.get();
+      }
+    };
+    Lock mlock = mock(Lock.class);
 
     final AtomicLong wlogged = new AtomicLong(0);
     final AtomicLong wsuppresed = new AtomicLong(0);
-    InstrumentedReentrantLock lock = new InstrumentedReentrantLock(
-        testname, LOG, new ReentrantLock(), minLoggingGap,
-        warningThreshold, mclock) {
+    InstrumentedLock lock = new InstrumentedLock(
+        testname, LOG, mlock, 2000, 300, mclock) {
       @Override
       void logWarning(long lockHeldTime, long suppressed) {
         wlogged.incrementAndGet();
@@ -128,50 +130,37 @@ public class TestInstrumentedReentrantLock {
       }
     };
 
-    // do not log warning when the lock held time is <= warningThreshold.
-    lock.lock();
-    mclock.advance(warningThreshold);
-    lock.unlock();
+    // do not log warning when the lock held time is short
+    lock.lock();   // t = 0
+    time.set(200);
+    lock.unlock(); // t = 200
     assertEquals(0, wlogged.get());
     assertEquals(0, wsuppresed.get());
 
-    // log a warning when the lock held time exceeds the threshold.
-    lock.lock();
-    mclock.advance(warningThreshold + 1);
-    assertEquals(1, lock.lock.getHoldCount());
-    lock.unlock();
+    lock.lock();   // t = 200
+    time.set(700);
+    lock.unlock(); // t = 700
     assertEquals(1, wlogged.get());
     assertEquals(0, wsuppresed.get());
 
     // despite the lock held time is greater than threshold
     // suppress the log warning due to the logging gap
     // (not recorded in wsuppressed until next log message)
-    lock.lock();
-    mclock.advance(warningThreshold + 1);
-    lock.unlock();
+    lock.lock();   // t = 700
+    time.set(1100);
+    lock.unlock(); // t = 1100
     assertEquals(1, wlogged.get());
     assertEquals(0, wsuppresed.get());
 
     // log a warning message when the lock held time is greater the threshold
     // and the logging time gap is satisfied. Also should display suppressed
     // previous warnings.
-    lock.lock();
-    mclock.advance(minLoggingGap + 1);
+    time.set(2400);
+    lock.lock();   // t = 2400
+    time.set(2800);
     lock.unlock(); // t = 2800
     assertEquals(2, wlogged.get());
     assertEquals(1, wsuppresed.get());
-
-    // Ensure that nested acquisitions do not log.
-    wlogged.set(0);
-    wsuppresed.set(0);
-    lock.lock();
-    lock.lock();
-    mclock.advance(minLoggingGap + 1);
-    lock.unlock();
-    assertEquals(0, wlogged.get());    // No warnings on nested release.
-    assertEquals(0, wsuppresed.get());
-    lock.unlock();
-    assertEquals(1, wlogged.get());    // Last release immediately logs.
-    assertEquals(0, wsuppresed.get());
   }
+
 }
