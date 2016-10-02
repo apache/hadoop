@@ -14,8 +14,16 @@ Release 2.6.5 - 2016-10-03
     HDFS-9688. Test the effect of nested encryption zones in HDFS downgrade.
     (zhz)
 
+    HDFS-10264. Logging improvements in FSImageFormatProtobuf.Saver. (Xiaobing
+    Zhou via shvachko)
+
+    HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
+
     HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
     level instead of INFO level. (Xiaoyu Yao via wheat9)
+
+    HDFS-10377. CacheReplicationMonitor shutdown log message should use INFO
+    level (Yiqun Lin via cmccabe)
 
     HDFS-9669. TcpPeerServer should respect ipc.server.listen.queue.size
     (Elliot Clark via cmccabe)
@@ -25,6 +33,9 @@ Release 2.6.5 - 2016-10-03
 
   OPTIMIZATIONS
 
+    HDFS-10653. Optimize conversion from path string to components. (Daryn
+    Sharp via zhz)
+
     HDFS-8845. DiskChecker should not traverse the entire tree (Chang Li via
     Colin P. McCabe)
 
@@ -33,11 +44,22 @@ Release 2.6.5 - 2016-10-03
     HDFS-9347. Invariant assumption in TestQuorumJournalManager.shutdown()
     is wrong. (Wei-Chiu Chuang via zhz)
 
+    HDFS-9752. Permanent write failures may happen to slow writers during
+    datanode rolling upgrades. (Walter Su via kihwal)
+
+    HDFS-10182. Hedged read might overwrite user's buf. (zhouyingchao via
+    Walter Su)
+
     HDFS-10271. Extra bytes are getting released from reservedSpace for append
     (Brahma Reddy Battula via vinayakumarb)
 
+    HDFS-10458. getFileEncryptionInfo should return quickly for non-encrypted
+    cluster. (zhz)
+
     HDFS-8581. ContentSummary on / skips further counts on yielding lock
     (J.Andreina via vinayakumarb)
+
+    HDFS-10544. Balancer doesn't work with IPFailoverProxyProvider. (zhz)
 
     HDFS-9530. ReservedSpace is not cleared for abandoned Blocks.
     (Brahma Reddy Battula)
@@ -106,9 +128,6 @@ Release 2.6.4 - 2016-02-11
 
     HDFS-9220. Reading small file (< 512 bytes) that is open for append fails
     due to incorrect checksum (Jing Zhao via kihwal)
-
-    HDFS-9752. Permanent write failures may happen to slow writers during
-    datanode rolling upgrades. (Walter Su via kihwal)
 
 Release 2.6.3 - 2015-12-17
 

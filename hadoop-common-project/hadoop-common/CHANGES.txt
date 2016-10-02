@@ -17,6 +17,9 @@ Release 2.6.5 - 2016-10-03
     HADOOP-12789. log classpath of ApplicationClassLoader at INFO level
     (Sangjin Lee via mingma)
 
+    HADOOP-13290. Appropriate use of generics in FairCallQueue. (Jonathan Hung
+    via zhz)
+
     HADOOP-13298. Fix the leftover L&N files in
     hadoop-build-tools/src/main/resources/META-INF/. (ozawa)
 
@@ -36,17 +39,39 @@ Release 2.6.5 - 2016-10-03
     HADOOP-12589. Fix intermittent test failure of TestCopyPreserveFlag
     (iwasakims)
 
+    HADOOP-12559. KMS connection failures should trigger TGT renewal. (Zhe
+    Zhang via xiaoyuyao)
+
+    HADOOP-12682. Fix TestKMS#testKMSRestart* failure. (Wei-Chiu Chuang via
+    xiaoyuyao)
+
     HADOOP-12958. PhantomReference for filesystem statistics can trigger OOM
     (Sangjin Lee via jlowe)
 
     HADOOP-7817. RawLocalFileSystem.append() should give FSDataOutputStream
     with accurate .getPos() (kanaka kumar avvaru via vinayakumarb)
 
+    HADOOP-13042. Restore lost leveldbjni LICENSE and NOTICE changes. (wang)
+
+    HADOOP-13043. Add LICENSE.txt entries for bundled javascript dependencies.
+    (wang)
+
     HADOOP-12893. Verify LICENSE.txt and NOTICE.txt.
     (Xiao Chen and Andrew Wang via aajisaka)
 
+    HADOOP-13189. FairCallQueue makes callQueue larger than the configured
+    capacity. (Vinitha Gankidi via shvachko)
+
+    HADOOP-13255. KMSClientProvider should check and renew tgt when doing
+    delegation token operations. (Xiao Chen via xiaoyuyao)
+
+    HADOOP-13350. Additional fix to LICENSE and NOTICE. (Xiao Chen via wang)
+
     HADOOP-13297. Add missing dependency in setting
     maven-remote-resource-plugin to fix builds. (Sean Busbey via aajisaka)
+
+    HADOOP-13494. ReconfigurableBase can log sensitive information. (Sean
+    Mackrory via wang)
 
     HADOOP-13579. Fix source-level compatibility after HADOOP-11252.
     (Tsuyoshi Ozawa via aajisaka)
