@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -64,9 +65,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1082,6 +1083,106 @@ public class TestRMAdminService {
     rm.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
         .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
             (Set<String>) ImmutableSet.of("x"))));
+    rm.close();
+  }
+
+  @Test
+  public void testModifyLabelsOnUnknownNodes() throws IOException,
+      YarnException {
+    // create RM and set it's ACTIVE, and set distributed node label
+    // configuration to true
+    rm = new MockRM();
+
+    ((RMContextImpl) rm.getRMContext())
+        .setHAServiceState(HAServiceState.ACTIVE);
+    Map<NodeId, RMNode> rmNodes = rm.getRMContext().getRMNodes();
+    rmNodes.put(NodeId.newInstance("host1", 1111),
+        new RMNodeImpl(null, rm.getRMContext(), "host1", 0, 0, null, null,
+                null));
+    rmNodes.put(NodeId.newInstance("host2", 2222),
+            new RMNodeImpl(null, rm.getRMContext(), "host2", 0, 0, null, null,
+                null));
+    rmNodes.put(NodeId.newInstance("host3", 3333),
+            new RMNodeImpl(null, rm.getRMContext(), "host3", 0, 0, null, null,
+                null));
+    Map<NodeId, RMNode> rmInactiveNodes = rm.getRMContext()
+        .getInactiveRMNodes();
+    rmInactiveNodes.put(NodeId.newInstance("host4", 4444),
+        new RMNodeImpl(null, rm.getRMContext(), "host4", 0, 0, null, null,
+                null));
+    RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
+
+    // by default, distributed configuration for node label is disabled, this
+    // should pass
+    labelMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x",
+        "y"));
+    // replace known node
+    ReplaceLabelsOnNodeRequest request1 = ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host1", 1111),
+            (Set<String>) ImmutableSet.of("x")));
+    request1.setFailOnUnknownNodes(true);
+    try {
+      rm.adminService.replaceLabelsOnNode(request1);
+    } catch (Exception ex) {
+      fail("should not fail on known node");
+    }
+
+    // replace known node with wildcard port
+    ReplaceLabelsOnNodeRequest request2 = ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host1", 0),
+            (Set<String>) ImmutableSet.of("x")));
+    request2.setFailOnUnknownNodes(true);
+    try {
+      rm.adminService.replaceLabelsOnNode(request2);
+    } catch (Exception ex) {
+      fail("should not fail on known node");
+    }
+
+    // replace unknown node
+    ReplaceLabelsOnNodeRequest request3 = ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host5", 0),
+            (Set<String>) ImmutableSet.of("x")));
+    request3.setFailOnUnknownNodes(true);
+    try {
+      rm.adminService.replaceLabelsOnNode(request3);
+      fail("Should fail on unknown node");
+    } catch (Exception ex) {
+    }
+
+    // replace known node but wrong port
+    ReplaceLabelsOnNodeRequest request4 = ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host2", 1111),
+            (Set<String>) ImmutableSet.of("x")));
+    request4.setFailOnUnknownNodes(true);
+    try {
+      rm.adminService.replaceLabelsOnNode(request4);
+      fail("Should fail on node with wrong port");
+    } catch (Exception ex) {
+    }
+
+    // replace non-exist node but not check
+    ReplaceLabelsOnNodeRequest request5 = ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host5", 0),
+            (Set<String>) ImmutableSet.of("x")));
+    request5.setFailOnUnknownNodes(false);
+    try {
+      rm.adminService.replaceLabelsOnNode(request5);
+    } catch (Exception ex) {
+      fail("Should not fail on unknown node when "
+          + "fail-on-unkown-nodes is set false");
+    }
+
+    // replace on inactive node
+    ReplaceLabelsOnNodeRequest request6 = ReplaceLabelsOnNodeRequest
+        .newInstance(ImmutableMap.of(NodeId.newInstance("host4", 0),
+            (Set<String>) ImmutableSet.of("x")));
+    request6.setFailOnUnknownNodes(true);
+    try {
+      rm.adminService.replaceLabelsOnNode(request6);
+    } catch (Exception ex) {
+      fail("should not fail on inactive node");
+    }
+
     rm.close();
   }
 

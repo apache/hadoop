@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -806,6 +809,49 @@ public class AdminService extends CompositeService implements
 
     ReplaceLabelsOnNodeResponse response =
         recordFactory.newRecordInstance(ReplaceLabelsOnNodeResponse.class);
+
+    if (request.getFailOnUnknownNodes()) {
+      // verify if nodes have registered to RM
+      List<NodeId> unknownNodes = new ArrayList<>();
+      for (NodeId requestedNode : request.getNodeToLabels().keySet()) {
+        boolean isKnown = false;
+        // both active and inactive nodes are recognized as known nodes
+        if (requestedNode.getPort() != 0) {
+          if (rmContext.getRMNodes().containsKey(requestedNode)
+              || rmContext.getInactiveRMNodes().containsKey(requestedNode)) {
+            isKnown = true;
+          }
+        } else {
+          for (NodeId knownNode : rmContext.getRMNodes().keySet()) {
+            if (knownNode.getHost().equals(requestedNode.getHost())) {
+              isKnown = true;
+              break;
+            }
+          }
+          if (!isKnown) {
+            for (NodeId knownNode : rmContext.getInactiveRMNodes().keySet()) {
+              if (knownNode.getHost().equals(requestedNode.getHost())) {
+                isKnown = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!isKnown) {
+          unknownNodes.add(requestedNode);
+        }
+      }
+
+      if (!unknownNodes.isEmpty()) {
+        RMAuditLogger.logFailure(user.getShortUserName(), operation, "",
+            "AdminService",
+            "Failed to replace labels as there are unknown nodes:"
+                + Arrays.toString(unknownNodes.toArray()));
+        throw RPCUtil.getRemoteException(new IOException(
+            "Failed to replace labels as there are unknown nodes:"
+                + Arrays.toString(unknownNodes.toArray())));
+      }
+    }
     try {
       rmContext.getNodeLabelManager().replaceLabelsOnNode(
           request.getNodeToLabels());
