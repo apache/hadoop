@@ -130,11 +130,13 @@ public class RMAdminCLI extends HAAdmin {
               new UsageInfo("<label1,label2,label3> (label splitted by \",\")",
                   "remove from cluster node labels"))
           .put("-replaceLabelsOnNode",
-              new UsageInfo(
+              new UsageInfo("[-failOnUnknownNodes] " +
                   "<\"node1[:port]=label1,label2 node2[:port]=label1,label2\">",
-                  "replace labels on nodes"
-                      + " (please note that we do not support specifying multiple"
-                      + " labels on a single host for now.)"))
+              "replace labels on nodes"
+                  + " (please note that we do not support specifying multiple"
+                  + " labels on a single host for now.)\n\t\t"
+                  + "[-failOnUnknownNodes] is optional, when we set this"
+                  + " option, it will fail if specified nodes are unknown."))
           .put("-directlyAccessNodeLabelStore",
               new UsageInfo("", "This is DEPRECATED, will be removed in future releases. Directly access node label store, "
                   + "with this option, all node label related operations"
@@ -246,7 +248,8 @@ public class RMAdminCLI extends HAAdmin {
       " [-addToClusterNodeLabels <\"label1(exclusive=true),"
                   + "label2(exclusive=false),label3\">]" +
       " [-removeFromClusterNodeLabels <label1,label2,label3>]" +
-      " [-replaceLabelsOnNode <\"node1[:port]=label1,label2 node2[:port]=label1\">]" +
+      " [-replaceLabelsOnNode [-failOnUnknownNodes] "
+          + "<\"node1[:port]=label1,label2 node2[:port]=label1\">]" +
       " [-directlyAccessNodeLabelStore]" +
       " [-refreshClusterMaxPriority]" +
       " [-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout])");
@@ -300,7 +303,7 @@ public class RMAdminCLI extends HAAdmin {
     return ClientRMProxy.createRMProxy(conf,
         ResourceManagerAdministrationProtocol.class);
   }
-  
+
   private int refreshQueues() throws IOException, YarnException {
     // Refresh the queue properties
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
@@ -644,14 +647,14 @@ public class RMAdminCLI extends HAAdmin {
     return map;
   }
 
-  private int replaceLabelsOnNodes(String args) throws IOException,
-      YarnException {
+  private int replaceLabelsOnNodes(String args, boolean failOnUnknownNodes)
+      throws IOException, YarnException {
     Map<NodeId, Set<String>> map = buildNodeLabelsMapFromStr(args);
-    return replaceLabelsOnNodes(map);
+    return replaceLabelsOnNodes(map, failOnUnknownNodes);
   }
 
-  private int replaceLabelsOnNodes(Map<NodeId, Set<String>> map)
-      throws IOException, YarnException {
+  private int replaceLabelsOnNodes(Map<NodeId, Set<String>> map,
+      boolean failOnUnknownNodes) throws IOException, YarnException {
     if (directlyAccessNodeLabelStore) {
       getNodeLabelManagerInstance(getConf()).replaceLabelsOnNode(map);
     } else {
@@ -659,11 +662,12 @@ public class RMAdminCLI extends HAAdmin {
           createAdminProtocol();
       ReplaceLabelsOnNodeRequest request =
           ReplaceLabelsOnNodeRequest.newInstance(map);
+      request.setFailOnUnknownNodes(failOnUnknownNodes);
       adminProtocol.replaceLabelsOnNode(request);
     }
     return 0;
   }
-  
+
   @Override
   public int run(String[] args) throws Exception {
     // -directlyAccessNodeLabelStore is a additional option for node label
@@ -806,8 +810,16 @@ public class RMAdminCLI extends HAAdmin {
           System.err.println(NO_MAPPING_ERR_MSG);
           printUsage("", isHAEnabled);
           exitCode = -1;
+        } else if ("-failOnUnknownNodes".equals(args[i])) {
+          if (i + 1 >= args.length) {
+            System.err.println(NO_MAPPING_ERR_MSG);
+            printUsage("", isHAEnabled);
+            exitCode = -1;
+          } else {
+            exitCode = replaceLabelsOnNodes(args[i + 1], true);
+          }
         } else {
-          exitCode = replaceLabelsOnNodes(args[i]);
+          exitCode = replaceLabelsOnNodes(args[i], false);
         }
       } else {
         exitCode = -1;

@@ -146,10 +146,22 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
     nodeIdToLabels.putAll(map);
   }
 
+  @Override
+  public boolean getFailOnUnknownNodes() {
+    ReplaceLabelsOnNodeRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFailOnUnknownNodes();
+  }
+
+  @Override
+  public void setFailOnUnknownNodes(boolean failOnUnknownNodes) {
+    maybeInitBuilder();
+    builder.setFailOnUnknownNodes(failOnUnknownNodes);
+  }
+
   private NodeIdProto convertToProtoFormat(NodeId t) {
     return ((NodeIdPBImpl) t).getProto();
   }
-  
+
   @Override
   public int hashCode() {
     assert false : "hashCode not designed";

@@ -44,4 +44,12 @@ public abstract class ReplaceLabelsOnNodeRequest {
   @Public
   @Evolving
   public abstract Map<NodeId, Set<String>> getNodeToLabels();
+
+  @Public
+  @Evolving
+  public abstract void setFailOnUnknownNodes(boolean failOnUnknownNodes);
+
+  @Public
+  @Evolving
+  public abstract boolean getFailOnUnknownNodes();
 }
