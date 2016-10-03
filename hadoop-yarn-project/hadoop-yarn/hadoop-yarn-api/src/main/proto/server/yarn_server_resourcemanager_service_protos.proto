@@ -99,10 +99,10 @@ message RemoveFromClusterNodeLabelsResponseProto {
 
 message ReplaceLabelsOnNodeRequestProto {
   repeated NodeIdToLabelsNameProto nodeToLabels = 1;
+  optional bool failOnUnknownNodes = 2;
 }
 
 message ReplaceLabelsOnNodeResponseProto {
-  
 }
 
 message UpdateNodeLabelsResponseProto {
