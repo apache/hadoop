@@ -668,11 +668,12 @@ public class FairScheduler extends
     queue.getMetrics().submitApp(user);
 
     LOG.info("Accepted application " + applicationId + " from user: " + user
-        + ", in queue: " + queueName + ", currently num of applications: "
-        + applications.size());
+        + ", in queue: " + queue.getName()
+        + ", currently num of applications: " + applications.size());
     if (isAppRecovering) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(applicationId + " is recovering. Skip notifying APP_ACCEPTED");
+        LOG.debug(applicationId
+            + " is recovering. Skip notifying APP_ACCEPTED");
       }
     } else {
       rmContext.getDispatcher().getEventHandler()
