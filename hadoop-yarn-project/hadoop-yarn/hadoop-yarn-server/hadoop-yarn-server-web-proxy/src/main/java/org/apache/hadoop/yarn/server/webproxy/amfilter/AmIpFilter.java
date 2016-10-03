@@ -59,8 +59,9 @@ public class AmIpFilter implements Filter {
   public static final String PROXY_HOSTS_DELIMITER = ",";
   public static final String PROXY_URI_BASES = "PROXY_URI_BASES";
   public static final String PROXY_URI_BASES_DELIMITER = ",";
+  private static final String PROXY_PATH = "/proxy";
   //update the proxy IP list about every 5 min
-  private static final long updateInterval = 5 * 60 * 1000;
+  private static final long UPDATE_INTERVAL = 5 * 60 * 1000;
 
   private String[] proxyHosts;
   private Set<String> proxyAddresses = null;
@@ -96,7 +97,7 @@ public class AmIpFilter implements Filter {
   protected Set<String> getProxyAddresses() throws ServletException {
     long now = System.currentTimeMillis();
     synchronized(this) {
-      if(proxyAddresses == null || (lastUpdate + updateInterval) >= now) {
+      if (proxyAddresses == null || (lastUpdate + UPDATE_INTERVAL) >= now) {
         proxyAddresses = new HashSet<>();
         for (String proxyHost : proxyHosts) {
           try {
@@ -131,37 +132,52 @@ public class AmIpFilter implements Filter {
 
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
     }
+
     if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
-      String redirectUrl = findRedirectUrl();
-      String target = redirectUrl + httpReq.getRequestURI();
-      ProxyUtils.sendRedirect(httpReq,  httpResp,  target);
-      return;
-    }
+      StringBuilder redirect = new StringBuilder(findRedirectUrl());
 
-    String user = null;
+      redirect.append(httpReq.getRequestURI());
 
-    if (httpReq.getCookies() != null) {
-      for(Cookie c: httpReq.getCookies()) {
-        if(WebAppProxyServlet.PROXY_USER_COOKIE_NAME.equals(c.getName())){
-          user = c.getValue();
-          break;
+      int insertPoint = redirect.indexOf(PROXY_PATH);
+
+      if (insertPoint >= 0) {
+        // Add /redirect as the second component of the path so that the RM web
+        // proxy knows that this request was a redirect.
+        insertPoint += PROXY_PATH.length();
+        redirect.insert(insertPoint, "/redirect");
+      }
+
+      ProxyUtils.sendRedirect(httpReq, httpResp, redirect.toString());
+    } else {
+      String user = null;
+
+      if (httpReq.getCookies() != null) {
+        for(Cookie c: httpReq.getCookies()) {
+          if(WebAppProxyServlet.PROXY_USER_COOKIE_NAME.equals(c.getName())){
+            user = c.getValue();
+            break;
+          }
         }
       }
-    }
-    if (user == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Could not find " + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
-                 + " cookie, so user will not be set");
+      if (user == null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Could not find "
+              + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
+              + " cookie, so user will not be set");
+        }
+
+        chain.doFilter(req, resp);
+      } else {
+        AmIpPrincipal principal = new AmIpPrincipal(user);
+        ServletRequest requestWrapper = new AmIpServletRequestWrapper(httpReq,
+            principal);
+
+        chain.doFilter(requestWrapper, resp);
       }
-      chain.doFilter(req, resp);
-    } else {
-      final AmIpPrincipal principal = new AmIpPrincipal(user);
-      ServletRequest requestWrapper = new AmIpServletRequestWrapper(httpReq,
-          principal);
-      chain.doFilter(requestWrapper, resp);
     }
   }
 
