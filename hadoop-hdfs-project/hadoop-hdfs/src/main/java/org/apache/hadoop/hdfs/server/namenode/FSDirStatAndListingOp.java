@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -156,7 +155,6 @@ class FSDirStatAndListingOp {
         "Negative offset is not supported. File: " + src);
     Preconditions.checkArgument(length >= 0,
         "Negative length is not supported. File: " + src);
-    CacheManager cm = fsd.getFSNamesystem().getCacheManager();
     BlockManager bm = fsd.getBlockManager();
     fsd.readLock();
     try {
@@ -189,11 +187,6 @@ class FSDirStatAndListingOp {
       final LocatedBlocks blocks = bm.createLocatedBlocks(
           inode.getBlocks(iip.getPathSnapshotId()), fileSize, isUc, offset,
           length, needBlockToken, iip.isSnapshot(), feInfo, ecPolicy);
-
-      // Set caching information for the located blocks.
-      for (LocatedBlock lb : blocks.getLocatedBlocks()) {
-        cm.setCachedLocations(lb);
-      }
 
       final long now = now();
       boolean updateAccessTime = fsd.isAccessTimeSupported()
@@ -461,7 +454,7 @@ class FSDirStatAndListingOp {
         node.asDirectory().getChildrenNum(snapshot) : 0;
 
     INodeAttributes nodeAttrs = fsd.getAttributes(iip);
-    HdfsFileStatus status = createFileStatus(
+    return createFileStatus(
         size,
         node.isDirectory(),
         replication,
@@ -479,14 +472,6 @@ class FSDirStatAndListingOp {
         storagePolicy,
         ecPolicy,
         loc);
-    // Set caching information for the located blocks.
-    if (loc != null) {
-      CacheManager cacheManager = fsd.getFSNamesystem().getCacheManager();
-      for (LocatedBlock lb: loc.getLocatedBlocks()) {
-        cacheManager.setCachedLocations(lb);
-      }
-    }
-    return status;
   }
 
   private static HdfsFileStatus createFileStatus(long length, boolean isdir,
