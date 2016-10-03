@@ -121,4 +121,25 @@ public class FileEncryptionInfo {
     builder.append("}");
     return builder.toString();
   }
+
+  /**
+   * A frozen version of {@link #toString()} to be backward compatible.
+   * When backward compatibility is not needed, use {@link #toString()}, which
+   * provides more info and is supposed to evolve.
+   * Don't change this method except for major revisions.
+   *
+   * NOTE:
+   * Currently this method is used by CLI for backward compatibility.
+   */
+  public String toStringStable() {
+    StringBuilder builder = new StringBuilder("{");
+    builder.append("cipherSuite: " + cipherSuite);
+    builder.append(", cryptoProtocolVersion: " + version);
+    builder.append(", edek: " + Hex.encodeHexString(edek));
+    builder.append(", iv: " + Hex.encodeHexString(iv));
+    builder.append(", keyName: " + keyName);
+    builder.append(", ezKeyVersionName: " + ezKeyVersionName);
+    builder.append("}");
+    return builder.toString();
+  }
 }

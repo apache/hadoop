@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSLinkResolver;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemLinkResolver;
@@ -2202,6 +2203,35 @@ public class DistributedFileSystem extends FileSystem {
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
     return dfs.listEncryptionZones();
+  }
+
+  /* HDFS only */
+  public FileEncryptionInfo getFileEncryptionInfo(final Path path)
+      throws IOException {
+    Path absF = fixRelativePart(path);
+    return new FileSystemLinkResolver<FileEncryptionInfo>() {
+      @Override
+      public FileEncryptionInfo doCall(final Path p) throws IOException {
+        final HdfsFileStatus fi = dfs.getFileInfo(getPathName(p));
+        if (fi == null) {
+          throw new FileNotFoundException("File does not exist: " + p);
+        }
+        return fi.getFileEncryptionInfo();
+      }
+
+      @Override
+      public FileEncryptionInfo next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.getFileEncryptionInfo(p);
+        }
+        throw new UnsupportedOperationException(
+            "Cannot call getFileEncryptionInfo"
+                + " on a symlink to a non-DistributedFileSystem: " + path
+                + " -> " + p);
+      }
+    }.resolve(this, absF);
   }
 
   @Override

@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -351,6 +352,19 @@ public class HdfsAdmin {
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
     return dfs.listEncryptionZones();
+  }
+
+  /**
+   * Returns the FileEncryptionInfo on the HdfsFileStatus for the given path.
+   * The return value can be null if the path points to a directory, or a file
+   * that is not in an encryption zone.
+   *
+   * @throws FileNotFoundException if the path does not exist.
+   * @throws AccessControlException if no execute permission on parent path.
+   */
+  public FileEncryptionInfo getFileEncryptionInfo(final Path path)
+      throws IOException {
+    return dfs.getFileEncryptionInfo(path);
   }
 
   /**
