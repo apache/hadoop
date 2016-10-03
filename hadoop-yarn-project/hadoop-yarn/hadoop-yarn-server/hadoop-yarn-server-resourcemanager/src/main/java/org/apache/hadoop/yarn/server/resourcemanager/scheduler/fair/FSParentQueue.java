@@ -158,13 +158,13 @@ public class FSParentQueue extends FSQueue {
       for (FSQueue childQueue : childQueues) {
         childQueue.updateDemand();
         Resource toAdd = childQueue.getDemand();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Counting resource from " + childQueue.getName() + " " +
-              toAdd + "; Total resource consumption for " + getName() +
-              " now " + demand);
-        }
         demand = Resources.add(demand, toAdd);
         demand = Resources.componentwiseMin(demand, maxShare);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Counting resource from " + childQueue.getName() + " " +
+              toAdd + "; Total resource demand for " + getName() +
+              " now " + demand);
+        }
         if (Resources.equals(demand, maxShare)) {
           break;
         }
