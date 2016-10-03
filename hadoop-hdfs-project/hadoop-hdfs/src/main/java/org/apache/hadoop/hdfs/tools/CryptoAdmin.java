@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -193,6 +194,53 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
+  private static class GetFileEncryptionInfoCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-getFileEncryptionInfo";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " -path <path>]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      final TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<path>", "The path to the file to show encryption info.");
+      return getShortUsage() + "\n" + "Get encryption info of a file.\n\n" +
+          listing.toString();
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      final String path = StringUtils.popOptionWithArgument("-path", args);
+
+      if (!args.isEmpty()) {
+        System.err.println("Can't understand argument: " + args.get(0));
+        return 1;
+      }
+
+      final HdfsAdmin admin =
+          new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+      try {
+        final FileEncryptionInfo fei =
+            admin.getFileEncryptionInfo(new Path(path));
+        if (fei == null) {
+          System.out.println("No FileEncryptionInfo found for path " + path);
+          return 2;
+        }
+        System.out.println(fei.toStringStable());
+      } catch (IOException e) {
+        System.err.println(prettifyException(e));
+        return 3;
+      }
+      return 0;
+    }
+  }
+
   private static class ProvisionTrashCommand implements AdminHelper.Command {
     @Override
     public String getName() {
@@ -237,6 +285,7 @@ public class CryptoAdmin extends Configured implements Tool {
   private static final AdminHelper.Command[] COMMANDS = {
       new CreateZoneCommand(),
       new ListZonesCommand(),
-      new ProvisionTrashCommand()
+      new ProvisionTrashCommand(),
+      new GetFileEncryptionInfoCommand()
   };
 }
