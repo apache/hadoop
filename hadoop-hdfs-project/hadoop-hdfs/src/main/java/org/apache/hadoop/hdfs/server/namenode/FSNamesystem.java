@@ -2697,8 +2697,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (success) {
       getEditLog().logSync();
     }
-    logAuditEvent(success, "rename", src, dst,
-        ret == null ? null : ret.auditStat);
+    logAuditEvent(success, "rename", src, dst, ret.auditStat);
     return success;
   }
 
