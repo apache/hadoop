@@ -295,7 +295,7 @@ public class FSLeafQueue extends FSQueue {
     Resource toAdd = sched.getDemand();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Counting resource from " + sched.getName() + " " + toAdd
-          + "; Total resource consumption for " + getName() + " now "
+          + "; Total resource demand for " + getName() + " now "
           + demand);
     }
     demand = Resources.add(demand, toAdd);
