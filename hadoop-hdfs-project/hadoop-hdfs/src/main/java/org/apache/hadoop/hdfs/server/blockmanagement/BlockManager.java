@@ -4013,13 +4013,15 @@ public class BlockManager implements BlockStatsMXBean {
         return;
       }
       NumberReplicas repl = countNodes(block);
+      int pendingNum = pendingReconstruction.getNumReplicas(block);
       int curExpectedReplicas = getRedundancy(block);
-      if (isNeededReconstruction(block, repl.liveReplicas())) {
-        neededReconstruction.update(block, repl.liveReplicas(),
+      if (!hasEnoughEffectiveReplicas(block, repl, pendingNum,
+          curExpectedReplicas)) {
+        neededReconstruction.update(block, repl.liveReplicas() + pendingNum,
             repl.readOnlyReplicas(), repl.decommissionedAndDecommissioning(),
             curExpectedReplicas, curReplicasDelta, expectedReplicasDelta);
       } else {
-        int oldReplicas = repl.liveReplicas()-curReplicasDelta;
+        int oldReplicas = repl.liveReplicas() + pendingNum - curReplicasDelta;
         int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
         neededReconstruction.remove(block, oldReplicas, repl.readOnlyReplicas(),
             repl.decommissionedAndDecommissioning(), oldExpectedReplicas);
