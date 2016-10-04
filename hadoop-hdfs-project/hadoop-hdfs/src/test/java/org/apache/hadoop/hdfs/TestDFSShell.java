@@ -2127,11 +2127,11 @@ public class TestDFSShell {
       fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
       final Path testDir1 = new Path("testStat", "dir1");
       dfs.mkdirs(testDir1);
-      final FileStatus status1 = dfs.getFileStatus(testDir1);
-      final String mtime1 = fmt.format(new Date(status1.getModificationTime()));
       final Path testFile2 = new Path(testDir1, "file2");
       DFSTestUtil.createFile(dfs, testFile2, 2 * blockSize, (short) 3, 0);
-      final FileStatus status2 = dfs.getFileStatus(testDir1);
+      final FileStatus status1 = dfs.getFileStatus(testDir1);
+      final String mtime1 = fmt.format(new Date(status1.getModificationTime()));
+      final FileStatus status2 = dfs.getFileStatus(testFile2);
       final String mtime2 = fmt.format(new Date(status2.getModificationTime()));
 
       final ByteArrayOutputStream out = new ByteArrayOutputStream();
