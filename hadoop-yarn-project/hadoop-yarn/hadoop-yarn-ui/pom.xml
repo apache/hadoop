@@ -31,7 +31,7 @@
 
   <properties>
     <packaging.type>war</packaging.type>
-    <webappDir>src/main/webapp</webappDir>
+    <webappTgtDir>${basedir}/target/src/main/webapp</webappTgtDir>
     <node.executable>node</node.executable>
     <nodeVersion>v0.12.2</nodeVersion>
     <npmVersion>2.10.0</npmVersion>
@@ -84,10 +84,10 @@
           <followSymLinks>false</followSymLinks>
           <filesets>
             <fileset>
-              <directory>${basedir}/src/main/webapp/bower_components</directory>
+              <directory>${webappTgtDir}/bower_components</directory>
             </fileset>
             <fileset>
-              <directory>${basedir}/src/main/webapp/node_modules</directory>
+              <directory>${webappTgtDir}/node_modules</directory>
             </fileset>
           </filesets>
         </configuration>
@@ -109,6 +109,33 @@
 
       <build>
         <plugins>
+          <!-- prepare source code -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>prepare-source-code</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy toDir="${basedir}/target/src/main/webapp">
+                      <fileset dir="${basedir}/src/main/webapp"/>
+                    </copy>
+
+                    <copy toDir="${basedir}/target/src/public">
+                      <fileset dir="${basedir}/public"/>
+                    </copy>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+
           <!-- Bower install & grunt build-->
           <plugin>
             <artifactId>exec-maven-plugin</artifactId>
@@ -121,7 +148,7 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <workingDirectory>${webappDir}</workingDirectory>
+                  <workingDirectory>${webappTgtDir}</workingDirectory>
                   <executable>npm</executable>
                   <arguments>
                     <argument>install</argument>
@@ -135,7 +162,7 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <workingDirectory>${webappDir}</workingDirectory>
+                  <workingDirectory>${webappTgtDir}</workingDirectory>
                   <executable>bower</executable>
                   <arguments>
                     <argument>--allow-root</argument>
@@ -150,28 +177,13 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <workingDirectory>${webappDir}</workingDirectory>
+                  <workingDirectory>${webappTgtDir}</workingDirectory>
                   <executable>ember</executable>
                   <arguments>
                     <argument>build</argument>
                     <argument>-prod</argument>
                     <argument>--output-path</argument>
                     <argument>${basedir}/target/dist</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-              <execution>
-                <id>cleanup tmp</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <workingDirectory>${webappDir}</workingDirectory>
-                  <executable>rm</executable>
-                  <arguments>
-                    <argument>-rf</argument>
-                    <argument>tmp</argument>
                   </arguments>
                 </configuration>
               </execution>

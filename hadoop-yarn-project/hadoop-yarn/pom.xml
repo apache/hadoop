@@ -230,7 +230,6 @@
   </profiles>
 
   <modules>
-    <module>hadoop-yarn-ui</module>
     <module>hadoop-yarn-api</module>
     <module>hadoop-yarn-common</module>
     <module>hadoop-yarn-server</module>
@@ -238,5 +237,6 @@
     <module>hadoop-yarn-site</module>
     <module>hadoop-yarn-client</module>
     <module>hadoop-yarn-registry</module>
+    <module>hadoop-yarn-ui</module>
   </modules>
 </project>
