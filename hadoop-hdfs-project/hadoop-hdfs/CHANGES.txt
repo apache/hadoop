@@ -35,6 +35,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10889. Remove outdated Fault Injection Framework documentaion.
     (Brahma Reddy Battula)
 
+    HDFS-10878. TestDFSClientRetries#testIdempotentAllocateBlockAndClose
+    throws ConcurrentModificationException. (Rushabh S Shaah via kihwal)
+
 Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
