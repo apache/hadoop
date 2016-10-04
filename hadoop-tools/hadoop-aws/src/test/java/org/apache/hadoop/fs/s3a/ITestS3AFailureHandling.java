@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +31,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
-import java.nio.file.AccessDeniedException;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -138,55 +134,4 @@ public class ITestS3AFailureHandling extends AbstractFSContractTestBase {
     assertEquals("Expected EOF from "+ operation
         + "; got char " + (char) readResult, -1, readResult);
   }
-
-  @Test
-  public void test404isNotFound() throws Throwable {
-    verifyTranslated(FileNotFoundException.class, createS3Exception(404));
-  }
-
-  protected Exception verifyTranslated(Class clazz,
-      AmazonClientException exception) throws Exception {
-    return verifyExceptionClass(clazz,
-        translateException("test", "/", exception));
-  }
-
-  @Test
-  public void test401isNotPermittedFound() throws Throwable {
-    verifyTranslated(AccessDeniedException.class,
-        createS3Exception(401));
-  }
-
-  protected AmazonS3Exception createS3Exception(int code) {
-    AmazonS3Exception source = new AmazonS3Exception("");
-    source.setStatusCode(code);
-    return source;
-  }
-
-  @Test
-  public void testGenericS3Exception() throws Throwable {
-    // S3 exception of no known type
-    AWSS3IOException ex = (AWSS3IOException)verifyTranslated(
-        AWSS3IOException.class,
-        createS3Exception(451));
-    assertEquals(451, ex.getStatusCode());
-  }
-
-  @Test
-  public void testGenericServiceS3Exception() throws Throwable {
-    // service exception of no known type
-    AmazonServiceException ase = new AmazonServiceException("unwind");
-    ase.setStatusCode(500);
-    AWSServiceIOException ex = (AWSServiceIOException)verifyTranslated(
-        AWSServiceIOException.class,
-        ase);
-    assertEquals(500, ex.getStatusCode());
-  }
-
-  @Test
-  public void testGenericClientException() throws Throwable {
-    // Generic Amazon exception
-    verifyTranslated(AWSClientIOException.class,
-        new AmazonClientException(""));
-  }
-
 }

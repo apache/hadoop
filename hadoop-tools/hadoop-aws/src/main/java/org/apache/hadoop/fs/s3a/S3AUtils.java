@@ -48,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
 
 /**
@@ -64,6 +65,7 @@ public final class S3AUtils {
       = "instantiation exception";
   static final String NOT_AWS_PROVIDER =
       "does not implement AWSCredentialsProvider";
+  static final String ENDPOINT_KEY = "Endpoint";
 
   private S3AUtils() {
   }
@@ -117,6 +119,21 @@ public final class S3AUtils {
       int status = ase.getStatusCode();
       switch (status) {
 
+      case 301:
+        if (s3Exception != null) {
+          if (s3Exception.getAdditionalDetails() != null &&
+              s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
+            message = String.format("Received permanent redirect response to "
+                + "endpoint %s.  This likely indicates that the S3 endpoint "
+                + "configured in %s does not match the AWS region containing "
+                + "the bucket.",
+                s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
+          }
+          ioe = new AWSS3IOException(message, s3Exception);
+        } else {
+          ioe = new AWSServiceIOException(message, ase);
+        }
+        break;
       // permissions
       case 401:
       case 403:
