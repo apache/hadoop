@@ -716,7 +716,7 @@ public class DFSAdmin extends FsShell {
   }
   
   /**
-   * Allow snapshot on a directory.
+   * Disallow snapshot on a directory.
    * Usage: hdfs dfsadmin -disallowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
