@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
 import java.io.IOException;
 
@@ -55,6 +53,11 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   @Before
   public void nameThread() {
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
+  }
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    return S3A_TEST_TIMEOUT;
   }
 
   protected Configuration getConfiguration() {

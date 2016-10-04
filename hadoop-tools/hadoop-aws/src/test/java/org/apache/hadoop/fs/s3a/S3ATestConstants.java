@@ -152,4 +152,14 @@ public interface S3ATestConstants {
   String TEST_UNIQUE_FORK_ID = "test.unique.fork.id";
   String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";
   String TEST_STS_ENDPOINT = "test.fs.s3a.sts.endpoint";
+
+  /**
+   * Timeout in Milliseconds for standard tests: {@value}.
+   */
+  int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
+
+  /**
+   * Timeout in Milliseconds for Scale Tests: {@value}.
+   */
+  int SCALE_TEST_TIMEOUT = 30 * 60 * 1000;
 }
