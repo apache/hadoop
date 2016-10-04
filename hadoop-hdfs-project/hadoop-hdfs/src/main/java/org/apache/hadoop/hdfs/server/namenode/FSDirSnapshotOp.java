@@ -35,7 +35,6 @@ import org.apache.hadoop.util.ChunkedArrayList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.ListIterator;
 import java.util.List;
 
 class FSDirSnapshotOp {
@@ -252,7 +251,7 @@ class FSDirSnapshotOp {
    * @param snapshottableDirs The list of directories that are snapshottable
    *                          but do not have snapshots yet
    */
-  static void checkSnapshot(
+  private static void checkSnapshot(
       INode target, List<INodeDirectory> snapshottableDirs)
       throws SnapshotException {
     if (target.isDirectory()) {
@@ -274,6 +273,25 @@ class FSDirSnapshotOp {
       for (INode child : targetDir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
         checkSnapshot(child, snapshottableDirs);
       }
+    }
+  }
+
+  /**
+   * Check if the given path (or one of its descendants) is snapshottable and
+   * already has snapshots.
+   *
+   * @param fsd the FSDirectory
+   * @param iip inodes of the path
+   * @param snapshottableDirs The list of directories that are snapshottable
+   *                          but do not have snapshots yet
+   */
+  static void checkSnapshot(FSDirectory fsd, INodesInPath iip,
+      List<INodeDirectory> snapshottableDirs) throws SnapshotException {
+    // avoid the performance penalty of recursing the tree if snapshots
+    // are not in use
+    SnapshotManager sm = fsd.getFSNamesystem().getSnapshotManager();
+    if (sm.getNumSnapshottableDirs() > 0) {
+      checkSnapshot(iip.getLastINode(), snapshottableDirs);
     }
   }
 }
