@@ -57,7 +57,7 @@ class FSDirDeleteOp {
     try {
       if (deleteAllowed(iip, iip.getPath()) ) {
         List<INodeDirectory> snapshottableDirs = new ArrayList<>();
-        FSDirSnapshotOp.checkSnapshot(iip.getLastINode(), snapshottableDirs);
+        FSDirSnapshotOp.checkSnapshot(fsd, iip, snapshottableDirs);
         ReclaimContext context = new ReclaimContext(
             fsd.getBlockStoragePolicySuite(), collectedBlocks, removedINodes,
             removedUCFiles);
@@ -140,7 +140,7 @@ class FSDirDeleteOp {
       return;
     }
     List<INodeDirectory> snapshottableDirs = new ArrayList<>();
-    FSDirSnapshotOp.checkSnapshot(iip.getLastINode(), snapshottableDirs);
+    FSDirSnapshotOp.checkSnapshot(fsd, iip, snapshottableDirs);
     boolean filesRemoved = unprotectedDelete(fsd, iip,
         new ReclaimContext(fsd.getBlockStoragePolicySuite(),
             collectedBlocks, removedINodes, removedUCFiles),

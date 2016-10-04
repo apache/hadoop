@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,12 +31,15 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /** Test snapshot related operations. */
 public class TestSnapshotPathINodes {
@@ -425,5 +429,17 @@ public class TestSnapshotPathINodes {
     Assert.assertFalse(modTime == newNodesInPath.getINode(last).getModificationTime());
     hdfs.deleteSnapshot(sub1, "s3");
     hdfs.disallowSnapshot(sub1);
+  }
+
+  @Test
+  public void testShortCircuitSnapshotSearch() throws SnapshotException {
+    FSNamesystem fsn = cluster.getNamesystem();
+    SnapshotManager sm = fsn.getSnapshotManager();
+    assertEquals(0, sm.getNumSnapshottableDirs());
+
+    INodesInPath iip = Mockito.mock(INodesInPath.class);
+    List<INodeDirectory> snapDirs = new ArrayList<>();
+    FSDirSnapshotOp.checkSnapshot(fsn.getFSDirectory(), iip, snapDirs);
+    Mockito.verifyZeroInteractions(iip);
   }
 }
