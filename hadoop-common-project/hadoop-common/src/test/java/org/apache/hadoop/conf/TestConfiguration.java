@@ -42,7 +42,6 @@ import static java.util.concurrent.TimeUnit.*;
 
 import junit.framework.TestCase;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -1140,7 +1139,19 @@ public class TestConfiguration extends TestCase {
       this.properties = properties;
     }
   }
-  
+
+  static class SingleJsonConfiguration {
+    private JsonProperty property;
+
+    public JsonProperty getProperty() {
+      return property;
+    }
+
+    public void setProperty(JsonProperty property) {
+      this.property = property;
+    }
+  }
+
   static class JsonProperty {
     String key;
     public String getKey() {
@@ -1171,7 +1182,14 @@ public class TestConfiguration extends TestCase {
     boolean isFinal;
     String resource;
   }
-  
+
+  private Configuration getActualConf(String xmlStr) {
+    Configuration ac = new Configuration(false);
+    InputStream in = new ByteArrayInputStream(xmlStr.getBytes());
+    ac.addResource(in);
+    return ac;
+  }
+
   public void testGetSetTrimmedNames() throws IOException {
     Configuration conf = new Configuration(false);
     conf.set(" name", "value");
@@ -1180,7 +1198,121 @@ public class TestConfiguration extends TestCase {
     assertEquals("value", conf.getRaw("  name  "));
   }
 
-  public void testDumpConfiguration () throws IOException {
+  public void testDumpProperty() throws IOException {
+    StringWriter outWriter = new StringWriter();
+    ObjectMapper mapper = new ObjectMapper();
+    String jsonStr = null;
+    String xmlStr = null;
+    try {
+      Configuration testConf = new Configuration(false);
+      out = new BufferedWriter(new FileWriter(CONFIG));
+      startConfig();
+      appendProperty("test.key1", "value1");
+      appendProperty("test.key2", "value2", true);
+      appendProperty("test.key3", "value3");
+      endConfig();
+      Path fileResource = new Path(CONFIG);
+      testConf.addResource(fileResource);
+      out.close();
+
+      // case 1: dump an existing property
+      // test json format
+      outWriter = new StringWriter();
+      Configuration.dumpConfiguration(testConf, "test.key2", outWriter);
+      jsonStr = outWriter.toString();
+      outWriter.close();
+      mapper = new ObjectMapper();
+      SingleJsonConfiguration jconf1 =
+          mapper.readValue(jsonStr, SingleJsonConfiguration.class);
+      JsonProperty jp1 = jconf1.getProperty();
+      assertEquals("test.key2", jp1.getKey());
+      assertEquals("value2", jp1.getValue());
+      assertEquals(true, jp1.isFinal);
+      assertEquals(fileResource.toUri().getPath(), jp1.getResource());
+
+      // test xml format
+      outWriter = new StringWriter();
+      testConf.writeXml("test.key2", outWriter);
+      xmlStr = outWriter.toString();
+      outWriter.close();
+      Configuration actualConf1 = getActualConf(xmlStr);
+      assertEquals(1, actualConf1.size());
+      assertEquals("value2", actualConf1.get("test.key2"));
+      assertTrue(actualConf1.getFinalParameters().contains("test.key2"));
+      assertEquals(fileResource.toUri().getPath(),
+          actualConf1.getPropertySources("test.key2")[0]);
+
+      // case 2: dump an non existing property
+      // test json format
+      try {
+        outWriter = new StringWriter();
+        Configuration.dumpConfiguration(testConf,
+            "test.unknown.key", outWriter);
+        outWriter.close();
+      } catch (Exception e) {
+        assertTrue(e instanceof IllegalArgumentException);
+        assertTrue(e.getMessage().contains("test.unknown.key") &&
+            e.getMessage().contains("not found"));
+      }
+      // test xml format
+      try {
+        outWriter = new StringWriter();
+        testConf.writeXml("test.unknown.key", outWriter);
+        outWriter.close();
+      } catch (Exception e) {
+        assertTrue(e instanceof IllegalArgumentException);
+        assertTrue(e.getMessage().contains("test.unknown.key") &&
+            e.getMessage().contains("not found"));
+      }
+
+      // case 3: specify a null property, ensure all configurations are dumped
+      outWriter = new StringWriter();
+      Configuration.dumpConfiguration(testConf, null, outWriter);
+      jsonStr = outWriter.toString();
+      mapper = new ObjectMapper();
+      JsonConfiguration jconf3 =
+          mapper.readValue(jsonStr, JsonConfiguration.class);
+      assertEquals(3, jconf3.getProperties().length);
+
+      outWriter = new StringWriter();
+      testConf.writeXml(null, outWriter);
+      xmlStr = outWriter.toString();
+      outWriter.close();
+      Configuration actualConf3 = getActualConf(xmlStr);
+      assertEquals(3, actualConf3.size());
+      assertTrue(actualConf3.getProps().containsKey("test.key1") &&
+          actualConf3.getProps().containsKey("test.key2") &&
+          actualConf3.getProps().containsKey("test.key3"));
+
+      // case 4: specify an empty property, ensure all configurations are dumped
+      outWriter = new StringWriter();
+      Configuration.dumpConfiguration(testConf, "", outWriter);
+      jsonStr = outWriter.toString();
+      mapper = new ObjectMapper();
+      JsonConfiguration jconf4 =
+          mapper.readValue(jsonStr, JsonConfiguration.class);
+      assertEquals(3, jconf4.getProperties().length);
+
+      outWriter = new StringWriter();
+      testConf.writeXml("", outWriter);
+      xmlStr = outWriter.toString();
+      outWriter.close();
+      Configuration actualConf4 = getActualConf(xmlStr);
+      assertEquals(3, actualConf4.size());
+      assertTrue(actualConf4.getProps().containsKey("test.key1") &&
+          actualConf4.getProps().containsKey("test.key2") &&
+          actualConf4.getProps().containsKey("test.key3"));
+    } finally {
+      if(outWriter != null) {
+        outWriter.close();
+      }
+      if(out != null) {
+        out.close();
+      }
+    }
+  }
+
+  public void testDumpConfiguration() throws IOException {
     StringWriter outWriter = new StringWriter();
     Configuration.dumpConfiguration(conf, outWriter);
     String jsonStr = outWriter.toString();
