@@ -3588,13 +3588,15 @@ public class BlockManager implements BlockStatsMXBean {
         return;
       }
       NumberReplicas repl = countNodes(block);
+      int pendingNum = pendingReplications.getNumReplicas(block);
       int curExpectedReplicas = getReplication(block);
-      if (isNeededReplication(block, repl.liveReplicas())) {
-        neededReplications.update(block, repl.liveReplicas(), repl.readOnlyReplicas(),
-            repl.decommissionedAndDecommissioning(), curExpectedReplicas,
-            curReplicasDelta, expectedReplicasDelta);
+      if (!hasEnoughEffectiveReplicas(block, repl, pendingNum,
+                    curExpectedReplicas)) {
+        neededReplications.update(block, repl.liveReplicas() + pendingNum,
+            repl.readOnlyReplicas(), repl.decommissionedAndDecommissioning(),
+            curExpectedReplicas, curReplicasDelta, expectedReplicasDelta);
       } else {
-        int oldReplicas = repl.liveReplicas()-curReplicasDelta;
+        int oldReplicas = repl.liveReplicas() + pendingNum - curReplicasDelta;
         int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
         neededReplications.remove(block, oldReplicas, repl.readOnlyReplicas(),
             repl.decommissionedAndDecommissioning(), oldExpectedReplicas);
