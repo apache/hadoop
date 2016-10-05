@@ -26,8 +26,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 
 @XmlRootElement(name = "conf")
@@ -45,6 +44,7 @@ public class ConfInfo {
     this.property = new ArrayList<ConfEntryInfo>();
     Configuration jobConf = job.loadConfFile();
     this.path = job.getConfFile().toString();
+    MRJobConfUtil.redact(jobConf);
     for (Map.Entry<String, String> entry : jobConf) {
       this.property.add(new ConfEntryInfo(entry.getKey(), entry.getValue(), 
           jobConf.getPropertySources(entry.getKey())));
