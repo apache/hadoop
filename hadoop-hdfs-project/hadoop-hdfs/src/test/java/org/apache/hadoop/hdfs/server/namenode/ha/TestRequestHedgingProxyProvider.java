@@ -31,9 +31,12 @@ import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.MultiException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -46,6 +49,11 @@ public class TestRequestHedgingProxyProvider {
   private Configuration conf;
   private URI nnUri;
   private String ns;
+
+  @BeforeClass
+  public static void setupClass() throws Exception {
+    GenericTestUtils.setLogLevel(RequestHedgingProxyProvider.LOG, Level.TRACE);
+  }
 
   @Before
   public void setup() throws URISyntaxException {
@@ -66,13 +74,19 @@ public class TestRequestHedgingProxyProvider {
   @Test
   public void testHedgingWhenOneFails() throws Exception {
     final NamenodeProtocols goodMock = Mockito.mock(NamenodeProtocols.class);
-    Mockito.when(goodMock.getStats()).thenReturn(new long[] {1});
+    Mockito.when(goodMock.getStats()).thenAnswer(new Answer<long[]>() {
+      @Override
+      public long[] answer(InvocationOnMock invocation) throws Throwable {
+        Thread.sleep(1000);
+        return new long[]{1};
+      }
+    });
     final NamenodeProtocols badMock = Mockito.mock(NamenodeProtocols.class);
     Mockito.when(badMock.getStats()).thenThrow(new IOException("Bad mock !!"));
 
     RequestHedgingProxyProvider<NamenodeProtocols> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri, NamenodeProtocols.class,
-            createFactory(goodMock, badMock));
+            createFactory(badMock, goodMock));
     long[] stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Mockito.verify(badMock).getStats();
