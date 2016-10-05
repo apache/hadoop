@@ -281,15 +281,15 @@ int FileSystemImpl::AddWorkerThread() {
 void FileSystemImpl::Open(
     const std::string &path,
     const std::function<void(const Status &, FileHandle *)> &handler) {
-  LOG_INFO(kFileSystem, << "FileSystemImpl::Open("
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::Open("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
   nn_.GetBlockLocations(path, 0, std::numeric_limits<int64_t>::max(), [this, path, handler](const Status &stat, std::shared_ptr<const struct FileInfo> file_info) {
     if(!stat.ok()) {
-      LOG_INFO(kFileSystem, << "FileSystemImpl::Open failed to get block locations. status=" << stat.ToString());
+      LOG_DEBUG(kFileSystem, << "FileSystemImpl::Open failed to get block locations. status=" << stat.ToString());
       if(stat.get_server_exception_type() == Status::kStandbyException) {
-        LOG_INFO(kFileSystem, << "Operation not allowed on standby datanode");
+        LOG_DEBUG(kFileSystem, << "Operation not allowed on standby datanode");
       }
     }
     handler(stat, stat.ok() ? new FileHandleImpl(cluster_name_, path, &io_service_->io_service(), client_name_, file_info, bad_node_tracker_, event_handlers_)
@@ -299,7 +299,7 @@ void FileSystemImpl::Open(
 
 Status FileSystemImpl::Open(const std::string &path,
                                          FileHandle **handle) {
-  LOG_INFO(kFileSystem, << "FileSystemImpl::[sync]Open("
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::[sync]Open("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
@@ -652,7 +652,7 @@ void FileSystemImpl::GetListingShim(const Status &stat, const std::vector<StatIn
 void FileSystemImpl::GetListing(
     const std::string &path,
     const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler) {
-  LOG_INFO(kFileSystem, << "FileSystemImpl::GetListing("
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::GetListing("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
@@ -665,7 +665,7 @@ void FileSystemImpl::GetListing(
 }
 
 Status FileSystemImpl::GetListing(const std::string &path, std::vector<StatInfo> * stat_infos) {
-  LOG_INFO(kFileSystem, << "FileSystemImpl::[sync]GetListing("
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::[sync]GetListing("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ") called");
 
@@ -997,7 +997,7 @@ void FileSystemImpl::FindShim(const Status &stat, const std::vector<StatInfo> & 
 void FileSystemImpl::Find(
     const std::string &path, const std::string &name, const uint32_t maxdepth,
     const std::function<bool(const Status &, const std::vector<StatInfo> &, bool)> &handler) {
-  LOG_INFO(kFileSystem, << "FileSystemImpl::Find("
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::Find("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ", name="
                                  << name << ") called");
@@ -1015,7 +1015,7 @@ void FileSystemImpl::Find(
 }
 
 Status FileSystemImpl::Find(const std::string &path, const std::string &name, const uint32_t maxdepth, std::vector<StatInfo> * stat_infos) {
-  LOG_INFO(kFileSystem, << "FileSystemImpl::[sync]Find("
+  LOG_DEBUG(kFileSystem, << "FileSystemImpl::[sync]Find("
                                  << FMT_THIS_ADDR << ", path="
                                  << path << ", name="
                                  << name << ") called");
