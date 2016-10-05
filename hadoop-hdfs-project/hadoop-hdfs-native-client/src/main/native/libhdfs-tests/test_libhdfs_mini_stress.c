@@ -231,7 +231,12 @@ static int testHdfsMiniStressImpl(struct tlhThreadInfo *ti)
   fprintf(stderr, "testHdfsMiniStress(threadIdx=%d): starting\n",
           ti->threadIdx);
   EXPECT_NONNULL(ti->hdfs);
-  EXPECT_ZERO(doTestHdfsMiniStress(ti, 1));
+  // Error injection on, some failures are expected in the read path.
+  // The expectation is that any memory stomps will cascade and cause
+  // the following test to fail.  Ideally RPC errors would be seperated
+  // from BlockReader errors (RPC is expected to recover from disconnects).
+  doTestHdfsMiniStress(ti, 1);
+  // No error injection
   EXPECT_ZERO(doTestHdfsMiniStress(ti, 0));
   return 0;
 }
