@@ -1138,6 +1138,14 @@
 </property>
 
 <property>
+  <name>fs.s3a.block.output.active.limit</name>
+  <value>5</value>
+  <description>Limit on Number of operations which a single output stream
+    can submit simultaneously to the (shared) thread pool of the Filesystem.
+    This stops a single stream overloading the shared resource.</description>
+</property>
+
+<property>
   <name>fs.s3a.readahead.range</name>
   <value>65536</value>
   <description>Bytes to read ahead during a seek() before closing and

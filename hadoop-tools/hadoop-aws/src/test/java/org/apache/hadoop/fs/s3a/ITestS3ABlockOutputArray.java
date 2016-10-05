@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,18 +19,16 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.io.IOUtils;
+
 import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BUFFER_ARRAY;
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Tests small file upload functionality for
@@ -64,6 +62,21 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
   @Test
   public void testRegularUpload() throws IOException {
     verifyUpload("regular", 1024);
+  }
+
+  @Test(expected = IOException.class)
+  public void testDoubleStreamClose() throws Throwable {
+    Path dest = path("testDoubleStreamClose");
+    describe(" testDoubleStreamClose" );
+    FSDataOutputStream stream = getFileSystem().create(dest, true);
+    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+    try {
+      stream.write(data);
+      stream.close();
+      stream.write(data);
+    } finally {
+      IOUtils.closeStream(stream);
+    }
   }
 
   public void verifyUpload(String name, int fileSize) throws IOException {

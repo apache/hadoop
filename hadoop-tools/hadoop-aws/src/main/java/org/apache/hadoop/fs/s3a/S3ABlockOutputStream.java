@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,7 +34,6 @@ import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
@@ -117,9 +117,9 @@ class S3ABlockOutputStream extends OutputStream {
   private final S3AInstrumentation.OutputStreamStatistics statistics;
 
   /**
-   * State of the write operation.
+   * Write operation helper; encapsulation of the filesystem operations.
    */
-  private final S3AFileSystem.WriteOperationState writeOperationState;
+  private final S3AFileSystem.WriteOperationHelper writeOperationHelper;
 
   /**
    * An S3A output stream which uploads partitions in a separate pool of
@@ -128,6 +128,7 @@ class S3ABlockOutputStream extends OutputStream {
    *
    * @param fs S3AFilesystem
    * @param key S3 object to work on.
+   * @param executorService the executor service to use to schedule work
    * @param progress report progress in order to prevent timeouts. If
    * this class implements {@code ProgressListener} then it will be
    * directly wired up to the AWS client, so receive detailed progress
@@ -135,33 +136,35 @@ class S3ABlockOutputStream extends OutputStream {
    * @param blockSize size of a single block.
    * @param blockFactory factory for creating stream destinations
    * @param statistics stats for this stream
-   * @param writeOperationState state of the write operation.
+   * @param writeOperationHelper state of the write operation.
    * @throws IOException on any problem
    */
   S3ABlockOutputStream(S3AFileSystem fs,
       String key,
+      ExecutorService executorService,
       Progressable progress,
       long blockSize,
       S3ADataBlocks.BlockFactory blockFactory,
       S3AInstrumentation.OutputStreamStatistics statistics,
-      S3AFileSystem.WriteOperationState writeOperationState)
+      S3AFileSystem.WriteOperationHelper writeOperationHelper)
       throws IOException {
     this.fs = fs;
     this.key = key;
     this.blockFactory = blockFactory;
     this.blockSize = (int) blockSize;
     this.statistics = statistics;
-    this.writeOperationState = writeOperationState;
+    this.writeOperationHelper = writeOperationHelper;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
         "Block size is too small: %d", blockSize);
-    this.executorService = MoreExecutors.listeningDecorator(
-        fs.getThreadPoolExecutor());
+    this.executorService = MoreExecutors.listeningDecorator(executorService);
     this.multiPartUpload = null;
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
-            " output to {}", writeOperationState, activeBlock);
+            " output to {}", writeOperationHelper, activeBlock);
+    // create that first block. This guarantees that an open + close sequence
+    // writes a 0-byte entry.
     maybeCreateBlock();
   }
 
@@ -211,7 +214,7 @@ class S3ABlockOutputStream extends OutputStream {
    */
   void checkOpen() throws IOException {
     if (closed.get()) {
-      throw new IOException("Filesystem " + writeOperationState + " closed");
+      throw new IOException("Filesystem " + writeOperationHelper + " closed");
     }
   }
 
@@ -344,9 +347,9 @@ class S3ABlockOutputStream extends OutputStream {
         // then complete the operation
         multiPartUpload.complete(partETags);
       }
-      LOG.debug("Upload complete for {}", writeOperationState);
+      LOG.debug("Upload complete for {}", writeOperationHelper);
     } catch (IOException ioe) {
-      writeOperationState.writeFailed(ioe);
+      writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {
       LOG.debug("Closing block and factory");
@@ -357,7 +360,7 @@ class S3ABlockOutputStream extends OutputStream {
       clearActiveBlock();
     }
     // All end of write operations, including deleting fake parent directories
-    writeOperationState.writeSuccessful();
+    writeOperationHelper.writeSuccessful();
   }
 
   /**
@@ -367,12 +370,12 @@ class S3ABlockOutputStream extends OutputStream {
    * @throws IOException any problem.
    */
   private void putObject() throws IOException {
-    LOG.debug("Executing regular upload for {}", writeOperationState);
+    LOG.debug("Executing regular upload for {}", writeOperationHelper);
 
     final S3ADataBlocks.DataBlock block = getActiveBlock();
     int size = block.dataSize();
     final PutObjectRequest putObjectRequest =
-        writeOperationState.newPutRequest(
+        writeOperationHelper.newPutRequest(
             block.startUpload(),
             size);
     long transferQueueTime = now();
@@ -406,7 +409,7 @@ class S3ABlockOutputStream extends OutputStream {
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "S3ABlockOutputStream{");
-    sb.append(writeOperationState.toString());
+    sb.append(writeOperationHelper.toString());
     sb.append(", blockSize=").append(blockSize);
     // unsynced access; risks consistency in exchange for no risk of deadlock.
     S3ADataBlocks.DataBlock block = activeBlock;
@@ -437,10 +440,10 @@ class S3ABlockOutputStream extends OutputStream {
     private final List<ListenableFuture<PartETag>> partETagsFutures;
 
     public MultiPartUpload() throws IOException {
-      this.uploadId = writeOperationState.initiateMultiPartUpload();
+      this.uploadId = writeOperationHelper.initiateMultiPartUpload();
       this.partETagsFutures = new ArrayList<>(2);
       LOG.debug("Initiated multi-part upload for {} with " +
-          "id '{}'", writeOperationState, uploadId);
+          "id '{}'", writeOperationHelper, uploadId);
     }
 
     /**
@@ -456,7 +459,7 @@ class S3ABlockOutputStream extends OutputStream {
       final InputStream uploadStream = block.startUpload();
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request =
-          writeOperationState.newUploadPartRequest(
+          writeOperationHelper.newUploadPartRequest(
               uploadId,
               uploadStream,
               currentPartNumber,
@@ -533,7 +536,7 @@ class S3ABlockOutputStream extends OutputStream {
       do {
         try {
           LOG.debug(operation);
-          return writeOperationState.completeMultipartUpload(
+          return writeOperationHelper.completeMultipartUpload(
                   uploadId,
                   partETags);
         } catch (AmazonClientException e) {
@@ -556,11 +559,11 @@ class S3ABlockOutputStream extends OutputStream {
       fs.incrementStatistic(OBJECT_MULTIPART_UPLOAD_ABORTED);
       String operation =
           String.format("Aborting multi-part upload for '%s', id '%s",
-          writeOperationState, uploadId);
+              writeOperationHelper, uploadId);
       do {
         try {
           LOG.debug(operation);
-          writeOperationState.abortMultipartUpload(uploadId);
+          writeOperationHelper.abortMultipartUpload(uploadId);
           return;
         } catch (AmazonClientException e) {
           lastException = e;

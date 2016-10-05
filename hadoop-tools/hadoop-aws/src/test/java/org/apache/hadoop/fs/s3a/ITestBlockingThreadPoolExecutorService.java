@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,18 +20,23 @@ package org.apache.hadoop.fs.s3a;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.util.StopWatch;
-import org.junit.*;
+
+import org.junit.AfterClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 /**
- * Basic unit test for S3A's blocking executor service.
+ * Basic test for S3A's blocking executor service.
  */
 public class ITestBlockingThreadPoolExecutorService {
 
@@ -47,7 +52,10 @@ public class ITestBlockingThreadPoolExecutorService {
 
   private static final Integer SOME_VALUE = 1337;
 
-  private static BlockingThreadPoolExecutorService tpe = null;
+  private static BlockingThreadPoolExecutorService tpe;
+
+  @Rule
+  public Timeout testTimeout = new Timeout(60 * 1000);
 
   @AfterClass
   public static void afterClass() throws Exception {
@@ -71,13 +79,23 @@ public class ITestBlockingThreadPoolExecutorService {
   @Test
   public void testSubmitRunnable() throws Exception {
     ensureCreated();
-    int totalTasks = NUM_ACTIVE_TASKS + NUM_WAITING_TASKS;
+    verifyQueueSize(tpe, NUM_ACTIVE_TASKS + NUM_WAITING_TASKS);
+  }
+
+  /**
+   * Verify the size of the executor's queue, by verifying that the first
+   * submission to block is {@code expectedQueueSize + 1}.
+   * @param executorService executor service to test
+   * @param expectedQueueSize size of queue
+   */
+  protected void verifyQueueSize(ExecutorService executorService,
+      int expectedQueueSize) {
     StopWatch stopWatch = new StopWatch().start();
-    for (int i = 0; i < totalTasks; i++) {
-      tpe.submit(sleeper);
+    for (int i = 0; i < expectedQueueSize; i++) {
+      executorService.submit(sleeper);
       assertDidntBlock(stopWatch);
     }
-    tpe.submit(sleeper);
+    executorService.submit(sleeper);
     assertDidBlock(stopWatch);
   }
 
@@ -91,6 +109,15 @@ public class ITestBlockingThreadPoolExecutorService {
     ensureCreated();
     testSubmitRunnable();
     ensureDestroyed();
+  }
+
+  @Test
+  public void testChainedQueue() throws Throwable {
+    ensureCreated();
+    int size = 2;
+    ExecutorService wrapper = new SemaphoredDelegatingExecutor(tpe,
+        size, true);
+    verifyQueueSize(wrapper, size);
   }
 
   // Helper functions, etc.
@@ -141,8 +168,9 @@ public class ITestBlockingThreadPoolExecutorService {
   private static void ensureCreated() throws Exception {
     if (tpe == null) {
       LOG.debug("Creating thread pool");
-      tpe = new BlockingThreadPoolExecutorService(NUM_ACTIVE_TASKS,
-          NUM_WAITING_TASKS, 1, TimeUnit.SECONDS, "btpetest");
+      tpe = BlockingThreadPoolExecutorService.newInstance(
+          NUM_ACTIVE_TASKS, NUM_WAITING_TASKS,
+          1, TimeUnit.SECONDS, "btpetest");
     }
   }
 

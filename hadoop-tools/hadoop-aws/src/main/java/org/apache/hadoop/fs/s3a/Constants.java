@@ -190,6 +190,7 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String BLOCK_OUTPUT =
       "fs.s3a.block.output";
+
   /**
    * What buffer to use.
    * Default is {@link #BLOCK_OUTPUT_BUFFER_DISK}
@@ -230,6 +231,23 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String DEFAULT_BLOCK_OUTPUT_BUFFER =
       BLOCK_OUTPUT_BUFFER_DISK;
+
+  /**
+   * Limit of queued block upload operations before writing
+   * blocks. Value: {@value}
+   * <p>
+   * Default is {@link #BLOCK_OUTPUT_ACTIVE_LIMIT_DEFAULT}
+   */
+  @InterfaceStability.Unstable
+  public static final String BLOCK_OUTPUT_ACTIVE_LIMIT =
+      "fs.s3a.block.output.active.limit";
+
+  /**
+   * Limit of queued block upload operations before writing
+   * blocks. Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final int BLOCK_OUTPUT_ACTIVE_LIMIT_DEFAULT = 4;
 
   /**
    * Which input strategy to use for buffering, seeking and similar when

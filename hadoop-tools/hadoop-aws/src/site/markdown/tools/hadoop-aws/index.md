@@ -881,13 +881,13 @@ Seoul
 If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
 or as a 400 Bad Request.
 
-### Improving S3A Upload Performance/Reducing Delays
+### Improving S3A Upload Performance
 
 Because of the nature of the S3 object store, data written to an S3A `OutputStream` 
 is not written incrementally —instead, by default, it is buffered to disk
 until the stream is closed in its `close()` method. 
 
-This has time implications:
+This can make output slow:
 
 * The execution time for `OutputStream.close()` is proportional to the amount of data
 buffered and inversely proportional to the bandwidth. That is `O(data/bandwidth)`.
@@ -1000,7 +1000,13 @@ This is an alternative output stream, "s3a block output" which:
   </description>
 </property>
 
-
+<property>
+  <name>fs.s3a.block.output.active.limit</name>
+  <value>5</value>
+  <description>Limit on Number of operations which a single output stream
+    can submit simultaneously to the (shared) thread pool of the Filesystem.
+    This stops a single stream overloading the shared resource.</description>
+</property>
 ```
 
 **Notes**

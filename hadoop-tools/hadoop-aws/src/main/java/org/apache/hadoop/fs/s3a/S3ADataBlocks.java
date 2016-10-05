@@ -610,6 +610,7 @@ final class S3ADataBlocks {
        * amount of data requested.
        * @throws IllegalArgumentException other arguments are invalid.
        */
+      @SuppressWarnings("NullableProblems")
       public synchronized int read(byte[] buffer, int offset, int length)
           throws IOException {
         Preconditions.checkArgument(length >= 0, "length is negative");

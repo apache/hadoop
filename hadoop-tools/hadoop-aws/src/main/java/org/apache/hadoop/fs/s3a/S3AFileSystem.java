@@ -30,14 +30,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -60,8 +57,12 @@ import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.event.ProgressListener;
+import com.amazonaws.event.ProgressEvent;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListeningExecutorService;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -125,7 +126,7 @@ public class S3AFileSystem extends FileSystem {
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
-  private ExecutorService threadPoolExecutor;
+  private ListeningExecutorService threadPoolExecutor;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
@@ -146,6 +147,7 @@ public class S3AFileSystem extends FileSystem {
   private boolean blockUploadEnabled;
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
+  private int blockOutputQueueLimit;
 
   /*
    * Register Deprecated options.
@@ -225,8 +227,10 @@ public class S3AFileSystem extends FileSystem {
         totalTasks = 1;
       }
       long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
-      threadPoolExecutor = new BlockingThreadPoolExecutorService(maxThreads,
-          maxThreads + totalTasks, keepAliveTime, TimeUnit.SECONDS,
+      threadPoolExecutor = BlockingThreadPoolExecutorService.newInstance(
+          maxThreads,
+          maxThreads + totalTasks,
+          keepAliveTime, TimeUnit.SECONDS,
           "s3a-transfer-shared");
 
       initTransferManager();
@@ -250,8 +254,11 @@ public class S3AFileSystem extends FileSystem {
       if (blockUploadEnabled) {
         partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
         blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
-        LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={}",
-            blockOutputBuffer, partSize);
+        blockOutputQueueLimit = (int)longOption(conf,
+            BLOCK_OUTPUT_ACTIVE_LIMIT, BLOCK_OUTPUT_ACTIVE_LIMIT_DEFAULT, 1);
+        LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
+                " queue limit={}",
+            blockOutputBuffer, partSize, blockOutputQueueLimit);
       } else {
         LOG.debug("Using S3AOutputStream");
       }
@@ -408,22 +415,6 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Get the thread pool of this FS.
-   * @return the (blocking) thread pool.
-   */
-  public ExecutorService getThreadPoolExecutor() {
-    return threadPoolExecutor;
-  }
-
-  /**
-   * ACL list if set.
-   * @return an ACL list or null.
-   */
-  public CannedAccessControlList getCannedACL() {
-    return cannedACL;
-  }
-
-  /**
    * Change the input policy for this FS.
    * @param inputPolicy new policy
    */
@@ -547,6 +538,7 @@ public class S3AFileSystem extends FileSystem {
    * @see #setPermission(Path, FsPermission)
    */
   @Override
+  @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
@@ -576,11 +568,14 @@ public class S3AFileSystem extends FileSystem {
       output = new FSDataOutputStream(
           new S3ABlockOutputStream(this,
               key,
+              new SemaphoredDelegatingExecutor(threadPoolExecutor,
+                  blockOutputQueueLimit, true),
               progress,
               partSize,
               blockFactory,
               instrumentation.newOutputStreamStatistics(),
-              new WriteOperationState(key)),
+              new WriteOperationHelper(key)
+          ),
           null);
     } else {
 
@@ -1924,8 +1919,9 @@ public class S3AFileSystem extends FileSystem {
           .append('\'');
     }
     if (blockFactory != null) {
-      sb.append("Block Upload enabled via ").append(blockFactory);
+      sb.append(", blockFactory=").append(blockFactory);
     }
+    sb.append(", executor=").append(threadPoolExecutor);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
@@ -2135,7 +2131,8 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * State of an ongoing write operation.
+   * Helper for an ongoing write operation.
+   * <p>
    * It hides direct access to the S3 API from the output stream,
    * and is a location where the object upload process can be evolved/enhanced.
    * <p>
@@ -2151,10 +2148,10 @@ public class S3AFileSystem extends FileSystem {
    *
    * Each instance of this state is unique to a single output stream.
    */
-  class WriteOperationState {
+  class WriteOperationHelper {
     private final String key;
 
-    private WriteOperationState(String key) {
+    private WriteOperationHelper(String key) {
       this.key = key;
     }
 
@@ -2239,7 +2236,6 @@ public class S3AFileSystem extends FileSystem {
     /**
      * Abort a multipart upload operation.
      * @param uploadId multipart operation Id
-     * @param partETags list of partial uploads
      * @return the result
      * @throws AmazonClientException on problems.
      */
