@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -186,7 +187,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
             activeUsersManager, rmContext.getEpoch(), attemptResourceUsage);
     this.queue = queue;
-    this.pendingRelease = new HashSet<ContainerId>();
+    this.pendingRelease = Collections.newSetFromMap(
+        new ConcurrentHashMap<ContainerId, Boolean>());
     this.attemptId = applicationAttemptId;
     if (rmContext.getRMApps() != null &&
         rmContext.getRMApps()
@@ -1189,6 +1191,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // Give the specific information which might be applicable for the
     // respective scheduler
     // queue's resource usage for specific partition
+  }
+
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return writeLock;
   }
 
   @Override
