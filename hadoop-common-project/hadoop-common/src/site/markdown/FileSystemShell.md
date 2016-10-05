@@ -504,7 +504,7 @@ See [HDFS Snapshots Guide](../hadoop-hdfs/HdfsSnapshots.html).
 rm
 ----
 
-Usage: `hadoop fs -rm [-f] [-r |-R] [-skipTrash] URI [URI ...]`
+Usage: `hadoop fs -rm [-f] [-r |-R] [-skipTrash] [-safely] URI [URI ...]`
 
 Delete files specified as args.
 
@@ -523,6 +523,7 @@ Options:
 * The -R option deletes the directory and any content under it recursively.
 * The -r option is equivalent to -R.
 * The -skipTrash option will bypass trash, if enabled, and delete the specified file(s) immediately. This can be useful when it is necessary to delete files from an over-quota directory.
+* The -safely option will require safety confirmation before deleting directory with total number of files greater than `hadoop.shell.delete.limit.num.files` (in core-site.xml, default: 100). It can be used with -skipTrash to prevent accidental deletion of large directories. Delay is expected when walking over large directory recursively to count the number of files to be deleted before the confirmation.
 
 Example:
 
