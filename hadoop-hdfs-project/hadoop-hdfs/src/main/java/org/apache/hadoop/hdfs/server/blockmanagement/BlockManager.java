@@ -1060,7 +1060,8 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     // get block locations
-    final int numCorruptNodes = countNodes(blk).corruptReplicas();
+    NumberReplicas numReplicas = countNodes(blk);
+    final int numCorruptNodes = numReplicas.corruptReplicas();
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
       LOG.warn("Inconsistent number of corrupt replicas for "
@@ -1069,8 +1070,14 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     final int numNodes = blocksMap.numNodes(blk);
-    final boolean isCorrupt = numCorruptReplicas != 0 &&
-        numCorruptReplicas == numNodes;
+    final boolean isCorrupt;
+    if (blk.isStriped()) {
+      BlockInfoStriped sblk = (BlockInfoStriped) blk;
+      isCorrupt = numCorruptReplicas != 0 &&
+          numReplicas.liveReplicas() < sblk.getRealDataBlockNum();
+    } else {
+      isCorrupt = numCorruptReplicas != 0 && numCorruptReplicas == numNodes;
+    }
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptReplicas;
     DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
     final byte[] blockIndices = blk.isStriped() ? new byte[numMachines] : null;
