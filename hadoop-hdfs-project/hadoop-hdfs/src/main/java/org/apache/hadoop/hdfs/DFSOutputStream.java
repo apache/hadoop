@@ -225,6 +225,89 @@ public class DFSOutputStream extends FSOutputSummer
   // if them are received, the DataStreamer closes the current block.
   //
   class DataStreamer extends Daemon {
+    private class RefetchEncryptionKeyPolicy {
+      private int fetchEncryptionKeyTimes = 0;
+      private InvalidEncryptionKeyException lastException;
+      private final DatanodeInfo src;
+
+      RefetchEncryptionKeyPolicy(DatanodeInfo src) {
+        this.src = src;
+      }
+      boolean continueRetryingOrThrow() throws InvalidEncryptionKeyException {
+        if (fetchEncryptionKeyTimes >= 2) {
+          // hit the same exception twice connecting to the node, so
+          // throw the exception and exclude the node.
+          throw lastException;
+        }
+        // Don't exclude this node just yet.
+        // Try again with a new encryption key.
+        DFSClient.LOG.info("Will fetch a new encryption key and retry, "
+            + "encryption key was invalid when connecting to "
+            + this.src + ": ", lastException);
+        // The encryption key used is invalid.
+        dfsClient.clearDataEncryptionKey();
+        return true;
+      }
+
+      /**
+       * Record a connection exception.
+       * @param e
+       * @throws InvalidEncryptionKeyException
+       */
+      void recordFailure(final InvalidEncryptionKeyException e)
+          throws InvalidEncryptionKeyException {
+        fetchEncryptionKeyTimes++;
+        lastException = e;
+      }
+    }
+
+    private class StreamerStreams implements java.io.Closeable {
+      private Socket sock = null;
+      private DataOutputStream out = null;
+      private DataInputStream in = null;
+
+      StreamerStreams(final DatanodeInfo src,
+          final long writeTimeout, final long readTimeout,
+          final Token<BlockTokenIdentifier> blockToken)
+          throws IOException {
+        sock = createSocketForPipeline(src, 2, dfsClient);
+
+        OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
+        InputStream unbufIn = NetUtils.getInputStream(sock, readTimeout);
+        IOStreamPair saslStreams = dfsClient.saslClient
+            .socketSend(sock, unbufOut, unbufIn, dfsClient, blockToken, src);
+        unbufOut = saslStreams.out;
+        unbufIn = saslStreams.in;
+        out = new DataOutputStream(new BufferedOutputStream(unbufOut,
+            HdfsConstants.SMALL_BUFFER_SIZE));
+        in = new DataInputStream(unbufIn);
+      }
+
+      void sendTransferBlock(final DatanodeInfo[] targets,
+          final StorageType[] targetStorageTypes,
+          final Token<BlockTokenIdentifier> blockToken) throws IOException {
+        //send the TRANSFER_BLOCK request
+        new Sender(out)
+            .transferBlock(block, blockToken, dfsClient.clientName, targets,
+                targetStorageTypes);
+        out.flush();
+        //ack
+        BlockOpResponseProto transferResponse = BlockOpResponseProto
+            .parseFrom(PBHelper.vintPrefixed(in));
+        if (SUCCESS != transferResponse.getStatus()) {
+          throw new IOException("Failed to add a datanode. Response status: "
+              + transferResponse.getStatus());
+        }
+      }
+
+      @Override
+      public void close() throws IOException {
+        IOUtils.closeStream(in);
+        IOUtils.closeStream(out);
+        IOUtils.closeSocket(sock);
+      }
+    }
+
     private volatile boolean streamerClosed = false;
     private volatile ExtendedBlock block; // its length is number of bytes acked
     private Token<BlockTokenIdentifier> accessToken;
@@ -1010,48 +1093,38 @@ public class DFSOutputStream extends FSOutputSummer
          new IOException("Failed to add a node");
     }
 
+    private long computeTransferWriteTimeout() {
+      return dfsClient.getDatanodeWriteTimeout(2);
+    }
+    private long computeTransferReadTimeout() {
+      // transfer timeout multiplier based on the transfer size
+      // One per 200 packets = 12.8MB. Minimum is 2.
+      int multi = 2
+          + (int) (bytesSent / dfsClient.getConf().writePacketSize) / 200;
+      return dfsClient.getDatanodeReadTimeout(multi);
+    }
+
     private void transfer(final DatanodeInfo src, final DatanodeInfo[] targets,
         final StorageType[] targetStorageTypes,
         final Token<BlockTokenIdentifier> blockToken) throws IOException {
       //transfer replica to the new datanode
-      Socket sock = null;
-      DataOutputStream out = null;
-      DataInputStream in = null;
-      try {
-        sock = createSocketForPipeline(src, 2, dfsClient);
-        final long writeTimeout = dfsClient.getDatanodeWriteTimeout(2);
-        
-        // transfer timeout multiplier based on the transfer size
-        // One per 200 packets = 12.8MB. Minimum is 2.
-        int multi = 2 + (int)(bytesSent/dfsClient.getConf().writePacketSize)/200;
-        final long readTimeout = dfsClient.getDatanodeReadTimeout(multi);
+      RefetchEncryptionKeyPolicy policy = new RefetchEncryptionKeyPolicy(src);
+      do {
+        StreamerStreams streams = null;
+        try {
+          final long writeTimeout = computeTransferWriteTimeout();
+          final long readTimeout = computeTransferReadTimeout();
 
-        OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
-        InputStream unbufIn = NetUtils.getInputStream(sock, readTimeout);
-        IOStreamPair saslStreams = dfsClient.saslClient.socketSend(sock,
-          unbufOut, unbufIn, dfsClient, blockToken, src);
-        unbufOut = saslStreams.out;
-        unbufIn = saslStreams.in;
-        out = new DataOutputStream(new BufferedOutputStream(unbufOut,
-            HdfsConstants.SMALL_BUFFER_SIZE));
-        in = new DataInputStream(unbufIn);
-
-        //send the TRANSFER_BLOCK request
-        new Sender(out).transferBlock(block, blockToken, dfsClient.clientName,
-            targets, targetStorageTypes);
-        out.flush();
-
-        //ack
-        BlockOpResponseProto response =
-          BlockOpResponseProto.parseFrom(PBHelper.vintPrefixed(in));
-        if (SUCCESS != response.getStatus()) {
-          throw new IOException("Failed to add a datanode");
+          streams = new StreamerStreams(src, writeTimeout, readTimeout,
+              blockToken);
+          streams.sendTransferBlock(targets, targetStorageTypes, blockToken);
+          return;
+        } catch (InvalidEncryptionKeyException e) {
+          policy.recordFailure(e);
+        } finally {
+          IOUtils.closeStream(streams);
         }
-      } finally {
-        IOUtils.closeStream(in);
-        IOUtils.closeStream(out);
-        IOUtils.closeSocket(sock);
-      }
+      } while (policy.continueRetryingOrThrow());
     }
 
     /**
