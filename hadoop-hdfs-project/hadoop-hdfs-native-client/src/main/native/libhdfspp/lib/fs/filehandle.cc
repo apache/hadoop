@@ -50,7 +50,7 @@ FileHandleImpl::FileHandleImpl(const std::string & cluster_name,
 void FileHandleImpl::PositionRead(
     void *buf, size_t buf_size, uint64_t offset,
     const std::function<void(const Status &, size_t)> &handler) {
-  LOG_TRACE(kFileHandle, << "FileHandleImpl::PositionRead("
+  LOG_DEBUG(kFileHandle, << "FileHandleImpl::PositionRead("
                          << FMT_THIS_ADDR << ", buf=" << buf
                          << ", buf_size=" << buf_size << ") called");
 
@@ -76,7 +76,7 @@ void FileHandleImpl::PositionRead(
 }
 
 Status FileHandleImpl::PositionRead(void *buf, size_t buf_size, off_t offset, size_t *bytes_read) {
-  LOG_TRACE(kFileHandle, << "FileHandleImpl::[sync]PositionRead("
+  LOG_DEBUG(kFileHandle, << "FileHandleImpl::[sync]PositionRead("
                          << FMT_THIS_ADDR << ", buf=" << buf
                          << ", buf_size=" << buf_size
                          << ", offset=" << offset << ") called");
@@ -104,7 +104,7 @@ Status FileHandleImpl::PositionRead(void *buf, size_t buf_size, off_t offset, si
 }
 
 Status FileHandleImpl::Read(void *buf, size_t buf_size, size_t *bytes_read) {
-  LOG_TRACE(kFileHandle, << "FileHandleImpl::Read("
+  LOG_DEBUG(kFileHandle, << "FileHandleImpl::Read("
                          << FMT_THIS_ADDR << ", buf=" << buf
                          << ", buf_size=" << buf_size << ") called");
 
@@ -118,7 +118,7 @@ Status FileHandleImpl::Read(void *buf, size_t buf_size, size_t *bytes_read) {
 }
 
 Status FileHandleImpl::Seek(off_t *offset, std::ios_base::seekdir whence) {
-  LOG_TRACE(kFileHandle, << "FileHandleImpl::Seek("
+  LOG_DEBUG(kFileHandle, << "FileHandleImpl::Seek("
                          << ", offset=" << *offset << ", ...) called");
 
   if(cancel_state_->is_canceled()) {
@@ -173,7 +173,7 @@ void FileHandleImpl::AsyncPreadSome(
   using ::hadoop::hdfs::DatanodeInfoProto;
   using ::hadoop::hdfs::LocatedBlockProto;
 
-  LOG_TRACE(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
+  LOG_DEBUG(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
                          << FMT_THIS_ADDR << ", ...) called");
 
   if(cancel_state_->is_canceled()) {
