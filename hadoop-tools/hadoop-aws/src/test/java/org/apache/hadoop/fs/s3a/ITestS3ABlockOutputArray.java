@@ -32,7 +32,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Tests small file upload functionality for
- * {@link S3ABlockOutputStream} with the block buffered in byte arrays.
+ * {@link S3ABlockOutputStream} with the blocks buffered in byte arrays.
  *
  * File sizes are kept small to reduce test duration on slow connections;
  * multipart tests are kept in scale tests.
@@ -45,13 +45,13 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
-    conf.setBoolean(BLOCK_OUTPUT, true);
-    conf.set(BLOCK_OUTPUT_BUFFER, getBlockOutputBufferName());
+    conf.setBoolean(Constants.FAST_UPLOAD, true);
+    conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
     return conf;
   }
 
   protected String getBlockOutputBufferName() {
-    return BLOCK_OUTPUT_BUFFER_ARRAY;
+    return FAST_UPLOAD_BUFFER_ARRAY;
   }
 
   @Test

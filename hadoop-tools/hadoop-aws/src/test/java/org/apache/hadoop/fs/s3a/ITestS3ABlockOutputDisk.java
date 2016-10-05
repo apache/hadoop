@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.s3a;
 
 /**
- * Use {@link Constants#BLOCK_OUTPUT_BUFFER_DISK} for buffering.
+ * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
  */
 public class ITestS3ABlockOutputDisk extends ITestS3ABlockOutputArray {
 
   protected String getBlockOutputBufferName() {
-    return Constants.BLOCK_OUTPUT_BUFFER_DISK;
+    return Constants.FAST_UPLOAD_BUFFER_DISK;
   }
 
 }

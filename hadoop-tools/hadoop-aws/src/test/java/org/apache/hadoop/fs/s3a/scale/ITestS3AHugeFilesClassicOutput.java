@@ -19,8 +19,7 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
-
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT;
+import org.apache.hadoop.fs.s3a.Constants;
 
 /**
  * Use classic output for writing things; tweaks the configuration to do
@@ -32,7 +31,7 @@ public class ITestS3AHugeFilesClassicOutput extends AbstractSTestS3AHugeFiles {
   @Override
   protected Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
-    conf.setBoolean(BLOCK_OUTPUT, false);
+    conf.setBoolean(Constants.FAST_UPLOAD, false);
     return conf;
   }
 

@@ -30,7 +30,6 @@ import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -84,11 +83,11 @@ final class S3ADataBlocks {
   static BlockFactory createFactory(S3AFileSystem owner,
       String name) {
     switch (name) {
-    case Constants.BLOCK_OUTPUT_BUFFER_ARRAY:
+    case Constants.FAST_UPLOAD_BUFFER_ARRAY:
       return new ArrayBlockFactory(owner);
-    case Constants.BLOCK_OUTPUT_BUFFER_DISK:
+    case Constants.FAST_UPLOAD_BUFFER_DISK:
       return new DiskBlockFactory(owner);
-    case Constants.BLOCK_OUTPUT_BYTEBUFFER:
+    case Constants.FAST_UPLOAD_BYTEBUFFER:
       return new ByteBufferBlockFactory(owner);
     default:
       throw new IllegalArgumentException("Unsupported block buffer" +

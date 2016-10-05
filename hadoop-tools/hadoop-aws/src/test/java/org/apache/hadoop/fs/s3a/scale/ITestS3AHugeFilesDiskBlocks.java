@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.s3a.scale;
 import org.apache.hadoop.fs.s3a.Constants;
 
 /**
- * Use {@link Constants#BLOCK_OUTPUT_BUFFER_DISK} for buffering.
+ * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
  */
 public class ITestS3AHugeFilesDiskBlocks extends AbstractSTestS3AHugeFiles {
 
   protected String getBlockOutputBufferName() {
-    return Constants.BLOCK_OUTPUT_BUFFER_DISK;
+    return Constants.FAST_UPLOAD_BUFFER_DISK;
   }
 }

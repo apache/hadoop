@@ -28,9 +28,9 @@ public class ITestS3AEncryptionBlockOutputStream extends ITestS3AEncryption {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.setBoolean(Constants.BLOCK_OUTPUT, true);
-    conf.set(Constants.BLOCK_OUTPUT_BUFFER,
-        Constants.BLOCK_OUTPUT_BYTEBUFFER);
+    conf.setBoolean(Constants.FAST_UPLOAD, true);
+    conf.set(Constants.FAST_UPLOAD_BUFFER,
+        Constants.FAST_UPLOAD_BYTEBUFFER);
     return conf;
   }
 }

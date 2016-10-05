@@ -147,7 +147,7 @@ public class S3AFileSystem extends FileSystem {
   private boolean blockUploadEnabled;
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
-  private int blockOutputQueueLimit;
+  private int blockOutputActiveBlocks;
 
   /*
    * Register Deprecated options.
@@ -156,11 +156,7 @@ public class S3AFileSystem extends FileSystem {
     Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
         new Configuration.DeprecationDelta("fs.s3a.threads.core",
             null,
-            "Unsupported option \"fs.s3a.threads.core\" will be ignored"),
-        new Configuration.DeprecationDelta(FAST_UPLOAD,
-            BLOCK_OUTPUT,
-            FAST_UPLOAD + " has been replaced by " + BLOCK_OUTPUT
-            + " with multiple buffering options. Switching to block output.")
+            "Unsupported option \"fs.s3a.threads.core\" will be ignored")
     });
   }
 
@@ -221,12 +217,10 @@ public class S3AFileSystem extends FileSystem {
         LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
         maxThreads = 2;
       }
-      int totalTasks = conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS);
-      if (totalTasks < 1) {
-        LOG.warn(MAX_TOTAL_TASKS + "must be at least 1: forcing to 1.");
-        totalTasks = 1;
-      }
-      long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
+      int totalTasks = intOption(conf,
+          MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
+      long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
+          DEFAULT_KEEPALIVE_TIME, 0);
       threadPoolExecutor = BlockingThreadPoolExecutorService.newInstance(
           maxThreads,
           maxThreads + totalTasks,
@@ -247,18 +241,18 @@ public class S3AFileSystem extends FileSystem {
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE, INPUT_FADV_NORMAL));
 
-      blockUploadEnabled = conf.getBoolean(BLOCK_OUTPUT, false);
-      blockOutputBuffer = conf.getTrimmed(BLOCK_OUTPUT_BUFFER,
-          DEFAULT_BLOCK_OUTPUT_BUFFER);
+      blockUploadEnabled = conf.getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD);
 
       if (blockUploadEnabled) {
+        blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
+            DEFAULT_FAST_UPLOAD_BUFFER);
         partSize = ensureOutputParameterInRange(MULTIPART_SIZE, partSize);
         blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
-        blockOutputQueueLimit = (int)longOption(conf,
-            BLOCK_OUTPUT_ACTIVE_LIMIT, BLOCK_OUTPUT_ACTIVE_LIMIT_DEFAULT, 1);
+        blockOutputActiveBlocks = intOption(conf,
+            FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
         LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
                 " queue limit={}",
-            blockOutputBuffer, partSize, blockOutputQueueLimit);
+            blockOutputBuffer, partSize, blockOutputActiveBlocks);
       } else {
         LOG.debug("Using S3AOutputStream");
       }
@@ -569,7 +563,7 @@ public class S3AFileSystem extends FileSystem {
           new S3ABlockOutputStream(this,
               key,
               new SemaphoredDelegatingExecutor(threadPoolExecutor,
-                  blockOutputQueueLimit, true),
+                  blockOutputActiveBlocks, true),
               progress,
               partSize,
               blockFactory,

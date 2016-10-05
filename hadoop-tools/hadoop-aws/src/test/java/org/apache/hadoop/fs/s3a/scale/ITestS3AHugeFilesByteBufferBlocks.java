@@ -20,15 +20,15 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.s3a.Constants;
 
-import static org.apache.hadoop.fs.s3a.Constants.BLOCK_OUTPUT_BYTEBUFFER;
+import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 
 /**
- * Use {@link Constants#BLOCK_OUTPUT_BYTEBUFFER} for buffering.
+ * Use {@link Constants#FAST_UPLOAD_BYTEBUFFER} for buffering.
  */
 public class ITestS3AHugeFilesByteBufferBlocks
     extends AbstractSTestS3AHugeFiles {
 
   protected String getBlockOutputBufferName() {
-    return BLOCK_OUTPUT_BYTEBUFFER;
+    return FAST_UPLOAD_BYTEBUFFER;
   }
 }

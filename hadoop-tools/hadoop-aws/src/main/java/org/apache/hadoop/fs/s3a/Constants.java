@@ -132,8 +132,7 @@ public final class Constants {
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
-  // should we upload directly from memory rather than using a file buffer
-  @Deprecated
+  // switch to the fast block-by-block upload mechanism
   public static final String FAST_UPLOAD = "fs.s3a.fast.upload";
   public static final boolean DEFAULT_FAST_UPLOAD = false;
 
@@ -141,6 +140,63 @@ public final class Constants {
   @Deprecated
   public static final String FAST_BUFFER_SIZE = "fs.s3a.fast.buffer.size";
   public static final int DEFAULT_FAST_BUFFER_SIZE = 1048576; //1MB
+
+  /**
+   * What buffer to use.
+   * Default is {@link #FAST_UPLOAD_BUFFER_DISK}
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BUFFER =
+      "fs.s3a.fast.upload.buffer";
+
+  /**
+   * Buffer blocks to disk: {@value}.
+   * Capacity is limited to available disk space.
+   */
+
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BUFFER_DISK = "disk";
+
+  /**
+   * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BUFFER_ARRAY = "array";
+
+  /**
+   * Use a byte buffer. May be more memory efficient than the
+   * {@link #FAST_UPLOAD_BUFFER_ARRAY}: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BYTEBUFFER = "bytebuffer";
+
+  /**
+   * Default buffer option: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String DEFAULT_FAST_UPLOAD_BUFFER =
+      FAST_UPLOAD_BUFFER_DISK;
+
+  /**
+   * Maximum Number of blocks a single output stream can have
+   * active (uploading, or queued to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS}
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_ACTIVE_BLOCKS =
+      "fs.s3a.fast.upload.active.blocks";
+
+  /**
+   * Limit of queued block upload operations before writes
+   * block. Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final int DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS = 4;
 
   // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
   // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl
@@ -182,72 +238,6 @@ public final class Constants {
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;
-
-  /**
-   * Whether to use the experimental block output mechanism.
-   * Value: {@value}
-   */
-  @InterfaceStability.Unstable
-  public static final String BLOCK_OUTPUT =
-      "fs.s3a.block.output";
-
-  /**
-   * What buffer to use.
-   * Default is {@link #BLOCK_OUTPUT_BUFFER_DISK}
-   * Value: {@value}
-   */
-  @InterfaceStability.Unstable
-  public static final String BLOCK_OUTPUT_BUFFER =
-      "fs.s3a.block.output.buffer";
-
-  /**
-   * Buffer blocks to disk: {@value}.
-   * Capacity is limited to available disk space.
-   */
-
-  @InterfaceStability.Unstable
-  public static final String BLOCK_OUTPUT_BUFFER_DISK =
-      "disk";
-
-  /**
-   * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
-   */
-  @InterfaceStability.Unstable
-  public static final String BLOCK_OUTPUT_BUFFER_ARRAY =
-      "array";
-
-  /**
-   * Use a byte buffer. May be more memory efficient than the
-   * {@link #BLOCK_OUTPUT_BUFFER_ARRAY}: {@value}.
-   */
-  @InterfaceStability.Unstable
-  public static final String BLOCK_OUTPUT_BYTEBUFFER =
-      "bytebuffer";
-
-  /**
-   * Default buffer option: {@value}.
-   */
-
-  @InterfaceStability.Unstable
-  public static final String DEFAULT_BLOCK_OUTPUT_BUFFER =
-      BLOCK_OUTPUT_BUFFER_DISK;
-
-  /**
-   * Limit of queued block upload operations before writing
-   * blocks. Value: {@value}
-   * <p>
-   * Default is {@link #BLOCK_OUTPUT_ACTIVE_LIMIT_DEFAULT}
-   */
-  @InterfaceStability.Unstable
-  public static final String BLOCK_OUTPUT_ACTIVE_LIMIT =
-      "fs.s3a.block.output.active.limit";
-
-  /**
-   * Limit of queued block upload operations before writing
-   * blocks. Value: {@value}
-   */
-  @InterfaceStability.Unstable
-  public static final int BLOCK_OUTPUT_ACTIVE_LIMIT_DEFAULT = 4;
 
   /**
    * Which input strategy to use for buffering, seeking and similar when
