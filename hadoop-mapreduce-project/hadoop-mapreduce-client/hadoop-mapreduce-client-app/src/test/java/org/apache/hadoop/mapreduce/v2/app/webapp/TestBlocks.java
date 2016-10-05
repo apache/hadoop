@@ -23,6 +23,8 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -64,6 +66,9 @@ public class TestBlocks {
     Path path = new Path("conf");
     Configuration configuration = new Configuration();
     configuration.set("Key for test", "Value for test");
+    final String redactedProp = "Key for redaction";
+    configuration.set(MRJobConfig.MR_JOB_REDACTED_PROPERTIES,
+        redactedProp);
     when(job.getConfFile()).thenReturn(path);
     when(job.loadConfFile()).thenReturn(configuration);
 
@@ -84,9 +89,10 @@ public class TestBlocks {
     configurationBlock.render(html);
     pWriter.flush();
     assertTrue(data.toString().contains("Key for test"));
-
     assertTrue(data.toString().contains("Value for test"));
-
+    assertTrue(data.toString().contains(redactedProp));
+    assertTrue(data.toString().contains(
+        MRJobConfUtil.REDACTION_REPLACEMENT_VAL));
   }
 
   /**
