@@ -47,6 +47,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9145. Tracking methods that hold FSNamesytemLock for too long.
     (Mingliang Liu via Haohui Mai)
 
+    HDFS-10745. Directly resolve paths into INodesInPath.
+    (Daryn Sharp via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.

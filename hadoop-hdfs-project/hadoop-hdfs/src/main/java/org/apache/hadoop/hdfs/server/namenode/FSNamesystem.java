@@ -1740,8 +1740,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
          * HDFS-7463. A better fix is to change the edit log of SetTime to
          * use inode id instead of a path.
          */
-        src = dir.resolvePath(pc, srcArg);
-        final INodesInPath iip = dir.getINodesInPath(src, true);
+        final INodesInPath iip = dir.resolvePath(pc, src);
+        src = iip.getPath();
         INode inode = iip.getLastINode();
         boolean updateAccessTime = inode != null &&
             now > inode.getAccessTime() + getAccessTimePrecision();
@@ -1817,8 +1817,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       boolean needBlockToken)
       throws IOException {
     String src = srcArg;
-    src = dir.resolvePath(pc, srcArg);
-    final INodesInPath iip = dir.getINodesInPath(src, true);
+    final INodesInPath iip = dir.resolvePath(pc, src);
+    src = iip.getPath();
     final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
     if (isPermissionEnabled) {
       dir.checkPathAccess(pc, iip, FsAction.READ);
@@ -2016,7 +2016,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot truncate for " + src);
-      src = dir.resolvePath(pc, src);
+      INodesInPath iip = dir.resolvePath(pc, src);
+      src = iip.getPath();
       res = truncateInternal(src, newLength, clientName,
           clientMachine, mtime, pc, toRemoveBlocks);
       stat = dir.getAuditFileInfo(dir.getINodesInPath4Write(src, false));
@@ -2399,8 +2400,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (provider != null) {
       readLock();
       try {
-        src = dir.resolvePath(pc, src);
-        INodesInPath iip = dir.getINodesInPath4Write(src);
+        INodesInPath iip = dir.resolvePathForWrite(pc, src);
+        src = iip.getPath();
         // Nothing to do if the path is not within an EZ
         final EncryptionZone zone = dir.getEZForPath(iip);
         if (zone != null) {
@@ -2437,8 +2438,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkNameNodeSafeMode("Cannot create file" + src);
       dir.writeLock();
       try {
-        src = dir.resolvePath(pc, src);
-        final INodesInPath iip = dir.getINodesInPath4Write(src);
+        final INodesInPath iip = dir.resolvePathForWrite(pc, src);
+        src = iip.getPath();
         toRemoveBlocks = startFileInternal(
             pc, iip, permissions, holder,
             clientMachine, create, overwrite,
@@ -2446,7 +2447,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             isLazyPersist, suite, protocolVersion, edek,
             logRetryCache);
         stat = FSDirStatAndListingOp.getFileInfo(
-            dir, src, false, FSDirectory.isReservedRawName(srcArg), true);
+            dir, src, false, FSDirectory.isReservedRawName(srcArg));
       } finally {
         dir.writeUnlock();
       }
@@ -2815,8 +2816,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot recover the lease of " + src);
-      src = dir.resolvePath(pc, src);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
+      final INodesInPath iip = dir.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (!inode.isUnderConstruction()) {
         return true;
@@ -2967,12 +2968,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot append to file" + src);
-      src = dir.resolvePath(pc, src);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
+      final INodesInPath iip = dir.resolvePathForWrite(pc, src);
+      src = iip.getPath();
       lb = appendFileInternal(pc, iip, holder, clientMachine, newBlock,
           logRetryCache);
       stat = FSDirStatAndListingOp.getFileInfo(dir, src, false,
-          FSDirectory.isReservedRawName(srcArg), true);
+          FSDirectory.isReservedRawName(srcArg));
     } catch (StandbyException se) {
       skipSync = true;
       throw se;
@@ -3056,9 +3057,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src);
+      INodesInPath iip = dir.resolvePath(pc, src, fileId);
+      src = iip.getPath();
       FileState fileState = analyzeFileState(
-          src, fileId, clientName, previous, onRetryBlock);
+          iip, fileId, clientName, previous, onRetryBlock);
       if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
         // This is a retry. No need to generate new locations.
         // Use the last block if it has locations.
@@ -3117,8 +3119,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Run the full analysis again, since things could have changed
       // while chooseTarget() was executing.
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
+      final INodesInPath iip = dir.resolvePath(null, src, fileId);
       FileState fileState = 
-          analyzeFileState(src, fileId, clientName, previous, onRetryBlock);
+          analyzeFileState(iip, fileId, clientName, previous, onRetryBlock);
       final INodeFile pendingFile = fileState.inode;
       src = fileState.path;
 
@@ -3186,14 +3189,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  FileState analyzeFileState(String src,
-                                long fileId,
-                                String clientName,
-                                ExtendedBlock previous,
-                                LocatedBlock[] onRetryBlock)
+  private FileState analyzeFileState(
+      INodesInPath iip, long fileId, String clientName,
+      ExtendedBlock previous, LocatedBlock[] onRetryBlock)
           throws IOException  {
     assert hasReadLock();
-
+    String src = iip.getPath();
     checkBlock(previous);
     onRetryBlock[0] = null;
     checkNameNodeSafeMode("Cannot add block to " + src);
@@ -3202,24 +3203,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkFsObjectLimit();
 
     Block previousBlock = ExtendedBlock.getLocalBlock(previous);
-    final INode inode;
-    final INodesInPath iip;
-    if (fileId == INodeId.GRANDFATHER_INODE_ID) {
-      // Older clients may not have given us an inode ID to work with.
-      // In this case, we have to try to resolve the path and hope it
-      // hasn't changed or been deleted since the file was opened for write.
-      iip = dir.getINodesInPath4Write(src);
-      inode = iip.getLastINode();
-    } else {
-      // Newer clients pass the inode ID, so we can just get the inode
-      // directly.
-      inode = dir.getInode(fileId);
-      iip = INodesInPath.fromINode(inode);
-      if (inode != null) {
-        src = iip.getPath();
-      }
-    }
-    final INodeFile pendingFile = checkLease(src, clientName, inode, fileId);
+    final INodeFile pendingFile = checkLease(iip, clientName, fileId);
     BlockInfoContiguous lastBlockInFile = pendingFile.getLastBlock();
     if (!Block.matchingIdAndGenStamp(previousBlock, lastBlockInFile)) {
       // The block that the client claims is the current last block
@@ -3317,20 +3301,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.READ);
       //check safe mode
       checkNameNodeSafeMode("Cannot add datanode; src=" + src + ", blk=" + blk);
-      src = dir.resolvePath(pc, src);
+      final INodesInPath iip = dir.resolvePath(pc, src, fileId);
+      src = iip.getPath();
 
       //check lease
-      final INode inode;
-      if (fileId == INodeId.GRANDFATHER_INODE_ID) {
-        // Older clients may not have given us an inode ID to work with.
-        // In this case, we have to try to resolve the path and hope it
-        // hasn't changed or been deleted since the file was opened for write.
-        inode = dir.getINode(src);
-      } else {
-        inode = dir.getInode(fileId);
-        if (inode != null) src = inode.getFullPathName();
-      }
-      final INodeFile file = checkLease(src, clientName, inode, fileId);
+      final INodeFile file = checkLease(iip, clientName, fileId);
       clientMachine = file.getFileUnderConstructionFeature().getClientMachine();
       clientnode = blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
       preferredblocksize = file.getPreferredBlockSize();
@@ -3369,27 +3344,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
+    final INodesInPath iip = dir.resolvePath(pc, src, fileId);
+    src = iip.getPath();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot abandon block " + b + " for file" + src);
-      src = dir.resolvePath(pc, src);
-
-      final INode inode;
-      final INodesInPath iip;
-      if (fileId == INodeId.GRANDFATHER_INODE_ID) {
-        // Older clients may not have given us an inode ID to work with.
-        // In this case, we have to try to resolve the path and hope it
-        // hasn't changed or been deleted since the file was opened for write.
-        iip = dir.getINodesInPath(src, true);
-        inode = iip.getLastINode();
-      } else {
-        inode = dir.getInode(fileId);
-        iip = INodesInPath.fromINode(inode);
-        if (inode != null) {
-          src = iip.getPath();
-        }
-      }
-      final INodeFile file = checkLease(src, holder, inode, fileId);
+      final INodeFile file = checkLease(iip, holder, fileId);
 
       // Remove the block from the pending creates list
       boolean removed = dir.removeBlock(src, iip, file,
@@ -3408,8 +3368,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return true;
   }
 
-  private INodeFile checkLease(String src, String holder, INode inode,
-      long fileId) throws LeaseExpiredException, FileNotFoundException {
+  private INodeFile checkLease(INodesInPath iip, String holder, long fileId)
+      throws LeaseExpiredException, FileNotFoundException {
+    String src = iip.getPath();
+    INode inode = iip.getLastINode();
     assert hasReadLock();
     final String ident = src + " (inode " + fileId + ")";
     if (inode == null) {
@@ -3463,13 +3425,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkBlock(last);
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
-    FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot complete file " + src);
-      src = dir.resolvePath(pc, src);
       success = completeFileInternal(src, holder,
         ExtendedBlock.getLocalBlock(last), fileId);
     } finally {
@@ -3487,23 +3447,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       long fileId) throws IOException {
     assert hasWriteLock();
     final INodeFile pendingFile;
-    final INodesInPath iip;
+    FSPermissionChecker pc = getPermissionChecker();
+    final INodesInPath iip = dir.resolvePath(pc, src, fileId);
+    src = iip.getPath();
     INode inode = null;
     try {
-      if (fileId == INodeId.GRANDFATHER_INODE_ID) {
-        // Older clients may not have given us an inode ID to work with.
-        // In this case, we have to try to resolve the path and hope it
-        // hasn't changed or been deleted since the file was opened for write.
-        iip = dir.getINodesInPath(src, true);
-        inode = iip.getLastINode();
-      } else {
-        inode = dir.getInode(fileId);
-        iip = INodesInPath.fromINode(inode);
-        if (inode != null) {
-          src = iip.getPath();
-        }
-      }
-      pendingFile = checkLease(src, holder, inode, fileId);
+      inode = iip.getLastINode();
+      pendingFile = checkLease(iip, holder, fileId);
     } catch (LeaseExpiredException lee) {
       if (inode != null && inode.isFile() &&
           !inode.asFile().isUnderConstruction()) {
@@ -3967,18 +3917,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot fsync file " + src);
-      src = dir.resolvePath(pc, src);
-      final INode inode;
-      if (fileId == INodeId.GRANDFATHER_INODE_ID) {
-        // Older clients may not have given us an inode ID to work with.
-        // In this case, we have to try to resolve the path and hope it
-        // hasn't changed or been deleted since the file was opened for write.
-        inode = dir.getINode(src);
-      } else {
-        inode = dir.getInode(fileId);
-        if (inode != null) src = inode.getFullPathName();
-      }
-      final INodeFile pendingFile = checkLease(src, clientName, inode, fileId);
+      INodesInPath iip = dir.resolvePath(pc, src, fileId);
+      src = iip.getPath();
+      final INodeFile pendingFile = checkLease(iip, clientName, fileId);
       if (lastBlockLength > 0) {
         pendingFile.getFileUnderConstructionFeature().updateLengthOfLastBlock(
             pendingFile, lastBlockLength);
@@ -8021,7 +7962,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
-      src = dir.resolvePath(pc, src);
+      final INodesInPath iip = dir.resolvePathForWrite(pc, src);
+      src = iip.getPath();
 
       final CipherSuite suite = CipherSuite.convert(cipher);
       // For now this is hardcoded, as we only support one method.
@@ -8032,7 +7974,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(ezXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-      final INodesInPath iip = dir.getINodesInPath4Write(src, false);
       resultingStat = dir.getAuditFileInfo(iip);
     } finally {
       writeUnlock();
@@ -8059,8 +8000,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
+      INodesInPath iip = dir.resolvePath(pc, src);
       if (isPermissionEnabled) {
         dir.checkPathAccess(pc, iip, FsAction.READ);
       }
@@ -8161,17 +8101,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void checkAccess(String src, FsAction mode) throws IOException {
     checkOperation(OperationCategory.READ);
+    FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = FSDirectory.resolvePath(src, dir);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
+      final INodesInPath iip = dir.resolvePath(pc, src);
+      src = iip.getPath();
       INode inode = iip.getLastINode();
       if (inode == null) {
         throw new FileNotFoundException("Path not found");
       }
       if (isPermissionEnabled) {
-        FSPermissionChecker pc = getPermissionChecker();
         dir.checkPathAccess(pc, iip, mode);
       }
     } catch (AccessControlException e) {
