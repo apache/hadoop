@@ -299,7 +299,6 @@
             </goals>
             <phase>site</phase>
             <configuration>
-              <linksource>true</linksource>
               <quiet>true</quiet>
               <verbose>false</verbose>
               <source>${maven.compile.source}</source>
