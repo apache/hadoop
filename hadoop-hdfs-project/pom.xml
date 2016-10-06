@@ -35,7 +35,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>hadoop-hdfs-client</module>
     <module>hadoop-hdfs-native-client</module>
     <module>hadoop-hdfs-httpfs</module>
-    <module>hadoop-hdfs/src/contrib/bkjournal</module>
     <module>hadoop-hdfs-nfs</module>
   </modules>
 
