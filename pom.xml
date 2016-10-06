@@ -429,7 +429,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <id>aggregate</id>
             <configuration>
               <maxmemory>1024m</maxmemory>
-              <linksource>true</linksource>
               <quiet>true</quiet>
               <verbose>false</verbose>
               <source>${maven.compile.source}</source>
