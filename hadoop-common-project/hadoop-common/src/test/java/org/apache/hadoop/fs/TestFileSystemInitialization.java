@@ -47,16 +47,12 @@ public class TestFileSystemInitialization {
 
   @Test
   public void testMissingLibraries() {
-    boolean catched = false;
     try {
       Configuration conf = new Configuration();
-      FileSystem.getFileSystemClass("s3a", conf);
-    } catch (Exception e) {
-      catched = true;
-    } catch (ServiceConfigurationError e) {
-      // S3A shouldn't find AWS SDK and fail
-      catched = true;
+      Class<? extends FileSystem> fs = FileSystem.getFileSystemClass("s3a",
+          conf);
+      fail("Expected an exception, got a filesystem: " + fs);
+    } catch (Exception | ServiceConfigurationError expected) {
     }
-    assertTrue(catched);
   }
 }
