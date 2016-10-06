@@ -20,9 +20,6 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.junit.Test;
-
-import java.io.IOException;
 
 /**
  * Tests file deletion with multi-delete disabled.

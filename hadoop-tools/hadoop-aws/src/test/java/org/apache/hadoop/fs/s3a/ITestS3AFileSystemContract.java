@@ -69,7 +69,7 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
    */
   protected Path path(String pathString) {
     if (pathString.startsWith("/")) {
-      return new Path(basePath, pathString).makeQualified(fs);
+      return fs.makeQualified(new Path(basePath, pathString));
     } else {
       return super.path(pathString);
     }
