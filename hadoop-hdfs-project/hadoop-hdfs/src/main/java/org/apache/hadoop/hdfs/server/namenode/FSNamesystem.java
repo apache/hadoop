@@ -1784,8 +1784,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         boolean updateAccessTime = inode != null &&
             now > inode.getAccessTime() + dir.getAccessTimePrecision();
         if (!isInSafeMode() && updateAccessTime) {
-          boolean changed = FSDirAttrOp.setTimes(dir,
-              inode, -1, now, false, iip.getLatestSnapshotId());
+          boolean changed = FSDirAttrOp.setTimes(dir, iip, -1, now, false);
           if (changed) {
             getEditLog().logTimes(src, -1, now);
           }

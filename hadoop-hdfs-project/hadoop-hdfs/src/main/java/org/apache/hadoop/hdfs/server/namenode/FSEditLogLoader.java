@@ -508,10 +508,12 @@ public class FSEditLogLoader {
     }
     case OP_SET_REPLICATION: {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
+      String src = renameReservedPathsOnUpgrade(
+          setReplicationOp.path, logVersion);
+      INodesInPath iip = fsDir.getINodesInPath4Write(src);
       short replication = fsNamesys.getBlockManager().adjustReplication(
           setReplicationOp.replication);
-      FSDirAttrOp.unprotectedSetReplication(fsDir, renameReservedPathsOnUpgrade(
-          setReplicationOp.path, logVersion), replication);
+      FSDirAttrOp.unprotectedSetReplication(fsDir, iip, replication);
       break;
     }
     case OP_CONCAT_DELETE: {
@@ -576,52 +578,66 @@ public class FSEditLogLoader {
     }
     case OP_SET_PERMISSIONS: {
       SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
-      FSDirAttrOp.unprotectedSetPermission(fsDir, renameReservedPathsOnUpgrade(
-          setPermissionsOp.src, logVersion), setPermissionsOp.permissions);
+      final String src =
+          renameReservedPathsOnUpgrade(setPermissionsOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetPermission(fsDir, iip,
+          setPermissionsOp.permissions);
       break;
     }
     case OP_SET_OWNER: {
       SetOwnerOp setOwnerOp = (SetOwnerOp)op;
-      FSDirAttrOp.unprotectedSetOwner(
-          fsDir, renameReservedPathsOnUpgrade(setOwnerOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setOwnerOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetOwner(fsDir, iip,
           setOwnerOp.username, setOwnerOp.groupname);
       break;
     }
     case OP_SET_NS_QUOTA: {
       SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
-      FSDirAttrOp.unprotectedSetQuota(
-          fsDir, renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setNSQuotaOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
     case OP_CLEAR_NS_QUOTA: {
       ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
-      FSDirAttrOp.unprotectedSetQuota(
-          fsDir, renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          clearNSQuotaOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
-
-    case OP_SET_QUOTA:
+    case OP_SET_QUOTA: {
       SetQuotaOp setQuotaOp = (SetQuotaOp) op;
-      FSDirAttrOp.unprotectedSetQuota(fsDir,
-          renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setQuotaOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           setQuotaOp.nsQuota, setQuotaOp.dsQuota, null);
       break;
-
-    case OP_SET_QUOTA_BY_STORAGETYPE:
-        FSEditLogOp.SetQuotaByStorageTypeOp setQuotaByStorageTypeOp =
+    }
+    case OP_SET_QUOTA_BY_STORAGETYPE: {
+      FSEditLogOp.SetQuotaByStorageTypeOp setQuotaByStorageTypeOp =
           (FSEditLogOp.SetQuotaByStorageTypeOp) op;
-        FSDirAttrOp.unprotectedSetQuota(fsDir,
-          renameReservedPathsOnUpgrade(setQuotaByStorageTypeOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setQuotaByStorageTypeOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           HdfsConstants.QUOTA_DONT_SET, setQuotaByStorageTypeOp.dsQuota,
           setQuotaByStorageTypeOp.type);
-        break;
-
+      break;
+    }
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;
-      FSDirAttrOp.unprotectedSetTimes(
-          fsDir, renameReservedPathsOnUpgrade(timesOp.path, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          timesOp.path, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetTimes(fsDir, iip,
           timesOp.mtime, timesOp.atime, true);
       break;
     }
