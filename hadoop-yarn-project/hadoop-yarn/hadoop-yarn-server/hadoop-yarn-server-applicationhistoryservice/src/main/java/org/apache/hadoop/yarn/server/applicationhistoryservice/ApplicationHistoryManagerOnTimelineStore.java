@@ -351,6 +351,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       }
     }
     List<TimelineEvent> events = entity.getEvents();
+    long updatedTimeStamp = 0L;
     if (events != null) {
       for (TimelineEvent event : events) {
         if (event.getEventType().equals(
@@ -358,9 +359,16 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           createdTime = event.getTimestamp();
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.UPDATED_EVENT_TYPE)) {
-          // TODO: YARN-5101. This type of events are parsed in
-          // time-stamp descending order which means the previous event
-          // could override the information from the later same type of event.
+          // This type of events are parsed in time-stamp descending order
+          // which means the previous event could override the information
+          // from the later same type of event. Hence compare timestamp
+          // before over writing.
+          if (event.getTimestamp() > updatedTimeStamp) {
+            updatedTimeStamp = event.getTimestamp();
+          } else {
+            continue;
+          }
+
           Map<String, Object> eventInfo = event.getEventInfo();
           if (eventInfo == null) {
             continue;
