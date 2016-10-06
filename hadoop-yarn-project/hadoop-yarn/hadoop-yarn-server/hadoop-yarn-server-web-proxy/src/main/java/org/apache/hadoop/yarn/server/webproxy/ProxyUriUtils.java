@@ -40,6 +40,8 @@ public class ProxyUriUtils {
   public static final String PROXY_SERVLET_NAME = "proxy";
   /**Base path where the proxy servlet will handle requests.*/
   public static final String PROXY_BASE = "/proxy/";
+  /**Path component added when the proxy redirects the connection.*/
+  public static final String REDIRECT = "redirect/";
   /**Path Specification for the proxy servlet.*/
   public static final String PROXY_PATH_SPEC = PROXY_BASE+"*";
   /**Query Parameter indicating that the URI was approved.*/
@@ -57,27 +59,58 @@ public class ProxyUriUtils {
   
   /**
    * Get the proxied path for an application.
-   * @param id the application id to use.
-   * @return the base path to that application through the proxy.
+   *
+   * @param id the application id to use
+   * @return the base path to that application through the proxy
    */
   public static String getPath(ApplicationId id) {
-    if(id == null) {
-      throw new IllegalArgumentException("Application id cannot be null ");
-    }
-    return ujoin(PROXY_BASE, uriEncode(id));
+    return getPath(id, false);
   }
 
   /**
    * Get the proxied path for an application.
-   * @param id the application id to use.
-   * @param path the rest of the path to the application.
-   * @return the base path to that application through the proxy.
+   *
+   * @param id the application id to use
+   * @param redirected whether the path should contain the redirect component
+   * @return the base path to that application through the proxy
+   */
+  public static String getPath(ApplicationId id, boolean redirected) {
+    if (id == null) {
+      throw new IllegalArgumentException("Application id cannot be null ");
+    }
+
+    if (redirected) {
+      return ujoin(PROXY_BASE, REDIRECT, uriEncode(id));
+    } else {
+      return ujoin(PROXY_BASE, uriEncode(id));
+    }
+  }
+
+  /**
+   * Get the proxied path for an application.
+   *
+   * @param id the application id to use
+   * @param path the rest of the path to the application
+   * @return the base path to that application through the proxy
    */
   public static String getPath(ApplicationId id, String path) {
-    if(path == null) {
-      return getPath(id);
+    return getPath(id, path, false);
+  }
+
+  /**
+   * Get the proxied path for an application.
+   *
+   * @param id the application id to use
+   * @param path the rest of the path to the application
+   * @param redirected whether the path should contain the redirect component
+   * @return the base path to that application through the proxy
+   */
+  public static String getPath(ApplicationId id, String path,
+      boolean redirected) {
+    if (path == null) {
+      return getPath(id, redirected);
     } else {
-      return ujoin(getPath(id), path);
+      return ujoin(getPath(id, redirected), path);
     }
   }
   

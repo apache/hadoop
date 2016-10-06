@@ -247,9 +247,11 @@ public class TestAMWebApp {
       HttpURLConnection conn = (HttpURLConnection) httpUrl.openConnection();
       conn.setInstanceFollowRedirects(false);
       conn.connect();
-      String expectedURL =
-          scheme + conf.get(YarnConfiguration.PROXY_ADDRESS)
-              + ProxyUriUtils.getPath(app.getAppID(), "/mapreduce");
+
+      // Because we're not calling from the proxy's address, we'll be redirected
+      String expectedURL = scheme + conf.get(YarnConfiguration.PROXY_ADDRESS)
+          + ProxyUriUtils.getPath(app.getAppID(), "/mapreduce", true);
+
       Assert.assertEquals(expectedURL,
         conn.getHeaderField(HttpHeaders.LOCATION));
       Assert.assertEquals(HttpStatus.SC_MOVED_TEMPORARILY,
