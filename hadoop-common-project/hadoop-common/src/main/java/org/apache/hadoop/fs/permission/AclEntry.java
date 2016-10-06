@@ -36,7 +36,7 @@ import org.apache.hadoop.util.StringUtils;
  * to create a new instance.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Stable
 public class AclEntry {
   private final AclEntryType type;
   private final String name;
@@ -100,13 +100,29 @@ public class AclEntry {
   }
 
   @Override
+  @InterfaceStability.Unstable
   public String toString() {
+    // This currently just delegates to the stable string representation, but it
+    // is permissible for the output of this method to change across versions.
+    return toStringStable();
+  }
+
+  /**
+   * Returns a string representation guaranteed to be stable across versions to
+   * satisfy backward compatibility requirements, such as for shell command
+   * output or serialization.  The format of this string representation matches
+   * what is expected by the {@link #parseAclSpec(String, boolean)} and
+   * {@link #parseAclEntry(String, boolean)} methods.
+   *
+   * @return stable, backward compatible string representation
+   */
+  public String toStringStable() {
     StringBuilder sb = new StringBuilder();
     if (scope == AclEntryScope.DEFAULT) {
       sb.append("default:");
     }
     if (type != null) {
-      sb.append(StringUtils.toLowerCase(type.toString()));
+      sb.append(StringUtils.toLowerCase(type.toStringStable()));
     }
     sb.append(':');
     if (name != null) {
@@ -203,6 +219,8 @@ public class AclEntry {
   /**
    * Parses a string representation of an ACL spec into a list of AclEntry
    * objects. Example: "user::rwx,user:foo:rw-,group::r--,other::---"
+   * The expected format of ACL entries in the string parameter is the same
+   * format produced by the {@link #toStringStable()} method.
    * 
    * @param aclSpec
    *          String representation of an ACL spec.
@@ -228,6 +246,8 @@ public class AclEntry {
 
   /**
    * Parses a string representation of an ACL into a AclEntry object.<br>
+   * The expected format of ACL entries in the string parameter is the same
+   * format produced by the {@link #toStringStable()} method.
    * 
    * @param aclStr
    *          String representation of an ACL.<br>
