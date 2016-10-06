@@ -247,11 +247,7 @@ final class S3ADataBlocks {
      */
     protected synchronized boolean enterClosedState() {
       if (!state.equals(Closed)) {
-        try {
-          enterState(null, Closed);
-        } catch (IllegalStateException ignored) {
-
-        }
+        enterState(null, Closed);
         return true;
       } else {
         return false;
@@ -329,7 +325,6 @@ final class S3ADataBlocks {
       dataSize = buffer.size();
       ByteArrayInputStream bufferData = new ByteArrayInputStream(
           buffer.toByteArray());
-      buffer.reset();
       buffer = null;
       return bufferData;
     }
@@ -768,6 +763,7 @@ final class S3ADataBlocks {
      */
     @Override
     void flush() throws IOException {
+      super.flush();
       out.flush();
     }
 

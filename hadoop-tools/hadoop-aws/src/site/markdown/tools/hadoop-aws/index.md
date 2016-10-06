@@ -883,7 +883,7 @@ or as a 400 Bad Request.
 
 
 
-#### <a href="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
+### <a href="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
 
 
 **New in Hadoop 2.7; significantly enhanced in Hadoop 2.9**
@@ -1026,17 +1026,13 @@ or read when the multipart operation completes in the `close()` call, which
 will block until the upload is completed.
 
 
-##### <a href="s3a_fast_upload_disk"></a>Disk upload `fs.s3a.fast.upload.buffer=disk`
+#### <a href="s3a_fast_upload_disk"></a>Fast Upload with Disk Buffers `fs.s3a.fast.upload.buffer=disk`
 
 When `fs.s3a.fast.upload.buffer` is set to `disk`, all data is buffered
 to local hard disks prior to upload. This minimizes the amount of memory
 consumed, and so eliminates heap size as the limiting factor in queued uploads
 —exactly as the original "direct to disk" buffering used when
 `fs.s3a.fast.upload=false`.
-
-Because the upload data is buffered via disk, there is little risk of heap
-overflow as the queue of pending uploads (limited by `fs.s3a.max.total.tasks`)
-increases.
 
 
 ```xml
@@ -1050,19 +1046,10 @@ increases.
   <value>disk</value>
 </property>
 
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>5</value>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>20</value>
-</property>
 ```
 
 
-##### <a href="s3a_fast_upload_bytebuffer"></a>Block Upload with ByteBuffers: `fs.s3a.fast.upload.buffer=bytebuffer`
+#### <a href="s3a_fast_upload_bytebuffer"></a>Fast Upload with ByteBuffers: `fs.s3a.fast.upload.buffer=bytebuffer`
 
 When `fs.s3a.fast.upload.buffer` is set to `bytebuffer`, all data is buffered
 in "Direct" ByteBuffers prior to upload. This *may* be faster than buffering to disk,
@@ -1090,7 +1077,7 @@ of memory.
 </property>
 ```
 
-##### <a href="s3a_fast_upload_array"></a>Array upload: `fs.s3a.fast.upload.buffer=array`
+#### <a href="s3a_fast_upload_array"></a>Fast Upload with Arrays: `fs.s3a.fast.upload.buffer=array`
 
 When `fs.s3a.fast.upload.buffer` is set to `array`, all data is buffered
 in byte arrays in the JVM's heap prior to upload.
@@ -1115,7 +1102,7 @@ the risk of heap overflows.
 </property>
 
 ```
-#### <a href="s3a_fast_upload_threading"></a>S3A Fast Upload Threading
+#### <a href="s3a_fast_upload_thread_tuning"></a>S3A Fast Upload Thread Tuning
 
 Both the [Array](#s3a_fast_upload_array) and [Byte buffer](#s3a_fast_upload_bytebuffer)
 buffer mechanisms can consume very large amounts of memory, on-heap or
@@ -1586,7 +1573,7 @@ Using the explicit endpoint for the region is recommended for speed and the
 ability to use the V4 signing API.
 
 
-## "Timeout waiting for connection from pool" when writing to S3A
+### "Timeout waiting for connection from pool" when writing to S3A
 
 This happens when using the Block output stream, `fs.s3a.fast.upload=true` and
 the thread pool runs out of capacity. 
@@ -1635,7 +1622,7 @@ than `fs.s3a.threads.max`.
 </property>
 ```
 
-## "Timeout waiting for connection from pool" when reading from S3A
+### "Timeout waiting for connection from pool" when reading from S3A
 
 This happens when more threads are trying to read from an S3A system than
 the maximum number of allocated HTTP connections. 
@@ -1643,31 +1630,21 @@ the maximum number of allocated HTTP connections.
 Set `fs.s3a.connection.maximum` to a larger value (and at least as large as 
 `fs.s3a.threads.max`)
 
-### Out of heap memory when writing to S3A
+### Out of heap memory when writing to S3A via Fast Upload
 
-This can happen when using the block output stream (`fs.s3a.fast.upload=true`)
+This can happen when using the fast upload mechanism (`fs.s3a.fast.upload=true`)
 and in-memory buffering (either `fs.s3a.fast.upload.buffer=array` or
 `fs.s3a.fast.upload.buffer=bytebuffer`).
 
 More data is being generated than in the JVM than it can upload to S3 —and
 so much data has been buffered that the JVM has run out of memory.
 
-Fixes
+Consult [S3A Fast Upload Thread Tuning](#s3a_fast_upload_thread_tuning) for
+detail on this issue and options to address it. Consider also buffering to 
+disk, rather than memory.
 
-1. Increase heap capacity. This is a short term measure —the problem may
-return.
-1. Decrease the values of `fs.s3a.threads.max` and `fs.s3a.max.total.tasks`
- so that less uploads can be pending. You may need to decrease the value
-of `fs.s3a.multipart.size` to reduce the amount of memory buffered in each
-queued operation.
-1. Switch to disk buffering: `fs.s3a.fast.upload.buffer=disk`. The upper limit
-on buffered data becomes limited to that of disk capacity.
 
-If using disk buffering, the number of total tasks can be kept high, as
-pending uploads consume little memory. Keeping the thread count low can
-reduce bandwidth requirements on the uploads
-
-## When writing to S3A: "java.io.FileNotFoundException: Completing multi-part upload"
+### When writing to S3A: "java.io.FileNotFoundException: Completing multi-part upload"
 
 
 ```
@@ -1685,10 +1662,18 @@ java.io.FileNotFoundException: Completing multi-part upload on fork-5/test/multi
   at org.apache.hadoop.fs.FSDataOutputStream.close(FSDataOutputStream.java:106)
 ```
 
+This surfaces if, while a multipart upload was taking place, all outstanding multipart
+uploads were garbage collected. The upload operation cannot complete because
+the data uploaded has been deleted.
+
+Consult [Cleaning up After Incremental Upload Failures](#s3a_multipart_purge) for
+details on how the multipart purge timeout can be set. If multipart uploads
+are failing with the message above, it may be a sign that this value is too low.
+
 ### When writing to S3A, HTTP Exceptions logged at info from `AmazonHttpClient`
 
 ```
-2016-09-26 18:34:41,254 [s3a-transfer-shared-pool4-t6] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: hwdev-steve-ireland-new.s3.amazonaws.com:443 failed to respond
+[s3a-transfer-shared-pool4-t6] INFO  http.AmazonHttpClient (AmazonHttpClient.java:executeHelper(496)) - Unable to execute HTTP request: hwdev-steve-ireland-new.s3.amazonaws.com:443 failed to respond
 org.apache.http.NoHttpResponseException: bucket.s3.amazonaws.com:443 failed to respond
   at org.apache.http.impl.conn.DefaultHttpResponseParser.parseHead(DefaultHttpResponseParser.java:143)
   at org.apache.http.impl.conn.DefaultHttpResponseParser.parseHead(DefaultHttpResponseParser.java:57)
@@ -1718,12 +1703,12 @@ org.apache.http.NoHttpResponseException: bucket.s3.amazonaws.com:443 failed to r
   at java.lang.Thread.run(Thread.java:745)
 ```
 
-These are HTTP IO exceptions caught and logged inside the AWS SDK. The client
+These are HTTP I/O exceptions caught and logged inside the AWS SDK. The client
 will attempt to retry the operation; it may just be a transient event. If there
 are many such exceptions in logs, it may be a symptom of connectivity or network
 problems.
 
-## Visible S3 Inconsistency
+### Visible S3 Inconsistency
 
 Amazon S3 is *an eventually consistent object store*. That is: not a filesystem.
 

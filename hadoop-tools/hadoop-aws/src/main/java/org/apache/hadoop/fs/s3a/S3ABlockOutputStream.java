@@ -161,11 +161,11 @@ class S3ABlockOutputStream extends OutputStream {
     this.progressListener = (progress instanceof ProgressListener) ?
         (ProgressListener) progress
         : new ProgressableListener(progress);
-    LOG.debug("Initialized S3ABlockOutputStream for {}" +
-            " output to {}", writeOperationHelper, activeBlock);
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
     maybeCreateBlock();
+    LOG.debug("Initialized S3ABlockOutputStream for {}" +
+        " output to {}", writeOperationHelper, activeBlock);
   }
 
   /**
