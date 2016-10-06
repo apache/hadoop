@@ -31,7 +31,7 @@ import com.google.common.collect.Lists;
  * instances are immutable. Use a {@link Builder} to create a new instance.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Stable
 public class AclStatus {
   private final String owner;
   private final String group;
