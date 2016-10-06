@@ -317,7 +317,7 @@ public class JsonUtil {
 
     final List<String> stringEntries = new ArrayList<>();
     for (AclEntry entry : status.getEntries()) {
-      stringEntries.add(entry.toString());
+      stringEntries.add(entry.toStringStable());
     }
     m.put("entries", stringEntries);
 
