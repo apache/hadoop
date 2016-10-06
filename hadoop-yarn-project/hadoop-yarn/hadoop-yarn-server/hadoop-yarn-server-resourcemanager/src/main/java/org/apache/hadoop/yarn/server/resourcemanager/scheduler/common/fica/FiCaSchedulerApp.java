@@ -19,6 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -66,12 +73,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocato
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Represents an application attempt from the viewpoint of the FIFO or Capacity
@@ -665,6 +666,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     } finally {
       writeLock.unlock();
     }
+  }
 
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return this.writeLock;
   }
 }

@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerChangeRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
@@ -2231,6 +2232,22 @@ public class LeafQueue extends AbstractCSQueue {
           + " decreased container:" + decreaseRequest.getContainerId()
           + " from " + resourceBeforeDecrease + " to "
           + decreaseRequest.getTargetCapacity());
+    }
+  }
+
+  public void updateApplicationPriority(SchedulerApplication<FiCaSchedulerApp> app,
+      Priority newAppPriority) {
+    try {
+      writeLock.lock();
+      FiCaSchedulerApp attempt = app.getCurrentAppAttempt();
+      getOrderingPolicy().removeSchedulableEntity(attempt);
+
+      // Update new priority in SchedulerApplication
+      attempt.setPriority(newAppPriority);
+
+      getOrderingPolicy().addSchedulableEntity(attempt);
+    } finally {
+      writeLock.unlock();
     }
   }
 
