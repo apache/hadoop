@@ -64,6 +64,9 @@ Release 2.7.4 - UNRELEASED
     "hadoop.security.keystore.JavaKeyStoreProvider.password" should be updated with
     new name. (Contributed by Surendra Singh Lilhore via Brahma Reddy Battula)
 
+    HADOOP-13670. Update CHANGES.txt to reflect all the changes in branch-2.7.
+    (Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
