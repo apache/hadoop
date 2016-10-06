@@ -2858,7 +2858,15 @@ public abstract class FileSystem extends Configured implements Closeable {
                   ClassUtil.findContainingJar(fs.getClass()), e);
             }
           } catch (ServiceConfigurationError ee) {
-            LOG.warn("Cannot load filesystem", ee);
+            LOG.warn("Cannot load filesystem: " + ee);
+            Throwable cause = ee.getCause();
+            // print all the nested exception messages
+            while (cause != null) {
+              LOG.warn(cause.toString());
+              cause = cause.getCause();
+            }
+            // and at debug: the full stack
+            LOG.debug("Stack Trace", ee);
           }
         }
         FILE_SYSTEMS_LOADED = true;
