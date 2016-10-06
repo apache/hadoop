@@ -890,8 +890,10 @@ public class TestUserGroupInformation {
     ugi.addToken(new Text("regular-token"), token);
 
     // Now add cloned private token
-    ugi.addToken(new Text("private-token"), new Token.PrivateToken<TestTokenIdentifier>(token));
-    ugi.addToken(new Text("private-token1"), new Token.PrivateToken<TestTokenIdentifier>(token));
+    Text service = new Text("private-token");
+    ugi.addToken(service, token.privateClone(service));
+    Text service1 = new Text("private-token1");
+    ugi.addToken(service1, token.privateClone(service1));
 
     // Ensure only non-private tokens are returned
     Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
