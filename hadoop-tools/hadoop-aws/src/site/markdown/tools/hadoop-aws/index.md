@@ -883,7 +883,7 @@ or as a 400 Bad Request.
 
 
 
-### <a href="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
+### <a name="s3a_fast_upload"></a>Stabilizing: S3A Fast Upload
 
 
 **New in Hadoop 2.7; significantly enhanced in Hadoop 2.9**
@@ -1026,7 +1026,7 @@ or read when the multipart operation completes in the `close()` call, which
 will block until the upload is completed.
 
 
-#### <a href="s3a_fast_upload_disk"></a>Fast Upload with Disk Buffers `fs.s3a.fast.upload.buffer=disk`
+#### <a name="s3a_fast_upload_disk"></a>Fast Upload with Disk Buffers `fs.s3a.fast.upload.buffer=disk`
 
 When `fs.s3a.fast.upload.buffer` is set to `disk`, all data is buffered
 to local hard disks prior to upload. This minimizes the amount of memory
@@ -1049,7 +1049,7 @@ consumed, and so eliminates heap size as the limiting factor in queued uploads
 ```
 
 
-#### <a href="s3a_fast_upload_bytebuffer"></a>Fast Upload with ByteBuffers: `fs.s3a.fast.upload.buffer=bytebuffer`
+#### <a name="s3a_fast_upload_bytebuffer"></a>Fast Upload with ByteBuffers: `fs.s3a.fast.upload.buffer=bytebuffer`
 
 When `fs.s3a.fast.upload.buffer` is set to `bytebuffer`, all data is buffered
 in "Direct" ByteBuffers prior to upload. This *may* be faster than buffering to disk,
@@ -1077,7 +1077,7 @@ of memory.
 </property>
 ```
 
-#### <a href="s3a_fast_upload_array"></a>Fast Upload with Arrays: `fs.s3a.fast.upload.buffer=array`
+#### <a name="s3a_fast_upload_array"></a>Fast Upload with Arrays: `fs.s3a.fast.upload.buffer=array`
 
 When `fs.s3a.fast.upload.buffer` is set to `array`, all data is buffered
 in byte arrays in the JVM's heap prior to upload.
@@ -1102,7 +1102,7 @@ the risk of heap overflows.
 </property>
 
 ```
-#### <a href="s3a_fast_upload_thread_tuning"></a>S3A Fast Upload Thread Tuning
+#### <a name="s3a_fast_upload_thread_tuning"></a>S3A Fast Upload Thread Tuning
 
 Both the [Array](#s3a_fast_upload_array) and [Byte buffer](#s3a_fast_upload_bytebuffer)
 buffer mechanisms can consume very large amounts of memory, on-heap or
@@ -1197,7 +1197,7 @@ from VMs running on EC2.
 ```
 
 
-#### <a href="s3a_multipart_purge"></a>Cleaning up After Incremental Upload Failures: `fs.s3a.multipart.purge`
+#### <a name="s3a_multipart_purge"></a>Cleaning up After Incremental Upload Failures: `fs.s3a.multipart.purge`
 
 
 If an incremental streaming operation is interrupted, there may be 
