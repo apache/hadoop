@@ -23,13 +23,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounter;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounterGroup;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
 
 import org.apache.hadoop.util.StringUtils;
-import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
  * A {@link LoggedTask} represents a [hadoop] task that is part of a hadoop job.

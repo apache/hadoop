@@ -21,16 +21,17 @@ import java.io.IOException;
 
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.codehaus.jackson.JsonEncoding;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -139,9 +140,9 @@ public class TestHistograms {
         Path goldFilePath = new Path(filePath.getParent(), "gold"+testName);
 
         ObjectMapper mapper = new ObjectMapper();
-        JsonFactory factory = mapper.getJsonFactory();
+        JsonFactory factory = mapper.getFactory();
         FSDataOutputStream ostream = lfs.create(goldFilePath, true);
-        JsonGenerator gen = factory.createJsonGenerator(ostream,
+        JsonGenerator gen = factory.createGenerator(ostream,
             JsonEncoding.UTF8);
         gen.useDefaultPrettyPrinter();
         

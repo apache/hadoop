@@ -19,13 +19,13 @@ package org.apache.hadoop.tools.rumen.state;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.tools.rumen.state.StatePool.StatePair;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.DeserializationContext;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.deser.std.StdDeserializer;
-import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * Rumen JSON deserializer for deserializing the {@link State} object.
@@ -46,7 +46,7 @@ public class StateDeserializer extends StdDeserializer<StatePair> {
     
     try {
       stateClass = 
-        Class.forName(statePairObject.get("className").getTextValue().trim());
+        Class.forName(statePairObject.get("className").textValue().trim());
     } catch (ClassNotFoundException cnfe) {
       throw new RuntimeException("Invalid classname!", cnfe);
     }
