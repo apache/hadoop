@@ -72,8 +72,11 @@ final class FSDirEncryptionZoneOp {
    * @return New EDEK, or null if ezKeyName is null
    * @throws IOException
    */
-  static EncryptedKeyVersion generateEncryptedDataEncryptionKey(
+  private static EncryptedKeyVersion generateEncryptedDataEncryptionKey(
       final FSDirectory fsd, final String ezKeyName) throws IOException {
+    // must not be holding lock during this operation
+    assert !fsd.getFSNamesystem().hasReadLock();
+    assert !fsd.getFSNamesystem().hasWriteLock();
     if (ezKeyName == null) {
       return null;
     }
@@ -147,23 +150,21 @@ final class FSDirEncryptionZoneOp {
       final String keyName, final boolean logRetryCache) throws IOException {
     final CipherSuite suite = CipherSuite.convert(cipher);
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-    final String src;
     // For now this is hard coded, as we only support one method.
     final CryptoProtocolVersion version =
         CryptoProtocolVersion.ENCRYPTION_ZONES;
 
+    final INodesInPath iip;
     fsd.writeLock();
     try {
-      final INodesInPath iip = fsd.resolvePath(pc, srcArg);
-      src = iip.getPath();
-      final XAttr ezXAttr = fsd.ezManager.createEncryptionZone(src, suite,
+      iip = fsd.resolvePathForWrite(pc, srcArg);
+      final XAttr ezXAttr = fsd.ezManager.createEncryptionZone(iip, suite,
           version, keyName);
       xAttrs.add(ezXAttr);
     } finally {
       fsd.writeUnlock();
     }
-    fsd.getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-    final INodesInPath iip = fsd.getINodesInPath4Write(src, false);
+    fsd.getEditLog().logSetXAttrs(iip.getPath(), xAttrs, logRetryCache);
     return fsd.getAuditFileInfo(iip);
   }
 
@@ -223,8 +224,9 @@ final class FSDirEncryptionZoneOp {
    * @param info file encryption information
    * @throws IOException
    */
-  static void setFileEncryptionInfo(final FSDirectory fsd, final String src,
-      final FileEncryptionInfo info) throws IOException {
+  static void setFileEncryptionInfo(final FSDirectory fsd,
+      final INodesInPath iip, final FileEncryptionInfo info)
+          throws IOException {
     // Make the PB for the xattr
     final HdfsProtos.PerFileEncryptionInfoProto proto =
         PBHelperClient.convertPerFileEncInfo(info);
@@ -235,7 +237,7 @@ final class FSDirEncryptionZoneOp {
     xAttrs.add(fileEncryptionAttr);
     fsd.writeLock();
     try {
-      FSDirXAttrOp.unprotectedSetXAttrs(fsd, src, xAttrs,
+      FSDirXAttrOp.unprotectedSetXAttrs(fsd, iip, xAttrs,
                                         EnumSet.of(XAttrSetFlag.CREATE));
     } finally {
       fsd.writeUnlock();
@@ -246,21 +248,18 @@ final class FSDirEncryptionZoneOp {
    * This function combines the per-file encryption info (obtained
    * from the inode's XAttrs), and the encryption info from its zone, and
    * returns a consolidated FileEncryptionInfo instance. Null is returned
-   * for non-encrypted files.
+   * for non-encrypted or raw files.
    *
    * @param fsd fsdirectory
-   * @param inode inode of the file
-   * @param snapshotId ID of the snapshot that
-   *                   we want to get encryption info from
    * @param iip inodes in the path containing the file, passed in to
-   *            avoid obtaining the list of inodes again; if iip is
-   *            null then the list of inodes will be obtained again
+   *            avoid obtaining the list of inodes again
    * @return consolidated file encryption info; null for non-encrypted files
    */
   static FileEncryptionInfo getFileEncryptionInfo(final FSDirectory fsd,
-      final INode inode, final int snapshotId, final INodesInPath iip)
-      throws IOException {
-    if (!inode.isFile() || !fsd.ezManager.hasCreatedEncryptionZone()) {
+      final INodesInPath iip) throws IOException {
+    if (iip.isRaw() ||
+        !fsd.ezManager.hasCreatedEncryptionZone() ||
+        !iip.getLastINode().isFile()) {
       return null;
     }
     fsd.readLock();
@@ -280,8 +279,8 @@ final class FSDirEncryptionZoneOp {
       final CryptoProtocolVersion version = encryptionZone.getVersion();
       final CipherSuite suite = encryptionZone.getSuite();
       final String keyName = encryptionZone.getKeyName();
-      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(inode,
-          snapshotId, CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
+      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByPrefixedName(
+          iip, CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
 
       if (fileXAttr == null) {
         NameNode.LOG.warn("Could not find encryption XAttr for file " +
@@ -295,15 +294,53 @@ final class FSDirEncryptionZoneOp {
         return PBHelperClient.convert(fileProto, suite, version, keyName);
       } catch (InvalidProtocolBufferException e) {
         throw new IOException("Could not parse file encryption info for " +
-            "inode " + inode, e);
+            "inode " + iip.getPath(), e);
       }
     } finally {
       fsd.readUnlock();
     }
   }
 
+  /**
+   * If the file and encryption key are valid, return the encryption info,
+   * else throw a retry exception.  The startFile method generates the EDEK
+   * outside of the lock so the zone must be reverified.
+   *
+   * @param dir fsdirectory
+   * @param iip inodes in the file path
+   * @param ezInfo the encryption key
+   * @return FileEncryptionInfo for the file
+   * @throws RetryStartFileException if key is inconsistent with current zone
+   */
+  static FileEncryptionInfo getFileEncryptionInfo(FSDirectory dir,
+      INodesInPath iip, EncryptionKeyInfo ezInfo)
+          throws RetryStartFileException {
+    FileEncryptionInfo feInfo = null;
+    final EncryptionZone zone = getEZForPath(dir, iip);
+    if (zone != null) {
+      // The path is now within an EZ, but we're missing encryption parameters
+      if (ezInfo == null) {
+        throw new RetryStartFileException();
+      }
+      // Path is within an EZ and we have provided encryption parameters.
+      // Make sure that the generated EDEK matches the settings of the EZ.
+      final String ezKeyName = zone.getKeyName();
+      if (!ezKeyName.equals(ezInfo.edek.getEncryptionKeyName())) {
+        throw new RetryStartFileException();
+      }
+      feInfo = new FileEncryptionInfo(ezInfo.suite, ezInfo.protocolVersion,
+          ezInfo.edek.getEncryptedKeyVersion().getMaterial(),
+          ezInfo.edek.getEncryptedKeyIv(),
+          ezKeyName, ezInfo.edek.getEncryptionKeyVersionName());
+    }
+    return feInfo;
+  }
+
   static boolean isInAnEZ(final FSDirectory fsd, final INodesInPath iip)
       throws UnresolvedLinkException, SnapshotAccessControlException {
+    if (!fsd.ezManager.hasCreatedEncryptionZone()) {
+      return false;
+    }
     fsd.readLock();
     try {
       return fsd.ezManager.isInAnEZ(iip);
@@ -397,6 +434,69 @@ final class FSDirEncryptionZoneOp {
           NameNode.LOG.warn("Last seen exception:", lastSeenIOE);
         }
       }
+    }
+  }
+
+  /**
+   * If the file is in an encryption zone, we optimistically create an
+   * EDEK for the file by calling out to the configured KeyProvider.
+   * Since this typically involves doing an RPC, the fsn lock is yielded.
+   *
+   * Since the path can flip-flop between being in an encryption zone and not
+   * in the meantime, the call MUST re-resolve the IIP and re-check
+   * preconditions if this method does not return null;
+   *
+   * @param fsn the namesystem.
+   * @param iip the inodes for the path
+   * @param supportedVersions client's supported versions
+   * @return EncryptionKeyInfo if the path is in an EZ, else null
+   */
+  static EncryptionKeyInfo getEncryptionKeyInfo(FSNamesystem fsn,
+      INodesInPath iip, CryptoProtocolVersion[] supportedVersions)
+      throws IOException {
+    FSDirectory fsd = fsn.getFSDirectory();
+    // Nothing to do if the path is not within an EZ
+    final EncryptionZone zone = getEZForPath(fsd, iip);
+    if (zone == null) {
+      EncryptionFaultInjector.getInstance().startFileNoKey();
+      return null;
+    }
+    CryptoProtocolVersion protocolVersion = fsn.chooseProtocolVersion(
+        zone, supportedVersions);
+    CipherSuite suite = zone.getSuite();
+    String ezKeyName = zone.getKeyName();
+
+    Preconditions.checkNotNull(protocolVersion);
+    Preconditions.checkNotNull(suite);
+    Preconditions.checkArgument(!suite.equals(CipherSuite.UNKNOWN),
+                                "Chose an UNKNOWN CipherSuite!");
+    Preconditions.checkNotNull(ezKeyName);
+
+    // Generate EDEK while not holding the fsn lock.
+    fsn.writeUnlock();
+    try {
+      EncryptionFaultInjector.getInstance().startFileBeforeGenerateKey();
+      return new EncryptionKeyInfo(protocolVersion, suite, ezKeyName,
+          generateEncryptedDataEncryptionKey(fsd, ezKeyName));
+    } finally {
+      fsn.writeLock();
+      EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
+    }
+  }
+
+  static class EncryptionKeyInfo {
+    final CryptoProtocolVersion protocolVersion;
+    final CipherSuite suite;
+    final String ezKeyName;
+    final KeyProviderCryptoExtension.EncryptedKeyVersion edek;
+
+    EncryptionKeyInfo(
+        CryptoProtocolVersion protocolVersion, CipherSuite suite,
+        String ezKeyName, KeyProviderCryptoExtension.EncryptedKeyVersion edek) {
+      this.protocolVersion = protocolVersion;
+      this.suite = suite;
+      this.ezKeyName = ezKeyName;
+      this.edek = edek;
     }
   }
 }

@@ -163,7 +163,7 @@ class FSDirStatAndListingOp {
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
-        fsd.checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
+        fsd.checkUnreadableBySuperuser(pc, iip);
       }
 
       final long fileSize = iip.isSnapshot()
@@ -178,9 +178,8 @@ class FSDirStatAndListingOp {
         isUc = false;
       }
 
-      final FileEncryptionInfo feInfo = iip.isRaw() ? null
-          : FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, inode,
-          iip.getPathSnapshotId(), iip);
+      final FileEncryptionInfo feInfo =
+          FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, iip);
       final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp.
           getErasureCodingPolicy(fsd.getFSNamesystem(), iip);
 
@@ -415,14 +414,12 @@ class FSDirStatAndListingOp {
     long size = 0;     // length is zero for directories
     short replication = 0;
     long blocksize = 0;
-    final boolean isEncrypted;
     final INode node = iip.getLastINode();
     final int snapshot = iip.getPathSnapshotId();
-    final boolean isRawPath = iip.isRaw();
     LocatedBlocks loc = null;
 
-    final FileEncryptionInfo feInfo = isRawPath ? null : FSDirEncryptionZoneOp
-        .getFileEncryptionInfo(fsd, node, snapshot, iip);
+    final boolean isEncrypted = FSDirEncryptionZoneOp.isInAnEZ(fsd, iip);
+    FileEncryptionInfo feInfo = null;
 
     final ErasureCodingPolicy ecPolicy = FSDirErasureCodingOp
         .getErasureCodingPolicy(fsd.getFSNamesystem(), iip);
@@ -432,8 +429,9 @@ class FSDirStatAndListingOp {
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
       blocksize = fileNode.getPreferredBlockSize();
-      isEncrypted = (feInfo != null)
-          || (isRawPath && FSDirEncryptionZoneOp.isInAnEZ(fsd, iip));
+      if (isEncrypted) {
+        feInfo = FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, iip);
+      }
       if (needLocation) {
         final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
         final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
@@ -446,8 +444,6 @@ class FSDirStatAndListingOp {
           loc = new LocatedBlocks();
         }
       }
-    } else {
-      isEncrypted = FSDirEncryptionZoneOp.isInAnEZ(fsd, iip);
     }
 
     int childrenNum = node.isDirectory() ?

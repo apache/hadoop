@@ -141,7 +141,7 @@ final class FSDirErasureCodingOp {
     }
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ecXAttr);
-    FSDirXAttrOp.unprotectedSetXAttrs(fsd, src, xattrs,
+    FSDirXAttrOp.unprotectedSetXAttrs(fsd, srcIIP, xattrs,
         EnumSet.of(XAttrSetFlag.CREATE));
     return xattrs;
   }
