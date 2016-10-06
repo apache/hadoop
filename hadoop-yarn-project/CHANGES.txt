@@ -19,6 +19,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5540. Scheduler spends too much time looking at empty priorities
     (jlowe)
 
+    YARN-5550. TestYarnCLI#testGetContainers should format according to
+    CONTAINER_PATTERN. (Jonathan Hung via Zhe Zhang)
+
   BUG FIXES
 
     YARN-5197. RM leaks containers if running container disappears from
@@ -50,7 +53,7 @@ Release 2.7.4 - UNRELEASED
     YARN-5382. RM does not audit log kill request for active applications
     (Vrushali C via jlowe)
 
-Release 2.7.3 - UNRELEASED
+Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
 

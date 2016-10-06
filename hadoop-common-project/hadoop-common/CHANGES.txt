@@ -37,11 +37,34 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13579. Fix source-level compatibility after HADOOP-11252.
     (Tsuyoshi Ozawa via aajisaka)
 
+    HADOOP-13494. ReconfigurableBase can log sensitive information.
+    (Sean Mackrory via Andrew Wang)
+
+    HADOOP-13512. ReloadingX509TrustManager should keep reloading in
+    case of exception. (Mingliang Liu)
+
+    HADOOP-12668. Support excluding weak Ciphers in HttpServer2 through
+    ssl-server.conf. (Vijay Singh via Zhe Zhang)
+
+    HADOOP-12765. HttpServer2 should switch to using the non-blocking
+    SslSelectChannelConnector to prevent performance degradation when
+    handling SSL connections.
+    (Min Shen,Wei-Chiu Chuang via Zhe Zhang)
+
+    HADOOP-13558. UserGroupInformation created from a Subject incorrectly
+    triesto renew the Kerberos ticket. (Xiao Chen).
+
+    HADOOP-13601. Fix a log message typo in AbstractDelegationTokenSecretManager
+    . (Mehran Hassani via Mingliang Liu).
+
+    HADOOP-11780. Prevent IPC reader thread death.
+    (Daryn Sharp via kihwal).
+
     HADOOP-12597. In kms-site.xml configuration
     "hadoop.security.keystore.JavaKeyStoreProvider.password" should be updated with
     new name. (Contributed by Surendra Singh Lilhore via Brahma Reddy Battula)
 
-Release 2.7.3 - UNRELEASED
+Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
 
@@ -187,6 +210,9 @@ Release 2.7.3 - UNRELEASED
 
     HADOOP-13312. Updated CHANGES.txt to reflect all the changes in branch-2.7.
     (Akira Ajisaka via vinodkv)
+
+    HADOOP-13434. Add bash quoting to Shell class.
+    (Owen O'Malley via Arpit Agarwal)
 
   INCOMPATIBLE CHANGES
 

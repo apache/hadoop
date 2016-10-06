@@ -26,7 +26,11 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6771. RMContainerAllocator sends container diagnostics event
     after corresponding completion event (Haibo Chen via jlowe)
 
-Release 2.7.3 - UNRELEASED
+    MAPREDUCE-6763. Shuffle server listen queue is too small.
+    (Jason Lowe via Varun Saxena)
+
+
+Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
 

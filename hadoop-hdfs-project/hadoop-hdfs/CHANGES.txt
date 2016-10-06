@@ -4,11 +4,53 @@ Release 2.7.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-7933. fsck should also report decommissioning replicas.
+    (Xiaoyu Yao via Chris Nauroth).
+
   NEW FEATURES
+
+    HDFS-9804. Allow long-running Balancer to login with keytab.
+    (Xiao Chen via Zhe Zhang)
 
   IMPROVEMENTS
 
+    HDFS-8721. Add a metric for number of encryption zones.
+    (Rakesh R via Chris Nauroth)
+
+    HDFS-8883. NameNode Metrics : Add FSNameSystem lock Queue Length.
+    (Anu Engineer via Xiaoyu Yao)
+
+    HDFS-8818. Changes the global moveExecutor to per datanode executors and
+    changes MAX_SIZE_TO_MOVE to be configurable.(Tsz Wo Nicholas Sze)
+
+    HDFS-8200. Refactor FSDirStatAndListingOp. (Haohui Mai)
+
+    HDFS-9621. Consolidate FSDirStatAndListingOp#createFileStatus to let
+    its INodesInPath parameter always include the target INode.
+    (Jing Zhao)
+
+    HDFS-10656. Optimize conversion of byte arrays back to path string.
+    (Daryn Sharp via kihwal)
+
+    HDFS-10674. Optimize creating a full path from an inode.
+    (Daryn Sharp via kihwal)
+
+    HDFS-10662. Optimize UTF8 string/byte conversions.
+    (Daryn Sharp via kihwal)
+
+    HDFS-10673. Optimize FSPermissionChecker's internal path usage.
+    (Daryn Sharp via kihwal)
+
+    HDFS-10744. Internally optimize path component resolution.
+    (Daryn Sharp via kihwal)
+
+    HDFS-9145. Tracking methods that hold FSNamesytemLock for too long.
+    (Mingliang Liu via Haohui Mai)
+
   OPTIMIZATIONS
+
+    HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
+    (Erik Krogen via Zhe Zhang)
 
   BUG FIXES
 
@@ -29,6 +71,65 @@ Release 2.7.4 - UNRELEASED
     HDFS-8915. TestFSNamesystem.testFSLockGetWaiterCount fails intermittently.
     (Masatake Iwasaki via kihwal)
 
+    HDFS-10693. metaSave should print blocks, not LightWeightHashSet.
+    (Yuanbo Liu via shv)
+
+    HDFS-10694. processReport() should print blockReportId in each log message.
+    (Yuanbo Liu via shv)
+
+    HDFS-10336. TestBalancer failing intermittently because of not reseting
+    UserGroupInformation completely. (Yiqun Lin via Akira Ajisaka)
+
+    HDFS-9888. Allow reseting KerberosName in unit tests.
+    (Xiao Chen via Zhe Zhang).
+
+    HDFS-10747. o.a.h.hdfs.tools.DebugAdmin usage message is misleading.
+    (Mingliang Liu)
+
+    HDFS-10270. TestJMXGet:testNameNode() fails.
+    (Gergely Novák via kihwal)
+
+    HDFS-8224. Schedule a block for scanning if its metadata file is
+    corrupt. (Rushabh S Shah via We-Chiu Chuang)
+
+    HDFS-9467. Fix data race accessing writeLockHeldTimeStamp in FSNamesystem.
+    (Mingliang Liu via Jing Zhao).
+
+    HDFS-10798. Make the threshold of reporting FSNamesystem lock contention
+    configurable. (Erik Krogen via Zhe Zhang).
+
+    HDFS-10807. Doc about upgrading to a version of HDFS with snapshots may be
+    confusing. (Mingliang Liu)
+
+    HDFS-10625. VolumeScanner to report why a block is found bad.
+    (Rushabh S Shah and Yiqun Lin via Yongjun Zhang)
+
+    HDFS-10809. getNumEncryptionZones causes NPE in branch-2.7.
+    (Vinitha Reddy Gankidi via Zhe Zhang)
+
+    HDFS-10655. Fix path related byte array conversion bugs. (daryn)
+
+    HDFS-10817. Add Logging for Long-held NN Read Locks.
+    (Erik Krogen via Zhe Zhang)
+
+    HDFS-9038. DFS reserved space is erroneously counted towards non-DFS used.
+    (Brahma Reddy Battula)
+
+    HDFS-10276. HDFS should not expose path info that user has no permission
+    to see. (Yuanbo Liu via Yongjun Zhang)
+
+    HDFS-10716. In Balancer, the target task should be removed when its size
+     < 0. (Yiqun Lin via Tsz Wo Nicholas Sze)
+
+    HDFS-10843. Update space quota when a UC block is completed rather
+    than committed. (Erik Krogen via shv)
+
+    HDFS-10915. Fix time measurement bug in TestDatanodeRestart.
+    (Xiaobing Zhou via Mingliang Liu)
+
+    HDFS-10713. Throttle FsNameSystem lock warnings.
+    (Hanisha Koneru via arp)
+
     HDFS-9885. Correct the distcp counters name while displaying counters.
     (Contributed by Surendra Singh Lilhore via Brahma Reddy Battula)
 
@@ -38,7 +139,11 @@ Release 2.7.4 - UNRELEASED
     HDFS-10878. TestDFSClientRetries#testIdempotentAllocateBlockAndClose
     throws ConcurrentModificationException. (Rushabh S Shaah via kihwal)
 
-Release 2.7.3 - UNRELEASED
+    HDFS-10609. Uncaught InvalidEncryptionKeyException during pipeline
+    recovery may abort downstream applications.
+    (Wei-Chiu Chuang)
+
+Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
 
