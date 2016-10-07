@@ -17,7 +17,12 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.Random;
 import javax.servlet.ServletContext;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.curator.test.TestingServer;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -25,7 +30,6 @@ import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,8 +38,13 @@ public class TestZKSignerSecretProvider {
   private TestingServer zkServer;
 
   // rollover every 2 sec
-  private final int timeout = 4000;
-  private final long rolloverFrequency = Long.valueOf(timeout / 2);
+  private final int timeout = 100;
+  private final long rolloverFrequency = timeout / 2;
+
+  static final Log LOG = LogFactory.getLog(TestZKSignerSecretProvider.class);
+  {
+    LogManager.getLogger( RolloverSignerSecretProvider.LOG.getName() ).setLevel(Level.DEBUG);
+  }
 
   @Before
   public void setup() throws Exception {
@@ -60,8 +69,8 @@ public class TestZKSignerSecretProvider {
     byte[] secret2 = Long.toString(rand.nextLong()).getBytes();
     byte[] secret1 = Long.toString(rand.nextLong()).getBytes();
     byte[] secret3 = Long.toString(rand.nextLong()).getBytes();
-    ZKSignerSecretProvider secretProvider =
-        spy(new ZKSignerSecretProvider(seed));
+    MockZKSignerSecretProvider secretProvider =
+        spy(new MockZKSignerSecretProvider(seed));
     Properties config = new Properties();
     config.setProperty(
         ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
@@ -77,7 +86,8 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret1, allSecrets[0]);
       Assert.assertNull(allSecrets[1]);
-      verify(secretProvider, timeout(timeout).times(1)).rollSecret();
+      verify(secretProvider, timeout(timeout).atLeastOnce()).rollSecret();
+      secretProvider.realRollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -85,7 +95,8 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret2, allSecrets[0]);
       Assert.assertArrayEquals(secret1, allSecrets[1]);
-      verify(secretProvider, timeout(timeout).times(2)).rollSecret();
+      verify(secretProvider, timeout(timeout).atLeast(2)).rollSecret();
+      secretProvider.realRollSecret();
 
       currentSecret = secretProvider.getCurrentSecret();
       allSecrets = secretProvider.getAllSecrets();
@@ -93,35 +104,70 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecrets.length);
       Assert.assertArrayEquals(secret3, allSecrets[0]);
       Assert.assertArrayEquals(secret2, allSecrets[1]);
-      verify(secretProvider, timeout(timeout).times(3)).rollSecret();
+      verify(secretProvider, timeout(timeout).atLeast(3)).rollSecret();
+      secretProvider.realRollSecret();
     } finally {
       secretProvider.destroy();
     }
   }
 
+  /**
+   * A hack to test ZKSignerSecretProvider.
+   * We want to test that ZKSignerSecretProvider.rollSecret() is periodically
+   * called at the expected frequency, but we want to exclude the
+   * race-condition.
+   */
+  private class MockZKSignerSecretProvider extends ZKSignerSecretProvider {
+    MockZKSignerSecretProvider(long seed) {
+      super(seed);
+    }
+    @Override
+    protected synchronized void rollSecret() {
+      // this is a no-op: simply used for Mockito to verify that rollSecret()
+      // is periodically called at the expected frequency
+    }
+
+    public void realRollSecret() {
+      // the test code manually calls ZKSignerSecretProvider.rollSecret()
+      // to update the state
+      super.rollSecret();
+    }
+  }
+
   @Test
-  public void testMultipleInit() throws Exception {
-    // use the same seed so we can predict the RNG
+  public void testMultiple1() throws Exception {
+    testMultiple(1);
+  }
+
+  @Test
+  public void testMultiple2() throws Exception {
+    testMultiple(2);
+  }
+
+  /**
+   * @param order:
+   *            1: secretProviderA wins both realRollSecret races
+   *            2: secretProviderA wins 1st race, B wins 2nd
+   * @throws Exception
+   */
+  public void testMultiple(int order) throws Exception {
     long seedA = System.currentTimeMillis();
     Random rand = new Random(seedA);
     byte[] secretA2 = Long.toString(rand.nextLong()).getBytes();
     byte[] secretA1 = Long.toString(rand.nextLong()).getBytes();
+    byte[] secretA3 = Long.toString(rand.nextLong()).getBytes();
+    byte[] secretA4 = Long.toString(rand.nextLong()).getBytes();
     // use the same seed so we can predict the RNG
     long seedB = System.currentTimeMillis() + rand.nextLong();
     rand = new Random(seedB);
     byte[] secretB2 = Long.toString(rand.nextLong()).getBytes();
     byte[] secretB1 = Long.toString(rand.nextLong()).getBytes();
-    // use the same seed so we can predict the RNG
-    long seedC = System.currentTimeMillis() + rand.nextLong();
-    rand = new Random(seedC);
-    byte[] secretC2 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretC1 = Long.toString(rand.nextLong()).getBytes();
-    ZKSignerSecretProvider secretProviderA =
-        spy(new ZKSignerSecretProvider(seedA));
-    ZKSignerSecretProvider secretProviderB =
-        spy(new ZKSignerSecretProvider(seedB));
-    ZKSignerSecretProvider secretProviderC =
-        spy(new ZKSignerSecretProvider(seedC));
+    byte[] secretB3 = Long.toString(rand.nextLong()).getBytes();
+    byte[] secretB4 = Long.toString(rand.nextLong()).getBytes();
+    MockZKSignerSecretProvider secretProviderA =
+        spy(new MockZKSignerSecretProvider(seedA));
+    MockZKSignerSecretProvider secretProviderB =
+        spy(new MockZKSignerSecretProvider(seedB));
     Properties config = new Properties();
     config.setProperty(
         ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
@@ -131,106 +177,23 @@ public class TestZKSignerSecretProvider {
     try {
       secretProviderA.init(config, getDummyServletContext(), rolloverFrequency);
       secretProviderB.init(config, getDummyServletContext(), rolloverFrequency);
-      secretProviderC.init(config, getDummyServletContext(), rolloverFrequency);
 
       byte[] currentSecretA = secretProviderA.getCurrentSecret();
       byte[][] allSecretsA = secretProviderA.getAllSecrets();
       byte[] currentSecretB = secretProviderB.getCurrentSecret();
       byte[][] allSecretsB = secretProviderB.getAllSecrets();
-      byte[] currentSecretC = secretProviderC.getCurrentSecret();
-      byte[][] allSecretsC = secretProviderC.getAllSecrets();
-      Assert.assertArrayEquals(currentSecretA, currentSecretB);
-      Assert.assertArrayEquals(currentSecretB, currentSecretC);
+      Assert.assertArrayEquals(secretA1, currentSecretA);
+      Assert.assertArrayEquals(secretA1, currentSecretB);
       Assert.assertEquals(2, allSecretsA.length);
       Assert.assertEquals(2, allSecretsB.length);
-      Assert.assertEquals(2, allSecretsC.length);
-      Assert.assertArrayEquals(allSecretsA[0], allSecretsB[0]);
-      Assert.assertArrayEquals(allSecretsB[0], allSecretsC[0]);
+      Assert.assertArrayEquals(secretA1, allSecretsA[0]);
+      Assert.assertArrayEquals(secretA1, allSecretsB[0]);
       Assert.assertNull(allSecretsA[1]);
       Assert.assertNull(allSecretsB[1]);
-      Assert.assertNull(allSecretsC[1]);
-      char secretChosen = 'z';
-      if (Arrays.equals(secretA1, currentSecretA)) {
-        Assert.assertArrayEquals(secretA1, allSecretsA[0]);
-        secretChosen = 'A';
-      } else if (Arrays.equals(secretB1, currentSecretB)) {
-        Assert.assertArrayEquals(secretB1, allSecretsA[0]);
-        secretChosen = 'B';
-      }else if (Arrays.equals(secretC1, currentSecretC)) {
-        Assert.assertArrayEquals(secretC1, allSecretsA[0]);
-        secretChosen = 'C';
-      } else {
-        Assert.fail("It appears that they all agreed on the same secret, but "
-                + "not one of the secrets they were supposed to");
-      }
-      verify(secretProviderA, timeout(timeout).times(1)).rollSecret();
-      verify(secretProviderB, timeout(timeout).times(1)).rollSecret();
-      verify(secretProviderC, timeout(timeout).times(1)).rollSecret();
-
-      currentSecretA = secretProviderA.getCurrentSecret();
-      allSecretsA = secretProviderA.getAllSecrets();
-      currentSecretB = secretProviderB.getCurrentSecret();
-      allSecretsB = secretProviderB.getAllSecrets();
-      currentSecretC = secretProviderC.getCurrentSecret();
-      allSecretsC = secretProviderC.getAllSecrets();
-      Assert.assertArrayEquals(currentSecretA, currentSecretB);
-      Assert.assertArrayEquals(currentSecretB, currentSecretC);
-      Assert.assertEquals(2, allSecretsA.length);
-      Assert.assertEquals(2, allSecretsB.length);
-      Assert.assertEquals(2, allSecretsC.length);
-      Assert.assertArrayEquals(allSecretsA[0], allSecretsB[0]);
-      Assert.assertArrayEquals(allSecretsB[0], allSecretsC[0]);
-      Assert.assertArrayEquals(allSecretsA[1], allSecretsB[1]);
-      Assert.assertArrayEquals(allSecretsB[1], allSecretsC[1]);
-      // The second secret used is prechosen by whoever won the init; so it
-      // should match with whichever we saw before
-      if (secretChosen == 'A') {
-        Assert.assertArrayEquals(secretA2, currentSecretA);
-      } else if (secretChosen == 'B') {
-        Assert.assertArrayEquals(secretB2, currentSecretA);
-      } else if (secretChosen == 'C') {
-        Assert.assertArrayEquals(secretC2, currentSecretA);
-      }
-    } finally {
-      secretProviderC.destroy();
-      secretProviderB.destroy();
-      secretProviderA.destroy();
-    }
-  }
-
-  @Test
-  public void testMultipleUnsychnronized() throws Exception {
-    long seedA = System.currentTimeMillis();
-    Random rand = new Random(seedA);
-    byte[] secretA2 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretA1 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretA3 = Long.toString(rand.nextLong()).getBytes();
-    // use the same seed so we can predict the RNG
-    long seedB = System.currentTimeMillis() + rand.nextLong();
-    rand = new Random(seedB);
-    byte[] secretB2 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretB1 = Long.toString(rand.nextLong()).getBytes();
-    byte[] secretB3 = Long.toString(rand.nextLong()).getBytes();
-    ZKSignerSecretProvider secretProviderA =
-        spy(new ZKSignerSecretProvider(seedA));
-    ZKSignerSecretProvider secretProviderB =
-        spy(new ZKSignerSecretProvider(seedB));
-    Properties config = new Properties();
-    config.setProperty(
-        ZKSignerSecretProvider.ZOOKEEPER_CONNECTION_STRING,
-        zkServer.getConnectString());
-    config.setProperty(ZKSignerSecretProvider.ZOOKEEPER_PATH,
-        "/secret");
-    try {
-      secretProviderA.init(config, getDummyServletContext(), rolloverFrequency);
-
-      byte[] currentSecretA = secretProviderA.getCurrentSecret();
-      byte[][] allSecretsA = secretProviderA.getAllSecrets();
-      Assert.assertArrayEquals(secretA1, currentSecretA);
-      Assert.assertEquals(2, allSecretsA.length);
-      Assert.assertArrayEquals(secretA1, allSecretsA[0]);
-      Assert.assertNull(allSecretsA[1]);
-      verify(secretProviderA, timeout(timeout).times(1)).rollSecret();
+      verify(secretProviderA, timeout(timeout).atLeastOnce()).rollSecret();
+      verify(secretProviderB, timeout(timeout).atLeastOnce()).rollSecret();
+      secretProviderA.realRollSecret();
+      secretProviderB.realRollSecret();
 
       currentSecretA = secretProviderA.getCurrentSecret();
       allSecretsA = secretProviderA.getAllSecrets();
@@ -238,18 +201,32 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecretsA.length);
       Assert.assertArrayEquals(secretA2, allSecretsA[0]);
       Assert.assertArrayEquals(secretA1, allSecretsA[1]);
-      Thread.sleep((rolloverFrequency / 5));
 
-      secretProviderB.init(config, getDummyServletContext(), rolloverFrequency);
-
-      byte[] currentSecretB = secretProviderB.getCurrentSecret();
-      byte[][] allSecretsB = secretProviderB.getAllSecrets();
+      currentSecretB = secretProviderB.getCurrentSecret();
+      allSecretsB = secretProviderB.getAllSecrets();
       Assert.assertArrayEquals(secretA2, currentSecretB);
       Assert.assertEquals(2, allSecretsA.length);
       Assert.assertArrayEquals(secretA2, allSecretsB[0]);
       Assert.assertArrayEquals(secretA1, allSecretsB[1]);
-      verify(secretProviderA, timeout(timeout).times(2)).rollSecret();
-      verify(secretProviderB, timeout(timeout).times(1)).rollSecret();
+      verify(secretProviderA, timeout(timeout).atLeast(2)).rollSecret();
+      verify(secretProviderB, timeout(timeout).atLeastOnce()).rollSecret();
+
+      switch (order) {
+        case 1:
+          secretProviderA.realRollSecret();
+          secretProviderB.realRollSecret();
+          secretProviderA.realRollSecret();
+          secretProviderB.realRollSecret();
+          break;
+        case 2:
+          secretProviderB.realRollSecret();
+          secretProviderA.realRollSecret();
+          secretProviderB.realRollSecret();
+          secretProviderA.realRollSecret();
+          break;
+        default:
+          throw new Exception("Invalid order selected");
+      }
 
       currentSecretA = secretProviderA.getCurrentSecret();
       allSecretsA = secretProviderA.getAllSecrets();
@@ -260,13 +237,13 @@ public class TestZKSignerSecretProvider {
       Assert.assertEquals(2, allSecretsB.length);
       Assert.assertArrayEquals(allSecretsA[0], allSecretsB[0]);
       Assert.assertArrayEquals(allSecretsA[1], allSecretsB[1]);
-      if (Arrays.equals(secretA3, currentSecretA)) {
-        Assert.assertArrayEquals(secretA3, allSecretsA[0]);
-      } else if (Arrays.equals(secretB3, currentSecretB)) {
-        Assert.assertArrayEquals(secretB3, allSecretsA[0]);
-      } else {
-        Assert.fail("It appears that they all agreed on the same secret, but "
-                + "not one of the secrets they were supposed to");
+      switch (order) {
+        case 1:
+          Assert.assertArrayEquals(secretA4, allSecretsA[0]);
+          break;
+        case 2:
+          Assert.assertArrayEquals(secretB4, allSecretsA[0]);
+          break;
       }
     } finally {
       secretProviderB.destroy();
