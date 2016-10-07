@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Records;
@@ -52,7 +56,7 @@ public abstract class URL {
   @Public
   @Stable
   public abstract String getScheme();
-  
+
   /**
    * Set the scheme of the URL
    * @param scheme scheme of the URL
@@ -68,7 +72,7 @@ public abstract class URL {
   @Public
   @Stable
   public abstract String getUserInfo();
-  
+
   /**
    * Set the user info of the URL.
    * @param userInfo user info of the URL
@@ -84,7 +88,7 @@ public abstract class URL {
   @Public
   @Stable
   public abstract String getHost();
-  
+
   /**
    * Set the host of the URL.
    * @param host host of the URL
@@ -100,7 +104,7 @@ public abstract class URL {
   @Public
   @Stable
   public abstract int getPort();
-  
+
   /**
    * Set the port of the URL
    * @param port port of the URL
@@ -116,7 +120,7 @@ public abstract class URL {
   @Public
   @Stable
   public abstract String getFile();
-  
+
   /**
    * Set the file of the URL.
    * @param file file of the URL
@@ -124,32 +128,20 @@ public abstract class URL {
   @Public
   @Stable
   public abstract void setFile(String file);
-  
+
   @Public
   @Stable
   public Path toPath() throws URISyntaxException {
-    String scheme = getScheme() == null ? "" : getScheme();
-    
-    String authority = "";
-    if (getHost() != null) {
-      authority = getHost();
-      if (getUserInfo() != null) {
-        authority = getUserInfo() + "@" + authority;
-      }
-      if (getPort() > 0) {
-        authority += ":" + getPort();
-      }
-    }
-    
-    return new Path(
-        (new URI(scheme, authority, getFile(), null, null)).normalize());
+    return new Path(new URI(getScheme(), getUserInfo(),
+      getHost(), getPort(), getFile(), null, null));
   }
-  
-  @Public
-  @Stable
-  public static URL fromURI(URI uri) {
+
+
+  @Private
+  @VisibleForTesting
+  public static URL fromURI(URI uri, Configuration conf) {
     URL url =
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+        RecordFactoryProvider.getRecordFactory(conf).newRecordInstance(
             URL.class);
     if (uri.getHost() != null) {
       url.setHost(uri.getHost());
@@ -162,7 +154,19 @@ public abstract class URL {
     url.setFile(uri.getPath());
     return url;
   }
-  
+
+  @Public
+  @Stable
+  public static URL fromURI(URI uri) {
+    return fromURI(uri, null);
+  }
+
+  @Private
+  @VisibleForTesting
+  public static URL fromPath(Path path, Configuration conf) {
+    return fromURI(path.toUri(), conf);
+  }
+
   @Public
   @Stable
   public static URL fromPath(Path path) {
