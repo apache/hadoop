@@ -505,7 +505,7 @@ public interface MRJobConfig {
    */
   public static final String MR_CLIENT_JOB_MAX_RETRIES =
       MR_PREFIX + "client.job.max-retries";
-  public static final int DEFAULT_MR_CLIENT_JOB_MAX_RETRIES = 0;
+  public static final int DEFAULT_MR_CLIENT_JOB_MAX_RETRIES = 3;
 
   /**
    * How long to wait between jobclient retries on failure
