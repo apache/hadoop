@@ -66,7 +66,7 @@ class FSDirMkdirOp {
         }
 
         if (!createParent) {
-          fsd.verifyParentDir(iip, src);
+          fsd.verifyParentDir(iip);
         }
 
         // validate that we have enough inodes. This is, at best, a
