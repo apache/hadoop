@@ -260,12 +260,14 @@ public class EncryptionZoneManager {
    *
    * @param srcIIP source IIP
    * @param dstIIP destination IIP
-   * @param src    source path, used for debugging
    * @throws IOException if the src cannot be renamed to the dst
    */
-  void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP, String src)
+  void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP)
       throws IOException {
     assert dir.hasReadLock();
+    if (!hasCreatedEncryptionZone()) {
+      return;
+    }
     final EncryptionZoneInt srcParentEZI =
         getParentEncryptionZoneForPath(srcIIP);
     final EncryptionZoneInt dstParentEZI =
@@ -274,17 +276,17 @@ public class EncryptionZoneManager {
     final boolean dstInEZ = (dstParentEZI != null);
     if (srcInEZ && !dstInEZ) {
       throw new IOException(
-          src + " can't be moved from an encryption zone.");
+          srcIIP.getPath() + " can't be moved from an encryption zone.");
     } else if (dstInEZ && !srcInEZ) {
       throw new IOException(
-          src + " can't be moved into an encryption zone.");
+          srcIIP.getPath() + " can't be moved into an encryption zone.");
     }
 
     if (srcInEZ) {
       if (srcParentEZI != dstParentEZI) {
         final String srcEZPath = getFullPathName(srcParentEZI);
         final String dstEZPath = getFullPathName(dstParentEZI);
-        final StringBuilder sb = new StringBuilder(src);
+        final StringBuilder sb = new StringBuilder(srcIIP.getPath());
         sb.append(" can't be moved from encryption zone ");
         sb.append(srcEZPath);
         sb.append(" to encryption zone ");
@@ -300,15 +302,14 @@ public class EncryptionZoneManager {
    * <p/>
    * Called while holding the FSDirectory lock.
    */
-  XAttr createEncryptionZone(String src, CipherSuite suite,
+  XAttr createEncryptionZone(INodesInPath srcIIP, CipherSuite suite,
       CryptoProtocolVersion version, String keyName)
       throws IOException {
     assert dir.hasWriteLock();
 
     // Check if src is a valid path for new EZ creation
-    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
-    if (srcIIP == null || srcIIP.getLastINode() == null) {
-      throw new FileNotFoundException("cannot find " + src);
+    if (srcIIP.getLastINode() == null) {
+      throw new FileNotFoundException("cannot find " + srcIIP.getPath());
     }
     if (dir.isNonEmptyDirectory(srcIIP)) {
       throw new IOException(
@@ -322,8 +323,8 @@ public class EncryptionZoneManager {
 
     if (hasCreatedEncryptionZone() && encryptionZones.
         get(srcINode.getId()) != null) {
-      throw new IOException("Directory " + src + " is already an encryption " +
-          "zone.");
+      throw new IOException(
+          "Directory " + srcIIP.getPath() + " is already an encryption zone.");
     }
 
     final HdfsProtos.ZoneEncryptionInfoProto proto =
@@ -335,7 +336,7 @@ public class EncryptionZoneManager {
     xattrs.add(ezXAttr);
     // updating the xattr will call addEncryptionZone,
     // done this way to handle edit log loading
-    FSDirXAttrOp.unprotectedSetXAttrs(dir, src, xattrs,
+    FSDirXAttrOp.unprotectedSetXAttrs(dir, srcIIP, xattrs,
                                       EnumSet.of(XAttrSetFlag.CREATE));
     return ezXAttr;
   }
