@@ -105,13 +105,15 @@ public interface S3ATestConstants {
 
   /**
    * Name of the property to define the file size for the huge file
-   * tests: {@value}. Measured in MB.
+   * tests: {@value}.
+   * Measured in KB; a suffix like "M", or "G" will change the unit.
    */
   String KEY_HUGE_FILESIZE = S3A_SCALE_TEST + "huge.filesize";
 
   /**
    * Name of the property to define the partition size for the huge file
-   * tests: {@value}. Measured in MB.
+   * tests: {@value}.
+   * Measured in KB; a suffix like "M", or "G" will change the unit.
    */
   String KEY_HUGE_PARTITION_SIZE = S3A_SCALE_TEST + "huge.partitionsize";
 

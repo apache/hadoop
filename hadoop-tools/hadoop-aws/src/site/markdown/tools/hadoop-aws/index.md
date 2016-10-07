@@ -2250,7 +2250,7 @@ Only a few properties can be set this way; more will be added.
 | `fs.s3a.scale.test.huge.huge.partitionsize`| Size for partitions in huge file uploads |
 
 The file and partition sizes are numeric values with a k/m/g/t/p suffix depending
-on the desired size. For example: 128M or 2g
+on the desired size. For example: 128M, 128m, 2G, 2G, 4T or even 1P.
 
 #### Scale test configuration options
 
@@ -2305,24 +2305,34 @@ The Huge File tests validate S3A's ability to handle large files —the property
 ```xml
 <property>
   <name>fs.s3a.scale.test.huge.filesize</name>
-  <value>20</value>
+  <value>200M</value>
 </property>
 ```
 
 Amazon S3 handles files larger than 5GB differently than smaller ones.
-Setting the huge filesize to a number greater than 5120) validates support
+Setting the huge filesize to a number greater than that) validates support
 for huge files.
 
 ```xml
 <property>
   <name>fs.s3a.scale.test.huge.filesize</name>
-  <value>5130</value>
+  <value>6G</value>
 </property>
 ```
 
-1. Tests at this scale are slow: they are best executed from hosts running in
+Tests at this scale are slow: they are best executed from hosts running in
 the cloud infrastructure where the S3 endpoint is based.
-1. The tests are executed in an order to only clean up created files after
+Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
+
+```xml
+<property>
+  <name>fs.s3a.scale.test.timeout</name>
+  <value>432000</value>
+</property>
+```
+
+
+The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
 
