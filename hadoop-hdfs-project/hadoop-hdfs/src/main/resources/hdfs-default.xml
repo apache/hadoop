@@ -725,7 +725,7 @@
 
   Setting this limit to 1000 disables compiler thread throttling. Only
   values between 1 and 1000 are valid. Setting an invalid value will result
-  in the throttle being disbled and an error message being logged. 1000 is
+  in the throttle being disabled and an error message being logged. 1000 is
   the default setting.
   </description>
 </property>
@@ -2559,7 +2559,7 @@
   <name>dfs.block.local-path-access.user</name>
   <value></value>
   <description>
-    Comma separated list of the users allowd to open block files
+    Comma separated list of the users allowed to open block files
     on legacy short-circuit local read.
   </description>
 </property>
@@ -3650,7 +3650,7 @@
   <name>dfs.datanode.transferTo.allowed</name>
   <value>true</value>
   <description>
-    If false, break block tranfers on 32-bit machines greater than
+    If false, break block transfers on 32-bit machines greater than
     or equal to 2GB into smaller chunks.
   </description>
 </property>
