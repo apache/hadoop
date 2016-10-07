@@ -86,6 +86,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -119,6 +120,7 @@ public class S3AFileSystem extends FileSystem {
   public static final int DEFAULT_BLOCKSIZE = 32 * 1024 * 1024;
   private URI uri;
   private Path workingDir;
+  private String username;
   private AmazonS3 s3;
   private String bucket;
   private int maxKeys;
@@ -159,7 +161,9 @@ public class S3AFileSystem extends FileSystem {
       instrumentation = new S3AInstrumentation(name);
 
       uri = S3xLoginHelper.buildFSURI(name);
-      workingDir = new Path("/user", System.getProperty("user.name"))
+      // Username is the current user at the time the FS was instantiated.
+      username = UserGroupInformation.getCurrentUser().getShortUserName();
+      workingDir = new Path("/user", username)
           .makeQualified(this.uri, this.getWorkingDirectory());
 
       bucket = name.getHost();
@@ -1387,6 +1391,14 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Get the username of the FS
+   * @return the short name of the user who instantiated the FS
+   */
+  public String getUsername() {
+    return username;
+  }
+
+  /**
    *
    * Make the given path and all non-existent parents into
    * directories. Has the semantics of Unix {@code 'mkdir -p'}.
@@ -1477,14 +1489,14 @@ public class S3AFileSystem extends FileSystem {
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
           LOG.debug("Found exact file: fake directory");
-          return new S3AFileStatus(true, true,
-              path);
+          return new S3AFileStatus(true, true, path, username);
         } else {
           LOG.debug("Found exact file: normal file");
           return new S3AFileStatus(meta.getContentLength(),
               dateToLong(meta.getLastModified()),
               path,
-              getDefaultBlockSize(path));
+              getDefaultBlockSize(path),
+              username);
         }
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() != 404) {
@@ -1502,7 +1514,7 @@ public class S3AFileSystem extends FileSystem {
 
           if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
             LOG.debug("Found file (with /): fake directory");
-            return new S3AFileStatus(true, true, path);
+            return new S3AFileStatus(true, true, path, username);
           } else {
             LOG.warn("Found file (with /): real file? should not happen: {}",
                 key);
@@ -1510,7 +1522,8 @@ public class S3AFileSystem extends FileSystem {
             return new S3AFileStatus(meta.getContentLength(),
                 dateToLong(meta.getLastModified()),
                 path,
-                getDefaultBlockSize(path));
+                getDefaultBlockSize(path),
+                username);
           }
         } catch (AmazonServiceException e) {
           if (e.getStatusCode() != 404) {
@@ -1547,10 +1560,10 @@ public class S3AFileSystem extends FileSystem {
           }
         }
 
-        return new S3AFileStatus(true, false, path);
+        return new S3AFileStatus(true, false, path, username);
       } else if (key.isEmpty()) {
         LOG.debug("Found root directory");
-        return new S3AFileStatus(true, true, path);
+        return new S3AFileStatus(true, true, path, username);
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {

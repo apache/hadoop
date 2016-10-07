@@ -32,18 +32,24 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Evolving
 public class S3AFileStatus extends FileStatus {
   private boolean isEmptyDirectory;
+  private final String owner;
 
   // Directories
-  public S3AFileStatus(boolean isdir, boolean isemptydir, Path path) {
+  public S3AFileStatus(boolean isdir,
+      boolean isemptydir,
+      Path path,
+      String owner) {
     super(0, isdir, 1, 0, 0, path);
     isEmptyDirectory = isemptydir;
+    this.owner = owner;
   }
 
   // Files
   public S3AFileStatus(long length, long modification_time, Path path,
-      long blockSize) {
+      long blockSize, String owner) {
     super(length, false, 1, blockSize, modification_time, path);
     isEmptyDirectory = false;
+    this.owner = owner;
   }
 
   public boolean isEmptyDirectory() {
@@ -52,7 +58,16 @@ public class S3AFileStatus extends FileStatus {
 
   @Override
   public String getOwner() {
-    return System.getProperty("user.name");
+    return owner;
+  }
+
+  /**
+   * The group of an S3A entry is the same as the owner
+   * @return the owner.
+   */
+  @Override
+  public String getGroup() {
+    return owner;
   }
 
   /** Compare if this object is equal to another object.
