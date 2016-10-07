@@ -356,7 +356,7 @@ public class FSEditLogLoader {
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
-        FSDirDeleteOp.deleteForEditLog(fsDir, path, addCloseOp.mtime);
+        FSDirDeleteOp.deleteForEditLog(fsDir, iip, addCloseOp.mtime);
         iip = INodesInPath.replace(iip, iip.length() - 1, null);
         oldFile = null;
       }
@@ -565,10 +565,11 @@ public class FSEditLogLoader {
     }
     case OP_DELETE: {
       DeleteOp deleteOp = (DeleteOp)op;
-      FSDirDeleteOp.deleteForEditLog(
-          fsDir, renameReservedPathsOnUpgrade(deleteOp.path, logVersion),
-          deleteOp.timestamp);
-      
+      final String src = renameReservedPathsOnUpgrade(
+          deleteOp.path, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src, false);
+      FSDirDeleteOp.deleteForEditLog(fsDir, iip, deleteOp.timestamp);
+
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteOp.rpcClientId, deleteOp.rpcCallId);
       }

@@ -3805,7 +3805,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           LOG.warn("Removing lazyPersist file " + bc.getName() + " with no replicas.");
           BlocksMapUpdateInfo toRemoveBlocks =
               FSDirDeleteOp.deleteInternal(
-                  FSNamesystem.this, bc.getName(),
+                  FSNamesystem.this,
                   INodesInPath.fromINode((INodeFile) bc), false);
           changed |= toRemoveBlocks != null;
           if (toRemoveBlocks != null) {
