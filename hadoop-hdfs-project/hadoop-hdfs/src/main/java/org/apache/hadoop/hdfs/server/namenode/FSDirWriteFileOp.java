@@ -323,7 +323,7 @@ class FSDirWriteFileOp {
       }
     } else {
       if (!createParent) {
-        dir.verifyParentDir(iip, src);
+        dir.verifyParentDir(iip);
       }
       if (!flag.contains(CreateFlag.CREATE)) {
         throw new FileNotFoundException("Can't overwrite non-existent " + src);

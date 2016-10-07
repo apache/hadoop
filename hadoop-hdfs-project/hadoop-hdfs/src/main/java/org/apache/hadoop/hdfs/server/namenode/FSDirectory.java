@@ -1765,17 +1765,16 @@ public class FSDirectory implements Closeable {
   /**
    * Verify that parent directory of src exists.
    */
-  void verifyParentDir(INodesInPath iip, String src)
+  void verifyParentDir(INodesInPath iip)
       throws FileNotFoundException, ParentNotDirectoryException {
-    Path parent = new Path(src).getParent();
-    if (parent != null) {
+    if (iip.length() > 2) {
       final INode parentNode = iip.getINode(-2);
       if (parentNode == null) {
         throw new FileNotFoundException("Parent directory doesn't exist: "
-            + parent);
-      } else if (!parentNode.isDirectory() && !parentNode.isSymlink()) {
+            + iip.getParentPath());
+      } else if (!parentNode.isDirectory()) {
         throw new ParentNotDirectoryException("Parent path is not a directory: "
-            + parent);
+            + iip.getParentPath());
       }
     }
   }

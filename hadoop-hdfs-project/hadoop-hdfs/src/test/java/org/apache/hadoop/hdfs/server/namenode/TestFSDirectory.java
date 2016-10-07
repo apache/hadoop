@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.EnumSet;
@@ -30,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -385,5 +387,51 @@ public class TestFSDirectory {
                                             EnumSet.of(XAttrSetFlag.CREATE,
                                                        XAttrSetFlag.REPLACE));
     verifyXAttrsPresent(newXAttrs, 4);
+  }
+
+  @Test
+  public void testVerifyParentDir() throws Exception {
+    hdfs.mkdirs(new Path("/dir1/dir2"));
+    hdfs.createNewFile(new Path("/dir1/file"));
+    hdfs.createNewFile(new Path("/dir1/dir2/file"));
+
+    INodesInPath iip = fsdir.resolvePath(null, "/");
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1");
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1/file");
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir-nonexist/file");
+    try {
+      fsdir.verifyParentDir(iip);
+      fail("expected FNF");
+    } catch (FileNotFoundException fnf) {
+      // expected.
+    }
+
+    iip = fsdir.resolvePath(null, "/dir1/dir2");
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1/dir2/file");
+    fsdir.verifyParentDir(iip);
+
+    iip = fsdir.resolvePath(null, "/dir1/dir-nonexist/file");
+    try {
+      fsdir.verifyParentDir(iip);
+      fail("expected FNF");
+    } catch (FileNotFoundException fnf) {
+      // expected.
+    }
+
+    iip = fsdir.resolvePath(null, "/dir1/file/fail");
+    try {
+      fsdir.verifyParentDir(iip);
+      fail("expected FNF");
+    } catch (ParentNotDirectoryException pnd) {
+      // expected.
+    }
   }
 }
