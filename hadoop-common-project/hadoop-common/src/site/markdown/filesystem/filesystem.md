@@ -669,19 +669,40 @@ exists in the metadata, but no copies of any its blocks can be located;
 
 ### `boolean delete(Path p, boolean recursive)`
 
+Delete a path, be it a file, symbolic link or directory. The
+`recursive` flag indicates whether a recursive delete should take place —if
+unset then a non-empty directory cannot be deleted.
+
+Except in the special case of the root directory, if this API call
+completed successfully then there is nothing at the end of the path.
+That is: the outcome is desired. The return flag simply tells the caller
+whether or not any change was made to the state of the filesystem.
+
+*Note*: many uses of this method surround it with checks for the return value being
+false, raising exception if so. For example
+
+```java
+if (!fs.delete(path, true)) throw new IOException("Could not delete " + path);
+```
+
+This pattern is not needed. Code SHOULD just call `delete(path, recursive)` and
+assume the destination is no longer present —except in the special case of root
+directories, which will always remain (see below for special coverage of root directories).
+
 #### Preconditions
 
-A directory with children and recursive == false cannot be deleted
+A directory with children and `recursive == False` cannot be deleted
 
     if isDir(FS, p) and not recursive and (children(FS, p) != {}) : raise IOException
 
+(HDFS raises `PathIsNotEmptyDirectoryException` here.)
 
 #### Postconditions
 
 
 ##### Nonexistent path
 
-If the file does not exist the FS state does not change
+If the file does not exist the filesystem state does not change
 
     if not exists(FS, p):
         FS' = FS
@@ -700,7 +721,7 @@ A path referring to a file is removed, return value: `True`
         result = True
 
 
-##### Empty root directory
+##### Empty root directory, `recursive == False`
 
 Deleting an empty root does not change the filesystem state
 and may return true or false.
@@ -711,7 +732,10 @@ and may return true or false.
 
 There is no consistent return code from an attempt to delete the root directory.
 
-##### Empty (non-root) directory
+Implementations SHOULD return true; this avoids code which checks for a false
+return value from overreacting.
+
+##### Empty (non-root) directory `recursive == False`
 
 Deleting an empty directory that is not root will remove the path from the FS and
 return true.
@@ -721,26 +745,41 @@ return true.
         result = True
 
 
-##### Recursive delete of root directory
+##### Recursive delete of non-empty root directory
 
 Deleting a root path with children and `recursive==True`
  can do one of two things.
 
-The POSIX model assumes that if the user has
+1. The POSIX model assumes that if the user has
 the correct permissions to delete everything,
 they are free to do so (resulting in an empty filesystem).
 
-    if isDir(FS, p) and isRoot(p) and recursive :
-        FS' = ({["/"]}, {}, {}, {})
-        result = True
+        if isDir(FS, p) and isRoot(p) and recursive :
+            FS' = ({["/"]}, {}, {}, {})
+            result = True
 
-In contrast, HDFS never permits the deletion of the root of a filesystem; the
-filesystem can be taken offline and reformatted if an empty
+1. HDFS never permits the deletion of the root of a filesystem; the
+filesystem must be taken offline and reformatted if an empty
 filesystem is desired.
 
-    if isDir(FS, p) and isRoot(p) and recursive :
-        FS' = FS
-        result = False
+        if isDir(FS, p) and isRoot(p) and recursive :
+            FS' = FS
+            result = False
+
+HDFS has the notion of *Protected Directories*, which are declared in
+the option `fs.protected.directories`. Any attempt to delete such a directory
+or a parent thereof raises an `AccessControlException`. Accordingly, any
+attempt to delete the root directory SHALL, if there is a protected directory,
+result in such an exception being raised.
+
+This specification does not recommend any specific action. Do note, however,
+that the POSIX model assumes that there is a permissions model such that normal
+users do not have the permission to delete that root directory; it is an action
+which only system administrators should be able to perform.
+
+Any filesystem client which interacts with a remote filesystem which lacks
+such a security model, MAY reject calls to `delete("/", true)` on the basis
+that it makes it too easy to lose data.
 
 ##### Recursive delete of non-root directory
 
@@ -766,11 +805,11 @@ removes the path and all descendants
 
 #### Implementation Notes
 
-* S3N, Swift, FTP and potentially other non-traditional FileSystems
-implement `delete()` as recursive listing and file delete operation.
-This can break the expectations of client applications -and means that
-they cannot be used as drop-in replacements for HDFS.
-
+* Object Stores and other non-traditional filesystems onto which a directory
+ tree is emulated, tend to implement `delete()` as recursive listing and
+entry-by-entry delete operation.
+This can break the expectations of client applications for O(1) atomic directory
+deletion, preventing the stores' use as drop-in replacements for HDFS.
 
 ### `boolean rename(Path src, Path d)`
 

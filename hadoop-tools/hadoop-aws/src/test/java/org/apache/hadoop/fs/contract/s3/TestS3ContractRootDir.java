@@ -39,6 +39,13 @@ public class TestS3ContractRootDir extends AbstractContractRootDirectoryTest {
   @Override
   @Test
   @Ignore
+  public void testRmEmptyRootDirRecursive() throws Throwable {
+
+  }
+
+  @Override
+  @Test
+  @Ignore
   public void testRmEmptyRootDirNonRecursive() {
   }
 
