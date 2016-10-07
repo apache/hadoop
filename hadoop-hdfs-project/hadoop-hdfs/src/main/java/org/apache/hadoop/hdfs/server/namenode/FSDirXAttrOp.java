@@ -75,7 +75,7 @@ class FSDirXAttrOp {
       iip = fsd.resolvePathForWrite(pc, src);
       src = iip.getPath();
       checkXAttrChangeAccess(fsd, iip, xAttr, pc);
-      unprotectedSetXAttrs(fsd, src, xAttrs, flag);
+      unprotectedSetXAttrs(fsd, iip, xAttrs, flag);
     } finally {
       fsd.writeUnlock();
     }
@@ -253,14 +253,11 @@ class FSDirXAttrOp {
   }
 
   static INode unprotectedSetXAttrs(
-      FSDirectory fsd, final String src, final List<XAttr> xAttrs,
+      FSDirectory fsd, final INodesInPath iip, final List<XAttr> xAttrs,
       final EnumSet<XAttrSetFlag> flag)
       throws IOException {
     assert fsd.hasWriteLock();
-    INodesInPath iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src),
-        true);
     INode inode = FSDirectory.resolveLastINode(iip);
-    int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = setINodeXAttrs(fsd, existingXAttrs, xAttrs, flag);
     final boolean isFile = inode.isFile();
@@ -287,7 +284,7 @@ class FSDirXAttrOp {
       }
     }
 
-    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
+    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, iip.getLatestSnapshotId());
     return inode;
   }
 
@@ -361,22 +358,20 @@ class FSDirXAttrOp {
     return xAttrs;
   }
 
-  static XAttr getXAttrByPrefixedName(FSDirectory fsd, INode inode,
-      int snapshotId, String prefixedName) throws IOException {
+  static XAttr getXAttrByPrefixedName(FSDirectory fsd, INodesInPath iip,
+      String prefixedName) throws IOException {
     fsd.readLock();
     try {
-      return XAttrStorage.readINodeXAttrByPrefixedName(inode, snapshotId,
-          prefixedName);
+      return XAttrStorage.readINodeXAttrByPrefixedName(iip, prefixedName);
     } finally {
       fsd.readUnlock();
     }
   }
 
   static XAttr unprotectedGetXAttrByPrefixedName(
-      INode inode, int snapshotId, String prefixedName)
+      INodesInPath iip, String prefixedName)
       throws IOException {
-    return XAttrStorage.readINodeXAttrByPrefixedName(inode, snapshotId,
-        prefixedName);
+    return XAttrStorage.readINodeXAttrByPrefixedName(iip, prefixedName);
   }
 
   private static void checkXAttrChangeAccess(

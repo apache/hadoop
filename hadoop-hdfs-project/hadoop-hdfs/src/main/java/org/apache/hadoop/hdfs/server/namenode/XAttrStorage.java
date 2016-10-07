@@ -51,9 +51,10 @@ public class XAttrStorage {
    * @param prefixedName xAttr name with prefix
    * @return the xAttr
    */
-  public static XAttr readINodeXAttrByPrefixedName(INode inode,
-      int snapshotId, String prefixedName) {
-    XAttrFeature f = inode.getXAttrFeature(snapshotId);
+  public static XAttr readINodeXAttrByPrefixedName(INodesInPath iip,
+      String prefixedName) {
+    XAttrFeature f =
+        iip.getLastINode().getXAttrFeature(iip.getPathSnapshotId());
     return f == null ? null : f.getXAttr(prefixedName);
   }
 

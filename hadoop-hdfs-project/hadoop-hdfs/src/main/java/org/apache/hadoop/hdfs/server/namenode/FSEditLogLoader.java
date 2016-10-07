@@ -891,7 +891,8 @@ public class FSEditLogLoader {
     }
     case OP_SET_XATTR: {
       SetXAttrOp setXAttrOp = (SetXAttrOp) op;
-      FSDirXAttrOp.unprotectedSetXAttrs(fsDir, setXAttrOp.src,
+      INodesInPath iip = fsDir.getINodesInPath4Write(setXAttrOp.src);
+      FSDirXAttrOp.unprotectedSetXAttrs(fsDir, iip,
                                         setXAttrOp.xAttrs,
                                         EnumSet.of(XAttrSetFlag.CREATE,
                                                    XAttrSetFlag.REPLACE));
