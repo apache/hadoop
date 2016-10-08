@@ -1,0 +1,10 @@
+{
+    "minimum": {
+        "memoryMB" : 1024,
+        "vcores" : 1
+    },
+    "default" : {
+        "memoryMB" : 2048,
+        "vcores" : 2
+    },
+}
