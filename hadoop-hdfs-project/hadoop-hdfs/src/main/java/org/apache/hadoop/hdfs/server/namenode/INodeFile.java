@@ -770,6 +770,7 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
       int snapshotId, final ContentSummaryComputationContext summary) {
+    summary.nodeIncluded(this);
     final ContentCounts counts = summary.getCounts();
     counts.addContent(Content.FILE, 1);
     final long fileLen = computeFileSize(snapshotId);

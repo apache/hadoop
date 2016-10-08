@@ -177,6 +177,7 @@ public class Snapshot implements Comparable<byte[]> {
     @Override
     public ContentSummaryComputationContext computeContentSummary(
         int snapshotId, ContentSummaryComputationContext summary) {
+      summary.nodeIncluded(this);
       return computeDirectoryContentSummary(summary, snapshotId);
     }
 
