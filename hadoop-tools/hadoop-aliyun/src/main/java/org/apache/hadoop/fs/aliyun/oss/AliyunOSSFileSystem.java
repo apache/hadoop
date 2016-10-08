@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
@@ -53,6 +54,7 @@ public class AliyunOSSFileSystem extends FileSystem {
   private static final Logger LOG =
       LoggerFactory.getLogger(AliyunOSSFileSystem.class);
   private URI uri;
+  private String bucket;
   private Path workingDir;
   private AliyunOSSFileSystemStore store;
   private int maxKeys;
@@ -124,11 +126,20 @@ public class AliyunOSSFileSystem extends FileSystem {
   private boolean innerDelete(FileStatus status, boolean recursive)
       throws IOException {
     Path f = status.getPath();
+    String p = f.toUri().getPath();
+    FileStatus[] statuses;
+    // indicating root directory "/".
+    if (p.equals("/")) {
+      statuses = listStatus(status.getPath());
+      boolean isEmptyDir = statuses.length <= 0;
+      return rejectRootDirectoryDelete(isEmptyDir, recursive);
+    }
+
     String key = pathToKey(f);
     if (status.isDirectory()) {
       if (!recursive) {
-        FileStatus[] statuses = listStatus(status.getPath());
         // Check whether it is an empty directory or not
+        statuses = listStatus(status.getPath());
         if (statuses.length > 0) {
           throw new IOException("Cannot remove directory " + f +
               ": It is not empty!");
@@ -146,6 +157,31 @@ public class AliyunOSSFileSystem extends FileSystem {
 
     createFakeDirectoryIfNecessary(f);
     return true;
+  }
+
+  /**
+   * Implements the specific logic to reject root directory deletion.
+   * The caller must return the result of this call, rather than
+   * attempt to continue with the delete operation: deleting root
+   * directories is never allowed. This method simply implements
+   * the policy of when to return an exit code versus raise an exception.
+   * @param isEmptyDir empty directory or not
+   * @param recursive recursive flag from command
+   * @return a return code for the operation
+   * @throws PathIOException if the operation was explicitly rejected.
+   */
+  private boolean rejectRootDirectoryDelete(boolean isEmptyDir,
+      boolean recursive) throws IOException {
+    LOG.info("oss delete the {} root directory of {}", bucket, recursive);
+    if (isEmptyDir) {
+      return true;
+    }
+    if (recursive) {
+      return false;
+    } else {
+      // reject
+      throw new PathIOException(bucket, "Cannot delete root path");
+    }
   }
 
   private void createFakeDirectoryIfNecessary(Path f) throws IOException {
@@ -226,6 +262,7 @@ public class AliyunOSSFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
 
+    bucket = name.getHost();
     uri = java.net.URI.create(name.getScheme() + "://" + name.getAuthority());
     workingDir = new Path("/user",
         System.getProperty("user.name")).makeQualified(uri, null);
