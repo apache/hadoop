@@ -351,6 +351,11 @@
             <exclude>src/test/resources/delete-reservation.json</exclude>
             <exclude>src/test/resources/update-reservation.json</exclude>
             <exclude>src/test/resources/invariants.txt</exclude>
+            <exclude>src/test/resources/profiles/sample-profiles-1.json</exclude>
+            <exclude>src/test/resources/profiles/sample-profiles-2.json</exclude>
+            <exclude>src/test/resources/profiles/illegal-profiles-1.json</exclude>
+            <exclude>src/test/resources/profiles/illegal-profiles-2.json</exclude>
+            <exclude>src/test/resources/profiles/illegal-profiles-3.json</exclude>
           </excludes>
         </configuration>
       </plugin>
