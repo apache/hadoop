@@ -938,6 +938,22 @@
     <value>600000</value>
   </property>
 
+  <property>
+    <description>
+    Flag to enable/disable resource profiles
+    </description>
+    <name>yarn.resourcemanager.resource-profiles.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    If resource profiles is enabled, source file for the profiles
+    </description>
+    <name>yarn.resourcemanager.resource-profiles.source-file</name>
+    <value>resource-profiles.json</value>
+  </property>
+
   <!-- Node Manager Configuration -->
 
   <property>

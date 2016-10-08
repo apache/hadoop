@@ -1,0 +1,26 @@
+{
+    "minimum": {
+        "memory-mb" : 1024,
+        "vcores" : 1
+    },
+    "default" : {
+        "memory-mb" : 2048,
+        "vcores" : 2
+    },
+    "maximum" : {
+        "memory-mb": 4096,
+        "vcores" : 4
+    },
+    "small" : {
+        "memory-mb": 1024,
+        "vcores": 1
+    },
+    "medium" : {
+        "memory-mb": 2048,
+        "vcores": 1
+    },
+    "large": {
+        "memory-mb" : 4096,
+        "vcores" : 4
+    }
+}

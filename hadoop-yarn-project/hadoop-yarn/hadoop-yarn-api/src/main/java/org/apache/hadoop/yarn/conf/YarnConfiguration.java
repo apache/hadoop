@@ -818,6 +818,29 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
 
   /**
+   * Enable/disable resource profiles.
+   */
+  @Public
+  @Unstable
+  public static final String RM_RESOURCE_PROFILES_ENABLED =
+      RM_PREFIX + "resource-profiles.enabled";
+  @Public
+  @Unstable
+  public static final boolean DEFAULT_RM_RESOURCE_PROFILES_ENABLED = false;
+
+  /**
+   * File containing resource profiles.
+   */
+  @Public
+  @Unstable
+  public static final String RM_RESOURCE_PROFILES_SOURCE_FILE =
+      RM_PREFIX + "resource-profiles.source-file";
+  @Public
+  @Unstable
+  public static final String DEFAULT_RM_RESOURCE_PROFILES_SOURCE_FILE =
+      "resource-profiles.json";
+
+  /**
    * Timeout in seconds for YARN node graceful decommission.
    * This is the maximal time to wait for running containers and applications
    * to complete before transition a DECOMMISSIONING node into DECOMMISSIONED.
