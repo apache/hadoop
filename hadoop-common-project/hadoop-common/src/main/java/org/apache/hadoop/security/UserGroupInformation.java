@@ -946,60 +946,60 @@ public class UserGroupInformation {
 
   /**Spawn a thread to do periodic renewals of kerberos credentials*/
   private void spawnAutoRenewalThreadForUserCreds() {
-    if (isSecurityEnabled()) {
-      //spawn thread only if we have kerb credentials
-      if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
-          !isKeytab) {
-        Thread t = new Thread(new Runnable() {
-          
-          @Override
-          public void run() {
-            String cmd = conf.get("hadoop.kerberos.kinit.command",
-                                  "kinit");
-            KerberosTicket tgt = getTGT();
+    if (!isSecurityEnabled()
+        || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
+        || isKeytab) {
+      return;
+    }
+
+    //spawn thread only if we have kerb credentials
+    Thread t = new Thread(new Runnable() {
+
+      @Override
+      public void run() {
+        String cmd = conf.get("hadoop.kerberos.kinit.command", "kinit");
+        KerberosTicket tgt = getTGT();
+        if (tgt == null) {
+          return;
+        }
+        long nextRefresh = getRefreshTime(tgt);
+        while (true) {
+          try {
+            long now = Time.now();
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Current time is " + now);
+              LOG.debug("Next refresh is " + nextRefresh);
+            }
+            if (now < nextRefresh) {
+              Thread.sleep(nextRefresh - now);
+            }
+            Shell.execCommand(cmd, "-R");
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("renewed ticket");
+            }
+            reloginFromTicketCache();
+            tgt = getTGT();
             if (tgt == null) {
+              LOG.warn("No TGT after renewal. Aborting renew thread for " +
+                  getUserName());
               return;
             }
-            long nextRefresh = getRefreshTime(tgt);
-            while (true) {
-              try {
-                long now = Time.now();
-                if(LOG.isDebugEnabled()) {
-                  LOG.debug("Current time is " + now);
-                  LOG.debug("Next refresh is " + nextRefresh);
-                }
-                if (now < nextRefresh) {
-                  Thread.sleep(nextRefresh - now);
-                }
-                Shell.execCommand(cmd, "-R");
-                if(LOG.isDebugEnabled()) {
-                  LOG.debug("renewed ticket");
-                }
-                reloginFromTicketCache();
-                tgt = getTGT();
-                if (tgt == null) {
-                  LOG.warn("No TGT after renewal. Aborting renew thread for " +
-                           getUserName());
-                  return;
-                }
-                nextRefresh = Math.max(getRefreshTime(tgt),
-                                       now + kerberosMinSecondsBeforeRelogin);
-              } catch (InterruptedException ie) {
-                LOG.warn("Terminating renewal thread");
-                return;
-              } catch (IOException ie) {
-                LOG.warn("Exception encountered while running the" +
-                    " renewal command. Aborting renew thread. " + ie);
-                return;
-              }
-            }
+            nextRefresh = Math.max(getRefreshTime(tgt),
+              now + kerberosMinSecondsBeforeRelogin);
+          } catch (InterruptedException ie) {
+            LOG.warn("Terminating renewal thread");
+            return;
+          } catch (IOException ie) {
+            LOG.warn("Exception encountered while running the" +
+                " renewal command. Aborting renew thread. " + ie);
+            return;
           }
-        });
-        t.setDaemon(true);
-        t.setName("TGT Renewer for " + getUserName());
-        t.start();
+        }
       }
-    }
+    });
+    t.setDaemon(true);
+    t.setName("TGT Renewer for " + getUserName());
+    t.start();
   }
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
