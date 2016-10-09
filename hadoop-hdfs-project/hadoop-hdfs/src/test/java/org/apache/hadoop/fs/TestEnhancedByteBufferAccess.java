@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
@@ -307,8 +308,8 @@ public class TestEnhancedByteBufferAccess {
     public void visit(int numOutstandingMmaps,
         Map<ExtendedBlockId, ShortCircuitReplica> replicas,
         Map<ExtendedBlockId, InvalidToken> failedLoads,
-        Map<Long, ShortCircuitReplica> evictable,
-        Map<Long, ShortCircuitReplica> evictableMmapped) {
+        LinkedMap evictable,
+        LinkedMap evictableMmapped) {
       if (expectedNumOutstandingMmaps >= 0) {
         Assert.assertEquals(expectedNumOutstandingMmaps, numOutstandingMmaps);
       }
@@ -373,8 +374,8 @@ public class TestEnhancedByteBufferAccess {
       public void visit(int numOutstandingMmaps,
           Map<ExtendedBlockId, ShortCircuitReplica> replicas,
           Map<ExtendedBlockId, InvalidToken> failedLoads, 
-          Map<Long, ShortCircuitReplica> evictable,
-          Map<Long, ShortCircuitReplica> evictableMmapped) {
+          LinkedMap evictable,
+          LinkedMap evictableMmapped) {
         ShortCircuitReplica replica = replicas.get(
             new ExtendedBlockId(firstBlock.getBlockId(), firstBlock.getBlockPoolId()));
         Assert.assertNotNull(replica);
@@ -410,8 +411,8 @@ public class TestEnhancedByteBufferAccess {
           public void visit(int numOutstandingMmaps,
               Map<ExtendedBlockId, ShortCircuitReplica> replicas,
               Map<ExtendedBlockId, InvalidToken> failedLoads,
-              Map<Long, ShortCircuitReplica> evictable,
-              Map<Long, ShortCircuitReplica> evictableMmapped) {
+              LinkedMap evictable,
+              LinkedMap evictableMmapped) {
             finished.setValue(evictableMmapped.isEmpty());
           }
         });
@@ -685,8 +686,8 @@ public class TestEnhancedByteBufferAccess {
           public void visit(int numOutstandingMmaps,
               Map<ExtendedBlockId, ShortCircuitReplica> replicas,
               Map<ExtendedBlockId, InvalidToken> failedLoads,
-              Map<Long, ShortCircuitReplica> evictable,
-              Map<Long, ShortCircuitReplica> evictableMmapped) {
+              LinkedMap evictable,
+              LinkedMap evictableMmapped) {
             Assert.assertEquals(expectedOutstandingMmaps, numOutstandingMmaps);
             ShortCircuitReplica replica =
                 replicas.get(ExtendedBlockId.fromExtendedBlock(block));

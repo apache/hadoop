@@ -18,11 +18,15 @@
 package org.apache.hadoop.conf;
 
 import java.io.StringWriter;
+import java.io.PrintWriter;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
 import javax.ws.rs.core.HttpHeaders;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -34,21 +38,48 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import junit.framework.TestCase;
+import com.google.common.base.Strings;
+
+import org.apache.hadoop.http.HttpServer2;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.junit.Assert.*;
 
 /**
  * Basic test case that the ConfServlet can write configuration
  * to its output in XML and JSON format.
  */
-public class TestConfServlet extends TestCase {
+public class TestConfServlet {
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";
+  private static final Map<String, String> TEST_PROPERTIES =
+      new HashMap<String, String>();
+  private static final Map<String, String> TEST_FORMATS =
+      new HashMap<String, String>();
+
+  @BeforeClass
+  public static void initTestProperties() {
+    TEST_PROPERTIES.put("test.key1", "value1");
+    TEST_PROPERTIES.put("test.key2", "value2");
+    TEST_PROPERTIES.put("test.key3", "value3");
+    TEST_FORMATS.put(ConfServlet.FORMAT_XML, "application/xml");
+    TEST_FORMATS.put(ConfServlet.FORMAT_JSON, "application/json");
+  }
 
   private Configuration getTestConf() {
     Configuration testConf = new Configuration();
     testConf.set(TEST_KEY, TEST_VAL);
+    return testConf;
+  }
+
+  private Configuration getMultiPropertiesConf() {
+    Configuration testConf = new Configuration(false);
+    for(String key : TEST_PROPERTIES.keySet()) {
+      testConf.set(key, TEST_PROPERTIES.get(key));
+    }
     return testConf;
   }
 
@@ -68,6 +99,92 @@ public class TestConfServlet extends TestCase {
           .thenReturn(contentTypeExpected);
       assertEquals(contenTypeActual,
           ConfServlet.parseAccecptHeader(request));
+    }
+  }
+
+  private void verifyGetProperty(Configuration conf, String format,
+      String propertyName) throws Exception {
+    StringWriter sw = null;
+    PrintWriter pw = null;
+    ConfServlet service = null;
+    try {
+      service = new ConfServlet();
+      ServletConfig servletConf = mock(ServletConfig.class);
+      ServletContext context = mock(ServletContext.class);
+      service.init(servletConf);
+      when(context.getAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE))
+        .thenReturn(conf);
+      when(service.getServletContext())
+        .thenReturn(context);
+
+      HttpServletRequest request = mock(HttpServletRequest.class);
+      when(request.getHeader(HttpHeaders.ACCEPT))
+        .thenReturn(TEST_FORMATS.get(format));
+      when(request.getParameter("name"))
+        .thenReturn(propertyName);
+
+      HttpServletResponse response = mock(HttpServletResponse.class);
+      sw = new StringWriter();
+      pw = new PrintWriter(sw);
+      when(response.getWriter()).thenReturn(pw);
+
+      // response request
+      service.doGet(request, response);
+      String result = sw.toString().trim();
+
+      // if property name is null or empty, expect all properties
+      // in the response
+      if (Strings.isNullOrEmpty(propertyName)) {
+        for(String key : TEST_PROPERTIES.keySet()) {
+          assertTrue(result.contains(key) &&
+              result.contains(TEST_PROPERTIES.get(key)));
+        }
+      } else {
+        if(conf.get(propertyName) != null) {
+          // if property name is not empty and property is found
+          assertTrue(result.contains(propertyName));
+          for(String key : TEST_PROPERTIES.keySet()) {
+            if(!key.equals(propertyName)) {
+              assertFalse(result.contains(key));
+            }
+          }
+        } else {
+          // if property name is not empty, and it's not in configuration
+          // expect proper error code and error message is set to the response
+          Mockito.verify(response).sendError(
+              Mockito.eq(HttpServletResponse.SC_NOT_FOUND),
+              Mockito.eq("Property " + propertyName + " not found"));
+        }
+      }
+    } finally {
+      if (sw != null) {
+        sw.close();
+      }
+      if (pw != null) {
+        pw.close();
+      }
+      if (service != null) {
+        service.destroy();
+      }
+    }
+  }
+
+  @Test
+  public void testGetProperty() throws Exception {
+    Configuration configurations = getMultiPropertiesConf();
+    // list various of property names
+    String[] testKeys = new String[] {
+        "test.key1",
+        "test.unknown.key",
+        "",
+        "test.key2",
+        null
+    };
+
+    for(String format : TEST_FORMATS.keySet()) {
+      for(String key : testKeys) {
+        verifyGetProperty(configurations, format, key);
+      }
     }
   }
 
@@ -109,7 +226,6 @@ public class TestConfServlet extends TestCase {
     for (int i = 0; i < nameNodes.getLength(); i++) {
       Node nameNode = nameNodes.item(i);
       String key = nameNode.getTextContent();
-      System.err.println("xml key: " + key);
       if (TEST_KEY.equals(key)) {
         foundSetting = true;
         Element propertyElem = (Element)nameNode.getParentNode();

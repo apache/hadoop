@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -37,9 +38,12 @@ public class RMZKUtils {
   private static final Log LOG = LogFactory.getLog(RMZKUtils.class);
 
   /**
-   * Utility method to fetch the ZK ACLs from the configuration
+   * Utility method to fetch the ZK ACLs from the configuration.
+   *
+   * @throws java.io.IOException if the Zookeeper ACLs configuration file
+   * cannot be read
    */
-  public static List<ACL> getZKAcls(Configuration conf) throws Exception {
+  public static List<ACL> getZKAcls(Configuration conf) throws IOException {
     // Parse authentication from configuration.
     String zkAclConf =
         conf.get(YarnConfiguration.RM_ZK_ACL,
@@ -47,17 +51,20 @@ public class RMZKUtils {
     try {
       zkAclConf = ZKUtil.resolveConfIndirection(zkAclConf);
       return ZKUtil.parseACLs(zkAclConf);
-    } catch (Exception e) {
+    } catch (IOException | ZKUtil.BadAclFormatException e) {
       LOG.error("Couldn't read ACLs based on " + YarnConfiguration.RM_ZK_ACL);
       throw e;
     }
   }
 
   /**
-   * Utility method to fetch ZK auth info from the configuration
+   * Utility method to fetch ZK auth info from the configuration.
+   *
+   * @throws java.io.IOException if the Zookeeper ACLs configuration file
+   * cannot be read
    */
   public static List<ZKUtil.ZKAuthInfo> getZKAuths(Configuration conf)
-      throws Exception {
+      throws IOException {
     String zkAuthConf = conf.get(YarnConfiguration.RM_ZK_AUTH);
     try {
       zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
@@ -66,7 +73,7 @@ public class RMZKUtils {
       } else {
         return Collections.emptyList();
       }
-    } catch (Exception e) {
+    } catch (IOException | ZKUtil.BadAuthFormatException e) {
       LOG.error("Couldn't read Auth based on " + YarnConfiguration.RM_ZK_AUTH);
       throw e;
     }

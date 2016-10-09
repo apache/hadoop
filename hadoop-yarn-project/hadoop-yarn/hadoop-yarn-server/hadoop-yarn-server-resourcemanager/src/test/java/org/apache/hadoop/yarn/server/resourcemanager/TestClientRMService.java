@@ -506,7 +506,8 @@ public class TestClientRMService {
   @Test
   public void testForceKillApplication() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
-    MockRM rm = new MockRM();
+    conf.setBoolean(MockRM.ENABLE_WEBAPP, true);
+    MockRM rm = new MockRM(conf);
     rm.init(conf);
     rm.start();
 
@@ -522,6 +523,8 @@ public class TestClientRMService {
 
     KillApplicationRequest killRequest1 =
         KillApplicationRequest.newInstance(app1.getApplicationId());
+    String diagnostic = "message1";
+    killRequest1.setDiagnostics(diagnostic);
     KillApplicationRequest killRequest2 =
         KillApplicationRequest.newInstance(app2.getApplicationId());
 
@@ -539,6 +542,8 @@ public class TestClientRMService {
         killAttemptCount > 1);
     assertEquals("Incorrect number of apps in the RM", 1,
         rmService.getApplications(getRequest).getApplicationList().size());
+    assertTrue("Diagnostic message is incorrect",
+        app1.getDiagnostics().toString().contains(diagnostic));
 
     KillApplicationResponse killResponse2 =
         rmService.forceKillApplication(killRequest2);

@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import org.apache.hadoop.tools.rumen.datatypes.NodeName;
-import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
  * A {@link LoggedLocation} is a representation of a point in an hierarchical

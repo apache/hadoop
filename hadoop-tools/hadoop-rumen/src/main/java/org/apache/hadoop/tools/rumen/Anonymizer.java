@@ -21,6 +21,12 @@ package org.apache.hadoop.tools.rumen;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,13 +41,6 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.tools.rumen.datatypes.*;
 import org.apache.hadoop.tools.rumen.serializers.*;
 import org.apache.hadoop.tools.rumen.state.*;
-
-import org.codehaus.jackson.JsonEncoding;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.Version;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.module.SimpleModule;
 
 public class Anonymizer extends Configured implements Tool {
   private boolean anonymizeTrace = false;
@@ -88,8 +87,8 @@ public class Anonymizer extends Configured implements Tool {
      
     outMapper = new ObjectMapper();
     // define a module
-    SimpleModule module = new SimpleModule("Anonymization Serializer",  
-                                           new Version(0, 1, 1, "FINAL"));
+    SimpleModule module = new SimpleModule(
+        "Anonymization Serializer", new Version(0, 1, 1, "FINAL", "", ""));
     // add various serializers to the module
     // use the default (as-is) serializer for default data types
     module.addSerializer(DataType.class, new DefaultRumenSerializer());
@@ -106,7 +105,7 @@ public class Anonymizer extends Configured implements Tool {
     // register the module with the object-mapper
     outMapper.registerModule(module);
     
-    outFactory = outMapper.getJsonFactory();
+    outFactory = outMapper.getFactory();
   }
   
   // anonymize the job trace file
@@ -191,8 +190,8 @@ public class Anonymizer extends Configured implements Tool {
       output = outFS.create(path);
     }
 
-    JsonGenerator outGen = outFactory.createJsonGenerator(output, 
-                                                          JsonEncoding.UTF8);
+    JsonGenerator outGen =
+        outFactory.createGenerator(output, JsonEncoding.UTF8);
     outGen.useDefaultPrettyPrinter();
     
     return outGen;

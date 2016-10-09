@@ -26,11 +26,13 @@ import java.io.InterruptedIOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -58,16 +60,20 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
+import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -121,6 +127,7 @@ public class S3AFileSystem extends FileSystem {
   private S3AStorageStatistics storageStatistics;
   private long readAhead;
   private S3AInputPolicy inputPolicy;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
@@ -502,6 +509,31 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * {@inheritDoc}
+   * @throws FileNotFoundException if the parent directory is not present -or
+   * is not a directory.
+   */
+  @Override
+  public FSDataOutputStream createNonRecursive(Path path,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException {
+    Path parent = path.getParent();
+    if (parent != null) {
+      // expect this to raise an exception if there is no parent
+      if (!getFileStatus(parent).isDirectory()) {
+        throw new FileAlreadyExistsException("Not a directory: " + parent);
+      }
+    }
+    return create(path, permission,
+        flags.contains(CreateFlag.OVERWRITE), bufferSize,
+        replication, blockSize, progress);
+  }
+
+  /**
    * Append to an existing file (optional operation).
    * @param f the existing file to be appended.
    * @param bufferSize the size of the buffer to be used.
@@ -666,7 +698,7 @@ public class S3AFileSystem extends FileSystem {
           copyFile(summary.getKey(), newDstKey, summary.getSize());
 
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            removeKeys(keysToDelete, true);
+            removeKeys(keysToDelete, true, false);
           }
         }
 
@@ -674,7 +706,7 @@ public class S3AFileSystem extends FileSystem {
           objects = continueListObjects(objects);
         } else {
           if (!keysToDelete.isEmpty()) {
-            removeKeys(keysToDelete, false);
+            removeKeys(keysToDelete, false, false);
           }
           break;
         }
@@ -774,10 +806,24 @@ public class S3AFileSystem extends FileSystem {
    * operation statistics.
    * @param key key to blob to delete.
    */
-  private void deleteObject(String key) {
+  private void deleteObject(String key) throws InvalidRequestException {
+    blockRootDelete(key);
     incrementWriteOperations();
     incrementStatistic(OBJECT_DELETE_REQUESTS);
     s3.deleteObject(bucket, key);
+  }
+
+  /**
+   * Reject any request to delete an object where the key is root.
+   * @param key key to validate
+   * @throws InvalidRequestException if the request was rejected due to
+   * a mistaken attempt to delete the root directory.
+   */
+  private void blockRootDelete(String key) throws InvalidRequestException {
+    if (key.isEmpty() || "/".equals(key)) {
+      throw new InvalidRequestException("Bucket "+ bucket
+          +" cannot be deleted");
+    }
   }
 
   /**
@@ -919,20 +965,35 @@ public class S3AFileSystem extends FileSystem {
   /**
    * A helper method to delete a list of keys on a s3-backend.
    *
-   * @param keysToDelete collection of keys to delete on the s3-backend
+   * @param keysToDelete collection of keys to delete on the s3-backend.
+   *        if empty, no request is made of the object store.
    * @param clearKeys clears the keysToDelete-list after processing the list
    *            when set to true
+   * @param deleteFakeDir indicates whether this is for deleting fake dirs
+   * @throws InvalidRequestException if the request was rejected due to
+   * a mistaken attempt to delete the root directory.
    */
   private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-          boolean clearKeys) throws AmazonClientException {
+      boolean clearKeys, boolean deleteFakeDir)
+      throws AmazonClientException, InvalidRequestException {
+    if (keysToDelete.isEmpty()) {
+      // exit fast if there are no keys to delete
+      return;
+    }
+    for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
+      blockRootDelete(keyVersion.getKey());
+    }
     if (enableMultiObjectsDelete) {
       deleteObjects(new DeleteObjectsRequest(bucket).withKeys(keysToDelete));
-      instrumentation.fileDeleted(keysToDelete.size());
     } else {
       for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
         deleteObject(keyVersion.getKey());
       }
+    }
+    if (!deleteFakeDir) {
       instrumentation.fileDeleted(keysToDelete.size());
+    } else {
+      instrumentation.fakeDirsDeleted(keysToDelete.size());
     }
     if (clearKeys) {
       keysToDelete.clear();
@@ -983,18 +1044,16 @@ public class S3AFileSystem extends FileSystem {
     if (status.isDirectory()) {
       LOG.debug("delete: Path is a directory: {}", f);
 
-      if (!recursive && !status.isEmptyDirectory()) {
-        throw new IOException("Path is a folder: " + f +
-                              " and it is not an empty directory");
-      }
-
       if (!key.endsWith("/")) {
         key = key + "/";
       }
 
       if (key.equals("/")) {
-        LOG.info("s3a cannot delete the root directory");
-        return false;
+        return rejectRootDirectoryDelete(status, recursive);
+      }
+
+      if (!recursive && !status.isEmptyDirectory()) {
+        throw new PathIsNotEmptyDirectoryException(f.toString());
       }
 
       if (status.isEmptyDirectory()) {
@@ -1015,7 +1074,7 @@ public class S3AFileSystem extends FileSystem {
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              removeKeys(keys, true);
+              removeKeys(keys, true, false);
             }
           }
 
@@ -1023,7 +1082,7 @@ public class S3AFileSystem extends FileSystem {
             objects = continueListObjects(objects);
           } else {
             if (!keys.isEmpty()) {
-              removeKeys(keys, false);
+              removeKeys(keys, false, false);
             }
             break;
           }
@@ -1035,8 +1094,37 @@ public class S3AFileSystem extends FileSystem {
       deleteObject(key);
     }
 
-    createFakeDirectoryIfNecessary(f.getParent());
+    Path parent = f.getParent();
+    if (parent != null) {
+      createFakeDirectoryIfNecessary(parent);
+    }
     return true;
+  }
+
+  /**
+   * Implements the specific logic to reject root directory deletion.
+   * The caller must return the result of this call, rather than
+   * attempt to continue with the delete operation: deleting root
+   * directories is never allowed. This method simply implements
+   * the policy of when to return an exit code versus raise an exception.
+   * @param status filesystem status
+   * @param recursive recursive flag from command
+   * @return a return code for the operation
+   * @throws PathIOException if the operation was explicitly rejected.
+   */
+  private boolean rejectRootDirectoryDelete(S3AFileStatus status,
+      boolean recursive) throws IOException {
+    LOG.info("s3a delete the {} root directory of {}", bucket, recursive);
+    boolean emptyRoot = status.isEmptyDirectory();
+    if (emptyRoot) {
+      return true;
+    }
+    if (recursive) {
+      return false;
+    } else {
+      // reject
+      throw new PathIOException(bucket, "Cannot delete root path");
+    }
   }
 
   private void createFakeDirectoryIfNecessary(Path f)
@@ -1414,7 +1502,11 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException IO problem
    */
   @Override
-  public synchronized void close() throws IOException {
+  public void close() throws IOException {
+    if (closed.getAndSet(true)) {
+      // already closed
+      return;
+    }
     try {
       super.close();
     } finally {
@@ -1498,36 +1590,29 @@ public class S3AFileSystem extends FileSystem {
   /**
    * Delete mock parent directories which are no longer needed.
    * This code swallows IO exceptions encountered
-   * @param f path
+   * @param path path
    */
-  private void deleteUnnecessaryFakeDirectories(Path f) {
-    while (true) {
-      String key = "";
-      try {
-        key = pathToKey(f);
-        if (key.isEmpty()) {
-          break;
+  private void deleteUnnecessaryFakeDirectories(Path path) {
+    List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
+    while (!path.isRoot()) {
+      String key = pathToKey(path);
+      key = (key.endsWith("/")) ? key : (key + "/");
+      keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+      path = path.getParent();
+    }
+    try {
+      removeKeys(keysToRemove, false, true);
+    } catch(AmazonClientException | InvalidRequestException e) {
+      instrumentation.errorIgnored();
+      if (LOG.isDebugEnabled()) {
+        StringBuilder sb = new StringBuilder();
+        for(DeleteObjectsRequest.KeyVersion kv : keysToRemove) {
+          sb.append(kv.getKey()).append(",");
         }
-
-        S3AFileStatus status = getFileStatus(f);
-
-        if (status.isDirectory() && status.isEmptyDirectory()) {
-          LOG.debug("Deleting fake directory {}/", key);
-          deleteObject(key + "/");
-        }
-      } catch (IOException | AmazonClientException e) {
-        LOG.debug("While deleting key {} ", key, e);
-        instrumentation.errorIgnored();
+        LOG.debug("While deleting keys {} ", sb.toString(), e);
       }
-
-      if (f.isRoot()) {
-        break;
-      }
-
-      f = f.getParent();
     }
   }
-
 
   private void createFakeDirectory(final String objectName)
       throws AmazonClientException, AmazonServiceException,

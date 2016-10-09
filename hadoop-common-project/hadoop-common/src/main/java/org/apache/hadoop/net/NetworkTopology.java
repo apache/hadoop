@@ -813,7 +813,7 @@ public class NetworkTopology {
       }
     }
     if (numOfDatanodes == 0) {
-      LOG.warn("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\").",
+      LOG.debug("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\").",
           String.valueOf(scope), String.valueOf(excludedScope));
       return null;
     }

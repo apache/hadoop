@@ -152,7 +152,6 @@ class FSDirAclOp {
     fsd.readLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src);
-      src = iip.getPath();
       // There is no real inode for the path ending in ".snapshot", so return a
       // non-null, unpopulated AclStatus.  This is similar to getFileInfo.
       if (iip.isDotSnapshotDir() && fsd.getINode4DotSnapshot(iip) != null) {
@@ -163,8 +162,7 @@ class FSDirAclOp {
       }
       INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getPathSnapshotId();
-      List<AclEntry> acl = AclStorage.readINodeAcl(fsd.getAttributes(src,
-              inode.getLocalNameBytes(), inode, snapshotId));
+      List<AclEntry> acl = AclStorage.readINodeAcl(fsd.getAttributes(iip));
       FsPermission fsPermission = inode.getFsPermission(snapshotId);
       return new AclStatus.Builder()
           .owner(inode.getUserName()).group(inode.getGroupName())

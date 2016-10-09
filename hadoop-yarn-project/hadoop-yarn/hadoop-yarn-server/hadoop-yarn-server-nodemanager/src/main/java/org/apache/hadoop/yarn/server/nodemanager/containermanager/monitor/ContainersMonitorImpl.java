@@ -171,7 +171,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
 
-    containersMonitorEnabled = isEnabled();
+    containersMonitorEnabled = isContainerMonitorEnabled();
     LOG.info("ContainersMonitor enabled: " + containersMonitorEnabled);
 
     nodeCpuPercentageForYARN =
@@ -204,23 +204,24 @@ public class ContainersMonitorImpl extends AbstractService implements
     super.serviceInit(conf);
   }
 
-  private boolean isEnabled() {
+  private boolean isContainerMonitorEnabled() {
+    return conf.getBoolean(YarnConfiguration.NM_CONTAINER_MONITOR_ENABLED,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_MONITOR_ENABLED);
+  }
+
+  private boolean isResourceCalculatorAvailable() {
     if (resourceCalculatorPlugin == null) {
-            LOG.info("ResourceCalculatorPlugin is unavailable on this system. "
-                + this.getClass().getName() + " is disabled.");
-            return false;
-    }
-    if (ResourceCalculatorProcessTree.getResourceCalculatorProcessTree("0", processTreeClass, conf) == null) {
-        LOG.info("ResourceCalculatorProcessTree is unavailable on this system. "
-                + this.getClass().getName() + " is disabled.");
-            return false;
-    }
-    if (!(isPmemCheckEnabled() || isVmemCheckEnabled())) {
-      LOG.info("Neither virtual-memory nor physical-memory monitoring is " +
-          "needed. Not running the monitor-thread");
+      LOG.info("ResourceCalculatorPlugin is unavailable on this system. " + this
+          .getClass().getName() + " is disabled.");
       return false;
     }
-
+    if (ResourceCalculatorProcessTree
+        .getResourceCalculatorProcessTree("0", processTreeClass, conf)
+        == null) {
+      LOG.info("ResourceCalculatorProcessTree is unavailable on this system. "
+          + this.getClass().getName() + " is disabled.");
+      return false;
+    }
     return true;
   }
 
@@ -462,7 +463,7 @@ public class ContainersMonitorImpl extends AbstractService implements
             }
             // End of initializing any uninitialized processTrees
 
-            if (pId == null) {
+            if (pId == null || !isResourceCalculatorAvailable()) {
               continue; // processTree cannot be tracked
             }
 

@@ -225,10 +225,10 @@ public class JobClientUnitTest {
 
     //To prevent the test from running for a very long time, lower the retry
     JobConf conf = new JobConf();
-    conf.set(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES, "3");
+    conf.setInt(MRJobConfig.MR_CLIENT_JOB_MAX_RETRIES, 2);
 
     TestJobClientGetJob client = new TestJobClientGetJob(conf);
-    JobID id = new JobID("ajob",1);
+    JobID id = new JobID("ajob", 1);
     RunningJob rj = mock(RunningJob.class);
     client.setRunningJob(rj);
 
@@ -236,13 +236,35 @@ public class JobClientUnitTest {
     assertNotNull(client.getJob(id));
     assertEquals(client.getLastGetJobRetriesCounter(), 0);
 
-    //3 retry
-    client.setGetJobRetries(3);
+    //2 retries
+    client.setGetJobRetries(2);
     assertNotNull(client.getJob(id));
-    assertEquals(client.getLastGetJobRetriesCounter(), 3);
+    assertEquals(client.getLastGetJobRetriesCounter(), 2);
 
-    //beyond MAPREDUCE_JOBCLIENT_GETJOB_MAX_RETRY_KEY, will get null
-    client.setGetJobRetries(5);
+    //beyond yarn.app.mapreduce.client.job.max-retries, will get null
+    client.setGetJobRetries(3);
+    assertNull(client.getJob(id));
+  }
+
+  @Test
+  public void testGetJobRetryDefault() throws Exception {
+
+    //To prevent the test from running for a very long time, lower the retry
+    JobConf conf = new JobConf();
+
+    TestJobClientGetJob client = new TestJobClientGetJob(conf);
+    JobID id = new JobID("ajob", 1);
+    RunningJob rj = mock(RunningJob.class);
+    client.setRunningJob(rj);
+
+    //3 retries (default)
+    client.setGetJobRetries(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+    assertNotNull(client.getJob(id));
+    assertEquals(client.getLastGetJobRetriesCounter(),
+        MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES);
+
+    //beyond yarn.app.mapreduce.client.job.max-retries, will get null
+    client.setGetJobRetries(MRJobConfig.DEFAULT_MR_CLIENT_JOB_MAX_RETRIES + 1);
     assertNull(client.getJob(id));
   }
 

@@ -40,6 +40,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -63,14 +67,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.microsoft.azure.storage.StorageException;
 
@@ -193,8 +193,8 @@ public class NativeAzureFileSystem extends FileSystem {
       if (oldFolderName == null || newFolderName == null) {
     	  this.committed = false;
       } else {
-        this.srcKey = oldFolderName.getTextValue();
-        this.dstKey = newFolderName.getTextValue();
+        this.srcKey = oldFolderName.textValue();
+        this.dstKey = newFolderName.textValue();
         if (this.srcKey == null || this.dstKey == null) {
           this.committed = false;
         } else {
@@ -203,7 +203,7 @@ public class NativeAzureFileSystem extends FileSystem {
             this.committed = false;
           } else {
             for (int i = 0; i < fileList.size(); i++) {
-              fileStrList.add(fileList.get(i).getTextValue());
+              fileStrList.add(fileList.get(i).textValue());
             }
           }
         }

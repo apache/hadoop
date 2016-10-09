@@ -31,14 +31,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.io.retry.MultiException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A FailoverProxyProvider implementation that technically does not "failover"
@@ -51,8 +51,8 @@ import org.apache.hadoop.io.retry.MultiException;
 public class RequestHedgingProxyProvider<T> extends
         ConfiguredFailoverProxyProvider<T> {
 
-  private static final Log LOG =
-          LogFactory.getLog(RequestHedgingProxyProvider.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RequestHedgingProxyProvider.class);
 
   class RequestHedgingInvocationHandler implements InvocationHandler {
 
@@ -100,6 +100,8 @@ public class RequestHedgingProxyProvider<T> extends
           Callable<Object> c = new Callable<Object>() {
             @Override
             public Object call() throws Exception {
+              LOG.trace("Invoking method {} on proxy {}", method,
+                  pEntry.getValue().proxyInfo);
               return method.invoke(pEntry.getValue().proxy, args);
             }
           };
@@ -114,15 +116,14 @@ public class RequestHedgingProxyProvider<T> extends
           try {
             retVal = callResultFuture.get();
             successfulProxy = proxyMap.get(callResultFuture);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Invocation successful on ["
-                      + successfulProxy.proxyInfo + "]");
-            }
+            LOG.debug("Invocation successful on [{}]",
+                successfulProxy.proxyInfo);
             return retVal;
           } catch (Exception ex) {
             ProxyInfo<T> tProxyInfo = proxyMap.get(callResultFuture);
             logProxyException(ex, tProxyInfo.proxyInfo);
             badResults.put(tProxyInfo.proxyInfo, ex);
+            LOG.trace("Unsuccessful invocation on [{}]", tProxyInfo.proxyInfo);
             numAttempts--;
           }
         }
@@ -136,6 +137,7 @@ public class RequestHedgingProxyProvider<T> extends
         }
       } finally {
         if (executor != null) {
+          LOG.trace("Shutting down threadpool executor");
           executor.shutdownNow();
         }
       }
@@ -193,12 +195,9 @@ public class RequestHedgingProxyProvider<T> extends
    */
   private void logProxyException(Exception ex, String proxyInfo) {
     if (isStandbyException(ex)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Invocation returned standby exception on [" +
-            proxyInfo + "]");
-      }
+      LOG.debug("Invocation returned standby exception on [{}]", proxyInfo);
     } else {
-      LOG.warn("Invocation returned exception on [" + proxyInfo + "]");
+      LOG.warn("Invocation returned exception on [{}]", proxyInfo);
     }
   }
 

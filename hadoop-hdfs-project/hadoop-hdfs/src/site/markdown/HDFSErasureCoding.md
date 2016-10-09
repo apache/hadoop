@@ -59,9 +59,9 @@ Architecture
       1. _Read the data from source nodes:_ Input data is read in parallel from source nodes using a dedicated thread pool.
         Based on the EC policy, it schedules the read requests to all source targets and reads only the minimum number of input blocks for reconstruction.
 
-      1. _Decode the data and generate the output data:_ New data and parity blocks are decoded from the input data. All missing data and parity blocks are decoded together.
+      2. _Decode the data and generate the output data:_ New data and parity blocks are decoded from the input data. All missing data and parity blocks are decoded together.
 
-      1. _Transfer the generated data blocks to target nodes:_ Once decoding is finished, the recovered blocks are transferred to target DataNodes.
+      3. _Transfer the generated data blocks to target nodes:_ Once decoding is finished, the recovered blocks are transferred to target DataNodes.
 
  *  **ErasureCoding policy**
     To accommodate heterogeneous workloads, we allow files and directories in an HDFS cluster to have different replication and EC policies.
@@ -69,10 +69,9 @@ Architecture
 
       1. _The ECSchema:_ This includes the numbers of data and parity blocks in an EC group (e.g., 6+3), as well as the codec algorithm (e.g., Reed-Solomon).
 
-      1. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
+      2. _The size of a striping cell._ This determines the granularity of striped reads and writes, including buffer sizes and encoding work.
 
-    Currently, HDFS supports the Reed-Solomon and XOR erasure coding algorithms. Additional algorithms are planned as future work.
-    The system default scheme is Reed-Solomon (6, 3) with a cell size of 64KB.
+    There are three policies currently being supported: RS-DEFAULT-3-2-64k, RS-DEFAULT-6-3-64k and RS-LEGACY-6-3-64k. All with default cell size of 64KB. The system default policy is RS-DEFAULT-6-3-64k which use the default schema RS_6_3_SCHEMA with a cell size of 64KB.
 
 
 Deployment
@@ -126,7 +125,7 @@ Below are the details about each command.
 
       `path`: An directory in HDFS. This is a mandatory parameter. Setting a policy only affects newly created files, and does not affect existing files.
 
-      `policyName`: The ErasureCoding policy to be used for files under this directory. This is an optional parameter, specified using ‘-s’ flag. If no policy is specified, the system default ErasureCodingPolicy will be used.
+      `policyName`: The ErasureCoding policy to be used for files under this directory. This is an optional parameter, specified using ‘-p’ flag. If no policy is specified, the system default ErasureCodingPolicy will be used.
 
  *  `[-getPolicy <path>]`
 

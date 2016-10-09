@@ -104,12 +104,8 @@ public class Credentials implements Writable {
       for (Map.Entry<Text, Token<? extends TokenIdentifier>> e :
           tokenMap.entrySet()) {
         Token<? extends TokenIdentifier> token = e.getValue();
-        if (token instanceof Token.PrivateToken &&
-            ((Token.PrivateToken) token).getPublicService().equals(alias)) {
-          Token<? extends TokenIdentifier> privateToken =
-              new Token.PrivateToken<>(t);
-          privateToken.setService(token.getService());
-          tokensToAdd.put(e.getKey(), privateToken);
+        if (token.isPrivateCloneOf(alias)) {
+          tokensToAdd.put(e.getKey(), t.privateClone(token.getService()));
         }
       }
       tokenMap.putAll(tokensToAdd);

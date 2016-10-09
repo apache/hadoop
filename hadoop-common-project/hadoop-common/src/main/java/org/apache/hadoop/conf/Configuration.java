@@ -103,8 +103,9 @@ import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
-/** 
+/**
  * Provides access to configuration parameters.
  *
  * <h4 id="Resources">Resources</h4>
@@ -2834,14 +2835,37 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     writeXml(new OutputStreamWriter(out, "UTF-8"));
   }
 
-  /** 
-   * Write out the non-default properties in this configuration to the given
-   * {@link Writer}.
-   * 
+  public void writeXml(Writer out) throws IOException {
+    writeXml(null, out);
+  }
+
+  /**
+   * Write out the non-default properties in this configuration to the
+   * given {@link Writer}.
+   *
+   * <li>
+   * When property name is not empty and the property exists in the
+   * configuration, this method writes the property and its attributes
+   * to the {@link Writer}.
+   * </li>
+   * <p>
+   *
+   * <li>
+   * When property name is null or empty, this method writes all the
+   * configuration properties and their attributes to the {@link Writer}.
+   * </li>
+   * <p>
+   *
+   * <li>
+   * When property name is not empty but the property doesn't exist in
+   * the configuration, this method throws an {@link IllegalArgumentException}.
+   * </li>
+   * <p>
    * @param out the writer to write to.
    */
-  public void writeXml(Writer out) throws IOException {
-    Document doc = asXmlDocument();
+  public void writeXml(String propertyName, Writer out)
+      throws IOException, IllegalArgumentException {
+    Document doc = asXmlDocument(propertyName);
 
     try {
       DOMSource source = new DOMSource(doc);
@@ -2861,62 +2885,180 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument() throws IOException {
+  private synchronized Document asXmlDocument(String propertyName)
+      throws IOException, IllegalArgumentException {
     Document doc;
     try {
-      doc =
-        DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
+      doc = DocumentBuilderFactory
+          .newInstance()
+          .newDocumentBuilder()
+          .newDocument();
     } catch (ParserConfigurationException pe) {
       throw new IOException(pe);
     }
+
     Element conf = doc.createElement("configuration");
     doc.appendChild(conf);
     conf.appendChild(doc.createTextNode("\n"));
     handleDeprecation(); //ensure properties is set and deprecation is handled
-    for (Enumeration<Object> e = properties.keys(); e.hasMoreElements();) {
-      String name = (String)e.nextElement();
-      Object object = properties.get(name);
-      String value = null;
-      if (object instanceof String) {
-        value = (String) object;
-      }else {
-        continue;
+
+    if(!Strings.isNullOrEmpty(propertyName)) {
+      if (!properties.containsKey(propertyName)) {
+        // given property not found, illegal argument
+        throw new IllegalArgumentException("Property " +
+            propertyName + " not found");
+      } else {
+        // given property is found, write single property
+        appendXMLProperty(doc, conf, propertyName);
+        conf.appendChild(doc.createTextNode("\n"));
       }
-      Element propNode = doc.createElement("property");
-      conf.appendChild(propNode);
-
-      Element nameNode = doc.createElement("name");
-      nameNode.appendChild(doc.createTextNode(name));
-      propNode.appendChild(nameNode);
-
-      Element valueNode = doc.createElement("value");
-      valueNode.appendChild(doc.createTextNode(value));
-      propNode.appendChild(valueNode);
-
-      if (updatingResource != null) {
-        String[] sources = updatingResource.get(name);
-        if(sources != null) {
-          for(String s : sources) {
-            Element sourceNode = doc.createElement("source");
-            sourceNode.appendChild(doc.createTextNode(s));
-            propNode.appendChild(sourceNode);
-          }
-        }
+    } else {
+      // append all elements
+      for (Enumeration<Object> e = properties.keys(); e.hasMoreElements();) {
+        appendXMLProperty(doc, conf, (String)e.nextElement());
+        conf.appendChild(doc.createTextNode("\n"));
       }
-      
-      conf.appendChild(doc.createTextNode("\n"));
     }
     return doc;
   }
 
   /**
-   *  Writes out all the parameters and their properties (final and resource) to
-   *  the given {@link Writer}
-   *  The format of the output would be 
-   *  { "properties" : [ {key1,value1,key1.isFinal,key1.resource}, {key2,value2,
-   *  key2.isFinal,key2.resource}... ] } 
-   *  It does not output the parameters of the configuration object which is 
-   *  loaded from an input stream.
+   *  Append a property with its attributes to a given {#link Document}
+   *  if the property is found in configuration.
+   *
+   * @param doc
+   * @param conf
+   * @param propertyName
+   */
+  private synchronized void appendXMLProperty(Document doc, Element conf,
+      String propertyName) {
+    // skip writing if given property name is empty or null
+    if (!Strings.isNullOrEmpty(propertyName)) {
+      String value = properties.getProperty(propertyName);
+      if (value != null) {
+        Element propNode = doc.createElement("property");
+        conf.appendChild(propNode);
+
+        Element nameNode = doc.createElement("name");
+        nameNode.appendChild(doc.createTextNode(propertyName));
+        propNode.appendChild(nameNode);
+
+        Element valueNode = doc.createElement("value");
+        valueNode.appendChild(doc.createTextNode(
+            properties.getProperty(propertyName)));
+        propNode.appendChild(valueNode);
+
+        Element finalNode = doc.createElement("final");
+        finalNode.appendChild(doc.createTextNode(
+            String.valueOf(finalParameters.contains(propertyName))));
+        propNode.appendChild(finalNode);
+
+        if (updatingResource != null) {
+          String[] sources = updatingResource.get(propertyName);
+          if(sources != null) {
+            for(String s : sources) {
+              Element sourceNode = doc.createElement("source");
+              sourceNode.appendChild(doc.createTextNode(s));
+              propNode.appendChild(sourceNode);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   *  Writes properties and their attributes (final and resource)
+   *  to the given {@link Writer}.
+   *
+   *  <li>
+   *  When propertyName is not empty, and the property exists
+   *  in the configuration, the format of the output would be,
+   *  <pre>
+   *  {
+   *    "property": {
+   *      "key" : "key1",
+   *      "value" : "value1",
+   *      "isFinal" : "key1.isFinal",
+   *      "resource" : "key1.resource"
+   *    }
+   *  }
+   *  </pre>
+   *  </li>
+   *
+   *  <li>
+   *  When propertyName is null or empty, it behaves same as
+   *  {@link #dumpConfiguration(Configuration, Writer)}, the
+   *  output would be,
+   *  <pre>
+   *  { "properties" :
+   *      [ { key : "key1",
+   *          value : "value1",
+   *          isFinal : "key1.isFinal",
+   *          resource : "key1.resource" },
+   *        { key : "key2",
+   *          value : "value2",
+   *          isFinal : "ke2.isFinal",
+   *          resource : "key2.resource" }
+   *       ]
+   *   }
+   *  </pre>
+   *  </li>
+   *
+   *  <li>
+   *  When propertyName is not empty, and the property is not
+   *  found in the configuration, this method will throw an
+   *  {@link IllegalArgumentException}.
+   *  </li>
+   *  <p>
+   * @param config the configuration
+   * @param propertyName property name
+   * @param out the Writer to write to
+   * @throws IOException
+   * @throws IllegalArgumentException when property name is not
+   *   empty and the property is not found in configuration
+   **/
+  public static void dumpConfiguration(Configuration config,
+      String propertyName, Writer out) throws IOException {
+    if(Strings.isNullOrEmpty(propertyName)) {
+      dumpConfiguration(config, out);
+    } else if (Strings.isNullOrEmpty(config.get(propertyName))) {
+      throw new IllegalArgumentException("Property " +
+          propertyName + " not found");
+    } else {
+      JsonFactory dumpFactory = new JsonFactory();
+      JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
+      dumpGenerator.writeStartObject();
+      dumpGenerator.writeFieldName("property");
+      appendJSONProperty(dumpGenerator, config, propertyName);
+      dumpGenerator.writeEndObject();
+      dumpGenerator.flush();
+    }
+  }
+
+  /**
+   *  Writes out all properties and their attributes (final and resource) to
+   *  the given {@link Writer}, the format of the output would be,
+   *
+   *  <pre>
+   *  { "properties" :
+   *      [ { key : "key1",
+   *          value : "value1",
+   *          isFinal : "key1.isFinal",
+   *          resource : "key1.resource" },
+   *        { key : "key2",
+   *          value : "value2",
+   *          isFinal : "ke2.isFinal",
+   *          resource : "key2.resource" }
+   *       ]
+   *   }
+   *  </pre>
+   *
+   *  It does not output the properties of the configuration object which
+   *  is loaded from an input stream.
+   *  <p>
+   *
+   * @param config the configuration
    * @param out the Writer to write to
    * @throws IOException
    */
@@ -2930,29 +3072,47 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     dumpGenerator.flush();
     synchronized (config) {
       for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
-        dumpGenerator.writeStartObject();
-        dumpGenerator.writeStringField("key", (String) item.getKey());
-        dumpGenerator.writeStringField("value", 
-                                       config.get((String) item.getKey()));
-        dumpGenerator.writeBooleanField("isFinal",
-                                        config.finalParameters.contains(item.getKey()));
-        String[] resources = config.updatingResource.get(item.getKey());
-        String resource = UNKNOWN_RESOURCE;
-        if(resources != null && resources.length > 0) {
-          resource = resources[0];
-        }
-        dumpGenerator.writeStringField("resource", resource);
-        dumpGenerator.writeEndObject();
+        appendJSONProperty(dumpGenerator,
+            config,
+            item.getKey().toString());
       }
     }
     dumpGenerator.writeEndArray();
     dumpGenerator.writeEndObject();
     dumpGenerator.flush();
   }
-  
+
+  /**
+   * Write property and its attributes as json format to given
+   * {@link JsonGenerator}.
+   *
+   * @param jsonGen json writer
+   * @param config configuration
+   * @param name property name
+   * @throws IOException
+   */
+  private static void appendJSONProperty(JsonGenerator jsonGen,
+      Configuration config, String name) throws IOException {
+    // skip writing if given property name is empty or null
+    if(!Strings.isNullOrEmpty(name) && jsonGen != null) {
+      jsonGen.writeStartObject();
+      jsonGen.writeStringField("key", name);
+      jsonGen.writeStringField("value", config.get(name));
+      jsonGen.writeBooleanField("isFinal",
+          config.finalParameters.contains(name));
+      String[] resources = config.updatingResource.get(name);
+      String resource = UNKNOWN_RESOURCE;
+      if(resources != null && resources.length > 0) {
+        resource = resources[0];
+      }
+      jsonGen.writeStringField("resource", resource);
+      jsonGen.writeEndObject();
+    }
+  }
+
   /**
    * Get the {@link ClassLoader} for this job.
-   * 
+   *
    * @return the correct class loader.
    */
   public ClassLoader getClassLoader() {

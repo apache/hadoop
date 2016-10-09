@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSche
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterDistributedSchedulingAMResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -97,6 +98,11 @@ public class TestOpportunisticContainerAllocatorAMService {
       public Configuration getYarnConfiguration() {
         return new YarnConfiguration();
       }
+
+      @Override
+      public RMContainerTokenSecretManager getContainerTokenSecretManager() {
+        return new RMContainerTokenSecretManager(conf);
+      }
     };
     Container c = factory.newRecordInstance(Container.class);
     c.setExecutionType(ExecutionType.OPPORTUNISTIC);
@@ -117,8 +123,8 @@ public class TestOpportunisticContainerAllocatorAMService {
     Server server = service.getServer(rpc, conf, addr, null);
     server.start();
 
-    // Verify that the DistrubutedSchedulingService can handle vanilla
-    // ApplicationMasterProtocol clients
+    // Verify that the OpportunisticContainerAllocatorAMSercvice can handle
+    // vanilla ApplicationMasterProtocol clients
     RPC.setProtocolEngine(conf, ApplicationMasterProtocolPB.class,
         ProtobufRpcEngine.class);
     ApplicationMasterProtocolPB ampProxy =

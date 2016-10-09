@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift.auth.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.fs.swift.auth.Roles;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 import java.util.List;
 

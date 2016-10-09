@@ -455,10 +455,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
   protected void populateNMTokens(List<NMToken> nmTokens) {
     for (NMToken token : nmTokens) {
       String nodeId = token.getNodeId().toString();
-      if (getNMTokenCache().containsToken(nodeId)) {
-        LOG.info("Replacing token for : " + nodeId);
-      } else {
-        LOG.info("Received new token for : " + nodeId);
+      if (LOG.isDebugEnabled()) {
+        if (getNMTokenCache().containsToken(nodeId)) {
+          LOG.debug("Replacing token for : " + nodeId);
+        } else {
+          LOG.debug("Received new token for : " + nodeId);
+        }
       }
       getNMTokenCache().setToken(nodeId, token.getToken());
     }

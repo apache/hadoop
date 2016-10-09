@@ -31,6 +31,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
@@ -199,6 +200,13 @@ public class ReservationSystemTestUtil {
   public static ReservationSubmissionRequest createSimpleReservationRequest(
       ReservationId reservationId, int numContainers, long arrival,
       long deadline, long duration) {
+    return createSimpleReservationRequest(reservationId, numContainers,
+        arrival, deadline, duration, Priority.UNDEFINED);
+  }
+
+  public static ReservationSubmissionRequest createSimpleReservationRequest(
+      ReservationId reservationId, int numContainers, long arrival,
+      long deadline, long duration, Priority priority) {
     // create a request with a single atomic ask
     ReservationRequest r =
         ReservationRequest.newInstance(Resource.newInstance(1024, 1),
@@ -208,7 +216,7 @@ public class ReservationSystemTestUtil {
             ReservationRequestInterpreter.R_ALL);
     ReservationDefinition rDef =
         ReservationDefinition.newInstance(arrival, deadline, reqs,
-            "testClientRMService#reservation");
+            "testClientRMService#reservation", "0", priority);
     ReservationSubmissionRequest request =
         ReservationSubmissionRequest.newInstance(rDef,
             reservationQ, reservationId);

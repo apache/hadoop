@@ -51,6 +51,9 @@ public class RMAuditLogger {
     public static final String KILL_APP_REQUEST = "Kill Application Request";
     public static final String SUBMIT_APP_REQUEST = "Submit Application Request";
     public static final String MOVE_APP_REQUEST = "Move Application Request";
+    public static final String GET_APP_STATE = "Get Application State";
+    public static final String GET_APP_PRIORITY = "Get Application Priority";
+    public static final String GET_APP_QUEUE = "Get Application Queue";
     public static final String FINISH_SUCCESS_APP = "Application Finished - Succeeded";
     public static final String FINISH_FAILED_APP = "Application Finished - Failed";
     public static final String FINISH_KILLED_APP = "Application Finished - Killed";

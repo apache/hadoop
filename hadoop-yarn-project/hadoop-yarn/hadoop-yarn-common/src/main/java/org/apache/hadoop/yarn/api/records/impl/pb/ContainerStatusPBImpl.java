@@ -95,6 +95,8 @@ public class ContainerStatusPBImpl extends ContainerStatus {
     sb.append("Capability: ").append(getCapability()).append(", ");
     sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
     sb.append("ExitStatus: ").append(getExitStatus()).append(", ");
+    sb.append("IP: ").append(getIPs()).append(", ");
+    sb.append("Host: ").append(getHost());
     sb.append("]");
     return sb.toString();
   }

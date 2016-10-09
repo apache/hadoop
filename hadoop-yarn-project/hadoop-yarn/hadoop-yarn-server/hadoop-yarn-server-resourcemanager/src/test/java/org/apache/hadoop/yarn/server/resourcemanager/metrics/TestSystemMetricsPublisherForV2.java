@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -354,6 +355,14 @@ public class TestSystemMetricsPublisherForV2 {
         mock(ApplicationSubmissionContext.class);
     when(appSubmissionContext.getPriority())
         .thenReturn(Priority.newInstance(0));
+
+    ContainerLaunchContext containerLaunchContext =
+        mock(ContainerLaunchContext.class);
+    when(containerLaunchContext.getCommands())
+        .thenReturn(Collections.singletonList("java -Xmx1024m"));
+    when(appSubmissionContext.getAMContainerSpec())
+        .thenReturn(containerLaunchContext);
+
     when(app.getApplicationSubmissionContext())
         .thenReturn(appSubmissionContext);
     return app;

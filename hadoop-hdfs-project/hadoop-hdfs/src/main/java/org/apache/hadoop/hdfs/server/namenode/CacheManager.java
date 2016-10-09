@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -902,7 +903,16 @@ public final class CacheManager {
     return new BatchedListEntries<CachePoolEntry>(results, false);
   }
 
-  public void setCachedLocations(LocatedBlock block) {
+  public void setCachedLocations(LocatedBlocks locations) {
+    // don't attempt lookups if there are no cached blocks
+    if (cachedBlocks.size() > 0) {
+      for (LocatedBlock lb : locations.getLocatedBlocks()) {
+        setCachedLocations(lb);
+      }
+    }
+  }
+
+  private void setCachedLocations(LocatedBlock block) {
     CachedBlock cachedBlock =
         new CachedBlock(block.getBlock().getBlockId(),
             (short)0, false);

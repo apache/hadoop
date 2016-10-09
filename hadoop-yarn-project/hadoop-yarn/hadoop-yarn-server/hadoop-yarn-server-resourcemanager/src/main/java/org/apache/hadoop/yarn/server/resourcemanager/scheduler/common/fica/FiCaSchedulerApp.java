@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -666,6 +667,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     } finally {
       writeLock.unlock();
     }
+  }
 
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return this.writeLock;
   }
 }

@@ -49,7 +49,8 @@ public class BlockPoolTokenSecretManager extends
     map.put(bpid, secretMgr);
   }
 
-  synchronized BlockTokenSecretManager get(String bpid) {
+  @VisibleForTesting
+  public synchronized BlockTokenSecretManager get(String bpid) {
     BlockTokenSecretManager secretMgr = map.get(bpid);
     if (secretMgr == null) {
       throw new IllegalArgumentException("Block pool " + bpid

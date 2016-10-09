@@ -24,9 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
 import org.apache.hadoop.yarn.api.impl.pb.service.ApplicationMasterProtocolPBServiceImpl;
 
@@ -65,12 +67,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 
+
+import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
+import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
+import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The OpportunisticContainerAllocatorAMService is started instead of the
@@ -88,17 +92,20 @@ public class OpportunisticContainerAllocatorAMService
       LogFactory.getLog(OpportunisticContainerAllocatorAMService.class);
 
   private final NodeQueueLoadMonitor nodeMonitor;
+  private final OpportunisticContainerAllocator oppContainerAllocator;
 
-  private final ConcurrentHashMap<String, Set<NodeId>> rackToNode =
-      new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, Set<NodeId>> hostToNode =
-      new ConcurrentHashMap<>();
   private final int k;
+
+  private final long cacheRefreshInterval;
+  private List<NodeId> cachedNodeIds;
+  private long lastCacheUpdateTime;
 
   public OpportunisticContainerAllocatorAMService(RMContext rmContext,
       YarnScheduler scheduler) {
     super(OpportunisticContainerAllocatorAMService.class.getName(),
         rmContext, scheduler);
+    this.oppContainerAllocator = new OpportunisticContainerAllocator(
+        rmContext.getContainerTokenSecretManager(), 0);
     this.k = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT);
@@ -106,6 +113,8 @@ public class OpportunisticContainerAllocatorAMService
         YarnConfiguration.NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS,
         YarnConfiguration.
             NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS_DEFAULT);
+    this.cacheRefreshInterval = nodeSortInterval;
+    this.lastCacheUpdateTime = System.currentTimeMillis();
     NodeQueueLoadMonitor.LoadComparator comparator =
         NodeQueueLoadMonitor.LoadComparator.valueOf(
             rmContext.getYarnConfiguration().get(
@@ -172,6 +181,27 @@ public class OpportunisticContainerAllocatorAMService
   public RegisterApplicationMasterResponse registerApplicationMaster
       (RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
+    final ApplicationAttemptId appAttemptId = getAppAttemptId();
+    SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
+        rmContext.getScheduler()).getApplicationAttempt(appAttemptId);
+    if (appAttempt.getOpportunisticContainerContext() == null) {
+      OpportunisticContainerContext opCtx = new OpportunisticContainerContext();
+      opCtx.setContainerIdGenerator(new OpportunisticContainerAllocator
+          .ContainerIdGenerator() {
+        @Override
+        public long generateContainerId() {
+          return appAttempt.getAppSchedulingInfo().getNewContainerId();
+        }
+      });
+      int tokenExpiryInterval = getConfig()
+          .getInt(YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
+              YarnConfiguration.
+                  OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS_DEFAULT);
+      opCtx.updateAllocationParams(createMinContainerResource(),
+          createMaxContainerResource(), createIncrContainerResource(),
+          tokenExpiryInterval);
+      appAttempt.setOpportunisticContainerContext(opCtx);
+    }
     return super.registerApplicationMaster(request);
   }
 
@@ -185,7 +215,30 @@ public class OpportunisticContainerAllocatorAMService
   @Override
   public AllocateResponse allocate(AllocateRequest request) throws
       YarnException, IOException {
-    return super.allocate(request);
+
+    final ApplicationAttemptId appAttemptId = getAppAttemptId();
+    SchedulerApplicationAttempt appAttempt = ((AbstractYarnScheduler)
+        rmContext.getScheduler()).getApplicationAttempt(appAttemptId);
+    OpportunisticContainerContext oppCtx =
+        appAttempt.getOpportunisticContainerContext();
+    oppCtx.updateNodeList(getLeastLoadedNodes());
+    List<Container> oppContainers =
+        oppContainerAllocator.allocateContainers(request, appAttemptId, oppCtx,
+        ResourceManager.getClusterTimeStamp(), appAttempt.getUser());
+
+    if (!oppContainers.isEmpty()) {
+      handleNewContainers(oppContainers, false);
+      appAttempt.updateNMTokens(oppContainers);
+    }
+
+    // Allocate all guaranteed containers
+    AllocateResponse allocateResp = super.allocate(request);
+
+    oppCtx.updateCompletedContainers(allocateResp);
+
+    // Add all opportunistic containers
+    allocateResp.getAllocatedContainers().addAll(oppContainers);
+    return allocateResp;
   }
 
   @Override
@@ -198,39 +251,9 @@ public class OpportunisticContainerAllocatorAMService
     RegisterDistributedSchedulingAMResponse dsResp = recordFactory
         .newRecordInstance(RegisterDistributedSchedulingAMResponse.class);
     dsResp.setRegisterResponse(response);
-    dsResp.setMinContainerResource(
-        Resource.newInstance(
-            getConfig().getInt(
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB,
-                YarnConfiguration.
-                    OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB_DEFAULT),
-            getConfig().getInt(
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES,
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES_DEFAULT)
-        )
-    );
-    dsResp.setMaxContainerResource(
-        Resource.newInstance(
-            getConfig().getInt(
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB,
-                YarnConfiguration
-                    .OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB_DEFAULT),
-            getConfig().getInt(
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES,
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES_DEFAULT)
-        )
-    );
-    dsResp.setIncrContainerResource(
-        Resource.newInstance(
-            getConfig().getInt(
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB,
-                YarnConfiguration.
-                    OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB_DEFAULT),
-            getConfig().getInt(
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES,
-                YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES_DEFAULT)
-        )
-    );
+    dsResp.setMinContainerResource(createMinContainerResource());
+    dsResp.setMaxContainerResource(createMaxContainerResource());
+    dsResp.setIncrContainerResource(createIncrContainerResource());
     dsResp.setContainerTokenExpiryInterval(
         getConfig().getInt(
             YarnConfiguration.OPPORTUNISTIC_CONTAINERS_TOKEN_EXPIRY_MS,
@@ -240,8 +263,7 @@ public class OpportunisticContainerAllocatorAMService
         this.rmContext.getEpoch() << ResourceManager.EPOCH_BIT_SHIFT);
 
     // Set nodes to be used for scheduling
-    dsResp.setNodesForScheduling(
-        this.nodeMonitor.selectLeastLoadedNodes(this.k));
+    dsResp.setNodesForScheduling(getLeastLoadedNodes());
     return dsResp;
   }
 
@@ -250,46 +272,29 @@ public class OpportunisticContainerAllocatorAMService
       DistributedSchedulingAllocateRequest request)
       throws YarnException, IOException {
     List<Container> distAllocContainers = request.getAllocatedContainers();
-    for (Container container : distAllocContainers) {
+    handleNewContainers(distAllocContainers, true);
+    AllocateResponse response = allocate(request.getAllocateRequest());
+    DistributedSchedulingAllocateResponse dsResp = recordFactory
+        .newRecordInstance(DistributedSchedulingAllocateResponse.class);
+    dsResp.setAllocateResponse(response);
+    dsResp.setNodesForScheduling(getLeastLoadedNodes());
+    return dsResp;
+  }
+
+  private void handleNewContainers(List<Container> allocContainers,
+                                   boolean isRemotelyAllocated) {
+    for (Container container : allocContainers) {
       // Create RMContainer
       SchedulerApplicationAttempt appAttempt =
           ((AbstractYarnScheduler) rmContext.getScheduler())
               .getCurrentAttemptForContainer(container.getId());
       RMContainer rmContainer = new RMContainerImpl(container,
           appAttempt.getApplicationAttemptId(), container.getNodeId(),
-          appAttempt.getUser(), rmContext, true);
+          appAttempt.getUser(), rmContext, isRemotelyAllocated);
       appAttempt.addRMContainer(container.getId(), rmContainer);
       rmContainer.handle(
           new RMContainerEvent(container.getId(),
               RMContainerEventType.LAUNCHED));
-    }
-    AllocateResponse response = allocate(request.getAllocateRequest());
-    DistributedSchedulingAllocateResponse dsResp = recordFactory
-        .newRecordInstance(DistributedSchedulingAllocateResponse.class);
-    dsResp.setAllocateResponse(response);
-    dsResp.setNodesForScheduling(
-        this.nodeMonitor.selectLeastLoadedNodes(this.k));
-    return dsResp;
-  }
-
-  private void addToMapping(ConcurrentHashMap<String, Set<NodeId>> mapping,
-                            String rackName, NodeId nodeId) {
-    if (rackName != null) {
-      mapping.putIfAbsent(rackName, new HashSet<NodeId>());
-      Set<NodeId> nodeIds = mapping.get(rackName);
-      synchronized (nodeIds) {
-        nodeIds.add(nodeId);
-      }
-    }
-  }
-
-  private void removeFromMapping(ConcurrentHashMap<String, Set<NodeId>> mapping,
-                                 String rackName, NodeId nodeId) {
-    if (rackName != null) {
-      Set<NodeId> nodeIds = mapping.get(rackName);
-      synchronized (nodeIds) {
-        nodeIds.remove(nodeId);
-      }
     }
   }
 
@@ -303,10 +308,6 @@ public class OpportunisticContainerAllocatorAMService
       NodeAddedSchedulerEvent nodeAddedEvent = (NodeAddedSchedulerEvent) event;
       nodeMonitor.addNode(nodeAddedEvent.getContainerReports(),
           nodeAddedEvent.getAddedRMNode());
-      addToMapping(rackToNode, nodeAddedEvent.getAddedRMNode().getRackName(),
-          nodeAddedEvent.getAddedRMNode().getNodeID());
-      addToMapping(hostToNode, nodeAddedEvent.getAddedRMNode().getHostName(),
-          nodeAddedEvent.getAddedRMNode().getNodeID());
       break;
     case NODE_REMOVED:
       if (!(event instanceof NodeRemovedSchedulerEvent)) {
@@ -315,12 +316,6 @@ public class OpportunisticContainerAllocatorAMService
       NodeRemovedSchedulerEvent nodeRemovedEvent =
           (NodeRemovedSchedulerEvent) event;
       nodeMonitor.removeNode(nodeRemovedEvent.getRemovedRMNode());
-      removeFromMapping(rackToNode,
-          nodeRemovedEvent.getRemovedRMNode().getRackName(),
-          nodeRemovedEvent.getRemovedRMNode().getNodeID());
-      removeFromMapping(hostToNode,
-          nodeRemovedEvent.getRemovedRMNode().getHostName(),
-          nodeRemovedEvent.getRemovedRMNode().getNodeID());
       break;
     case NODE_UPDATE:
       if (!(event instanceof NodeUpdateSchedulerEvent)) {
@@ -363,5 +358,59 @@ public class OpportunisticContainerAllocatorAMService
 
   public QueueLimitCalculator getNodeManagerQueueLimitCalculator() {
     return nodeMonitor.getThresholdCalculator();
+  }
+
+  private Resource createIncrContainerResource() {
+    return Resource.newInstance(
+        getConfig().getInt(
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB,
+            YarnConfiguration.
+                OPPORTUNISTIC_CONTAINERS_INCR_MEMORY_MB_DEFAULT),
+        getConfig().getInt(
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES,
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_INCR_VCORES_DEFAULT)
+    );
+  }
+
+  private synchronized List<NodeId> getLeastLoadedNodes() {
+    long currTime = System.currentTimeMillis();
+    if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
+        || cachedNodeIds == null) {
+      cachedNodeIds = this.nodeMonitor.selectLeastLoadedNodes(this.k);
+      lastCacheUpdateTime = currTime;
+    }
+    return cachedNodeIds;
+  }
+
+  private Resource createMaxContainerResource() {
+    return Resource.newInstance(
+        getConfig().getInt(
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB,
+            YarnConfiguration
+                .OPPORTUNISTIC_CONTAINERS_MAX_MEMORY_MB_DEFAULT),
+        getConfig().getInt(
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES,
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MAX_VCORES_DEFAULT)
+    );
+  }
+
+  private Resource createMinContainerResource() {
+    return Resource.newInstance(
+        getConfig().getInt(
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB,
+            YarnConfiguration.
+                OPPORTUNISTIC_CONTAINERS_MIN_MEMORY_MB_DEFAULT),
+        getConfig().getInt(
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES,
+            YarnConfiguration.OPPORTUNISTIC_CONTAINERS_MIN_VCORES_DEFAULT)
+    );
+  }
+
+  private static ApplicationAttemptId getAppAttemptId() throws YarnException {
+    AMRMTokenIdentifier amrmTokenIdentifier =
+        YarnServerSecurityUtils.authorizeRequest();
+    ApplicationAttemptId applicationAttemptId =
+        amrmTokenIdentifier.getApplicationAttemptId();
+    return applicationAttemptId;
   }
 }

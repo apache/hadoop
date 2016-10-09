@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FileStatus;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.deleteChildren;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.listChildren;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
 
@@ -62,12 +64,40 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
   }
 
   @Test
-  public void testRmEmptyRootDirNonRecursive() throws Throwable {
+  public void testRmEmptyRootDirRecursive() throws Throwable {
     //extra sanity checks here to avoid support calls about complete loss of data
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
     assertIsDirectory(root);
     boolean deleted = getFileSystem().delete(root, true);
+    LOG.info("rm -r / of empty dir result is {}", deleted);
+    assertIsDirectory(root);
+  }
+
+  @Test
+  public void testRmEmptyRootDirNonRecursive() throws Throwable {
+    // extra sanity checks here to avoid support calls about complete loss
+    // of data
+    skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
+    Path root = new Path("/");
+    assertIsDirectory(root);
+    // make sure it is clean
+    FileSystem fs = getFileSystem();
+    deleteChildren(fs, root, true);
+    FileStatus[] children = listChildren(fs, root);
+    if (children.length > 0) {
+      StringBuilder error = new StringBuilder();
+      error.append("Deletion of child entries failed, still have")
+          .append(children.length)
+          .append(System.lineSeparator());
+      for (FileStatus child : children) {
+        error.append("  ").append(child.getPath())
+            .append(System.lineSeparator());
+      }
+      fail(error.toString());
+    }
+    // then try to delete the empty one
+    boolean deleted = fs.delete(root, false);
     LOG.info("rm / of empty dir result is {}", deleted);
     assertIsDirectory(root);
   }
@@ -88,6 +118,8 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     } catch (IOException e) {
       //expected
       handleExpectedException(e);
+      // and the file must still be present
+      assertIsFile(file);
     } finally {
       getFileSystem().delete(file, false);
     }

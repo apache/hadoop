@@ -2227,6 +2227,22 @@ public class LeafQueue extends AbstractCSQueue {
     }
   }
 
+  public void updateApplicationPriority(SchedulerApplication<FiCaSchedulerApp> app,
+      Priority newAppPriority) {
+    try {
+      writeLock.lock();
+      FiCaSchedulerApp attempt = app.getCurrentAppAttempt();
+      getOrderingPolicy().removeSchedulableEntity(attempt);
+
+      // Update new priority in SchedulerApplication
+      attempt.setPriority(newAppPriority);
+
+      getOrderingPolicy().addSchedulableEntity(attempt);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   public OrderingPolicy<FiCaSchedulerApp>
       getPendingAppsOrderingPolicy() {
     return pendingOrderingPolicy;

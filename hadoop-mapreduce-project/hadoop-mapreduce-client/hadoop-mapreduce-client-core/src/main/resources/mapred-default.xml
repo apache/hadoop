@@ -1505,12 +1505,12 @@
 
 <property>
   <name>yarn.app.mapreduce.client.job.max-retries</name>
-  <value>0</value>
+  <value>3</value>
   <description>The number of retries the client will make for getJob and
-  dependent calls.  The default is 0 as this is generally only needed for
-  non-HDFS DFS where additional, high level retries are required to avoid
-  spurious failures during the getJob call.  30 is a good value for
-  WASB</description>
+    dependent calls.
+    This is needed for non-HDFS DFS where additional, high level
+    retries are required to avoid spurious failures during the getJob call.
+    30 is a good value for WASB</description>
 </property>
 
 <property>

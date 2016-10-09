@@ -17,13 +17,9 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.htrace.fasterxml.jackson.annotation.JsonInclude;
-
-
-
-
 
 /**
  * Ignore fields with default values. In most cases Throughtput, diskErrors

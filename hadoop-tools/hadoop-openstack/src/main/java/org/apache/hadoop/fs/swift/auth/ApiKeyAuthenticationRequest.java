@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.swift.auth;
 
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Class that represents authentication request to Openstack Keystone.

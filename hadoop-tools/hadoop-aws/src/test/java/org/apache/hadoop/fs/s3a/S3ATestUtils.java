@@ -298,11 +298,20 @@ public class S3ATestUtils {
 
     /**
      * Assert that the value of {@link #diff()} matches that expected.
+     * @param message message to print; metric name is appended
+     * @param expected expected value.
+     */
+    public void assertDiffEquals(String message, long expected) {
+      Assert.assertEquals(message + ": " + statistic.getSymbol(),
+          expected, diff());
+    }
+
+    /**
+     * Assert that the value of {@link #diff()} matches that expected.
      * @param expected expected value.
      */
     public void assertDiffEquals(long expected) {
-      Assert.assertEquals("Count of " + this,
-          expected, diff());
+      assertDiffEquals("Count of " + this, expected);
     }
 
     /**

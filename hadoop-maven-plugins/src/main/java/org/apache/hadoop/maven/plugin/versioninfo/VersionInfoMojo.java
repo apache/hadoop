@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.maven.plugin.versioninfo;
 
+import java.io.Serializable;
 import java.util.Locale;
 import org.apache.hadoop.maven.plugin.util.Exec;
 import org.apache.hadoop.maven.plugin.util.FileSetUtils;
@@ -149,27 +150,23 @@ public class VersionInfoMojo extends AbstractMojo {
    */
   private String[] getSvnUriInfo(String str) {
     String[] res = new String[]{"Unknown", "Unknown"};
-    try {
-      String path = str;
-      int index = path.indexOf("trunk");
+    String path = str;
+    int index = path.indexOf("trunk");
+    if (index > -1) {
+      res[0] = path.substring(0, index - 1);
+      res[1] = "trunk";
+    } else {
+      index = path.indexOf("branches");
       if (index > -1) {
         res[0] = path.substring(0, index - 1);
-        res[1] = "trunk";
-      } else {
-        index = path.indexOf("branches");
+        int branchIndex = index + "branches".length() + 1;
+        index = path.indexOf('/', branchIndex);
         if (index > -1) {
-          res[0] = path.substring(0, index - 1);
-          int branchIndex = index + "branches".length() + 1;
-          index = path.indexOf("/", branchIndex);
-          if (index > -1) {
-            res[1] = path.substring(branchIndex, index);
-          } else {
-            res[1] = path.substring(branchIndex);
-          }
+          res[1] = path.substring(branchIndex, index);
+        } else {
+          res[1] = path.substring(branchIndex);
         }
       }
-    } catch (Exception ex) {
-      getLog().warn("Could not determine URI & branch from SVN URI: " + str);
     }
     return res;
   }
@@ -311,6 +308,20 @@ public class VersionInfoMojo extends AbstractMojo {
     return sb.toString();
   }
 
+  static class MD5Comparator implements Comparator<File>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public int compare(File lhs, File rhs) {
+      return normalizePath(lhs).compareTo(normalizePath(rhs));
+    }
+
+    private String normalizePath(File file) {
+      return file.getPath().toUpperCase(Locale.ENGLISH)
+          .replaceAll("\\\\", "/");
+    }
+  }
+
   /**
    * Computes and returns an MD5 checksum of the contents of all files in the
    * input Maven FileSet.
@@ -323,17 +334,7 @@ public class VersionInfoMojo extends AbstractMojo {
     // File order of MD5 calculation is significant.  Sorting is done on
     // unix-format names, case-folded, in order to get a platform-independent
     // sort and calculate the same MD5 on all platforms.
-    Collections.sort(files, new Comparator<File>() {
-      @Override
-      public int compare(File lhs, File rhs) {
-        return normalizePath(lhs).compareTo(normalizePath(rhs));
-      }
-
-      private String normalizePath(File file) {
-        return file.getPath().toUpperCase(Locale.ENGLISH)
-            .replaceAll("\\\\", "/");
-      }
-    });
+    Collections.sort(files, new MD5Comparator());
     byte[] md5 = computeMD5(files);
     String md5str = byteArrayToString(md5);
     getLog().info("Computed MD5: " + md5str);

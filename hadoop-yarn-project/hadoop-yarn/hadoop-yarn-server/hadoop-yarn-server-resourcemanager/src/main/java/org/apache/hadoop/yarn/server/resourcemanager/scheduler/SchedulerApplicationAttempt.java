@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -68,6 +70,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerUpda
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
+
+import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.state.InvalidStateTransitionException;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -114,6 +118,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private boolean isAttemptRecovering;
 
   protected ResourceUsage attemptResourceUsage = new ResourceUsage();
+  /** Resource usage of opportunistic containers. */
+  protected ResourceUsage attemptOpportunisticResourceUsage =
+      new ResourceUsage();
   /** Scheduled by a remote scheduler. */
   protected ResourceUsage attemptResourceUsageAllocatedRemotely =
       new ResourceUsage();
@@ -131,6 +138,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   // from NM for recovery. In this case, the to-be-recovered containers reported
   // by NM should not be recovered.
   private Set<ContainerId> pendingRelease = null;
+
+  private OpportunisticContainerContext oppContainerContext;
 
   /**
    * Count how many times the application has been given an opportunity to
@@ -178,7 +187,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
             activeUsersManager, rmContext.getEpoch(), attemptResourceUsage);
     this.queue = queue;
-    this.pendingRelease = new HashSet<ContainerId>();
+    this.pendingRelease = Collections.newSetFromMap(
+        new ConcurrentHashMap<ContainerId, Boolean>());
     this.attemptId = applicationAttemptId;
     if (rmContext.getRMApps() != null &&
         rmContext.getRMApps()
@@ -199,7 +209,17 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     readLock = lock.readLock();
     writeLock = lock.writeLock();
   }
-  
+
+  public void setOpportunisticContainerContext(
+      OpportunisticContainerContext oppContext) {
+    this.oppContainerContext = oppContext;
+  }
+
+  public OpportunisticContainerContext
+      getOpportunisticContainerContext() {
+    return this.oppContainerContext;
+  }
+
   /**
    * Get the live containers of the application.
    * @return live containers of the application
@@ -331,6 +351,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     try {
       writeLock.lock();
       liveContainers.put(id, rmContainer);
+      if (rmContainer.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+        this.attemptOpportunisticResourceUsage.incUsed(
+            rmContainer.getAllocatedResource());
+      }
       if (rmContainer.isRemotelyAllocated()) {
         this.attemptResourceUsageAllocatedRemotely.incUsed(
             rmContainer.getAllocatedResource());
@@ -344,9 +368,15 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     try {
       writeLock.lock();
       RMContainer rmContainer = liveContainers.remove(containerId);
-      if (rmContainer != null && rmContainer.isRemotelyAllocated()) {
-        this.attemptResourceUsageAllocatedRemotely.decUsed(
-            rmContainer.getAllocatedResource());
+      if (rmContainer != null) {
+        if (rmContainer.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
+          this.attemptOpportunisticResourceUsage
+              .decUsed(rmContainer.getAllocatedResource());
+        }
+        if (rmContainer.isRemotelyAllocated()) {
+          this.attemptResourceUsageAllocatedRemotely
+              .decUsed(rmContainer.getAllocatedResource());
+        }
       }
     } finally {
       writeLock.unlock();
@@ -612,12 +642,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
               container.getPriority(), rmContainer.getCreationTime(),
               this.logAggregationContext, rmContainer.getNodeLabelExpression(),
               containerType));
-      NMToken nmToken =
-          rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
-              getApplicationAttemptId(), container);
-      if (nmToken != null) {
-        updatedNMTokens.add(nmToken);
-      }
+      updateNMToken(container);
     } catch (IllegalArgumentException e) {
       // DNS might be down, skip returning this container.
       LOG.error("Error trying to assign container token and NM token to"
@@ -633,6 +658,21 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           rmContainer.getContainerId(), increasedContainer));
     }
     return container;
+  }
+
+  public void updateNMTokens(Collection<Container> containers) {
+    for (Container container : containers) {
+      updateNMToken(container);
+    }
+  }
+
+  private void updateNMToken(Container container) {
+    NMToken nmToken =
+        rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
+            getApplicationAttemptId(), container);
+    if (nmToken != null) {
+      updatedNMTokens.add(nmToken);
+    }
   }
 
   // Create container token and update NMToken altogether, if either of them fails for
@@ -1151,6 +1191,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     // Give the specific information which might be applicable for the
     // respective scheduler
     // queue's resource usage for specific partition
+  }
+
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return writeLock;
   }
 
   @Override

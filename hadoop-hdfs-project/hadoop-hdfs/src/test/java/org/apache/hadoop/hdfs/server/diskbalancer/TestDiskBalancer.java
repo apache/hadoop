@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
@@ -27,9 +28,15 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancer;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancer.DiskBalancerMover;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancer.VolumePair;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkItem;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus;
+import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
@@ -41,18 +48,30 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 /**
  * Test Disk Balancer.
@@ -180,6 +199,47 @@ public class TestDiskBalancer {
       dataMover.verifyPlanExectionDone();
       dataMover.verifyAllVolumesHaveData();
       dataMover.verifyTolerance(plan, 0, sourceDiskIndex, 10);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test disk balancer behavior when one of the disks involved
+   * in balancing operation is removed after submitting the plan.
+   * @throws Exception
+   */
+  @Test
+  public void testDiskBalancerWhenRemovingVolumes() throws Exception {
+
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
+
+    final int blockCount = 100;
+    final int blockSize = 1024;
+    final int diskCount = 2;
+    final int dataNodeCount = 1;
+    final int dataNodeIndex = 0;
+    final int sourceDiskIndex = 0;
+
+    MiniDFSCluster cluster = new ClusterBuilder()
+        .setBlockCount(blockCount)
+        .setBlockSize(blockSize)
+        .setDiskCount(diskCount)
+        .setNumDatanodes(dataNodeCount)
+        .setConf(conf)
+        .build();
+
+    try {
+      DataMover dataMover = new DataMover(cluster, dataNodeIndex,
+          sourceDiskIndex, conf, blockSize, blockCount);
+      dataMover.moveDataToSourceDisk();
+      NodePlan plan = dataMover.generatePlan();
+      dataMover.executePlanDuringDiskRemove(plan);
+      dataMover.verifyAllVolumesHaveData();
+      dataMover.verifyTolerance(plan, 0, sourceDiskIndex, 10);
+    } catch (Exception e) {
+      Assert.fail("Unexpected exception: " + e);
     } finally {
       cluster.shutdown();
     }
@@ -444,6 +504,102 @@ public class TestDiskBalancer {
           }
         }
       }, 1000, 100000);
+    }
+
+    public void executePlanDuringDiskRemove(NodePlan plan) throws
+        IOException, TimeoutException, InterruptedException {
+      CountDownLatch createWorkPlanLatch = new CountDownLatch(1);
+      CountDownLatch removeDiskLatch = new CountDownLatch(1);
+      AtomicInteger errorCount = new AtomicInteger(0);
+
+      LOG.info("FSDataSet: " + node.getFSDataset());
+      final FsDatasetSpi<?> fsDatasetSpy = Mockito.spy(node.getFSDataset());
+      doAnswer(new Answer<Object>() {
+          public Object answer(InvocationOnMock invocation) {
+            try {
+              node.getFSDataset().moveBlockAcrossVolumes(
+                  (ExtendedBlock)invocation.getArguments()[0],
+                  (FsVolumeSpi) invocation.getArguments()[1]);
+            } catch (Exception e) {
+              errorCount.incrementAndGet();
+            }
+            return null;
+          }
+        }).when(fsDatasetSpy).moveBlockAcrossVolumes(
+            any(ExtendedBlock.class), any(FsVolumeSpi.class));
+
+      DiskBalancerMover diskBalancerMover = new DiskBalancerMover(
+          fsDatasetSpy, conf);
+      diskBalancerMover.setRunnable();
+
+      DiskBalancerMover diskBalancerMoverSpy = Mockito.spy(diskBalancerMover);
+      doAnswer(new Answer<Object>() {
+          public Object answer(InvocationOnMock invocation) {
+            createWorkPlanLatch.countDown();
+            LOG.info("Waiting for the disk removal!");
+            try {
+              removeDiskLatch.await();
+            } catch (InterruptedException e) {
+              LOG.info("Encountered " + e);
+            }
+            LOG.info("Got disk removal notification, resuming copyBlocks!");
+            diskBalancerMover.copyBlocks((VolumePair)(invocation
+                .getArguments()[0]), (DiskBalancerWorkItem)(invocation
+                .getArguments()[1]));
+            return null;
+          }
+        }).when(diskBalancerMoverSpy).copyBlocks(
+            any(VolumePair.class), any(DiskBalancerWorkItem.class));
+
+      DiskBalancer diskBalancer = new DiskBalancer(node.getDatanodeUuid(),
+          conf, diskBalancerMoverSpy);
+
+      List<String> oldDirs = new ArrayList<String>(node.getConf().
+          getTrimmedStringCollection(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
+      final String newDirs = oldDirs.get(0);
+      LOG.info("Reconfigure newDirs:" + newDirs);
+      Thread reconfigThread = new Thread() {
+        public void run() {
+          try {
+            LOG.info("Waiting for work plan creation!");
+            createWorkPlanLatch.await();
+            LOG.info("Work plan created. Removing disk!");
+            assertThat(
+                "DN did not update its own config", node.
+                reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDirs),
+                is(node.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
+            Thread.sleep(1000);
+            LOG.info("Removed disk!");
+            removeDiskLatch.countDown();
+          } catch (ReconfigurationException | InterruptedException e) {
+            Assert.fail("Unexpected error while reconfiguring: " + e);
+          }
+        }
+      };
+      reconfigThread.start();
+
+      String planJson = plan.toJson();
+      String planID = DigestUtils.shaHex(planJson);
+      diskBalancer.submitPlan(planID, 1, PLAN_FILE, planJson, false);
+
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            LOG.info("Work Status: " + diskBalancer.
+                queryWorkStatus().toJsonString());
+            Result result = diskBalancer.queryWorkStatus().getResult();
+            return (result == Result.PLAN_DONE);
+          } catch (IOException e) {
+            return false;
+          }
+        }
+      }, 1000, 100000);
+
+      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <
+          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT);
+      createWorkPlanLatch.await();
+      removeDiskLatch.await();
     }
 
     /**

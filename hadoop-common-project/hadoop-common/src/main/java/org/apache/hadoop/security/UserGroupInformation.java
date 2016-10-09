@@ -21,6 +21,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_MET
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
+import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
@@ -38,7 +39,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -652,33 +652,7 @@ public class UserGroupInformation {
     }
     this.isKrbTkt = KerberosUtil.hasKerberosTicket(subject);
   }
-
-  /**
-   * Copies the Subject of this UGI and creates a new UGI with the new subject.
-   * This can be used to add credentials (e.g. tokens) to different copies of
-   * the same UGI, allowing multiple users with different tokens to reuse the
-   * UGI without re-authenticating with Kerberos.
-   * @return clone of the UGI with a new subject.
-   */
-  @InterfaceAudience.Public
-  @InterfaceStability.Evolving
-  public UserGroupInformation copySubjectAndUgi() {
-    Subject subj = getSubject();
-    // The ctor will set other fields automatically from the principals.
-    return new UserGroupInformation(new Subject(false, subj.getPrincipals(),
-        cloneCredentials(subj.getPublicCredentials()),
-        cloneCredentials(subj.getPrivateCredentials())));
-  }
-
-  private static Set<Object> cloneCredentials(Set<Object> old) {
-    Set<Object> set = new HashSet<>();
-    // Make sure Hadoop credentials objects do not reuse the maps.
-    for (Object o : old) {
-      set.add(o instanceof Credentials ? new Credentials((Credentials)o) : o);
-    }
-    return set;
-  }
-
+  
   /**
    * checks if logged in using kerberos
    * @return true if the subject logged via keytab or has a Kerberos TGT
@@ -782,8 +756,11 @@ public class UserGroupInformation {
       ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
       return ugi;
     } catch (LoginException le) {
-      throw new IOException("failure to login using ticket cache file " +
-          ticketCache, le);
+      KerberosAuthException kae =
+          new KerberosAuthException(FAILURE_TO_LOGIN, le);
+      kae.setUser(user);
+      kae.setTicketCacheFile(ticketCache);
+      throw kae;
     }
   }
 
@@ -792,16 +769,17 @@ public class UserGroupInformation {
    *
    * @param subject             The KerberosPrincipal to use in UGI
    *
-   * @throws IOException        if the kerberos login fails
+   * @throws IOException
+   * @throws KerberosAuthException if the kerberos login fails
    */
   public static UserGroupInformation getUGIFromSubject(Subject subject)
       throws IOException {
     if (subject == null) {
-      throw new IOException("Subject must not be null");
+      throw new KerberosAuthException(SUBJECT_MUST_NOT_BE_NULL);
     }
 
     if (subject.getPrincipals(KerberosPrincipal.class).isEmpty()) {
-      throw new IOException("Provided Subject must contain a KerberosPrincipal");
+      throw new KerberosAuthException(SUBJECT_MUST_CONTAIN_PRINCIPAL);
     }
 
     KerberosPrincipal principal =
@@ -921,7 +899,7 @@ public class UserGroupInformation {
       loginUser.spawnAutoRenewalThreadForUserCreds();
     } catch (LoginException le) {
       LOG.debug("failure to login", le);
-      throw new IOException("failure to login: " + le, le);
+      throw new KerberosAuthException(FAILURE_TO_LOGIN, le);
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("UGI loginUser:"+loginUser);
@@ -1028,7 +1006,8 @@ public class UserGroupInformation {
    * file and logs them in. They become the currently logged-in user.
    * @param user the principal name to load from the keytab
    * @param path the path to the keytab file
-   * @throws IOException if the keytab file can't be read
+   * @throws IOException
+   * @throws KerberosAuthException if it's a kerberos login exception.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -1057,8 +1036,10 @@ public class UserGroupInformation {
       if (start > 0) {
         metrics.loginFailure.add(Time.now() - start);
       }
-      throw new IOException("Login failure for " + user + " from keytab " + 
-                            path+ ": " + le, le);
+      KerberosAuthException kae = new KerberosAuthException(LOGIN_FAILURE, le);
+      kae.setUser(user);
+      kae.setKeytabFile(path);
+      throw kae;
     }
     LOG.info("Login successful for user " + keytabPrincipal
         + " using keytab file " + keytabFile);
@@ -1069,8 +1050,9 @@ public class UserGroupInformation {
    * This method assumes that the user logged in by calling
    * {@link #loginUserFromKeytab(String, String)}.
    *
-   * @throws IOException if a failure occurred in logout, or if the user did
-   * not log in by invoking loginUserFromKeyTab() before.
+   * @throws IOException
+   * @throws KerberosAuthException if a failure occurred in logout,
+   * or if the user did not log in by invoking loginUserFromKeyTab() before.
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
@@ -1081,7 +1063,7 @@ public class UserGroupInformation {
     }
     LoginContext login = getLogin();
     if (login == null || keytabFile == null) {
-      throw new IOException("loginUserFromKeytab must be done first");
+      throw new KerberosAuthException(MUST_FIRST_LOGIN_FROM_KEYTAB);
     }
 
     try {
@@ -1092,9 +1074,10 @@ public class UserGroupInformation {
         login.logout();
       }
     } catch (LoginException le) {
-      throw new IOException("Logout failure for " + user + " from keytab " +
-          keytabFile + ": " + le,
-          le);
+      KerberosAuthException kae = new KerberosAuthException(LOGOUT_FAILURE, le);
+      kae.setUser(user.toString());
+      kae.setKeytabFile(keytabFile);
+      throw kae;
     }
 
     LOG.info("Logout successful for user " + keytabPrincipal
@@ -1105,6 +1088,7 @@ public class UserGroupInformation {
    * Re-login a user from keytab if TGT is expired or is close to expiry.
    * 
    * @throws IOException
+   * @throws KerberosAuthException if it's a kerberos login exception.
    */
   public synchronized void checkTGTAndReloginFromKeytab() throws IOException {
     if (!isSecurityEnabled()
@@ -1126,12 +1110,12 @@ public class UserGroupInformation {
    * happened already.
    * The Subject field of this UserGroupInformation object is updated to have
    * the new credentials.
-   * @throws IOException on a failure
+   * @throws IOException
+   * @throws KerberosAuthException on a failure
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromKeytab()
-  throws IOException {
+  public synchronized void reloginFromKeytab() throws IOException {
     if (!isSecurityEnabled() ||
          user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS ||
          !isKeytab)
@@ -1151,7 +1135,7 @@ public class UserGroupInformation {
     
     LoginContext login = getLogin();
     if (login == null || keytabFile == null) {
-      throw new IOException("loginUserFromKeyTab must be done first");
+      throw new KerberosAuthException(MUST_FIRST_LOGIN_FROM_KEYTAB);
     }
     
     long start = 0;
@@ -1183,8 +1167,10 @@ public class UserGroupInformation {
       if (start > 0) {
         metrics.loginFailure.add(Time.now() - start);
       }
-      throw new IOException("Login failure for " + keytabPrincipal + 
-          " from keytab " + keytabFile + ": " + le, le);
+      KerberosAuthException kae = new KerberosAuthException(LOGIN_FAILURE, le);
+      kae.setPrincipal(keytabPrincipal);
+      kae.setKeytabFile(keytabFile);
+      throw kae;
     } 
   }
 
@@ -1193,19 +1179,19 @@ public class UserGroupInformation {
    * method assumes that login had happened already.
    * The Subject field of this UserGroupInformation object is updated to have
    * the new credentials.
-   * @throws IOException on a failure
+   * @throws IOException
+   * @throws KerberosAuthException on a failure
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromTicketCache()
-  throws IOException {
+  public synchronized void reloginFromTicketCache() throws IOException {
     if (!isSecurityEnabled() || 
         user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS ||
         !isKrbTkt)
       return;
     LoginContext login = getLogin();
     if (login == null) {
-      throw new IOException("login must be done first");
+      throw new KerberosAuthException(MUST_FIRST_LOGIN);
     }
     long now = Time.now();
     if (!hasSufficientTimeElapsed(now)) {
@@ -1232,8 +1218,9 @@ public class UserGroupInformation {
       login.login();
       setLogin(login);
     } catch (LoginException le) {
-      throw new IOException("Login failure for " + getUserName() + ": " + le,
-          le);
+      KerberosAuthException kae = new KerberosAuthException(LOGIN_FAILURE, le);
+      kae.setUser(getUserName());
+      throw kae;
     } 
   }
 
@@ -1279,8 +1266,10 @@ public class UserGroupInformation {
       if (start > 0) {
         metrics.loginFailure.add(Time.now() - start);
       }
-      throw new IOException("Login failure for " + user + " from keytab " + 
-                            path + ": " + le, le);
+      KerberosAuthException kae = new KerberosAuthException(LOGIN_FAILURE, le);
+      kae.setUser(user);
+      kae.setKeytabFile(path);
+      throw kae;
     } finally {
       if(oldKeytabFile != null) keytabFile = oldKeytabFile;
       if(oldKeytabPrincipal != null) keytabPrincipal = oldKeytabPrincipal;
@@ -1611,7 +1600,7 @@ public class UserGroupInformation {
       Credentials creds = new Credentials(getCredentialsInternal());
       Iterator<Token<?>> iter = creds.getAllTokens().iterator();
       while (iter.hasNext()) {
-        if (iter.next() instanceof Token.PrivateToken) {
+        if (iter.next().isPrivate()) {
           iter.remove();
         }
       }

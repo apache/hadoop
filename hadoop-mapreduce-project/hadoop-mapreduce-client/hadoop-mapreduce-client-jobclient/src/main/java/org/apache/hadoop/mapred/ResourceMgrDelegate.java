@@ -511,4 +511,10 @@ public class ResourceMgrDelegate extends YarnClient {
       throws YarnException, IOException {
     client.signalToContainer(containerId, command);
   }
+
+  @Override
+  public void killApplication(ApplicationId appId, String diagnostics)
+      throws YarnException, IOException {
+    client.killApplication(appId, diagnostics);
+  }
 }

@@ -58,7 +58,7 @@ class FSDirSymlinkOp {
       iip = fsd.resolvePathForWrite(pc, link, false);
       link = iip.getPath();
       if (!createParent) {
-        fsd.verifyParentDir(iip, link);
+        fsd.verifyParentDir(iip);
       }
       if (!fsd.isValidToCreate(link, iip)) {
         throw new IOException(

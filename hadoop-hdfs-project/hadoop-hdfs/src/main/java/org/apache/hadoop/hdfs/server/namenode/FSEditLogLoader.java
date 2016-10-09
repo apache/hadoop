@@ -356,7 +356,7 @@ public class FSEditLogLoader {
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
-        FSDirDeleteOp.deleteForEditLog(fsDir, path, addCloseOp.mtime);
+        FSDirDeleteOp.deleteForEditLog(fsDir, iip, addCloseOp.mtime);
         iip = INodesInPath.replace(iip, iip.length() - 1, null);
         oldFile = null;
       }
@@ -383,10 +383,8 @@ public class FSEditLogLoader {
 
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
-          HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatusForEditLog(
-              fsNamesys.dir, path, HdfsFileStatus.EMPTY_NAME,
-              HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
-              false, iip);
+          HdfsFileStatus stat =
+              FSDirStatAndListingOp.createFileStatusForEditLog(fsDir, iip);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
               addCloseOp.rpcCallId, stat);
         }
@@ -402,10 +400,8 @@ public class FSEditLogLoader {
               false);
           // add the op into retry cache if necessary
           if (toAddRetryCache) {
-            HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatusForEditLog(
-                fsNamesys.dir, path, HdfsFileStatus.EMPTY_NAME,
-                HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-                Snapshot.CURRENT_STATE_ID, false, iip);
+            HdfsFileStatus stat =
+                FSDirStatAndListingOp.createFileStatusForEditLog(fsDir, iip);
             fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
                 addCloseOp.rpcCallId, new LastBlockWithStatus(lb, stat));
           }
@@ -480,10 +476,8 @@ public class FSEditLogLoader {
             false, false);
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
-          HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatusForEditLog(
-              fsNamesys.dir, path, HdfsFileStatus.EMPTY_NAME,
-              HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
-              Snapshot.CURRENT_STATE_ID, false, iip);
+          HdfsFileStatus stat =
+              FSDirStatAndListingOp.createFileStatusForEditLog(fsDir, iip);
           fsNamesys.addCacheEntryWithPayload(appendOp.rpcClientId,
               appendOp.rpcCallId, new LastBlockWithStatus(lb, stat));
         }
@@ -527,10 +521,12 @@ public class FSEditLogLoader {
     }
     case OP_SET_REPLICATION: {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
+      String src = renameReservedPathsOnUpgrade(
+          setReplicationOp.path, logVersion);
+      INodesInPath iip = fsDir.getINodesInPath4Write(src);
       short replication = fsNamesys.getBlockManager().adjustReplication(
           setReplicationOp.replication);
-      FSDirAttrOp.unprotectedSetReplication(fsDir, renameReservedPathsOnUpgrade(
-          setReplicationOp.path, logVersion), replication);
+      FSDirAttrOp.unprotectedSetReplication(fsDir, iip, replication);
       break;
     }
     case OP_CONCAT_DELETE: {
@@ -569,10 +565,11 @@ public class FSEditLogLoader {
     }
     case OP_DELETE: {
       DeleteOp deleteOp = (DeleteOp)op;
-      FSDirDeleteOp.deleteForEditLog(
-          fsDir, renameReservedPathsOnUpgrade(deleteOp.path, logVersion),
-          deleteOp.timestamp);
-      
+      final String src = renameReservedPathsOnUpgrade(
+          deleteOp.path, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src, false);
+      FSDirDeleteOp.deleteForEditLog(fsDir, iip, deleteOp.timestamp);
+
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteOp.rpcClientId, deleteOp.rpcCallId);
       }
@@ -595,52 +592,66 @@ public class FSEditLogLoader {
     }
     case OP_SET_PERMISSIONS: {
       SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
-      FSDirAttrOp.unprotectedSetPermission(fsDir, renameReservedPathsOnUpgrade(
-          setPermissionsOp.src, logVersion), setPermissionsOp.permissions);
+      final String src =
+          renameReservedPathsOnUpgrade(setPermissionsOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetPermission(fsDir, iip,
+          setPermissionsOp.permissions);
       break;
     }
     case OP_SET_OWNER: {
       SetOwnerOp setOwnerOp = (SetOwnerOp)op;
-      FSDirAttrOp.unprotectedSetOwner(
-          fsDir, renameReservedPathsOnUpgrade(setOwnerOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setOwnerOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetOwner(fsDir, iip,
           setOwnerOp.username, setOwnerOp.groupname);
       break;
     }
     case OP_SET_NS_QUOTA: {
       SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
-      FSDirAttrOp.unprotectedSetQuota(
-          fsDir, renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setNSQuotaOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
     case OP_CLEAR_NS_QUOTA: {
       ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
-      FSDirAttrOp.unprotectedSetQuota(
-          fsDir, renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          clearNSQuotaOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
-
-    case OP_SET_QUOTA:
+    case OP_SET_QUOTA: {
       SetQuotaOp setQuotaOp = (SetQuotaOp) op;
-      FSDirAttrOp.unprotectedSetQuota(fsDir,
-          renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setQuotaOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           setQuotaOp.nsQuota, setQuotaOp.dsQuota, null);
       break;
-
-    case OP_SET_QUOTA_BY_STORAGETYPE:
-        FSEditLogOp.SetQuotaByStorageTypeOp setQuotaByStorageTypeOp =
+    }
+    case OP_SET_QUOTA_BY_STORAGETYPE: {
+      FSEditLogOp.SetQuotaByStorageTypeOp setQuotaByStorageTypeOp =
           (FSEditLogOp.SetQuotaByStorageTypeOp) op;
-        FSDirAttrOp.unprotectedSetQuota(fsDir,
-          renameReservedPathsOnUpgrade(setQuotaByStorageTypeOp.src, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          setQuotaByStorageTypeOp.src, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, iip,
           HdfsConstants.QUOTA_DONT_SET, setQuotaByStorageTypeOp.dsQuota,
           setQuotaByStorageTypeOp.type);
-        break;
-
+      break;
+    }
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;
-      FSDirAttrOp.unprotectedSetTimes(
-          fsDir, renameReservedPathsOnUpgrade(timesOp.path, logVersion),
+      final String src = renameReservedPathsOnUpgrade(
+          timesOp.path, logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(src);
+      FSDirAttrOp.unprotectedSetTimes(fsDir, iip,
           timesOp.mtime, timesOp.atime, true);
       break;
     }
@@ -902,7 +913,8 @@ public class FSEditLogLoader {
     }
     case OP_SET_XATTR: {
       SetXAttrOp setXAttrOp = (SetXAttrOp) op;
-      FSDirXAttrOp.unprotectedSetXAttrs(fsDir, setXAttrOp.src,
+      INodesInPath iip = fsDir.getINodesInPath4Write(setXAttrOp.src);
+      FSDirXAttrOp.unprotectedSetXAttrs(fsDir, iip,
                                         setXAttrOp.xAttrs,
                                         EnumSet.of(XAttrSetFlag.CREATE,
                                                    XAttrSetFlag.REPLACE));

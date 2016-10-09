@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -527,6 +528,8 @@ public class RMAppImpl implements RMApp, Recoverable {
             DEFAULT_AM_SCHEDULING_NODE_BLACKLISTING_DISABLE_THRESHOLD;
       }
     }
+
+
   }
 
   /**
@@ -1058,7 +1061,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
 
       app.rmContext.getSystemMetricsPublisher().appUpdated(app,
-          System.currentTimeMillis());
+          app.systemClock.getTime());
 
       // TODO: Write out change to state store (YARN-1558)
       // Also take care of RM failover
@@ -1103,6 +1106,20 @@ public class RMAppImpl implements RMApp, Recoverable {
               + e.getMessage();
           app.diagnostics.append(msg);
           LOG.error(msg, e);
+        }
+      }
+
+      long applicationLifetime =
+          app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+      if (applicationLifetime > 0) {
+        app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
+            ApplicationTimeoutType.LIFETIME, app.submitTime,
+            applicationLifetime * 1000);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Application " + app.applicationId
+              + " is registered for timeout monitor, type="
+              + ApplicationTimeoutType.LIFETIME + " value="
+              + applicationLifetime + " seconds");
         }
       }
 
@@ -1152,6 +1169,13 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
+      Map<ApplicationTimeoutType, Long> timeouts =
+          app.submissionContext.getApplicationTimeouts();
+      if (timeouts != null && timeouts.size() > 0) {
+        app.rmContext.getRMAppLifetimeMonitor()
+            .unregisterApp(app.getApplicationId(), timeouts.keySet());
+      }
+
       if (app.transitionTodo instanceof SingleArcTransition) {
         ((SingleArcTransition) app.transitionTodo).transition(app,
           app.eventCausingFinalSaving);
@@ -1160,7 +1184,6 @@ public class RMAppImpl implements RMApp, Recoverable {
           app.eventCausingFinalSaving);
       }
       return app.targetedFinalState;
-
     }
   }
 
@@ -1208,6 +1231,18 @@ public class RMAppImpl implements RMApp, Recoverable {
   private static final class RMAppNewlySavingTransition extends RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
+
+      long applicationLifetime =
+          app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+      if (applicationLifetime > 0) {
+        app.rmContext.getRMAppLifetimeMonitor().registerApp(app.applicationId,
+            ApplicationTimeoutType.LIFETIME, app.submitTime,
+            applicationLifetime * 1000);
+        LOG.debug("Application " + app.applicationId
+            + " is registered for timeout monitor, type="
+            + ApplicationTimeoutType.LIFETIME + " value=" + applicationLifetime
+            + " seconds");
+      }
 
       // If recovery is enabled then store the application information in a
       // non-blocking call so make sure that RM has stored the information
@@ -1921,5 +1956,15 @@ public class RMAppImpl implements RMApp, Recoverable {
   @VisibleForTesting
   public int getNextAttemptId() {
     return nextAttemptId;
+  }
+
+  private long getApplicationLifetime(ApplicationTimeoutType type) {
+    Map<ApplicationTimeoutType, Long> timeouts =
+        this.submissionContext.getApplicationTimeouts();
+    long applicationLifetime = -1;
+    if (timeouts != null && timeouts.containsKey(type)) {
+      applicationLifetime = timeouts.get(type);
+    }
+    return applicationLifetime;
   }
 }

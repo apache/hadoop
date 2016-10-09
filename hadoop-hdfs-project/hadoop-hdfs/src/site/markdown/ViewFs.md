@@ -108,7 +108,7 @@ The mount points of a mount table are specified in the standard Hadoop configura
 
 ```xml
 <property>
-  <name>fs.default.name</name>
+  <name>fs.defaultFS</name>
   <value>viewfs://clusterX</value>
 </property>
 ```

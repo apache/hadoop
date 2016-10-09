@@ -66,6 +66,9 @@ static const int DEFAULT_MIN_USERID = 1000;
 
 static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
 
+static const int DEFAULT_DOCKER_SUPPORT_ENABLED = 0;
+static const int DEFAULT_TC_SUPPORT_ENABLED = 0;
+
 //location of traffic control binary
 static const char* TC_BIN = "/sbin/tc";
 static const char* TC_MODIFY_STATE_OPTS [] = { "-b" , NULL};
@@ -417,6 +420,43 @@ int change_user(uid_t user, gid_t group) {
   }
 
   return 0;
+}
+
+
+static int is_feature_enabled(const char* feature_key, int default_value) {
+    char *enabled_str = get_value(feature_key, &executor_cfg);
+    int enabled = default_value;
+
+    if (enabled_str != NULL) {
+        char *end_ptr = NULL;
+        enabled = strtol(enabled_str, &end_ptr, 10);
+
+        if ((enabled_str == end_ptr || *end_ptr != '\0') ||
+            (enabled < 0 || enabled > 1)) {
+              fprintf(LOGFILE, "Illegal value '%s' for '%s' in configuration. "
+              "Using default value: %d.\n", enabled_str, feature_key,
+              default_value);
+              fflush(LOGFILE);
+              free(enabled_str);
+              return default_value;
+        }
+
+        free(enabled_str);
+        return enabled;
+    } else {
+        return default_value;
+    }
+}
+
+
+int is_docker_support_enabled() {
+    return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
+    DEFAULT_DOCKER_SUPPORT_ENABLED);
+}
+
+int is_tc_support_enabled() {
+    return is_feature_enabled(TC_SUPPORT_ENABLED_KEY,
+    DEFAULT_TC_SUPPORT_ENABLED);
 }
 
 char* check_docker_binary(char *docker_binary) {
@@ -1136,9 +1176,6 @@ int run_docker(const char *command_file) {
   snprintf(docker_command_with_binary, EXECUTOR_PATH_MAX, "%s %s", docker_binary, docker_command);
   char **args = extract_values_delim(docker_command_with_binary, " ");
 
-  //clean up command file before we exec
-  unlink(command_file);
-
   int exit_code = -1;
   if (execvp(docker_binary, args) != 0) {
     fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
@@ -1451,8 +1488,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
 
 cleanup:
-  //clean up docker command file
-  unlink(command_file);
 
   if (exit_code_file != NULL && write_exit_code_file_as_nm(exit_code_file, exit_code) < 0) {
     fprintf (ERRORFILE,
@@ -2081,7 +2116,6 @@ static int run_traffic_control(const char *opts[], char *command_file) {
       fprintf(LOGFILE, "failed to execute tc command!\n");
       return TRAFFIC_CONTROL_EXECUTION_FAILED;
     }
-    unlink(command_file);
     return 0;
   } else {
     execv(TC_BIN, (char**)args);

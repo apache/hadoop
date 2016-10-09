@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
@@ -320,7 +321,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   public CuratorFramework createAndStartCurator(Configuration conf)
-      throws Exception {
+      throws IOException {
     String zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
     if (zkHostPort == null) {
       throw new YarnRuntimeException(
@@ -556,6 +557,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addService(amFinishingMonitor);
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
       
+      RMAppLifetimeMonitor rmAppLifetimeMonitor = createRMAppLifetimeMonitor();
+      addService(rmAppLifetimeMonitor);
+      rmContext.setRMAppLifetimeMonitor(rmAppLifetimeMonitor);
+
       RMNodeLabelsManager nlm = createNodeLabelManager();
       nlm.setRMContext(rmContext);
       addService(nlm);
@@ -1179,6 +1184,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     Configuration config = this.rmContext.getYarnConfiguration();
     if (YarnConfiguration.isOpportunisticContainerAllocationEnabled(config)
         || YarnConfiguration.isDistSchedulingEnabled(config)) {
+      if (YarnConfiguration.isDistSchedulingEnabled(config) &&
+          !YarnConfiguration
+              .isOpportunisticContainerAllocationEnabled(config)) {
+        throw new YarnRuntimeException(
+            "Invalid parameters: opportunistic container allocation has to " +
+                "be enabled when distributed scheduling is enabled.");
+      }
       OpportunisticContainerAllocatorAMService
           oppContainerAllocatingAMService =
           new OpportunisticContainerAllocatorAMService(this.rmContext,
@@ -1188,9 +1200,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
               OpportunisticContainerAllocatorAMService.class.getName());
       // Add an event dispatcher for the
       // OpportunisticContainerAllocatorAMService to handle node
-      // updates/additions and removals.
-      // Since the SchedulerEvent is currently a super set of theses,
-      // we register interest for it..
+      // additions, updates and removals. Since the SchedulerEvent is currently
+      // a super set of theses, we register interest for it.
       addService(oppContainerAllocEventDispatcher);
       rmDispatcher.register(SchedulerEventType.class,
           oppContainerAllocEventDispatcher);
@@ -1397,5 +1408,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     out.println("Usage: yarn resourcemanager [-format-state-store]");
     out.println("                            "
         + "[-remove-application-from-state-store <appId>]" + "\n");
+  }
+
+  protected RMAppLifetimeMonitor createRMAppLifetimeMonitor() {
+    return new RMAppLifetimeMonitor(this.rmContext);
   }
 }

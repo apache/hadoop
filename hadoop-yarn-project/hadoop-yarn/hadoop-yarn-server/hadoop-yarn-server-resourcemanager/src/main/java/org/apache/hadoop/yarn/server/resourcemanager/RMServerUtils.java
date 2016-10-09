@@ -36,6 +36,7 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions
     .InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -209,10 +211,7 @@ public class RMServerUtils {
   }
 
   /**
-   * Validate increase/decrease request. This function must be called under
-   * the queue lock to make sure that the access to container resource is
-   * atomic. Refer to LeafQueue.decreaseContainer() and
-   * CapacityScheduelr.updateIncreaseRequests()
+   * Validate increase/decrease request.
    * <pre>
    * - Throw exception when any other error happens
    * </pre>
@@ -468,6 +467,20 @@ public class RMServerUtils {
     }
     for (Map.Entry<String, String> entry : rmProxyUsers.entrySet()) {
       conf.set(entry.getKey(), entry.getValue());
+    }
+  }
+
+  public static void validateApplicationTimeouts(
+      Map<ApplicationTimeoutType, Long> timeouts) throws YarnException {
+    if (timeouts != null) {
+      for (Map.Entry<ApplicationTimeoutType, Long> timeout : timeouts
+          .entrySet()) {
+        if (timeout.getValue() < 0) {
+          String message = "Invalid application timeout, value="
+              + timeout.getValue() + " for type=" + timeout.getKey();
+          throw new YarnException(message);
+        }
+      }
     }
   }
 }

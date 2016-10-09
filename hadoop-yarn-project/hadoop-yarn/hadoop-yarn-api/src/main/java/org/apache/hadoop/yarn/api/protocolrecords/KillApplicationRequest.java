@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
@@ -57,4 +58,21 @@ public abstract class KillApplicationRequest {
   @Public
   @Stable
   public abstract void setApplicationId(ApplicationId applicationId);
+
+  /**
+   * Get the <em>diagnostics</em> to which the application is being killed.
+   * @return <em>diagnostics</em> to which the application is being killed
+   */
+  @Public
+  @Unstable
+  public abstract String getDiagnostics();
+
+  /**
+   * Set the <em>diagnostics</em> to which the application is being killed.
+   * @param diagnostics <em>diagnostics</em> to which the application is being
+   *          killed
+   */
+  @Public
+  @Unstable
+  public abstract void setDiagnostics(String diagnostics);
 }

@@ -156,6 +156,7 @@ message FailApplicationAttemptResponseProto {
 
 message KillApplicationRequestProto {
   optional ApplicationIdProto application_id = 1;
+  optional string diagnostics = 2;
 }
 
 message KillApplicationResponseProto {
@@ -292,6 +293,24 @@ message ResourceLocalizationRequestProto {
 }
 
 message ResourceLocalizationResponseProto {
+}
+
+message ReInitializeContainerRequestProto {
+  optional ContainerIdProto container_id = 1;
+  optional ContainerLaunchContextProto container_launch_context = 2;
+  optional bool auto_commit = 3 [default = true];
+}
+
+message ReInitializeContainerResponseProto {
+}
+
+message RestartContainerResponseProto {
+}
+
+message RollbackResponseProto {
+}
+
+message CommitResponseProto {
 }
 
 //// bulk API records

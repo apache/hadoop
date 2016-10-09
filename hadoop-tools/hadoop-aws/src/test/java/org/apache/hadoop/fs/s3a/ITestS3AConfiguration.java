@@ -409,6 +409,14 @@ public class ITestS3AConfiguration {
         awsConf.getUserAgent());
   }
 
+  @Test
+  public void testCloseIdempotent() throws Throwable {
+    conf = new Configuration();
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    fs.close();
+    fs.close();
+  }
+
   /**
    * Reads and returns a field from an object using reflection.  If the field
    * cannot be found, is null, or is not the expected type, then this method

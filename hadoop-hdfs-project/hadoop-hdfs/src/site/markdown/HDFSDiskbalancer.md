@@ -106,10 +106,13 @@ or
 Plan ID can be read from datanode using query command.
 
 ### Report
-Report command provides detailed report about node(s).
+Report command provides detailed report of specified node(s) or top nodes that will benefit from running disk balancer.
 
 `hdfs diskbalancer -fs http://namenode.uri -report -node [<DataNodeID|IP|Hostname>,...]`
 
+or
+
+`hdfs diskbalancer -fs http://namenode.uri -report -top topnum`
 
 Settings
 --------
