@@ -246,6 +246,9 @@ public class TeraGen extends Configured implements Tool {
 
   private static void usage() throws IOException {
     System.err.println("teragen <num rows> <output dir>");
+    System.err.println("If you want to generate data and store them as " +
+        "erasure code striping file, just make sure that the parent dir " +
+        "of <output dir> has erasure code policy set");
   }
 
   /**

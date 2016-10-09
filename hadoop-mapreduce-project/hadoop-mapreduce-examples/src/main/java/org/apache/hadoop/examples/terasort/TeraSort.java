@@ -287,6 +287,9 @@ public class TeraSort extends Configured implements Tool {
     for (TeraSortConfigKeys teraSortConfigKeys : TeraSortConfigKeys.values()) {
       System.err.println(teraSortConfigKeys.toString());
     }
+    System.err.println("If you want to store the output data as " +
+        "erasure code striping file, just make sure that the parent dir " +
+        "of <out> has erasure code policy set");
   }
 
   public int run(String[] args) throws Exception {
