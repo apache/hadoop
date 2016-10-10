@@ -66,7 +66,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
+      <version>${project.hbase-hadoop-compatibility.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -79,7 +79,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
+      <version>${project.hbase-hadoop-compatibility.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -363,7 +363,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
+      <version>${project.hbase-hadoop-compatibility.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
       <exclusions>
@@ -377,14 +377,14 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
+      <version>${project.hbase-hadoop-compatibility.version}</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hbase-compatible-hadoop.version}</version>
+      <version>${project.hbase-hadoop-compatibility.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
