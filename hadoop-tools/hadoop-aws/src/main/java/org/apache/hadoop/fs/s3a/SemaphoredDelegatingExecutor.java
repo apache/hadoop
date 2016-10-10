@@ -40,8 +40,8 @@ import java.util.concurrent.TimeoutException;
  * completions release permits.
  * <p>
  * This is a refactoring of {@link BlockingThreadPoolExecutorService}; that code
- * contains the thread pool logic, whereas this isolates the semaphore and submit
- * logic for use with other thread pools and delegation models.
+ * contains the thread pool logic, whereas this isolates the semaphore
+ * and submit logic for use with other thread pools and delegation models.
  * In particular, it <i>permits multiple per stream executors to share a
  * single per-FS-instance executor; the latter to throttle overall
  * load from the the FS, the others to limit the amount of load which
@@ -149,7 +149,7 @@ class SemaphoredDelegatingExecutor extends
 
   /**
    * Get the number of permits available; guaranteed to be
-   * {@code 0 <= availablePermits <= size}
+   * {@code 0 <= availablePermits <= size}.
    * @return the number of permits available at the time of invocation.
    */
   public int getAvailablePermits() {

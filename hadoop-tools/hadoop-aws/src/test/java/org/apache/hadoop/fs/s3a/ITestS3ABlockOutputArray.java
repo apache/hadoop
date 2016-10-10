@@ -67,7 +67,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
   @Test(expected = IOException.class)
   public void testDoubleStreamClose() throws Throwable {
     Path dest = path("testDoubleStreamClose");
-    describe(" testDoubleStreamClose" );
+    describe(" testDoubleStreamClose");
     FSDataOutputStream stream = getFileSystem().create(dest, true);
     byte[] data = ContractTestUtils.dataset(16, 'a', 26);
     try {

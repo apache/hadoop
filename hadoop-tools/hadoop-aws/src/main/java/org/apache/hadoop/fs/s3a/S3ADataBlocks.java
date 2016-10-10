@@ -49,7 +49,8 @@ import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
  */
 final class S3ADataBlocks {
 
-  private static final Logger LOG = LoggerFactory.getLogger(S3ADataBlocks.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(S3ADataBlocks.class);
 
   private S3ADataBlocks() {
   }
@@ -100,14 +101,12 @@ final class S3ADataBlocks {
    */
   static abstract class BlockFactory implements Closeable {
 
-    /**
-     * Owner.
-     */
-    protected final S3AFileSystem owner;
+    private final S3AFileSystem owner;
 
     protected BlockFactory(S3AFileSystem owner) {
       this.owner = owner;
     }
+
 
     /**
      * Create a block.
@@ -124,6 +123,13 @@ final class S3ADataBlocks {
     @Override
     public void close() throws IOException {
     }
+
+    /**
+     * Owner.
+     */
+    protected S3AFileSystem getOwner() {
+      return owner;
+    }
   }
 
   /**
@@ -134,10 +140,10 @@ final class S3ADataBlocks {
     private volatile DestState state = Writing;
 
     /**
-     * Enter
-     * @param current
-     * @param next
-     * @throws IllegalStateException
+     * Atomically enter a state, verifying current state.
+     * @param current current state. null means "no check"
+     * @param next next state
+     * @throws IllegalStateException if the current state is not as expected
      */
     protected synchronized final void enterState(DestState current,
         DestState next)
@@ -152,7 +158,8 @@ final class S3ADataBlocks {
      * @param expected expected state.
      * @throws IllegalStateException if the DataBlock is in the wrong state
      */
-    protected final void verifyState(DestState expected) throws IllegalStateException {
+    protected final void verifyState(DestState expected)
+        throws IllegalStateException {
       if (expected != null && state != expected) {
         throw new IllegalStateException("Expected stream state " + expected
             + " -but actual state is " + state + " in " + this);
@@ -660,8 +667,8 @@ final class S3ADataBlocks {
      */
     @Override
     DataBlock create(int limit) throws IOException {
-      File destFile = owner
-          .createTmpFileForWrite("s3ablock", limit, owner.getConf());
+      File destFile = getOwner()
+          .createTmpFileForWrite("s3ablock", limit, getOwner().getConf());
       return new DiskBlock(destFile, limit);
     }
   }
@@ -672,7 +679,7 @@ final class S3ADataBlocks {
    */
   static class DiskBlock extends DataBlock {
 
-    protected int bytesWritten;
+    private int bytesWritten;
     private final File bufferFile;
     private final int limit;
     private BufferedOutputStream out;

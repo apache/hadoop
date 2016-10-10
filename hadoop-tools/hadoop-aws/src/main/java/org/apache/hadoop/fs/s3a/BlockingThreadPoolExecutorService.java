@@ -42,7 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * this s4 threadpool</a>
  */
 @InterfaceAudience.Private
-class  BlockingThreadPoolExecutorService
+final class  BlockingThreadPoolExecutorService
     extends SemaphoredDelegatingExecutor {
 
   private static final Logger LOG = LoggerFactory
@@ -151,7 +151,7 @@ class  BlockingThreadPoolExecutorService
   }
 
   /**
-   * Get the actual number of active threads
+   * Get the actual number of active threads.
    * @return the active thread count
    */
   int getActiveCount() {

@@ -2142,7 +2142,7 @@ public class S3AFileSystem extends FileSystem {
    *
    * Each instance of this state is unique to a single output stream.
    */
-  class WriteOperationHelper {
+  final class WriteOperationHelper {
     private final String key;
 
     private WriteOperationHelper(String key) {

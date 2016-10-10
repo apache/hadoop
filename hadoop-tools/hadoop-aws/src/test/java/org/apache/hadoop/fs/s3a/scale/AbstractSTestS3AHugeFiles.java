@@ -134,12 +134,12 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     int timeout = getTestTimeoutSeconds();
     // assume 1 MB/s upload bandwidth
     int bandwidth = _1MB;
-    long upload_time = filesize/ bandwidth;
+    long uploadTime = filesize / bandwidth;
     assertTrue(String.format("Timeout set in %s seconds is too low;" +
             " estimating upload time of %d seconds at 1 MB/s." +
             " Rerun tests with -D%s=%d",
-            timeout, upload_time, KEY_TEST_TIMEOUT, upload_time * 2),
-        upload_time < timeout);
+            timeout, uploadTime, KEY_TEST_TIMEOUT, uploadTime * 2),
+        uploadTime < timeout);
     assertEquals("File size set in " + KEY_HUGE_FILESIZE + " = " + filesize
             + " is not a multiple of " + uploadBlockSize,
         0, filesize % uploadBlockSize);
@@ -200,7 +200,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
       closeTimer.end("time to close() output stream");
     }
 
-    timer.end("time to write %d MB in blocks of %d", filesizeMB, uploadBlockSize);
+    timer.end("time to write %d MB in blocks of %d",
+        filesizeMB, uploadBlockSize);
     logFSState();
     bandwidth(timer, filesize);
     long putRequestCount = storageStatistics.getLong(putRequests);
@@ -222,7 +223,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   /**
    * Progress callback from AWS. Likely to come in on a different thread.
    */
-  private class ProgressCallback implements Progressable,
+  private final class ProgressCallback implements Progressable,
       ProgressListener {
     private AtomicLong bytesTransferred = new AtomicLong(0);
     private AtomicInteger failures = new AtomicInteger(0);

@@ -736,8 +736,8 @@ public class S3AInstrumentation {
     }
 
     /**
-     * Get the number of bytes pending upload
-     * @return
+     * Get the number of bytes pending upload.
+     * @return the number of bytes in the pending upload state.
      */
     public long getBytesPendingUpload() {
       return bytesPendingUpload.get();
