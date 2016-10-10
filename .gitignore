@@ -31,3 +31,5 @@ hadoop-tools/hadoop-aws/src/test/resources/auth-keys.xml
 hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml
 hadoop-tools/hadoop-azure/src/test/resources/azure-auth-keys.xml
 patchprocess/
+hadoop-tools/hadoop-aliyun/src/test/resources/auth-keys.xml
+hadoop-tools/hadoop-aliyun/src/test/resources/contract-test-options.xml
