@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.util.StringUtils;
 
+
 /**
  * Encapsulates the URI and storage medium that together describe a
  * storage directory.
@@ -37,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
  *
  */
 @InterfaceAudience.Private
-public class StorageLocation {
+public class StorageLocation implements Comparable<StorageLocation>{
   final StorageType storageType;
   final File file;
 
@@ -104,16 +105,37 @@ public class StorageLocation {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    } else if (obj == null || !(obj instanceof StorageLocation)) {
+    if (obj == null || !(obj instanceof StorageLocation)) {
       return false;
     }
-    return toString().equals(obj.toString());
+    int comp = compareTo((StorageLocation) obj);
+    return comp == 0;
   }
 
   @Override
   public int hashCode() {
     return toString().hashCode();
+  }
+
+  @Override
+  public int compareTo(StorageLocation obj) {
+    if (obj == this) {
+      return 0;
+    } else if (obj == null) {
+      return -1;
+    }
+
+    StorageLocation otherStorage = (StorageLocation) obj;
+    if (this.getFile() != null && otherStorage.getFile() != null) {
+      return this.getFile().getAbsolutePath().compareTo(
+          otherStorage.getFile().getAbsolutePath());
+    } else if (this.getFile() == null && otherStorage.getFile() == null) {
+      return this.storageType.compareTo(otherStorage.getStorageType());
+    } else if (this.getFile() == null) {
+      return -1;
+    } else {
+      return 1;
+    }
+
   }
 }

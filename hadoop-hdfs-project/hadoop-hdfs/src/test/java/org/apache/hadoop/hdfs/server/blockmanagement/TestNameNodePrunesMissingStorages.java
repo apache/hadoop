@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -216,13 +217,13 @@ public class TestNameNodePrunesMissingStorages {
         datanodeToRemoveStorageFromIdx++;
       }
       // Find the volume within the datanode which holds that first storage.
-      String volumeDirectoryToRemove = null;
+      StorageLocation volumeLocationToRemove = null;
       try (FsVolumeReferences volumes =
           datanodeToRemoveStorageFrom.getFSDataset().getFsVolumeReferences()) {
         assertEquals(NUM_STORAGES_PER_DN, volumes.size());
         for (FsVolumeSpi volume : volumes) {
           if (volume.getStorageID().equals(storageIdToRemove)) {
-            volumeDirectoryToRemove = volume.getBasePath();
+            volumeLocationToRemove = volume.getStorageLocation();
           }
         }
       };
@@ -230,10 +231,11 @@ public class TestNameNodePrunesMissingStorages {
       // Replace the volume directory with a regular file, which will
       // cause a volume failure.  (If we merely removed the directory,
       // it would be re-initialized with a new storage ID.)
-      assertNotNull(volumeDirectoryToRemove);
+      assertNotNull(volumeLocationToRemove);
       datanodeToRemoveStorageFrom.shutdown();
-      FileUtil.fullyDelete(new File(volumeDirectoryToRemove));
-      FileOutputStream fos = new FileOutputStream(volumeDirectoryToRemove);
+      FileUtil.fullyDelete(volumeLocationToRemove.getFile());
+      FileOutputStream fos = new FileOutputStream(
+          volumeLocationToRemove.getFile().toString());
       try {
         fos.write(1);
       } finally {
@@ -326,7 +328,8 @@ public class TestNameNodePrunesMissingStorages {
           dn.getFSDataset().getFsVolumeReferences();
       final String newStorageId = DatanodeStorage.generateUuid();
       try {
-        File currentDir = new File(volumeRefs.get(0).getBasePath(), "current");
+        File currentDir = new File(
+            volumeRefs.get(0).getStorageLocation().getFile(), "current");
         File versionFile = new File(currentDir, "VERSION");
         rewriteVersionFile(versionFile, newStorageId);
       } finally {

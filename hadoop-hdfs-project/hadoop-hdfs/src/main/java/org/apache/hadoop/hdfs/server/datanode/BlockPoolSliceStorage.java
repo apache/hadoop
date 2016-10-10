@@ -147,10 +147,10 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException
    */
   private StorageDirectory loadStorageDirectory(NamespaceInfo nsInfo,
-      File dataDir, StartupOption startOpt,
+      File dataDir, StorageLocation location, StartupOption startOpt,
       List<Callable<StorageDirectory>> callables, Configuration conf)
           throws IOException {
-    StorageDirectory sd = new StorageDirectory(dataDir, null, true);
+    StorageDirectory sd = new StorageDirectory(dataDir, null, true, location);
     try {
       StorageState curState = sd.analyzeStorage(startOpt, this, true);
       // sd is locked but not opened
@@ -208,9 +208,9 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException on error
    */
   List<StorageDirectory> loadBpStorageDirectories(NamespaceInfo nsInfo,
-      Collection<File> dataDirs, StartupOption startOpt,
-      List<Callable<StorageDirectory>> callables, Configuration conf)
-          throws IOException {
+      Collection<File> dataDirs, StorageLocation location,
+      StartupOption startOpt, List<Callable<StorageDirectory>> callables,
+      Configuration conf) throws IOException {
     List<StorageDirectory> succeedDirs = Lists.newArrayList();
     try {
       for (File dataDir : dataDirs) {
@@ -220,7 +220,7 @@ public class BlockPoolSliceStorage extends Storage {
                   "attempt to load an used block storage: " + dataDir);
         }
         final StorageDirectory sd = loadStorageDirectory(
-            nsInfo, dataDir, startOpt, callables, conf);
+            nsInfo, dataDir, location, startOpt, callables, conf);
         succeedDirs.add(sd);
       }
     } catch (IOException e) {
@@ -244,12 +244,12 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException on error
    */
   List<StorageDirectory> recoverTransitionRead(NamespaceInfo nsInfo,
-      Collection<File> dataDirs, StartupOption startOpt,
-      List<Callable<StorageDirectory>> callables, Configuration conf)
-          throws IOException {
+      Collection<File> dataDirs, StorageLocation location,
+      StartupOption startOpt, List<Callable<StorageDirectory>> callables,
+      Configuration conf) throws IOException {
     LOG.info("Analyzing storage directories for bpid " + nsInfo.getBlockPoolID());
     final List<StorageDirectory> loaded = loadBpStorageDirectories(
-        nsInfo, dataDirs, startOpt, callables, conf);
+        nsInfo, dataDirs, location, startOpt, callables, conf);
     for (StorageDirectory sd : loaded) {
       addStorageDir(sd);
     }

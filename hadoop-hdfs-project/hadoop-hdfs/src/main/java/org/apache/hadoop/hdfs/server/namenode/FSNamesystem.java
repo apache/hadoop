@@ -5413,7 +5413,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
       if (volumeFailureSummary != null) {
         innerinfo
-            .put("failedStorageLocations",
+            .put("failedStorageIDs",
                 volumeFailureSummary.getFailedStorageLocations())
             .put("lastVolumeFailureDate",
                 volumeFailureSummary.getLastVolumeFailureDate())

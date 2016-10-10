@@ -549,7 +549,8 @@ public class TestBlockScanner {
       info.shouldRun = false;
     }
     ctx.datanode.shutdown();
-    String vPath = ctx.volumes.get(0).getBasePath();
+    String vPath = ctx.volumes.get(0).getStorageLocation()
+        .getFile().getAbsolutePath();
     File cursorPath = new File(new File(new File(vPath, "current"),
           ctx.bpids[0]), "scanner.cursor");
     assertTrue("Failed to find cursor save file in " +

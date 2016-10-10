@@ -263,9 +263,10 @@ public class DataStorage extends Storage {
   }
 
   private StorageDirectory loadStorageDirectory(DataNode datanode,
-      NamespaceInfo nsInfo, File dataDir, StartupOption startOpt,
-      List<Callable<StorageDirectory>> callables) throws IOException {
-    StorageDirectory sd = new StorageDirectory(dataDir, null, false);
+      NamespaceInfo nsInfo, File dataDir, StorageLocation location,
+      StartupOption startOpt, List<Callable<StorageDirectory>> callables)
+          throws IOException {
+    StorageDirectory sd = new StorageDirectory(dataDir, null, false, location);
     try {
       StorageState curState = sd.analyzeStorage(startOpt, this, true);
       // sd is locked but not opened
@@ -310,7 +311,7 @@ public class DataStorage extends Storage {
    * builder later.
    *
    * @param datanode DataNode object.
-   * @param volume the root path of a storage directory.
+   * @param location the StorageLocation for the storage directory.
    * @param nsInfos an array of namespace infos.
    * @return a VolumeBuilder that holds the metadata of this storage directory
    * and can be added to DataStorage later.
@@ -318,8 +319,10 @@ public class DataStorage extends Storage {
    *
    * Note that if there is IOException, the state of DataStorage is not modified.
    */
-  public VolumeBuilder prepareVolume(DataNode datanode, File volume,
-      List<NamespaceInfo> nsInfos) throws IOException {
+  public VolumeBuilder prepareVolume(DataNode datanode,
+      StorageLocation location, List<NamespaceInfo> nsInfos)
+          throws IOException {
+    File volume = location.getFile();
     if (containsStorageDir(volume)) {
       final String errorMessage = "Storage directory is in use";
       LOG.warn(errorMessage + ".");
@@ -327,7 +330,8 @@ public class DataStorage extends Storage {
     }
 
     StorageDirectory sd = loadStorageDirectory(
-        datanode, nsInfos.get(0), volume, StartupOption.HOTSWAP, null);
+        datanode, nsInfos.get(0), volume, location,
+        StartupOption.HOTSWAP, null);
     VolumeBuilder builder =
         new VolumeBuilder(this, sd);
     for (NamespaceInfo nsInfo : nsInfos) {
@@ -338,7 +342,8 @@ public class DataStorage extends Storage {
 
       final BlockPoolSliceStorage bpStorage = getBlockPoolSliceStorage(nsInfo);
       final List<StorageDirectory> dirs = bpStorage.loadBpStorageDirectories(
-          nsInfo, bpDataDirs, StartupOption.HOTSWAP, null, datanode.getConf());
+          nsInfo, bpDataDirs, location, StartupOption.HOTSWAP,
+          null, datanode.getConf());
       builder.addBpStorageDirectories(nsInfo.getBlockPoolID(), dirs);
     }
     return builder;
@@ -407,7 +412,7 @@ public class DataStorage extends Storage {
           final List<Callable<StorageDirectory>> callables
               = Lists.newArrayList();
           final StorageDirectory sd = loadStorageDirectory(
-              datanode, nsInfo, root, startOpt, callables);
+              datanode, nsInfo, root, dataDir, startOpt, callables);
           if (callables.isEmpty()) {
             addStorageDir(sd);
             success.add(dataDir);
@@ -458,7 +463,8 @@ public class DataStorage extends Storage {
 
         final List<Callable<StorageDirectory>> callables = Lists.newArrayList();
         final List<StorageDirectory> dirs = bpStorage.recoverTransitionRead(
-            nsInfo, bpDataDirs, startOpt, callables, datanode.getConf());
+            nsInfo, bpDataDirs, dataDir, startOpt,
+            callables, datanode.getConf());
         if (callables.isEmpty()) {
           for(StorageDirectory sd : dirs) {
             success.add(sd);
@@ -498,9 +504,10 @@ public class DataStorage extends Storage {
    * @param dirsToRemove a set of storage directories to be removed.
    * @throws IOException if I/O error when unlocking storage directory.
    */
-  synchronized void removeVolumes(final Set<File> dirsToRemove)
+  synchronized void removeVolumes(
+      final Collection<StorageLocation> storageLocations)
       throws IOException {
-    if (dirsToRemove.isEmpty()) {
+    if (storageLocations.isEmpty()) {
       return;
     }
 
@@ -508,7 +515,8 @@ public class DataStorage extends Storage {
     for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
-      if (dirsToRemove.contains(sd.getRoot())) {
+      StorageLocation sdLocation = sd.getStorageLocation();
+      if (storageLocations.contains(sdLocation)) {
         // Remove the block pool level storage first.
         for (Map.Entry<String, BlockPoolSliceStorage> entry :
             this.bpStorageMap.entrySet()) {

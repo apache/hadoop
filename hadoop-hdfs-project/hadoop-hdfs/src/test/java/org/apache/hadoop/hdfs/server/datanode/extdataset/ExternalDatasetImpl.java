@@ -56,12 +56,14 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void addVolume(StorageLocation location, List<NamespaceInfo> nsInfos) throws IOException {
-
+  public void addVolume(StorageLocation location, List<NamespaceInfo> nsInfos)
+      throws IOException {
   }
 
   @Override
-  public void removeVolumes(Set<File> volumes, boolean clearFailure) {
+  public void removeVolumes(Collection<StorageLocation> volumes,
+      boolean clearFailure) {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -242,7 +244,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public Set<File> checkDataDir() {
+  public Set<StorageLocation> checkDataDir() {
     return null;
   }
 

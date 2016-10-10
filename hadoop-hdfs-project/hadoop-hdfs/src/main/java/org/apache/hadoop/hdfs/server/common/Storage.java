@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.ToolRunner;
@@ -269,11 +270,17 @@ public abstract class Storage extends StorageInfo {
 
     private String storageUuid = null;      // Storage directory identifier.
     
+    private final StorageLocation location;
     public StorageDirectory(File dir) {
       // default dirType is null
       this(dir, null, false);
     }
     
+    public StorageDirectory(StorageLocation location) {
+      // default dirType is null
+      this(location.getFile(), null, false, location);
+    }
+
     public StorageDirectory(File dir, StorageDirType dirType) {
       this(dir, dirType, false);
     }
@@ -294,11 +301,22 @@ public abstract class Storage extends StorageInfo {
      *          disables locking on the storage directory, false enables locking
      */
     public StorageDirectory(File dir, StorageDirType dirType, boolean isShared) {
+      this(dir, dirType, isShared, null);
+    }
+
+    public StorageDirectory(File dir, StorageDirType dirType,
+        boolean isShared, StorageLocation location) {
       this.root = dir;
       this.lock = null;
       this.dirType = dirType;
       this.isShared = isShared;
+      this.location = location;
+      assert location == null ||
+          dir.getAbsolutePath().startsWith(
+              location.getFile().getAbsolutePath()):
+            "The storage location and directory should be equal";
     }
+
     
     /**
      * Get root directory of this storage
@@ -860,6 +878,10 @@ public abstract class Storage extends StorageInfo {
         }
       }
       return false;
+    }
+
+    public StorageLocation getStorageLocation() {
+      return location;
     }
   }
 

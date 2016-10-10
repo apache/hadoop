@@ -374,9 +374,12 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
   public long getRawCapacity() throws IOException {
     try (FsVolumeReferences volRefs = dataset.getFsVolumeReferences()) {
       Preconditions.checkState(volRefs.size() != 0);
-      DF df = new DF(new File(volRefs.get(0).getBasePath()),
-          dataset.datanode.getConf());
-      return df.getCapacity();
+      DF df = volRefs.get(0).getUsageStats(dataset.datanode.getConf());
+      if (df != null) {
+        return df.getCapacity();
+      } else {
+        return -1;
+      }
     }
   }
 

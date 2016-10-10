@@ -539,6 +539,16 @@ public class TestDataNodeVolumeFailureReporting {
     assertCounter("VolumeFailures", expectedVolumeFailuresCounter,
         getMetrics(dn.getMetrics().name()));
     FsDatasetSpi<?> fsd = dn.getFSDataset();
+    StringBuilder strBuilder = new StringBuilder();
+    strBuilder.append("expectedFailedVolumes is ");
+    for (String expected: expectedFailedVolumes) {
+      strBuilder.append(expected + ",");
+    }
+    strBuilder.append(" fsd.getFailedStorageLocations() is ");
+    for (String expected: fsd.getFailedStorageLocations()) {
+      strBuilder.append(expected + ",");
+    }
+    LOG.info(strBuilder.toString());
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
     assertArrayEquals(expectedFailedVolumes, fsd.getFailedStorageLocations());
     if (expectedFailedVolumes.length > 0) {
