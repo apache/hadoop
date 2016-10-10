@@ -943,10 +943,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *
    * If var is unbounded the current state of expansion "prefix${var}suffix" is
    * returned.
-   *
-   * If a cycle is detected: replacing var1 requires replacing var2 ... requires
-   * replacing var1, i.e., the cycle is shorter than
-   * {@link Configuration#MAX_SUBST} then the original expr is returned.
+   * <p>
+   * This function also detects self-referential substitutions, i.e.
+   * <pre>
+   *   {@code
+   *   foo.bar = ${foo.bar}
+   *   }
+   * </pre>
+   * If a cycle is detected then the original expr is returned. Loops
+   * involving multiple substitutions are not detected.
    *
    * @param expr the literal value of a config key
    * @return null if expr is null, otherwise the value resulting from expanding
@@ -959,7 +964,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return null;
     }
     String eval = expr;
-    Set<String> evalSet = null;
     for(int s = 0; s < MAX_SUBST; s++) {
       final int[] varBounds = findSubVariable(eval);
       if (varBounds[SUB_START_IDX] == -1) {
@@ -1004,15 +1008,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         return eval; // return literal ${var}: var is unbound
       }
 
-      // prevent recursive resolution
-      //
       final int dollar = varBounds[SUB_START_IDX] - "${".length();
       final int afterRightBrace = varBounds[SUB_END_IDX] + "}".length();
       final String refVar = eval.substring(dollar, afterRightBrace);
-      if (evalSet == null) {
-        evalSet = new HashSet<String>();
-      }
-      if (!evalSet.add(refVar)) {
+
+      // detect self-referential values
+      if (val.contains(refVar)) {
         return expr; // return original expression if there is a loop
       }
 

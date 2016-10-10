@@ -168,6 +168,9 @@ public class TestConfiguration extends TestCase {
     declareProperty("my.fullfile", "${my.base}/${my.file}${my.suffix}", "/tmp/hadoop_user/hello.txt");
     // check that undefined variables are returned as-is
     declareProperty("my.failsexpand", "a${my.undefvar}b", "a${my.undefvar}b");
+    // check that multiple variable references are resolved
+    declareProperty("my.user.group", "${user.name} ${user.name}",
+        "hadoop_user hadoop_user");
     endConfig();
     Path fileResource = new Path(CONFIG);
     mock.addResource(fileResource);
@@ -1508,7 +1511,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
-  public void testInvalidSubstitutation() {
+  public void testInvalidSubstitution() {
     final Configuration configuration = new Configuration(false);
 
     // 2-var loops
@@ -1522,25 +1525,6 @@ public class TestConfiguration extends TestCase {
       configuration.set(key, keyExpression);
       assertEquals("Unexpected value", keyExpression, configuration.get(key));
     }
-
-    //
-    // 3-variable loops
-    //
-
-    final String expVal1 = "${test.var2}";
-    String testVar1 = "test.var1";
-    configuration.set(testVar1, expVal1);
-    configuration.set("test.var2", "${test.var3}");
-    configuration.set("test.var3", "${test.var1}");
-    assertEquals("Unexpected value", expVal1, configuration.get(testVar1));
-
-    // 3-variable loop with non-empty value prefix/suffix
-    //
-    final String expVal2 = "foo2${test.var2}bar2";
-    configuration.set(testVar1, expVal2);
-    configuration.set("test.var2", "foo3${test.var3}bar3");
-    configuration.set("test.var3", "foo1${test.var1}bar1");
-    assertEquals("Unexpected value", expVal2, configuration.get(testVar1));
   }
 
   public void testIncompleteSubbing() {
