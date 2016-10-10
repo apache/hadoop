@@ -22,6 +22,7 @@ HDFS Erasure Coding
     * [Deployment](#Deployment)
         * [Cluster and hardware configuration](#Cluster_and_hardware_configuration)
         * [Configuration keys](#Configuration_keys)
+        * [Enable Intel ISA-L](#Enable_Intel_ISA-L)
         * [Administrative commands](#Administrative_commands)
 
 Purpose
@@ -73,6 +74,9 @@ Architecture
 
     There are three policies currently being supported: RS-DEFAULT-3-2-64k, RS-DEFAULT-6-3-64k and RS-LEGACY-6-3-64k. All with default cell size of 64KB. The system default policy is RS-DEFAULT-6-3-64k which use the default schema RS_6_3_SCHEMA with a cell size of 64KB.
 
+ *  **Intel ISA-L**
+    Intel ISA-L stands for Intel Intelligent Storage Acceleration Library. ISA-L is a collection of optimized low-level functions used primarily in storage applications. It includes a fast block Reed-Solomon type erasure codes optimized for Intel AVX and AVX2 instruction sets.
+    HDFS EC can leverage this open-source library to accelerate encoding and decoding calculation. ISA-L supports most of major operating systems, including Linux and Windows. By default, ISA-L is not enabled in HDFS.
 
 Deployment
 ----------
@@ -98,13 +102,22 @@ Deployment
   `io.erasurecode.codec.rs-default.rawcoder` for the default RS codec,
   `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
   `io.erasurecode.codec.xor.rawcoder` for the XOR codec.
-  The default implementations for all of these codecs are pure Java.
+  The default implementations for all of these codecs are pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the encoding and decoding calculation. Please refer to section "Enable Intel ISA-L" for more detail information.
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 
   1. `dfs.datanode.stripedread.timeout.millis` - Timeout for striped reads. Default value is 5000 ms.
   1. `dfs.datanode.stripedread.threads` - Number of concurrent reader threads. Default value is 20 threads.
   1. `dfs.datanode.stripedread.buffer.size` - Buffer size for reader service. Default value is 256KB.
+
+### Enable Intel ISA-L
+
+  HDFS native implementation of default RS codec leverages Intel ISA-L library to improve the encoding and decoding calculation. To enable and use Intel ISA-L, there are three steps.
+  1. Build ISA-L library. Please refer to the offical site "https://github.com/01org/isa-l/" for detail information.
+  2. Build Hadoop with ISA-L support. Please refer to "Intel ISA-L build options" section in "Build instructions for Hadoop"(BUILDING.txt) document. Use -Dbundle.isal to copy the contents of the isal.lib directory into the final tar file. Deploy hadoop with the tar file. Make sure ISA-L library is available on both HDFS client and DataNodes.
+  3. Configure the `io.erasurecode.codec.rs-default.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS client and DataNodes.
+
+  To check ISA-L library enable state, try "Hadoop checknative" command. It will tell you if ISA-L library is enabled or not.
 
 ### Administrative commands
 
