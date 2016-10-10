@@ -373,6 +373,21 @@ a time proportional to the quantity of data to upload, and inversely proportiona
 to the network bandwidth. It may also fail &mdash;a failure that is better
 escalated than ignored.
 
+1. **Authorization**. Hadoop uses the `FileStatus` class to
+represent core metadata of files and directories, including the owner, group and
+permissions.  Object stores might not have a viable way to persist this
+metadata, so they might need to populate `FileStatus` with stub values.  Even if
+the object store persists this metadata, it still might not be feasible for the
+object store to enforce file authorization in the same way as a traditional file
+system.  If the object store cannot persist this metadata, then the recommended
+convention is:
+    * File owner is reported as the current user.
+    * File group also is reported as the current user.
+    * Directory permissions are reported as 777.
+    * File permissions are reported as 666.
+    * File system APIs that set ownership and permissions execute successfully
+      without error, but they are no-ops.
+
 Object stores with these characteristics, can not be used as a direct replacement
 for HDFS. In terms of this specification, their implementations of the
 specified operations do not match those required. They are considered supported
