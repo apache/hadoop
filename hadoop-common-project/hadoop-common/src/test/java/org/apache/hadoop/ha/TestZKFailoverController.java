@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.security.NoSuchAlgorithmException;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -441,12 +442,16 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     cluster.getService(0).getZKFCProxy(conf, 5000).gracefulFailover();
     cluster.waitForActiveLockHolder(0);
 
-    Thread.sleep(10000); // allow to quiesce
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return cluster.getService(0).fenceCount == 0 &&
+            cluster.getService(1).fenceCount == 0 &&
+            cluster.getService(0).activeTransitionCount == 2 &&
+            cluster.getService(1).activeTransitionCount == 1;
+      }
+    }, 100, 60 * 1000);
 
-    assertEquals(0, cluster.getService(0).fenceCount);
-    assertEquals(0, cluster.getService(1).fenceCount);
-    assertEquals(2, cluster.getService(0).activeTransitionCount);
-    assertEquals(1, cluster.getService(1).activeTransitionCount);
   }
 
   @Test
