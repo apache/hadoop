@@ -38,6 +38,17 @@ public abstract class TrashPolicy extends Configured {
 
   /**
    * Used to setup the trash policy. Must be implemented by all TrashPolicy
+   * implementations.
+   * @param conf the configuration to be used
+   * @param fs the filesystem to be used
+   * @param home the home directory
+   * @deprecated Use {@link #initialize(Configuration, FileSystem)} instead.
+   */
+  @Deprecated
+  public abstract void initialize(Configuration conf, FileSystem fs, Path home);
+
+  /**
+   * Used to setup the trash policy. Must be implemented by all TrashPolicy
    * implementations. Different from initialize(conf, fs, home), this one does
    * not assume trash always under /user/$USER due to HDFS encryption zone.
    * @param conf the configuration to be used
@@ -98,6 +109,25 @@ public abstract class TrashPolicy extends Configured {
    * users, intended to be run by the superuser.
    */
   public abstract Runnable getEmptier() throws IOException;
+
+  /**
+   * Get an instance of the configured TrashPolicy based on the value
+   * of the configuration parameter fs.trash.classname.
+   *
+   * @param conf the configuration to be used
+   * @param fs the file system to be used
+   * @param home the home directory
+   * @return an instance of TrashPolicy
+   * @deprecated Use {@link #getInstance(Configuration, FileSystem)} instead.
+   */
+  @Deprecated
+  public static TrashPolicy getInstance(Configuration conf, FileSystem fs, Path home) {
+    Class<? extends TrashPolicy> trashClass = conf.getClass(
+        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
+    TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
+    trash.initialize(conf, fs, home); // initialize TrashPolicy
+    return trash;
+  }
 
   /**
    * Get an instance of the configured TrashPolicy based on the value
