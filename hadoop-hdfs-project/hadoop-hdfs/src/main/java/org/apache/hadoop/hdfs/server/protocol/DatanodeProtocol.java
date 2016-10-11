@@ -79,6 +79,7 @@ public interface DatanodeProtocol {
   final static int DNA_CACHE = 9;      // cache blocks
   final static int DNA_UNCACHE = 10;   // uncache blocks
   final static int DNA_ERASURE_CODING_RECONSTRUCTION = 11; // erasure coding reconstruction command
+  final static int DNA_BLOCK_STORAGE_MOVEMENT = 12; // block storage movement command
 
   /** 
    * Register Datanode.

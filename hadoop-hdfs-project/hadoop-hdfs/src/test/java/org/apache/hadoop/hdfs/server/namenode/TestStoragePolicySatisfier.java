@@ -18,9 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -29,8 +26,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,9 +70,6 @@ public class TestStoragePolicySatisfier {
     try {
       // Change policy to ALL_SSD
       distributedFS.setStoragePolicy(new Path(file), "COLD");
-      Set<DatanodeDescriptor> previousNodes =
-          hdfsCluster.getNameNode().getNamesystem().getBlockManager()
-              .getDatanodeManager().getDatanodes();
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
 
@@ -91,8 +84,8 @@ public class TestStoragePolicySatisfier {
 
       hdfsCluster.triggerHeartbeats();
       // Wait till namenode notified about the block location details
-      waitExpectedStorageType(StorageType.ARCHIVE, distributedFS, previousNodes,
-          6, 30000);
+      waitExpectedStorageType(file, StorageType.ARCHIVE, distributedFS, 3,
+          30000);
     } finally {
       hdfsCluster.shutdown();
     }
@@ -104,9 +97,6 @@ public class TestStoragePolicySatisfier {
     try {
       // Change policy to ALL_SSD
       distributedFS.setStoragePolicy(new Path(file), "ALL_SSD");
-      Set<DatanodeDescriptor> previousNodes =
-          hdfsCluster.getNameNode().getNamesystem().getBlockManager()
-              .getDatanodeManager().getDatanodes();
       FSNamesystem namesystem = hdfsCluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode(file);
 
@@ -123,8 +113,34 @@ public class TestStoragePolicySatisfier {
       hdfsCluster.triggerHeartbeats();
       // Wait till StorgePolicySatisfier Identified that block to move to SSD
       // areas
-      waitExpectedStorageType(StorageType.SSD, distributedFS, previousNodes, 6,
-          30000);
+      waitExpectedStorageType(file, StorageType.SSD, distributedFS, 3, 30000);
+    } finally {
+      hdfsCluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testWhenStoragePolicySetToONESSD()
+      throws Exception {
+    try {
+      // Change policy to ONE_SSD
+      distributedFS.setStoragePolicy(new Path(file), "ONE_SSD");
+      FSNamesystem namesystem = hdfsCluster.getNamesystem();
+      INode inode = namesystem.getFSDirectory().getINode(file);
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.SSD, StorageType.DISK}};
+
+      // Making sure SDD based nodes added to cluster. Adding SSD based
+      // datanodes.
+      startAdditionalDNs(config, 1, numOfDatanodes, newtypes,
+          storagesPerDatanode, capacity, hdfsCluster);
+      namesystem.getBlockManager().satisfyStoragePolicy(inode.getId());
+      hdfsCluster.triggerHeartbeats();
+      // Wait till StorgePolicySatisfier Identified that block to move to SSD
+      // areas
+      waitExpectedStorageType(file, StorageType.SSD, distributedFS, 1, 30000);
+      waitExpectedStorageType(file, StorageType.DISK, distributedFS, 2, 30000);
     } finally {
       hdfsCluster.shutdown();
     }
@@ -174,35 +190,31 @@ public class TestStoragePolicySatisfier {
     return cluster;
   }
 
-  // TODO: this assertion can be changed to end to end based assertion later
-  // when DN side processing work integrated to this work.
-  private void waitExpectedStorageType(final StorageType expectedStorageType,
-      final DistributedFileSystem dfs,
-      final Set<DatanodeDescriptor> previousNodes, int expectedArchiveCount,
-      int timeout) throws Exception {
+  // Check whether the Block movement has been successfully completed to satisfy
+  // the storage policy for the given file.
+  private void waitExpectedStorageType(final String fileName,
+      final StorageType expectedStorageType, final DistributedFileSystem dfs,
+      int expectedStorageCount, int timeout) throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        Iterator<DatanodeDescriptor> iterator = previousNodes.iterator();
-        int archiveCount = 0;
-        while (iterator.hasNext()) {
-          DatanodeDescriptor dn = iterator.next();
-          List<BlockMovingInfo> pendingItemsToMove =
-              dn.getStorageMovementPendingItems();
-          for (BlockMovingInfo blkInfoToMoveStorage : pendingItemsToMove) {
-            StorageType[] targetStorageTypes =
-                blkInfoToMoveStorage.getTargetStorageTypes();
-            for (StorageType storageType : targetStorageTypes) {
-              if (storageType == expectedStorageType) {
-                archiveCount++;
-              }
-            }
+        LocatedBlock lb = null;
+        try {
+          lb = dfs.getClient().getLocatedBlocks(fileName, 0).get(0);
+        } catch (IOException e) {
+          LOG.error("Exception while getting located blocks", e);
+          return false;
+        }
+        int actualStorageCount = 0;
+        for (StorageType storageType : lb.getStorageTypes()) {
+          if (expectedStorageType == storageType) {
+            actualStorageCount++;
           }
         }
         LOG.info(
             expectedStorageType + " replica count, expected={} and actual={}",
-            expectedArchiveCount, archiveCount);
-        return expectedArchiveCount == archiveCount;
+            expectedStorageType, actualStorageCount);
+        return expectedStorageCount == actualStorageCount;
       }
     }, 100, timeout);
   }

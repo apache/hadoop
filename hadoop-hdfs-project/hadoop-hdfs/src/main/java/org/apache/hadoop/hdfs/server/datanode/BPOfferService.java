@@ -795,6 +795,13 @@ class BPOfferService {
           ((BlockECReconstructionCommand) cmd).getECTasks();
       dn.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
       break;
+    case DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT:
+      LOG.info("DatanodeCommand action: DNA_BLOCK_STORAGE_MOVEMENT");
+      BlockStorageMovementCommand blkSPSCmd = (BlockStorageMovementCommand) cmd;
+      dn.getStoragePolicySatisfyWorker().processBlockMovingTasks(
+          blkSPSCmd.getTrackID(), blkSPSCmd.getBlockPoolId(),
+          blkSPSCmd.getBlockMovingTasks());
+      break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
@@ -825,6 +832,7 @@ class BPOfferService {
     case DatanodeProtocol.DNA_CACHE:
     case DatanodeProtocol.DNA_UNCACHE:
     case DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION:
+    case DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT:
       LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
       break;
     default:

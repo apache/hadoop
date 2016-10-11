@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.protocol;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -33,12 +34,60 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
  * {@link org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker}
  * service. After the block movement this DataNode sends response back to the
  * NameNode about the movement status.
+ *
+ * The coordinator datanode will use 'trackId' identifier to coordinate the block
+ * movement of the given set of blocks. TrackId is a unique identifier that
+ * represents a group of blocks. Namenode will generate this unique value and
+ * send it to the coordinator datanode along with the
+ * BlockStorageMovementCommand. Datanode will monitor the completion of the
+ * block movements that grouped under this trackId and notifies Namenode about
+ * the completion status.
  */
 public class BlockStorageMovementCommand extends DatanodeCommand {
-  // TODO: constructor needs to be refined based on the block movement data
-  // structure.
-  BlockStorageMovementCommand(int action) {
+  private final long trackID;
+  private final String blockPoolId;
+  private final Collection<BlockMovingInfo> blockMovingTasks;
+
+  /**
+   * Block storage movement command constructor.
+   *
+   * @param action
+   *          protocol specific action
+   * @param trackID
+   *          unique identifier to monitor the given set of block movements
+   * @param blockPoolId
+   *          block pool ID
+   * @param blockMovingInfos
+   *          block to storage info that will be used for movement
+   */
+  public BlockStorageMovementCommand(int action, long trackID,
+      String blockPoolId, Collection<BlockMovingInfo> blockMovingInfos) {
     super(action);
+    this.trackID = trackID;
+    this.blockPoolId = blockPoolId;
+    this.blockMovingTasks = blockMovingInfos;
+  }
+
+  /**
+   * Returns trackID, which will be used to monitor the block movement assigned
+   * to this coordinator datanode.
+   */
+  public long getTrackID() {
+    return trackID;
+  }
+
+  /**
+   * Returns block pool ID.
+   */
+  public String getBlockPoolId() {
+    return blockPoolId;
+  }
+
+  /**
+   * Returns the list of blocks to be moved.
+   */
+  public Collection<BlockMovingInfo> getBlockMovingTasks() {
+    return blockMovingTasks;
   }
 
   /**
@@ -47,10 +96,24 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
   public static class BlockMovingInfo {
     private Block blk;
     private DatanodeInfo[] sourceNodes;
-    private StorageType[] sourceStorageTypes;
     private DatanodeInfo[] targetNodes;
+    private StorageType[] sourceStorageTypes;
     private StorageType[] targetStorageTypes;
 
+    /**
+     * Block to storage info constructor.
+     *
+     * @param block
+     *          block
+     * @param sourceDnInfos
+     *          node that can be the sources of a block move
+     * @param targetDnInfos
+     *          target datanode info
+     * @param srcStorageTypes
+     *          type of source storage media
+     * @param targetStorageTypes
+     *          type of destin storage media
+     */
     public BlockMovingInfo(Block block,
         DatanodeInfo[] sourceDnInfos, DatanodeInfo[] targetDnInfos,
         StorageType[] srcStorageTypes, StorageType[] targetStorageTypes) {

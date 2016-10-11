@@ -1739,6 +1739,19 @@ public class DatanodeManager {
       }
     }
 
+    // check pending block storage movement tasks
+    List<BlockMovingInfo> pendingBlockMovementList = nodeinfo
+        .getBlocksToMoveStorages();
+    if (pendingBlockMovementList != null) {
+      // TODO: trackID is used to track the block movement sends to coordinator
+      // datanode. Need to implement tracking logic. Temporarily, using a
+      // constant value -1.
+      long trackID = -1;
+      cmds.add(new BlockStorageMovementCommand(
+          DatanodeProtocol.DNA_BLOCK_STORAGE_MOVEMENT, trackID, blockPoolId,
+          pendingBlockMovementList));
+    }
+
     if (!cmds.isEmpty()) {
       return cmds.toArray(new DatanodeCommand[cmds.size()]);
     }

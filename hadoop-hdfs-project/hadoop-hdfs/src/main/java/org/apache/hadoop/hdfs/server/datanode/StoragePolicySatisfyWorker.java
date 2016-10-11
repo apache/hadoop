@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -126,8 +127,25 @@ public class StoragePolicySatisfyWorker {
     return moverThreadPool;
   }
 
+  /**
+   * Handles the given set of block movement tasks. This will iterate over the
+   * block movement list and submit each block movement task asynchronously in a
+   * separate thread. Each task will move the block replica to the target node &
+   * wait for the completion.
+   *
+   * TODO: Presently this function is a blocking call, this has to be refined by
+   * moving the tracking logic to another tracker thread. HDFS-10884 jira
+   * addresses the same.
+   *
+   * @param trackID
+   *          unique tracking identifier
+   * @param blockPoolID
+   *          block pool ID
+   * @param blockMovingInfos
+   *          list of blocks to be moved
+   */
   public void processBlockMovingTasks(long trackID, String blockPoolID,
-      List<BlockMovingInfo> blockMovingInfos) {
+      Collection<BlockMovingInfo> blockMovingInfos) {
     Future<Void> moveCallable = null;
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
       assert blkMovingInfo
@@ -143,8 +161,6 @@ public class StoragePolicySatisfyWorker {
       }
     }
 
-    // TODO: Presently this function act as a blocking call, this has to be
-    // refined by moving the tracking logic to another tracker thread.
     for (int i = 0; i < moverTaskFutures.size(); i++) {
       try {
         moveCallable = moverExecutorCompletionService.take();

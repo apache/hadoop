@@ -1089,19 +1089,4 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public List<BlockMovingInfo> getBlocksToMoveStorages() {
     return storageMovementBlocks.poll();
   }
-
-  // TODO: we will remove this method once DN side handling integrated. We can
-  // convert the test to check real block movements instead of this ds.
-  @VisibleForTesting
-  public List<BlockMovingInfo> getStorageMovementPendingItems() {
-    List<BlockMovingInfo> flatList = new ArrayList<>();
-    Iterator<List<BlockMovingInfo>> iterator = storageMovementBlocks
-        .iterator();
-    while (iterator.hasNext()) {
-      List<BlockMovingInfo> next = iterator.next();
-      flatList.addAll(next);
-    }
-    return flatList;
-  }
 }
-
