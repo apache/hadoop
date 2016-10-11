@@ -92,6 +92,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
+import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -953,6 +954,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Add audit logger to calculate top users
     if (topConf.isEnabled) {
       topMetrics = new TopMetrics(conf, topConf.nntopReportingPeriodsMs);
+      if (DefaultMetricsSystem.instance().getSource(
+          TOPMETRICS_METRICS_SOURCE_NAME) == null) {
+        DefaultMetricsSystem.instance().register(TOPMETRICS_METRICS_SOURCE_NAME,
+            "Top N operations by user", topMetrics);
+      }
       auditLoggers.add(new TopAuditLogger(topMetrics));
     }
 

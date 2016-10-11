@@ -17,23 +17,31 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.top.metrics;
 
-import java.net.InetAddress;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import com.google.common.collect.Lists;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager;
+import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.Op;
+import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.User;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.TopWindow;
 
@@ -58,8 +66,11 @@ import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowMan
  * Thread-safe: relies on thread-safety of RollingWindowManager
  */
 @InterfaceAudience.Private
-public class TopMetrics {
+public class TopMetrics implements MetricsSource {
   public static final Logger LOG = LoggerFactory.getLogger(TopMetrics.class);
+  public static final String TOPMETRICS_METRICS_SOURCE_NAME =
+      "NNTopUserOpCounts";
+  private final boolean isMetricsSourceEnabled;
 
   private static void logConf(Configuration conf) {
     LOG.info("NNTop conf: " + DFSConfigKeys.NNTOP_BUCKETS_PER_WINDOW_KEY +
@@ -83,6 +94,8 @@ public class TopMetrics {
       rollingWindowManagers.put(reportingPeriods[i], new RollingWindowManager(
           conf, reportingPeriods[i]));
     }
+    isMetricsSourceEnabled = conf.getBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY,
+        DFSConfigKeys.NNTOP_ENABLED_DEFAULT);
   }
 
   /**
@@ -127,5 +140,45 @@ public class TopMetrics {
       rollingWindowManager.recordMetric(currTime,
           TopConf.ALL_CMDS, userName, 1);
     }
+  }
+
+  /**
+   * Flatten out the top window metrics into
+   * {@link org.apache.hadoop.metrics2.MetricsRecord}s for consumption by
+   * external metrics systems. Each metrics record added corresponds to the
+   * reporting period a.k.a window length of the configured rolling windows.
+   */
+  @Override
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    if (!isMetricsSourceEnabled) {
+      return;
+    }
+
+    for (final TopWindow window : getTopWindows()) {
+      MetricsRecordBuilder rb = collector.addRecord(buildOpRecordName(window))
+          .setContext("dfs");
+      for (final Op op: window.getOps()) {
+        rb.addCounter(buildOpTotalCountMetricsInfo(op), op.getTotalCount());
+        for (User user : op.getTopUsers()) {
+          rb.addCounter(buildOpRecordMetricsInfo(op, user), user.getCount());
+        }
+      }
+    }
+  }
+
+  private String buildOpRecordName(TopWindow window) {
+    return TOPMETRICS_METRICS_SOURCE_NAME + ".windowMs="
+      + window.getWindowLenMs();
+  }
+
+  private MetricsInfo buildOpTotalCountMetricsInfo(Op op) {
+    return Interns.info("op=" + StringUtils.deleteWhitespace(op.getOpType())
+      + ".TotalCount", "Total operation count");
+  }
+
+  private MetricsInfo buildOpRecordMetricsInfo(Op op, User user) {
+    return Interns.info("op=" + StringUtils.deleteWhitespace(op.getOpType())
+      + ".user=" + user.getUser()
+      + ".count", "Total operations performed by user");
   }
 }

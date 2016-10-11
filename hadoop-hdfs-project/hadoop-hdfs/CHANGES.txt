@@ -17,6 +17,8 @@ Release 2.7.5 - UNRELEASED
     
     HDFS-12420. Add an option to disallow 'namenode format -force'.
     (Ajay Kumar via Arpit Agarwal, zhz)
+    
+    HDFS-10984. Expose nntop output as metrics. (Siddharth Wagle via xyao, zhz)
 
   OPTIMIZATIONS
 
