@@ -369,21 +369,24 @@ public class TestProcfsBasedProcessTree {
       List<ProcessSmapMemoryInfo> memoryMappingList =
           procMemInfo[i].getMemoryInfoList();
       memoryMappingList.add(constructMemoryMappingInfo(
-        "7f56c177c000-7f56c177d000 "
+          "7f56c177c000-7f56c177d000 "
             + "rw-p 00010000 08:02 40371558                   "
             + "/grid/0/jdk1.7.0_25/jre/lib/amd64/libnio.so",
-        new String[] { "4", "4", "25", "4", "25", "15", "10", "4", "0", "0",
-            "0", "4", "4" }));
+            // Format: size, rss, pss, shared_clean, shared_dirty, private_clean
+            // private_dirty, referenced, anon, anon-huge-pages, swap,
+            // kernel_page_size, mmu_page_size
+            new String[] {"4", "4", "25", "4", "25", "15", "10", "4", "10", "0",
+                "0", "4", "4"}));
       memoryMappingList.add(constructMemoryMappingInfo(
-        "7fb09382e000-7fb09382f000 r--s 00003000 " + "08:02 25953545",
-        new String[] { "4", "4", "25", "4", "0", "15", "10", "4", "0", "0",
-            "0", "4", "4" }));
+          "7fb09382e000-7fb09382f000 r--s 00003000 " + "08:02 25953545",
+          new String[] {"4", "4", "25", "4", "0", "15", "10", "4", "10", "0",
+              "0", "4", "4"}));
       memoryMappingList.add(constructMemoryMappingInfo(
-        "7e8790000-7e8b80000 r-xs 00000000 00:00 0", new String[] { "4", "4",
-            "25", "4", "0", "15", "10", "4", "0", "0", "0", "4", "4" }));
+          "7e8790000-7e8b80000 r-xs 00000000 00:00 0", new String[] {"4", "4",
+              "25", "4", "0", "15", "10", "4", "10", "0", "0", "4", "4"}));
       memoryMappingList.add(constructMemoryMappingInfo(
-        "7da677000-7e0dcf000 rw-p 00000000 00:00 0", new String[] { "4", "4",
-            "25", "4", "50", "15", "10", "4", "0", "0", "0", "4", "4" }));
+          "7da677000-7e0dcf000 rw-p 00000000 00:00 0", new String[] {"4", "4",
+              "25", "4", "50", "15", "10", "4", "10", "0", "0", "4", "4"}));
     }
   }
 
@@ -471,13 +474,12 @@ public class TestProcfsBasedProcessTree {
 
       // Check by enabling smaps
       setSmapsInProceTree(processTree, true);
-      // RSS=Min(shared_dirty,PSS)+PrivateClean+PrivateDirty (exclude r-xs,
-      // r--s)
+      // anon (exclude r-xs,r--s)
       Assert.assertEquals("rss memory does not match",
-        (100 * KB_TO_BYTES * 3), processTree.getRssMemorySize());
+          (20 * KB_TO_BYTES * 3), processTree.getRssMemorySize());
       // verify old API
       Assert.assertEquals("rss memory (old API) does not match",
-        (100 * KB_TO_BYTES * 3), processTree.getCumulativeRssmem());
+          (20 * KB_TO_BYTES * 3), processTree.getCumulativeRssmem());
 
       // test the cpu time again to see if it cumulates
       procInfos[0] =
@@ -621,10 +623,10 @@ public class TestProcfsBasedProcessTree {
           cumuRssMem, processTree.getCumulativeRssmem());
       } else {
         Assert.assertEquals("rssmem does not include new process",
-          100 * KB_TO_BYTES * 4, processTree.getRssMemorySize());
+            20 * KB_TO_BYTES * 4, processTree.getRssMemorySize());
         // verify old API
         Assert.assertEquals("rssmem (old API) does not include new process",
-          100 * KB_TO_BYTES * 4, processTree.getCumulativeRssmem());
+            20 * KB_TO_BYTES * 4, processTree.getCumulativeRssmem());
       }
 
       // however processes older than 1 iteration will retain the older value
@@ -650,11 +652,11 @@ public class TestProcfsBasedProcessTree {
       } else {
         Assert.assertEquals(
           "rssmem shouldn't have included new process",
-          100 * KB_TO_BYTES * 3, processTree.getRssMemorySize(1));
+            20 * KB_TO_BYTES * 3, processTree.getRssMemorySize(1));
         // Verify old API
         Assert.assertEquals(
           "rssmem (old API) shouldn't have included new process",
-          100 * KB_TO_BYTES * 3, processTree.getCumulativeRssmem(1));
+            20 * KB_TO_BYTES * 3, processTree.getCumulativeRssmem(1));
       }
 
       // one more process
@@ -696,11 +698,11 @@ public class TestProcfsBasedProcessTree {
       } else {
         Assert.assertEquals(
           "rssmem shouldn't have included new processes",
-          100 * KB_TO_BYTES * 3, processTree.getRssMemorySize(2));
+            20 * KB_TO_BYTES * 3, processTree.getRssMemorySize(2));
         // Verify old API
         Assert.assertEquals(
           "rssmem (old API) shouldn't have included new processes",
-          100 * KB_TO_BYTES * 3, processTree.getCumulativeRssmem(2));
+            20 * KB_TO_BYTES * 3, processTree.getCumulativeRssmem(2));
       }
 
       // processes older than 1 iteration should not include new process,
@@ -727,10 +729,10 @@ public class TestProcfsBasedProcessTree {
       } else {
         Assert.assertEquals(
           "rssmem shouldn't have included new processes",
-          100 * KB_TO_BYTES * 4, processTree.getRssMemorySize(1));
+            20 * KB_TO_BYTES * 4, processTree.getRssMemorySize(1));
         Assert.assertEquals(
           "rssmem (old API) shouldn't have included new processes",
-          100 * KB_TO_BYTES * 4, processTree.getCumulativeRssmem(1));
+            20 * KB_TO_BYTES * 4, processTree.getCumulativeRssmem(1));
       }
 
       // no processes older than 3 iterations
