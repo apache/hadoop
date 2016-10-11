@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 2.6.5 - UNRELEASED
+Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
 
@@ -29,6 +29,10 @@ Release 2.6.5 - UNRELEASED
 
     MAPREDUCE-6302. Preempt reducers after a configurable timeout 
     irrespective of headroom. (kasha via wangda)
+
+    MAPREDUCE-6514. Fixed MapReduce ApplicationMaster to properly updated
+    resources ask after ramping down of all reducers avoiding job hangs. (Varun
+    Saxena and Wangda Tan via vinodkv)
 
     MAPREDUCE-6689. MapReduce job can infinitely increase number of reducer
     resource requests (Wangda Tan via jlowe)

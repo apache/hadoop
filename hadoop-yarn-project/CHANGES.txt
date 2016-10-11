@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.6.5 - UNRELEASED
+Release 2.6.5 - 2016-10-08
 
   INCOMPATIBLE CHANGES
 
@@ -167,17 +167,10 @@ Release 2.6.3 - 2015-12-17
 
     YARN-4424. Fix deadlock in RMAppImpl. (Jian he via wangda)
 
-<<<<<<< HEAD
     YARN-4434. NodeManager Disk Checker parameter documentation is not correct.
     (Weiwei Yang via aajisaka)
 
 Release 2.6.2 - 2015-10-28
-=======
-    YARN-3893. Both RM in active state when Admin#transitionToActive failure 
-    from refeshAll() (Bibin A Chundatt via rohithsharmaks)
-
-Release 2.7.1 - 2015-07-06
->>>>>>> 7d6687f... YARN-3893. Both RM in active state when Admin#transitionToActive failure from refeshAll() (Bibin A Chundatt via rohithsharmaks)
 
   INCOMPATIBLE CHANGES
 
