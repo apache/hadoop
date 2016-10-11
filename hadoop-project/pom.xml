@@ -142,6 +142,9 @@
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
     <declared.hadoop.version>${project.version}</declared.hadoop.version>
+    
+    <swagger-annotations-version>1.5.4</swagger-annotations-version>
+    <maven-doxia-module-markdown.version>1.4</maven-doxia-module-markdown.version>
   </properties>
 
   <dependencyManagement>
@@ -1319,6 +1322,23 @@
           <artifactId>mssql-jdbc</artifactId>
           <version>${mssql.version}</version>
         </dependency>
+
+        <dependency>
+          <groupId>io.swagger</groupId>
+          <artifactId>swagger-annotations</artifactId>
+          <version>${swagger-annotations-version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>jackson-jaxrs-json-provider</artifactId>
+          <version>${jackson2.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.maven.doxia</groupId>
+          <artifactId>doxia-module-markdown</artifactId>
+          <version>${maven-doxia-module-markdown.version}</version>
+        </dependency>
+
     </dependencies>
   </dependencyManagement>
 
