@@ -408,6 +408,7 @@ extern  "C" {
      *         complete before proceeding with further file updates.
      *         -1 on error.
      */
+    LIBHDFS_EXTERNAL
     int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength);
 
     /**

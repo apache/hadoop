@@ -148,6 +148,9 @@ Release 2.7.4 - UNRELEASED
     recovery may abort downstream applications.
     (Wei-Chiu Chuang)
 
+    HDFS-10991. Export hdfsTruncateFile symbol in libhdfs.
+    (Surendra Singh Lilhore via wang)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
