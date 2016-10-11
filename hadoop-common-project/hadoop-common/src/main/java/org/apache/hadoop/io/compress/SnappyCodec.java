@@ -60,20 +60,22 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    * Are the native snappy libraries loaded & initialized?
    */
   public static void checkNativeCodeLoaded() {
-      if (!NativeCodeLoader.isNativeCodeLoaded() ||
-          !NativeCodeLoader.buildSupportsSnappy()) {
-        throw new RuntimeException("native snappy library not available: " +
-            "this version of libhadoop was built without " +
-            "snappy support.");
-      }
-      if (!SnappyCompressor.isNativeCodeLoaded()) {
-        throw new RuntimeException("native snappy library not available: " +
-            "SnappyCompressor has not been loaded.");
-      }
-      if (!SnappyDecompressor.isNativeCodeLoaded()) {
-        throw new RuntimeException("native snappy library not available: " +
-            "SnappyDecompressor has not been loaded.");
-      }
+    if (!NativeCodeLoader.buildSupportsSnappy()) {
+      throw new RuntimeException("native snappy library not available: " +
+          "this version of libhadoop was built without " +
+          "snappy support.");
+    }
+    if (!NativeCodeLoader.isNativeCodeLoaded()) {
+      throw new RuntimeException("Failed to load libhadoop.");
+    }
+    if (!SnappyCompressor.isNativeCodeLoaded()) {
+      throw new RuntimeException("native snappy library not available: " +
+          "SnappyCompressor has not been loaded.");
+    }
+    if (!SnappyDecompressor.isNativeCodeLoaded()) {
+      throw new RuntimeException("native snappy library not available: " +
+          "SnappyDecompressor has not been loaded.");
+    }
   }
   
   public static boolean isNativeCodeLoaded() {
