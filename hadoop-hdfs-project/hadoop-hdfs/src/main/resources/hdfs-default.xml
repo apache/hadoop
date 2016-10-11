@@ -4273,4 +4273,12 @@
       consecutive warnings within this interval.</description>
   </property>
 
+  <property>
+    <name>httpfs.buffer.size</name>
+    <value>4096</value>
+    <description>
+      The size buffer to be used when creating or opening httpfs filesystem IO stream.
+    </description>
+  </property>
+
 </configuration>
