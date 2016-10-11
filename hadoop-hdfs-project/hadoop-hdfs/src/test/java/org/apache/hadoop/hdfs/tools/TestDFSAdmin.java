@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -361,6 +362,55 @@ public class TestDFSAdmin {
 
       }
     }, 100, 100 * 100);
+  }
+
+  @Test(timeout = 30000)
+  public void testPrintTopology() throws Exception {
+    redirectStream();
+
+    /* init conf */
+    final Configuration dfsConf = new HdfsConfiguration();
+    final File baseDir = new File(
+        PathUtils.getTestDir(getClass()),
+        GenericTestUtils.getMethodName());
+    dfsConf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, baseDir.getAbsolutePath());
+
+    final int numDn = 4;
+    final String[] racks = {
+        "/d1/r1", "/d1/r2",
+        "/d2/r1", "/d2/r2"};
+
+    /* init cluster using topology */
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
+        .numDataNodes(numDn).racks(racks).build()) {
+
+      miniCluster.waitActive();
+      assertEquals(numDn, miniCluster.getDataNodes().size());
+      final DFSAdmin dfsAdmin = new DFSAdmin(dfsConf);
+
+      resetStream();
+      final int ret = ToolRunner.run(dfsAdmin, new String[] {"-printTopology"});
+
+      /* collect outputs */
+      final List<String> outs = Lists.newArrayList();
+      scanIntoList(out, outs);
+
+      /* verify results */
+      assertEquals(0, ret);
+      assertEquals(
+          "There should be three lines per Datanode: the 1st line is"
+              + " rack info, 2nd node info, 3rd empty line. The total"
+              + " should be as a result of 3 * numDn.",
+          12, outs.size());
+      assertThat(outs.get(0),
+          is(allOf(containsString("Rack:"), containsString("/d1/r1"))));
+      assertThat(outs.get(3),
+          is(allOf(containsString("Rack:"), containsString("/d1/r2"))));
+      assertThat(outs.get(6),
+          is(allOf(containsString("Rack:"), containsString("/d2/r1"))));
+      assertThat(outs.get(9),
+          is(allOf(containsString("Rack:"), containsString("/d2/r2"))));
+    }
   }
 
   @Test(timeout = 30000)
