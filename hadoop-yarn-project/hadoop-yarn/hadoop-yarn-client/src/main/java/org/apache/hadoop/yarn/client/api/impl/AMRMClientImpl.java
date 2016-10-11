@@ -664,15 +664,17 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     List<LinkedHashSet<T>> list = new LinkedList<LinkedHashSet<T>>();
 
     RemoteRequestsTable remoteRequestsTable = getTable(0);
-    List<ResourceRequestInfo<T>> matchingRequests =
-        remoteRequestsTable.getMatchingRequests(priority, resourceName,
-            executionType, capability);
-    // If no exact match. Container may be larger than what was requested.
-    // get all resources <= capability. map is reverse sorted.
-    for (ResourceRequestInfo<T> resReqInfo : matchingRequests) {
-      if (canFit(resReqInfo.remoteRequest.getCapability(), capability) &&
-        !resReqInfo.containerRequests.isEmpty()) {
-        list.add(resReqInfo.containerRequests);
+    if (remoteRequestsTable != null) {
+      List<ResourceRequestInfo<T>> matchingRequests =
+          remoteRequestsTable.getMatchingRequests(priority, resourceName,
+              executionType, capability);
+      // If no exact match. Container may be larger than what was requested.
+      // get all resources <= capability. map is reverse sorted.
+      for (ResourceRequestInfo<T> resReqInfo : matchingRequests) {
+        if (canFit(resReqInfo.remoteRequest.getCapability(), capability) &&
+            !resReqInfo.containerRequests.isEmpty()) {
+          list.add(resReqInfo.containerRequests);
+        }
       }
     }
     // no match found
