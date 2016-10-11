@@ -35,7 +35,7 @@ of the client.
 
 **Implementation Note**: the static `FileSystem get(URI uri, Configuration conf) ` method MAY return
 a pre-existing instance of a filesystem client class&mdash;a class that may also be in use in other threads.
-The implementations of `FileSystem` which ship with Apache Hadoop
+The implementations of `FileSystem` shipped with Apache Hadoop
 *do not make any attempt to synchronize access to the working directory field*.
 
 ## Invariants
@@ -104,8 +104,6 @@ may differ from the local user account name.
 **It is the responsibility of the FileSystem to determine the actual home directory
 of the caller.**
 
-
-#### Preconditions
 
 
 #### Postconditions
@@ -214,7 +212,6 @@ response, then, if a listing `listStatus("/d")` takes place concurrently with th
 
 	[a, part-0000001, ... , part-9999999]
 	[part-0000001, ... , part-9999999, z]
-
 	[a, part-0000001, ... , part-9999999, z]
 	[part-0000001, ... , part-9999999]
 
@@ -282,7 +279,7 @@ value is an instance of the `LocatedFileStatus` subclass of a `FileStatus`,
 and that rather than return an entire list, an iterator is returned.
 
 This is actually a `protected` method, directly invoked by
-`listLocatedStatus(Path path):`. Calls to it may be delegated through
+`listLocatedStatus(Path path)`. Calls to it may be delegated through
 layered filesystems, such as `FilterFileSystem`, so its implementation MUST
 be considered mandatory, even if `listLocatedStatus(Path path)` has been
 implemented in a different manner. There are open JIRAs proposing
@@ -442,10 +439,9 @@ the convention is generally retained.
 
 ###  `long getDefaultBlockSize()`
 
-Get the "default" block size for a filesystem. This often used during
+Get the "default" block size for a filesystem. This is often used during
 split calculations to divide work optimally across a set of worker processes.
 
-#### Preconditions
 
 #### Postconditions
 
@@ -465,8 +461,6 @@ A FileSystem MAY make this user-configurable (the S3 and Swift filesystem client
 
 Get the "default" block size for a path —that is, the block size to be used
 when writing objects to a path in the filesystem.
-
-#### Preconditions
 
 
 #### Postconditions
@@ -604,7 +598,7 @@ This MAY be a bug, as it allows >1 client to create a file with `overwrite==fals
  and potentially confuse file/directory logic
 
 * The Local FileSystem raises a `FileNotFoundException` when trying to create a file over
-a directory, hence it is is listed as an exception that MAY be raised when
+a directory, hence it is listed as an exception that MAY be raised when
 this precondition fails.
 
 * Not covered: symlinks. The resolved path of the symlink is used as the final path argument to the `create()` operation
@@ -898,8 +892,8 @@ Renaming a file where the destination is a directory moves the file as a child
 ##### Renaming a directory onto a directory
 
 If `src` is a directory then all its children will then exist under `dest`, while the path
-`src` and its descendants will no longer not exist. The names of the paths under
-`dest` will match those under `src`, as will the contents:
+`src` and its descendants will no longer exist. The names of the paths under
+`dest` will match those under `src`, as will the contents do:
 
     if isDir(FS, src) isDir(FS, dest) and src != dest :
         FS' where:
@@ -928,7 +922,7 @@ The outcome is no change to FileSystem state, with a return value of false.
 *Local Filesystem, S3N*
 
 The outcome is as a normal rename, with the additional (implicit) feature
-that the parent directores of the destination also exist
+that the parent directores of the destination also exist.
 
     exists(FS', parent(dest))
 
@@ -1018,9 +1012,9 @@ HDFS: All source files except the final one MUST be a complete block:
 
 
 HDFS's restrictions may be an implementation detail of how it implements
-`concat` -by changing the inode references to join them together in
+`concat` by changing the inode references to join them together in
 a sequence. As no other filesystem in the Hadoop core codebase
-implements this method, there is no way to distinguish implementation detail.
+implements this method, there is no way to distinguish implementation detail
 from specification.
 
 
