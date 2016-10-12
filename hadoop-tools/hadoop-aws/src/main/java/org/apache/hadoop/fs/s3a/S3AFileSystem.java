@@ -1489,7 +1489,7 @@ public class S3AFileSystem extends FileSystem {
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
           LOG.debug("Found exact file: fake directory");
-          return new S3AFileStatus(true, true, path, username);
+          return new S3AFileStatus(true, path, username);
         } else {
           LOG.debug("Found exact file: normal file");
           return new S3AFileStatus(meta.getContentLength(),
@@ -1514,7 +1514,7 @@ public class S3AFileSystem extends FileSystem {
 
           if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
             LOG.debug("Found file (with /): fake directory");
-            return new S3AFileStatus(true, true, path, username);
+            return new S3AFileStatus(true, path, username);
           } else {
             LOG.warn("Found file (with /): real file? should not happen: {}",
                 key);
@@ -1560,10 +1560,10 @@ public class S3AFileSystem extends FileSystem {
           }
         }
 
-        return new S3AFileStatus(true, false, path, username);
+        return new S3AFileStatus(false, path, username);
       } else if (key.isEmpty()) {
         LOG.debug("Found root directory");
-        return new S3AFileStatus(true, true, path, username);
+        return new S3AFileStatus(true, path, username);
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {

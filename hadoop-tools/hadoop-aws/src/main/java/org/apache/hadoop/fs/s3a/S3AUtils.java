@@ -244,7 +244,7 @@ public final class S3AUtils {
       long blockSize,
       String owner) {
     if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-      return new S3AFileStatus(true, true, keyPath, owner);
+      return new S3AFileStatus(true, keyPath, owner);
     } else {
       return new S3AFileStatus(summary.getSize(),
           dateToLong(summary.getLastModified()), keyPath,
