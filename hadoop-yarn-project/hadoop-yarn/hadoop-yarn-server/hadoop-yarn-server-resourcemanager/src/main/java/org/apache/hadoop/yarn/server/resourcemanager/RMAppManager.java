@@ -101,7 +101,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.maxCompletedAppsInStateStore =
         conf.getInt(
           YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS,
-          YarnConfiguration.DEFAULT_RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS);
+          this.maxCompletedAppsInMemory);
     if (this.maxCompletedAppsInStateStore > this.maxCompletedAppsInMemory) {
       this.maxCompletedAppsInStateStore = this.maxCompletedAppsInMemory;
     }

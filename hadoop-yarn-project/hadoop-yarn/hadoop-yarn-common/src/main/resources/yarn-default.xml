@@ -417,7 +417,7 @@
     the applications remembered in RM memory.
     Any values larger than ${yarn.resourcemanager.max-completed-applications} will
     be reset to ${yarn.resourcemanager.max-completed-applications}.
-    Note that this value impacts the RM recovery performance.Typically,
+    Note that this value impacts the RM recovery performance. Typically,
     a smaller value indicates better performance on RM recovery.
     </description>
     <name>yarn.resourcemanager.state-store.max-completed-applications</name>
@@ -687,7 +687,7 @@
   <property>
     <description>The maximum number of completed applications RM keeps. </description>
     <name>yarn.resourcemanager.max-completed-applications</name>
-    <value>10000</value>
+    <value>1000</value>
   </property>
 
   <property>
