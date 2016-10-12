@@ -1,0 +1,416 @@
+# Hadoop YARN REST APIs for services v1 spec in YAML
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+swagger: '2.0'
+info:
+  title: "[YARN-4793] Simplified API layer for services and beyond"
+  description: |
+    Bringing a new service on YARN today is not a simple experience. The APIs of existing frameworks are either too low level (native YARN), require writing new code (for frameworks with programmatic APIs) or writing a complex spec (for declarative frameworks). In addition to building critical building blocks inside YARN (as part of other efforts at link:https://issues.apache.org/jira/browse/YARN-4692[YARN-4692]), there is a need for simplifying the user facing story for building services. Experience of projects like Apache Slider running real-life services like HBase, Storm, Accumulo, Solr etc, gives us some very good insights on how simplified APIs for services should look like.
+
+
+    To this end, we should look at a new simple-services API layer backed by REST interfaces. This API can be used to create and manage the lifecycle of YARN services. Services here can range from simple single-component apps to complex multi-component assemblies needing orchestration.
+
+
+    We should also look at making this a unified REST based entry point for other important features like resource-profile management (link:https://issues.apache.org/jira/browse/YARN-3926[YARN-3926]), package-definitions' lifecycle-management and service-discovery (link:https://issues.apache.org/jira/browse/YARN-913[YARN-913]/link:https://issues.apache.org/jira/browse/YARN-4757[YARN-4757]). We also need to flesh out its relation to our present much lower level REST APIs (link:https://issues.apache.org/jira/browse/YARN-1695[YARN-1695]) in YARN for application-submission and management.
+
+
+    This document spotlights on this specification. In most of the cases, the application owner will not be forced to make any changes to their application. This is primarily true if the application is packaged with containerization technologies like docker. Irrespective of how complex the application is, there will be hooks provided at appropriate layers to allow pluggable and customizable application behavior.
+
+  version: "1.0.0"
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+# the domain of the service
+host: host.mycompany.com
+# array of all schemes that your API supports
+schemes:
+  - http
+  - https
+# will be prefixed to all paths
+basePath: /services/v1/
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /applications:
+    get:
+      summary: List of applications/services running in the cluster
+      description: Get a list of all currently running applications (response includes a minimal projection of the application info). For more details do a GET on a specific application name.
+      responses:
+        200:
+          description: An array of applications
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Application'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ApplicationStatus'
+    post:
+      summary: Create an application/service
+      description: Create an application. The request JSON is an Application object with details required for creation. If the request is successful it returns 202 Accepted. A success of this API only confirms success in submission of the application creation request. There is no guarantee that the application will actually reach a RUNNING state. Resource availability and several other factors determines if the application will be deployed in the cluster. It is expected that clients would subsequently call the GET API to get details of the application and determine its state.
+      parameters:
+        - name: Application
+          in: body
+          description: Application request object
+          required: true
+          schema:
+            $ref: '#/definitions/Application'
+      responses:
+        202:
+          description: Request accepted
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ApplicationStatus'
+
+  /applications/{app_name}:
+    get:
+      summary: Get an application/service details
+      description: Return the details (including containers) of a running application
+      parameters:
+        - name: app_name
+          in: path
+          description: Application name
+          required: true
+          type: string
+      responses:
+        200:
+          description: An application object
+          schema:
+            type: object
+            items:
+              $ref: '#/definitions/Application'
+          examples:
+            app_name: logsearch
+            artifact:
+              id: logsearch:latest
+              type: docker
+        404:
+          description: Application does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ApplicationStatus'
+    put:
+      summary: Update an application/service or upgrade the binary version of the components of a running application
+      description: Update the runtime properties of an application. As of now, only update of lifetime and number of instances (flexing) of the components of an application is supported. The PUT operation is also used to orchestrate an upgrade of the application containers to a newer version of their artifacts.
+      parameters:
+        - name: app_name
+          in: path
+          description: Application name
+          required: true
+          type: string
+      responses:
+        204:
+          description: Update or upgrade was successful
+        404:
+          description: Application does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ApplicationStatus'
+    delete:
+      summary: Destroy application/service
+      description: Destroy an application and release all resources. This API might have to return JSON data providing location of logs, etc. Not finalized yet.
+      parameters:
+        - name: app_name
+          in: path
+          description: Application name
+          required: true
+          type: string
+      responses:
+        204:
+          description: Destroy was successful
+        404:
+          description: Application does not exist
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/ApplicationStatus'
+
+definitions:
+  Application:
+    description: An Application resource has the following attributes.
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        description: A unique application name.
+      id:
+        type: string
+        description: A unique application id.
+      artifact:
+        description: Artifact of single-component applications. Mandatory if components attribute is not specified.
+        $ref: '#/definitions/Artifact'
+      resource:
+        description: Resource of single-component applications or the global default for multi-component applications. Mandatory if it is a single-component application and if cpus and memory are not specified at the Application level.
+        $ref: '#/definitions/Resource'
+      launch_command:
+        type: string
+        description: The custom launch command of an application component (optional). If not specified for applications with docker images say, it will default to the default start command of the image. If there is a single component in this application, you can specify this without the need to have a 'components' section.
+      launch_time:
+        type: string
+        format: date
+        description: The time when the application was created, e.g. 2016-03-16T01:01:49.000Z.
+      number_of_containers:
+        type: integer
+        format: int64
+        description: Number of containers for each app-component in the application. Each app-component can further override this app-level global default.
+      number_of_running_containers:
+        type: integer
+        format: int64
+        description: In get response this provides the total number of running containers for this application (across all components) at the time of request. Note, a subsequent request can return a different number as and when more containers get allocated until it reaches the total number of containers or if a flex request has been made between the two requests.
+      lifetime:
+        type: integer
+        format: int64
+        description: Life time (in seconds) of the application from the time it reaches the STARTED state (after which it is automatically destroyed by YARN). For unlimited lifetime do not set a lifetime value.
+      placement_policy:
+        description: Advanced scheduling and placement policies (optional). If not specified, it defaults to the default placement policy of the app owner. The design of placement policies are in the works. It is not very clear at this point, how policies in conjunction with labels be exposed to application owners. This is a placeholder for now. The advanced structure of this attribute will be determined by YARN-4902.
+        $ref: '#/definitions/PlacementPolicy'
+      components:
+        description: Components of an application.
+        type: array
+        items:
+          $ref: '#/definitions/Component'
+      configuration:
+        description: Config properties of an application. Configurations provided at the application/global level are available to all the components. Specific properties can be overridden at the component level.
+        $ref: '#/definitions/Configuration'
+      containers:
+        description: Containers of a started application. Specifying a value for this attribute for the POST payload raises a validation error. This blob is available only in the GET response of a started application.
+        type: array
+        items:
+          $ref: '#/definitions/Container'
+      state:
+        description: State of the application. Specifying a value for this attribute for the POST payload raises a validation error. This attribute is available only in the GET response of a started application.
+        $ref: '#/definitions/ApplicationState'
+      quicklinks:
+        type: object
+        description: A blob of key-value pairs of quicklinks to be exported for an application.
+        additionalProperties:
+          type: string
+      queue:
+        type: string
+        description: The YARN queue that this application should be submitted to.
+  Resource:
+    description:
+      Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or application. The resource specified at the app (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are exepected. It raises a validation exception otherwise.
+    properties:
+      profile:
+        type: string
+        description: Each resource profile has a unique id which is associated with a cluster-level predefined memory, cpus, etc.
+      cpus:
+        type: integer
+        format: int32
+        description: Amount of vcores allocated to each container (optional but overrides cpus in profile if specified).
+      memory:
+        type: string
+        description: Amount of memory allocated to each container (optional but overrides memory in profile if specified). Currently accepts only an integer value and default unit is in MB.
+  PlacementPolicy:
+    description: Placement policy of an instance of an application. This feature is in the works in YARN-4902.
+    properties:
+      label:
+        type: string
+        description: Assigns an app to a named partition of the cluster where the application desires to run (optional). If not specified all apps are submitted to a default label of the app owner. One or more labels can be setup for each application owner account with required constraints like no-preemption, sla-99999, preemption-ok, etc.
+  Artifact:
+    description: Artifact of an application component.
+    required:
+    - id
+    properties:
+      id:
+        type: string
+        description: Artifact id. Examples are package location uri for tarball based apps, image name for docker, etc.
+      type:
+        type: string
+        description: Artifact type, like docker, tarball, etc. (optional).
+        enum:
+          - docker
+          - tarball
+          - application
+        default: docker
+      uri:
+        type: string
+        description: Artifact location to support multiple artifact stores (optional).
+  Component:
+    description: One or more components of the application. If the application is HBase say, then the component can be a simple role like master or regionserver. If the application is a complex business webapp then a component can be other applications say Kafka or Storm. Thereby it opens up the support for complex and nested applications.
+    required:
+    - name
+    properties:
+      name:
+        type: string
+        description: Name of the application component (mandatory).
+      dependencies:
+        type: array
+        items:
+          type: string
+        description: An array of application components which should be in READY state (as defined by readiness check), before this component can be started. The dependencies across all components of an application should be represented as a DAG.
+      readiness_check:
+        description: Readiness check for this app-component.
+        $ref: '#/definitions/ReadinessCheck'
+      artifact:
+        description: Artifact of the component (optional). If not specified, the application level global artifact takes effect.
+        $ref: '#/definitions/Artifact'
+      launch_command:
+        type: string
+        description: The custom launch command of this component (optional). When specified at the component level, it overrides the value specified at the global level (if any).
+      resource:
+        description: Resource of this component (optional). If not specified, the application level global resource takes effect.
+        $ref: '#/definitions/Resource'
+      number_of_containers:
+        type: integer
+        format: int64
+        description: Number of containers for this app-component (optional). If not specified, the application level global number_of_containers takes effect.
+      unique_component_support:
+        type: boolean
+        description: Certain applications need to define multiple components using the same artifact and resource profile, differing only in configurations. In such cases, this field helps app owners to avoid creating multiple component definitions with repeated information. The number_of_containers field dictates the initial number of components created. Component names typically differ with a trailing id, but assumptions should not be made on that, as the algorithm can change at any time. Configurations section will be able to use placeholders like ${USER}, ${CLUSTER_NAME} and ${COMPONENT_NAME} to be replaced at runtime with user the app is submitted as, application name and application component name respectively. Launch command can use placeholders like ${APP_COMPONENT_NAME} and ${APP_NAME} to get its component name and app name respectively at runtime. The best part of this feature is that when the component is flexed up, entirely new components (with new trailing ids) are created.
+      run_privileged_container:
+        type: boolean
+        description: Run all containers of this component in privileged mode (YARN-4262).
+      placement_policy:
+        description: Advanced scheduling and placement policies for all containers of this component (optional). If not specified, the app level placement_policy takes effect. Refer to the description at the global level for more details.
+        $ref: '#/definitions/PlacementPolicy'
+      configuration:
+        description: Config properties for this app-component.
+        $ref: '#/definitions/Configuration'
+      quicklinks:
+        type: array
+        items:
+          type: string
+        description: A list of quicklink keys defined at the application level, and to be resolved by this component.
+  ReadinessCheck:
+    description: A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every application is different. Hence the need for a simple interface, with scope to support advanced usecases.
+    required:
+    - uri
+    properties:
+      type:
+        type: string
+        description: E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).
+        enum:
+          - http
+      uri:
+        type: string
+        description: Fully qualified REST uri endpoint.
+      artifact:
+        description: Artifact of the pluggable readiness check helper container (optional). If specified, this helper container typically hosts the http uri and encapsulates the complex scripts required to perform actual container readiness check. At the end it is expected to respond a 204 No content just like the simplified use case. This pluggable framework benefits application owners who can run applications without any packaging modifications. Note, artifacts of type docker only is supported for now.
+        $ref: '#/definitions/Artifact'
+  Configuration:
+    description: Set of configuration properties that can be injected into the application components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.
+    properties:
+      properties:
+        type: object
+        description: A blob of key-value pairs of common application properties.
+        additionalProperties:
+          type: string
+      env:
+        type: object
+        description: A blob of key-value pairs which will be appended to the default system properties and handed off to the application at start time. All placeholder references to properties will be substituted before injection.
+        additionalProperties:
+          type: string
+      files:
+        description: Array of list of files that needs to be created and made available as volumes in the application component containers.
+        type: array
+        items:
+          $ref: '#/definitions/ConfigFile'
+  ConfigFile:
+    description: A config file that needs to be created and made available as a volume in an application component container.
+    properties:
+      type:
+        type: string
+        description: Config file in the standard format like xml, properties, json, yaml, template.
+        enum:
+          - xml
+          - properties
+          - json
+          - yaml
+          - template
+          - env
+          - hadoop_xml
+      dest_file:
+        type: string
+        description: The absolute path that this configuration file should be mounted as, in the application container.
+      src_file:
+        type: string
+        description: Required for type template. This provides the source location of the template which needs to be mounted as dest_file post property substitutions. Typically the src_file would point to a source controlled network accessible file maintained by tools like puppet, chef, etc.
+      props:
+        type: object
+        description: A blob of key value pairs that will be dumped in the dest_file in the format as specified in type. If the type is template then the attribute src_file is mandatory and the src_file content is dumped to dest_file post property substitutions.
+  Container:
+    description: An instance of a running application container.
+    properties:
+      id:
+        type: string
+        description: Unique container id of a running application, e.g. container_e3751_1458061340047_0008_01_000002.
+      launch_time:
+        type: string
+        format: date
+        description: The time when the container was created, e.g. 2016-03-16T01:01:49.000Z. This will most likely be different from cluster launch time.
+      ip:
+        type: string
+        description: IP address of a running container, e.g. 172.31.42.141. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.
+      hostname:
+        type: string
+        description: Fully qualified hostname of a running container, e.g. ctr-e3751-1458061340047-0008-01-000002.examplestg.site. The IP address and hostname attribute values are dependent on the cluster/docker network setup as per YARN-4007.
+      bare_host:
+        type: string
+        description: The bare node or host in which the container is running, e.g. cn008.example.com.
+      state:
+        description: State of the container of an application.
+        $ref: '#/definitions/ContainerState'
+      component_name:
+        type: string
+        description: Name of the component that this container instance belongs to.
+      resource:
+        description: Resource used for this container.
+        $ref: '#/definitions/Resource'
+  ApplicationState:
+    description: The current state of an application.
+    properties:
+      state:
+        type: string
+        description: enum of the state of the application
+        enum:
+          - accepted
+          - started
+          - ready
+          - stopped
+          - failed
+  ContainerState:
+    description: The current state of the container of an application.
+    properties:
+      state:
+        type: string
+        description: enum of the state of the container
+        enum:
+          - init
+          - ready
+  ApplicationStatus:
+    description: The current status of a submitted application, returned as a response to the GET API.
+    properties:
+      diagnostics:
+        type: string
+        description: Diagnostic information (if any) for the reason of the current state of the application. It typically has a non-null value, if the application is in a non-running state.
+      state:
+        description: Application state.
+        $ref: '#/definitions/ApplicationState'
+      code:
+        type: integer
+        format: int32
+        description: An error code specific to a scenario which app owners should be able to use to understand the failure in addition to the diagnostic information.
+
