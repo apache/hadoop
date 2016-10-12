@@ -28,6 +28,14 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestRMEmbeddedElector extends ClientBaseWithFixes {
   private static final Log LOG =
@@ -40,6 +48,14 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
 
   private Configuration conf;
   private AtomicBoolean callbackCalled;
+
+  private enum SyncTestType {
+    ACTIVE,
+    STANDBY,
+    NEUTRAL,
+    ACTIVE_TIMING,
+    STANDBY_TIMING
+  }
 
   @Before
   public void setup() throws IOException {
@@ -77,6 +93,181 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     LOG.info("Stopping RM");
     rm.stop();
     LOG.info("Stopped RM");
+  }
+
+  /**
+   * Test that neutral mode plays well with all other transitions.
+   *
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  @Test
+  public void testCallbackSynchronization()
+      throws IOException, InterruptedException {
+    testCallbackSynchronization(SyncTestType.ACTIVE);
+    testCallbackSynchronization(SyncTestType.STANDBY);
+    testCallbackSynchronization(SyncTestType.NEUTRAL);
+    testCallbackSynchronization(SyncTestType.ACTIVE_TIMING);
+    testCallbackSynchronization(SyncTestType.STANDBY_TIMING);
+  }
+
+  /**
+   * Helper method to test that neutral mode plays well with other transitions.
+   *
+   * @param type the type of test to run
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  private void testCallbackSynchronization(SyncTestType type)
+      throws IOException, InterruptedException {
+    AdminService as = mock(AdminService.class);
+    RMContext rc = mock(RMContext.class);
+    Configuration myConf = new Configuration(conf);
+
+    myConf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 50);
+    when(rc.getRMAdminService()).thenReturn(as);
+
+    EmbeddedElectorService ees = new EmbeddedElectorService(rc);
+    ees.init(myConf);
+
+    ees.enterNeutralMode();
+
+    switch (type) {
+    case ACTIVE:
+      testCallbackSynchronizationActive(as, ees);
+      break;
+    case STANDBY:
+      testCallbackSynchronizationStandby(as, ees);
+      break;
+    case NEUTRAL:
+      testCallbackSynchronizationNeutral(as, ees);
+      break;
+    case ACTIVE_TIMING:
+      testCallbackSynchronizationTimingActive(as, ees);
+      break;
+    case STANDBY_TIMING:
+      testCallbackSynchronizationTimingStandby(as, ees);
+      break;
+    default:
+      fail("Unknown test type: " + type);
+      break;
+    }
+  }
+
+  /**
+   * Helper method to test that neutral mode plays well with an active
+   * transition.
+   *
+   * @param as the admin service
+   * @param ees the embedded elector service
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  private void testCallbackSynchronizationActive(AdminService as,
+      EmbeddedElectorService ees) throws IOException, InterruptedException {
+    ees.becomeActive();
+
+    Thread.sleep(100);
+
+    verify(as).transitionToActive(any());
+    verify(as, never()).transitionToStandby(any());
+  }
+
+  /**
+   * Helper method to test that neutral mode plays well with a standby
+   * transition.
+   *
+   * @param as the admin service
+   * @param ees the embedded elector service
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  private void testCallbackSynchronizationStandby(AdminService as,
+      EmbeddedElectorService ees) throws IOException, InterruptedException {
+    ees.becomeStandby();
+
+    Thread.sleep(100);
+
+    verify(as, atLeast(1)).transitionToStandby(any());
+    verify(as, atMost(1)).transitionToStandby(any());
+  }
+
+  /**
+   * Helper method to test that neutral mode plays well with itself.
+   *
+   * @param as the admin service
+   * @param ees the embedded elector service
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  private void testCallbackSynchronizationNeutral(AdminService as,
+      EmbeddedElectorService ees) throws IOException, InterruptedException {
+    ees.enterNeutralMode();
+
+    Thread.sleep(100);
+
+    verify(as, atLeast(1)).transitionToStandby(any());
+    verify(as, atMost(1)).transitionToStandby(any());
+  }
+
+  /**
+   * Helper method to test that neutral mode does not race with an active
+   * transition.
+   *
+   * @param as the admin service
+   * @param ees the embedded elector service
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  private void testCallbackSynchronizationTimingActive(AdminService as,
+      EmbeddedElectorService ees) throws IOException, InterruptedException {
+    synchronized (ees.zkDisconnectLock) {
+      // Sleep while holding the lock so that the timer thread can't do
+      // anything when it runs.  Sleep until we're pretty sure the timer thread
+      // has tried to run.
+      Thread.sleep(100);
+      // While still holding the lock cancel the timer by transitioning. This
+      // simulates a race where the callback goes to cancel the timer while the
+      // timer is trying to run.
+      ees.becomeActive();
+    }
+
+    // Sleep just a little more so that the timer thread can do whatever it's
+    // going to do, hopefully nothing.
+    Thread.sleep(50);
+
+    verify(as).transitionToActive(any());
+    verify(as, never()).transitionToStandby(any());
+  }
+
+  /**
+   * Helper method to test that neutral mode does not race with an active
+   * transition.
+   *
+   * @param as the admin service
+   * @param ees the embedded elector service
+   * @throws IOException if there's an issue transitioning
+   * @throws InterruptedException if interrupted
+   */
+  private void testCallbackSynchronizationTimingStandby(AdminService as,
+      EmbeddedElectorService ees) throws IOException, InterruptedException {
+    synchronized (ees.zkDisconnectLock) {
+      // Sleep while holding the lock so that the timer thread can't do
+      // anything when it runs.  Sleep until we're pretty sure the timer thread
+      // has tried to run.
+      Thread.sleep(100);
+      // While still holding the lock cancel the timer by transitioning. This
+      // simulates a race where the callback goes to cancel the timer while the
+      // timer is trying to run.
+      ees.becomeStandby();
+    }
+
+    // Sleep just a little more so that the timer thread can do whatever it's
+    // going to do, hopefully nothing.
+    Thread.sleep(50);
+
+    verify(as, atLeast(1)).transitionToStandby(any());
+    verify(as, atMost(1)).transitionToStandby(any());
   }
 
   private class MockRMWithElector extends MockRM {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +40,8 @@ import org.apache.zookeeper.data.ACL;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -54,6 +57,10 @@ public class EmbeddedElectorService extends AbstractService
 
   private byte[] localActiveNodeInfo;
   private ActiveStandbyElector elector;
+  private long zkSessionTimeout;
+  private Timer zkDisconnectTimer;
+  @VisibleForTesting
+  final Object zkDisconnectLock = new Object();
 
   EmbeddedElectorService(RMContext rmContext) {
     super(EmbeddedElectorService.class.getName());
@@ -80,7 +87,7 @@ public class EmbeddedElectorService extends AbstractService
         YarnConfiguration.DEFAULT_AUTO_FAILOVER_ZK_BASE_PATH);
     String electionZNode = zkBasePath + "/" + clusterId;
 
-    long zkSessionTimeout = conf.getLong(YarnConfiguration.RM_ZK_TIMEOUT_MS,
+    zkSessionTimeout = conf.getLong(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
 
     List<ACL> zkAcls = RMZKUtils.getZKAcls(conf);
@@ -123,6 +130,8 @@ public class EmbeddedElectorService extends AbstractService
 
   @Override
   public void becomeActive() throws ServiceFailedException {
+    cancelDisconnectTimer();
+
     try {
       rmContext.getRMAdminService().transitionToActive(req);
     } catch (Exception e) {
@@ -132,6 +141,8 @@ public class EmbeddedElectorService extends AbstractService
 
   @Override
   public void becomeStandby() {
+    cancelDisconnectTimer();
+
     try {
       rmContext.getRMAdminService().transitionToStandby(req);
     } catch (Exception e) {
@@ -139,13 +150,49 @@ public class EmbeddedElectorService extends AbstractService
     }
   }
 
+  /**
+   * Stop the disconnect timer.  Any running tasks will be allowed to complete.
+   */
+  private void cancelDisconnectTimer() {
+    synchronized (zkDisconnectLock) {
+      if (zkDisconnectTimer != null) {
+        zkDisconnectTimer.cancel();
+        zkDisconnectTimer = null;
+      }
+    }
+  }
+
+  /**
+   * When the ZK client loses contact with ZK, this method will be called to
+   * allow the RM to react. Because the loss of connection can be noticed
+   * before the session timeout happens, it is undesirable to transition
+   * immediately. Instead the method starts a timer that will wait
+   * {@link YarnConfiguration#RM_ZK_TIMEOUT_MS} milliseconds before
+   * initiating the transition into standby state.
+   */
   @Override
   public void enterNeutralMode() {
-    /**
-     * Possibly due to transient connection issues. Do nothing.
-     * TODO: Might want to keep track of how long in this state and transition
-     * to standby.
-     */
+    LOG.warn("Lost contact with Zookeeper. Transitioning to standby in "
+        + zkSessionTimeout + " ms if connection is not reestablished.");
+
+    // If we've just become disconnected, start a timer.  When the time's up,
+    // we'll transition to standby.
+    synchronized (zkDisconnectLock) {
+      if (zkDisconnectTimer == null) {
+        zkDisconnectTimer = new Timer("Zookeeper disconnect timer");
+        zkDisconnectTimer.schedule(new TimerTask() {
+          @Override
+          public void run() {
+            synchronized (zkDisconnectLock) {
+              // Only run if the timer hasn't been cancelled
+              if (zkDisconnectTimer != null) {
+                becomeStandby();
+              }
+            }
+          }
+        }, zkSessionTimeout);
+      }
+    }
   }
 
   @SuppressWarnings(value = "unchecked")
