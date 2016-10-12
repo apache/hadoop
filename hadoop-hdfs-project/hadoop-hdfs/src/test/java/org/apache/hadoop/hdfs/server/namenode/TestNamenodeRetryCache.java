@@ -55,6 +55,7 @@ import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.LightWeightCache;
 import org.junit.After;
@@ -111,19 +112,33 @@ public class TestNamenodeRetryCache {
     }
   }
   
+  static class DummyCall extends Server.Call {
+    private UserGroupInformation ugi;
+
+    DummyCall(int callId, byte[] clientId) {
+      super(callId, 1, null, null, RpcKind.RPC_PROTOCOL_BUFFER, clientId);
+      try {
+        ugi = UserGroupInformation.getCurrentUser();
+      } catch (IOException ioe) {
+      }
+    }
+    @Override
+    public UserGroupInformation getRemoteUser() {
+      return ugi;
+    }
+  }
   /** Set the current Server RPC call */
   public static void newCall() {
-    Server.Call call = new Server.Call(++callId, 1, null, null,
-        RpcKind.RPC_PROTOCOL_BUFFER, CLIENT_ID);
+    Server.Call call = new DummyCall(++callId, CLIENT_ID);
     Server.getCurCall().set(call);
   }
   
   public static void resetCall() {
-    Server.Call call = new Server.Call(RpcConstants.INVALID_CALL_ID, 1, null,
-        null, RpcKind.RPC_PROTOCOL_BUFFER, RpcConstants.DUMMY_CLIENT_ID);
+    Server.Call call = new DummyCall(RpcConstants.INVALID_CALL_ID,
+        RpcConstants.DUMMY_CLIENT_ID);
     Server.getCurCall().set(call);
   }
-  
+
   private void concatSetup(String file1, String file2) throws Exception {
     DFSTestUtil.createFile(filesystem, new Path(file1), BlockSize, (short)1, 0L);
     DFSTestUtil.createFile(filesystem, new Path(file2), BlockSize, (short)1, 0L);

@@ -64,7 +64,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -407,7 +409,15 @@ public class NameNode extends ReconfigurableBase implements
   public NamenodeProtocols getRpcServer() {
     return rpcServer;
   }
-  
+
+  public void queueExternalCall(ExternalCall<?> extCall)
+      throws IOException, InterruptedException {
+    if (rpcServer == null) {
+      throw new RetriableException("Namenode is in startup mode");
+    }
+    rpcServer.getClientRpcServer().queueCall(extCall);
+  }
+
   public static void initMetrics(Configuration conf, NamenodeRole role) {
     metrics = NameNodeMetrics.create(conf, role);
   }

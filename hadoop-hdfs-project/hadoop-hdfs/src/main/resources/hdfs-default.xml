@@ -4281,4 +4281,11 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.webhdfs.use.ipc.callq</name>
+    <value>true</value>
+    <description>Enables routing of webhdfs calls through rpc
+      call queue</description>
+  </property>
+
 </configuration>
