@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.ipc.Server.Call;
@@ -37,14 +38,10 @@ public abstract class ExternalCall<T> extends Call {
 
   public abstract UserGroupInformation getRemoteUser();
 
-  public final T get() throws IOException, InterruptedException {
+  public final T get() throws InterruptedException, ExecutionException {
     waitForCompletion();
     if (error != null) {
-      if (error instanceof IOException) {
-        throw (IOException)error;
-      } else {
-        throw new IOException(error);
-      }
+      throw new ExecutionException(error);
     }
     return result;
   }
