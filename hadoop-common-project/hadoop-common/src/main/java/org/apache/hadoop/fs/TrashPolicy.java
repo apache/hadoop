@@ -53,9 +53,8 @@ public abstract class TrashPolicy extends Configured {
    * not assume trash always under /user/$USER due to HDFS encryption zone.
    * @param conf the configuration to be used
    * @param fs the filesystem to be used
-   * @throws IOException
    */
-  public void initialize(Configuration conf, FileSystem fs) throws IOException{
+  public void initialize(Configuration conf, FileSystem fs) {
     throw new UnsupportedOperationException();
   }
 
@@ -137,8 +136,7 @@ public abstract class TrashPolicy extends Configured {
    * @param fs the file system to be used
    * @return an instance of TrashPolicy
    */
-  public static TrashPolicy getInstance(Configuration conf, FileSystem fs)
-      throws IOException {
+  public static TrashPolicy getInstance(Configuration conf, FileSystem fs) {
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
     TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
