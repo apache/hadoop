@@ -76,14 +76,14 @@ public class Artifact {
   }
 
   /**
-   * Artifact type, like docker, tarball, etc. (optional)
+   * Artifact type, like docker, tarball, etc. (optional).
    **/
   public Artifact type(TypeEnum type) {
     this.type = type;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Artifact type, like docker, tarball, etc. (optional)")
+  @ApiModelProperty(example = "null", value = "Artifact type, like docker, tarball, etc. (optional).")
   @JsonProperty("type")
   public TypeEnum getType() {
     return type;

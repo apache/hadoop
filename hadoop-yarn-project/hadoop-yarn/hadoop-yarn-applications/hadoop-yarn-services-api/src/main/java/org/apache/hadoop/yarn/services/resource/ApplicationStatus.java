@@ -22,7 +22,6 @@ import io.swagger.annotations.ApiModelProperty;
 
 import java.util.Objects;
 
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -33,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * GET API.
  **/
 
-@ApiModel(description = "The current status of a submitted application, returned as a response to the GET api")
+@ApiModel(description = "The current status of a submitted application, returned as a response to the GET API.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -60,20 +59,19 @@ public class ApplicationStatus extends BaseResource {
     return diagnostics;
   }
 
-  @XmlElement(name = "diagnostics")
   public void setDiagnostics(String diagnostics) {
     this.diagnostics = diagnostics;
   }
 
   /**
-   * Application state
+   * Application state.
    **/
   public ApplicationStatus state(ApplicationState state) {
     this.state = state;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Application state")
+  @ApiModelProperty(example = "null", value = "Application state.")
   @JsonProperty("state")
   public ApplicationState getState() {
     return state;

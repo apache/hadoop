@@ -29,6 +29,10 @@ import javax.xml.bind.annotation.XmlRootElement;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * An instance of a running application container.
+ **/
+
 @ApiModel(description = "An instance of a running application container")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
@@ -47,14 +51,14 @@ public class Container extends BaseResource {
 
   /**
    * Unique container id of a running application, e.g.
-   * container_e3751_1458061340047_0008_01_000002
+   * container_e3751_1458061340047_0008_01_000002.
    **/
   public Container id(String id) {
     this.id = id;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Unique container id of a running application, e.g. container_e3751_1458061340047_0008_01_000002")
+  @ApiModelProperty(example = "null", value = "Unique container id of a running application, e.g. container_e3751_1458061340047_0008_01_000002.")
   @JsonProperty("id")
   public String getId() {
     return id;
@@ -65,7 +69,8 @@ public class Container extends BaseResource {
   }
 
   /**
-   * The time when the container was created, e.g. 2016-03-16T01:01:49.000Z. This will most likely be different from cluster launch time.
+   * The time when the container was created, e.g. 2016-03-16T01:01:49.000Z.
+   * This will most likely be different from cluster launch time.
    **/
   public Container launchTime(Date launchTime) {
     this.launchTime = launchTime;
@@ -126,14 +131,14 @@ public class Container extends BaseResource {
 
   /**
    * The bare node or host in which the container is running, e.g.
-   * cn008.example.com
+   * cn008.example.com.
    **/
   public Container bareHost(String bareHost) {
     this.bareHost = bareHost;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "The bare node or host in which the container is running, e.g. cn008.example.com")
+  @ApiModelProperty(example = "null", value = "The bare node or host in which the container is running, e.g. cn008.example.com.")
   @JsonProperty("bare_host")
   public String getBareHost() {
     return bareHost;
