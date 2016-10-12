@@ -48,8 +48,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 public class Application extends BaseResource {
   private static final long serialVersionUID = -4491694636566094885L;
 
-  private String id = null;
   private String name = null;
+  private String id = null;
   private Artifact artifact = null;
   private Resource resource = null;
   private String launchCommand = null;
@@ -63,25 +63,7 @@ public class Application extends BaseResource {
   private List<Container> containers = new ArrayList<>();
   private ApplicationState state = null;
   private Map<String, String> quicklinks = null;
-  private String queue;
-
-  /**
-   * A unique application id.
-   **/
-  public Application id(String id) {
-    this.id = id;
-    return this;
-  }
-
-  @ApiModelProperty(example = "null", required = true, value = "A unique application id.")
-  @JsonProperty("id")
-  public String getId() {
-    return id;
-  }
-
-  public void setId(String id) {
-    this.id = id;
-  }
+  private String queue = null;
 
   /**
    * A unique application name.
@@ -99,6 +81,24 @@ public class Application extends BaseResource {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  /**
+   * A unique application id.
+   **/
+  public Application id(String id) {
+    this.id = id;
+    return this;
+  }
+
+  @ApiModelProperty(example = "null", value = "A unique application id.")
+  @JsonProperty("id")
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
   }
 
   /**
@@ -423,8 +423,8 @@ public class Application extends BaseResource {
     sb.append("    numberOfRunningContainers: ")
         .append(toIndentedString(numberOfRunningContainers)).append("\n");
     sb.append("    lifetime: ").append(toIndentedString(lifetime)).append("\n");
-    sb.append("    placementPolicy: ")
-        .append(toIndentedString(placementPolicy)).append("\n");
+    sb.append("    placementPolicy: ").append(toIndentedString(placementPolicy))
+        .append("\n");
     sb.append("    components: ").append(toIndentedString(components))
         .append("\n");
     sb.append("    configuration: ").append(toIndentedString(configuration))
