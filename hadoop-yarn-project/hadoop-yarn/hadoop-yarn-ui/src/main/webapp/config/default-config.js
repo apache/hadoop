@@ -18,7 +18,7 @@
 
 module.exports = { // Yarn UI App configurations
     hosts: {
-      localBaseAddress: "localhost:1337",
+      localBaseAddress: "",
       timelineWebAddress: "localhost:8188",
       rmWebAddress: "localhost:8088",
       protocolScheme: "http:"
