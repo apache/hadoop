@@ -202,8 +202,11 @@ public class Component {
    * dictates the initial number of components created. Component names
    * typically differ with a trailing id, but assumptions should not be made on
    * that, as the algorithm can change at any time. Configurations section will
-   * be able to use placeholders like ${APP_COMPONENT_NAME} to get its component
-   * name at runtime, and thereby differing in value at runtime. The best part
+   * be able to use placeholders like ${USER}, ${CLUSTER_NAME} and
+   * ${COMPONENT_NAME} to be replaced at runtime with user the app is submitted
+   * as, application name and application component name respectively. Launch
+   * command can use placeholders like ${APP_COMPONENT_NAME} and ${APP_NAME} to
+   * get its component name and app name respectively at runtime. The best part
    * of this feature is that when the component is flexed up, entirely new
    * components (with new trailing ids) are created.
    **/
@@ -212,7 +215,7 @@ public class Component {
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "Certain applications need to define multiple components using the same artifact and resource profile, differing only in configurations. In such cases, this field helps app owners to avoid creating multiple component definitions with repeated information. The number_of_containers field dictates the initial number of components created. Component names typically differ with a trailing id, but assumptions should not be made on that, as the algorithm can change at any time. Configurations section will be able to use placeholders like ${APP_COMPONENT_NAME} to get its component name at runtime, and thereby differing in value at runtime. The best part of this feature is that when the component is flexed up, entirely new components (with new trailing ids) are created.")
+  @ApiModelProperty(example = "null", value = "Certain applications need to define multiple components using the same artifact and resource profile, differing only in configurations. In such cases, this field helps app owners to avoid creating multiple component definitions with repeated information. The number_of_containers field dictates the initial number of components created. Component names typically differ with a trailing id, but assumptions should not be made on that, as the algorithm can change at any time. Configurations section will be able to use placeholders like ${USER}, ${CLUSTER_NAME} and ${COMPONENT_NAME} to be replaced at runtime with user the app is submitted as, application name and application component name respectively. Launch command can use placeholders like ${APP_COMPONENT_NAME} and ${APP_NAME} to get its component name and app name respectively at runtime. The best part of this feature is that when the component is flexed up, entirely new components (with new trailing ids) are created.")
   @JsonProperty("unique_component_support")
   public Boolean getUniqueComponentSupport() {
     return uniqueComponentSupport;
@@ -316,8 +319,7 @@ public class Component {
         && Objects.equals(this.artifact, component.artifact)
         && Objects.equals(this.launchCommand, component.launchCommand)
         && Objects.equals(this.resource, component.resource)
-        && Objects
-            .equals(this.numberOfContainers, component.numberOfContainers)
+        && Objects.equals(this.numberOfContainers, component.numberOfContainers)
         && Objects.equals(this.uniqueComponentSupport,
             component.uniqueComponentSupport)
         && Objects.equals(this.runPrivilegedContainer,
@@ -354,8 +356,8 @@ public class Component {
         .append(toIndentedString(uniqueComponentSupport)).append("\n");
     sb.append("    runPrivilegedContainer: ")
         .append(toIndentedString(runPrivilegedContainer)).append("\n");
-    sb.append("    placementPolicy: ")
-        .append(toIndentedString(placementPolicy)).append("\n");
+    sb.append("    placementPolicy: ").append(toIndentedString(placementPolicy))
+        .append("\n");
     sb.append("    configuration: ").append(toIndentedString(configuration))
         .append("\n");
     sb.append("    quicklinks: ").append(toIndentedString(quicklinks))

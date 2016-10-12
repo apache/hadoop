@@ -17,9 +17,14 @@
 
 package org.apache.hadoop.yarn.services.resource;
 
+import io.swagger.annotations.ApiModel;
+
 /**
  * The current state of an application.
  **/
+
+@ApiModel(description = "The current state of an application.")
+@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 public enum ApplicationState {
   ACCEPTED, STARTED, READY, STOPPED, FAILED;
 }

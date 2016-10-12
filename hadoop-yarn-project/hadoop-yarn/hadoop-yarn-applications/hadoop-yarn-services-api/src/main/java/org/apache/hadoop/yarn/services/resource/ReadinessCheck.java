@@ -57,15 +57,15 @@ public class ReadinessCheck {
   private Artifact artifact = null;
 
   /**
-   * http (YARN will perform a simple REST call at a regular interval and expect
-   * a 204 No content).
+   * E.g. HTTP (YARN will perform a simple REST call at a regular interval and
+   * expect a 204 No content).
    **/
   public ReadinessCheck type(TypeEnum type) {
     this.type = type;
     return this;
   }
 
-  @ApiModelProperty(example = "null", value = "http (YARN will perform a simple REST call at a regular interval and expect a 204 No content).")
+  @ApiModelProperty(example = "null", value = "E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).")
   @JsonProperty("type")
   public TypeEnum getType() {
     return type;
