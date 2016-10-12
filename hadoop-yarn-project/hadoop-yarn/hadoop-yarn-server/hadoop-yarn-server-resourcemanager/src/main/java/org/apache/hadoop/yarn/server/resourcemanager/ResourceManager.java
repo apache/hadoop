@@ -46,6 +46,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -110,6 +112,7 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
+import org.mortbay.jetty.webapp.WebAppContext;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.common.annotations.VisibleForTesting;
@@ -118,6 +121,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
@@ -144,6 +149,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   private static long clusterTimeStamp = System.currentTimeMillis();
+
+  /*
+   * UI2 webapp name
+   */
+  public static final String UI2_WEBAPP_NAME = "/ui2";
 
   /**
    * "Always On" services. Services that need to run always irrespective of
@@ -1037,26 +1047,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return builder;
   }
 
-  protected void startWebAppV2() throws IOException {
-    Configuration config = getConfig();
-    final InetSocketAddress httpAddr = config.getSocketAddr(
-        YarnConfiguration.RM_WEBAPP_UI2_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_PORT);
-    final InetSocketAddress httpsAddr = config.getSocketAddr(
-        YarnConfiguration.RM_WEBAPP_UI2_HTTPS_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_HTTPS_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_HTTPS_PORT);
-
-    HttpServer2.Builder builder = httpServerTemplateForRM(config, httpAddr,
-        httpsAddr, "rm");
-
-    HttpServer2 infoServer = builder.build();
-    infoServer.start();
-
-    LOG.info("Web server init done");
-  }
-
   protected void startWepApp() {
 
     Configuration conf = getConfig();
@@ -1090,7 +1080,35 @@ public class ResourceManager extends CompositeService implements Recoverable {
       String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
     }
-    webApp = builder.start(new RMWebApp(this));
+
+    WebAppContext uiWebAppContext = null;
+    if (getConfig().getBoolean(YarnConfiguration.YARN_WEBAPP_UI2_ENABLE,
+        YarnConfiguration.DEFAULT_YARN_WEBAPP_UI2_ENABLE)) {
+      String webPath = UI2_WEBAPP_NAME;
+      String onDiskPath = getConfig()
+          .get(YarnConfiguration.YARN_WEBAPP_UI2_WARFILE_PATH);
+
+      if (null == onDiskPath) {
+        String war = "hadoop-yarn-ui-" + VersionInfo.getVersion() + ".war";
+        URLClassLoader cl = (URLClassLoader) ClassLoader.getSystemClassLoader();
+        URL url = cl.findResource(war);
+
+        if (null == url) {
+          onDiskPath = "";
+        } else {
+          onDiskPath = url.getFile();
+        }
+
+        LOG.info(
+            "New web UI war file name:" + war + ", and path:" + onDiskPath);
+      }
+
+      uiWebAppContext = new WebAppContext();
+      uiWebAppContext.setContextPath(webPath);
+      uiWebAppContext.setWar(onDiskPath);
+    }
+
+    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
 
   /**
@@ -1190,16 +1208,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       transitionToStandby(false);
     } else {
       transitionToActive();
-    }
-
-    if (getConfig().getBoolean(YarnConfiguration.RM_WEBAPP_UI2_ENABLE,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_UI2_ENABLE)) {
-      try {
-        startWebAppV2();
-        LOG.info("Yarn WebApp UI 2 is started");
-      } catch (Exception e) {
-        LOG.error("Failed to start Yarn web app v2:" + e.getMessage());
-      }
     }
 
     startWepApp();

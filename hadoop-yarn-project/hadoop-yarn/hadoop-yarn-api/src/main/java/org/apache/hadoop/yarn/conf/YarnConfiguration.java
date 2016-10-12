@@ -301,25 +301,12 @@ public class YarnConfiguration extends Configuration {
   /**
    * Enable YARN WebApp V2.
    */
-  public static final String RM_WEBAPP_UI2_ENABLE = RM_PREFIX
+  public static final String YARN_WEBAPP_UI2_ENABLE = "yarn."
       + "webapp.ui2.enable";
-  public static final boolean DEFAULT_RM_WEBAPP_UI2_ENABLE = false;
+  public static final boolean DEFAULT_YARN_WEBAPP_UI2_ENABLE = false;
 
-  /** The address of the RM web ui2 application. */
-  public static final String RM_WEBAPP_UI2_ADDRESS = RM_PREFIX
-      + "webapp.ui2.address";
-
-  public static final int DEFAULT_RM_WEBAPP_UI2_PORT = 8288;
-  public static final String DEFAULT_RM_WEBAPP_UI2_ADDRESS = "0.0.0.0:" +
-      DEFAULT_RM_WEBAPP_UI2_PORT;
-  
-  /** The https address of the RM web ui2 application.*/
-  public static final String RM_WEBAPP_UI2_HTTPS_ADDRESS =
-      RM_PREFIX + "webapp.ui2.https.address";
-
-  public static final int DEFAULT_RM_WEBAPP_UI2_HTTPS_PORT = 8290;
-  public static final String DEFAULT_RM_WEBAPP_UI2_HTTPS_ADDRESS = "0.0.0.0:"
-      + DEFAULT_RM_WEBAPP_UI2_HTTPS_PORT;
+  public static final String YARN_WEBAPP_UI2_WARFILE_PATH = "yarn."
+      + "webapp.ui2.war-file-path";
 
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";

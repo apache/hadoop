@@ -199,28 +199,16 @@
 
   <property>
     <description>To enable RM web ui2 application.</description>
-    <name>yarn.resourcemanager.webapp.ui2.enable</name>
+    <name>yarn.webapp.ui2.enable</name>
     <value>false</value>
   </property>
 
   <property>
     <description>
-      The http address of the RM web ui2 application.
-      If only a host is provided as the value,
-      the webapp will be served on a random port.
+      Explicitly provide WAR file path for ui2 if needed.
     </description>
-    <name>yarn.resourcemanager.webapp.ui2.address</name>
-    <value>${yarn.resourcemanager.hostname}:8288</value>
-  </property>
-
-  <property>
-    <description>
-      The https address of the RM web ui2 application.
-      If only a host is provided as the value,
-      the webapp will be served on a random port.
-    </description>
-    <name>yarn.resourcemanager.webapp.ui2.https.address</name>
-    <value>${yarn.resourcemanager.hostname}:8290</value>
+    <name>yarn.webapp.ui2.war-file-path</name>
+    <value></value>
   </property>
 
   <property>
