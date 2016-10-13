@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.storage;
+package org.apache.hadoop.scm.storage;
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -37,29 +37,24 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResp
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.WriteChunkRequestProto;
 import org.apache.hadoop.scm.XceiverClient;
-import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
 
 /**
  * Implementation of all container protocol calls performed by
- * {@link DistributedStorageHandler}.
+ * .
  */
-final class ContainerProtocolCalls {
+public final class ContainerProtocolCalls {
 
   /**
    * Calls the container protocol to get a container key.
    *
    * @param xceiverClient client to perform call
    * @param containerKeyData key data to identify container
-   * @param args container protocol call args
-   * @returns container protocol get key response
+   * @param traceID container protocol call args
+   * @return container protocol get key response
    * @throws IOException if there is an I/O error while performing the call
-   * @throws OzoneException if the container protocol call failed
    */
   public static GetKeyResponseProto getKey(XceiverClient xceiverClient,
-      KeyData containerKeyData, UserArgs args) throws IOException,
-      OzoneException {
+      KeyData containerKeyData, String traceID) throws IOException {
     GetKeyRequestProto.Builder readKeyRequest = GetKeyRequestProto
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
@@ -67,11 +62,11 @@ final class ContainerProtocolCalls {
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.GetKey)
-        .setTraceID(args.getRequestID())
+        .setTraceID(traceID)
         .setGetKey(readKeyRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, args);
+    validateContainerResponse(response, traceID);
     return response.getGetKey();
   }
 
@@ -80,13 +75,11 @@ final class ContainerProtocolCalls {
    *
    * @param xceiverClient client to perform call
    * @param containerKeyData key data to identify container
-   * @param args container protocol call args
+   * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
-   * @throws OzoneException if the container protocol call failed
    */
   public static void putKey(XceiverClient xceiverClient,
-      KeyData containerKeyData, UserArgs args) throws IOException,
-      OzoneException {
+      KeyData containerKeyData, String traceID) throws IOException {
     PutKeyRequestProto.Builder createKeyRequest = PutKeyRequestProto
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
@@ -94,11 +87,11 @@ final class ContainerProtocolCalls {
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.PutKey)
-        .setTraceID(args.getRequestID())
+        .setTraceID(traceID)
         .setPutKey(createKeyRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, args);
+    validateContainerResponse(response, traceID);
   }
 
   /**
@@ -107,14 +100,13 @@ final class ContainerProtocolCalls {
    * @param xceiverClient client to perform call
    * @param chunk information about chunk to read
    * @param key the key name
-   * @param args container protocol call args
-   * @returns container protocol read chunk response
+   * @param traceID container protocol call args
+   * @return container protocol read chunk response
    * @throws IOException if there is an I/O error while performing the call
-   * @throws OzoneException if the container protocol call failed
    */
   public static ReadChunkResponseProto readChunk(XceiverClient xceiverClient,
-      ChunkInfo chunk, String key, UserArgs args)
-      throws IOException, OzoneException {
+      ChunkInfo chunk, String key, String traceID)
+      throws IOException {
     ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
@@ -123,11 +115,11 @@ final class ContainerProtocolCalls {
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.ReadChunk)
-        .setTraceID(args.getRequestID())
+        .setTraceID(traceID)
         .setReadChunk(readChunkRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, args);
+    validateContainerResponse(response, traceID);
     return response.getReadChunk();
   }
 
@@ -138,13 +130,12 @@ final class ContainerProtocolCalls {
    * @param chunk information about chunk to write
    * @param key the key name
    * @param data the data of the chunk to write
-   * @param args container protocol call args
+   * @param traceID container protocol call args
    * @throws IOException if there is an I/O error while performing the call
-   * @throws OzoneException if the container protocol call failed
    */
   public static void writeChunk(XceiverClient xceiverClient, ChunkInfo chunk,
-      String key, ByteString data, UserArgs args)
-      throws IOException, OzoneException {
+      String key, ByteString data, String traceID)
+      throws IOException {
     WriteChunkRequestProto.Builder writeChunkRequest = WriteChunkRequestProto
         .newBuilder()
         .setPipeline(xceiverClient.getPipeline().getProtobufMessage())
@@ -154,11 +145,11 @@ final class ContainerProtocolCalls {
     ContainerCommandRequestProto request = ContainerCommandRequestProto
         .newBuilder()
         .setCmdType(Type.WriteChunk)
-        .setTraceID(args.getRequestID())
+        .setTraceID(traceID)
         .setWriteChunk(writeChunkRequest)
         .build();
     ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response, args);
+    validateContainerResponse(response, traceID);
   }
 
   /**
@@ -166,27 +157,28 @@ final class ContainerProtocolCalls {
    * return code is mapped to a corresponding exception and thrown.
    *
    * @param response container protocol call response
-   * @param args container protocol call args
-   * @throws OzoneException if the container protocol call failed
+   * @param traceID container protocol call args
+   * @throws IOException if the container protocol call failed
    */
   private static void validateContainerResponse(
-      ContainerCommandResponseProto response, UserArgs args)
-      throws OzoneException {
+      ContainerCommandResponseProto response, String traceID
+  ) throws IOException {
+    // TODO : throw the right type of exception
     switch (response.getResult()) {
     case SUCCESS:
       break;
     case MALFORMED_REQUEST:
-      throw ErrorTable.newError(new OzoneException(HTTP_BAD_REQUEST,
-          "badRequest", "Bad container request."), args);
+      throw new IOException(HTTP_BAD_REQUEST +
+          ":Bad container request: " + traceID);
     case UNSUPPORTED_REQUEST:
-      throw ErrorTable.newError(new OzoneException(HTTP_INTERNAL_ERROR,
-          "internalServerError", "Unsupported container request."), args);
+      throw new IOException(HTTP_INTERNAL_ERROR +
+          "Unsupported container request: " + traceID);
     case CONTAINER_INTERNAL_ERROR:
-      throw ErrorTable.newError(new OzoneException(HTTP_INTERNAL_ERROR,
-          "internalServerError", "Container internal error."), args);
+      throw new IOException(HTTP_INTERNAL_ERROR +
+          "Container internal error:" + traceID);
     default:
-      throw ErrorTable.newError(new OzoneException(HTTP_INTERNAL_ERROR,
-          "internalServerError", "Unrecognized container response."), args);
+      throw new IOException(HTTP_INTERNAL_ERROR +
+          "Unrecognized container response:" + traceID);
     }
   }
 

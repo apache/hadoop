@@ -29,4 +29,7 @@ public final class ScmConfigKeys {
   public static final String DFS_CONTAINER_IPC_PORT =
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 50011;
+
+  // TODO : this is copied from OzoneConsts, may need to move to a better place
+  public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
 }

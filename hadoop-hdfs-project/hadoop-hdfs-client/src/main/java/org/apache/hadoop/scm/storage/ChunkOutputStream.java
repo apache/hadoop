@@ -16,11 +16,10 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.storage;
+package org.apache.hadoop.scm.storage;
 
-import static org.apache.hadoop.ozone.OzoneConsts.CHUNK_SIZE;
-import static org.apache.hadoop.ozone.web.storage.ContainerProtocolCalls.*;
-import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
+import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.putKey;
+import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.writeChunk;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,15 +30,14 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyData;
+import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.KeyValue;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
-import org.apache.hadoop.ozone.web.response.KeyInfo;
 
 /**
  * An {@link OutputStream} used by the REST service in combination with the
- * {@link DistributedStorageHandler} to write the value of a key to a sequence
+ * SCMClient to write the value of a key to a sequence
  * of container chunks.  Writes are buffered locally and periodically written to
  * the container as a new chunk.  In order to preserve the semantics that
  * replacement of a pre-existing key is atomic, each instance of the stream has
@@ -53,11 +51,11 @@ import org.apache.hadoop.ozone.web.response.KeyInfo;
  * This class encapsulates all state management for buffering and writing
  * through to the container.
  */
-class ChunkOutputStream extends OutputStream {
+public class ChunkOutputStream extends OutputStream {
 
   private final String containerKey;
-  private final KeyInfo key;
-  private final UserArgs args;
+  private final String key;
+  private final String traceID;
   private final KeyData.Builder containerKeyData;
   private XceiverClientManager xceiverClientManager;
   private XceiverClient xceiverClient;
@@ -72,19 +70,23 @@ class ChunkOutputStream extends OutputStream {
    * @param key chunk key
    * @param xceiverClientManager client manager that controls client
    * @param xceiverClient client to perform container calls
-   * @param args container protocol call args
+   * @param traceID container protocol call args
    */
-  public ChunkOutputStream(String containerKey, KeyInfo key,
+  public ChunkOutputStream(String containerKey, String key,
       XceiverClientManager xceiverClientManager, XceiverClient xceiverClient,
-      UserArgs args) {
+      String traceID) {
     this.containerKey = containerKey;
     this.key = key;
-    this.args = args;
-    this.containerKeyData = fromKeyToContainerKeyDataBuilder(
-        xceiverClient.getPipeline().getContainerName(), containerKey, key);
+    this.traceID = traceID;
+    KeyValue keyValue = KeyValue.newBuilder()
+        .setKey("TYPE").setValue("KEY").build();
+    this.containerKeyData = KeyData.newBuilder()
+        .setContainerName(xceiverClient.getPipeline().getContainerName())
+        .setName(containerKey)
+        .addMetadata(keyValue);
     this.xceiverClientManager = xceiverClientManager;
     this.xceiverClient = xceiverClient;
-    this.buffer = ByteBuffer.allocate(CHUNK_SIZE);
+    this.buffer = ByteBuffer.allocate(ScmConfigKeys.CHUNK_SIZE);
     this.streamId = UUID.randomUUID().toString();
     this.chunkIndex = 0;
   }
@@ -95,7 +97,7 @@ class ChunkOutputStream extends OutputStream {
     int rollbackPosition = buffer.position();
     int rollbackLimit = buffer.limit();
     buffer.put((byte)b);
-    if (buffer.position() == CHUNK_SIZE) {
+    if (buffer.position() == ScmConfigKeys.CHUNK_SIZE) {
       flushBufferToChunk(rollbackPosition, rollbackLimit);
     }
   }
@@ -114,11 +116,12 @@ class ChunkOutputStream extends OutputStream {
     }
     checkOpen();
     while (len > 0) {
-      int writeLen = Math.min(CHUNK_SIZE - buffer.position(), len);
+      int writeLen = Math.min(
+          ScmConfigKeys.CHUNK_SIZE - buffer.position(), len);
       int rollbackPosition = buffer.position();
       int rollbackLimit = buffer.limit();
       buffer.put(b, off, writeLen);
-      if (buffer.position() == CHUNK_SIZE) {
+      if (buffer.position() == ScmConfigKeys.CHUNK_SIZE) {
         flushBufferToChunk(rollbackPosition, rollbackLimit);
       }
       off += writeLen;
@@ -144,9 +147,9 @@ class ChunkOutputStream extends OutputStream {
         if (buffer.position() > 0) {
           writeChunkToContainer();
         }
-        putKey(xceiverClient, containerKeyData.build(), args);
-      } catch (OzoneException e) {
-        throw new IOException("Unexpected OzoneException", e);
+        putKey(xceiverClient, containerKeyData.build(), traceID);
+      } catch (IOException e) {
+        throw new IOException("Unexpected Storage Container Exception", e);
       } finally {
         xceiverClientManager.releaseClient(xceiverClient);
         xceiverClientManager = null;
@@ -205,14 +208,14 @@ class ChunkOutputStream extends OutputStream {
     ChunkInfo chunk = ChunkInfo
         .newBuilder()
         .setChunkName(
-            key.getKeyName() + "_stream_" + streamId + "_chunk_" + ++chunkIndex)
+            key + "_stream_" + streamId + "_chunk_" + ++chunkIndex)
         .setOffset(0)
         .setLen(data.size())
         .build();
     try {
-      writeChunk(xceiverClient, chunk, key.getKeyName(), data, args);
-    } catch (OzoneException e) {
-      throw new IOException("Unexpected OzoneException", e);
+      writeChunk(xceiverClient, chunk, key, data, traceID);
+    } catch (IOException e) {
+      throw new IOException("Unexpected Storage Container Exception", e);
     }
     containerKeyData.addChunks(chunk);
   }
