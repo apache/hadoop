@@ -50,7 +50,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -68,10 +67,12 @@ import org.apache.hadoop.yarn.services.resource.Configuration;
 import org.apache.hadoop.yarn.services.resource.Container;
 import org.apache.hadoop.yarn.services.resource.ContainerState;
 import org.apache.hadoop.yarn.services.resource.Resource;
+import org.apache.slider.api.OptionKeys;
 import org.apache.slider.api.ResourceKeys;
 import org.apache.slider.api.StateValues;
 import org.apache.slider.client.SliderClient;
 import org.apache.slider.common.SliderExitCodes;
+import org.apache.slider.common.SliderKeys;
 import org.apache.slider.common.params.ActionCreateArgs;
 import org.apache.slider.common.params.ActionFlexArgs;
 import org.apache.slider.common.params.ActionFreezeArgs;
@@ -88,12 +89,11 @@ import org.apache.slider.core.exceptions.NotFoundException;
 import org.apache.slider.core.exceptions.SliderException;
 import org.apache.slider.core.exceptions.UnknownApplicationInstanceException;
 import org.apache.slider.core.registry.docstore.ConfigFormat;
+import org.apache.slider.providers.docker.DockerKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
@@ -211,7 +211,8 @@ public class ApplicationApiService implements ApplicationApi {
           application.setConfiguration(new Configuration());
         }
         addPropertyToConfiguration(application.getConfiguration(),
-            PROPERTY_COMPONENT_TYPE, COMPONENT_TYPE_EXTERNAL);
+            SliderKeys.COMPONENT_TYPE_KEY,
+            SliderKeys.COMPONENT_TYPE_EXTERNAL_APP);
       }
       // resource
       validateApplicationResource(application.getResource(), null, application
@@ -249,7 +250,8 @@ public class ApplicationApiService implements ApplicationApi {
             comp.setConfiguration(new Configuration());
           }
           addPropertyToConfiguration(comp.getConfiguration(),
-              PROPERTY_COMPONENT_TYPE, COMPONENT_TYPE_EXTERNAL);
+              SliderKeys.COMPONENT_TYPE_KEY,
+              SliderKeys.COMPONENT_TYPE_EXTERNAL_APP);
           compNameArtifactIdMap.put(comp.getName(), comp.getArtifact().getId());
           comp.setName(comp.getArtifact().getId());
         }
@@ -339,9 +341,9 @@ public class ApplicationApiService implements ApplicationApi {
     final ActionCreateArgs createArgs = new ActionCreateArgs();
     addAppConfOptions(createArgs, application, compNameArtifactIdMap);
     addResourceOptions(createArgs, application);
-    String metainfoJson = getMetainfoJson(application, compNameArtifactIdMap);
 
-    createArgs.appMetaInfoJson = metainfoJson;
+    createArgs.provider = DockerKeys.PROVIDER_DOCKER;
+
     if (queueName != null && queueName.trim().length() > 0) {
       createArgs.queue = queueName.trim();
     }
@@ -388,17 +390,76 @@ public class ApplicationApiService implements ApplicationApi {
     //    }
 
     Set<String> uniqueGlobalPropertyCache = new HashSet<>();
-    if (application.getConfiguration() != null
-        && application.getConfiguration().getProperties() != null) {
-      for (Map.Entry<String, String> propEntry : application.getConfiguration()
-          .getProperties().entrySet()) {
+    if (application.getConfiguration() != null) {
+      if (application.getConfiguration().getProperties() != null) {
+        for (Map.Entry<String, String> propEntry : application
+            .getConfiguration().getProperties().entrySet()) {
+          addOptionsIfNotPresent(appOptions, uniqueGlobalPropertyCache,
+              propEntry.getKey(), propEntry.getValue());
+        }
+      }
+      List<ConfigFile> configFiles = application.getConfiguration().getFiles();
+      if (configFiles != null && !configFiles.isEmpty()) {
         addOptionsIfNotPresent(appOptions, uniqueGlobalPropertyCache,
-            propEntry.getKey(), propEntry.getValue());
+            SliderKeys.AM_CONFIG_GENERATION, "true");
+        for (ConfigFile configFile : configFiles) {
+          addOptionsIfNotPresent(appOptions, uniqueGlobalPropertyCache,
+              OptionKeys.CONF_FILE_PREFIX + configFile.getSrcFile() +
+                  OptionKeys.NAME_SUFFIX, configFile.getDestFile());
+          addOptionsIfNotPresent(appOptions, uniqueGlobalPropertyCache,
+              OptionKeys.CONF_FILE_PREFIX + configFile.getSrcFile() +
+                  OptionKeys.TYPE_SUFFIX, configFile.getType().toString());
+        }
       }
     }
     if (application.getComponents() != null) {
+
+      Map<String, String> appQuicklinks = application.getQuicklinks();
+      if (appQuicklinks != null) {
+        for (Map.Entry<String, String> quicklink : appQuicklinks.entrySet()) {
+          addOptionsIfNotPresent(appOptions, uniqueGlobalPropertyCache,
+              OptionKeys.EXPORT_PREFIX + quicklink.getKey(),
+              quicklink.getValue());
+        }
+      }
+
       Map<String, String> placeholders = new HashMap<>();
+      placeholders.put(PLACEHOLDER_APP_NAME, application.getName());
       for (Component comp : application.getComponents()) {
+        placeholders.put(PLACEHOLDER_APP_COMPONENT_NAME, comp.getName());
+        if (comp.getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
+          appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+              DockerKeys.DOCKER_IMAGE, comp.getArtifact().getId() == null ?
+              application.getArtifact().getId() : comp.getArtifact().getId()));
+          appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+              DockerKeys.DOCKER_START_COMMAND, comp.getLaunchCommand() == null ?
+              replacePlaceholders(application.getLaunchCommand(), placeholders)
+              : replacePlaceholders(comp.getLaunchCommand(), placeholders)));
+          appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+              DockerKeys.DOCKER_NETWORK, DockerKeys.DEFAULT_DOCKER_NETWORK));
+          if (comp.getRunPrivilegedContainer() != null) {
+            appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+                DockerKeys.DOCKER_USE_PRIVILEGED,
+                comp.getRunPrivilegedContainer().toString()));
+          }
+        }
+
+        if (comp.getConfiguration() != null) {
+          List<ConfigFile> configFiles = comp.getConfiguration().getFiles();
+          if (configFiles != null && !configFiles.isEmpty()) {
+            appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+                SliderKeys.AM_CONFIG_GENERATION, "true"));
+            for (ConfigFile configFile : configFiles) {
+              appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+                  OptionKeys.CONF_FILE_PREFIX + configFile.getSrcFile() +
+                      OptionKeys.NAME_SUFFIX, configFile.getDestFile()));
+              appCompOptionTriples.addAll(Arrays.asList(comp.getName(),
+                  OptionKeys.CONF_FILE_PREFIX + configFile.getSrcFile() +
+                  OptionKeys.TYPE_SUFFIX, configFile.getType().toString()));
+            }
+          }
+        }
+
         if (Boolean.TRUE.equals(comp.getUniqueComponentSupport())) {
           for (int i = 1; i <= comp.getNumberOfContainers(); i++) {
             placeholders.put(PLACEHOLDER_COMPONENT_ID, Integer.toString(i));
@@ -526,8 +587,8 @@ public class ApplicationApiService implements ApplicationApi {
     if (application.getComponents() != null) {
       int priority = 1;
       for (Component comp : application.getComponents()) {
-        if (hasPropertyWithValue(comp, PROPERTY_COMPONENT_TYPE,
-            COMPONENT_TYPE_EXTERNAL)) {
+        if (hasPropertyWithValue(comp, SliderKeys.COMPONENT_TYPE_KEY,
+            SliderKeys.COMPONENT_TYPE_EXTERNAL_APP)) {
           continue;
         }
         if (Boolean.TRUE.equals(comp.getUniqueComponentSupport())) {
@@ -593,168 +654,6 @@ public class ApplicationApiService implements ApplicationApi {
     }
 
     return resCompOptTriples;
-  }
-
-  private String getMetainfoJson(Application application,
-      Map<String, String> compNameArtifactIdMap) throws SliderException,
-      IOException {
-    JsonObject rootObj = new JsonObject();
-    rootObj.addProperty("schemaVersion", METAINFO_SCHEMA_VERSION);
-    JsonObject applicationObj = new JsonObject();
-    rootObj.add("application", applicationObj);
-    applicationObj.addProperty("name", application.getName().toUpperCase());
-    JsonArray componentsArray = new JsonArray();
-    applicationObj.add("components", componentsArray);
-    JsonArray commandOrdersArray = new JsonArray();
-    applicationObj.add("commandOrders", commandOrdersArray);
-
-    JsonArray exportGroupsArray = new JsonArray();
-    applicationObj.add("exportGroups", exportGroupsArray);
-    // Use only one export group
-    JsonObject exportGroup = new JsonObject();
-    exportGroup.addProperty("name", EXPORT_GROUP_NAME);
-    exportGroupsArray.add(exportGroup);
-    JsonArray exportsArray = new JsonArray();
-    exportGroup.add("exports", exportsArray);
-
-    if (application.getComponents() != null) {
-
-      // Set exports at application level
-      Map<String, String> appQuicklinks = application.getQuicklinks();
-      Map<String, String> placeholders = new HashMap<>();
-      placeholders.put(PLACEHOLDER_APP_NAME, application.getName());
-      if (appQuicklinks != null) {
-        for (Map.Entry<String, String> quicklink : appQuicklinks.entrySet()) {
-          JsonObject export = new JsonObject();
-          export.addProperty("name", quicklink.getKey());
-          export.addProperty("value",
-              replacePlaceholders(quicklink.getValue(), placeholders));
-          exportsArray.add(export);
-        }
-      }
-
-      for (Component comp : application.getComponents()) {
-        JsonObject compObject = null;
-        if (!hasPropertyWithValue(comp, PROPERTY_COMPONENT_TYPE,
-            COMPONENT_TYPE_EXTERNAL)) {
-          if (Boolean.TRUE.equals(comp.getUniqueComponentSupport())) {
-            for (int i = 1; i <= comp.getNumberOfContainers(); i++) {
-              // we also need the capability to specify ports and mount points
-              // sometime
-              compObject = createMetainfoComponent(comp, application,
-                  comp.getName() + i);
-              componentsArray.add(compObject);
-            }
-          } else {
-            compObject = createMetainfoComponent(comp, application,
-                comp.getName());
-            componentsArray.add(compObject);
-          }
-        }
-
-        // Translate dependencies into command orders
-        List<String> dependencies = comp.getDependencies();
-        if (dependencies != null && !dependencies.isEmpty()) {
-          JsonObject commandOrder = new JsonObject();
-          commandOrder.addProperty("command", comp.getName()
-              + COMMAND_ORDER_SUFFIX_START);
-          for (String dependency : dependencies) {
-            // If APPLICATION type artifact then map component name dependencies
-            // to artifact id
-            if (comp.getArtifact().getType() == Artifact.TypeEnum.APPLICATION) {
-              dependency = compNameArtifactIdMap.get(dependency);
-            }
-            commandOrder.addProperty("requires", dependency
-                + COMMAND_ORDER_SUFFIX_STARTED);
-          }
-          commandOrdersArray.add(commandOrder);
-        }
-
-        // Quicklinks need to be added as appExports and componentExports at the
-        // component level
-        List<String> compQuicklinks = comp.getQuicklinks();
-        if (compQuicklinks != null && !compQuicklinks.isEmpty()) {
-          if (MapUtils.isEmpty(appQuicklinks)) {
-            throw new SliderException(ERROR_QUICKLINKS_FOR_COMP_INVALID);
-          }
-          List<String> appExports = new ArrayList<>();
-          JsonArray compExportsArray = new JsonArray();
-          compObject.add("componentExports", compExportsArray);
-
-          for (String quicklink : compQuicklinks) {
-            appExports.add(EXPORT_GROUP_NAME + "-" + quicklink);
-
-            JsonObject compExport = new JsonObject();
-            compExport.addProperty("name", quicklink);
-            compExport.addProperty("value", appQuicklinks.get(quicklink));
-            compExportsArray.add(compExport);
-          }
-          compObject.addProperty("appExports",
-              StringUtils.join(appExports, ","));
-          // specify that there are published configs for this component
-          compObject.addProperty("publishConfig", "true");
-        }
-      }
-    }
-
-    String jsonString = new GsonBuilder().setPrettyPrinting().create()
-        .toJson(rootObj);
-    logger.info("Metainfo = \n{}", jsonString);
-    return jsonString;
-  }
-
-  private JsonObject createMetainfoComponent(Component comp,
-      Application application, String compName) {
-    JsonObject compObj = new JsonObject();
-    compObj.addProperty("name", compName);
-    // below is diff for each type
-    if (comp.getArtifact() != null && comp.getArtifact().getType() != null
-        && comp.getArtifact().getType() == Artifact.TypeEnum.DOCKER) {
-      compObj.addProperty("type", COMPONENT_TYPE_YARN_DOCKER);
-      JsonArray dockerContainerArray = new JsonArray();
-      compObj.add("dockerContainers", dockerContainerArray);
-      JsonObject dockerContainerObj = new JsonObject();
-      dockerContainerArray.add(dockerContainerObj);
-      dockerContainerObj.addProperty("name", compName.toLowerCase());
-      // if image not specified, then use global value
-      dockerContainerObj.addProperty("image",
-          comp.getArtifact().getId() == null ? application.getArtifact()
-              .getId() : comp.getArtifact().getId());
-      // If launch command not specified, then use global value. Resolve all
-      // placeholders.
-      Map<String, String> placeholders = new HashMap<>();
-      placeholders.put(PLACEHOLDER_APP_NAME, application.getName());
-      placeholders.put(PLACEHOLDER_APP_COMPONENT_NAME, compName);
-      dockerContainerObj.addProperty(
-          "startCommand",
-          comp.getLaunchCommand() == null ? replacePlaceholders(
-              application.getLaunchCommand(), placeholders)
-              : replacePlaceholders(comp.getLaunchCommand(), placeholders));
-      dockerContainerObj.addProperty("network", DEFAULT_NETWORK);
-      dockerContainerObj.addProperty("commandPath", DEFAULT_COMMAND_PATH);
-      // TODO: What to do with privContainer ?
-      dockerContainerObj.addProperty("runPrivilegedContainer",
-          comp.getRunPrivilegedContainer());
-      if (comp.getConfiguration() != null) {
-        List<ConfigFile> configFiles = comp.getConfiguration().getFiles();
-        if (configFiles != null && !configFiles.isEmpty()) {
-          JsonArray configFileArray = new JsonArray();
-          for (ConfigFile configFile : configFiles) {
-            JsonObject configFileObj = new JsonObject();
-            configFileObj.addProperty("type", configFile.getType().toString());
-            configFileObj.addProperty("fileName", configFile.getDestFile());
-            // TODO: add all properties which should include dictionaryName
-            configFileObj.addProperty("dictionaryName",
-                configFile.getSrcFile());
-            configFileArray.add(configFileObj);
-          }
-          dockerContainerObj.add("configFiles", configFileArray);
-        }
-      }
-      // we also need to specify artifact_management_service sometime
-    }
-    // we also need the capability to specify ports and mount points sometime
-    return compObj;
   }
 
   private static UserGroupInformation getSliderUser() {

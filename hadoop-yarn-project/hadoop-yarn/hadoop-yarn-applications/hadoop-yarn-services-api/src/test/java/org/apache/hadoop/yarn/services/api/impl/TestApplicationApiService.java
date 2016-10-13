@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.hadoop.yarn.services.resource.Application;
 import org.apache.hadoop.yarn.services.resource.Artifact;
 import org.apache.hadoop.yarn.services.resource.Resource;
+import org.apache.slider.common.SliderKeys;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -124,8 +125,9 @@ public class TestApplicationApiService {
         DEFAULT_COMPONENT_NAME);
     Assert.assertEquals(app.getLifetime(), DEFAULT_UNLIMITED_LIFETIME);
     Assert.assertEquals("Property not set",
-        app.getConfiguration().getProperties().get(PROPERTY_COMPONENT_TYPE),
-        COMPONENT_TYPE_EXTERNAL);
+        app.getConfiguration().getProperties()
+            .get(SliderKeys.COMPONENT_TYPE_KEY),
+        SliderKeys.COMPONENT_TYPE_EXTERNAL_APP);
 
     // unset artifact type, default component and no of containers to test other
     // validation logic
