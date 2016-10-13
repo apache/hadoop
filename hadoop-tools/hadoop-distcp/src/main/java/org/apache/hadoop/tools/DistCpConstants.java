@@ -18,6 +18,8 @@ package org.apache.hadoop.tools;
  * limitations under the License.
  */
 
+import org.apache.hadoop.fs.Path;
+
 /**
  * Utility class to hold commonly used constants.
  */
@@ -125,9 +127,17 @@ public class DistCpConstants {
   public static final int SPLIT_RATIO_DEFAULT  = 2;
 
   /**
+   * Constants for NONE file deletion
+   */
+  public static final String NONE_PATH_NAME = "/NONE";
+  public static final Path NONE_PATH = new Path(NONE_PATH_NAME);
+  public static final Path RAW_NONE_PATH = new Path(
+      DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME + NONE_PATH_NAME);
+
+  /**
    * Value of reserved raw HDFS directory when copying raw.* xattrs.
    */
-  static final String HDFS_RESERVED_RAW_DIRECTORY_NAME = "/.reserved/raw";
+  public static final String HDFS_RESERVED_RAW_DIRECTORY_NAME = "/.reserved/raw";
 
   static final String HDFS_DISTCP_DIFF_DIRECTORY_NAME = ".distcp.diff.tmp";
 }
