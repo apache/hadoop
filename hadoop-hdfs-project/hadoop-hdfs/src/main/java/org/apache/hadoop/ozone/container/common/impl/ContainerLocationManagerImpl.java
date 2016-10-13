@@ -71,7 +71,7 @@ public class ContainerLocationManagerImpl implements ContainerLocationManager {
         references = this.dataset.getFsVolumeReferences();
         for (int ndx = 0; ndx < references.size(); ndx++) {
           FsVolumeSpi vol = references.get(ndx);
-          pathList.add(Paths.get(vol.getBasePath()));
+          pathList.add(Paths.get(vol.getBaseURI().getPath()));
         }
         references.close();
         volumePaths = pathList.toArray(new Path[pathList.size()]);
