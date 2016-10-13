@@ -29,8 +29,8 @@ import com.google.protobuf.ByteString;
 
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
-import org.apache.hadoop.ozone.container.common.transport.client.XceiverClient;
-import org.apache.hadoop.ozone.container.common.transport.client.XceiverClientManager;
+import org.apache.hadoop.scm.XceiverClient;
+import org.apache.hadoop.scm.XceiverClientManager;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 

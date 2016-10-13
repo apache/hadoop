@@ -15,10 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.ozone.container.common.transport.client;
-
+package org.apache.hadoop.scm.container.common.helpers;
 /**
- * This package contains classes for the client of the storage container
- * protocol.
- */
+ Contains protocol buffer helper classes and utilites used in
+ impl.
+ **/
