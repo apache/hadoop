@@ -151,6 +151,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-10991. Export hdfsTruncateFile symbol in libhdfs.
     (Surendra Singh Lilhore via wang)
 
+    HDFS-11002. Fix broken attr/getfattr/setfattr links in
+    ExtendedAttributes.md. (Mingliang Liu via aajisaka)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
