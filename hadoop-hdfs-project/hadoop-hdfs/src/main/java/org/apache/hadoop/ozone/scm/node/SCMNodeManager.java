@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
@@ -35,7 +36,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -101,8 +101,9 @@ public class SCMNodeManager implements NodeManager {
   private long lastHBcheckStart;
   private long lastHBcheckFinished = 0;
   private long lastHBProcessedCount;
-  private int safeModeNodeCount;
+  private int chillModeNodeCount;
   private final int maxHBToProcessPerLoop;
+  private Optional<Boolean> inManualChillMode;
 
   /**
    * Constructs SCM machine Manager.
@@ -120,7 +121,7 @@ public class SCMNodeManager implements NodeManager {
     totalNodes = new AtomicInteger(0);
 
     // TODO: Support this value as a Percentage of known machines.
-    safeModeNodeCount = 1;
+    chillModeNodeCount = 1;
 
     staleNodeIntervalMs = OzoneClientUtils.getStaleNodeInterval(conf);
     deadNodeIntervalMs = OzoneClientUtils.getDeadNodeInterval(conf);
@@ -132,6 +133,7 @@ public class SCMNodeManager implements NodeManager {
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
+    this.inManualChillMode =  Optional.absent();
 
     Preconditions.checkState(heartbeatCheckerIntervalMs > 0);
     executorService.schedule(this, heartbeatCheckerIntervalMs,
@@ -243,36 +245,111 @@ public class SCMNodeManager implements NodeManager {
   }
 
   /**
-   * Get the minimum number of nodes to get out of safe mode.
+   * Get the minimum number of nodes to get out of Chill mode.
    *
    * @return int
    */
   @Override
-  public int getMinimumSafeModeNodes() {
-    return safeModeNodeCount;
+  public int getMinimumChillModeNodes() {
+    return chillModeNodeCount;
   }
 
   /**
-   * Sets the Minimum SafeModeNode count, used only in testing.
+   * Sets the Minimum chill mode nodes count, used only in testing.
    *
    * @param count  - Number of nodes.
    */
   @VisibleForTesting
-  public void setMinimumSafeModeNodes(int count) {
-    safeModeNodeCount = count;
+  public void setMinimumChillModeNodes(int count) {
+    chillModeNodeCount = count;
   }
 
   /**
-   * Reports if we have exited out of safe mode.
+   * Reports if we have exited out of chill mode.
    *
-   * @return true if we are out of safe mode.
+   * @return true if we are out of chill mode.
    */
   @Override
-  public boolean isOutOfNodeSafeMode() {
-    LOG.trace("Node count : {}", totalNodes.get());
+  public boolean isOutOfNodeChillMode() {
+    if (inManualChillMode.isPresent()) {
+      return !inManualChillMode.get();
+    }
 
-    //TODO : Support a boolean to force getting out of Safe mode.
-    return (totalNodes.get() >= getMinimumSafeModeNodes());
+    return (totalNodes.get() >= getMinimumChillModeNodes());
+  }
+
+  /**
+   * Clears the manual chill mode.
+   */
+  @Override
+  public void clearChillModeFlag() {
+    this.inManualChillMode = Optional.absent();
+  }
+
+  /**
+   * Returns chill mode Status string.
+   * @return String
+   */
+  @Override
+  public String getChillModeStatus() {
+    if (inManualChillMode.isPresent() && inManualChillMode.get()) {
+      return "Manual chill mode is set to true." +
+          getNodeStatus();
+    }
+
+    if (inManualChillMode.isPresent() && !inManualChillMode.get()) {
+      return "Manual chill mode is set to false." +
+          getNodeStatus();
+    }
+
+    if (isOutOfNodeChillMode()) {
+      return "Out of chill mode." + getNodeStatus();
+    } else {
+      return "Still in chill mode. Waiting on nodes to report in."
+          + getNodeStatus();
+    }
+  }
+
+  /**
+   * Returns a node status string.
+   * @return - String
+   */
+  private String getNodeStatus() {
+    final String chillModeStatus = " %d of out of total "
+        + "%d nodes have reported in.";
+    return String.format(chillModeStatus, totalNodes.get(),
+        getMinimumChillModeNodes());
+  }
+
+  /**
+   * Returns the status of Manual chill Mode flag.
+   *
+   * @return true if forceEnterChillMode has been called, false if
+   * forceExitChillMode or status is not set. eg. clearChillModeFlag.
+   */
+  @Override
+  public boolean isInManualChillMode() {
+    if(this.inManualChillMode.isPresent()) {
+      return this.inManualChillMode.get();
+    }
+    return false;
+  }
+
+  /**
+   * Forcefully exits the chill mode even if we have not met the minimum
+   * criteria of exiting the chill mode.
+   */
+  @Override
+  public void forceExitChillMode() {
+    this.inManualChillMode = Optional.of(false);
+  }
+
+  /**
+   * Forcefully enters chill mode, even if all chill mode conditions are met.
+   */
+  @Override
+  public void forceEnterChillMode() {
+    this.inManualChillMode = Optional.of(true);
   }
 
   /**

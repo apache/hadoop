@@ -94,18 +94,51 @@ public interface NodeManager extends Closeable, Runnable {
   List<DatanodeID> getAllNodes();
 
   /**
-   * Get the minimum number of nodes to get out of safe mode.
+   * Get the minimum number of nodes to get out of chill mode.
    *
    * @return int
    */
-  int getMinimumSafeModeNodes();
+  int getMinimumChillModeNodes();
 
   /**
-   * Reports if we have exited out of safe mode by discovering enough nodes.
+   * Reports if we have exited out of chill mode by discovering enough nodes.
    *
-   * @return True if we are out of Node layer safe mode, false otherwise.
+   * @return True if we are out of Node layer chill mode, false otherwise.
    */
-  boolean isOutOfNodeSafeMode();
+  boolean isOutOfNodeChillMode();
+
+  /**
+   * Chill mode is the period when node manager waits for a minimum
+   * configured number of datanodes to report in. This is called chill mode
+   * to indicate the period before node manager gets into action.
+   *
+   * Forcefully exits the chill mode, even if we have not met the minimum
+   * criteria of the nodes reporting in.
+   */
+  void forceExitChillMode();
+
+  /**
+   * Forcefully enters chill mode, even if all minimum node conditions are met.
+   */
+  void forceEnterChillMode();
+
+  /**
+   * Clears the manual chill mode flag.
+   */
+  void clearChillModeFlag();
+
+  /**
+   * Returns a chill mode status string.
+   * @return String
+   */
+  String getChillModeStatus();
+
+  /**
+   * Returns the status of manual chill mode flag.
+   * @return true if forceEnterChillMode has been called,
+   * false if forceExitChillMode or status is not set. eg. clearChillModeFlag.
+   */
+  boolean isInManualChillMode();
 
   /**
    * Enum that represents the Node State. This is used in calls to getNodeList
