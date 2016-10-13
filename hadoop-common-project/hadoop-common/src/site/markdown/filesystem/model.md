@@ -18,7 +18,7 @@
 
 ## Paths and Path Elements
 
-A Path is a list of Path elements which represents a path to a file, directory of symbolic link
+A Path is a list of Path elements which represents a path to a file, directory or symbolic link
 
 Path elements are non-empty strings. The exact set of valid strings MAY
 be specific to a particular FileSystem implementation.
@@ -179,7 +179,7 @@ path begins with the path P -that is their parent is P or an ancestor is P
 
 ### File references
 
-A path MAY refer to a file; that it it has data in the filesystem; its path is a key in the data dictionary
+A path MAY refer to a file that has data in the filesystem; its path is a key in the data dictionary
 
     def isFile(FS, p) =  p in FS.Files
 
@@ -206,7 +206,8 @@ process working with the filesystem:
 
 The function `getHomeDirectory` returns the home directory for the Filesystem and the current user account.
 For some FileSystems, the path is `["/","users", System.getProperty("user-name")]`. However,
-for HDFS,
+for HDFS, the username is derived from the credentials used to authenticate the client with HDFS.
+This may differ from the local user account name.
 
 
 ### Exclusivity
