@@ -388,23 +388,22 @@ public class DecommissionManager {
      */
     private final int numBlocksPerCheck;
     /**
-<<<<<<< HEAD
      * The maximum number of nodes to check per tick.
      */
     private final int numNodesPerCheck;
     /**
      * The maximum number of nodes to track in decomNodeBlocks. A value of 0
      * means no limit.
-=======
-     * The maximum number of nodes to track in outOfServiceNodeBlocks.
-     * A value of 0 means no limit.
->>>>>>> 9dcbdbd... HDFS-9392. Admins support for maintenance state. Contributed by Ming Ma.
      */
     private final int maxConcurrentTrackedNodes;
     /**
      * The number of blocks that have been checked on this tick.
      */
     private int numBlocksChecked = 0;
+    /**
+     * The number of blocks checked after (re)holding lock.
+     */
+    private int numBlocksCheckedPerLock = 0;
     /**
      * The number of nodes that have been checked on this tick. Used for 
      * testing.
@@ -443,6 +442,7 @@ public class DecommissionManager {
       }
       // Reset the checked count at beginning of each iteration
       numBlocksChecked = 0;
+      numBlocksCheckedPerLock = 0;
       numNodesChecked = 0;
       // Check decom progress
       namesystem.writeLock();
@@ -478,7 +478,8 @@ public class DecommissionManager {
 
       while (it.hasNext()
           && !exceededNumBlocksPerCheck()
-          && !exceededNumNodesPerCheck()) {
+          && !exceededNumNodesPerCheck()
+          && namesystem.isRunning()) {
         numNodesChecked++;
         final Map.Entry<DatanodeDescriptor, AbstractList<BlockInfo>>
             entry = it.next();
@@ -608,7 +609,28 @@ public class DecommissionManager {
       int decommissionOnlyReplicas = 0;
       int underReplicatedInOpenFiles = 0;
       while (it.hasNext()) {
+        if (insufficientlyReplicated == null
+            && numBlocksCheckedPerLock >= numBlocksPerCheck) {
+          // During fullscan insufficientlyReplicated will NOT be null, iterator
+          // will be DN's iterator. So should not yield lock, otherwise
+          // ConcurrentModificationException could occur.
+          // Once the fullscan done, iterator will be a copy. So can yield the
+          // lock.
+          // Yielding is required in case of block number is greater than the
+          // configured per-iteration-limit.
+          namesystem.writeUnlock();
+          try {
+            LOG.debug("Yielded lock during decommission check");
+            Thread.sleep(0, 500);
+          } catch (InterruptedException ignored) {
+            return;
+          }
+          // reset
+          numBlocksCheckedPerLock = 0;
+          namesystem.writeLock();
+        }
         numBlocksChecked++;
+        numBlocksCheckedPerLock++;
         final BlockInfo block = it.next();
         // Remove the block from the list if it's no longer in the block map,
         // e.g. the containing file has been deleted
