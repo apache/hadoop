@@ -44,7 +44,6 @@ import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -137,6 +136,7 @@ public class TestDiskBalancer {
     final int dataNodeCount = 1;
     final int dataNodeIndex = 0;
     final int sourceDiskIndex = 0;
+    final long cap = blockSize * 2L * blockCount;
 
     MiniDFSCluster cluster = new ClusterBuilder()
         .setBlockCount(blockCount)
@@ -144,6 +144,7 @@ public class TestDiskBalancer {
         .setDiskCount(diskCount)
         .setNumDatanodes(dataNodeCount)
         .setConf(conf)
+        .setCapacities(new long[] {cap, cap})
         .build();
     try {
       DataMover dataMover = new DataMover(cluster, dataNodeIndex,
@@ -174,7 +175,7 @@ public class TestDiskBalancer {
     final int dataNodeCount = 1;
     final int dataNodeIndex = 0;
     final int sourceDiskIndex = 0;
-
+    final long cap = blockSize * 2L * blockCount;
 
     MiniDFSCluster cluster = new ClusterBuilder()
         .setBlockCount(blockCount)
@@ -182,8 +183,8 @@ public class TestDiskBalancer {
         .setDiskCount(diskCount)
         .setNumDatanodes(dataNodeCount)
         .setConf(conf)
+        .setCapacities(new long[] {cap, cap, cap})
         .build();
-
 
     try {
       DataMover dataMover = new DataMover(cluster, dataNodeIndex,
@@ -221,6 +222,7 @@ public class TestDiskBalancer {
     final int dataNodeCount = 1;
     final int dataNodeIndex = 0;
     final int sourceDiskIndex = 0;
+    final long cap = blockSize * 2L * blockCount;
 
     MiniDFSCluster cluster = new ClusterBuilder()
         .setBlockCount(blockCount)
@@ -228,6 +230,7 @@ public class TestDiskBalancer {
         .setDiskCount(diskCount)
         .setNumDatanodes(dataNodeCount)
         .setConf(conf)
+        .setCapacities(new long[] {cap, cap})
         .build();
 
     try {
@@ -246,24 +249,6 @@ public class TestDiskBalancer {
   }
 
   /**
-   * Sets alll Disks capacity to size specified.
-   *
-   * @param cluster - DiskBalancerCluster
-   * @param size    - new size of the disk
-   */
-  private void setVolumeCapacity(DiskBalancerCluster cluster, long size,
-                                 String diskType) {
-    Preconditions.checkNotNull(cluster);
-    for (DiskBalancerDataNode node : cluster.getNodes()) {
-      for (DiskBalancerVolume vol :
-          node.getVolumeSets().get(diskType).getVolumes()) {
-        vol.setCapacity(size);
-      }
-      node.getVolumeSets().get(diskType).computeVolumeDataDensity();
-    }
-  }
-
-  /**
    * Helper class that allows us to create different kinds of MiniDFSClusters
    * and populate data.
    */
@@ -274,6 +259,7 @@ public class TestDiskBalancer {
     private int fileLen;
     private int blockCount;
     private int diskCount;
+    private long[] capacities;
 
     public ClusterBuilder setConf(Configuration conf) {
       this.conf = conf;
@@ -300,13 +286,9 @@ public class TestDiskBalancer {
       return this;
     }
 
-    private long[] getCapacities(int diskCount, int bSize, int fSize) {
-      Preconditions.checkState(diskCount > 0);
-      long[] capacities = new long[diskCount];
-      for (int x = 0; x < diskCount; x++) {
-        capacities[x] = diskCount * bSize * fSize * 2L;
-      }
-      return capacities;
+    private ClusterBuilder setCapacities(final long[] caps) {
+      this.capacities = caps;
+      return this;
     }
 
     private StorageType[] getStorageTypes(int diskCount) {
@@ -338,7 +320,7 @@ public class TestDiskBalancer {
       // Write a file and restart the cluster
       MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(numDatanodes)
-          .storageCapacities(getCapacities(diskCount, blockSize, fileLen))
+          .storageCapacities(capacities)
           .storageTypes(getStorageTypes(diskCount))
           .storagesPerDatanode(diskCount)
           .build();
@@ -447,10 +429,6 @@ public class TestDiskBalancer {
       diskBalancerCluster.readClusterInfo();
       List<DiskBalancerDataNode> nodesToProcess = new LinkedList<>();
 
-      // Rewrite the capacity in the model to show that disks need
-      // re-balancing.
-      setVolumeCapacity(diskBalancerCluster, blockSize * 2L * blockCount,
-          "DISK");
       // Pick a node to process.
       nodesToProcess.add(diskBalancerCluster.getNodeByUUID(
           node.getDatanodeUuid()));
