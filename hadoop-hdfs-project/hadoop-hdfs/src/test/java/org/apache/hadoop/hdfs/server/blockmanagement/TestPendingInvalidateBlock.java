@@ -86,8 +86,6 @@ public class TestPendingInvalidateBlock {
   public void testPendingDeletion() throws Exception {
     final Path foo = new Path("/foo");
     DFSTestUtil.createFile(dfs, foo, BLOCKSIZE, REPLICATION, 0);
-    DFSTestUtil.waitForReplication(dfs, foo, REPLICATION, 10000);
-
     // restart NN
     cluster.restartNameNode(true);
     InvalidateBlocks invalidateBlocks =
@@ -100,7 +98,6 @@ public class TestPendingInvalidateBlock {
         "invalidateBlocks", mockIb);
     dfs.delete(foo, true);
 
-    waitForNumPendingDeletionBlocks(REPLICATION);
     Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(REPLICATION, cluster.getNamesystem()
         .getPendingDeletionBlocks());
@@ -108,7 +105,7 @@ public class TestPendingInvalidateBlock {
         dfs.getPendingDeletionBlocksCount());
     Mockito.doReturn(0L).when(mockIb).getInvalidationDelay();
 
-    waitForNumPendingDeletionBlocks(0);
+    waitForBlocksToDelete();
     Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
     Assert.assertEquals(0, dfs.getPendingDeletionBlocksCount());
@@ -185,7 +182,7 @@ public class TestPendingInvalidateBlock {
     Assert.assertEquals(4, cluster.getNamesystem().getPendingDeletionBlocks());
 
     cluster.restartNameNode(true);
-    waitForNumPendingDeletionBlocks(0);
+    waitForBlocksToDelete();
     Assert.assertEquals(3, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
   }
@@ -202,8 +199,7 @@ public class TestPendingInvalidateBlock {
     return cluster.getNamesystem().getUnderReplicatedBlocks();
   }
 
-  private void waitForNumPendingDeletionBlocks(int numBlocks)
-      throws Exception {
+  private void waitForBlocksToDelete() throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
 
       @Override
@@ -211,8 +207,7 @@ public class TestPendingInvalidateBlock {
         try {
           cluster.triggerBlockReports();
 
-          if (cluster.getNamesystem().getPendingDeletionBlocks()
-              == numBlocks) {
+          if (cluster.getNamesystem().getPendingDeletionBlocks() == 0) {
             return true;
           }
         } catch (Exception e) {
