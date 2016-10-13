@@ -16,9 +16,9 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.web.storage;
+package org.apache.hadoop.scm.storage;
 
-import static org.apache.hadoop.ozone.web.storage.ContainerProtocolCalls.*;
+import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,23 +31,21 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResp
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.scm.XceiverClientManager;
-import org.apache.hadoop.ozone.web.exceptions.OzoneException;
-import org.apache.hadoop.ozone.web.handlers.UserArgs;
 
 /**
  * An {@link InputStream} used by the REST service in combination with the
- * {@link DistributedStorageHandler} to read the value of a key from a sequence
+ * SCMClient to read the value of a key from a sequence
  * of container chunks.  All bytes of the key value are stored in container
  * chunks.  Each chunk may contain multiple underlying {@link ByteBuffer}
  * instances.  This class encapsulates all state management for iterating
  * through the sequence of chunks and the sequence of buffers within each chunk.
  */
-class ChunkInputStream extends InputStream {
+public class ChunkInputStream extends InputStream {
 
   private static final int EOF = -1;
 
   private final String key;
-  private final UserArgs args;
+  private final String traceID;
   private XceiverClientManager xceiverClientManager;
   private XceiverClient xceiverClient;
   private List<ChunkInfo> chunks;
@@ -62,12 +60,12 @@ class ChunkInputStream extends InputStream {
    * @param xceiverClientManager client manager that controls client
    * @param xceiverClient client to perform container calls
    * @param chunks list of chunks to read
-   * @param args container protocol call args
+   * @param traceID container protocol call traceID
    */
   public ChunkInputStream(String key, XceiverClientManager xceiverClientManager,
-      XceiverClient xceiverClient, List<ChunkInfo> chunks, UserArgs args) {
+      XceiverClient xceiverClient, List<ChunkInfo> chunks, String traceID) {
     this.key = key;
-    this.args = args;
+    this.traceID = traceID;
     this.xceiverClientManager = xceiverClientManager;
     this.xceiverClient = xceiverClient;
     this.chunks = chunks;
@@ -182,8 +180,8 @@ class ChunkInputStream extends InputStream {
     final ReadChunkResponseProto readChunkResponse;
     try {
       readChunkResponse = readChunk(xceiverClient, chunks.get(readChunkOffset),
-          key, args);
-    } catch (OzoneException e) {
+          key, traceID);
+    } catch (IOException e) {
       throw new IOException("Unexpected OzoneException", e);
     }
     chunkOffset = readChunkOffset;

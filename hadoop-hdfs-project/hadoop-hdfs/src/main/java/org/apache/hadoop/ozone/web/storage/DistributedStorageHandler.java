@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ozone.web.storage;
 
-import static org.apache.hadoop.ozone.web.storage.ContainerProtocolCalls.*;
+import static org.apache.hadoop.scm.storage.ContainerProtocolCalls.*;
 import static org.apache.hadoop.ozone.web.storage.OzoneContainerTranslation.*;
 
 import java.io.IOException;
@@ -57,6 +57,8 @@ import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
 import org.apache.hadoop.ozone.web.response.VolumeInfo;
 import org.apache.hadoop.ozone.web.response.VolumeOwner;
+import org.apache.hadoop.scm.storage.ChunkInputStream;
+import org.apache.hadoop.scm.storage.ChunkOutputStream;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -95,7 +97,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       volume.setCreatedBy(args.getAdminName());
       KeyData containerKeyData = fromVolumeToContainerKeyData(
           xceiverClient.getPipeline().getContainerName(), containerKey, volume);
-      putKey(xceiverClient, containerKeyData, args);
+      putKey(xceiverClient, containerKeyData, args.getRequestID());
     } finally {
       xceiverClientManager.releaseClient(xceiverClient);
     }
@@ -140,7 +142,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       KeyData containerKeyData = containerKeyDataForRead(
           xceiverClient.getPipeline().getContainerName(), containerKey);
       GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,
-          args);
+          args.getRequestID());
       return fromContainerKeyValueListToVolume(
           response.getKeyData().getMetadataList());
     } finally {
@@ -163,7 +165,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       bucket.setStorageType(args.getStorageType());
       KeyData containerKeyData = fromBucketToContainerKeyData(
           xceiverClient.getPipeline().getContainerName(), containerKey, bucket);
-      putKey(xceiverClient, containerKeyData, args);
+      putKey(xceiverClient, containerKeyData, args.getRequestID());
     } finally {
       xceiverClientManager.releaseClient(xceiverClient);
     }
@@ -218,7 +220,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       KeyData containerKeyData = containerKeyDataForRead(
           xceiverClient.getPipeline().getContainerName(), containerKey);
       GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,
-          args);
+          args.getRequestID());
       return fromContainerKeyValueListToBucket(
           response.getKeyData().getMetadataList());
     } finally {
@@ -235,8 +237,8 @@ public final class DistributedStorageHandler implements StorageHandler {
     key.setKeyName(args.getKeyName());
     key.setCreatedOn(dateToString(new Date()));
     XceiverClient xceiverClient = acquireXceiverClient(containerKey);
-    return new ChunkOutputStream(containerKey, key, xceiverClientManager,
-        xceiverClient, args);
+    return new ChunkOutputStream(containerKey, key.getKeyName(),
+        xceiverClientManager, xceiverClient, args.getRequestID());
   }
 
   @Override
@@ -256,7 +258,7 @@ public final class DistributedStorageHandler implements StorageHandler {
       KeyData containerKeyData = containerKeyDataForRead(
           xceiverClient.getPipeline().getContainerName(), containerKey);
       GetKeyResponseProto response = getKey(xceiverClient, containerKeyData,
-          args);
+          args.getRequestID());
       long length = 0;
       List<ChunkInfo> chunks = response.getKeyData().getChunksList();
       for (ChunkInfo chunk : chunks) {
@@ -264,8 +266,8 @@ public final class DistributedStorageHandler implements StorageHandler {
       }
       success = true;
       return new LengthInputStream(new ChunkInputStream(
-          containerKey, xceiverClientManager, xceiverClient, chunks, args),
-          length);
+          containerKey, xceiverClientManager, xceiverClient,
+          chunks, args.getRequestID()), length);
     } finally {
       if (!success) {
         xceiverClientManager.releaseClient(xceiverClient);
