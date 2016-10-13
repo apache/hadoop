@@ -42,7 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * this s4 threadpool</a>
  */
 @InterfaceAudience.Private
-final class  BlockingThreadPoolExecutorService
+final class BlockingThreadPoolExecutorService
     extends SemaphoredDelegatingExecutor {
 
   private static final Logger LOG = LoggerFactory
@@ -137,14 +137,14 @@ final class  BlockingThreadPoolExecutorService
         new ThreadPoolExecutor(activeTasks, activeTasks, keepAliveTime, unit,
             workQueue, newDaemonThreadFactory(prefixName),
             new RejectedExecutionHandler() {
-          @Override
-            public void rejectedExecution(Runnable r,
-                ThreadPoolExecutor executor) {
-              // This is not expected to happen.
-              LOG.error("Could not submit task to executor {}",
-                  executor.toString());
-            }
-          });
+              @Override
+              public void rejectedExecution(Runnable r,
+                  ThreadPoolExecutor executor) {
+                // This is not expected to happen.
+                LOG.error("Could not submit task to executor {}",
+                    executor.toString());
+              }
+            });
     eventProcessingExecutor.allowCoreThreadTimeOut(true);
     return new BlockingThreadPoolExecutorService(waitingTasks + activeTasks,
         eventProcessingExecutor);

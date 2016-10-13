@@ -130,7 +130,7 @@ class S3ABlockOutputStream extends OutputStream {
    * @param key S3 object to work on.
    * @param executorService the executor service to use to schedule work
    * @param progress report progress in order to prevent timeouts. If
-   * this class implements {@code ProgressListener} then it will be
+   * this object implements {@code ProgressListener} then it will be
    * directly wired up to the AWS client, so receive detailed progress
    * information.
    * @param blockSize size of a single block.
@@ -163,7 +163,7 @@ class S3ABlockOutputStream extends OutputStream {
         : new ProgressableListener(progress);
     // create that first block. This guarantees that an open + close sequence
     // writes a 0-byte entry.
-    maybeCreateBlock();
+    createBlockIfNeeded();
     LOG.debug("Initialized S3ABlockOutputStream for {}" +
         " output to {}", writeOperationHelper, activeBlock);
   }
@@ -173,7 +173,7 @@ class S3ABlockOutputStream extends OutputStream {
    * @return the active block; null if there isn't one.
    * @throws IOException on any failure to create
    */
-  private synchronized S3ADataBlocks.DataBlock maybeCreateBlock()
+  private synchronized S3ADataBlocks.DataBlock createBlockIfNeeded()
       throws IOException {
     if (activeBlock == null) {
       blockCount++;
@@ -264,7 +264,7 @@ class S3ABlockOutputStream extends OutputStream {
     if (len == 0) {
       return;
     }
-    S3ADataBlocks.DataBlock block = maybeCreateBlock();
+    S3ADataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(source, offset, len);
     int remainingCapacity = block.remainingCapacity();
     if (written < len) {

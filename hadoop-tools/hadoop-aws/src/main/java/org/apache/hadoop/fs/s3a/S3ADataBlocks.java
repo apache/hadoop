@@ -137,6 +137,8 @@ final class S3ADataBlocks {
    */
   static abstract class DataBlock implements Closeable {
 
+    enum DestState {Writing, Upload, Closed}
+
     private volatile DestState state = Writing;
 
     /**
@@ -276,7 +278,6 @@ final class S3ADataBlocks {
 
     }
 
-    enum DestState {Writing, Upload, Closed}
   }
 
   // ====================================================================
