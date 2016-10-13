@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.transport.client;
+package org.apache.hadoop.scm;
 
 import com.google.common.base.Preconditions;
 import io.netty.bootstrap.Bootstrap;
@@ -29,8 +29,7 @@ import io.netty.handler.logging.LoggingHandler;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,8 +83,8 @@ public class XceiverClient implements Closeable {
     // port.
     int port = leader.getContainerPort();
     if (port == 0) {
-      port = config.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
-          OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
+      port = config.getInt(ScmConfigKeys.DFS_CONTAINER_IPC_PORT,
+          ScmConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
     }
     LOG.debug("Connecting to server Port : " + port);
     channelFuture = b.connect(leader.getHostName(), port).sync();

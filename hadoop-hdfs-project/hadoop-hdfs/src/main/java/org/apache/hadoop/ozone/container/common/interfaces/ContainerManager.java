@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerData;
-import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 import java.io.IOException;
 import java.nio.file.Path;

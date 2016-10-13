@@ -16,14 +16,14 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.container.common.transport.client;
+package org.apache.hadoop.scm;
 
 import java.io.IOException;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.hadoop.ozone.OzoneConfiguration;
-import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.scm.container.common.helpers.Pipeline;
 
 /**
  * XceiverClientManager is responsible for the lifecycle of XceiverClient
@@ -38,14 +38,15 @@ import org.apache.hadoop.ozone.container.common.helpers.Pipeline;
  */
 public class XceiverClientManager {
 
-  private final OzoneConfiguration conf;
+  //TODO : change this to SCM configuration class
+  private final Configuration conf;
 
   /**
    * Creates a new XceiverClientManager.
    *
    * @param conf configuration
    */
-  public XceiverClientManager(OzoneConfiguration conf) {
+  public XceiverClientManager(Configuration conf) {
     Preconditions.checkNotNull(conf);
     this.conf = conf;
   }

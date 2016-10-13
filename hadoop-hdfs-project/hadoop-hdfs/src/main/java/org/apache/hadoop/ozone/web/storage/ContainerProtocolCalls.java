@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkRequ
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.ReadChunkResponseProto;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.Type;
 import org.apache.hadoop.hdfs.ozone.protocol.proto.ContainerProtos.WriteChunkRequestProto;
-import org.apache.hadoop.ozone.container.common.transport.client.XceiverClient;
+import org.apache.hadoop.scm.XceiverClient;
 import org.apache.hadoop.ozone.web.exceptions.ErrorTable;
 import org.apache.hadoop.ozone.web.exceptions.OzoneException;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;

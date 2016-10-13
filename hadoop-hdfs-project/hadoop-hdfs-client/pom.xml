@@ -111,6 +111,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
           <groupId>com.fasterxml.jackson.core</groupId>
           <artifactId>jackson-annotations</artifactId>
       </dependency>
+      <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-all</artifactId>
+      </dependency>
   </dependencies>
 
   <build>
@@ -158,6 +162,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <include>inotify.proto</include>
                   <include>erasurecoding.proto</include>
                   <include>ReconfigurationProtocol.proto</include>
+                  <include>DatanodeContainerProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
