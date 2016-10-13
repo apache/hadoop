@@ -44,6 +44,9 @@ public class ReservationDefinitionInfo {
   @XmlElement(name = "reservation-name")
   private String reservationName;
 
+  @XmlElement(name = "priority")
+  private int priority;
+
   public ReservationDefinitionInfo() {
 
   }
@@ -87,6 +90,14 @@ public class ReservationDefinitionInfo {
 
   public void setReservationName(String reservationName) {
     this.reservationName = reservationName;
+  }
+
+  public int getPriority() {
+    return priority;
+  }
+
+  public void setPriority(int priority) {
+    this.priority = priority;
   }
 
 }

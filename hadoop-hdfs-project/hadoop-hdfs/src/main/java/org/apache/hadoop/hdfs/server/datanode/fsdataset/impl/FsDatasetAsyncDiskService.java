@@ -71,8 +71,8 @@ class FsDatasetAsyncDiskService {
   private final DataNode datanode;
   private final FsDatasetImpl fsdatasetImpl;
   private final ThreadGroup threadGroup;
-  private Map<File, ThreadPoolExecutor> executors
-      = new HashMap<File, ThreadPoolExecutor>();
+  private Map<String, ThreadPoolExecutor> executors
+      = new HashMap<String, ThreadPoolExecutor>();
   private Map<String, Set<Long>> deletedBlockIds 
       = new HashMap<String, Set<Long>>();
   private static final int MAX_DELETED_BLOCKS = 64;
@@ -91,7 +91,7 @@ class FsDatasetAsyncDiskService {
     this.threadGroup = new ThreadGroup(getClass().getSimpleName());
   }
 
-  private void addExecutorForVolume(final File volume) {
+  private void addExecutorForVolume(final FsVolumeImpl volume) {
     ThreadFactory threadFactory = new ThreadFactory() {
       int counter = 0;
 
@@ -115,18 +115,21 @@ class FsDatasetAsyncDiskService {
 
     // This can reduce the number of running threads
     executor.allowCoreThreadTimeOut(true);
-    executors.put(volume, executor);
+    executors.put(volume.getStorageID(), executor);
   }
 
   /**
    * Starts AsyncDiskService for a new volume
    * @param volume the root of the new data volume.
    */
-  synchronized void addVolume(File volume) {
+  synchronized void addVolume(FsVolumeImpl volume) {
     if (executors == null) {
       throw new RuntimeException("AsyncDiskService is already shutdown");
     }
-    ThreadPoolExecutor executor = executors.get(volume);
+    if (volume == null) {
+      throw new RuntimeException("Attempt to add a null volume");
+    }
+    ThreadPoolExecutor executor = executors.get(volume.getStorageID());
     if (executor != null) {
       throw new RuntimeException("Volume " + volume + " is already existed.");
     }
@@ -137,17 +140,17 @@ class FsDatasetAsyncDiskService {
    * Stops AsyncDiskService for a volume.
    * @param volume the root of the volume.
    */
-  synchronized void removeVolume(File volume) {
+  synchronized void removeVolume(String storageId) {
     if (executors == null) {
       throw new RuntimeException("AsyncDiskService is already shutdown");
     }
-    ThreadPoolExecutor executor = executors.get(volume);
+    ThreadPoolExecutor executor = executors.get(storageId);
     if (executor == null) {
-      throw new RuntimeException("Can not find volume " + volume
-          + " to remove.");
+      throw new RuntimeException("Can not find volume with storageId "
+          + storageId + " to remove.");
     } else {
       executor.shutdown();
-      executors.remove(volume);
+      executors.remove(storageId);
     }
   }
   
@@ -162,13 +165,16 @@ class FsDatasetAsyncDiskService {
   /**
    * Execute the task sometime in the future, using ThreadPools.
    */
-  synchronized void execute(File root, Runnable task) {
+  synchronized void execute(FsVolumeImpl volume, Runnable task) {
     if (executors == null) {
       throw new RuntimeException("AsyncDiskService is already shutdown");
     }
-    ThreadPoolExecutor executor = executors.get(root);
+    if (volume == null) {
+      throw new RuntimeException("A null volume does not have a executor");
+    }
+    ThreadPoolExecutor executor = executors.get(volume.getStorageID());
     if (executor == null) {
-      throw new RuntimeException("Cannot find root " + root
+      throw new RuntimeException("Cannot find volume " + volume
           + " for execution of task " + task);
     } else {
       executor.execute(task);
@@ -185,7 +191,7 @@ class FsDatasetAsyncDiskService {
     } else {
       LOG.info("Shutting down all async disk service threads");
       
-      for (Map.Entry<File, ThreadPoolExecutor> e : executors.entrySet()) {
+      for (Map.Entry<String, ThreadPoolExecutor> e : executors.entrySet()) {
         e.getValue().shutdown();
       }
       // clear the executor map so that calling execute again will fail.
@@ -198,7 +204,7 @@ class FsDatasetAsyncDiskService {
   public void submitSyncFileRangeRequest(FsVolumeImpl volume,
       final FileDescriptor fd, final long offset, final long nbytes,
       final int flags) {
-    execute(volume.getCurrentDir(), new Runnable() {
+    execute(volume, new Runnable() {
       @Override
       public void run() {
         try {
@@ -220,7 +226,7 @@ class FsDatasetAsyncDiskService {
         + " replica " + replicaToDelete + " for deletion");
     ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(
         volumeRef, replicaToDelete, block, trashDirectory);
-    execute(((FsVolumeImpl) volumeRef.getVolume()).getCurrentDir(), deletionTask);
+    execute(((FsVolumeImpl) volumeRef.getVolume()), deletionTask);
   }
   
   /** A task for deleting a block file and its associated meta file, as well

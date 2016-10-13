@@ -469,7 +469,7 @@ public class TestRMAdminCLI {
               "[username]] [-addToClusterNodeLabels " +
               "<\"label1(exclusive=true),label2(exclusive=false),label3\">] " +
               "[-removeFromClusterNodeLabels <label1,label2,label3>] " +
-              "[-replaceLabelsOnNode " +
+              "[-replaceLabelsOnNode [-failOnUnknownNodes] " +
               "<\"node1[:port]=label1,label2 node2[:port]=label1\">] " +
               "[-directlyAccessNodeLabelStore] [-refreshClusterMaxPriority] " +
               "[-updateNodeResource [NodeID] [MemSize] [vCores] " +
@@ -564,6 +564,7 @@ public class TestRMAdminCLI {
               + " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),"
                   + "label2(exclusive=false),label3\">]"
               + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
+              + "[-failOnUnknownNodes] "
               + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore] "
               + "[-refreshClusterMaxPriority] "
               + "[-updateNodeResource [NodeID] [MemSize] [vCores] "

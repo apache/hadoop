@@ -46,6 +46,7 @@ import org.apache.htrace.core.Tracer;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving
+@Deprecated
 public class WritableRpcEngine implements RpcEngine {
   private static final Log LOG = LogFactory.getLog(RPC.class);
   
@@ -331,6 +332,7 @@ public class WritableRpcEngine implements RpcEngine {
 
 
   /** An RPC Server. */
+  @Deprecated
   public static class Server extends RPC.Server {
     /** 
      * Construct an RPC server.
@@ -443,7 +445,8 @@ public class WritableRpcEngine implements RpcEngine {
         value = value.substring(0, 55)+"...";
       LOG.info(value);
     }
-    
+
+    @Deprecated
     static class WritableRpcInvoker implements RpcInvoker {
 
      @Override

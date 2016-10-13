@@ -21,7 +21,6 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -254,17 +253,18 @@ public class TestDataNodeVolumeFailure {
     FsDatasetSpi<? extends FsVolumeSpi> data = dn0.getFSDataset();
     try (FsDatasetSpi.FsVolumeReferences vols = data.getFsVolumeReferences()) {
       for (FsVolumeSpi volume : vols) {
-        assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
-            dn0Vol1.getAbsoluteFile());
+        assertFalse(volume.getStorageLocation().getFile()
+            .getAbsolutePath().startsWith(dn0Vol1.getAbsolutePath()
+        ));
       }
     }
 
     // 3. all blocks on dn0Vol1 have been removed.
     for (ReplicaInfo replica : FsDatasetTestUtil.getReplicas(data, bpid)) {
       assertNotNull(replica.getVolume());
-      assertNotEquals(
-          new File(replica.getVolume().getBasePath()).getAbsoluteFile(),
-          dn0Vol1.getAbsoluteFile());
+      assertFalse(replica.getVolume().getStorageLocation().getFile()
+          .getAbsolutePath().startsWith(dn0Vol1.getAbsolutePath()
+      ));
     }
 
     // 4. dn0Vol1 is not in DN0's configuration and dataDirs anymore.

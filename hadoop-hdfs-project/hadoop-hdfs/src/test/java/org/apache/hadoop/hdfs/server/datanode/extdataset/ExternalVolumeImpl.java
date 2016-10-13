@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.hdfs.server.datanode.extdataset;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.channels.ClosedChannelException;
+import java.util.LinkedList;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -41,21 +46,6 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   @Override
   public long getAvailable() throws IOException {
     return 0;
-  }
-
-  @Override
-  public String getBasePath() {
-    return null;
-  }
-
-  @Override
-  public String getPath(String bpid) throws IOException {
-    return null;
-  }
-
-  @Override
-  public File getFinalizedDir(String bpid) throws IOException {
-    return null;
   }
 
   @Override
@@ -98,6 +88,28 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
 
   @Override
   public FsDatasetSpi getDataset() {
+    return null;
+  }
+
+  @Override
+  public StorageLocation getStorageLocation() {
+    return null;
+  }
+
+  @Override
+  public URI getBaseURI() {
+    return null;
+  }
+
+  @Override
+  public DF getUsageStats(Configuration conf) {
+    return null;
+  }
+
+  @Override
+  public LinkedList<ScanInfo> compileReport(String bpid,
+      LinkedList<ScanInfo> report, ReportCompiler reportCompiler)
+      throws InterruptedException, IOException {
     return null;
   }
 }

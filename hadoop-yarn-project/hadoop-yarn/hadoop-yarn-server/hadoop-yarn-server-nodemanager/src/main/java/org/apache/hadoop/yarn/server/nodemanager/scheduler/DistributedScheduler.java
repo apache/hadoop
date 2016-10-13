@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.scheduler;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
@@ -32,8 +33,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -48,7 +47,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>The DistributedScheduler runs on the NodeManager and is modeled as an
@@ -74,6 +75,9 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
   private OpportunisticContainerContext oppContainerContext =
       new OpportunisticContainerContext();
 
+  // Mapping of NodeId to NodeTokens. Populated either from RM response or
+  // generated locally if required.
+  private Map<NodeId, NMToken> nodeTokens = new HashMap<>();
   private ApplicationAttemptId applicationAttemptId;
   private OpportunisticContainerAllocator containerAllocator;
   private NMTokenSecretManagerInNM nmSecretManager;
@@ -157,17 +161,17 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
   }
 
   /**
-   * Check if we already have a NMToken. if Not, generate the Token and
-   * add it to the response
+   * Adds all the newly allocated Containers to the allocate Response.
+   * Additionally, in case the NMToken for one of the nodes does not exist, it
+   * generates one and adds it to the response.
    */
-  private void updateResponseWithNMTokens(AllocateResponse response,
+  private void updateAllocateResponse(AllocateResponse response,
       List<NMToken> nmTokens, List<Container> allocatedContainers) {
     List<NMToken> newTokens = new ArrayList<>();
     if (allocatedContainers.size() > 0) {
       response.getAllocatedContainers().addAll(allocatedContainers);
       for (Container alloc : allocatedContainers) {
-        if (!oppContainerContext.getNodeTokens().containsKey(
-            alloc.getNodeId())) {
+        if (!nodeTokens.containsKey(alloc.getNodeId())) {
           newTokens.add(nmSecretManager.generateNMToken(appSubmitter, alloc));
         }
       }
@@ -179,17 +183,14 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
 
   private void updateParameters(
       RegisterDistributedSchedulingAMResponse registerResponse) {
-    oppContainerContext.getAppParams().setMinResource(
-        registerResponse.getMinContainerResource());
-    oppContainerContext.getAppParams().setMaxResource(
-        registerResponse.getMaxContainerResource());
-    oppContainerContext.getAppParams().setIncrementResource(
-        registerResponse.getIncrContainerResource());
-    if (oppContainerContext.getAppParams().getIncrementResource() == null) {
-      oppContainerContext.getAppParams().setIncrementResource(
-          oppContainerContext.getAppParams().getMinResource());
+    Resource incrementResource = registerResponse.getIncrContainerResource();
+    if (incrementResource == null) {
+      incrementResource = registerResponse.getMinContainerResource();
     }
-    oppContainerContext.getAppParams().setContainerTokenExpiryInterval(
+    oppContainerContext.updateAllocationParams(
+        registerResponse.getMinContainerResource(),
+        registerResponse.getMaxContainerResource(),
+        incrementResource,
         registerResponse.getContainerTokenExpiryInterval());
 
     oppContainerContext.getContainerIdGenerator()
@@ -198,14 +199,7 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
   }
 
   private void setNodeList(List<NodeId> nodeList) {
-    oppContainerContext.getNodeMap().clear();
-    addToNodeList(nodeList);
-  }
-
-  private void addToNodeList(List<NodeId> nodes) {
-    for (NodeId n : nodes) {
-      oppContainerContext.getNodeMap().put(n.getHost(), n);
-    }
+    oppContainerContext.updateNodeList(nodeList);
   }
 
   @Override
@@ -243,23 +237,14 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
     setNodeList(dsResp.getNodesForScheduling());
     List<NMToken> nmTokens = dsResp.getAllocateResponse().getNMTokens();
     for (NMToken nmToken : nmTokens) {
-      oppContainerContext.getNodeTokens().put(nmToken.getNodeId(), nmToken);
+      nodeTokens.put(nmToken.getNodeId(), nmToken);
     }
 
-    List<ContainerStatus> completedContainers =
-        dsResp.getAllocateResponse().getCompletedContainersStatuses();
-
-    // Only account for opportunistic containers
-    for (ContainerStatus cs : completedContainers) {
-      if (cs.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
-        oppContainerContext.getContainersAllocated()
-            .remove(cs.getContainerId());
-      }
-    }
+    oppContainerContext.updateCompletedContainers(dsResp.getAllocateResponse());
 
     // Check if we have NM tokens for all the allocated containers. If not
     // generate one and update the response.
-    updateResponseWithNMTokens(
+    updateAllocateResponse(
         dsResp.getAllocateResponse(), nmTokens, allocatedContainers);
 
     if (LOG.isDebugEnabled()) {

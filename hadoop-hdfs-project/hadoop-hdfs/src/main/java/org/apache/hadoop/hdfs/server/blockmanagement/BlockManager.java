@@ -103,6 +103,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.util.FoldedTreeSet;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.server.namenode.CacheManager;
 
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getInternalBlockLength;
 
@@ -1059,7 +1060,8 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     // get block locations
-    final int numCorruptNodes = countNodes(blk).corruptReplicas();
+    NumberReplicas numReplicas = countNodes(blk);
+    final int numCorruptNodes = numReplicas.corruptReplicas();
     final int numCorruptReplicas = corruptReplicas.numCorruptReplicas(blk);
     if (numCorruptNodes != numCorruptReplicas) {
       LOG.warn("Inconsistent number of corrupt replicas for "
@@ -1068,8 +1070,14 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     final int numNodes = blocksMap.numNodes(blk);
-    final boolean isCorrupt = numCorruptReplicas != 0 &&
-        numCorruptReplicas == numNodes;
+    final boolean isCorrupt;
+    if (blk.isStriped()) {
+      BlockInfoStriped sblk = (BlockInfoStriped) blk;
+      isCorrupt = numCorruptReplicas != 0 &&
+          numReplicas.liveReplicas() < sblk.getRealDataBlockNum();
+    } else {
+      isCorrupt = numCorruptReplicas != 0 && numCorruptReplicas == numNodes;
+    }
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptReplicas;
     DatanodeStorageInfo[] machines = new DatanodeStorageInfo[numMachines];
     final byte[] blockIndices = blk.isStriped() ? new byte[numMachines] : null;
@@ -1145,9 +1153,16 @@ public class BlockManager implements BlockStatsMXBean {
             fileSizeExcludeBlocksUnderConstruction, mode);
         isComplete = true;
       }
-      return new LocatedBlocks(fileSizeExcludeBlocksUnderConstruction,
+      LocatedBlocks locations = new LocatedBlocks(
+          fileSizeExcludeBlocksUnderConstruction,
           isFileUnderConstruction, locatedblocks, lastlb, isComplete, feInfo,
           ecPolicy);
+      // Set caching information for the located blocks.
+      CacheManager cm = namesystem.getCacheManager();
+      if (cm != null) {
+        cm.setCachedLocations(locations);
+      }
+      return locations;
     }
   }
 
@@ -1766,8 +1781,12 @@ public class BlockManager implements BlockStatsMXBean {
 
   private boolean isInNewRack(DatanodeDescriptor[] srcs,
       DatanodeDescriptor target) {
+    LOG.debug("check if target {} increases racks, srcs={}", target,
+        Arrays.asList(srcs));
     for (DatanodeDescriptor src : srcs) {
-      if (src.getNetworkLocation().equals(target.getNetworkLocation())) {
+      if (!src.isDecommissionInProgress() &&
+          src.getNetworkLocation().equals(target.getNetworkLocation())) {
+        LOG.debug("the target {} is in the same rack with src {}", target, src);
         return false;
       }
     }
@@ -4005,13 +4024,15 @@ public class BlockManager implements BlockStatsMXBean {
         return;
       }
       NumberReplicas repl = countNodes(block);
+      int pendingNum = pendingReconstruction.getNumReplicas(block);
       int curExpectedReplicas = getRedundancy(block);
-      if (isNeededReconstruction(block, repl.liveReplicas())) {
-        neededReconstruction.update(block, repl.liveReplicas(),
+      if (!hasEnoughEffectiveReplicas(block, repl, pendingNum,
+          curExpectedReplicas)) {
+        neededReconstruction.update(block, repl.liveReplicas() + pendingNum,
             repl.readOnlyReplicas(), repl.decommissionedAndDecommissioning(),
             curExpectedReplicas, curReplicasDelta, expectedReplicasDelta);
       } else {
-        int oldReplicas = repl.liveReplicas()-curReplicasDelta;
+        int oldReplicas = repl.liveReplicas() + pendingNum - curReplicasDelta;
         int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
         neededReconstruction.remove(block, oldReplicas, repl.readOnlyReplicas(),
             repl.decommissionedAndDecommissioning(), oldExpectedReplicas);

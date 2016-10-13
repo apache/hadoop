@@ -156,7 +156,7 @@ class FSDirRenameOp {
     assert fsd.hasWriteLock();
     final INode srcInode = srcIIP.getLastINode();
     try {
-      validateRenameSource(srcIIP);
+      validateRenameSource(fsd, srcIIP);
     } catch (SnapshotException e) {
       throw e;
     } catch (IOException ignored) {
@@ -190,7 +190,7 @@ class FSDirRenameOp {
       return null;
     }
 
-    fsd.ezManager.checkMoveValidity(srcIIP, dstIIP, src);
+    fsd.ezManager.checkMoveValidity(srcIIP, dstIIP);
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
     verifyQuotaForRename(fsd, srcIIP, dstIIP);
@@ -365,7 +365,7 @@ class FSDirRenameOp {
     final String dst = dstIIP.getPath();
     final String error;
     final INode srcInode = srcIIP.getLastINode();
-    validateRenameSource(srcIIP);
+    validateRenameSource(fsd, srcIIP);
 
     // validate the destination
     if (dst.equals(src)) {
@@ -382,12 +382,12 @@ class FSDirRenameOp {
     }
 
     BlockStoragePolicySuite bsps = fsd.getBlockStoragePolicySuite();
-    fsd.ezManager.checkMoveValidity(srcIIP, dstIIP, src);
+    fsd.ezManager.checkMoveValidity(srcIIP, dstIIP);
     final INode dstInode = dstIIP.getLastINode();
     List<INodeDirectory> snapshottableDirs = new ArrayList<>();
     if (dstInode != null) { // Destination exists
       validateOverwrite(src, dst, overwrite, srcInode, dstInode);
-      FSDirSnapshotOp.checkSnapshot(dstInode, snapshottableDirs);
+      FSDirSnapshotOp.checkSnapshot(fsd, dstIIP, snapshottableDirs);
     }
 
     INode dstParent = dstIIP.getINode(-2);
@@ -559,8 +559,8 @@ class FSDirRenameOp {
     }
   }
 
-  private static void validateRenameSource(INodesInPath srcIIP)
-      throws IOException {
+  private static void validateRenameSource(FSDirectory fsd,
+      INodesInPath srcIIP) throws IOException {
     String error;
     final INode srcInode = srcIIP.getLastINode();
     // validate source
@@ -578,7 +578,7 @@ class FSDirRenameOp {
     }
     // srcInode and its subtree cannot contain snapshottable directories with
     // snapshots
-    FSDirSnapshotOp.checkSnapshot(srcInode, null);
+    FSDirSnapshotOp.checkSnapshot(fsd, srcIIP, null);
   }
 
   private static class RenameOperation {

@@ -52,7 +52,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -519,11 +518,8 @@ public class TestDataNodeHotSwapVolumes {
     ExtendedBlock block =
         DFSTestUtil.getAllBlocks(fs, testFile).get(1).getBlock();
     FsVolumeSpi volumeWithBlock = dn.getFSDataset().getVolume(block);
-    String basePath = volumeWithBlock.getBasePath();
-    File storageDir = new File(basePath);
-    URI fileUri = storageDir.toURI();
-    String dirWithBlock =
-        "[" + volumeWithBlock.getStorageType() + "]" + fileUri;
+    String dirWithBlock = "[" + volumeWithBlock.getStorageType() + "]" +
+        volumeWithBlock.getStorageLocation().getFile().toURI();
     String newDirs = dirWithBlock;
     for (String dir : oldDirs) {
       if (dirWithBlock.startsWith(dir)) {
@@ -581,8 +577,8 @@ public class TestDataNodeHotSwapVolumes {
     try (FsDatasetSpi.FsVolumeReferences volumes =
         dataset.getFsVolumeReferences()) {
       for (FsVolumeSpi volume : volumes) {
-        assertThat(volume.getBasePath(), is(not(anyOf(
-            is(newDirs.get(0)), is(newDirs.get(2))))));
+        assertThat(volume.getStorageLocation().getFile().toString(),
+            is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2))))));
       }
     }
     DataStorage storage = dn.getStorage();
@@ -765,7 +761,7 @@ public class TestDataNodeHotSwapVolumes {
     try (FsDatasetSpi.FsVolumeReferences volumes =
       dn.getFSDataset().getFsVolumeReferences()) {
       for (FsVolumeSpi vol : volumes) {
-        if (vol.getBasePath().equals(basePath.getPath())) {
+        if (vol.getBaseURI().equals(basePath.toURI())) {
           return (FsVolumeImpl) vol;
         }
       }
@@ -810,6 +806,7 @@ public class TestDataNodeHotSwapVolumes {
     assertEquals(used, failedVolume.getDfsUsed());
 
     DataNodeTestUtils.restoreDataDirFromFailure(dirToFail);
+    LOG.info("reconfiguring DN ");
     assertThat(
         "DN did not update its own config",
         dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir),

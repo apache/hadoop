@@ -393,6 +393,45 @@ public class ContractTestUtils extends Assert {
     rejectRootOperation(path, false);
   }
 
+  /**
+   * List then delete the children of a path, but not the path itself.
+   * This can be used to delete the entries under a root path when that
+   * FS does not support {@code delete("/")}.
+   * @param fileSystem filesystem
+   * @param path path to delete
+   * @param recursive flag to indicate child entry deletion should be recursive
+   * @return the number of child entries found and deleted (not including
+   * any recursive children of those entries)
+   * @throws IOException problem in the deletion process.
+   */
+  public static int deleteChildren(FileSystem fileSystem,
+      Path path,
+      boolean recursive) throws IOException {
+    FileStatus[] children = listChildren(fileSystem, path);
+    for (FileStatus entry : children) {
+      fileSystem.delete(entry.getPath(), recursive);
+    }
+    return children.length;
+  }
+
+  /**
+   * List all children of a path, but not the path itself in the case
+   * that the path refers to a file or empty directory.
+   * @param fileSystem FS
+   * @param path path
+   * @return a list of children, and never the path itself.
+   * @throws IOException problem in the list process
+   */
+  public static FileStatus[] listChildren(FileSystem fileSystem,
+      Path path) throws IOException {
+    FileStatus[] entries = fileSystem.listStatus(path);
+    if (entries.length == 1 && path.equals(entries[0].getPath())) {
+      // this is the path: ignore
+      return new FileStatus[]{};
+    } else {
+      return entries;
+    }
+  }
 
   public static void noteAction(String action) {
     if (LOG.isDebugEnabled()) {

@@ -166,6 +166,7 @@ public class TestLeaseRecoveryStriped {
     // After recovery, storages are reported by primary DN. we should verify
     // storages reported by blockReport.
     cluster.restartNameNode(true);
+    cluster.waitFirstBRCompleted(0, 10000);
     StripedFileTestUtil.checkData(dfs, p, safeLength,
         new ArrayList<DatanodeInfo>(), oldGS);
   }

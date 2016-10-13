@@ -278,6 +278,8 @@ public class INodesInPath {
   }
 
   private final byte[][] path;
+  private final String pathname;
+
   /**
    * Array with the specified number of INodes resolved for a given path.
    */
@@ -306,6 +308,7 @@ public class INodesInPath {
     Preconditions.checkArgument(inodes != null && path != null);
     this.inodes = inodes;
     this.path = path;
+    this.pathname = DFSUtil.byteArray2PathString(path);
     this.isRaw = isRaw;
     this.isSnapshot = isSnapshot;
     this.snapshotId = snapshotId;
@@ -366,7 +369,7 @@ public class INodesInPath {
 
   /** @return the full path in string form */
   public String getPath() {
-    return DFSUtil.byteArray2PathString(path);
+    return pathname;
   }
 
   public String getParentPath() {
@@ -399,7 +402,7 @@ public class INodesInPath {
    */
   private INodesInPath getAncestorINodesInPath(int length) {
     Preconditions.checkArgument(length >= 0 && length < inodes.length);
-    Preconditions.checkState(!isSnapshot());
+    Preconditions.checkState(isDotSnapshotDir() || !isSnapshot());
     final INode[] anodes = new INode[length];
     final byte[][] apath = new byte[length][];
     System.arraycopy(this.inodes, 0, anodes, 0, length);

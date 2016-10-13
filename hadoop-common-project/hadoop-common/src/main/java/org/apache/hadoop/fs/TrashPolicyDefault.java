@@ -75,6 +75,21 @@ public class TrashPolicyDefault extends TrashPolicy {
     initialize(conf, fs);
   }
 
+  /**
+   * @deprecated Use {@link #initialize(Configuration, FileSystem)} instead.
+   */
+  @Override
+  @Deprecated
+  public void initialize(Configuration conf, FileSystem fs, Path home) {
+    this.fs = fs;
+    this.deletionInterval = (long)(conf.getFloat(
+        FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT)
+        * MSECS_PER_MINUTE);
+    this.emptierInterval = (long)(conf.getFloat(
+        FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
+        * MSECS_PER_MINUTE);
+   }
+
   @Override
   public void initialize(Configuration conf, FileSystem fs) {
     this.fs = fs;

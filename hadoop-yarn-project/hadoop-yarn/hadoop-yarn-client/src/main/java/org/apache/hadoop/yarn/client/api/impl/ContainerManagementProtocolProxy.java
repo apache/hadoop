@@ -78,8 +78,11 @@ public class ContainerManagementProtocolProxy {
           YarnConfiguration.NM_CLIENT_MAX_NM_PROXIES
               + " (" + maxConnectedNMs + ") can not be less than 0.");
     }
-    LOG.info(YarnConfiguration.NM_CLIENT_MAX_NM_PROXIES + " : "
-        + maxConnectedNMs);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(YarnConfiguration.NM_CLIENT_MAX_NM_PROXIES + " : " +
+          maxConnectedNMs);
+    }
 
     if (maxConnectedNMs > 0) {
       cmProxy =

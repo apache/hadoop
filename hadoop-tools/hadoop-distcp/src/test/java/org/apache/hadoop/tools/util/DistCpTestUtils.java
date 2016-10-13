@@ -18,20 +18,19 @@
 
 package org.apache.hadoop.tools.util;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.tools.DistCp;
+import org.apache.hadoop.util.ToolRunner;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-
-import org.apache.hadoop.tools.DistCp;
-import org.apache.hadoop.util.ToolRunner;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Utility class for DistCpTests
@@ -79,10 +78,19 @@ public class DistCpTestUtils {
   public static void assertRunDistCp(int exitCode, String src, String dst,
       String options, Configuration conf)
       throws Exception {
+    assertRunDistCp(exitCode, src, dst,
+        options == null ? new String[0] : options.trim().split(" "), conf);
+  }
+
+  private static void assertRunDistCp(int exitCode, String src, String dst,
+      String[] options, Configuration conf)
+      throws Exception {
     DistCp distCp = new DistCp(conf, null);
-    String[] optsArr = options == null ?
-        new String[] { src, dst } :
-        new String[] { options, src, dst };
+    String[] optsArr = new String[options.length + 2];
+    System.arraycopy(options, 0, optsArr, 0, options.length);
+    optsArr[optsArr.length - 2] = src;
+    optsArr[optsArr.length - 1] = dst;
+
     assertEquals(exitCode,
         ToolRunner.run(conf, distCp, optsArr));
   }

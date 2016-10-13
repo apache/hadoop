@@ -199,7 +199,7 @@ public class TestDiskError {
       try (FsDatasetSpi.FsVolumeReferences volumes =
           dn.getFSDataset().getFsVolumeReferences()) {
         for (FsVolumeSpi vol : volumes) {
-          String dir = vol.getBasePath();
+          String dir = vol.getStorageLocation().getFile().getAbsolutePath();
           Path dataDir = new Path(dir);
           FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
           assertEquals("Permission for dir: " + dataDir + ", is " + actual +

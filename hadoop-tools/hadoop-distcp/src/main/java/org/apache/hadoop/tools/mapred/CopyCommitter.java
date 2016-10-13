@@ -238,7 +238,10 @@ public class CopyCommitter extends FileOutputCommitter {
     List<Path> targets = new ArrayList<Path>(1);
     Path targetFinalPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     targets.add(targetFinalPath);
-    DistCpOptions options = new DistCpOptions(targets, new Path("/NONE"));
+    Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
+        .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
+        ? DistCpConstants.RAW_NONE_PATH : DistCpConstants.NONE_PATH;
+    DistCpOptions options = new DistCpOptions(targets, resultNonePath);
     //
     // Set up options to be the same from the CopyListing.buildListing's perspective,
     // so to collect similar listings as when doing the copy

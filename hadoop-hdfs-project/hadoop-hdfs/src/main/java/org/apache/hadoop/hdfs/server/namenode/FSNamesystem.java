@@ -71,12 +71,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_DEFAULT;
@@ -95,6 +89,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
+import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -129,8 +124,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -153,6 +146,7 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -224,6 +218,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.FSDirEncryptionZoneOp.EncryptionKeyInfo;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
@@ -247,7 +242,6 @@ import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager;
-import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -284,7 +278,6 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Timer;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -344,7 +337,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private void logAuditEvent(boolean succeeded, String cmd, String src,
       String dst, HdfsFileStatus stat) throws IOException {
     if (isAuditEnabled() && isExternalInvocation()) {
-      logAuditEvent(succeeded, getRemoteUser(), getRemoteIp(),
+      logAuditEvent(succeeded, Server.getRemoteUser(), Server.getRemoteIp(),
                     cmd, src, dst, stat);
     }
   }
@@ -713,12 +706,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       LOG.info("Enabling async auditlog");
       enableAsyncAuditLog();
     }
-    boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
-    LOG.info("fsLock is fair:" + fair);
-    fsLock = new FSNamesystemLock(fair);
-    cond = fsLock.writeLock().newCondition();
+    fsLock = new FSNamesystemLock(conf);
+    cond = fsLock.newWriteLockCondition();
     cpLock = new ReentrantLock();
-    setTimer(new Timer());
 
     this.fsImage = fsImage;
     try {
@@ -826,17 +816,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.maxLockHoldToReleaseLeaseMs = conf.getLong(
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_KEY,
           DFS_NAMENODE_MAX_LOCK_HOLD_TO_RELEASE_LEASE_MS_DEFAULT);
-
-      this.writeLockReportingThreshold = conf.getLong(
-          DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY,
-          DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_DEFAULT);
-      this.readLockReportingThreshold = conf.getLong(
-          DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
-          DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT);
-
-      this.lockSuppressWarningInterval = conf.getTimeDuration(
-          DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY,
-          DFS_LOCK_SUPPRESS_WARNING_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
 
       // For testing purposes, allow the DT secret manager to be started regardless
       // of whether security is enabled.
@@ -1010,6 +989,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Add audit logger to calculate top users
     if (topConf.isEnabled) {
       topMetrics = new TopMetrics(conf, topConf.nntopReportingPeriodsMs);
+      if (DefaultMetricsSystem.instance().getSource(
+          TOPMETRICS_METRICS_SOURCE_NAME) == null) {
+        DefaultMetricsSystem.instance().register(TOPMETRICS_METRICS_SOURCE_NAME,
+            "Top N operations by user", topMetrics);
+      }
       auditLoggers.add(new TopAuditLogger(topMetrics));
     }
 
@@ -1516,131 +1500,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return Util.stringCollectionAsURIs(dirNames);
   }
 
-  private final long lockSuppressWarningInterval;
-  /** Threshold (ms) for long holding write lock report. */
-  private final long writeLockReportingThreshold;
-  private int numWriteLockWarningsSuppressed = 0;
-  private long timeStampOfLastWriteLockReport = 0;
-  private long longestWriteLockHeldInterval = 0;
-  /** Last time stamp for write lock. Keep the longest one for multi-entrance.*/
-  private long writeLockHeldTimeStamp;
-  /** Threshold (ms) for long holding read lock report. */
-  private long readLockReportingThreshold;
-  private AtomicInteger numReadLockWarningsSuppressed = new AtomicInteger(0);
-  private AtomicLong timeStampOfLastReadLockReport = new AtomicLong(0);
-  private AtomicLong longestReadLockHeldInterval = new AtomicLong(0);
-  private Timer timer;
-  /**
-   * Last time stamp for read lock. Keep the longest one for
-   * multi-entrance. This is ThreadLocal since there could be
-   * many read locks held simultaneously.
-   */
-  private static ThreadLocal<Long> readLockHeldTimeStamp =
-      new ThreadLocal<Long>() {
-        @Override
-        public Long initialValue() {
-          return Long.MAX_VALUE;
-        }
-      };
-
   @Override
   public void readLock() {
-    this.fsLock.readLock().lock();
-    if (this.fsLock.getReadHoldCount() == 1) {
-      readLockHeldTimeStamp.set(timer.monotonicNow());
-    }
+    this.fsLock.readLock();
   }
   @Override
   public void readUnlock() {
-    final boolean needReport = this.fsLock.getReadHoldCount() == 1;
-    final long readLockInterval = timer.monotonicNow() -
-        readLockHeldTimeStamp.get();
-    if (needReport) {
-      readLockHeldTimeStamp.remove();
-    }
-
-    this.fsLock.readLock().unlock();
-
-    if (needReport && readLockInterval >= this.readLockReportingThreshold) {
-      long localLongestReadLock;
-      do {
-        localLongestReadLock = longestReadLockHeldInterval.get();
-      } while (localLongestReadLock - readLockInterval < 0
-          && !longestReadLockHeldInterval.compareAndSet(localLongestReadLock,
-                                                        readLockInterval));
-
-      long localTimeStampOfLastReadLockReport;
-      long now;
-      do {
-        now = timer.monotonicNow();
-        localTimeStampOfLastReadLockReport = timeStampOfLastReadLockReport
-            .get();
-        if (now - localTimeStampOfLastReadLockReport <
-            lockSuppressWarningInterval) {
-          numReadLockWarningsSuppressed.incrementAndGet();
-          return;
-        }
-      } while (!timeStampOfLastReadLockReport.compareAndSet(
-          localTimeStampOfLastReadLockReport, now));
-      int numSuppressedWarnings = numReadLockWarningsSuppressed.getAndSet(0);
-      long longestLockHeldInterval = longestReadLockHeldInterval.getAndSet(0);
-      LOG.info("FSNamesystem read lock held for " + readLockInterval +
-          " ms via\n" + StringUtils.getStackTrace(Thread.currentThread()) +
-          "\tNumber of suppressed read-lock reports: " +
-          numSuppressedWarnings + "\n\tLongest read-lock held interval: " +
-          longestLockHeldInterval);
-    }
+    this.fsLock.readUnlock();
   }
   @Override
   public void writeLock() {
-    this.fsLock.writeLock().lock();
-    if (fsLock.getWriteHoldCount() == 1) {
-      writeLockHeldTimeStamp = timer.monotonicNow();
-    }
+    this.fsLock.writeLock();
   }
   @Override
   public void writeLockInterruptibly() throws InterruptedException {
-    this.fsLock.writeLock().lockInterruptibly();
-    if (fsLock.getWriteHoldCount() == 1) {
-      writeLockHeldTimeStamp = timer.monotonicNow();
-    }
+    this.fsLock.writeLockInterruptibly();
   }
   @Override
   public void writeUnlock() {
-    final boolean needReport = fsLock.getWriteHoldCount() == 1 &&
-        fsLock.isWriteLockedByCurrentThread();
-    final long currentTime = timer.monotonicNow();
-    final long writeLockInterval = currentTime - writeLockHeldTimeStamp;
-
-    boolean logReport = false;
-    int numSuppressedWarnings = 0;
-    long longestLockHeldInterval = 0;
-    if (needReport && writeLockInterval >= this.writeLockReportingThreshold) {
-      if (writeLockInterval > longestWriteLockHeldInterval) {
-        longestWriteLockHeldInterval = writeLockInterval;
-      }
-      if (currentTime - timeStampOfLastWriteLockReport > this
-          .lockSuppressWarningInterval) {
-        logReport = true;
-        numSuppressedWarnings = numWriteLockWarningsSuppressed;
-        numWriteLockWarningsSuppressed = 0;
-        longestLockHeldInterval = longestWriteLockHeldInterval;
-        longestWriteLockHeldInterval = 0;
-        timeStampOfLastWriteLockReport = currentTime;
-      } else {
-        numWriteLockWarningsSuppressed++;
-      }
-    }
-
-    this.fsLock.writeLock().unlock();
-
-    if (logReport) {
-      LOG.info("FSNamesystem write lock held for " + writeLockInterval +
-          " ms via\n" + StringUtils.getStackTrace(Thread.currentThread()) +
-          "\tNumber of suppressed write-lock reports: " +
-          numSuppressedWarnings + "\n\tLongest write-lock held interval: " +
-              longestLockHeldInterval);
-    }
+    this.fsLock.writeUnlock();
   }
   @Override
   public boolean hasWriteLock() {
@@ -1925,8 +1803,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         boolean updateAccessTime = inode != null &&
             now > inode.getAccessTime() + dir.getAccessTimePrecision();
         if (!isInSafeMode() && updateAccessTime) {
-          boolean changed = FSDirAttrOp.setTimes(dir,
-              inode, -1, now, false, iip.getLatestSnapshotId());
+          boolean changed = FSDirAttrOp.setTimes(dir, iip, -1, now, false);
           if (changed) {
             getEditLog().logTimes(src, -1, now);
           }
@@ -2281,7 +2158,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return status;
   }
 
-  private HdfsFileStatus startFileInt(final String src,
+  private HdfsFileStatus startFileInt(String src,
       PermissionStatus permissions, String holder, String clientMachine,
       EnumSet<CreateFlag> flag, boolean createParent, short replication,
       long blockSize, CryptoProtocolVersion[] supportedVersions,
@@ -2300,92 +2177,79 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .append(Arrays.toString(supportedVersions));
       NameNode.stateChangeLog.debug(builder.toString());
     }
-    if (!DFSUtil.isValidName(src)) {
+    if (!DFSUtil.isValidName(src) ||
+        FSDirectory.isExactReservedName(src) ||
+        (FSDirectory.isReservedName(src)
+            && !FSDirectory.isReservedRawName(src)
+            && !FSDirectory.isReservedInodesName(src))) {
       throw new InvalidPathException(src);
     }
 
-    checkOperation(OperationCategory.READ);
-    readLock();
-    try {
-      checkOperation(OperationCategory.READ);
-      if (!FSDirErasureCodingOp.hasErasureCodingPolicy(this, src)) {
-        blockManager.verifyReplication(src, replication, clientMachine);
-      }
-    } finally {
-      readUnlock();
-    }
-    
-    checkOperation(OperationCategory.WRITE);
-    if (blockSize < minBlockSize) {
-      throw new IOException("Specified block size is less than configured" +
-          " minimum value (" + DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY
-          + "): " + blockSize + " < " + minBlockSize);
-    }
-
     FSPermissionChecker pc = getPermissionChecker();
-
-    /**
-     * If the file is in an encryption zone, we optimistically create an
-     * EDEK for the file by calling out to the configured KeyProvider.
-     * Since this typically involves doing an RPC, we take the readLock
-     * initially, then drop it to do the RPC.
-     * 
-     * Since the path can flip-flop between being in an encryption zone and not
-     * in the meantime, we need to recheck the preconditions when we retake the
-     * lock to do the create. If the preconditions are not met, we throw a
-     * special RetryStartFileException to ask the DFSClient to try the create
-     * again later.
-     */
-    FSDirWriteFileOp.EncryptionKeyInfo ezInfo = null;
-
-    if (provider != null) {
-      readLock();
-      try {
-        checkOperation(OperationCategory.READ);
-        ezInfo = FSDirWriteFileOp
-            .getEncryptionKeyInfo(this, pc, src, supportedVersions);
-      } finally {
-        readUnlock();
-      }
-
-      // Generate EDEK if necessary while not holding the lock
-      if (ezInfo != null) {
-        ezInfo.edek = FSDirEncryptionZoneOp
-            .generateEncryptedDataEncryptionKey(dir, ezInfo.ezKeyName);
-      }
-      EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
-    }
-
-    boolean skipSync = false;
+    INodesInPath iip = null;
+    boolean skipSync = true; // until we do something that might create edits
     HdfsFileStatus stat = null;
+    BlocksMapUpdateInfo toRemoveBlocks = null;
 
-    // Proceed with the create, using the computed cipher suite and
-    // generated EDEK
-    BlocksMapUpdateInfo toRemoveBlocks = new BlocksMapUpdateInfo();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create file" + src);
+
+      iip = FSDirWriteFileOp.resolvePathForStartFile(
+          dir, pc, src, flag, createParent);
+
+      if (!FSDirErasureCodingOp.hasErasureCodingPolicy(this, iip)) {
+        blockManager.verifyReplication(src, replication, clientMachine);
+      }
+
+      if (blockSize < minBlockSize) {
+        throw new IOException("Specified block size is less than configured" +
+            " minimum value (" + DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY
+            + "): " + blockSize + " < " + minBlockSize);
+      }
+
+      FileEncryptionInfo feInfo = null;
+      if (provider != null) {
+        EncryptionKeyInfo ezInfo = FSDirEncryptionZoneOp.getEncryptionKeyInfo(
+            this, iip, supportedVersions);
+        // if the path has an encryption zone, the lock was released while
+        // generating the EDEK.  re-resolve the path to ensure the namesystem
+        // and/or EZ has not mutated
+        if (ezInfo != null) {
+          checkOperation(OperationCategory.WRITE);
+          iip = FSDirWriteFileOp.resolvePathForStartFile(
+              dir, pc, iip.getPath(), flag, createParent);
+          feInfo = FSDirEncryptionZoneOp.getFileEncryptionInfo(
+              dir, iip, ezInfo);
+        }
+      }
+
+      skipSync = false; // following might generate edits
+      toRemoveBlocks = new BlocksMapUpdateInfo();
       dir.writeLock();
       try {
-        stat = FSDirWriteFileOp.startFile(this, pc, src, permissions, holder,
+        stat = FSDirWriteFileOp.startFile(this, iip, permissions, holder,
                                           clientMachine, flag, createParent,
-                                          replication, blockSize, ezInfo,
+                                          replication, blockSize, feInfo,
                                           toRemoveBlocks, logRetryCache);
+      } catch (IOException e) {
+        skipSync = e instanceof StandbyException;
+        throw e;
       } finally {
         dir.writeUnlock();
       }
-    } catch (IOException e) {
-      skipSync = e instanceof StandbyException;
-      throw e;
     } finally {
       writeUnlock();
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
         getEditLog().logSync();
-        removeBlocks(toRemoveBlocks);
-        toRemoveBlocks.clear();
+        if (toRemoveBlocks != null) {
+          removeBlocks(toRemoveBlocks);
+          toRemoveBlocks.clear();
+        }
       }
     }
 
@@ -3946,7 +3810,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           LOG.warn("Removing lazyPersist file " + bc.getName() + " with no replicas.");
           BlocksMapUpdateInfo toRemoveBlocks =
               FSDirDeleteOp.deleteInternal(
-                  FSNamesystem.this, bc.getName(),
+                  FSNamesystem.this,
                   INodesInPath.fromINode((INodeFile) bc), false);
           changed |= toRemoveBlocks != null;
           if (toRemoveBlocks != null) {
@@ -5397,17 +5261,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * RPC call context even if the client exits.
    */
   boolean isExternalInvocation() {
-    return Server.isRpcInvocation() || NamenodeWebHdfsMethods.isWebHdfsInvocation();
+    return Server.isRpcInvocation();
   }
 
-  private static InetAddress getRemoteIp() {
-    InetAddress ip = Server.getRemoteIp();
-    if (ip != null) {
-      return ip;
-    }
-    return NamenodeWebHdfsMethods.getRemoteIp();
-  }
-  
   // optimize ugi lookup for RPC operations to avoid a trip through
   // UGI.getCurrentUser which is synch'ed
   private static UserGroupInformation getRemoteUser() throws IOException {
@@ -5554,7 +5410,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
       if (volumeFailureSummary != null) {
         innerinfo
-            .put("failedStorageLocations",
+            .put("failedStorageIDs",
                 volumeFailureSummary.getFailedStorageLocations())
             .put("lastVolumeFailureDate",
                 volumeFailureSummary.getLastVolumeFailureDate())
@@ -7053,7 +6909,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           sb.append(trackingId);
         }
         sb.append("\t").append("proto=");
-        sb.append(NamenodeWebHdfsMethods.isWebHdfsInvocation() ? "webhdfs" : "rpc");
+        sb.append(Server.getProtocol());
         if (isCallerContextEnabled &&
             callerContext != null &&
             callerContext.isContextValid()) {
@@ -7173,9 +7029,5 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         .size();
   }
 
-  @VisibleForTesting
-  void setTimer(Timer newTimer) {
-    this.timer = newTimer;
-  }
 }
 

@@ -1184,33 +1184,27 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 
 ### Error message "The bucket you are attempting to access must be addressed using the specified endpoint"
 
-This surfaces when `fs.s3a.endpoint` is configured to use S3 service endpoint
+This surfaces when `fs.s3a.endpoint` is configured to use an S3 service endpoint
 which is neither the original AWS one, `s3.amazonaws.com` , nor the one where
-the bucket is hosted.
+the bucket is hosted.  The error message contains the redirect target returned
+by S3, which can be used to determine the correct value for `fs.s3a.endpoint`.
 
 ```
-org.apache.hadoop.fs.s3a.AWSS3IOException: purging multipart uploads on landsat-pds:
- com.amazonaws.services.s3.model.AmazonS3Exception:
-  The bucket you are attempting to access must be addressed using the specified endpoint.
-  Please send all future requests to this endpoint.
-   (Service: Amazon S3; Status Code: 301; Error Code: PermanentRedirect; Request ID: 5B7A5D18BE596E4B),
-    S3 Extended Request ID: uE4pbbmpxi8Nh7rycS6GfIEi9UH/SWmJfGtM9IeKvRyBPZp/hN7DbPyz272eynz3PEMM2azlhjE=:
-
-	at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1182)
-	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:770)
-	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:489)
-	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:310)
-	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3785)
-	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3738)
-	at com.amazonaws.services.s3.AmazonS3Client.listMultipartUploads(AmazonS3Client.java:2796)
-	at com.amazonaws.services.s3.transfer.TransferManager.abortMultipartUploads(TransferManager.java:1217)
-	at org.apache.hadoop.fs.s3a.S3AFileSystem.initMultipartUploads(S3AFileSystem.java:454)
-	at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:289)
-	at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:2715)
-	at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:96)
-	at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:2749)
-	at org.apache.hadoop.fs.FileSystem$Cache.getUnique(FileSystem.java:2737)
-	at org.apache.hadoop.fs.FileSystem.newInstance(FileSystem.java:430)
+org.apache.hadoop.fs.s3a.AWSS3IOException: Received permanent redirect response
+  to bucket.s3-us-west-2.amazonaws.com.  This likely indicates that the S3
+  endpoint configured in fs.s3a.endpoint does not match the AWS region
+  containing the bucket.: The bucket you are attempting to access must be
+  addressed using the specified endpoint. Please send all future requests to
+  this endpoint. (Service: Amazon S3; Status Code: 301;
+  Error Code: PermanentRedirect; Request ID: 7D39EC1021C61B11)
+        at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:132)
+        at org.apache.hadoop.fs.s3a.S3AFileSystem.initMultipartUploads(S3AFileSystem.java:287)
+        at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:203)
+        at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:2895)
+        at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:102)
+        at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:2932)
+        at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:2914)
+        at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:390)
 ```
 
 1. Use the [Specific endpoint of the bucket's S3 service](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region)

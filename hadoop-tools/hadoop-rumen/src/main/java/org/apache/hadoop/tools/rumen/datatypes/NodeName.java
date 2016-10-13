@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.tools.rumen.datatypes;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tools.rumen.ParsedHost;
 import org.apache.hadoop.tools.rumen.anonymization.WordList;
 import org.apache.hadoop.tools.rumen.state.State;
 import org.apache.hadoop.tools.rumen.state.StatePool;
-import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * Represents the cluster host.

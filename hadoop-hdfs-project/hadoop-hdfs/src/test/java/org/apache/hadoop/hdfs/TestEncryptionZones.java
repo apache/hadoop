@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
@@ -97,6 +96,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyObject;
@@ -604,13 +604,8 @@ public class TestEncryptionZones {
           assertExceptionContains("Permission denied:", e);
         }
 
-        try {
-          userAdmin.getEncryptionZoneForPath(nonexistent);
-          fail("FileNotFoundException should be thrown for a non-existent"
-              + " file path");
-        } catch (FileNotFoundException e) {
-          assertExceptionContains("Path not found: " + nonexistent, e);
-        }
+        assertNull("expected null for nonexistent path",
+            userAdmin.getEncryptionZoneForPath(nonexistent));
 
         // Check operation with non-ez paths
         assertNull("expected null for non-ez path",
@@ -638,20 +633,10 @@ public class TestEncryptionZones {
         assertEquals("expected ez path", allPath.toString(),
             userAdmin.getEncryptionZoneForPath(
                 new Path(snapshottedAllPath)).getPath().toString());
-        try {
-          userAdmin.getEncryptionZoneForPath(allPathFile);
-          fail("FileNotFoundException should be thrown for a non-existent"
-              + " file path");
-        } catch (FileNotFoundException e) {
-          assertExceptionContains("Path not found: " + allPathFile, e);
-        }
-        try {
-          userAdmin.getEncryptionZoneForPath(allPath);
-          fail("FileNotFoundException should be thrown for a non-existent"
-              + " file path");
-        } catch (FileNotFoundException e) {
-          assertExceptionContains("Path not found: " + allPath, e);
-        }
+        assertNull("expected null for deleted file path",
+            userAdmin.getEncryptionZoneForPath(allPathFile));
+        assertNull("expected null for deleted directory path",
+            userAdmin.getEncryptionZoneForPath(allPath));
         return null;
       }
     });
@@ -1062,7 +1047,7 @@ public class TestEncryptionZones {
   }
 
   private class MyInjector extends EncryptionFaultInjector {
-    int generateCount;
+    volatile int generateCount;
     CountDownLatch ready;
     CountDownLatch wait;
 
@@ -1072,13 +1057,27 @@ public class TestEncryptionZones {
     }
 
     @Override
-    public void startFileAfterGenerateKey() throws IOException {
+    public void startFileNoKey() throws IOException {
+      generateCount = -1;
+      syncWithLatches();
+    }
+
+    @Override
+    public void startFileBeforeGenerateKey() throws IOException {
+      syncWithLatches();
+    }
+
+    private void syncWithLatches() throws IOException {
       ready.countDown();
       try {
         wait.await();
       } catch (InterruptedException e) {
         throw new IOException(e);
       }
+    }
+
+    @Override
+    public void startFileAfterGenerateKey() throws IOException {
       generateCount++;
     }
   }
@@ -1114,10 +1113,14 @@ public class TestEncryptionZones {
       Future<Void> future =
           executor.submit(new CreateFileTask(fsWrapper, file));
       injector.ready.await();
-      // Do the fault
-      doFault();
-      // Allow create to proceed
-      injector.wait.countDown();
+      try {
+        // Do the fault
+        doFault();
+        // Allow create to proceed
+      } finally {
+        // Always decrement latch to avoid hanging the tests on failure.
+        injector.wait.countDown();
+      }
       future.get();
       // Cleanup and postconditions
       doCleanup();
@@ -1140,20 +1143,21 @@ public class TestEncryptionZones {
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    // Test when the parent directory becomes an EZ
+    // Test when the parent directory becomes an EZ.  With no initial EZ,
+    // the fsn lock must not be yielded.
     executor.submit(new InjectFaultTask() {
       @Override
-      public void doFault() throws Exception {
-        dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
-      }
-      @Override
       public void doCleanup() throws Exception {
-        assertEquals("Expected a startFile retry", 2, injector.generateCount);
+        assertEquals("Expected no startFile key generation",
+            -1, injector.generateCount);
         fsWrapper.delete(file, false);
       }
     }).get();
 
-    // Test when the parent directory unbecomes an EZ
+    // Test when the parent directory unbecomes an EZ.  The generation of
+    // the EDEK will yield the lock, then re-resolve the path and use the
+    // previous EDEK.
+    dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
     executor.submit(new InjectFaultTask() {
       @Override
       public void doFault() throws Exception {
@@ -1166,7 +1170,9 @@ public class TestEncryptionZones {
       }
     }).get();
 
-    // Test when the parent directory becomes a different EZ
+    // Test when the parent directory becomes a different EZ.  The generation
+    // of the EDEK will yield the lock, re-resolve will detect the EZ has
+    // changed, and client will be asked to retry a 2nd time
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
     final String otherKey = "other_key";
     DFSTestUtil.createKey(otherKey, cluster, conf);
@@ -1498,25 +1504,18 @@ public class TestEncryptionZones {
   }
 
   @Test(timeout = 60000)
-  public void testGetEncryptionZoneOnANonExistentZoneFile() throws Exception {
-    final Path ez = new Path("/ez");
-    fs.mkdirs(ez);
-    dfsAdmin.createEncryptionZone(ez, TEST_KEY, NO_TRASH);
-    Path zoneFile = new Path(ez, "file");
-    try {
-      fs.getEZForPath(zoneFile);
-      fail("FileNotFoundException should be thrown for a non-existent"
-          + " file path");
-    } catch (FileNotFoundException e) {
-      assertExceptionContains("Path not found: " + zoneFile, e);
-    }
-    try {
-      dfsAdmin.getEncryptionZoneForPath(zoneFile);
-      fail("FileNotFoundException should be thrown for a non-existent"
-          + " file path");
-    } catch (FileNotFoundException e) {
-      assertExceptionContains("Path not found: " + zoneFile, e);
-    }
+  public void testGetEncryptionZoneOnANonExistentPaths() throws Exception {
+    final Path ezPath = new Path("/ez");
+    fs.mkdirs(ezPath);
+    dfsAdmin.createEncryptionZone(ezPath, TEST_KEY, NO_TRASH);
+    Path zoneFile = new Path(ezPath, "file");
+    EncryptionZone ez = fs.getEZForPath(zoneFile);
+    assertNotNull("Expected EZ for non-existent path in EZ", ez);
+    ez = dfsAdmin.getEncryptionZoneForPath(zoneFile);
+    assertNotNull("Expected EZ for non-existent path in EZ", ez);
+    ez = dfsAdmin.getEncryptionZoneForPath(
+        new Path("/does/not/exist"));
+    assertNull("Expected null for non-existent path not in EZ", ez);
   }
 
   @Test(timeout = 120000)

@@ -331,8 +331,8 @@ public class TestDiskBalancerWithMockMover {
         .getFsVolumeReferences();
 
     nodeID = dataNode.getDatanodeUuid();
-    sourceName = references.get(0).getBasePath();
-    destName = references.get(1).getBasePath();
+    sourceName = references.get(0).getBaseURI().getPath();
+    destName = references.get(1).getBaseURI().getPath();
     sourceUUID = references.get(0).getStorageID();
     destUUID = references.get(1).getStorageID();
     references.close();

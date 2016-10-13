@@ -29,6 +29,8 @@ Transparent Encryption in HDFS
 * [crypto command-line interface](#crypto_command-line_interface)
     * [createZone](#createZone)
     * [listZones](#listZones)
+    * [provisionTrash](#provisionTrash)
+    * [getFileEncryptionInfo](#getFileEncryptionInfo)
 * [Example usage](#Example_usage)
 * [Distcp considerations](#Distcp_considerations)
     * [Running as the superuser](#Running_as_the_superuser)
@@ -189,6 +191,16 @@ Provision a trash directory for an encryption zone.
 |:---- |:---- |
 | *path* | The path to the root of the encryption zone. |
 
+### <a name="getFileEncryptionInfo"></a>getFileEncryptionInfo
+
+Usage: `[-getFileEncryptionInfo -path <path>]`
+
+Get encryption information from a file. This can be used to find out whether a file is being encrypted, and the key name / key version used to encrypt it.
+
+| | |
+|:---- |:---- |
+| *path* | The path of the file to get encryption information. |
+
 <a name="Example_usage"></a>Example usage
 -------------
 
@@ -207,6 +219,10 @@ These instructions assume that you are running as the normal user or HDFS superu
     # As the normal user, put a file in, read it out
     hadoop fs -put helloWorld /zone
     hadoop fs -cat /zone/helloWorld
+
+    # As the normal user, get encryption information from the file
+    hdfs crypto -getFileEncryptionInfo -path /zone/helloWorld
+    # console output: {cipherSuite: {name: AES/CTR/NoPadding, algorithmBlockSize: 16}, cryptoProtocolVersion: CryptoProtocolVersion{description='Encryption zones', version=1, unknownValue=null}, edek: 2010d301afbd43b58f10737ce4e93b39, iv: ade2293db2bab1a2e337f91361304cb3, keyName: mykey, ezKeyVersionName: mykey@0}
 
 <a name="Distcp_considerations"></a>Distcp considerations
 ---------------------

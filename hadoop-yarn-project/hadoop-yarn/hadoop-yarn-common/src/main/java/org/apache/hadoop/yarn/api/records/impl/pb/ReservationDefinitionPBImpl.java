@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationDefinitionProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationDefinitionProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestsProto;
@@ -32,6 +34,7 @@ public class ReservationDefinitionPBImpl extends ReservationDefinition {
   boolean viaProto = false;
 
   private ReservationRequests reservationReqs;
+  private Priority priority = null;
 
   public ReservationDefinitionPBImpl() {
     builder = ReservationDefinitionProto.newBuilder();
@@ -150,6 +153,33 @@ public class ReservationDefinitionPBImpl extends ReservationDefinition {
     builder.setReservationName(name);
   }
 
+  @Override
+  public Priority getPriority() {
+    ReservationDefinitionProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.priority != null) {
+      return this.priority;
+    }
+    if (!p.hasPriority()) {
+      return Priority.UNDEFINED;
+    }
+    this.priority = convertFromProtoFormat(p.getPriority());
+    return this.priority;
+  }
+
+  @Override
+  public void setPriority(Priority priority) {
+    maybeInitBuilder();
+    if (priority == null) {
+      this.priority = Priority.UNDEFINED;
+    }
+    this.priority = priority;
+  }
+
+  private PriorityPBImpl convertFromProtoFormat(
+      YarnProtos.PriorityProto p) {
+    return new PriorityPBImpl(p);
+  }
+
   private ReservationRequestsPBImpl convertFromProtoFormat(
       ReservationRequestsProto p) {
     return new ReservationRequestsPBImpl(p);
@@ -164,6 +194,7 @@ public class ReservationDefinitionPBImpl extends ReservationDefinition {
     return "{Arrival: " + getArrival() + ", Deadline: " + getDeadline()
         + ", Reservation Name: " + getReservationName()
         + ", Recurrence expression: " + getRecurrenceExpression()
+        + ", Priority: " + getPriority().toString()
         + ", Resources: " + getReservationRequests() + "}";
   }
 

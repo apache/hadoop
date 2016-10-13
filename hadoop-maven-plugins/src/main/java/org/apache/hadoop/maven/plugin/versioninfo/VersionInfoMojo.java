@@ -160,7 +160,7 @@ public class VersionInfoMojo extends AbstractMojo {
       if (index > -1) {
         res[0] = path.substring(0, index - 1);
         int branchIndex = index + "branches".length() + 1;
-        index = path.indexOf("/", branchIndex);
+        index = path.indexOf('/', branchIndex);
         if (index > -1) {
           res[1] = path.substring(branchIndex, index);
         } else {

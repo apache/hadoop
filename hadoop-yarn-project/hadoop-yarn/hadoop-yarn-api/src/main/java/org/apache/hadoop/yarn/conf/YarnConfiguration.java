@@ -719,17 +719,29 @@ public class YarnConfiguration extends Configuration {
       + "leveldb-state-store.compaction-interval-secs";
   public static final long DEFAULT_RM_LEVELDB_COMPACTION_INTERVAL_SECS = 3600;
 
-  /** The maximum number of completed applications RM keeps. */ 
+  /**
+   * The maximum number of completed applications RM keeps. By default equals
+   * to {@link #DEFAULT_RM_MAX_COMPLETED_APPLICATIONS}.
+   */
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
     RM_PREFIX + "max-completed-applications";
-  public static final int DEFAULT_RM_MAX_COMPLETED_APPLICATIONS = 10000;
+  public static final int DEFAULT_RM_MAX_COMPLETED_APPLICATIONS = 1000;
 
   /**
-   * The maximum number of completed applications RM state store keeps, by
-   * default equals to DEFAULT_RM_MAX_COMPLETED_APPLICATIONS
+   * The maximum number of completed applications RM state store keeps. By
+   * default equals to value of {@link #RM_MAX_COMPLETED_APPLICATIONS}.
    */
   public static final String RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS =
       RM_PREFIX + "state-store.max-completed-applications";
+  /**
+   * The default value for
+   * {@code yarn.resourcemanager.state-store.max-completed-applications}.
+   * @deprecated This default value is ignored and will be removed in a future
+   * release. The default value of
+   * {@code yarn.resourcemanager.state-store.max-completed-applications} is the
+   * value of {@link #RM_MAX_COMPLETED_APPLICATIONS}.
+   */
+  @Deprecated
   public static final int DEFAULT_RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS =
       DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
 

@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -37,8 +39,6 @@ import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
 import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.map.ObjectMapper;
 
 @Private
 @Unstable
@@ -106,8 +106,7 @@ public class SLSUtils {
     Reader input =
         new InputStreamReader(new FileInputStream(jobTrace), "UTF-8");
     try {
-      Iterator<Map> i = mapper.readValues(
-              jsonF.createJsonParser(input), Map.class);
+      Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
         Map jsonE = i.next();
         List tasks = (List) jsonE.get("job.tasks");
@@ -134,8 +133,7 @@ public class SLSUtils {
     Reader input =
         new InputStreamReader(new FileInputStream(nodeFile), "UTF-8");
     try {
-      Iterator<Map> i = mapper.readValues(
-              jsonF.createJsonParser(input), Map.class);
+      Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
       while (i.hasNext()) {
         Map jsonE = i.next();
         String rack = "/" + jsonE.get("rack");

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.webproxy.amfilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -147,8 +148,8 @@ public class TestAmFilter {
     testFilter.init(config);
 
     HttpServletResponseForTest response = new HttpServletResponseForTest();
-    // Test request should implements HttpServletRequest
 
+    // Test request should implements HttpServletRequest
     ServletRequest failRequest = Mockito.mock(ServletRequest.class);
     try {
       testFilter.doFilter(failRequest, response, chain);
@@ -159,22 +160,32 @@ public class TestAmFilter {
 
     // request with HttpServletRequest
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(request.getRemoteAddr()).thenReturn("redirect");
-    Mockito.when(request.getRequestURI()).thenReturn("/redirect");
+    Mockito.when(request.getRemoteAddr()).thenReturn("nowhere");
+    Mockito.when(request.getRequestURI()).thenReturn("/app/application_00_0");
+
+    // address "redirect" is not in host list for non-proxy connection
     testFilter.doFilter(request, response, chain);
-    // address "redirect" is not in host list
-    assertEquals(302, response.status);
+    assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, response.status);
     String redirect = response.getHeader(ProxyUtils.LOCATION);
-    assertEquals("http://bogus/redirect", redirect);
+    assertEquals("http://bogus/app/application_00_0", redirect);
+
+    // address "redirect" is not in host list for proxy connection
+    Mockito.when(request.getRequestURI()).thenReturn("/proxy/application_00_0");
+    testFilter.doFilter(request, response, chain);
+    assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, response.status);
+    redirect = response.getHeader(ProxyUtils.LOCATION);
+    assertEquals("http://bogus/proxy/redirect/application_00_0", redirect);
+
     // "127.0.0.1" contains in host list. Without cookie
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     testFilter.doFilter(request, response, chain);
-
     assertTrue(doFilterRequest
         .contains("javax.servlet.http.HttpServletRequest"));
+
     // cookie added
-    Cookie[] cookies = new Cookie[1];
-    cookies[0] = new Cookie(WebAppProxyServlet.PROXY_USER_COOKIE_NAME, "user");
+    Cookie[] cookies = new Cookie[] {
+        new Cookie(WebAppProxyServlet.PROXY_USER_COOKIE_NAME, "user")
+    };
 
     Mockito.when(request.getCookies()).thenReturn(cookies);
     testFilter.doFilter(request, response, chain);

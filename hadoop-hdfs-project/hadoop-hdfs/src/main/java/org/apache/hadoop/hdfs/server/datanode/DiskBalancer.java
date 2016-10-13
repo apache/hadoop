@@ -500,7 +500,8 @@ public class DiskBalancer {
         references = this.dataset.getFsVolumeReferences();
         for (int ndx = 0; ndx < references.size(); ndx++) {
           FsVolumeSpi vol = references.get(ndx);
-          storageIDToVolBasePathMap.put(vol.getStorageID(), vol.getBasePath());
+          storageIDToVolBasePathMap.put(vol.getStorageID(),
+              vol.getBaseURI().getPath());
         }
         references.close();
       }
@@ -1023,7 +1024,7 @@ public class DiskBalancer {
         openPoolIters(source, poolIters);
         if (poolIters.size() == 0) {
           LOG.error("No block pools found on volume. volume : {}. Exiting.",
-              source.getBasePath());
+              source.getBaseURI());
           return;
         }
 
@@ -1033,17 +1034,16 @@ public class DiskBalancer {
             // Check for the max error count constraint.
             if (item.getErrorCount() > getMaxError(item)) {
               LOG.error("Exceeded the max error count. source {}, dest: {} " +
-                      "error count: {}", source.getBasePath(),
-                  dest.getBasePath(), item.getErrorCount());
-              this.setExitFlag();
-              continue;
+                      "error count: {}", source.getBaseURI(),
+                  dest.getBaseURI(), item.getErrorCount());
+              break;
             }
 
             // Check for the block tolerance constraint.
             if (isCloseEnough(item)) {
               LOG.info("Copy from {} to {} done. copied {} bytes and {} " +
                       "blocks.",
-                  source.getBasePath(), dest.getBasePath(),
+                  source.getBaseURI(), dest.getBaseURI(),
                   item.getBytesCopied(), item.getBlocksCopied());
               this.setExitFlag();
               continue;
@@ -1053,7 +1053,7 @@ public class DiskBalancer {
             // we are not able to find any blocks to copy.
             if (block == null) {
               LOG.error("No source blocks, exiting the copy. Source: {}, " +
-                  "Dest:{}", source.getBasePath(), dest.getBasePath());
+                  "Dest:{}", source.getBaseURI(), dest.getBaseURI());
               this.setExitFlag();
               continue;
             }
@@ -1081,14 +1081,13 @@ public class DiskBalancer {
               // exiting here.
               LOG.error("Destination volume: {} does not have enough space to" +
                   " accommodate a block. Block Size: {} Exiting from" +
-                  " copyBlocks.", dest.getBasePath(), block.getNumBytes());
-              this.setExitFlag();
-              continue;
+                  " copyBlocks.", dest.getBaseURI(), block.getNumBytes());
+              break;
             }
 
             LOG.debug("Moved block with size {} from  {} to {}",
-                block.getNumBytes(), source.getBasePath(),
-                dest.getBasePath());
+                block.getNumBytes(), source.getBaseURI(),
+                dest.getBaseURI());
 
             // Check for the max throughput constraint.
             // We sleep here to keep the promise that we will not

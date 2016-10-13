@@ -70,11 +70,14 @@ public class ConfServlet extends HttpServlet {
       response.setContentType("application/json; charset=utf-8");
     }
 
+    String name = request.getParameter("name");
     Writer out = response.getWriter();
     try {
-      writeResponse(getConfFromContext(), out, format);
+      writeResponse(getConfFromContext(), out, format, name);
     } catch (BadFormatException bfe) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, bfe.getMessage());
+    } catch (IllegalArgumentException iae) {
+      response.sendError(HttpServletResponse.SC_NOT_FOUND, iae.getMessage());
     }
     out.close();
   }
@@ -89,15 +92,21 @@ public class ConfServlet extends HttpServlet {
   /**
    * Guts of the servlet - extracted for easy testing.
    */
-  static void writeResponse(Configuration conf, Writer out, String format)
-    throws IOException, BadFormatException {
+  static void writeResponse(Configuration conf,
+      Writer out, String format, String propertyName)
+          throws IOException, IllegalArgumentException, BadFormatException {
     if (FORMAT_JSON.equals(format)) {
-      Configuration.dumpConfiguration(conf, out);
+      Configuration.dumpConfiguration(conf, propertyName, out);
     } else if (FORMAT_XML.equals(format)) {
-      conf.writeXml(out);
+      conf.writeXml(propertyName, out);
     } else {
       throw new BadFormatException("Bad format: " + format);
     }
+  }
+
+  static void writeResponse(Configuration conf, Writer out, String format)
+      throws IOException, BadFormatException {
+    writeResponse(conf, out, format, null);
   }
 
   public static class BadFormatException extends Exception {

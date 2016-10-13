@@ -152,7 +152,7 @@ public final class DefaultRequestInterceptor extends
       return ((DistributedSchedulingAMProtocol)rmClient)
           .registerApplicationMasterForDistributedScheduling(request);
     } else {
-      throw new YarnException("Distributed Scheduling is not enabled !!");
+      throw new YarnException("Distributed Scheduling is not enabled.");
     }
   }
 
@@ -174,7 +174,7 @@ public final class DefaultRequestInterceptor extends
       }
       return allocateResponse;
     } else {
-      throw new YarnException("Distributed Scheduling is not enabled !!");
+      throw new YarnException("Distributed Scheduling is not enabled.");
     }
   }
 

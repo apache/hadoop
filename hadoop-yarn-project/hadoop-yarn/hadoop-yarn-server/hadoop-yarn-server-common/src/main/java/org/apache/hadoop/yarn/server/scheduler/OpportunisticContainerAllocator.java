@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,15 +146,6 @@ public class OpportunisticContainerAllocator {
     }
 
     /**
-     * Sets the underlying Atomic Long. To be used when implementation needs to
-     * share the underlying AtomicLong of an existing counter.
-     * @param counter AtomicLong
-     */
-    public void setContainerIdCounter(AtomicLong counter) {
-      this.containerIdCounter = counter;
-    }
-
-    /**
      * Generates a new long value. Default implementation increments the
      * underlying AtomicLong. Sub classes are encouraged to over-ride this
      * behaviour.
@@ -213,6 +205,10 @@ public class OpportunisticContainerAllocator {
     PartitionedResourceRequests partitionedAsks =
         partitionAskList(request.getAskList());
 
+    if (partitionedAsks.getOpportunistic().isEmpty()) {
+      return Collections.emptyList();
+    }
+
     List<ContainerId> releasedContainers = request.getReleaseList();
     int numReleasedContainers = releasedContainers.size();
     if (numReleasedContainers > 0) {
@@ -236,8 +232,8 @@ public class OpportunisticContainerAllocator {
         appContext.getOutstandingOpReqs().descendingKeySet()) {
       // Allocated containers :
       //  Key = Requested Capability,
-      //  Value = List of Containers of given Cap (The actual container size
-      //          might be different than what is requested.. which is why
+      //  Value = List of Containers of given cap (the actual container size
+      //          might be different than what is requested, which is why
       //          we need the requested capability (key) to match against
       //          the outstanding reqs)
       Map<Resource, List<Container>> allocated = allocate(rmIdentifier,
@@ -289,6 +285,10 @@ public class OpportunisticContainerAllocator {
         continue;
       }
       nodesForScheduling.add(nodeEntry.getValue());
+    }
+    if (nodesForScheduling.isEmpty()) {
+      LOG.warn("No nodes available for allocating opportunistic containers.");
+      return;
     }
     int numAllocated = 0;
     int nextNodeToSchedule = 0;

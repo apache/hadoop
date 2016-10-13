@@ -1148,17 +1148,21 @@ public class TestDelegationTokenRenewer {
         credentials, null, true, false, false, null, 0, null, false, null);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     rm.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+    DelegationTokenRenewer renewer =
+        rm.getRMContext().getDelegationTokenRenewer();
+    DelegationTokenToRenew dttr = renewer.getAllTokens().get(token1);
+    Assert.assertNotNull(dttr);
 
     // submit app2 with the same token, set cancelTokenWhenComplete to true;
     RMApp app2 = rm.submitApp(resource, "name", "user", null, false, null, 2,
         credentials, null, true, false, false, null, 0, null, true, null);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
     rm.waitForState(app2.getApplicationId(), RMAppState.RUNNING);
-    MockRM.finishAMAndVerifyAppState(app2, rm, nm1, am2);
+    finishAMAndWaitForComplete(app2, rm, nm1, am2, dttr);
     Assert.assertTrue(rm.getRMContext().getDelegationTokenRenewer()
       .getAllTokens().containsKey(token1));
 
-    MockRM.finishAMAndVerifyAppState(app1, rm, nm1, am1);
+    finishAMAndWaitForComplete(app1, rm, nm1, am1, dttr);
     // app2 completes, app1 is still running, check the token is not cancelled
     Assert.assertFalse(Renewer.cancelled);
   }
@@ -1224,7 +1228,7 @@ public class TestDelegationTokenRenewer {
     Assert.assertTrue(dttr.referringAppIds.contains(app2.getApplicationId()));
     Assert.assertFalse(Renewer.cancelled);
 
-    MockRM.finishAMAndVerifyAppState(app2, rm, nm1, am2);
+    finishAMAndWaitForComplete(app2, rm, nm1, am2, dttr);
     // app2 completes, app1 is still running, check the token is not cancelled
     Assert.assertTrue(renewer.getAllTokens().containsKey(token1));
     Assert.assertTrue(dttr.referringAppIds.contains(app1.getApplicationId()));
@@ -1242,14 +1246,14 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(dttr.isTimerCancelled());
     Assert.assertFalse(Renewer.cancelled);
 
-    MockRM.finishAMAndVerifyAppState(app1, rm, nm1, am1);
+    finishAMAndWaitForComplete(app1, rm, nm1, am1, dttr);
     Assert.assertTrue(renewer.getAllTokens().containsKey(token1));
     Assert.assertFalse(dttr.referringAppIds.contains(app1.getApplicationId()));
     Assert.assertTrue(dttr.referringAppIds.contains(app3.getApplicationId()));
     Assert.assertFalse(dttr.isTimerCancelled());
     Assert.assertFalse(Renewer.cancelled);
 
-    MockRM.finishAMAndVerifyAppState(app3, rm, nm1, am3);
+    finishAMAndWaitForComplete(app3, rm, nm1, am3, dttr);
     Assert.assertFalse(renewer.getAllTokens().containsKey(token1));
     Assert.assertTrue(dttr.referringAppIds.isEmpty());
     Assert.assertTrue(dttr.isTimerCancelled());
@@ -1259,4 +1263,14 @@ public class TestDelegationTokenRenewer {
     Assert.assertFalse(renewer.getDelegationTokens().contains(token1));
   }
 
+  private void finishAMAndWaitForComplete(final RMApp app, MockRM rm,
+      MockNM nm, MockAM am, final DelegationTokenToRenew dttr)
+          throws Exception {
+    MockRM.finishAMAndVerifyAppState(app, rm, nm, am);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        return !dttr.referringAppIds.contains(app.getApplicationId());
+      }
+    }, 10, 10000);
+  }
 }
