@@ -50,6 +50,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+
 @InterfaceAudience.Private
 public class FileSystemAccessService extends BaseService implements FileSystemAccess {
   private static final Logger LOG = LoggerFactory.getLogger(FileSystemAccessService.class);
@@ -159,7 +161,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
         throw new ServiceException(FileSystemAccessException.ERROR.H01, KERBEROS_PRINCIPAL);
       }
       Configuration conf = new Configuration();
-      conf.set("hadoop.security.authentication", "kerberos");
+      conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
       UserGroupInformation.setConfiguration(conf);
       try {
         UserGroupInformation.loginUserFromKeytab(principal, keytab);
@@ -169,7 +171,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
       LOG.info("Using FileSystemAccess Kerberos authentication, principal [{}] keytab [{}]", principal, keytab);
     } else if (security.equals("simple")) {
       Configuration conf = new Configuration();
-      conf.set("hadoop.security.authentication", "simple");
+      conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
       UserGroupInformation.setConfiguration(conf);
       LOG.info("Using FileSystemAccess simple/pseudo authentication, principal [{}]", System.getProperty("user.name"));
     } else {
