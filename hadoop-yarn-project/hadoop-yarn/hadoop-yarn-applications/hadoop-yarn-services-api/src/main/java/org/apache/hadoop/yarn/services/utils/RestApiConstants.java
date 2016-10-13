@@ -49,10 +49,7 @@ public interface RestApiConstants {
   Integer GET_APPLICATIONS_THREAD_POOL_SIZE = 200;
 
   String PROPERTY_PYTHON_PATH = "python.path";
-  String PROPERTY_COMPONENT_TYPE = "site.global.component_type";
   String PROPERTY_DNS_DEPENDENCY = "site.global.dns.dependency";
-
-  String COMPONENT_TYPE_EXTERNAL = "external";
 
   String COMMAND_ORDER_SUFFIX_START = "-START";
   String COMMAND_ORDER_SUFFIX_STARTED = "-STARTED";
