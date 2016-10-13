@@ -44,7 +44,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URI;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.ProviderUtils;

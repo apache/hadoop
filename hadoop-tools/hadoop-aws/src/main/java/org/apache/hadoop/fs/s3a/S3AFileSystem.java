@@ -1391,7 +1391,7 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
-   * Get the username of the FS
+   * Get the username of the FS.
    * @return the short name of the user who instantiated the FS
    */
   public String getUsername() {
