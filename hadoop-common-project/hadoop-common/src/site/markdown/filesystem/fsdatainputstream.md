@@ -166,7 +166,7 @@ the stream.
 
 That is, rather than `l` being simply defined as `min(length, len(data)-length)`,
 it strictly is an integer in the range `1..min(length, len(data)-length)`.
-While the caller may expect for as much buffer as possible to be filled
+While the caller may expect as much of the buffer as possible to be filled
 in, it is within the specification for an implementation to always return
 a smaller number, perhaps only ever 1 byte.
 

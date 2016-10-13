@@ -49,7 +49,7 @@ posix, libc is an external or public interface, while large parts of the kernel
 are internal or private interfaces. Also, some interfaces are targeted towards
 other specific subsystems.
 
-Identifying the audience of an interface helps defining the impact of breaking
+Identifying the audience of an interface helps define the impact of breaking
 it. For instance, it might be okay to break the compatibility of an interface
 whose audience is a small number of specific subsystems. On the other hand, it
 is probably not okay to break a protocol interface that millions of Internet
@@ -82,7 +82,7 @@ MapReduce projects.
 
 #### Public
 
-The interface is for general use by any applications.
+The interface is for general use by any application.
 
 ### Stability
 
@@ -153,9 +153,9 @@ FAQ
       stable they capture internal properties of the system and can communicate
       these properties to its internal users and to developers of the interface.
         * e.g. In HDFS, NN-DN protocol is private but stable and can help
-          implementing rolling upgrades. It communicates that this interface should
+          implement rolling upgrades. It communicates that this interface should
           not be changed in incompatible ways even though it is private.
-        * e.g. In HDFS, FSImage stability can help providing more flexible roll backs.
+        * e.g. In HDFS, FSImage stability provides more flexible rollback.
 
 * What is the harm in applications using a private interface that is stable? How
   is it different than a public stable interface?
@@ -182,11 +182,11 @@ FAQ
       away with private then do so; if the interface is really for general use
       for all applications then do so. But remember that making an interface
       public has huge responsibility. Sometimes Limited-private is just right.
-    * A good example of a limited-private interface is BlockLocations, This is
+    * A good example of a limited-private interface is BlockLocations, This is a
       fairly low-level interface that we are willing to expose to MR and perhaps
       HBase. We are likely to change it down the road and at that time we will
-      have got a coordinated effort with the MR team to release matching
-      releases. While MR and HDFS are always released in sync today, they may
+      coordinate release effort with the MR team.
+	  While MR and HDFS are always released in sync today, they may
       change down the road.
     * If you have a limited-private interface with many projects listed then you
       are fooling yourself. It is practically public.

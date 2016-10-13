@@ -318,7 +318,7 @@ term *Blobstore*. Hadoop does provide FileSystem client classes for some of thes
 even though they violate many of the requirements. This is why, although
 Hadoop can read and write data in an object store, the two which Hadoop ships
 with direct support for &mdash; Amazon S3 and OpenStack Swift &mdash; cannot
-be used as direct replacement for HDFS.
+be used as direct replacements for HDFS.
 
 *What is an Object Store?*
 

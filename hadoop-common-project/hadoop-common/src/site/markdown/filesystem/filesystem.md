@@ -893,7 +893,7 @@ Renaming a file where the destination is a directory moves the file as a child
 
 If `src` is a directory then all its children will then exist under `dest`, while the path
 `src` and its descendants will no longer exist. The names of the paths under
-`dest` will match those under `src`, as will the contents do:
+`dest` will match those under `src`, as will the contents:
 
     if isDir(FS, src) isDir(FS, dest) and src != dest :
         FS' where:
