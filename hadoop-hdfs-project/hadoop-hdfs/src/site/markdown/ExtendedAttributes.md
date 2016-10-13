@@ -30,7 +30,7 @@ Overview
 
 ### HDFS extended attributes
 
-Extended attributes in HDFS are modeled after extended attributes in Linux (see the Linux manpage for [attr(5)](http://www.bestbits.at/acl/man/man5/attr.txt) and [related documentation](http://www.bestbits.at/acl/)). An extended attribute is a *name-value pair*, with a string name and binary value. Xattrs names must also be prefixed with a *namespace*. For example, an xattr named *myXattr* in the *user* namespace would be specified as **user.myXattr**. Multiple xattrs can be associated with a single inode.
+Extended attributes in HDFS are modeled after extended attributes in Linux (see the Linux manpage for [attr(5)](http://man7.org/linux/man-pages/man5/attr.5.html)). An extended attribute is a *name-value pair*, with a string name and binary value. Xattrs names must also be prefixed with a *namespace*. For example, an xattr named *myXattr* in the *user* namespace would be specified as **user.myXattr**. Multiple xattrs can be associated with a single inode.
 
 ### Namespaces and Permissions
 
@@ -49,7 +49,7 @@ The `raw` namespace is reserved for internal system attributes that sometimes ne
 Interacting with extended attributes
 ------------------------------------
 
-The Hadoop shell has support for interacting with extended attributes via `hadoop fs -getfattr` and `hadoop fs -setfattr`. These commands are styled after the Linux [getfattr(1)](http://www.bestbits.at/acl/man/man1/getfattr.txt) and [setfattr(1)](http://www.bestbits.at/acl/man/man1/setfattr.txt) commands.
+The Hadoop shell has support for interacting with extended attributes via `hadoop fs -getfattr` and `hadoop fs -setfattr`. These commands are styled after the Linux [getfattr(1)](http://man7.org/linux/man-pages/man1/getfattr.1.html) and [setfattr(1)](http://man7.org/linux/man-pages/man1/setfattr.1.html) commands.
 
 ### getfattr
 
