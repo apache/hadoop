@@ -911,8 +911,7 @@ public class DFSAdmin extends FsShell {
       System.out.println("Balancer bandwidth is " + bandwidth
           + " bytes per second.");
     } catch (IOException ioe) {
-      System.err.println("Datanode unreachable.");
-      return -1;
+      throw new IOException("Datanode unreachable. " + ioe, ioe);
     }
     return 0;
   }
@@ -2178,7 +2177,7 @@ public class DFSAdmin extends FsShell {
       dnProxy.evictWriters();
       System.out.println("Requested writer eviction to datanode " + dn);
     } catch (IOException ioe) {
-      return -1;
+      throw new IOException("Datanode unreachable. " + ioe, ioe);
     }
     return 0;
   }
@@ -2189,8 +2188,7 @@ public class DFSAdmin extends FsShell {
       DatanodeLocalInfo dnInfo = dnProxy.getDatanodeInfo();
       System.out.println(dnInfo.getDatanodeLocalReport());
     } catch (IOException ioe) {
-      System.err.println("Datanode unreachable.");
-      return -1;
+      throw new IOException("Datanode unreachable. " + ioe, ioe);
     }
     return 0;
   }

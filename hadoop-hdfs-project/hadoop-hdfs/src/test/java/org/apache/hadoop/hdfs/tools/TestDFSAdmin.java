@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
@@ -79,6 +80,7 @@ public class TestDFSAdmin {
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
+    conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
     restartCluster();
 
     admin = new DFSAdmin();
@@ -116,7 +118,7 @@ public class TestDFSAdmin {
     if (cluster != null) {
       cluster.shutdown();
     }
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
     datanode = cluster.getDataNodes().get(0);
     namenode = cluster.getNameNode();
@@ -171,70 +173,58 @@ public class TestDFSAdmin {
   @Test(timeout = 30000)
   public void testGetDatanodeInfo() throws Exception {
     redirectStream();
-    final Configuration dfsConf = new HdfsConfiguration();
-    final int numDn = 2;
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
 
-    /* init cluster */
-    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
-        .numDataNodes(numDn).build()) {
-
-      miniCluster.waitActive();
-      assertEquals(numDn, miniCluster.getDataNodes().size());
-      final DFSAdmin dfsAdmin = new DFSAdmin(dfsConf);
-
-      /* init reused vars */
-      List<String> outs = null;
-      int ret;
-
-      /**
-       * test erroneous run
-       */
+    for (int i = 0; i < cluster.getDataNodes().size(); i++) {
       resetStream();
-      outs = Lists.newArrayList();
-
-      /* invoke getDatanodeInfo */
-      ret = ToolRunner.run(
-          dfsAdmin,
-          new String[] {"-getDatanodeInfo", "128.0.0.1:1234"});
+      final DataNode dn = cluster.getDataNodes().get(i);
+      final String addr = String.format(
+          "%s:%d",
+          dn.getXferAddress().getHostString(),
+          dn.getIpcPort());
+      final int ret = ToolRunner.run(dfsAdmin,
+          new String[]{"-getDatanodeInfo", addr});
+      assertEquals(0, ret);
 
       /* collect outputs */
+      final List<String> outs = Lists.newArrayList();
       scanIntoList(out, outs);
-
       /* verify results */
+      assertEquals(
+          "One line per DataNode like: Uptime: XXX, Software version: x.y.z,"
+              + " Config version: core-x.y.z,hdfs-x",
+          1, outs.size());
+      assertThat(outs.get(0),
+          is(allOf(containsString("Uptime:"),
+              containsString("Software version"),
+              containsString("Config version"))));
+    }
+  }
+
+  /**
+   * Test that if datanode is not reachable, some DFSAdmin commands will fail
+   * elegantly with non-zero ret error code along with exception error message.
+   */
+  @Test(timeout = 60000)
+  public void testDFSAdminUnreachableDatanode() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    for (String command : new String[]{"-getDatanodeInfo",
+        "-evictWriters", "-getBalancerBandwidth"}) {
+      // Connecting to Xfer port instead of IPC port will get
+      // Datanode unreachable. java.io.EOFException
+      final String dnDataAddr = datanode.getXferAddress().getHostString() + ":"
+          + datanode.getXferPort();
+      resetStream();
+      final List<String> outs = Lists.newArrayList();
+      final int ret = ToolRunner.run(dfsAdmin,
+          new String[]{command, dnDataAddr});
       assertEquals(-1, ret);
-      assertTrue("Unexpected getDatanodeInfo stdout", outs.isEmpty());
 
-      /**
-       * test normal run
-       */
-      for (int i = 0; i < numDn; i++) {
-        resetStream();
-        final DataNode dn = miniCluster.getDataNodes().get(i);
-
-        /* invoke getDatanodeInfo */
-        final String addr = String.format(
-            "%s:%d",
-            dn.getXferAddress().getHostString(),
-            dn.getIpcPort());
-        ret = ToolRunner.run(
-            dfsAdmin,
-            new String[] {"-getDatanodeInfo", addr});
-
-        /* collect outputs */
-        outs = Lists.newArrayList();
-        scanIntoList(out, outs);
-
-        /* verify results */
-        assertEquals(0, ret);
-        assertEquals(
-            "One line per DataNode like: Uptime: XXX, Software version: x.y.z,"
-                + " Config version: core-x.y.z,hdfs-x",
-            1, outs.size());
-        assertThat(outs.get(0),
-            is(allOf(containsString("Uptime:"),
-                containsString("Software version"),
-                containsString("Config version"))));
-      }
+      scanIntoList(out, outs);
+      assertTrue("Unexpected " + command + " stdout: " + out, outs.isEmpty());
+      assertTrue("Unexpected " + command + " stderr: " + err,
+          err.toString().contains("Exception"));
     }
   }
 
