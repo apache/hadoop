@@ -35,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @ApiModel(description = "Resource determines the amount of resources (vcores, memory, network, etc.) usable by a container. This field determines the resource to be applied for all the containers of a component or application. The resource specified at the app (or global) level can be overriden at the component level. Only one of profile OR cpu & memory are exepected. It raises a validation exception otherwise.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
-public class Resource extends BaseResource {
+public class Resource extends BaseResource implements Cloneable {
   private static final long serialVersionUID = -6431667797380250037L;
 
   private String profile = null;
