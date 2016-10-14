@@ -29,7 +29,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -50,7 +55,10 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
@@ -647,6 +655,48 @@ public abstract class BlockReportTestBase {
     // Ensure that the file is readable even from the DN that we futzed with.
     cluster.stopDataNode(1);
     DFSTestUtil.readFile(fs, filePath);
+  }
+
+  // See HDFS-10301
+  @Test(timeout = 300000)
+  public void testInterleavedBlockReports()
+      throws IOException, ExecutionException, InterruptedException {
+    int numConcurrentBlockReports = 3;
+    DataNode dn = cluster.getDataNodes().get(DN_N0);
+    final String poolId = cluster.getNamesystem().getBlockPoolId();
+    LOG.info("Block pool id: " + poolId);
+    final DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
+    final StorageBlockReport[] reports =
+        getBlockReports(dn, poolId, true, true);
+
+    // Get the list of storage ids associated with the datanode
+    // before the test
+    BlockManager bm = cluster.getNameNode().getNamesystem().getBlockManager();
+    final DatanodeDescriptor dnDescriptor =
+        bm.getDatanodeManager().getDatanode(dn.getDatanodeId());
+    DatanodeStorageInfo[] storageInfos = dnDescriptor.getStorageInfos();
+
+    // Send the block report concurrently using
+    // numThreads=numConcurrentBlockReports
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(numConcurrentBlockReports);
+    List<Future<Void>> futureList = new ArrayList<>(numConcurrentBlockReports);
+    for (int i = 0; i < numConcurrentBlockReports; i++) {
+      futureList.add(executorService.submit(new Callable<Void>() {
+        @Override
+        public Void call() throws IOException {
+          sendBlockReports(dnR, poolId, reports);
+          return null;
+        }
+      }));
+    }
+    for (Future<Void> future : futureList) {
+      future.get();
+    }
+    executorService.shutdown();
+
+    // Verify that the storages match before and after the test
+    Assert.assertArrayEquals(storageInfos, dnDescriptor.getStorageInfos());
   }
 
   private void waitForTempReplica(Block bl, int DN_N1) throws IOException {
