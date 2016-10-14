@@ -37,9 +37,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 
@@ -107,23 +106,31 @@ public class NMCollectorService extends CompositeService implements
   @Override
   public ReportNewCollectorInfoResponse reportNewCollectorInfo(
       ReportNewCollectorInfoRequest request) throws YarnException, IOException {
-    List<AppCollectorsMap> newCollectorsList = request.getAppCollectorsList();
+    List<AppCollectorData> newCollectorsList = request.getAppCollectorsList();
     if (newCollectorsList != null && !newCollectorsList.isEmpty()) {
-      Map<ApplicationId, String> newCollectorsMap =
-          new HashMap<ApplicationId, String>();
-      for (AppCollectorsMap collector : newCollectorsList) {
+      Map<ApplicationId, AppCollectorData> newCollectorsMap =
+          new HashMap<>();
+      for (AppCollectorData collector : newCollectorsList) {
         ApplicationId appId = collector.getApplicationId();
-        String collectorAddr = collector.getCollectorAddr();
-        newCollectorsMap.put(appId, collectorAddr);
+        newCollectorsMap.put(appId, collector);
         // set registered collector address to TimelineClient.
+        // TODO: Do we need to do this after we received confirmation from
+        // the RM?
         NMTimelinePublisher nmTimelinePublisher =
             context.getNMTimelinePublisher();
         if (nmTimelinePublisher != null) {
-          nmTimelinePublisher.setTimelineServiceAddress(appId, collectorAddr);
+          nmTimelinePublisher.setTimelineServiceAddress(appId,
+              collector.getCollectorAddr());
         }
       }
-      ((NodeManager.NMContext)context).addRegisteredCollectors(
-          newCollectorsMap);
+      Map<ApplicationId, AppCollectorData> registeringCollectors
+          = context.getRegisteringCollectors();
+      if (registeringCollectors != null) {
+        registeringCollectors.putAll(newCollectorsMap);
+      } else {
+        LOG.warn("collectors are added when the registered collectors are " +
+            "initialized");
+      }
     }
 
     return ReportNewCollectorInfoResponse.newInstance();

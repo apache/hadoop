@@ -81,8 +81,10 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
@@ -323,7 +325,7 @@ public class ApplicationMasterService extends AbstractService implements
 
     // Remove collector address when app get finished.
     if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
-      rmApp.removeCollectorAddr();
+      ((RMAppImpl) rmApp).removeCollectorData();
     }
     // checking whether the app exits in RMStateStore at first not to throw
     // ApplicationDoesNotExistInCacheException before and after
@@ -635,6 +637,14 @@ public class ApplicationMasterService extends AbstractService implements
     addToContainerUpdates(appAttemptId, allocateResponse, allocation);
 
     allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
+
+    // add collector address for this application
+    if (YarnConfiguration.timelineServiceV2Enabled(getConfig())) {
+      AppCollectorData data = app.getCollectorData();
+      if (data != null) {
+        allocateResponse.setCollectorAddr(data.getCollectorAddr());
+      }
+    }
 
     // add preemption to the allocateResponse message (if any)
     allocateResponse
