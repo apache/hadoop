@@ -17,6 +17,7 @@
 package org.apache.hadoop.yarn.server.federation.utils;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
@@ -26,6 +27,7 @@ import org.apache.hadoop.yarn.server.federation.resolver.DefaultSubClusterResolv
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.*;
+import org.apache.hadoop.yarn.util.Records;
 
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -48,6 +50,68 @@ public final class FederationPoliciesTestUtil {
     // disabled.
   }
 
+  private static final String FEDR_NODE_PREFIX = "fedr-test-node-";
+
+
+  public static List<ResourceRequest> createResourceRequests(String[] hosts,
+      int memory, int vCores, int priority, int containers,
+      String labelExpression, boolean relaxLocality) throws YarnException {
+    List<ResourceRequest> reqs = new ArrayList<ResourceRequest>();
+    for (String host : hosts) {
+      ResourceRequest hostReq =
+          createResourceRequest(host, memory, vCores, priority, containers,
+              labelExpression, relaxLocality);
+      reqs.add(hostReq);
+      ResourceRequest rackReq =
+          createResourceRequest("/default-rack", memory, vCores, priority,
+              containers, labelExpression, relaxLocality);
+      reqs.add(rackReq);
+    }
+
+    ResourceRequest offRackReq =
+        createResourceRequest(ResourceRequest.ANY, memory, vCores, priority,
+            containers, labelExpression, relaxLocality);
+    reqs.add(offRackReq);
+    return reqs;
+  }
+
+  protected static ResourceRequest createResourceRequest(String resource,
+      int memory, int vCores, int priority, int containers,
+      boolean relaxLocality) throws YarnException {
+    return createResourceRequest(resource, memory, vCores, priority, containers,
+        null, relaxLocality);
+  }
+
+  @SuppressWarnings("checkstyle:parameternumber")
+  public static ResourceRequest createResourceRequest(long id, String resource,
+      int memory, int vCores, int priority, int containers,
+      String labelExpression, boolean relaxLocality) throws YarnException {
+    ResourceRequest out =
+        createResourceRequest(resource, memory, vCores, priority, containers,
+            labelExpression, relaxLocality);
+    out.setAllocationRequestId(id);
+    return out;
+  }
+
+  public static ResourceRequest createResourceRequest(String resource,
+      int memory, int vCores, int priority, int containers,
+      String labelExpression, boolean relaxLocality) throws YarnException {
+    ResourceRequest req = Records.newRecord(ResourceRequest.class);
+    req.setResourceName(resource);
+    req.setNumContainers(containers);
+    Priority pri = Records.newRecord(Priority.class);
+    pri.setPriority(priority);
+    req.setPriority(pri);
+    Resource capability = Records.newRecord(Resource.class);
+    capability.setMemorySize(memory);
+    capability.setVirtualCores(vCores);
+    req.setCapability(capability);
+    if (labelExpression != null) {
+      req.setNodeLabelExpression(labelExpression);
+    }
+    req.setRelaxLocality(relaxLocality);
+    return req;
+  }
 
   public static void initializePolicyContext(
       FederationPolicyInitializationContext fpc, ConfigurableFederationPolicy

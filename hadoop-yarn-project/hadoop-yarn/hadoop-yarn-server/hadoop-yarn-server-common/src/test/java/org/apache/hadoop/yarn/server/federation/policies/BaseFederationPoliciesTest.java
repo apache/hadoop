@@ -22,14 +22,17 @@ import static org.mockito.Mockito.mock;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
-import org.apache.hadoop.yarn.server.federation.policies.exceptions.NoActiveSubclustersException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -49,6 +52,7 @@ public abstract class BaseFederationPoliciesTest {
   private ApplicationSubmissionContext applicationSubmissionContext =
       mock(ApplicationSubmissionContext.class);
   private Random rand = new Random();
+  private SubClusterId homeSubCluster;
 
   @Test
   public void testReinitilialize() throws YarnException {
@@ -88,16 +92,22 @@ public abstract class BaseFederationPoliciesTest {
     getPolicy().reinitialize(fpc);
   }
 
-  @Test(expected = NoActiveSubclustersException.class)
+  @Test(expected = FederationPolicyException.class)
   public void testNoSubclusters() throws YarnException {
     // empty the activeSubclusters map
     FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
         getPolicyInfo(), new HashMap<>());
 
-    ConfigurableFederationPolicy currentPolicy = getPolicy();
-    if (currentPolicy instanceof FederationRouterPolicy) {
-      ((FederationRouterPolicy) currentPolicy)
+    ConfigurableFederationPolicy localPolicy = getPolicy();
+    if (localPolicy instanceof FederationRouterPolicy) {
+      ((FederationRouterPolicy) localPolicy)
           .getHomeSubcluster(getApplicationSubmissionContext());
+    } else {
+      String[] hosts = new String[] {"host1", "host2" };
+      List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
+          .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
+      ((FederationAMRMProxyPolicy) localPolicy)
+          .splitResourceRequests(resourceRequests);
     }
   }
 
@@ -150,6 +160,14 @@ public abstract class BaseFederationPoliciesTest {
 
   public void setRand(Random rand) {
     this.rand = rand;
+  }
+
+  public SubClusterId getHomeSubCluster() {
+    return homeSubCluster;
+  }
+
+  public void setHomeSubCluster(SubClusterId homeSubCluster) {
+    this.homeSubCluster = homeSubCluster;
   }
 
 }

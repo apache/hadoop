@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -30,34 +30,27 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import java.util.Map;
-
 /**
  * This implements a simple load-balancing policy. The policy "weights" are
  * binary 0/1 values that enable/disable each sub-cluster, and the policy peaks
  * the sub-cluster with the least load to forward this application.
  */
-public class LoadBasedRouterPolicy
-    extends BaseWeightedRouterPolicy {
-
-  private static final Log LOG =
-      LogFactory.getLog(LoadBasedRouterPolicy.class);
+public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
 
   @Override
-  public void reinitialize(FederationPolicyInitializationContext
-      federationPolicyContext)
+  public void reinitialize(FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException {
 
     // remember old policyInfo
     WeightedPolicyInfo tempPolicy = getPolicyInfo();
 
-    //attempt new initialization
-    super.reinitialize(federationPolicyContext);
+    // attempt new initialization
+    super.reinitialize(policyContext);
 
-    //check extra constraints
+    // check extra constraints
     for (Float weight : getPolicyInfo().getRouterPolicyWeights().values()) {
       if (weight != 0 && weight != 1) {
-        //reset to old policyInfo if check fails
+        // reset to old policyInfo if check fails
         setPolicyInfo(tempPolicy);
         throw new FederationPolicyInitializationException(
             this.getClass().getCanonicalName()
@@ -69,18 +62,16 @@ public class LoadBasedRouterPolicy
 
   @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext)
-      throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();
 
-    Map<SubClusterIdInfo, Float> weights = getPolicyInfo()
-        .getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> weights =
+        getPolicyInfo().getRouterPolicyWeights();
     SubClusterIdInfo chosen = null;
     long currBestMem = -1;
-    for (Map.Entry<SubClusterId, SubClusterInfo> entry :
-        activeSubclusters
+    for (Map.Entry<SubClusterId, SubClusterInfo> entry : activeSubclusters
         .entrySet()) {
       SubClusterIdInfo id = new SubClusterIdInfo(entry.getKey());
       if (weights.containsKey(id) && weights.get(id) > 0) {
@@ -95,8 +86,7 @@ public class LoadBasedRouterPolicy
     return chosen.toId();
   }
 
-  private long getAvailableMemory(SubClusterInfo value)
-      throws YarnException {
+  private long getAvailableMemory(SubClusterInfo value) throws YarnException {
     try {
       long mem = -1;
       JSONObject obj = new JSONObject(value.getCapability());

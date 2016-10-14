@@ -16,21 +16,19 @@
  * limitations under the License.
  */
 
-
 package org.apache.hadoop.yarn.server.federation.policies;
+
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
-
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.nio.ByteBuffer;
 
 /**
  * Test class for {@link FederationPolicyInitializationContextValidator}.
@@ -45,11 +43,10 @@ public class TestFederationPolicyInitializationContextValidator {
   @Before
   public void setUp() throws Exception {
     goodFacade = FederationPoliciesTestUtil.initFacade();
-    goodConfig =
-        new MockPolicyManager().serializeConf();
-    goodSR =FederationPoliciesTestUtil.initResolver();
-    context = new
-        FederationPolicyInitializationContext(goodConfig, goodSR, goodFacade);
+    goodConfig = new MockPolicyManager().serializeConf();
+    goodSR = FederationPoliciesTestUtil.initResolver();
+    context = new FederationPolicyInitializationContext(goodConfig, goodSR,
+        goodFacade);
   }
 
   @Test
@@ -100,8 +97,7 @@ public class TestFederationPolicyInitializationContextValidator {
 
     @Override
     public FederationAMRMProxyPolicy getAMRMPolicy(
-        FederationPolicyInitializationContext
-            federationPolicyInitializationContext,
+        FederationPolicyInitializationContext policyContext,
         FederationAMRMProxyPolicy oldInstance)
         throws FederationPolicyInitializationException {
       return null;
@@ -109,8 +105,7 @@ public class TestFederationPolicyInitializationContextValidator {
 
     @Override
     public FederationRouterPolicy getRouterPolicy(
-        FederationPolicyInitializationContext
-            federationPolicyInitializationContext,
+        FederationPolicyInitializationContext policyContext,
         FederationRouterPolicy oldInstance)
         throws FederationPolicyInitializationException {
       return null;
@@ -120,8 +115,8 @@ public class TestFederationPolicyInitializationContextValidator {
     public SubClusterPolicyConfiguration serializeConf()
         throws FederationPolicyInitializationException {
       ByteBuffer buf = ByteBuffer.allocate(0);
-      return SubClusterPolicyConfiguration
-          .newInstance("queue1", this.getClass().getCanonicalName(), buf);
+      return SubClusterPolicyConfiguration.newInstance("queue1",
+          this.getClass().getCanonicalName(), buf);
     }
 
     @Override

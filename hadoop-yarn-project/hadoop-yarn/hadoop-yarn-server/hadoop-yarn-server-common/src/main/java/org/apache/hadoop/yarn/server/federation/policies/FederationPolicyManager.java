@@ -25,19 +25,19 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
 /**
  *
  * Implementors need to provide the ability to serliaze a policy and its
- * configuration as a {@link SubClusterPolicyConfiguration}, as well as
- * provide (re)initialization mechanics for the underlying
+ * configuration as a {@link SubClusterPolicyConfiguration}, as well as provide
+ * (re)initialization mechanics for the underlying
  * {@link FederationAMRMProxyPolicy} and {@link FederationRouterPolicy}.
  *
- * The serialization aspects are used by admin APIs or a policy engine to
- * store a serialized configuration in the {@code FederationStateStore},
- * while the getters methods are used to obtain a propertly inizialized
- * policy in the {@code Router} and {@code AMRMProxy} respectively.
+ * The serialization aspects are used by admin APIs or a policy engine to store
+ * a serialized configuration in the {@code FederationStateStore}, while the
+ * getters methods are used to obtain a propertly inizialized policy in the
+ * {@code Router} and {@code AMRMProxy} respectively.
  *
- * This interface by design binds together
- * {@link FederationAMRMProxyPolicy} and {@link FederationRouterPolicy} and
- * provide lifecycle support for serialization and deserialization, to reduce
- * configuration mistakes (combining incompatible policies).
+ * This interface by design binds together {@link FederationAMRMProxyPolicy} and
+ * {@link FederationRouterPolicy} and provide lifecycle support for
+ * serialization and deserialization, to reduce configuration mistakes
+ * (combining incompatible policies).
  *
  */
 public interface FederationPolicyManager {
@@ -50,23 +50,17 @@ public interface FederationPolicyManager {
    * the implementors should attempt to reinitalize (retaining state). To affect
    * a complete policy reset oldInstance should be null.
    *
-   * @param federationPolicyInitializationContext the current context
-   * @param oldInstance                           the existing (possibly null)
-   *                                              instance.
+   * @param policyContext the current context
+   * @param oldInstance the existing (possibly null) instance.
    *
-   * @return an updated {@link FederationAMRMProxyPolicy
-  }.
+   * @return an updated {@link FederationAMRMProxyPolicy }.
    *
    * @throws FederationPolicyInitializationException if the initialization
-   *                                                 cannot be completed
-   *                                                 properly. The oldInstance
-   *                                                 should be still valid in
-   *                                                 case of failed
-   *                                                 initialization.
+   *           cannot be completed properly. The oldInstance should be still
+   *           valid in case of failed initialization.
    */
   FederationAMRMProxyPolicy getAMRMPolicy(
-      FederationPolicyInitializationContext
-          federationPolicyInitializationContext,
+      FederationPolicyInitializationContext policyContext,
       FederationAMRMProxyPolicy oldInstance)
       throws FederationPolicyInitializationException;
 
@@ -78,21 +72,17 @@ public interface FederationPolicyManager {
    * implementors should attempt to reinitalize (retaining state). To affect a
    * complete policy reset oldInstance shoulb be set to null.
    *
-   * @param federationPolicyInitializationContext the current context
-   * @param oldInstance                           the existing (possibly null)
-   *                                              instance.
+   * @param policyContext the current context
+   * @param oldInstance the existing (possibly null) instance.
    *
    * @return an updated {@link FederationRouterPolicy}.
    *
    * @throws FederationPolicyInitializationException if the initalization cannot
-   *                                                 be completed properly. The
-   *                                                 oldInstance should be still
-   *                                                 valid in case of failed
-   *                                                 initialization.
+   *           be completed properly. The oldInstance should be still valid in
+   *           case of failed initialization.
    */
   FederationRouterPolicy getRouterPolicy(
-      FederationPolicyInitializationContext
-          federationPolicyInitializationContext,
+      FederationPolicyInitializationContext policyContext,
       FederationRouterPolicy oldInstance)
       throws FederationPolicyInitializationException;
 
@@ -102,23 +92,24 @@ public interface FederationPolicyManager {
    * store.
    *
    * @return a valid policy configuration representing this object
-   * parametrization.
+   *         parametrization.
    *
    * @throws FederationPolicyInitializationException if the current state cannot
-   *                                                 be serialized properly
+   *           be serialized properly
    */
   SubClusterPolicyConfiguration serializeConf()
       throws FederationPolicyInitializationException;
 
-
   /**
    * This method returns the queue this policy is configured for.
+   *
    * @return the name of the queue.
    */
   String getQueue();
 
   /**
    * This methods provides a setter for the queue this policy is specified for.
+   *
    * @param queue the name of the queue.
    */
   void setQueue(String queue);

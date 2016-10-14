@@ -17,4 +17,3 @@
  */
 /** AMRMPRoxy policies. **/
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
-
