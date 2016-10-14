@@ -59,6 +59,7 @@ public class DistCpConstants {
   public static final String CONF_LABEL_OVERWRITE = "distcp.copy.overwrite";
   public static final String CONF_LABEL_APPEND = "distcp.copy.append";
   public static final String CONF_LABEL_DIFF = "distcp.copy.diff";
+  public static final String CONF_LABEL_RDIFF = "distcp.copy.rdiff";
   public static final String CONF_LABEL_BANDWIDTH_MB = "distcp.map.bandwidth.mb";
   public static final String CONF_LABEL_SIMPLE_LISTING_FILESTATUS_SIZE =
       "distcp.simplelisting.file.status.size";

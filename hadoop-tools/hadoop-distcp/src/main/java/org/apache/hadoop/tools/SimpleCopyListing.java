@@ -194,7 +194,7 @@ public class SimpleCopyListing extends CopyListing {
   @Override
   protected void doBuildListing(Path pathToListingFile,
                                 DistCpOptions options) throws IOException {
-    if(options.shouldUseDiff()) {
+    if(options.shouldUseSnapshotDiff()) {
       doBuildListingWithSnapshotDiff(getWriter(pathToListingFile), options);
     }else {
       doBuildListing(getWriter(pathToListingFile), options);
@@ -256,7 +256,7 @@ public class SimpleCopyListing extends CopyListing {
   protected void doBuildListingWithSnapshotDiff(
       SequenceFile.Writer fileListWriter, DistCpOptions options)
       throws IOException {
-    ArrayList<DiffInfo> diffList = distCpSync.prepareDiffList();
+    ArrayList<DiffInfo> diffList = distCpSync.prepareDiffListForCopyListing();
     Path sourceRoot = options.getSourcePaths().get(0);
     FileSystem sourceFS = sourceRoot.getFileSystem(getConf());
 
@@ -264,13 +264,16 @@ public class SimpleCopyListing extends CopyListing {
       List<FileStatusInfo> fileStatuses = Lists.newArrayList();
       for (DiffInfo diff : diffList) {
         // add snapshot paths prefix
-        diff.target = new Path(options.getSourcePaths().get(0), diff.target);
+        diff.setTarget(
+            new Path(options.getSourcePaths().get(0), diff.getTarget()));
         if (diff.getType() == SnapshotDiffReport.DiffType.MODIFY) {
-          addToFileListing(fileListWriter, sourceRoot, diff.target, options);
+          addToFileListing(fileListWriter,
+              sourceRoot, diff.getTarget(), options);
         } else if (diff.getType() == SnapshotDiffReport.DiffType.CREATE) {
-          addToFileListing(fileListWriter, sourceRoot, diff.target, options);
+          addToFileListing(fileListWriter,
+              sourceRoot, diff.getTarget(), options);
 
-          FileStatus sourceStatus = sourceFS.getFileStatus(diff.target);
+          FileStatus sourceStatus = sourceFS.getFileStatus(diff.getTarget());
           if (sourceStatus.isDirectory()) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Adding source dir for traverse: " +
@@ -278,7 +281,7 @@ public class SimpleCopyListing extends CopyListing {
             }
 
             HashSet<String> excludeList =
-                distCpSync.getTraverseExcludeList(diff.source,
+                distCpSync.getTraverseExcludeList(diff.getSource(),
                     options.getSourcePaths().get(0));
 
             ArrayList<FileStatus> sourceDirs = new ArrayList<>();
