@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,82 +16,87 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.federation.policies.router;
+package org.apache.hadoop.yarn.server.federation.policies;
+
+import java.util.Map;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.NoActiveSubclustersException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
-import java.util.Map;
-
 /**
- * Abstract class provides common validation of reinitialize(), for all
- * policies that are "weight-based".
+ * Base abstract class for a weighted {@link ConfigurableFederationPolicy}.
  */
-public abstract class BaseWeightedRouterPolicy
-    implements FederationRouterPolicy {
+public abstract class AbstractConfigurableFederationPolicy
+    implements ConfigurableFederationPolicy {
 
   private WeightedPolicyInfo policyInfo = null;
   private FederationPolicyInitializationContext policyContext;
+  private boolean isDirty;
 
-  public BaseWeightedRouterPolicy() {
+  public AbstractConfigurableFederationPolicy() {
   }
 
   @Override
-  public void reinitialize(FederationPolicyInitializationContext
-      federationPolicyContext)
+  public void reinitialize(
+      FederationPolicyInitializationContext initializationContext)
       throws FederationPolicyInitializationException {
+    isDirty = true;
     FederationPolicyInitializationContextValidator
-        .validate(federationPolicyContext, this.getClass().getCanonicalName());
+        .validate(initializationContext, this.getClass().getCanonicalName());
 
     // perform consistency checks
-    WeightedPolicyInfo newPolicyInfo = WeightedPolicyInfo
-        .fromByteBuffer(
-            federationPolicyContext.getSubClusterPolicyConfiguration()
-                .getParams());
+    WeightedPolicyInfo newPolicyInfo = WeightedPolicyInfo.fromByteBuffer(
+        initializationContext.getSubClusterPolicyConfiguration().getParams());
 
     // if nothing has changed skip the rest of initialization
+    // and signal to childs that the reinit is free via isDirty var.
     if (policyInfo != null && policyInfo.equals(newPolicyInfo)) {
+      isDirty = false;
       return;
     }
 
     validate(newPolicyInfo);
     setPolicyInfo(newPolicyInfo);
-    this.policyContext = federationPolicyContext;
+    this.policyContext = initializationContext;
   }
 
   /**
    * Overridable validation step for the policy configuration.
+   *
    * @param newPolicyInfo the configuration to test.
-   * @throws FederationPolicyInitializationException if the configuration is
-   * not valid.
+   *
+   * @throws FederationPolicyInitializationException if the configuration is not
+   *           valid.
    */
-  public void validate(WeightedPolicyInfo newPolicyInfo) throws
-      FederationPolicyInitializationException {
+  public void validate(WeightedPolicyInfo newPolicyInfo)
+      throws FederationPolicyInitializationException {
     if (newPolicyInfo == null) {
-      throw new FederationPolicyInitializationException("The policy to "
-          + "validate should not be null.");
-    }
-    Map<SubClusterIdInfo, Float> newWeights =
-        newPolicyInfo.getRouterPolicyWeights();
-    if (newWeights == null || newWeights.size() < 1) {
       throw new FederationPolicyInitializationException(
-          "Weight vector cannot be null/empty.");
+          "The policy to " + "validate should not be null.");
     }
   }
 
+  /**
+   * Returns true whether the last reinitialization requires actual changes, or
+   * was "free" as the weights have not changed. This is used by subclasses
+   * overriding reinitialize and calling super.reinitialize() to know wheter to
+   * quit early.
+   *
+   * @return whether more work is needed to initialize.
+   */
+  public boolean getIsDirty() {
+    return isDirty;
+  }
 
   /**
    * Getter method for the configuration weights.
    *
    * @return the {@link WeightedPolicyInfo} representing the policy
-   * configuration.
+   *         configuration.
    */
   public WeightedPolicyInfo getPolicyInfo() {
     return policyInfo;
@@ -101,15 +106,15 @@ public abstract class BaseWeightedRouterPolicy
    * Setter method for the configuration weights.
    *
    * @param policyInfo the {@link WeightedPolicyInfo} representing the policy
-   *                   configuration.
+   *          configuration.
    */
-  public void setPolicyInfo(
-      WeightedPolicyInfo policyInfo) {
+  public void setPolicyInfo(WeightedPolicyInfo policyInfo) {
     this.policyInfo = policyInfo;
   }
 
   /**
    * Getter method for the {@link FederationPolicyInitializationContext}.
+   *
    * @return the context for this policy.
    */
   public FederationPolicyInitializationContext getPolicyContext() {
@@ -118,6 +123,7 @@ public abstract class BaseWeightedRouterPolicy
 
   /**
    * Setter method for the {@link FederationPolicyInitializationContext}.
+   *
    * @param policyContext the context to assign to this policy.
    */
   public void setPolicyContext(
@@ -130,13 +136,14 @@ public abstract class BaseWeightedRouterPolicy
    * FederationStateStoreFacade} and validate it not being null/empty.
    *
    * @return the map of ids to info for all active subclusters.
+   *
    * @throws YarnException if we can't get the list.
    */
   protected Map<SubClusterId, SubClusterInfo> getActiveSubclusters()
       throws YarnException {
 
-    Map<SubClusterId, SubClusterInfo> activeSubclusters = getPolicyContext()
-        .getFederationStateStoreFacade().getSubClusters(true);
+    Map<SubClusterId, SubClusterInfo> activeSubclusters =
+        getPolicyContext().getFederationStateStoreFacade().getSubClusters(true);
 
     if (activeSubclusters == null || activeSubclusters.size() < 1) {
       throw new NoActiveSubclustersException(
@@ -144,7 +151,5 @@ public abstract class BaseWeightedRouterPolicy
     }
     return activeSubclusters;
   }
-
-
 
 }

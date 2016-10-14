@@ -35,11 +35,10 @@ public interface FederationRouterPolicy extends ConfigurableFederationPolicy {
    * @param appSubmissionContext the context for the app being submitted.
    *
    * @return the sub-cluster as identified by {@link SubClusterId} to route the
-   * request to.
+   *         request to.
    *
    * @throws YarnException if the policy cannot determine a viable subcluster.
    */
   SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext)
-      throws YarnException;
+      ApplicationSubmissionContext appSubmissionContext) throws YarnException;
 }

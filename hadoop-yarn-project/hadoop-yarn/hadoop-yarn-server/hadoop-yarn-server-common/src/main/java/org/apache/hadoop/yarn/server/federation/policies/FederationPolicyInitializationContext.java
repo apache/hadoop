@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.federation.policies;
 
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 
@@ -30,6 +31,7 @@ public class FederationPolicyInitializationContext {
   private SubClusterPolicyConfiguration federationPolicyConfiguration;
   private SubClusterResolver federationSubclusterResolver;
   private FederationStateStoreFacade federationStateStoreFacade;
+  private SubClusterId homeSubcluster;
 
   public FederationPolicyInitializationContext() {
     federationPolicyConfiguration = null;
@@ -37,20 +39,19 @@ public class FederationPolicyInitializationContext {
     federationStateStoreFacade = null;
   }
 
-  public FederationPolicyInitializationContext(SubClusterPolicyConfiguration
-      policy, SubClusterResolver resolver, FederationStateStoreFacade
-      storeFacade) {
+  public FederationPolicyInitializationContext(
+      SubClusterPolicyConfiguration policy, SubClusterResolver resolver,
+      FederationStateStoreFacade storeFacade) {
     this.federationPolicyConfiguration = policy;
     this.federationSubclusterResolver = resolver;
     this.federationStateStoreFacade = storeFacade;
   }
 
-
   /**
    * Getter for the {@link SubClusterPolicyConfiguration}.
    *
    * @return the {@link SubClusterPolicyConfiguration} to be used for
-   * initialization.
+   *         initialization.
    */
   public SubClusterPolicyConfiguration getSubClusterPolicyConfiguration() {
     return federationPolicyConfiguration;
@@ -59,8 +60,8 @@ public class FederationPolicyInitializationContext {
   /**
    * Setter for the {@link SubClusterPolicyConfiguration}.
    *
-   * @param fedPolicyConfiguration the {@link SubClusterPolicyConfiguration}
-   *                               to be used for initialization.
+   * @param fedPolicyConfiguration the {@link SubClusterPolicyConfiguration} to
+   *          be used for initialization.
    */
   public void setSubClusterPolicyConfiguration(
       SubClusterPolicyConfiguration fedPolicyConfiguration) {
@@ -80,7 +81,7 @@ public class FederationPolicyInitializationContext {
    * Setter for the {@link SubClusterResolver}.
    *
    * @param federationSubclusterResolver the {@link SubClusterResolver} to be
-   *                                     used for initialization.
+   *          used for initialization.
    */
   public void setFederationSubclusterResolver(
       SubClusterResolver federationSubclusterResolver) {
@@ -105,4 +106,24 @@ public class FederationPolicyInitializationContext {
       FederationStateStoreFacade federationStateStoreFacade) {
     this.federationStateStoreFacade = federationStateStoreFacade;
   }
+
+  /**
+   * Returns the current home sub-cluster. Useful for default policy behaviors.
+   *
+   * @return the home sub-cluster.
+   */
+  public SubClusterId getHomeSubcluster() {
+    return homeSubcluster;
+  }
+
+  /**
+   * Sets in the context the home sub-cluster. Useful for default policy
+   * behaviors.
+   *
+   * @param homeSubcluster value to set.
+   */
+  public void setHomeSubcluster(SubClusterId homeSubcluster) {
+    this.homeSubcluster = homeSubcluster;
+  }
+
 }

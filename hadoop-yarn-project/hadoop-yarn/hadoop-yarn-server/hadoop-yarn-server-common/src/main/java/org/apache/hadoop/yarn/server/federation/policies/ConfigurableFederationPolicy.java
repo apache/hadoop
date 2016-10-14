@@ -31,14 +31,11 @@ public interface ConfigurableFederationPolicy {
    * policies. The implementor should provide try-n-swap semantics, and retain
    * state if possible.
    *
-   * @param federationPolicyInitializationContext the new context to provide to
-   *                                              implementor.
+   * @param policyContext the new context to provide to implementor.
    *
    * @throws FederationPolicyInitializationException in case the initialization
-   *                                                 fails.
+   *           fails.
    */
-  void reinitialize(
-      FederationPolicyInitializationContext
-          federationPolicyInitializationContext)
+  void reinitialize(FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException;
 }

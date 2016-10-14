@@ -17,4 +17,3 @@
  */
 /** Exceptions for policies. **/
 package org.apache.hadoop.yarn.server.federation.policies.exceptions;
-

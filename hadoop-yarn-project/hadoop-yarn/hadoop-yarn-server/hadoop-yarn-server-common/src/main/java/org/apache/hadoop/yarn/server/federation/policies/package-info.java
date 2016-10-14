@@ -17,4 +17,3 @@
  */
 /** Federation Policies. **/
 package org.apache.hadoop.yarn.server.federation.policies;
-

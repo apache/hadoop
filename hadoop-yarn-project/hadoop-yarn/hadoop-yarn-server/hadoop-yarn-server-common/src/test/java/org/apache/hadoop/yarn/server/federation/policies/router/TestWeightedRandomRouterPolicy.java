@@ -17,6 +17,13 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -28,13 +35,6 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Simple test class for the {@link WeightedRandomRouterPolicy}. Generate large
@@ -71,8 +71,7 @@ public class TestWeightedRandomRouterPolicy extends BaseFederationPoliciesTest {
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
 
     FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(),
-        getActiveSubclusters());
+        getPolicyInfo(), getActiveSubclusters());
 
   }
 
@@ -88,8 +87,8 @@ public class TestWeightedRandomRouterPolicy extends BaseFederationPoliciesTest {
     float numberOfDraws = 1000000;
 
     for (float i = 0; i < numberOfDraws; i++) {
-      SubClusterId chosenId = ((FederationRouterPolicy) getPolicy()).
-          getHomeSubcluster(getApplicationSubmissionContext());
+      SubClusterId chosenId = ((FederationRouterPolicy) getPolicy())
+          .getHomeSubcluster(getApplicationSubmissionContext());
       counter.get(chosenId).incrementAndGet();
     }
 
@@ -113,13 +112,15 @@ public class TestWeightedRandomRouterPolicy extends BaseFederationPoliciesTest {
       if (getActiveSubclusters().containsKey(counterEntry.getKey())) {
         Assert.assertTrue(
             "Id " + counterEntry.getKey() + " Actual weight: " + actualWeight
-                + " expected weight: " + expectedWeight, expectedWeight == 0 ||
-                (actualWeight / expectedWeight) < 1.1
-                    && (actualWeight / expectedWeight) > 0.9);
+                + " expected weight: " + expectedWeight,
+            expectedWeight == 0 || (actualWeight / expectedWeight) < 1.1
+                && (actualWeight / expectedWeight) > 0.9);
       } else {
-        Assert.assertTrue(
-            "Id " + counterEntry.getKey() + " Actual weight: " + actualWeight
-                + " expected weight: " + expectedWeight, actualWeight == 0);
+        Assert
+            .assertTrue(
+                "Id " + counterEntry.getKey() + " Actual weight: "
+                    + actualWeight + " expected weight: " + expectedWeight,
+                actualWeight == 0);
 
       }
     }
