@@ -25,50 +25,44 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 public final class FederationPolicyInitializationContextValidator {
 
   private FederationPolicyInitializationContextValidator() {
-    //disable constructor per checkstyle
+    // disable constructor per checkstyle
   }
 
   public static void validate(
-      FederationPolicyInitializationContext
-          federationPolicyInitializationContext,
-      String myType) throws FederationPolicyInitializationException {
+      FederationPolicyInitializationContext policyContext, String myType)
+      throws FederationPolicyInitializationException {
 
     if (myType == null) {
-      throw new FederationPolicyInitializationException("The myType parameter"
-          + " should not be null.");
+      throw new FederationPolicyInitializationException(
+          "The myType parameter" + " should not be null.");
     }
 
-    if (federationPolicyInitializationContext == null) {
+    if (policyContext == null) {
       throw new FederationPolicyInitializationException(
           "The FederationPolicyInitializationContext provided is null. Cannot"
-              + " reinitalize "
-              + "successfully.");
+              + " reinitalize " + "successfully.");
     }
 
-    if (federationPolicyInitializationContext.getFederationStateStoreFacade()
-        == null) {
+    if (policyContext.getFederationStateStoreFacade() == null) {
       throw new FederationPolicyInitializationException(
           "The FederationStateStoreFacade provided is null. Cannot"
               + " reinitalize successfully.");
     }
 
-    if (federationPolicyInitializationContext.getFederationSubclusterResolver()
-        == null) {
+    if (policyContext.getFederationSubclusterResolver() == null) {
       throw new FederationPolicyInitializationException(
           "The FederationStateStoreFacase provided is null. Cannot"
               + " reinitalize successfully.");
     }
 
-    if (federationPolicyInitializationContext.getSubClusterPolicyConfiguration()
-        == null) {
+    if (policyContext.getSubClusterPolicyConfiguration() == null) {
       throw new FederationPolicyInitializationException(
           "The FederationSubclusterResolver provided is null. Cannot "
               + "reinitalize successfully.");
     }
 
     String intendedType =
-        federationPolicyInitializationContext.getSubClusterPolicyConfiguration()
-            .getType();
+        policyContext.getSubClusterPolicyConfiguration().getType();
 
     if (!myType.equals(intendedType)) {
       throw new FederationPolicyInitializationException(

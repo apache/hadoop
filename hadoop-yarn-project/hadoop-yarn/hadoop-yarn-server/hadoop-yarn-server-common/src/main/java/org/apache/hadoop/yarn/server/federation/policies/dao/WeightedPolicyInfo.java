@@ -17,10 +17,19 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.dao;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
-import com.sun.jersey.api.json.JSONUnmarshaller;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -29,24 +38,16 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
+import com.sun.jersey.api.json.JSONConfiguration;
+import com.sun.jersey.api.json.JSONJAXBContext;
+import com.sun.jersey.api.json.JSONMarshaller;
+import com.sun.jersey.api.json.JSONUnmarshaller;
 
 /**
  * This is a DAO class for the configuration of parameteres for federation
  * policies. This generalizes several possible configurations as two lists of
- * {@link SubClusterIdInfo} and corresponding weights as a
- * {@link Float}. The interpretation of the weight is left to the logic in
- * the policy.
+ * {@link SubClusterIdInfo} and corresponding weights as a {@link Float}. The
+ * interpretation of the weight is left to the logic in the policy.
  */
 
 @InterfaceAudience.Private
@@ -57,12 +58,14 @@ public class WeightedPolicyInfo {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(WeightedPolicyInfo.class);
-
+  private static JSONJAXBContext jsonjaxbContext = initContext();
   private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
   private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
   private float headroomAlpha;
 
-  private static JSONJAXBContext jsonjaxbContext = initContext();
+  public WeightedPolicyInfo() {
+    // JAXB needs this
+  }
 
   private static JSONJAXBContext initContext() {
     try {
@@ -74,8 +77,46 @@ public class WeightedPolicyInfo {
     return null;
   }
 
-  public WeightedPolicyInfo() {
-    //JAXB needs this
+  /**
+   * Deserializes a {@link WeightedPolicyInfo} from a byte UTF-8 JSON
+   * representation.
+   *
+   * @param bb the input byte representation.
+   *
+   * @return the {@link WeightedPolicyInfo} represented.
+   *
+   * @throws FederationPolicyInitializationException if a deserializaiton error
+   *           occurs.
+   */
+  public static WeightedPolicyInfo fromByteBuffer(ByteBuffer bb)
+      throws FederationPolicyInitializationException {
+
+    if (jsonjaxbContext == null) {
+      throw new FederationPolicyInitializationException(
+          "JSONJAXBContext should" + " not be null.");
+    }
+
+    try {
+      JSONUnmarshaller unmarshaller = jsonjaxbContext.createJSONUnmarshaller();
+      final byte[] bytes = new byte[bb.remaining()];
+      bb.get(bytes);
+      String params = new String(bytes, Charset.forName("UTF-8"));
+
+      WeightedPolicyInfo weightedPolicyInfo = unmarshaller.unmarshalFromJSON(
+          new StringReader(params), WeightedPolicyInfo.class);
+      return weightedPolicyInfo;
+    } catch (JAXBException j) {
+      throw new FederationPolicyInitializationException(j);
+    }
+  }
+
+  /**
+   * Getter of the router weights.
+   *
+   * @return the router weights.
+   */
+  public Map<SubClusterIdInfo, Float> getRouterPolicyWeights() {
+    return routerPolicyWeights;
   }
 
   /**
@@ -89,25 +130,8 @@ public class WeightedPolicyInfo {
   }
 
   /**
-   * Setter method for ARMRMProxy weights.
-   *
-   * @param policyWeights the amrmproxy weights.
-   */
-  public void setAMRMPolicyWeights(
-      Map<SubClusterIdInfo, Float> policyWeights) {
-    this.amrmPolicyWeights = policyWeights;
-  }
-
-  /**
-   * Getter of the router weights.
-   * @return the router weights.
-   */
-  public Map<SubClusterIdInfo, Float> getRouterPolicyWeights() {
-    return routerPolicyWeights;
-  }
-
-  /**
    * Getter for AMRMProxy weights.
+   *
    * @return the AMRMProxy weights.
    */
   public Map<SubClusterIdInfo, Float> getAMRMPolicyWeights() {
@@ -115,53 +139,28 @@ public class WeightedPolicyInfo {
   }
 
   /**
-   * Deserializes a {@link WeightedPolicyInfo} from a byte UTF-8 JSON
-   * representation.
+   * Setter method for ARMRMProxy weights.
    *
-   * @param bb the input byte representation.
-   *
-   * @return the {@link WeightedPolicyInfo} represented.
-   *
-   * @throws FederationPolicyInitializationException if a deserializaiton error
-   *                                                 occurs.
+   * @param policyWeights the amrmproxy weights.
    */
-  public static WeightedPolicyInfo fromByteBuffer(ByteBuffer bb)
-      throws FederationPolicyInitializationException {
-
-    if (jsonjaxbContext == null) {
-      throw new FederationPolicyInitializationException("JSONJAXBContext should"
-          + " not be null.");
-    }
-
-    try {
-      JSONUnmarshaller unmarshaller = jsonjaxbContext.createJSONUnmarshaller();
-      final byte[] bytes = new byte[bb.remaining()];
-      bb.get(bytes);
-      String params = new String(bytes, Charset.forName("UTF-8"));
-
-      WeightedPolicyInfo weightedPolicyInfo = unmarshaller
-          .unmarshalFromJSON(new StringReader(params),
-              WeightedPolicyInfo.class);
-      return weightedPolicyInfo;
-    } catch (JAXBException j) {
-      throw new FederationPolicyInitializationException(j);
-    }
+  public void setAMRMPolicyWeights(Map<SubClusterIdInfo, Float> policyWeights) {
+    this.amrmPolicyWeights = policyWeights;
   }
 
   /**
-   * Converts the policy into a byte array representation in the input {@link
-   * ByteBuffer}.
+   * Converts the policy into a byte array representation in the input
+   * {@link ByteBuffer}.
    *
    * @return byte array representation of this policy configuration.
    *
    * @throws FederationPolicyInitializationException if a serialization error
-   *                                                 occurs.
+   *           occurs.
    */
   public ByteBuffer toByteBuffer()
       throws FederationPolicyInitializationException {
     if (jsonjaxbContext == null) {
-      throw new FederationPolicyInitializationException("JSONJAXBContext should"
-          + " not be null.");
+      throw new FederationPolicyInitializationException(
+          "JSONJAXBContext should" + " not be null.");
     }
     try {
       String s = toJSONString();
@@ -186,22 +185,21 @@ public class WeightedPolicyInfo {
       return false;
     }
 
-    WeightedPolicyInfo otherPolicy =
-        (WeightedPolicyInfo) other;
+    WeightedPolicyInfo otherPolicy = (WeightedPolicyInfo) other;
     Map<SubClusterIdInfo, Float> otherAMRMWeights =
         otherPolicy.getAMRMPolicyWeights();
     Map<SubClusterIdInfo, Float> otherRouterWeights =
         otherPolicy.getRouterPolicyWeights();
 
-    boolean amrmWeightsMatch = otherAMRMWeights != null &&
-        getAMRMPolicyWeights() != null &&
-        CollectionUtils.isEqualCollection(otherAMRMWeights.entrySet(),
-            getAMRMPolicyWeights().entrySet());
+    boolean amrmWeightsMatch =
+        otherAMRMWeights != null && getAMRMPolicyWeights() != null
+            && CollectionUtils.isEqualCollection(otherAMRMWeights.entrySet(),
+                getAMRMPolicyWeights().entrySet());
 
-    boolean routerWeightsMatch = otherRouterWeights != null &&
-        getRouterPolicyWeights() != null &&
-        CollectionUtils.isEqualCollection(otherRouterWeights.entrySet(),
-            getRouterPolicyWeights().entrySet());
+    boolean routerWeightsMatch =
+        otherRouterWeights != null && getRouterPolicyWeights() != null
+            && CollectionUtils.isEqualCollection(otherRouterWeights.entrySet(),
+                getRouterPolicyWeights().entrySet());
 
     return amrmWeightsMatch && routerWeightsMatch;
   }
@@ -215,10 +213,10 @@ public class WeightedPolicyInfo {
    * Return the parameter headroomAlpha, used by policies that balance
    * weight-based and load-based considerations in their decisions.
    *
-   * For policies that use this parameter, values close to 1 indicate that
-   * most of the decision should be based on currently observed headroom from
-   * various sub-clusters, values close to zero, indicate that the decision
-   * should be mostly based on weights and practically ignore current load.
+   * For policies that use this parameter, values close to 1 indicate that most
+   * of the decision should be based on currently observed headroom from various
+   * sub-clusters, values close to zero, indicate that the decision should be
+   * mostly based on weights and practically ignore current load.
    *
    * @return the value of headroomAlpha.
    */
@@ -227,13 +225,13 @@ public class WeightedPolicyInfo {
   }
 
   /**
-   * Set the parameter headroomAlpha, used by policies that balance
-   * weight-based and load-based considerations in their decisions.
+   * Set the parameter headroomAlpha, used by policies that balance weight-based
+   * and load-based considerations in their decisions.
    *
-   * For policies that use this parameter, values close to 1 indicate that
-   * most of the decision should be based on currently observed headroom from
-   * various sub-clusters, values close to zero, indicate that the decision
-   * should be mostly based on weights and practically ignore current load.
+   * For policies that use this parameter, values close to 1 indicate that most
+   * of the decision should be based on currently observed headroom from various
+   * sub-clusters, values close to zero, indicate that the decision should be
+   * mostly based on weights and practically ignore current load.
    *
    * @param headroomAlpha the value to use for balancing.
    */

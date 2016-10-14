@@ -57,11 +57,11 @@ public abstract class AbstractSubClusterResolver implements SubClusterResolver {
     return rackToSubClusters.get(rackname);
   }
 
-  protected Map<String, SubClusterId> getNodeToSubCluster() {
+  public Map<String, SubClusterId> getNodeToSubCluster() {
     return nodeToSubCluster;
   }
 
-  protected Map<String, Set<SubClusterId>> getRackToSubClusters() {
+  public Map<String, Set<SubClusterId>> getRackToSubClusters() {
     return rackToSubClusters;
   }
 }

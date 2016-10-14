@@ -18,32 +18,30 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.Map;
+import java.util.Random;
+
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-
-import java.util.Map;
-import java.util.Random;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This policy implements a weighted random sample among currently active
  * sub-clusters.
  */
-public class WeightedRandomRouterPolicy
-    extends BaseWeightedRouterPolicy {
+public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
 
-  private static final Log LOG =
-      LogFactory.getLog(WeightedRandomRouterPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(WeightedRandomRouterPolicy.class);
   private Random rand = new Random(System.currentTimeMillis());
 
   @Override
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext)
-      throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();
@@ -52,13 +50,13 @@ public class WeightedRandomRouterPolicy
     // changes dynamically (and this would unfairly spread the load to
     // sub-clusters adjacent to an inactive one), hence we need to count/scan
     // the list and based on weight pick the next sub-cluster.
-    Map<SubClusterIdInfo, Float> weights = getPolicyInfo()
-        .getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> weights =
+        getPolicyInfo().getRouterPolicyWeights();
 
     float totActiveWeight = 0;
-    for(Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()){
-      if(entry.getKey()!=null && activeSubclusters.containsKey(entry.getKey()
-          .toId())){
+    for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
+      if (entry.getKey() != null
+          && activeSubclusters.containsKey(entry.getKey().toId())) {
         totActiveWeight += entry.getValue();
       }
     }
@@ -73,7 +71,7 @@ public class WeightedRandomRouterPolicy
         return id;
       }
     }
-    //should never happen
+    // should never happen
     return null;
   }
 }

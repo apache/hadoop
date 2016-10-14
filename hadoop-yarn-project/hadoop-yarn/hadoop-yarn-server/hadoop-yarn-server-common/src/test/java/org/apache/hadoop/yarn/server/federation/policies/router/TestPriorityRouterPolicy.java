@@ -16,6 +16,12 @@
  */
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -27,12 +33,6 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Simple test class for the {@link PriorityRouterPolicy}. Tests that the
@@ -72,8 +72,7 @@ public class TestPriorityRouterPolicy extends BaseFederationPoliciesTest {
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
     FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(),
-        getActiveSubclusters());
+        getPolicyInfo(), getActiveSubclusters());
 
   }
 

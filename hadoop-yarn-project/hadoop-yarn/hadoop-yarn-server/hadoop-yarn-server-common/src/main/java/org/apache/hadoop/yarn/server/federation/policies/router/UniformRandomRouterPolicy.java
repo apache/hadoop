@@ -17,6 +17,11 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
@@ -24,11 +29,6 @@ import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitial
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 
 /**
  * This simple policy picks at uniform random among any of the currently active
@@ -39,7 +39,7 @@ import java.util.Random;
  * of the "weights", in which case the {@link UniformRandomRouterPolicy} send
  * load to them, while {@code WeightedRandomRouterPolicy} does not.
  */
-public class UniformRandomRouterPolicy extends BaseWeightedRouterPolicy {
+public class UniformRandomRouterPolicy extends AbstractRouterPolicy {
 
   private Random rand;
 
@@ -49,14 +49,14 @@ public class UniformRandomRouterPolicy extends BaseWeightedRouterPolicy {
 
   @Override
   public void reinitialize(
-      FederationPolicyInitializationContext federationPolicyContext)
+      FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException {
     FederationPolicyInitializationContextValidator
-        .validate(federationPolicyContext, this.getClass().getCanonicalName());
+        .validate(policyContext, this.getClass().getCanonicalName());
 
-    //note: this overrides BaseWeighterRouterPolicy and ignores the weights
+    // note: this overrides AbstractRouterPolicy and ignores the weights
 
-    setPolicyContext(federationPolicyContext);
+    setPolicyContext(policyContext);
   }
 
   /**
@@ -64,21 +64,19 @@ public class UniformRandomRouterPolicy extends BaseWeightedRouterPolicy {
    * depend on the weights in the policy).
    *
    * @param appSubmissionContext the context for the app being submitted
-   *                             (ignored).
+   *          (ignored).
    *
    * @return a randomly chosen subcluster.
    *
    * @throws YarnException if there are no active subclusters.
    */
   public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext)
-      throws YarnException {
+      ApplicationSubmissionContext appSubmissionContext) throws YarnException {
 
     Map<SubClusterId, SubClusterInfo> activeSubclusters =
         getActiveSubclusters();
 
-    List<SubClusterId> list =
-        new ArrayList<>(activeSubclusters.keySet());
+    List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
     return list.get(rand.nextInt(list.size()));
   }
 

@@ -17,6 +17,9 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
@@ -29,12 +32,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Simple test class for the {@link LoadBasedRouterPolicy}. Test that the
- * load is properly considered for allocation.
+ * Simple test class for the {@link LoadBasedRouterPolicy}. Test that the load
+ * is properly considered for allocation.
  */
 public class TestLoadBasedRouterPolicy extends BaseFederationPoliciesTest {
 
@@ -47,12 +47,10 @@ public class TestLoadBasedRouterPolicy extends BaseFederationPoliciesTest {
 
     // simulate 20 active subclusters
     for (int i = 0; i < 20; i++) {
-      SubClusterIdInfo sc =
-          new SubClusterIdInfo(String.format("sc%02d", i));
+      SubClusterIdInfo sc = new SubClusterIdInfo(String.format("sc%02d", i));
       SubClusterInfo federationSubClusterInfo =
           SubClusterInfo.newInstance(sc.toId(), null, null, null, null, -1,
-              SubClusterState.SC_RUNNING, -1,
-              generateClusterMetricsInfo(i));
+              SubClusterState.SC_RUNNING, -1, generateClusterMetricsInfo(i));
       getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       float weight = getRand().nextInt(2);
       if (i == 5) {
@@ -76,7 +74,7 @@ public class TestLoadBasedRouterPolicy extends BaseFederationPoliciesTest {
   private String generateClusterMetricsInfo(int id) {
 
     long mem = 1024 * getRand().nextInt(277 * 100 - 1);
-    //plant a best cluster
+    // plant a best cluster
     if (id == 5) {
       mem = 1024 * 277 * 100;
     }
