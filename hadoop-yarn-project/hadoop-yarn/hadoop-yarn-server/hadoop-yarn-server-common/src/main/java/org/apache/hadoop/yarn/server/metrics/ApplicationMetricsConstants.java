@@ -98,4 +98,7 @@ public class ApplicationMetricsConstants {
 
   public static final String AM_NODE_LABEL_EXPRESSION =
       "YARN_AM_NODE_LABEL_EXPRESSION";
+
+  public static final String AM_CONTAINER_LAUNCH_COMMAND =
+      "YARN_AM_CONTAINER_LAUNCH_COMMAND";
 }

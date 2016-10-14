@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -118,7 +119,8 @@ public class SystemMetricsPublisher extends CompositeService {
               appSubmissionContext.getPriority(),
               app.getAppNodeLabelExpression(),
               app.getAmNodeLabelExpression(),
-              app.getCallerContext()));
+              app.getCallerContext(),
+              appSubmissionContext.getAMContainerSpec()));
     }
   }
 
@@ -318,6 +320,11 @@ public class SystemMetricsPublisher extends CompositeService {
             event.getCallerContext().getSignature());
       }
     }
+
+    ContainerLaunchContext amContainerSpec = event.getAmContainerSpec();
+    entityInfo.put(ApplicationMetricsConstants.AM_CONTAINER_LAUNCH_COMMAND,
+        amContainerSpec.getCommands());
+
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(
