@@ -22,6 +22,7 @@ import java.util.Set;
 
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 
 public class ApplicationCreatedEvent extends
@@ -39,6 +40,7 @@ public class ApplicationCreatedEvent extends
   private String appNodeLabelsExpression;
   private String amNodeLabelsExpression;
   private final CallerContext callerContext;
+  private ContainerLaunchContext amContainerSpec;
 
 
   public ApplicationCreatedEvent(ApplicationId appId,
@@ -53,7 +55,8 @@ public class ApplicationCreatedEvent extends
       Priority applicationPriority,
       String appNodeLabelsExpression,
       String amNodeLabelsExpression,
-      CallerContext callerContext) {
+      CallerContext callerContext,
+      ContainerLaunchContext amContainerSpec) {
     super(SystemMetricsEventType.APP_CREATED, createdTime);
     this.appId = appId;
     this.name = name;
@@ -67,6 +70,7 @@ public class ApplicationCreatedEvent extends
     this.appNodeLabelsExpression = appNodeLabelsExpression;
     this.amNodeLabelsExpression = amNodeLabelsExpression;
     this.callerContext = callerContext;
+    this.amContainerSpec = amContainerSpec;
   }
 
   @Override
@@ -120,5 +124,9 @@ public class ApplicationCreatedEvent extends
   
   public CallerContext getCallerContext() {
     return callerContext;
+  }
+
+  public ContainerLaunchContext getAmContainerSpec() {
+    return amContainerSpec;
   }
 }
