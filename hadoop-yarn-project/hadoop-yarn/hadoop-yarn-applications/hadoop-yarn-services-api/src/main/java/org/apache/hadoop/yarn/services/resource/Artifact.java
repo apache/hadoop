@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.services.resource;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -33,7 +34,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 @ApiModel(description = "Artifact of an application component")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Artifact {
+public class Artifact implements Serializable {
+  private static final long serialVersionUID = 3608929500111099035L;
 
   private String id = null;
 

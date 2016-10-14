@@ -168,19 +168,19 @@ public class Application extends BaseResource {
    * The time when the application was created, e.g. 2016-03-16T01:01:49.000Z.
    **/
   public Application launchTime(Date launchTime) {
-    this.launchTime = launchTime;
+    this.launchTime = launchTime == null ? null : (Date) launchTime.clone();
     return this;
   }
 
   @ApiModelProperty(example = "null", value = "The time when the application was created, e.g. 2016-03-16T01:01:49.000Z.")
   @JsonProperty("launch_time")
   public String getLaunchTime() {
-    return launchTime.toString();
+    return launchTime == null ? null : launchTime.toString();
   }
 
   @XmlElement(name = "launch_time")
   public void setLaunchTime(Date launchTime) {
-    this.launchTime = launchTime;
+    this.launchTime = launchTime == null ? null : (Date) launchTime.clone();
   }
 
   /**

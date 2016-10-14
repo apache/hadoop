@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.services.resource;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -38,7 +39,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ConfigFile {
+public class ConfigFile implements Serializable {
+  private static final long serialVersionUID = -7009402089417704612L;
 
   public enum TypeEnum {
     XML("xml"), PROPERTIES("properties"), JSON("json"), YAML("yaml"), TEMPLATE(

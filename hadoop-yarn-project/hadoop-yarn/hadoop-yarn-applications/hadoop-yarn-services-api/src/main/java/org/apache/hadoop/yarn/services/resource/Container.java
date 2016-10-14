@@ -73,19 +73,19 @@ public class Container extends BaseResource {
    * This will most likely be different from cluster launch time.
    **/
   public Container launchTime(Date launchTime) {
-    this.launchTime = launchTime;
+    this.launchTime = launchTime == null ? null : (Date) launchTime.clone();
     return this;
   }
 
   @ApiModelProperty(example = "null", value = "The time when the container was created, e.g. 2016-03-16T01:01:49.000Z. This will most likely be different from cluster launch time.")
   @JsonProperty("launch_time")
   public String getLaunchTime() {
-    return launchTime.toString();
+    return launchTime == null ? null : launchTime.toString();
   }
 
   @XmlElement(name = "launch_time")
   public void setLaunchTime(Date launchTime) {
-    this.launchTime = launchTime;
+    this.launchTime = launchTime == null ? null : (Date) launchTime.clone();
   }
 
   /**

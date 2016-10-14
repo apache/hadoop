@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.services.resource;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,7 +40,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @ApiModel(description = "Set of configuration properties that can be injected into the application components via envs, files and custom pluggable helper docker containers. Files of several standard formats like xml, properties, json, yaml and templates will be supported.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Configuration {
+public class Configuration implements Serializable {
+  private static final long serialVersionUID = -4330788704981074466L;
 
   private Map<String, String> properties = new HashMap<String, String>();
   private Map<String, String> env = new HashMap<String, String>();

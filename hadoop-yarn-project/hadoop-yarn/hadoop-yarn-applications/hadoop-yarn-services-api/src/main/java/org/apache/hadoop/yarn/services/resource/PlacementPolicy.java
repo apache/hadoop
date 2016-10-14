@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.services.resource;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,7 +32,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @ApiModel(description = "Placement policy of an instance of an application. This feature is in the works in YARN-4902.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
-public class PlacementPolicy {
+public class PlacementPolicy implements Serializable {
+  private static final long serialVersionUID = 4341110649551172231L;
 
   private String label = null;
 

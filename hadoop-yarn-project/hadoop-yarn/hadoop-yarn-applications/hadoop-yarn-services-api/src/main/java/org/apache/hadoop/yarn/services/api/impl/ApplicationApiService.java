@@ -276,7 +276,7 @@ public class ApplicationApiService implements ApplicationApi {
 
     // If it is a simple app with no components, then create a default component
     if (application.getComponents() == null) {
-      application.setComponents(getDefaultComponentAsList());
+      application.setComponents(getDefaultComponentAsList(application));
     }
 
     // Application lifetime if not specified, is set to unlimited lifetime
@@ -1029,7 +1029,8 @@ public class ApplicationApiService implements ApplicationApi {
     // end-users point of view, is out of scope of the REST API. Also, this
     // readiness has nothing to do with readiness-check defined at the component
     // level (which is used for dependency resolution of component DAG).
-    if (totalNumberOfIpAssignedContainers == totalExpectedNumberOfRunningContainers) {
+    if (totalNumberOfIpAssignedContainers
+        .longValue() == totalExpectedNumberOfRunningContainers.longValue()) {
       app.setState(ApplicationState.READY);
     }
     logger.info("Application = {}", app);
@@ -1387,6 +1388,17 @@ public class ApplicationApiService implements ApplicationApi {
 
     // If nothing happens consider it a no-op
     return Response.status(Status.NO_CONTENT).build();
+  }
+
+  // create default component and initialize with app level global values
+  private List<Component> getDefaultComponentAsList(Application app) {
+    List<Component> comps = getDefaultComponentAsList();
+    Component comp = comps.get(0);
+    comp.setArtifact(app.getArtifact());
+    comp.setResource(app.getResource());
+    comp.setNumberOfContainers(app.getNumberOfContainers());
+    comp.setLaunchCommand(app.getLaunchCommand());
+    return comps;
   }
 
   private List<Component> getDefaultComponentAsList() {

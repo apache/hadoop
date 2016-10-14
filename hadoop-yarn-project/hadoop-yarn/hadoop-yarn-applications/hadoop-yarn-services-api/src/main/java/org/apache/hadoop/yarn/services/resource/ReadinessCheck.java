@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.services.resource;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,7 +35,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 @ApiModel(description = "A custom command or a pluggable helper container to determine the readiness of a container of a component. Readiness for every application is different. Hence the need for a simple interface, with scope to support advanced usecases.")
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
-public class ReadinessCheck {
+public class ReadinessCheck implements Serializable {
+  private static final long serialVersionUID = -3836839816887186801L;
 
   public enum TypeEnum {
     HTTP("http");
