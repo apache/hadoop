@@ -281,4 +281,10 @@ public final class Constants {
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           S3ClientFactory.DefaultS3ClientFactory.class;
+
+  /**
+   * Maximum number of partitions in a multipart upload: {@value}.
+   */
+  @InterfaceAudience.Private
+  public static int MAX_MULTIPART_COUNT = 10000;
 }

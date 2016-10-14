@@ -1,3 +1,4 @@
+
 <!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -1062,7 +1063,8 @@ limited by the Java runtime, the operating system, and, for YARN applications,
 the amount of memory requested for each container.
 
 The slower the write bandwidth to S3, the greater the risk of running out
-of memory.
+of memory —and so the more care is needed in
+[tuning the upload settings](#s3a_fast_upload_thread_tuning).
 
 
 ```xml
@@ -1088,7 +1090,8 @@ Hadoop 2.7 with `fs.s3a.fast.upload=true`
 
 The amount of data which can be buffered is limited by the available
 size of the JVM heap heap. The slower the write bandwidth to S3, the greater
-the risk of heap overflows.
+the risk of heap overflows. This risk can be mitigated by
+[tuning the upload settings](#s3a_fast_upload_thread_tuning).
 
 ```xml
 <property>
@@ -1204,10 +1207,10 @@ If an incremental streaming operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`, 
-and setting a purge time in seconds, such as 86400 seconds —24 hours, after
-which the S3 service automatically deletes outstanding multipart
-upload data from operations which are considered to have failed by virtue
-of having been in progress for longer than this purge time.
+and setting a purge time in seconds, such as 86400 seconds —24 hours.
+When an S3A FileSystem instance is instantiated with the purge time greater
+than zero, it will, on startup, delete all outstanding partition requests
+older than this time.
 
 ```xml
 <property>
@@ -1225,19 +1228,16 @@ of having been in progress for longer than this purge time.
 ```
 
 If an S3A client is instantited with `fs.s3a.multipart.purge=true`,
-it sets the purge time *for the entire bucket*. That is: it will affect all
-multipart uploads to that bucket, from all applications —and persist until set
-to a a new value. Leaving `fs.s3a.multipart.purge` to its default, `false`,
+it will delete all out of date uploads *in the entire bucket*. That is: it will affect all
+multipart uploads to that bucket, from all applications.
+
+Leaving `fs.s3a.multipart.purge` to its default, `false`,
 means that the client will not make any attempt to reset or change the partition
 rate.
 
-The best practise for using this option is for it to be explicitly set in a
-bucket management process to a value which is known to be greater than the
-maximum duration of any  multipart write, while leaving the configuration option to its
-default, `false` in `core-site.xml`. This eliminates the risk
-that one client unintentionally sets a purge time so low as to break multipart
-uploads being attempted by other applications.
-
+The best practise for using this option is to disable multipart purges in
+normal use of S3A, enabling only in manual/scheduled housekeeping operations.
+ 
 ### S3A Experimental "fadvise" input policy support
 
 **Warning: EXPERIMENTAL: behavior may change in future**

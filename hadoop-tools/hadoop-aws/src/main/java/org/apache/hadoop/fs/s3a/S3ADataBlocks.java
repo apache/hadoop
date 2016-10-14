@@ -302,9 +302,11 @@ final class S3ADataBlocks {
    * Stream to memory via a {@code ByteArrayOutputStream}.
    *
    * This was taken from {@code S3AFastOutputStream} and has the
-   * same problem which surfaced there: it consumes heap space
+   * same problem which surfaced there: it can consume a lot of heap space
    * proportional to the mismatch between writes to the stream and
    * the JVM-wide upload bandwidth to the S3 endpoint.
+   * The memory consumption can be limited by tuning the filesystem settings
+   * to restrict the number of queued/active uploads.
    */
 
   static class ByteArrayBlock extends DataBlock {

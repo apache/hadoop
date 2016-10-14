@@ -147,17 +147,6 @@ public class S3AFileSystem extends FileSystem {
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
 
-  /*
-   * Register Deprecated options.
-   */
-  static {
-    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
-        new Configuration.DeprecationDelta("fs.s3a.threads.core",
-            null,
-            "Unsupported option \"fs.s3a.threads.core\" will be ignored")
-    });
-  }
-
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem

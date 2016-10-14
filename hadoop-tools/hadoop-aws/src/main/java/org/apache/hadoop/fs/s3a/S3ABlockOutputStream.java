@@ -177,6 +177,10 @@ class S3ABlockOutputStream extends OutputStream {
       throws IOException {
     if (activeBlock == null) {
       blockCount++;
+      if (blockCount>= Constants.MAX_MULTIPART_COUNT) {
+        LOG.error("Number of partitions in stream exceeds limit for S3: " +
+             + Constants.MAX_MULTIPART_COUNT +  " write may fail.");
+      }
       activeBlock = blockFactory.create(this.blockSize);
     }
     return activeBlock;
