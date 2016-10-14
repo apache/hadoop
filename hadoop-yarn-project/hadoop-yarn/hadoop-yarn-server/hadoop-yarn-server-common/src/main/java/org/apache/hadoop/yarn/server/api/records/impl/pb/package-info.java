@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,34 +15,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
-
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
-
-  // Source: Scheduler
-  APP_ACCEPTED,
-
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-  
-  // Source: Container and ResourceTracker
-  APP_RUNNING_ON_NODE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
-  APP_SAVE_FAILED,
-}
+/** Server records PB implementations. */
+package org.apache.hadoop.yarn.server.api.records.impl.pb;

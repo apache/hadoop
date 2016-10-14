@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -70,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -1011,13 +1013,23 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RMNodeImpl node2 =
         (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm2.getNodeId());
 
-    RMApp app1 = rm.submitApp(1024);
+    RMAppImpl app1 = (RMAppImpl) rm.submitApp(1024);
     String collectorAddr1 = "1.2.3.4:5";
-    app1.setCollectorAddr(collectorAddr1);
+    app1.setCollectorData(AppCollectorData.newInstance(
+        app1.getApplicationId(), collectorAddr1));
 
     String collectorAddr2 = "5.4.3.2:1";
-    RMApp app2 = rm.submitApp(1024);
-    app2.setCollectorAddr(collectorAddr2);
+    RMAppImpl app2 = (RMAppImpl) rm.submitApp(1024);
+    app2.setCollectorData(AppCollectorData.newInstance(
+        app2.getApplicationId(), collectorAddr2));
+
+    String collectorAddr3 = "5.4.3.2:2";
+    app2.setCollectorData(AppCollectorData.newInstance(
+        app2.getApplicationId(), collectorAddr3, 0, 1));
+
+    String collectorAddr4 = "5.4.3.2:3";
+    app2.setCollectorData(AppCollectorData.newInstance(
+        app2.getApplicationId(), collectorAddr4, 1, 0));
 
     // Create a running container for app1 running on nm1
     ContainerId runningContainerId1 = BuilderUtils.newContainerId(
@@ -1055,14 +1067,18 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Assert.assertEquals(app2.getApplicationId(), node2.getRunningApps().get(0));
 
     nodeHeartbeat1 = nm1.nodeHeartbeat(true);
-    Map<ApplicationId, String> map1 = nodeHeartbeat1.getAppCollectorsMap();
+    Map<ApplicationId, AppCollectorData> map1
+        = nodeHeartbeat1.getAppCollectors();
     Assert.assertEquals(1, map1.size());
-    Assert.assertEquals(collectorAddr1, map1.get(app1.getApplicationId()));
+    Assert.assertEquals(collectorAddr1,
+        map1.get(app1.getApplicationId()).getCollectorAddr());
 
     nodeHeartbeat2 = nm2.nodeHeartbeat(true);
-    Map<ApplicationId, String> map2 = nodeHeartbeat2.getAppCollectorsMap();
+    Map<ApplicationId, AppCollectorData> map2
+        = nodeHeartbeat2.getAppCollectors();
     Assert.assertEquals(1, map2.size());
-    Assert.assertEquals(collectorAddr2, map2.get(app2.getApplicationId()));
+    Assert.assertEquals(collectorAddr4,
+        map2.get(app2.getApplicationId()).getCollectorAddr());
   }
 
   private void checkRebootedNMCount(MockRM rm2, int count)

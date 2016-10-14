@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
@@ -293,9 +294,10 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // add collector address for this application
     if (YarnConfiguration.timelineServiceV2Enabled(
         getRmContext().getYarnConfiguration())) {
-      response.setCollectorAddr(
-          getRmContext().getRMApps().get(appAttemptId.getApplicationId())
-              .getCollectorAddr());
+      AppCollectorData data = app.getCollectorData();
+      if (data != null) {
+        response.setCollectorAddr(data.getCollectorAddr());
+      }
     }
 
     // add preemption to the allocateResponse message (if any)

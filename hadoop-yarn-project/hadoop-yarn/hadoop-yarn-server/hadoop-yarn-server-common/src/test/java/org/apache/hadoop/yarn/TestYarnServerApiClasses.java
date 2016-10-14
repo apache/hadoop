@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatRe
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UnRegisterNodeManagerRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -109,14 +110,14 @@ public class TestYarnServerApiClasses {
     original.setLastKnownNMTokenMasterKey(getMasterKey());
     original.setNodeStatus(getNodeStatus());
     original.setNodeLabels(getValidNodeLabels());
-    Map<ApplicationId, String> collectors = getCollectors();
-    original.setRegisteredCollectors(collectors);
+    Map<ApplicationId, AppCollectorData> collectors = getCollectors();
+    original.setRegisteringCollectors(collectors);
     NodeHeartbeatRequestPBImpl copy = new NodeHeartbeatRequestPBImpl(
         original.getProto());
     assertEquals(1, copy.getLastKnownContainerTokenMasterKey().getKeyId());
     assertEquals(1, copy.getLastKnownNMTokenMasterKey().getKeyId());
     assertEquals("localhost", copy.getNodeStatus().getNodeId().getHost());
-    assertEquals(collectors, copy.getRegisteredCollectors());
+    assertEquals(collectors, copy.getRegisteringCollectors());
     // check labels are coming with valid values
     Assert.assertTrue(original.getNodeLabels()
         .containsAll(copy.getNodeLabels()));
@@ -153,8 +154,8 @@ public class TestYarnServerApiClasses {
     original.setNextHeartBeatInterval(1000);
     original.setNodeAction(NodeAction.NORMAL);
     original.setResponseId(100);
-    Map<ApplicationId, String> collectors = getCollectors();
-    original.setAppCollectorsMap(collectors);
+    Map<ApplicationId, AppCollectorData> collectors = getCollectors();
+    original.setAppCollectors(collectors);
 
     NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
         original.getProto());
@@ -164,7 +165,7 @@ public class TestYarnServerApiClasses {
     assertEquals(1, copy.getContainerTokenMasterKey().getKeyId());
     assertEquals(1, copy.getNMTokenMasterKey().getKeyId());
     assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
-    assertEquals(collectors, copy.getAppCollectorsMap());
+    assertEquals(collectors, copy.getAppCollectors());
     assertEquals(false, copy.getAreNodeLabelsAcceptedByRM());
    }
 
@@ -347,12 +348,13 @@ public class TestYarnServerApiClasses {
     return nodeLabels;
   }
 
-  private Map<ApplicationId, String> getCollectors() {
+  private Map<ApplicationId, AppCollectorData> getCollectors() {
     ApplicationId appID = ApplicationId.newInstance(1L, 1);
     String collectorAddr = "localhost:0";
-    Map<ApplicationId, String> collectorMap =
-        new HashMap<ApplicationId, String>();
-    collectorMap.put(appID, collectorAddr);
+    AppCollectorData data = AppCollectorData.newInstance(appID, collectorAddr);
+    Map<ApplicationId, AppCollectorData> collectorMap =
+        new HashMap<>();
+    collectorMap.put(appID, data);
     return collectorMap;
   }
 
