@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
-
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-/**
- * Event used for updating collector address in RMApp on node heartbeat.
- */
-public class RMAppCollectorUpdateEvent extends RMAppEvent {
-
-  private final String appCollectorAddr;
-
-  public RMAppCollectorUpdateEvent(ApplicationId appId,
-      String appCollectorAddr) {
-    super(appId, RMAppEventType.COLLECTOR_UPDATE);
-    this.appCollectorAddr = appCollectorAddr;
-  }
-
-  public String getAppCollectorAddr(){
-    return this.appCollectorAddr;
-  }
-
-}
+/** Server records PB implementations. */
+package org.apache.hadoop.yarn.server.api.records.impl.pb;
