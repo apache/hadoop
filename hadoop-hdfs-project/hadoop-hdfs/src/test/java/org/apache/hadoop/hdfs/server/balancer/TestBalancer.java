@@ -1282,6 +1282,14 @@ public class TestBalancer {
     } catch (IllegalArgumentException e) {
 
     }
+
+    parameters = new String[] {"-source"};
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason + " for -source parameter");
+    } catch (IllegalArgumentException ignored) {
+      // expected
+    }
   }
 
   @Test
@@ -1800,11 +1808,12 @@ public class TestBalancer {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
 
     { // run Balancer with min-block-size=50
-      BalancerParameters.Builder b =
-          new BalancerParameters.Builder();
-      b.setBalancingPolicy(BalancingPolicy.Node.INSTANCE);
-      b.setThreshold(1);
-      final BalancerParameters p = b.build();
+      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "1"
+      });
+      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(p.getThreshold(), 1.0, 0.001);
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 50);
       final int r = Balancer.run(namenodes, p, conf);
@@ -1819,12 +1828,14 @@ public class TestBalancer {
       for(int i = capacities.length; i < datanodes.size(); i++) {
         sourceNodes.add(datanodes.get(i).getDisplayName());
       }
-      BalancerParameters.Builder b =
-          new BalancerParameters.Builder();
-      b.setBalancingPolicy(BalancingPolicy.Node.INSTANCE);
-      b.setThreshold(1);
-      b.setSourceNodes(sourceNodes);
-      final BalancerParameters p = b.build();
+      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "1",
+          "-source", StringUtils.join(sourceNodes, ',')
+      });
+      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(p.getThreshold(), 1.0, 0.001);
+      assertEquals(p.getSourceNodes(), sourceNodes);
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 50);
       final int r = Balancer.run(namenodes, p, conf);
@@ -1835,12 +1846,14 @@ public class TestBalancer {
       final Set<String> sourceNodes = new HashSet<>();
       final List<DataNode> datanodes = cluster.getDataNodes();
       sourceNodes.add(datanodes.get(0).getDisplayName());
-      BalancerParameters.Builder b =
-          new BalancerParameters.Builder();
-      b.setBalancingPolicy(BalancingPolicy.Node.INSTANCE);
-      b.setThreshold(1);
-      b.setSourceNodes(sourceNodes);
-      final BalancerParameters p = b.build();
+      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "1",
+          "-source", StringUtils.join(sourceNodes, ',')
+      });
+      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(p.getThreshold(), 1.0, 0.001);
+      assertEquals(p.getSourceNodes(), sourceNodes);
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1);
       final int r = Balancer.run(namenodes, p, conf);
@@ -1853,12 +1866,14 @@ public class TestBalancer {
       for(int i = 0; i < capacities.length; i++) {
         sourceNodes.add(datanodes.get(i).getDisplayName());
       }
-      BalancerParameters.Builder b =
-          new BalancerParameters.Builder();
-      b.setBalancingPolicy(BalancingPolicy.Node.INSTANCE);
-      b.setThreshold(1);
-      b.setSourceNodes(sourceNodes);
-      final BalancerParameters p = b.build();
+      final BalancerParameters p = Balancer.Cli.parse(new String[] {
+          "-policy", BalancingPolicy.Node.INSTANCE.getName(),
+          "-threshold", "1",
+          "-source", StringUtils.join(sourceNodes, ',')
+      });
+      assertEquals(p.getBalancingPolicy(), BalancingPolicy.Node.INSTANCE);
+      assertEquals(p.getThreshold(), 1.0, 0.001);
+      assertEquals(p.getSourceNodes(), sourceNodes);
 
       conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1);
       final int r = Balancer.run(namenodes, p, conf);
