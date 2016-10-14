@@ -20,14 +20,15 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.params.AuthPolicy;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.auth.SPNegoSchemeFactory;
-import org.apache.http.impl.client.SystemDefaultHttpClient;
+import org.apache.http.impl.auth.SPNegoScheme;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -53,6 +54,7 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.security.Principal;
 import java.util.Properties;
+
 import org.junit.Assert;
 
 public class AuthenticatorTestCase {
@@ -241,22 +243,29 @@ public class AuthenticatorTestCase {
     }
   }
 
-  private SystemDefaultHttpClient getHttpClient() {
-    final SystemDefaultHttpClient httpClient = new SystemDefaultHttpClient();
-    httpClient.getAuthSchemes().register(AuthPolicy.SPNEGO, new SPNegoSchemeFactory(true));
-     Credentials use_jaas_creds = new Credentials() {
-       public String getPassword() {
-         return null;
-       }
+  private HttpClient getHttpClient() {
+    HttpClientBuilder builder = HttpClientBuilder.create();
+    // Register auth schema
+    builder.setDefaultAuthSchemeRegistry(
+        s-> httpContext -> new SPNegoScheme(true, true)
+    );
 
-       public Principal getUserPrincipal() {
-         return null;
-       }
-     };
+    Credentials useJaasCreds = new Credentials() {
+      public String getPassword() {
+        return null;
+      }
+      public Principal getUserPrincipal() {
+        return null;
+      }
+    };
 
-     httpClient.getCredentialsProvider().setCredentials(
-       AuthScope.ANY, use_jaas_creds);
-     return httpClient;
+    CredentialsProvider jaasCredentialProvider
+        = new BasicCredentialsProvider();
+    jaasCredentialProvider.setCredentials(AuthScope.ANY, useJaasCreds);
+    // Set credential provider
+    builder.setDefaultCredentialsProvider(jaasCredentialProvider);
+
+    return builder.build();
   }
 
   private void doHttpClientRequest(HttpClient httpClient, HttpUriRequest request) throws Exception {
@@ -273,7 +282,7 @@ public class AuthenticatorTestCase {
   protected void _testAuthenticationHttpClient(Authenticator authenticator, boolean doPost) throws Exception {
     start();
     try {
-      SystemDefaultHttpClient httpClient = getHttpClient();
+      HttpClient httpClient = getHttpClient();
       doHttpClientRequest(httpClient, new HttpGet(getBaseURL()));
 
       // Always do a GET before POST to trigger the SPNego negotiation
