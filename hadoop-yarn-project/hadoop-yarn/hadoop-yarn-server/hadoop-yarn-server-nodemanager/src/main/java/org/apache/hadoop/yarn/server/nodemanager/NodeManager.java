@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
@@ -526,7 +527,9 @@ public class NodeManager extends CompositeService
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
-    private Map<ApplicationId, String> registeredCollectors;
+    private Map<ApplicationId, AppCollectorData> registeringCollectors;
+
+    private Map<ApplicationId, AppCollectorData> knownCollectors;
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -562,7 +565,8 @@ public class NodeManager extends CompositeService
         NMStateStoreService stateStore, boolean isDistSchedulingEnabled,
         Configuration conf) {
       if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
-        this.registeredCollectors = new ConcurrentHashMap<>();
+        this.registeringCollectors = new ConcurrentHashMap<>();
+        this.knownCollectors = new ConcurrentHashMap<>();
       }
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
@@ -736,18 +740,13 @@ public class NodeManager extends CompositeService
       this.containerStateTransitionListener = transitionListener;
     }
 
-    public Map<ApplicationId, String> getRegisteredCollectors() {
-      return this.registeredCollectors;
+    public Map<ApplicationId, AppCollectorData> getRegisteringCollectors() {
+      return this.registeringCollectors;
     }
 
-    public void addRegisteredCollectors(
-        Map<ApplicationId, String> newRegisteredCollectors) {
-      if (registeredCollectors != null) {
-        this.registeredCollectors.putAll(newRegisteredCollectors);
-      } else {
-        LOG.warn("collectors are added when the registered collectors are " +
-            "initialized");
-      }
+    @Override
+    public Map<ApplicationId, AppCollectorData> getKnownCollectors() {
+      return this.knownCollectors;
     }
 
     @Override

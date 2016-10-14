@@ -21,37 +21,39 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class AppCollectorsMapPBImpl extends AppCollectorsMap {
+public class AppCollectorDataPBImpl extends AppCollectorData {
 
-  private AppCollectorsMapProto proto =
-      AppCollectorsMapProto.getDefaultInstance();
+  private AppCollectorDataProto proto =
+      AppCollectorDataProto.getDefaultInstance();
 
-  private AppCollectorsMapProto.Builder builder = null;
+  private AppCollectorDataProto.Builder builder = null;
   private boolean viaProto = false;
 
   private ApplicationId appId = null;
   private String collectorAddr = null;
+  private Long rmIdentifier = null;
+  private Long version = null;
 
-  public AppCollectorsMapPBImpl() {
-    builder = AppCollectorsMapProto.newBuilder();
+  public AppCollectorDataPBImpl() {
+    builder = AppCollectorDataProto.newBuilder();
   }
 
-  public AppCollectorsMapPBImpl(AppCollectorsMapProto proto) {
+  public AppCollectorDataPBImpl(AppCollectorDataProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public AppCollectorsMapProto getProto() {
+  public AppCollectorDataProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -81,7 +83,7 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
 
   @Override
   public ApplicationId getApplicationId() {
-    AppCollectorsMapProtoOrBuilder p = viaProto ? proto : builder;
+    AppCollectorDataProtoOrBuilder p = viaProto ? proto : builder;
     if (this.appId == null && p.hasAppId()) {
       this.appId = convertFromProtoFormat(p.getAppId());
     }
@@ -90,7 +92,7 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
 
   @Override
   public String getCollectorAddr() {
-    AppCollectorsMapProtoOrBuilder p = viaProto ? proto : builder;
+    AppCollectorDataProtoOrBuilder p = viaProto ? proto : builder;
     if (this.collectorAddr == null
         && p.hasAppCollectorAddr()) {
       this.collectorAddr = p.getAppCollectorAddr();
@@ -116,6 +118,46 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
     this.collectorAddr = collectorAddr;
   }
 
+  @Override
+  public long getRMIdentifier() {
+    AppCollectorDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.rmIdentifier == null && p.hasRmIdentifier()) {
+      this.rmIdentifier = p.getRmIdentifier();
+    }
+    if (this.rmIdentifier != null) {
+      return this.rmIdentifier;
+    } else {
+      return AppCollectorData.DEFAULT_TIMESTAMP_VALUE;
+    }
+  }
+
+  @Override
+  public void setRMIdentifier(long rmId) {
+    maybeInitBuilder();
+    this.rmIdentifier = rmId;
+    builder.setRmIdentifier(rmId);
+  }
+
+  @Override
+  public long getVersion() {
+    AppCollectorDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.version == null && p.hasRmIdentifier()) {
+      this.version = p.getRmIdentifier();
+    }
+    if (this.version != null) {
+      return this.version;
+    } else {
+      return AppCollectorData.DEFAULT_TIMESTAMP_VALUE;
+    }
+  }
+
+  @Override
+  public void setVersion(long version) {
+    maybeInitBuilder();
+    this.version = version;
+    builder.setVersion(version);
+  }
+
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
@@ -126,7 +168,7 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = AppCollectorsMapProto.newBuilder(proto);
+      builder = AppCollectorDataProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -146,6 +188,12 @@ public class AppCollectorsMapPBImpl extends AppCollectorsMap {
     }
     if (this.collectorAddr != null) {
       builder.setAppCollectorAddr(this.collectorAddr);
+    }
+    if (this.rmIdentifier != null) {
+      builder.setRmIdentifier(this.rmIdentifier);
+    }
+    if (this.version != null) {
+      builder.setVersion(this.version);
     }
   }
 

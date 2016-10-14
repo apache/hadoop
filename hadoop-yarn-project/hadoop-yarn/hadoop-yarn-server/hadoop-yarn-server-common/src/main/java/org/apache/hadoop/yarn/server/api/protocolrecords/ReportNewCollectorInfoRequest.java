@@ -22,14 +22,14 @@ import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.util.Records;
 
 @Private
 public abstract class ReportNewCollectorInfoRequest {
 
   public static ReportNewCollectorInfoRequest newInstance(
-      List<AppCollectorsMap> appCollectorsList) {
+      List<AppCollectorData> appCollectorsList) {
     ReportNewCollectorInfoRequest request =
         Records.newRecord(ReportNewCollectorInfoRequest.class);
     request.setAppCollectorsList(appCollectorsList);
@@ -41,13 +41,13 @@ public abstract class ReportNewCollectorInfoRequest {
     ReportNewCollectorInfoRequest request =
         Records.newRecord(ReportNewCollectorInfoRequest.class);
     request.setAppCollectorsList(
-        Arrays.asList(AppCollectorsMap.newInstance(id, collectorAddr)));
+        Arrays.asList(AppCollectorData.newInstance(id, collectorAddr)));
     return request;
   }
 
-  public abstract List<AppCollectorsMap> getAppCollectorsList();
+  public abstract List<AppCollectorData> getAppCollectorsList();
 
   public abstract void setAppCollectorsList(
-      List<AppCollectorsMap> appCollectorsList);
+      List<AppCollectorData> appCollectorsList);
 
 }

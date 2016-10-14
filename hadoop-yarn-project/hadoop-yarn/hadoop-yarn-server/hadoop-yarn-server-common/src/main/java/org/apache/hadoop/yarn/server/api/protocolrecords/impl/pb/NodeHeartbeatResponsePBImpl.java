@@ -46,11 +46,12 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ContainerQueui
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SignalContainerRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -69,7 +70,7 @@ public class NodeHeartbeatResponsePBImpl extends
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
   private Resource resource = null;
-  private Map<ApplicationId, String> appCollectorsMap = null;
+  private Map<ApplicationId, AppCollectorData> appCollectorsMap = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -150,11 +151,15 @@ public class NodeHeartbeatResponsePBImpl extends
 
   private void addAppCollectorsMapToProto() {
     maybeInitBuilder();
-    builder.clearAppCollectorsMap();
-    for (Map.Entry<ApplicationId, String> entry : appCollectorsMap.entrySet()) {
-      builder.addAppCollectorsMap(AppCollectorsMapProto.newBuilder()
+    builder.clearAppCollectors();
+    for (Map.Entry<ApplicationId, AppCollectorData> entry
+        : appCollectorsMap.entrySet()) {
+      AppCollectorData data = entry.getValue();
+      builder.addAppCollectors(AppCollectorDataProto.newBuilder()
           .setAppId(convertToProtoFormat(entry.getKey()))
-          .setAppCollectorAddr(entry.getValue()));
+          .setAppCollectorAddr(data.getCollectorAddr())
+          .setRmIdentifier(data.getRMIdentifier())
+          .setVersion(data.getVersion()));
     }
   }
 
@@ -632,7 +637,7 @@ public class NodeHeartbeatResponsePBImpl extends
   }
 
   @Override
-  public Map<ApplicationId, String> getAppCollectorsMap() {
+  public Map<ApplicationId, AppCollectorData> getAppCollectors() {
     if (this.appCollectorsMap != null) {
       return this.appCollectorsMap;
     }
@@ -653,12 +658,14 @@ public class NodeHeartbeatResponsePBImpl extends
 
   private void initAppCollectorsMap() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<AppCollectorsMapProto> list = p.getAppCollectorsMapList();
+    List<AppCollectorDataProto> list = p.getAppCollectorsList();
     if (!list.isEmpty()) {
       this.appCollectorsMap = new HashMap<>();
-      for (AppCollectorsMapProto c : list) {
+      for (AppCollectorDataProto c : list) {
         ApplicationId appId = convertFromProtoFormat(c.getAppId());
-        this.appCollectorsMap.put(appId, c.getAppCollectorAddr());
+        AppCollectorData data = AppCollectorData.newInstance(appId,
+            c.getAppCollectorAddr(), c.getRmIdentifier(), c.getVersion());
+        this.appCollectorsMap.put(appId, data);
       }
     }
   }
@@ -675,14 +682,14 @@ public class NodeHeartbeatResponsePBImpl extends
   }
 
   @Override
-  public void setAppCollectorsMap(
-      Map<ApplicationId, String> appCollectorsMap) {
-    if (appCollectorsMap == null || appCollectorsMap.isEmpty()) {
+  public void setAppCollectors(
+      Map<ApplicationId, AppCollectorData> appCollectors) {
+    if (appCollectors == null || appCollectors.isEmpty()) {
       return;
     }
     maybeInitBuilder();
-    this.appCollectorsMap = new HashMap<ApplicationId, String>();
-    this.appCollectorsMap.putAll(appCollectorsMap);
+    this.appCollectorsMap = new HashMap<>();
+    this.appCollectorsMap.putAll(appCollectors);
   }
 
   @Override
