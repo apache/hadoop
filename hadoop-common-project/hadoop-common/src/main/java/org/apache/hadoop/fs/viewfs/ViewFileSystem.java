@@ -220,12 +220,6 @@ public class ViewFileSystem extends FileSystem {
     this(FsConstants.VIEWFS_URI, conf);
   }
   
-  public Path getTrashCanLocation(final Path f) throws FileNotFoundException {
-    final InodeTree.ResolveResult<FileSystem> res = 
-      fsState.resolve(getUriPath(f), true);
-    return res.isInternalDir() ? null : res.targetFileSystem.getHomeDirectory();
-  }
-  
   @Override
   public URI getUri() {
     return myUri;
