@@ -77,7 +77,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
-import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -429,10 +429,10 @@ public class TestRPC {
     public ReportNewCollectorInfoResponse reportNewCollectorInfo(
         ReportNewCollectorInfoRequest request)
         throws YarnException, IOException {
-      List<AppCollectorsMap> appCollectors = request.getAppCollectorsList();
+      List<AppCollectorData> appCollectors = request.getAppCollectorsList();
       if (appCollectors.size() == 1) {
         // check default appID and collectorAddr
-        AppCollectorsMap appCollector = appCollectors.get(0);
+        AppCollectorData appCollector = appCollectors.get(0);
         Assert.assertEquals(appCollector.getApplicationId(),
             DEFAULT_APP_ID);
         Assert.assertEquals(appCollector.getCollectorAddr(),
