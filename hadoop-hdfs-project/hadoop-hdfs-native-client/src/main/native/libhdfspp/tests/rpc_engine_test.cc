@@ -118,7 +118,7 @@ TEST(RpcEngineTest, TestRoundTrip) {
   RpcResponseHeaderProto h;
   h.set_callid(1);
   h.set_status(RpcResponseHeaderProto::SUCCESS);
-  EXPECT_CALL(conn->next_layer(), Produce())
+  EXPECT_CALL(conn->TEST_get_mutable_socket(), Produce())
       .WillOnce(Return(RpcResponse(h, server_resp.SerializeAsString())));
 
   std::shared_ptr<RpcConnection> conn_ptr(conn);
@@ -153,7 +153,7 @@ TEST(RpcEngineTest, TestConnectionResetAndFail) {
   RpcResponseHeaderProto h;
   h.set_callid(1);
   h.set_status(RpcResponseHeaderProto::SUCCESS);
-  EXPECT_CALL(conn->next_layer(), Produce())
+  EXPECT_CALL(conn->TEST_get_mutable_socket(), Produce())
       .WillOnce(Return(RpcResponse(
           h, "", make_error_code(::asio::error::connection_reset))));
 
@@ -455,7 +455,7 @@ TEST(RpcEngineTest, TestTimeout) {
   conn->TEST_set_connected(true);
   conn->StartReading();
 
-    EXPECT_CALL(conn->next_layer(), Produce())
+    EXPECT_CALL(conn->TEST_get_mutable_socket(), Produce())
         .WillOnce(Return(std::make_pair(::asio::error::would_block, "")));
 
   std::shared_ptr<RpcConnection> conn_ptr(conn);
