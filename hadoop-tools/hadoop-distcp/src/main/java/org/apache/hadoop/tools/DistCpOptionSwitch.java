@@ -150,6 +150,11 @@ public enum DistCpOptionSwitch {
       "Use snapshot diff report to identify the difference between source and target"),
       2),
 
+  RDIFF(DistCpConstants.CONF_LABEL_RDIFF,
+      new Option("rdiff", false,
+      "Use target snapshot diff report to identify changes made on target"),
+      2),
+
   /**
    * Should DisctpExecution be blocking
    */

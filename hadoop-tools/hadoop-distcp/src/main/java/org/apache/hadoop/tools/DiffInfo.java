@@ -44,26 +44,47 @@ class DiffInfo {
   };
 
   /** The source file/dir of the rename or deletion op */
-  final Path source;
+  private Path source;
+  /** The target file/dir of the rename op. Null means the op is deletion. */
+  private Path target;
+
+  private SnapshotDiffReport.DiffType type;
   /**
    * The intermediate file/dir for the op. For a rename or a delete op,
    * we first rename the source to this tmp file/dir.
    */
   private Path tmp;
-  /** The target file/dir of the rename op. Null means the op is deletion. */
-  Path target;
 
-  private final SnapshotDiffReport.DiffType type;
-
-  public SnapshotDiffReport.DiffType getType(){
-    return this.type;
-  }
-
-  DiffInfo(Path source, Path target, SnapshotDiffReport.DiffType type) {
+  DiffInfo(final Path source, final Path target,
+      SnapshotDiffReport.DiffType type) {
     assert source != null;
     this.source = source;
     this.target= target;
     this.type = type;
+  }
+
+  void setSource(final Path source) {
+    this.source = source;
+  }
+
+  Path getSource() {
+    return source;
+  }
+
+  void setTarget(final Path target) {
+    this.target = target;
+  }
+
+  Path getTarget() {
+    return target;
+  }
+
+  public void setType(final SnapshotDiffReport.DiffType type){
+    this.type = type;
+  }
+
+  public SnapshotDiffReport.DiffType getType(){
+    return type;
   }
 
   void setTmp(Path tmp) {
@@ -72,5 +93,11 @@ class DiffInfo {
 
   Path getTmp() {
     return tmp;
+  }
+
+  @Override
+  public String toString() {
+    return type + ": src=" + String.valueOf(source) + " tgt="
+        + String.valueOf(target) + " tmp=" + String.valueOf(tmp);
   }
 }
