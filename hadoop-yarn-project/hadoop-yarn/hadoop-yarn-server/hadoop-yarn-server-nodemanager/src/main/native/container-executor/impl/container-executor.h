@@ -264,6 +264,10 @@ int check_dir(const char* npath, mode_t st_mode, mode_t desired,
 int create_validate_dir(const char* npath, mode_t perm, const char* path,
    int finalComponent);
 
+/** Check if a feature is enabled in the specified configuration. */
+int is_feature_enabled(const char* feature_key, int default_value,
+                              struct configuration *cfg);
+
 /** Check if tc (traffic control) support is enabled in configuration. */
 int is_tc_support_enabled();
 

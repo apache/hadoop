@@ -422,9 +422,9 @@ int change_user(uid_t user, gid_t group) {
   return 0;
 }
 
-
-static int is_feature_enabled(const char* feature_key, int default_value) {
-    char *enabled_str = get_value(feature_key, &executor_cfg);
+int is_feature_enabled(const char* feature_key, int default_value,
+                              struct configuration *cfg) {
+    char *enabled_str = get_value(feature_key, cfg);
     int enabled = default_value;
 
     if (enabled_str != NULL) {
@@ -448,15 +448,14 @@ static int is_feature_enabled(const char* feature_key, int default_value) {
     }
 }
 
-
 int is_docker_support_enabled() {
     return is_feature_enabled(DOCKER_SUPPORT_ENABLED_KEY,
-    DEFAULT_DOCKER_SUPPORT_ENABLED);
+    DEFAULT_DOCKER_SUPPORT_ENABLED, &executor_cfg);
 }
 
 int is_tc_support_enabled() {
     return is_feature_enabled(TC_SUPPORT_ENABLED_KEY,
-    DEFAULT_TC_SUPPORT_ENABLED);
+    DEFAULT_TC_SUPPORT_ENABLED, &executor_cfg);
 }
 
 char* check_docker_binary(char *docker_binary) {
