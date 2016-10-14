@@ -43,73 +43,69 @@
 #endif
 
 static void display_usage(FILE *stream) {
-  char usage_template[4096];
-
-  usage_template[0] = '\0';
-  strcat(usage_template,
+  fprintf(stream,
     "Usage: container-executor --checksetup\n"
     "       container-executor --mount-cgroups <hierarchy> "
     "<controller=path>...\n" );
 
   if(is_tc_support_enabled()) {
-    strcat(usage_template,
+    fprintf(stream,
       "       container-executor --tc-modify-state <command-file>\n"
       "       container-executor --tc-read-state <command-file>\n"
       "       container-executor --tc-read-stats <command-file>\n" );
   } else {
-    strcat(usage_template,
+    fprintf(stream,
       "[DISABLED] container-executor --tc-modify-state <command-file>\n"
       "[DISABLED] container-executor --tc-read-state <command-file>\n"
       "[DISABLED] container-executor --tc-read-stats <command-file>\n");
   }
 
   if(is_docker_support_enabled()) {
-    strcat(usage_template,
+    fprintf(stream,
       "       container-executor --run-docker <command-file>\n");
   } else {
-    strcat(usage_template,
+    fprintf(stream,
       "[DISABLED] container-executor --run-docker <command-file>\n");
   }
 
-  strcat(usage_template,
+  fprintf(stream,
       "       container-executor <user> <yarn-user> <command> <command-args>\n"
       "       where command and command-args: \n" \
       "            initialize container:  %2d appid tokens nm-local-dirs "
       "nm-log-dirs cmd app...\n"
       "            launch container:      %2d appid containerid workdir "
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs resources ");
+      "container-script tokens pidfile nm-local-dirs nm-log-dirs resources ",
+      INITIALIZE_CONTAINER, LAUNCH_CONTAINER);
 
   if(is_tc_support_enabled()) {
-    strcat(usage_template, "optional-tc-command-file\n");
+    fprintf(stream, "optional-tc-command-file\n");
   } else {
-    strcat(usage_template, "\n");
+    fprintf(stream, "\n");
   }
 
   if(is_docker_support_enabled()) {
-    strcat(usage_template,
+    fprintf(stream,
       "            launch docker container:      %2d appid containerid workdir "
       "container-script tokens pidfile nm-local-dirs nm-log-dirs "
-      "docker-command-file resources ");
+      "docker-command-file resources ", LAUNCH_DOCKER_CONTAINER);
   } else {
-    strcat(usage_template,
+    fprintf(stream,
       "[DISABLED]  launch docker container:      %2d appid containerid workdir "
       "container-script tokens pidfile nm-local-dirs nm-log-dirs "
-      "docker-command-file resources ");
+      "docker-command-file resources ", LAUNCH_DOCKER_CONTAINER);
   }
 
   if(is_tc_support_enabled()) {
-    strcat(usage_template, "optional-tc-command-file\n");
+    fprintf(stream, "optional-tc-command-file\n");
   } else {
-    strcat(usage_template, "\n");
+    fprintf(stream, "\n");
   }
 
-   strcat(usage_template,
+   fprintf(stream,
       "            signal container:      %2d container-pid signal\n"
       "            delete as user:        %2d relative-path\n"
-      "            list as user:          %2d relative-path\n");
-
-  fprintf(stream, usage_template, INITIALIZE_CONTAINER, LAUNCH_CONTAINER,
-    LAUNCH_DOCKER_CONTAINER, SIGNAL_CONTAINER, DELETE_AS_USER, LIST_AS_USER);
+      "            list as user:          %2d relative-path\n",
+      SIGNAL_CONTAINER, DELETE_AS_USER, LIST_AS_USER);
 }
 
 /* Sets up log files for normal/error logging */
