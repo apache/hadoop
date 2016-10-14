@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
@@ -302,17 +303,9 @@ public class MockRMApp implements RMApp {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
-  public String getCollectorAddr() {
+  @Override
+  public AppCollectorData getCollectorData() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
-  @Override
-  public void removeCollectorAddr() {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public void setCollectorAddr(String collectorAddr) {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
 }
