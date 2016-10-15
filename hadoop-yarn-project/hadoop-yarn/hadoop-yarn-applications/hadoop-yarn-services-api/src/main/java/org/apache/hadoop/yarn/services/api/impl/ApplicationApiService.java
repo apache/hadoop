@@ -347,7 +347,7 @@ public class ApplicationApiService implements ApplicationApi {
     if (queueName != null && queueName.trim().length() > 0) {
       createArgs.queue = queueName.trim();
     }
-
+    createArgs.lifetime = application.getLifetime();
     return invokeSliderClientRunnable(new SliderClientContextRunnable<String>() {
       @Override
       public String run(SliderClient sliderClient) throws YarnException,
@@ -1246,13 +1246,17 @@ public class ApplicationApiService implements ApplicationApi {
     });
   }
 
-  private Response startSliderApplication(final String appName)
+  private Response startSliderApplication(final String appName, Application app)
       throws IOException, YarnException, InterruptedException {
     return invokeSliderClientRunnable(new SliderClientContextRunnable<Response>() {
       @Override
       public Response run(SliderClient sliderClient) throws YarnException,
           IOException, InterruptedException {
         ActionThawArgs thawArgs = new ActionThawArgs();
+        if (app.getLifetime() == null) {
+          app.setLifetime(DEFAULT_UNLIMITED_LIFETIME);
+        }
+        thawArgs.lifetime = app.getLifetime();
         int returnCode = sliderClient.actionThaw(appName, thawArgs);
         if (returnCode == 0) {
           logger.info("Successfully started application {}", appName);
@@ -1344,7 +1348,7 @@ public class ApplicationApiService implements ApplicationApi {
       try {
         int livenessCheck = getSliderList(appName);
         if (livenessCheck != 0) {
-          return startSliderApplication(appName);
+          return startSliderApplication(appName, updateAppData);
         } else {
           logger.info("Application {} is already running", appName);
           ApplicationStatus applicationStatus = new ApplicationStatus();

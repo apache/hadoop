@@ -18,6 +18,7 @@
 
 package org.apache.slider.common.params;
 
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
 
@@ -42,6 +43,11 @@ public class ActionThawArgs extends AbstractActionArgs implements
 
   @ParametersDelegate
   LaunchArgsDelegate launchArgs = new LaunchArgsDelegate();
+
+  @Parameter(names = {ARG_LIFETIME},
+      description = "Life time of the application since application started at"
+          + " running state")
+  public long lifetime;
 
   @Override
   public String getRmAddress() {

@@ -54,6 +54,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -734,7 +735,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       sliderFileSystem.getFileSystem().delete(clusterDirectory, true);
       throw e;
     }
-    return startCluster(clustername, createArgs);
+    return startCluster(clustername, createArgs, createArgs.lifetime);
   }
 
   @Override
@@ -1960,14 +1961,13 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    *
    * @param clustername name of the cluster.
    * @param launchArgs launch arguments
+   * @param lifetime
    * @return the exit code
    * @throws YarnException
    * @throws IOException
    */
-  protected int startCluster(String clustername,
-                           LaunchArgsAccessor launchArgs) throws
-                                                          YarnException,
-                                                          IOException {
+  protected int startCluster(String clustername, LaunchArgsAccessor launchArgs,
+      long lifetime) throws YarnException, IOException {
     Path clusterDirectory = sliderFileSystem.buildClusterDirPath(clustername);
     AggregateConf instanceDefinition = loadInstanceDefinitionUnresolved(
       clustername,
@@ -1975,7 +1975,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
     LaunchedApplication launchedApplication =
       launchApplication(clustername, clusterDirectory, instanceDefinition,
-                        serviceArgs.isDebug());
+                        serviceArgs.isDebug(), lifetime);
 
     if (launchArgs.getOutputFile() != null) {
       // output file has been requested. Get the app report and serialize it
@@ -2044,9 +2044,8 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
   }
 
   protected AppMasterLauncher setupAppMasterLauncher(String clustername,
-      Path clusterDirectory,
-      AggregateConf instanceDefinition,
-      boolean debugAM)
+      Path clusterDirectory, AggregateConf instanceDefinition, boolean debugAM,
+      long lifetime)
     throws YarnException, IOException{
     deployedClusterName = clustername;
     validateClusterName(clustername);
@@ -2119,7 +2118,10 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     ApplicationId appId = amLauncher.getApplicationId();
     // set the application name;
     amLauncher.setKeepContainersOverRestarts(true);
-
+    // set lifetime in submission context;
+    Map<ApplicationTimeoutType, Long> appTimeout = new HashMap<>();
+    appTimeout.put(ApplicationTimeoutType.LIFETIME, lifetime);
+    amLauncher.submissionContext.setApplicationTimeouts(appTimeout);
     int maxAppAttempts = config.getInt(KEY_AM_RESTART_LIMIT, 0);
     amLauncher.setMaxAppAttempts(maxAppAttempts);
 
@@ -2383,20 +2385,19 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
    * @param clusterDirectory cluster dir
    * @param instanceDefinition the instance definition
    * @param debugAM enable debug AM options
+   * @param lifetime
    * @return the launched application
    * @throws YarnException
    * @throws IOException
    */
-  public LaunchedApplication launchApplication(String clustername,
-                                               Path clusterDirectory,
-                                               AggregateConf instanceDefinition,
-                                               boolean debugAM)
+  public LaunchedApplication launchApplication(String clustername, Path clusterDirectory,
+      AggregateConf instanceDefinition, boolean debugAM, long lifetime)
     throws YarnException, IOException {
 
     AppMasterLauncher amLauncher = setupAppMasterLauncher(clustername,
         clusterDirectory,
         instanceDefinition,
-        debugAM);
+        debugAM, lifetime);
 
     applicationId = amLauncher.getApplicationId();
     log.info("Submitting application {}", applicationId);
@@ -3254,7 +3255,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     verifyNoLiveClusters(clustername, "Start");
 
     //start the cluster
-    return startCluster(clustername, thaw);
+    return startCluster(clustername, thaw, thaw.lifetime);
   }
 
   /**

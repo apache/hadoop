@@ -103,6 +103,7 @@ public interface Arguments {
   String ARG_PRINCIPAL = "--principal";
   String ARG_PROVIDER = "--provider";
   String ARG_QUEUE = "--queue";
+  String ARG_LIFETIME = "--lifetime";
   String ARG_REPLACE_PKG = "--replacepkg";
   String ARG_RESOURCE = "--resource";
   String ARG_RESOURCES = "--resources";
