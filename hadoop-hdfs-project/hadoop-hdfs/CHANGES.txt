@@ -8,6 +8,9 @@ Release 2.7.6 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-11003. Expose XmitsInProgress through DataNodeMXBean.
+    (Brahma Reddy Battula)
+
   OPTIMIZATIONS
 
   BUG FIXES
