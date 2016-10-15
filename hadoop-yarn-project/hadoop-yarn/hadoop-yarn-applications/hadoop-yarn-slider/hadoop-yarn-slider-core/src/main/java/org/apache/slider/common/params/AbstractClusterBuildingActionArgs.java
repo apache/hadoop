@@ -102,6 +102,11 @@ public abstract class AbstractClusterBuildingActionArgs extends
              description = "Queue to submit the application")
   public String queue;
 
+  @Parameter(names = {ARG_LIFETIME},
+      description = "Life time of the application since application started at"
+          + " running state")
+  public long lifetime;
+
   @ParametersDelegate
   public ComponentArgsDelegate componentDelegate = new ComponentArgsDelegate();
 
