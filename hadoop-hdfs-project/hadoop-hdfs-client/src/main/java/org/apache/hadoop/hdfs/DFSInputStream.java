@@ -1443,9 +1443,11 @@ public class DFSInputStream extends FSInputStream
      * access key from its memory since it's considered expired based on
      * the estimated expiration date.
      */
-    if (ex instanceof InvalidBlockTokenException || ex instanceof InvalidToken) {
-      DFSClient.LOG.info("Access token was invalid when connecting to "
-          + targetAddr + " : " + ex);
+    if (ex instanceof InvalidBlockTokenException ||
+        ex instanceof InvalidToken) {
+      DFSClient.LOG.debug(
+          "Access token was invalid when connecting to {}: {}",
+          targetAddr, ex);
       return true;
     }
     return false;
