@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -98,7 +99,6 @@ public class NMTimelinePublisher extends CompositeService {
     // context will be updated after containerManagerImpl is started
     // hence NMMetricsPublisher is added subservice of containerManagerImpl
     this.nodeId = context.getNodeId();
-    this.httpAddress = nodeId.getHost() + ":" + context.getHttpPort();
   }
 
   @VisibleForTesting
@@ -167,18 +167,18 @@ public class NMTimelinePublisher extends CompositeService {
     Resource resource = container.getResource();
 
     Map<String, Object> entityInfo = new HashMap<String, Object>();
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_ENTITY_INFO,
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO,
         resource.getMemorySize());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_ENTITY_INFO,
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO,
         resource.getVirtualCores());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_ENTITY_INFO,
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
         nodeId.getHost());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_ENTITY_INFO,
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO,
         nodeId.getPort());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO,
+    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO,
         container.getPriority().toString());
     entityInfo.put(
-        ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO,
+        ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO,
         httpAddress);
     entity.setInfo(entityInfo);
 
@@ -198,19 +198,20 @@ public class NMTimelinePublisher extends CompositeService {
     ContainerId containerId = containerStatus.getContainerId();
     TimelineEntity entity = createContainerEntity(containerId);
 
-    Map<String, Object> eventInfo = new HashMap<String, Object>();
-    eventInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO_EVENT_INFO,
+    Map<String, Object> entityInfo = new HashMap<String, Object>();
+    entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
         containerStatus.getDiagnostics());
-    eventInfo.put(ContainerMetricsConstants.EXIT_STATUS_EVENT_INFO,
+    entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO,
         containerStatus.getExitStatus());
-    eventInfo.put(ContainerMetricsConstants.STATE_EVENT_INFO, containerStatus
-        .getState().toString());
+    entityInfo.put(ContainerMetricsConstants.STATE_INFO,
+        ContainerState.COMPLETE.toString());
+    entityInfo.put(ContainerMetricsConstants.CONTAINER_FINISHED_TIME,
+        timeStamp);
+    entity.setInfo(entityInfo);
 
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
     tEvent.setTimestamp(timeStamp);
-    tEvent.setInfo(eventInfo);
-
     entity.addEvent(tEvent);
 
     dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
@@ -304,6 +305,11 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void publishContainerEvent(ContainerEvent event) {
     // publish only when the desired event is received
+    if (this.httpAddress == null) {
+      // update httpAddress for first time. When this service started,
+      // web server will not be started.
+      this.httpAddress = nodeId.getHost() + ":" + context.getHttpPort();
+    }
     switch (event.getType()) {
     case INIT_CONTAINER:
       publishContainerCreatedEvent(event);

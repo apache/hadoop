@@ -41,33 +41,36 @@ public class ContainerMetricsConstants {
   public static final String FINISHED_IN_RM_EVENT_TYPE =
       "YARN_RM_CONTAINER_FINISHED";
 
+  public static final String CONTAINER_FINISHED_TIME =
+      "YARN_CONTAINER_FINISHED_TIME";
+
   public static final String PARENT_PRIMARIY_FILTER = "YARN_CONTAINER_PARENT";
 
-  public static final String ALLOCATED_MEMORY_ENTITY_INFO =
+  public static final String ALLOCATED_MEMORY_INFO =
       "YARN_CONTAINER_ALLOCATED_MEMORY";
 
-  public static final String ALLOCATED_VCORE_ENTITY_INFO =
+  public static final String ALLOCATED_VCORE_INFO =
       "YARN_CONTAINER_ALLOCATED_VCORE";
 
-  public static final String ALLOCATED_HOST_ENTITY_INFO =
+  public static final String ALLOCATED_HOST_INFO =
       "YARN_CONTAINER_ALLOCATED_HOST";
 
-  public static final String ALLOCATED_PORT_ENTITY_INFO =
+  public static final String ALLOCATED_PORT_INFO =
       "YARN_CONTAINER_ALLOCATED_PORT";
 
-  public static final String ALLOCATED_PRIORITY_ENTITY_INFO =
+  public static final String ALLOCATED_PRIORITY_INFO =
       "YARN_CONTAINER_ALLOCATED_PRIORITY";
 
-  public static final String DIAGNOSTICS_INFO_EVENT_INFO =
+  public static final String DIAGNOSTICS_INFO =
       "YARN_CONTAINER_DIAGNOSTICS_INFO";
 
-  public static final String EXIT_STATUS_EVENT_INFO =
+  public static final String EXIT_STATUS_INFO =
       "YARN_CONTAINER_EXIT_STATUS";
 
-  public static final String STATE_EVENT_INFO =
+  public static final String STATE_INFO =
       "YARN_CONTAINER_STATE";
 
-  public static final String ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO =
+  public static final String ALLOCATED_HOST_HTTP_ADDRESS_INFO =
       "YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS";
 
   // Event of this type will be emitted by NM.
