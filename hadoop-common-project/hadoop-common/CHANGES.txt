@@ -175,6 +175,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-13707. Skip authorization for anonymous user to access Hadoop
+    web interface in non-secure environment.  (Yuanbo Liu via eyang)
+
     HADOOP-12124. Add HTrace support for FsShell (cmccabe)
 
     HADOOP-12171. Shorten overly-long htrace span names for server (cmccabe)
