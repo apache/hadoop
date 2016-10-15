@@ -47,11 +47,12 @@ import com.google.common.collect.Lists;
  */
 public class ReportCommand extends Command {
 
-  private PrintStream out;
+  public ReportCommand(Configuration conf) {
+    this(conf, System.out);
+  }
 
-  public ReportCommand(Configuration conf, final PrintStream out) {
-    super(conf);
-    this.out = out;
+  public ReportCommand(Configuration conf, final PrintStream ps) {
+    super(conf, ps);
 
     addValidCommandParameters(DiskBalancerCLI.REPORT,
         "Report volume information of nodes.");
@@ -95,7 +96,7 @@ public class ReportCommand extends Command {
       handleTopReport(cmd, result, nodeFormat);
     }
 
-    out.println(result.toString());
+    getPrintStream().println(result.toString());
   }
 
   private void handleTopReport(final CommandLine cmd, final StrBuilder result,

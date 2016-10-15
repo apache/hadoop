@@ -78,7 +78,7 @@ public class HelpCommand extends Command {
       command = new CancelCommand(getConf());
       break;
     case DiskBalancerCLI.REPORT:
-      command = new ReportCommand(getConf(), null);
+      command = new ReportCommand(getConf());
       break;
     default:
       command = this;

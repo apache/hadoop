@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.DiskBalancerTestUtil;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ClusterConnector;
 import org.apache.hadoop.hdfs.server.diskbalancer.connectors.ConnectorFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
@@ -409,14 +410,53 @@ public class TestDiskBalancerCommand {
     runCommand(cmdLine);
   }
 
-  private List<String> runCommandInternal(final String cmdLine) throws
-      Exception {
+  @Test
+  public void testPrintFullPathOfPlan()
+      throws Exception {
+    MiniDFSCluster miniCluster = null;
+    try {
+      Configuration hdfsConf = new HdfsConfiguration();
+      final int numDatanodes = 1;
+      final int defaultBlockSize = 1024;
+      final int fileLen = 200 * 1024;
+      final long capcacity = 300 * 1024;
+      final long[] capacities = new long[] {capcacity, capcacity};
+      List<String> outputs = null;
+
+      /* new cluster with imbalanced capacity */
+      miniCluster = DiskBalancerTestUtil.newImbalancedCluster(
+          hdfsConf,
+          numDatanodes,
+          capacities,
+          defaultBlockSize,
+          fileLen);
+
+      /* run plan command */
+      final String cmdLine = String.format(
+          "hdfs diskbalancer -%s %s",
+          PLAN,
+          miniCluster.getDataNodes().get(0).getDatanodeUuid());
+      outputs = runCommand(cmdLine, hdfsConf, miniCluster);
+
+      /* verify the path of plan */
+      assertThat(outputs.get(0), containsString("Writing plan to"));
+      assertThat(outputs.get(0), containsString("/system/diskbalancer"));
+    } finally {
+      if (miniCluster != null) {
+        miniCluster.shutdown();
+      }
+    }
+  }
+
+  private List<String> runCommandInternal(
+      final String cmdLine,
+      final Configuration clusterConf) throws Exception {
     String[] cmds = StringUtils.split(cmdLine, ' ');
     ByteArrayOutputStream bufOut = new ByteArrayOutputStream();
     PrintStream out = new PrintStream(bufOut);
 
-    Tool diskBalancerTool = new DiskBalancerCLI(conf, out);
-    ToolRunner.run(conf, diskBalancerTool, cmds);
+    Tool diskBalancerTool = new DiskBalancerCLI(clusterConf, out);
+    ToolRunner.run(clusterConf, diskBalancerTool, cmds);
 
     Scanner scanner = new Scanner(bufOut.toString());
     List<String> outputs = Lists.newArrayList();
@@ -424,6 +464,11 @@ public class TestDiskBalancerCommand {
       outputs.add(scanner.nextLine());
     }
     return outputs;
+  }
+
+  private List<String> runCommandInternal(final String cmdLine)
+      throws Exception {
+    return runCommandInternal(cmdLine, conf);
   }
 
   private List<String> runCommand(final String cmdLine) throws Exception {
@@ -435,6 +480,14 @@ public class TestDiskBalancerCommand {
                                   MiniDFSCluster miniCluster) throws Exception {
     FileSystem.setDefaultUri(conf, miniCluster.getURI());
     return runCommandInternal(cmdLine);
+  }
+
+  private List<String> runCommand(
+      final String cmdLine,
+      Configuration clusterConf,
+      MiniDFSCluster miniCluster) throws Exception {
+    FileSystem.setDefaultUri(clusterConf, miniCluster.getURI());
+    return runCommandInternal(cmdLine, clusterConf);
   }
 
   /**

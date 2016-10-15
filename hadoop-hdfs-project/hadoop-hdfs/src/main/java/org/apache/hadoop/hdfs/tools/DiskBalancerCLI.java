@@ -137,6 +137,8 @@ public class DiskBalancerCLI extends Configured implements Tool {
 
   private final PrintStream printStream;
 
+  private Command currentCommand = null;
+
   /**
    * Construct a DiskBalancer.
    *
@@ -432,6 +434,13 @@ public class DiskBalancerCLI extends Configured implements Tool {
   }
 
   /**
+   * Gets current command associated with this instance of DiskBalancer.
+   */
+  public Command getCurrentCommand() {
+    return currentCommand;
+  }
+
+  /**
    * Dispatches calls to the right command Handler classes.
    *
    * @param cmd  - CommandLine
@@ -440,38 +449,38 @@ public class DiskBalancerCLI extends Configured implements Tool {
    */
   private int dispatch(CommandLine cmd, Options opts)
       throws Exception {
-    Command currentCommand = null;
+    Command dbCmd = null;
     if (cmd.hasOption(DiskBalancerCLI.PLAN)) {
-      currentCommand = new PlanCommand(getConf());
+      dbCmd = new PlanCommand(getConf(), printStream);
     }
 
     if (cmd.hasOption(DiskBalancerCLI.EXECUTE)) {
-      currentCommand = new ExecuteCommand(getConf());
+      dbCmd = new ExecuteCommand(getConf());
     }
 
     if (cmd.hasOption(DiskBalancerCLI.QUERY)) {
-      currentCommand = new QueryCommand(getConf());
+      dbCmd = new QueryCommand(getConf());
     }
 
     if (cmd.hasOption(DiskBalancerCLI.CANCEL)) {
-      currentCommand = new CancelCommand(getConf());
+      dbCmd = new CancelCommand(getConf());
     }
 
     if (cmd.hasOption(DiskBalancerCLI.REPORT)) {
-      currentCommand = new ReportCommand(getConf(), this.printStream);
+      dbCmd = new ReportCommand(getConf(), this.printStream);
     }
 
     if (cmd.hasOption(DiskBalancerCLI.HELP)) {
-      currentCommand = new HelpCommand(getConf());
+      dbCmd = new HelpCommand(getConf());
     }
 
     // Invoke main help here.
-    if (currentCommand == null) {
+    if (dbCmd == null) {
       new HelpCommand(getConf()).execute(null);
       return 1;
     }
 
-    currentCommand.execute(cmd);
+    dbCmd.execute(cmd);
     return 0;
   }
 }

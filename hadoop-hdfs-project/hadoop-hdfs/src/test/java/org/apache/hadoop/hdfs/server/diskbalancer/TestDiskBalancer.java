@@ -244,7 +244,9 @@ public class TestDiskBalancer {
     } catch (Exception e) {
       Assert.fail("Unexpected exception: " + e);
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
