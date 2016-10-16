@@ -15,6 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * A mechanism for selectively retrying methods that throw exceptions under
+ * certain circumstances.
+ * Typical usage is
+ *  UnreliableImplementation unreliableImpl = new UnreliableImplementation();
+ *  UnreliableInterface unreliable = (UnreliableInterface)
+ *  RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+ *  RetryPolicies.retryUpToMaximumCountWithFixedSleep(4, 10,
+ *      TimeUnit.SECONDS));
+ *  unreliable.call();
+ *
+ * This will retry any method called on <code>unreliable</code> four times -
+ * in this case the <code>call()</code> method - sleeping 10 seconds between
+ * each retry. There are a number of
+ * {@link org.apache.hadoop.io.retry.RetryPolicies retry policies}
+ * available, or you can implement a custom one by implementing
+ * {@link org.apache.hadoop.io.retry.RetryPolicy}.
+ * It is also possible to specify retry policies on a
+ * {@link org.apache.hadoop.io.retry.RetryProxy#create(Class, Object, Map)
+ * per-method basis}.
+ */
 @InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 package org.apache.hadoop.io.retry;

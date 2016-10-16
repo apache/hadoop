@@ -2035,7 +2035,7 @@ public abstract class Server {
     }
 
     /** Reads the connection context following the connection header
-     * @param dis - DataInputStream from which to read the header 
+     * @param buffer - DataInputStream from which to read the header
      * @throws WrappedRpcServerException - if the header cannot be
      *         deserialized, or the user is not authorized
      */ 
@@ -2087,7 +2087,7 @@ public abstract class Server {
     /**
      * Process a wrapped RPC Request - unwrap the SASL packet and process
      * each embedded RPC request 
-     * @param buf - SASL wrapped request of one or more RPCs
+     * @param inBuf - SASL wrapped request of one or more RPCs
      * @throws IOException - SASL packet cannot be unwrapped
      * @throws InterruptedException
      */    
@@ -2131,7 +2131,7 @@ public abstract class Server {
     /**
      * Process an RPC Request - handle connection setup and decoding of
      * request into a Call
-     * @param buf - contains the RPC request header and the rpc request
+     * @param bb - contains the RPC request header and the rpc request
      * @throws IOException - internal error that should not be returned to
      *         client, typically failure to respond to client
      * @throws WrappedRpcServerException - an exception to be sent back to
@@ -2207,7 +2207,7 @@ public abstract class Server {
      * Process an RPC Request - the connection headers and context must
      * have been already read
      * @param header - RPC request header
-     * @param dis - stream to request payload
+     * @param buffer - stream to request payload
      * @throws WrappedRpcServerException - due to fatal rpc layer issues such
      *   as invalid header or deserialization error. In this case a RPC fatal
      *   status response will later be sent back to client.
@@ -2283,7 +2283,7 @@ public abstract class Server {
      * Establish RPC connection setup by negotiating SASL if required, then
      * reading and authorizing the connection header
      * @param header - RPC header
-     * @param dis - stream to request payload
+     * @param buffer - stream to request payload
      * @throws WrappedRpcServerException - setup failed due to SASL
      *         negotiation failure, premature or invalid connection context,
      *         or other state errors 
@@ -2351,8 +2351,8 @@ public abstract class Server {
     
     /**
      * Decode the a protobuf from the given input stream 
-     * @param builder - Builder of the protobuf to decode
-     * @param dis - DataInputStream to read the protobuf
+     * @param message - Representation of the type of message
+     * @param buffer - a buffer to read the protobuf
      * @return Message - decoded protobuf
      * @throws WrappedRpcServerException - deserialization failed
      */
@@ -2522,8 +2522,8 @@ public abstract class Server {
    * from configuration. Otherwise the configuration will be picked up.
    * 
    * If rpcRequestClass is null then the rpcRequestClass must have been 
-   * registered via {@link #registerProtocolEngine(RpcPayloadHeader.RpcKind,
-   *  Class, RPC.RpcInvoker)}
+   * registered via {@link #registerProtocolEngine(RPC.RpcKind, Class,
+   * RPC.RpcInvoker)}.
    * This parameter has been retained for compatibility with existing tests
    * and usage.
    */
@@ -2881,8 +2881,8 @@ public abstract class Server {
   
   /** 
    * Called for each call. 
-   * @deprecated Use  {@link #call(RpcPayloadHeader.RpcKind, String,
-   *  Writable, long)} instead
+   * @deprecated Use  {@link Server#call(RPC.RpcKind, String, Writable, long)}
+   * instead.
    */
   @Deprecated
   public Writable call(Writable param, long receiveTime) throws Exception {
