@@ -52,7 +52,7 @@ public interface FenceMethod {
   
   /**
    * Attempt to fence the target node.
-   * @param serviceAddr the address (host:ipcport) of the service to fence
+   * @param target the address (host:ipcport) of the service to fence
    * @param args the configured arguments, which were checked at startup by
    *             {@link #checkArgs(String)}
    * @return true if fencing was successful, false if unsuccessful or
