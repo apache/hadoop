@@ -28,7 +28,7 @@ remote server providing the filesystem.
 
 These filesystem bindings must be defined in an XML configuration file, usually
 `hadoop-common-project/hadoop-common/src/test/resources/contract-test-options.xml`.
-This file is excluded should not be checked in.
+This file is excluded and should not be checked in.
 
 ### ftp://
 
@@ -122,7 +122,7 @@ new contract class, then creating a new non-abstract test class for every test
 suite that you wish to test.
 
 1. Do not try and add these tests into Hadoop itself. They won't be added to
-the soutce tree. The tests must live with your own filesystem source.
+the source tree. The tests must live with your own filesystem source.
 1. Create a package in your own test source tree (usually) under `contract`,
 for the files and tests.
 1. Subclass `AbstractFSContract` for your own contract implementation.
