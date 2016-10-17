@@ -48,7 +48,7 @@ LocalFileSpanReceiver is included in the htrace-core4 jar which is bundled
 with Hadoop.)
 
 ```
-    $ cp htrace-htraced/target/htrace-htraced-4.0.1-incubating.jar $HADOOP_HOME/share/hadoop/common/lib/
+    $ cp htrace-htraced/target/htrace-htraced-4.1.0-incubating.jar $HADOOP_HOME/share/hadoop/common/lib/
 ```
 
 ### Dynamic update of tracing configuration

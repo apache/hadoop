@@ -882,7 +882,7 @@
       <dependency>
         <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core4</artifactId>
-        <version>4.0.1-incubating</version>
+        <version>4.1.0-incubating</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
