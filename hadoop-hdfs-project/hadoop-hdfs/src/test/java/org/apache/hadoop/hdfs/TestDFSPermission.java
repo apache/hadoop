@@ -305,7 +305,7 @@ public class TestDFSPermission {
       fs.mkdirs(rootDir);
       fs.setPermission(rootDir, new FsPermission((short) 0777));
 
-      login(USER1);
+      fs = DFSTestUtil.login(fs, conf, USER1);
       fs.mkdirs(user1Dir);
       fs.setPermission(user1Dir, new FsPermission((short) 0755));
       fs.setOwner(user1Dir, USER1.getShortUserName(), GROUP2_NAME);
@@ -318,7 +318,7 @@ public class TestDFSPermission {
         // login as user2, attempt to delete /BSS/user1
         // this should fail because user2 has no permission to
         // its sub directory.
-        login(USER2);
+        fs = DFSTestUtil.login(fs, conf, USER2);
         fs.delete(user1Dir, true);
         fail("User2 should not be allowed to delete user1's dir.");
       } catch (AccessControlException e) {
@@ -331,7 +331,7 @@ public class TestDFSPermission {
       assertTrue(fs.exists(user1Dir));
 
       try {
-        login(SUPERUSER);
+        fs = DFSTestUtil.login(fs, conf, SUPERUSER);
         Trash trash = new Trash(fs, conf);
         Path trashRoot = trash.getCurrentTrashDir(user1Dir);
         while(true) {
@@ -346,7 +346,7 @@ public class TestDFSPermission {
         // login as user2, attempt to move /BSS/user1 to trash
         // this should also fail otherwise the directory will be
         // removed by trash emptier (emptier is running by superuser)
-        login(USER2);
+        fs = DFSTestUtil.login(fs, conf, USER2);
         Trash userTrash = new Trash(fs, conf);
         assertTrue(userTrash.isEnabled());
         userTrash.moveToTrash(user1Dir);
@@ -363,7 +363,7 @@ public class TestDFSPermission {
       // ensure /BSS/user1 still exists
       assertEquals(fs.exists(user1Dir), true);
     } finally {
-      login(SUPERUSER);
+      fs = DFSTestUtil.login(fs, conf, SUPERUSER);
       fs.delete(rootDir, true);
       conf.set(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, "0");
     }
@@ -405,7 +405,7 @@ public class TestDFSPermission {
     setOwner(FILE_DIR_PATH, USER1.getShortUserName(), GROUP3_NAME, false);
 
     // case 3: user1 changes FILE_DIR_PATH's owner to be user2
-    login(USER1);
+    fs = DFSTestUtil.login(fs, conf, USER1);
     setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // case 4: user1 changes FILE_DIR_PATH's group to be group1 which it belongs
@@ -417,14 +417,14 @@ public class TestDFSPermission {
     setOwner(FILE_DIR_PATH, null, GROUP3_NAME, true);
 
     // case 6: user2 (non-owner) changes FILE_DIR_PATH's group to be group3
-    login(USER2);
+    fs = DFSTestUtil.login(fs, conf, USER2);
     setOwner(FILE_DIR_PATH, null, GROUP3_NAME, true);
 
     // case 7: user2 (non-owner) changes FILE_DIR_PATH's user to be user2
     setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // delete the file/directory
-    login(SUPERUSER);
+    fs = DFSTestUtil.login(fs, conf, SUPERUSER);
     fs.delete(FILE_DIR_PATH, true);
   }
 
@@ -666,7 +666,7 @@ public class TestDFSPermission {
       short[] filePermission, Path[] parentDirs, Path[] files, Path[] dirs)
       throws Exception {
     boolean[] isDirEmpty = new boolean[NUM_TEST_PERMISSIONS];
-    login(SUPERUSER);
+    fs = DFSTestUtil.login(fs, conf, SUPERUSER);
     for (int i = 0; i < NUM_TEST_PERMISSIONS; i++) {
       create(OpType.CREATE, files[i]);
       create(OpType.MKDIRS, dirs[i]);
@@ -682,7 +682,7 @@ public class TestDFSPermission {
       isDirEmpty[i] = (fs.listStatus(dirs[i]).length == 0);
     }
 
-    login(ugi);
+    fs = DFSTestUtil.login(fs, conf, ugi);
     for (int i = 0; i < NUM_TEST_PERMISSIONS; i++) {
       testCreateMkdirs(ugi, new Path(parentDirs[i], FILE_DIR_NAME),
           ancestorPermission[i], parentPermission[i]);
@@ -1235,16 +1235,6 @@ public class TestDFSPermission {
     ddpv.set(path, ancestorPermission, parentPermission, permission,
         childPermissions);
     ddpv.verifyPermission(ugi);
-  }
-
-  /* log into dfs as the given user */
-  private void login(UserGroupInformation ugi) throws IOException,
-      InterruptedException {
-    if (fs != null) {
-      fs.close();
-    }
-
-    fs = DFSTestUtil.getFileSystemAs(ugi, conf);
   }
 
   /* test non-existent file */
