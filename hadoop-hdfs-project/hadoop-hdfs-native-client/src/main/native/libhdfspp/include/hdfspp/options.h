@@ -96,7 +96,7 @@ struct Options {
    * Client failover attempts before failover gives up
    **/
   int failover_max_retries;
-  static const unsigned int kDefaultFailoverMaxRetries = 15;
+  static const unsigned int kDefaultFailoverMaxRetries = 4;
 
   /**
    * Client failover attempts before failover gives up if server

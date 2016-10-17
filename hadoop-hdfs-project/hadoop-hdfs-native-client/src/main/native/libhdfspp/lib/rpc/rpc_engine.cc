@@ -365,7 +365,7 @@ void RpcEngine::RpcCommsError(
         ResolvedNamenodeInfo new_active_nn_info =
             ha_persisted_info_->GetFailoverAndUpdate(last_endpoints_[0]/*reverse lookup*/);
 
-        LOG_INFO(kRPC, << "Going to try connecting to alternate Datanode: " << new_active_nn_info.uri.str());
+        LOG_INFO(kRPC, << "Going to try connecting to alternate Namenode: " << new_active_nn_info.uri.str());
 
         if(ha_persisted_info_->is_resolved()) {
           last_endpoints_ = new_active_nn_info.endpoints;

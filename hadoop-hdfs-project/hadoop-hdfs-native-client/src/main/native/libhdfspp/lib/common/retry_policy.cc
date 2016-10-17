@@ -60,7 +60,12 @@ RetryAction FixedDelayWithFailover::ShouldRetry(const Status &s, uint64_t retrie
   {
     // Try connecting to another NN in case this one keeps timing out
     // Can add the backoff wait specified by dfs.client.failover.sleep.base.millis here
-    return RetryAction::failover(delay_);
+    if(failovers == 0) {
+      // No delay on first failover if it looks like the NN was bad.
+      return RetryAction::failover(0);
+    } else {
+      return RetryAction::failover(delay_);
+    }
   }
 
   if(retries < max_retries_ && failovers < max_failover_retries_) {
