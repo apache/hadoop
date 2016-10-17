@@ -130,7 +130,7 @@ Strings are lists of characters represented in double quotes. e.g. `"abc"`
 
 All system state declarations are immutable.
 
-The suffix "'" (single quote) is used as the convention to indicate the state of the system after a operation:
+The suffix "'" (single quote) is used as the convention to indicate the state of the system after an operation:
 
     L' = L + ['d','e']
 
