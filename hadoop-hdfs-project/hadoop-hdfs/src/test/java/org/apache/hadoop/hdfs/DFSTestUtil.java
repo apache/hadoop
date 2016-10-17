@@ -27,6 +27,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedOutputStream;
@@ -157,6 +158,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
 import org.junit.Assume;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -1971,6 +1973,35 @@ public class DFSTestUtil {
       if (o != null) {
         assertEquals(o, permission.getOtherAction());
       }
+    }
+  }
+
+  public static void verifyDelete(FsShell shell, FileSystem fs, Path path,
+      boolean shouldExistInTrash) throws Exception {
+    Path trashPath = Path.mergePaths(shell.getCurrentTrashDir(path), path);
+
+    verifyDelete(shell, fs, path, trashPath, shouldExistInTrash);
+  }
+
+  public static void verifyDelete(FsShell shell, FileSystem fs, Path path,
+      Path trashPath, boolean shouldExistInTrash) throws Exception {
+    assertTrue(path + " file does not exist", fs.exists(path));
+
+    // Verify that trashPath has a path component named ".Trash"
+    Path checkTrash = trashPath;
+    while (!checkTrash.isRoot() && !checkTrash.getName().equals(".Trash")) {
+      checkTrash = checkTrash.getParent();
+    }
+    assertEquals("No .Trash component found in trash path " + trashPath,
+        ".Trash", checkTrash.getName());
+
+    String[] argv = new String[]{"-rm", "-r", path.toString()};
+    int res = ToolRunner.run(shell, argv);
+    assertEquals("rm failed", 0, res);
+    if (shouldExistInTrash) {
+      assertTrue("File not in trash : " + trashPath, fs.exists(trashPath));
+    } else {
+      assertFalse("File in trash : " + trashPath, fs.exists(trashPath));
     }
   }
 }
