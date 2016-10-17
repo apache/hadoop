@@ -28,8 +28,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +41,8 @@ import java.util.Set;
  * Main test class for MetadataStore implementations.
  * Implementations should each create a test by subclassing this and
  * overriding {@link #createContract()}.
+ * If your implementation may return missing results for recently set paths,
+ * override {@link MetadataStoreTestBase#allowMissing()}.
  */
 public abstract class MetadataStoreTestBase extends Assert {
 
@@ -60,6 +63,17 @@ public abstract class MetadataStoreTestBase extends Assert {
    * @return Contract which specifies the MetadataStore under test plus config.
    */
   public abstract AbstractMSContract createContract();
+
+  /**
+   * Tests assume that implementations will return recently set results.  If
+   * your implementation does not always hold onto metadata (e.g. LRU or
+   * time-based expiry) you can override this to return false.
+   * @return true if the test should succeed when null results are returned
+   *  from the MetadataStore under test.
+   */
+  public boolean allowMissing() {
+    return false;
+  }
 
   /** The MetadataStore contract used to test against. */
   private AbstractMSContract contract;
@@ -100,8 +114,10 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertDirectorySize("/da1/db1", 1);
 
     /* Check contents of dir status. */
-    PathMetadata dirMeta = ms.get(new Path("/da1"));
-    verifyDirStatus(dirMeta);
+    PathMetadata dirMeta = ms.get(strToPath("/da1"));
+    if (!allowMissing() || dirMeta != null) {
+      verifyDirStatus(dirMeta);
+    }
 
     /* This already exists, and should silently replace it. */
     ms.put(new PathMetadata(makeDirStatus("/da1/db1")));
@@ -117,10 +133,12 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertDirectorySize("/da1", 1);
     assertDirectorySize("/da1/db1", 2);
     assertEmptyDirs("/da2", "/da3");
-    PathMetadata meta = ms.get(new Path("/da1/db1/fc2"));
-    assertNotNull("Get file after put new.", meta);
-    assertEquals("Cached file size correct.", 200,
-        meta.getFileStatus().getLen());
+    PathMetadata meta = ms.get(strToPath("/da1/db1/fc2"));
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Get file after put new.", meta);
+      assertEquals("Cached file size correct.", 200,
+          meta.getFileStatus().getLen());
+    }
   }
 
   @Test
@@ -129,53 +147,74 @@ public abstract class MetadataStoreTestBase extends Assert {
     final String dirPath = "/a1/b1/c1/d1";
     ms.put(new PathMetadata(makeFileStatus(filePath, 100)));
     ms.put(new PathMetadata(makeDirStatus(dirPath)));
-    PathMetadata meta = ms.get(new Path(filePath));
-    verifyBasicFileStatus(meta);
+    PathMetadata meta = ms.get(strToPath(filePath));
+    if (!allowMissing() || meta != null) {
+      verifyBasicFileStatus(meta);
+    }
 
-    ms.put(new PathMetadata(basicFileStatus(new Path(filePath), 9999, false)));
-    meta = ms.get(new Path(filePath));
-    assertEquals("Updated size", 9999, meta.getFileStatus().getLen());
+    ms.put(new PathMetadata(basicFileStatus(strToPath(filePath), 9999, false)));
+    meta = ms.get(strToPath(filePath));
+    if (!allowMissing() || meta != null) {
+      assertEquals("Updated size", 9999, meta.getFileStatus().getLen());
+    }
   }
 
   @Test
   public void testRootDirPutNew() throws Exception {
-    Path rootPath = new Path("/");
+    Path rootPath = strToPath("/");
 
     ms.put(new PathMetadata(makeFileStatus("/file1", 100)));
     DirListingMetadata dir = ms.listChildren(rootPath);
-    assertNotNull("Root dir cached", dir);
-    assertFalse("Root not fully cached", dir.isAuthoritative());
-    assertNotNull("have root dir file listing", dir.getListing());
-    assertEquals("One file in root dir", 1, dir.getListing().size());
-    assertEquals("file1 in root dir", "/file1", dir.getListing().iterator()
-        .next().getFileStatus().getPath().toString());
+    if (!allowMissing() || dir != null) {
+      assertNotNull("Root dir cached", dir);
+      assertFalse("Root not fully cached", dir.isAuthoritative());
+      assertNotNull("have root dir file listing", dir.getListing());
+      assertEquals("One file in root dir", 1, dir.getListing().size());
+      assertEquals("file1 in root dir", strToPath("/file1"),
+          dir.getListing().iterator().next().getFileStatus().getPath());
+    }
   }
 
   @Test
   public void testDelete() throws Exception {
     setUpDeleteTest();
 
-    ms.delete(new Path("/ADirectory1/db1/file2"));
+    ms.delete(strToPath("/ADirectory1/db1/file2"));
 
     /* Ensure delete happened. */
     assertDirectorySize("/ADirectory1/db1", 1);
-    PathMetadata meta = ms.get(new Path("/ADirectory1/db1/file2"));
+    PathMetadata meta = ms.get(strToPath("/ADirectory1/db1/file2"));
     assertNull("File deleted", meta);
   }
 
   @Test
   public void testDeleteSubtree() throws Exception {
-    setUpDeleteTest();
-    createNewDirs("/ADirectory1/db1/dc1", "/ADirectory1/db1/dc1/dd1");
-    ms.put(new PathMetadata(
-        makeFileStatus("/ADirectory1/db1/dc1/dd1/deepFile", 100)));
-    ms.deleteSubtree(new Path("/ADirectory1/db1"));
+    deleteSubtreeHelper("");
+  }
 
-    assertEmptyDirectory("/ADirectory1");
-    assertNotCached("/ADirectory1/file1");
-    assertNotCached("/ADirectory1/file2");
-    assertNotCached("/ADirectory1/db1/dc1/dd1/deepFile");
-    assertEmptyDirectory("/ADirectory2");
+  @Test
+  public void testDeleteSubtreeHostPath() throws Exception {
+    deleteSubtreeHelper("s3a://test-bucket-name");
+  }
+
+  private void deleteSubtreeHelper(String pathPrefix) throws Exception {
+
+    String p = pathPrefix;
+    setUpDeleteTest(p);
+    createNewDirs(p + "/ADirectory1/db1/dc1", p + "/ADirectory1/db1/dc1/dd1");
+    ms.put(new PathMetadata(
+        makeFileStatus(p + "/ADirectory1/db1/dc1/dd1/deepFile", 100)));
+    if (!allowMissing()) {
+      assertCached(p + "/ADirectory1/db1");
+    }
+    ms.deleteSubtree(strToPath(p + "/ADirectory1/db1/"));
+
+    assertEmptyDirectory(p + "/ADirectory1");
+    assertNotCached(p + "/ADirectory1/db1");
+    assertNotCached(p + "/ADirectory1/file1");
+    assertNotCached(p + "/ADirectory1/file2");
+    assertNotCached(p + "/ADirectory1/db1/dc1/dd1/deepFile");
+    assertEmptyDirectory(p + "/ADirectory2");
   }
 
 
@@ -188,7 +227,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   public void testDeleteRecursiveRoot() throws Exception {
     setUpDeleteTest();
 
-    ms.deleteSubtree(new Path("/"));
+    ms.deleteSubtree(strToPath("/"));
     assertNotCached("/ADirectory1");
     assertNotCached("/ADirectory2");
     assertNotCached("/ADirectory2/db1");
@@ -199,22 +238,30 @@ public abstract class MetadataStoreTestBase extends Assert {
   @Test
   public void testDeleteNonExisting() throws Exception {
     // Path doesn't exist, but should silently succeed
-    ms.delete(new Path("/bobs/your/uncle"));
+    ms.delete(strToPath("/bobs/your/uncle"));
 
     // Ditto.
-    ms.deleteSubtree(new Path("/internets"));
+    ms.deleteSubtree(strToPath("/internets"));
   }
 
 
   private void setUpDeleteTest() throws IOException {
-    createNewDirs("/ADirectory1", "/ADirectory2", "/ADirectory1/db1");
-    ms.put(new PathMetadata(makeFileStatus("/ADirectory1/db1/file1", 100)));
-    ms.put(new PathMetadata(makeFileStatus("/ADirectory1/db1/file2", 100)));
+    setUpDeleteTest("");
+  }
 
-    PathMetadata meta = ms.get(new Path("/ADirectory1/db1/file2"));
-    assertNotNull("Found test file", meta);
+  private void setUpDeleteTest(String prefix) throws IOException {
+    createNewDirs(prefix + "/ADirectory1", prefix + "/ADirectory2",
+        prefix + "/ADirectory1/db1");
+    ms.put(new PathMetadata(makeFileStatus(prefix + "/ADirectory1/db1/file1",
+        100)));
+    ms.put(new PathMetadata(makeFileStatus(prefix + "/ADirectory1/db1/file2",
+        100)));
 
-    assertDirectorySize("/ADirectory1/db1", 2);
+    PathMetadata meta = ms.get(strToPath(prefix + "/ADirectory1/db1/file2"));
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Found test file", meta);
+      assertDirectorySize(prefix + "/ADirectory1/db1", 2);
+    }
   }
 
   @Test
@@ -223,15 +270,19 @@ public abstract class MetadataStoreTestBase extends Assert {
     final String dirPath = "/a1/b1/c1/d1";
     ms.put(new PathMetadata(makeFileStatus(filePath, 100)));
     ms.put(new PathMetadata(makeDirStatus(dirPath)));
-    PathMetadata meta = ms.get(new Path(filePath));
-    assertNotNull("Get found file", meta);
-    verifyBasicFileStatus(meta);
+    PathMetadata meta = ms.get(strToPath(filePath));
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Get found file", meta);
+      verifyBasicFileStatus(meta);
+    }
 
-    meta = ms.get(new Path(dirPath));
-    assertNotNull("Get found file (dir)", meta);
-    assertTrue("Found dir", meta.getFileStatus().isDirectory());
+    meta = ms.get(strToPath(dirPath));
+    if (!allowMissing() || meta != null) {
+      assertNotNull("Get found file (dir)", meta);
+      assertTrue("Found dir", meta.getFileStatus().isDirectory());
+    }
 
-    meta = ms.get(new Path("bollocks"));
+    meta = ms.get(strToPath("/bollocks"));
     assertNull("Don't get non-existent file", meta);
   }
 
@@ -241,20 +292,21 @@ public abstract class MetadataStoreTestBase extends Assert {
     setupListStatus();
 
     DirListingMetadata dirMeta;
-    try {
-      dirMeta = ms.listChildren(new Path("/"));
-      if (dirMeta != null) {
-      /* Cache has no way of knowing it has all entries for root unless we
-       * specifically tell it via put() with
-       * DirListingMetadata.isAuthoritative = true */
-        assertFalse("Root dir is not cached, or partially cached",
-            dirMeta.isAuthoritative());
-        assertListingsEqual(dirMeta.getListing(), "/a1", "/a2");
-      }
-    } catch (FileNotFoundException f) { }
+    dirMeta = ms.listChildren(strToPath("/"));
+    if (!allowMissing()) {
+      assertNotNull(dirMeta);
+        /* Cache has no way of knowing it has all entries for root unless we
+         * specifically tell it via put() with
+         * DirListingMetadata.isAuthoritative = true */
+      assertFalse("Root dir is not cached, or partially cached",
+          dirMeta.isAuthoritative());
+      assertListingsEqual(dirMeta.getListing(), "/a1", "/a2");
+    }
 
-    dirMeta = ms.listChildren(new Path("/a1"));
-    assertListingsEqual(dirMeta.getListing(), "/a1/b1", "/a1/b2");
+    dirMeta = ms.listChildren(strToPath("/a1"));
+    if (!allowMissing() || dirMeta != null) {
+      assertListingsEqual(dirMeta.getListing(), "/a1/b1", "/a1/b2");
+    }
 
     // TODO
     // 1. Add properties query to MetadataStore interface
@@ -263,9 +315,11 @@ public abstract class MetadataStoreTestBase extends Assert {
     // 3. If #1 is true, assert that directory is still fully cached here.
     // assertTrue("Created dir is fully cached", dirMeta.isAuthoritative());
 
-    dirMeta = ms.listChildren(new Path("/a1/b1"));
-    assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
-        "/a1/b1/c1");
+    dirMeta = ms.listChildren(strToPath("/a1/b1"));
+    if (!allowMissing() || dirMeta != null) {
+      assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
+          "/a1/b1/c1");
+    }
   }
 
   @Test
@@ -282,7 +336,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   public void testInvalidListChildren() throws Exception {
     setupListStatus();
     assertNull("missing path returns null",
-        ms.listChildren(new Path("/a1/b1x")));
+        ms.listChildren(strToPath("/a1/b1x")));
   }
 
   @Test
@@ -293,20 +347,25 @@ public abstract class MetadataStoreTestBase extends Assert {
     putListStatusFiles("/a1/b1", false, "/a1/b1/file1", "/a1/b1/file2");
 
     // Assert root listing as expected
-    DirListingMetadata dirMeta = ms.listChildren(new Path("/"));
-    assertNotNull("Listing root", dirMeta);
-    Collection<PathMetadata> entries = dirMeta.getListing();
-    assertListingsEqual(entries, "/a1", "/a2", "/a3");
+    Collection<PathMetadata> entries;
+    DirListingMetadata dirMeta = ms.listChildren(strToPath("/"));
+    if (!allowMissing() || dirMeta != null) {
+      assertNotNull("Listing root", dirMeta);
+      entries = dirMeta.getListing();
+      assertListingsEqual(entries, "/a1", "/a2", "/a3");
+    }
 
     // Assert src listing as expected
-    dirMeta = ms.listChildren(new Path("/a1/b1"));
-    assertNotNull("Listing /a1/b1", dirMeta);
-    entries = dirMeta.getListing();
-    assertListingsEqual(entries, "/a1/b1/file1", "/a1/b1/file2");
+    dirMeta = ms.listChildren(strToPath("/a1/b1"));
+    if (!allowMissing() || dirMeta != null) {
+      assertNotNull("Listing /a1/b1", dirMeta);
+      entries = dirMeta.getListing();
+      assertListingsEqual(entries, "/a1/b1/file1", "/a1/b1/file2");
+    }
 
     // Do the move(): rename(/a1/b1, /b1)
-    Collection<Path> srcPaths = Arrays.asList(new Path("/a1/b1"),
-        new Path("/a1/b1/file1"), new Path("/a1/b1/file2"));
+    Collection<Path> srcPaths = Arrays.asList(strToPath("/a1/b1"),
+        strToPath("/a1/b1/file1"), strToPath("/a1/b1/file2"));
 
     ArrayList<PathMetadata> destMetas = new ArrayList<>();
     destMetas.add(new PathMetadata(makeDirStatus("/b1")));
@@ -315,24 +374,30 @@ public abstract class MetadataStoreTestBase extends Assert {
     ms.move(srcPaths, destMetas);
 
     // Assert src is no longer there
-    dirMeta = ms.listChildren(new Path("/a1"));
-    assertNotNull("Listing /a1", dirMeta);
-    entries = dirMeta.getListing();
-    assertListingsEqual(entries, "/a1/b2");
+    dirMeta = ms.listChildren(strToPath("/a1"));
+    if (!allowMissing() || dirMeta != null) {
+      assertNotNull("Listing /a1", dirMeta);
+      entries = dirMeta.getListing();
+      assertListingsEqual(entries, "/a1/b2");
+    }
 
-    PathMetadata meta = ms.get(new Path("/a1/b1/file1"));
+    PathMetadata meta = ms.get(strToPath("/a1/b1/file1"));
     // TODO allow return of PathMetadata with isDeleted == true
     assertNull("Src path deleted", meta);
 
     // Assert dest looks right
-    meta = ms.get(new Path("/b1/file1"));
-    assertNotNull("dest file not null", meta);
-    verifyBasicFileStatus(meta);
+    meta = ms.get(strToPath("/b1/file1"));
+    if (!allowMissing() || meta != null) {
+      assertNotNull("dest file not null", meta);
+      verifyBasicFileStatus(meta);
+    }
 
-    dirMeta = ms.listChildren(new Path("/b1"));
-    assertNotNull("dest listing not null", dirMeta);
-    entries = dirMeta.getListing();
-    assertListingsEqual(entries, "/b1/file1", "/b1/file2");
+    dirMeta = ms.listChildren(strToPath("/b1"));
+    if (!allowMissing() || dirMeta != null) {
+      assertNotNull("dest listing not null", dirMeta);
+      entries = dirMeta.getListing();
+      assertListingsEqual(entries, "/b1/file1", "/b1/file2");
+    }
   }
 
 
@@ -345,7 +410,7 @@ public abstract class MetadataStoreTestBase extends Assert {
 
     Path[] output = new Path[paths.length];
     for (int i = 0; i < paths.length; i++) {
-      output[i] = new Path(parent, paths[i]);
+      output[i] = new Path(strToPath(parent), paths[i]);
     }
     return output;
   }
@@ -353,7 +418,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   /** Modifies paths input array and returns it. */
   private String[] buildPathStrings(String parent, String... paths) {
     for (int i = 0; i < paths.length; i++) {
-      Path p = new Path(parent, paths[i]);
+      Path p = new Path(strToPath(parent), paths[i]);
       paths[i] = p.toString();
     }
     return paths;
@@ -362,12 +427,14 @@ public abstract class MetadataStoreTestBase extends Assert {
   private void commonTestPutListStatus(final String parent) throws IOException {
     putListStatusFiles(parent, true, buildPathStrings(parent, "file1", "file2",
         "file3"));
-    DirListingMetadata dirMeta = ms.listChildren(new Path(parent));
-    assertNotNull("list after putListStatus", dirMeta);
-    Collection<PathMetadata> entries = dirMeta.getListing();
-    assertNotNull("listStatus has entries", entries);
-    assertListingsEqual(entries, buildPathStrings(parent, "file1", "file2",
-        "file3"));
+    DirListingMetadata dirMeta = ms.listChildren(strToPath(parent));
+    if (!allowMissing() || dirMeta != null) {
+      assertNotNull("list after putListStatus", dirMeta);
+      Collection<PathMetadata> entries = dirMeta.getListing();
+      assertNotNull("listStatus has entries", entries);
+      assertListingsEqual(entries,
+          buildPathStrings(parent, "file1", "file2", "file3"));
+    }
   }
 
   private void setupListStatus() throws IOException {
@@ -386,7 +453,7 @@ public abstract class MetadataStoreTestBase extends Assert {
 
     Set<Path> b = new HashSet<>();
     for (String ps : pathStrs) {
-      b.add(new Path(ps));
+      b.add(strToPath(ps));
     }
     assertTrue("Same set of files", a.equals(b));
   }
@@ -398,7 +465,7 @@ public abstract class MetadataStoreTestBase extends Assert {
       metas.add(new PathMetadata(makeFileStatus(filenames[i], 100)));
     }
     DirListingMetadata dirMeta =
-        new DirListingMetadata(new Path(dirPath), metas, authoritative);
+        new DirListingMetadata(strToPath(dirPath), metas, authoritative);
     ms.put(dirMeta);
   }
 
@@ -411,10 +478,14 @@ public abstract class MetadataStoreTestBase extends Assert {
 
   private void assertDirectorySize(String pathStr, int size)
       throws IOException {
-    DirListingMetadata dirMeta = ms.listChildren(new Path(pathStr));
-    assertNotNull("Directory " + pathStr + " in cache", dirMeta);
-    assertEquals("Number of entries in dir " + pathStr, size,
-        nonDeleted(dirMeta.getListing()).size());
+    DirListingMetadata dirMeta = ms.listChildren(strToPath(pathStr));
+    if (!allowMissing()) {
+      assertNotNull("Directory " + pathStr + " in cache", dirMeta);
+    }
+    if (!allowMissing() || dirMeta != null) {
+      assertEquals("Number of entries in dir " + pathStr, size,
+          nonDeleted(dirMeta.getListing()).size());
+    }
   }
 
   /** @return only file statuses which are *not* marked deleted. */
@@ -426,8 +497,32 @@ public abstract class MetadataStoreTestBase extends Assert {
 
   private void assertNotCached(String pathStr) throws IOException {
     // TODO this should return an entry with deleted flag set
-    PathMetadata meta = ms.get(new Path(pathStr));
-    assertNull(pathStr + " not cached.", meta);
+    Path path = strToPath(pathStr);
+    PathMetadata meta = ms.get(path);
+    assertNull(pathStr + " should not be cached.", meta);
+  }
+
+  private void assertCached(String pathStr) throws IOException {
+    Path path = strToPath(pathStr);
+    PathMetadata meta = ms.get(path);
+    assertNotNull(pathStr + " should be cached.", meta);
+  }
+
+  // Convenience to add scheme if missing
+  private Path strToPath(String p) {
+    Path path = new Path(p);
+    URI uri = path.toUri();
+    if (uri.getScheme() == null) {
+      String fsScheme = contract.getFileSystem().getScheme();
+      try {
+        return new Path(new URI(fsScheme, uri.getHost(), uri.getPath(),
+            uri.getFragment()));
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException("FileStatus path invalid with " +
+            "scheme " + fsScheme + " added", e);
+      }
+    }
+    return path;
   }
 
   private void assertEmptyDirectory(String pathStr) throws IOException {
@@ -446,7 +541,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   }
 
   private FileStatus makeFileStatus(String pathStr, int size) {
-    return basicFileStatus(new Path(pathStr), size, false);
+    return basicFileStatus(strToPath(pathStr), size, false);
   }
 
   private void verifyBasicFileStatus(PathMetadata meta) {
@@ -462,7 +557,7 @@ public abstract class MetadataStoreTestBase extends Assert {
   }
 
   private FileStatus makeDirStatus(String pathStr) {
-    return basicFileStatus(new Path(pathStr), 0, true);
+    return basicFileStatus(strToPath(pathStr), 0, true);
   }
 
   private void verifyDirStatus(PathMetadata meta) {

@@ -89,6 +89,9 @@ public interface MetadataStore extends Closeable {
    * MetadataStore.  Clients provide explicit enumeration of the affected
    * paths (recursively), before and after the rename.
    *
+   * This operation is not atomic, unless specific implementations claim
+   * otherwise.
+   *
    * On the need to provide an enumeration of directory trees instead of just
    * source and destination paths:
    * Since a MetadataStore does not have to track all metadata for the

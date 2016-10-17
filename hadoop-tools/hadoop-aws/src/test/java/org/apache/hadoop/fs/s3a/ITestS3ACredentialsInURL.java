@@ -119,6 +119,7 @@ public class ITestS3ACredentialsInURL extends Assert {
     Configuration conf = new Configuration();
     String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
     Assume.assumeNotNull(fsname);
+    Assume.assumeFalse(S3ATestUtils.isMetadataStoreAuthoritative(conf));
     URI original = new URI(fsname);
     URI testURI = createUriWithEmbeddedSecrets(original, "user", "//");
 

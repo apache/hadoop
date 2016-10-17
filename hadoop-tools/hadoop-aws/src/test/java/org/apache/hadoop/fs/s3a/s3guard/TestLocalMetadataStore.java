@@ -20,9 +20,12 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * MetadataStore unit test for {@link LocalMetadataStore}.
@@ -36,13 +39,13 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     private FileSystem fs;
 
     public LocalMSContract() {
-      fs = new RawLocalFileSystem();
-      Configuration config = fs.getConf();
-      if (config == null) {
-        config = new Configuration();
-      }
+      Configuration config = new Configuration();
       config.set(LocalMetadataStore.CONF_MAX_RECORDS, MAX_ENTRIES_STR);
-      fs.setConf(config);
+      try {
+        fs = FileSystem.getLocal(config);
+      } catch (IOException e) {
+        fail("Error creating LocalFileSystem");
+      }
     }
 
     @Override
@@ -60,6 +63,41 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   @Override
   public AbstractMSContract createContract() {
     return new LocalMSContract();
+  }
+
+  @Test
+  public void testClearByAncestor() {
+    Map<Path, String> map = new HashMap<>();
+
+    // 1. Test paths without scheme/host
+    assertClearResult(map, "", "/", 0);
+    assertClearResult(map, "", "/dirA/dirB", 2);
+    assertClearResult(map, "", "/invalid", 5);
+
+
+    // 2. Test paths w/ scheme/host
+    String p = "s3a://fake-bucket-name";
+    assertClearResult(map, p, "/", 0);
+    assertClearResult(map, p, "/dirA/dirB", 2);
+    assertClearResult(map, p, "/invalid", 5);
+  }
+
+  private static void populateMap(Map<Path, String> map, String prefix) {
+    String dummyVal = "dummy";
+    map.put(new Path(prefix + "/dirA/dirB/"), dummyVal);
+    map.put(new Path(prefix + "/dirA/dirB/dirC"), dummyVal);
+    map.put(new Path(prefix + "/dirA/dirB/dirC/file1"), dummyVal);
+    map.put(new Path(prefix + "/dirA/dirB/dirC/file2"), dummyVal);
+    map.put(new Path(prefix + "/dirA/file1"), dummyVal);
+  }
+
+  private static void assertClearResult(Map <Path, String> map,
+      String prefixStr, String pathStr, int leftoverSize) {
+    populateMap(map, prefixStr);
+    LocalMetadataStore.clearHashByAncestor(new Path(prefixStr + pathStr), map);
+    assertEquals(String.format("Map should have %d entries", leftoverSize),
+        leftoverSize, map.size());
+    map.clear();
   }
 
 }

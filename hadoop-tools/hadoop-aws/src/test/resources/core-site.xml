@@ -30,6 +30,28 @@
     <final>true</final>
   </property>
 
+  <!-- Uncomment these two properties to run integration tests with
+       local metadata store (S3Guard).
+
+  <property>
+    <name>fs.s3a.metadatastore.authoritative</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.s3a.metadatastore.impl</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore</value>
+  </property>
+
+  -->
+
+  <!-- Scale integration tests may time out on slower connections
+       you can reduce the operation count like so to mitigate this.
+  <property>
+      <name>scale.test.operation.count</name>
+      <value>500</value>
+  </property>
+  -->
+
   <!-- Turn security off for tests by default -->
   <property>
     <name>hadoop.security.authentication</name>

@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -39,8 +41,7 @@ import com.google.common.base.Preconditions;
 public class DirListingMetadata {
 
   /**
-   * Convenience parameter for passing into
-   * {@link DirListingMetadata#DirListingMetadata(Path, Collection, boolean)}.
+   * Convenience parameter for passing into constructor.
    */
   public static final Collection<PathMetadata> EMPTY_DIR =
       Collections.emptyList();
@@ -55,7 +56,8 @@ public class DirListingMetadata {
   /**
    * Create a directory listing metadata container.
    *
-   * @param path Path of the directory.
+   * @param path Path of the directory. If this path has a host component, then
+   *     all paths added later via put() must also have the same host.
    * @param listing Entries in the directory.
    * @param isAuthoritative true iff listing is the full contents of the
    *     directory, and the calling client reports that this may be cached as
@@ -63,11 +65,15 @@ public class DirListingMetadata {
    */
   public DirListingMetadata(Path path, Collection<PathMetadata> listing,
       boolean isAuthoritative) {
-    Preconditions.checkNotNull(path, "path must be non-null");
+
+    checkPathAbsolute(path);
     this.path = path;
+
     if (listing != null) {
       for (PathMetadata entry : listing) {
-        listMap.put(entry.getFileStatus().getPath(), entry);
+        Path childPath = entry.getFileStatus().getPath();
+        checkChildPath(childPath);
+        listMap.put(childPath, entry);
       }
     }
     this.isAuthoritative  = isAuthoritative;
@@ -85,6 +91,15 @@ public class DirListingMetadata {
    */
   public Collection<PathMetadata> getListing() {
     return Collections.unmodifiableCollection(listMap.values());
+  }
+
+  /**
+   * @return number of entries tracked.  This is not the same as the number
+   * of entries in the actual directory unless {@link #isAuthoritative()} is
+   * true.
+   */
+  public int numEntries() {
+    return listMap.size();
   }
 
   /**
@@ -138,8 +153,7 @@ public class DirListingMetadata {
   public void put(FileStatus childFileStatus) {
     Preconditions.checkNotNull(childFileStatus,
         "childFileStatus must be non-null");
-    Path childPath = childFileStatus.getPath();
-    checkChildPath(childPath);
+    Path childPath = childStatusToPathKey(childFileStatus);
     listMap.put(childPath, new PathMetadata(childFileStatus));
   }
 
@@ -153,17 +167,81 @@ public class DirListingMetadata {
   }
 
   /**
-   * Performs pre-condition checks on child path arguments.
-   *
+   * Log contents to supplied StringBuilder in a pretty fashion.
+   * @param sb target StringBuilder
+   */
+  public void prettyPrint(StringBuilder sb) {
+    sb.append(String.format("DirMeta %-20s %-18s",
+        path.toString(),
+        isAuthoritative ? "Authoritative" : "Not Authoritative"));
+    for (Map.Entry<Path, PathMetadata> entry : listMap.entrySet()) {
+      sb.append("\n   key: ").append(entry.getKey()).append(": ");
+      entry.getValue().prettyPrint(sb);
+    }
+    sb.append("\n");
+  }
+
+  public String prettyPrint() {
+    StringBuilder sb = new StringBuilder();
+    prettyPrint(sb);
+    return sb.toString();
+  }
+  /**
+   * Checks that child path is valid.
    * @param childPath path to check.
    */
   private void checkChildPath(Path childPath) {
-    Preconditions.checkNotNull(childPath, "childPath must be non-null");
-    Preconditions.checkArgument(childPath.isAbsolute(), "childPath must be " +
-        "absolute");
+    checkPathAbsolute(childPath);
+
+    // If this dir's path has host (and thus scheme), so must its children
+    URI parentUri = path.toUri();
+    if (parentUri.getHost() != null) {
+      URI childUri = childPath.toUri();
+      Preconditions.checkNotNull(childUri.getHost(), "Expected non-null URI " +
+          "host");
+      Preconditions.checkArgument(
+          childUri.getHost().equals(parentUri.getHost()));
+      Preconditions.checkNotNull(childUri.getScheme());
+    }
     Preconditions.checkArgument(!childPath.isRoot(),
         "childPath cannot be the root path");
     Preconditions.checkArgument(childPath.getParent().equals(path),
         "childPath must be a child of path");
+  }
+
+  /**
+   * For Path's that are handed in directly, we assert they are in consistent
+   * format with checkPath().  For paths that are supplied embedded in
+   * FileStatus', we attempt to fill in missing scheme and host, when this
+   * DirListingMetadata is associated with one.
+   *
+   * @return Path suitable for consistent hashtable lookups
+   */
+  private Path childStatusToPathKey(FileStatus status) {
+    Path p = status.getPath();
+    Preconditions.checkNotNull(p, "Child status' path cannot be null");
+    Preconditions.checkArgument(!p.isRoot(),
+        "childPath cannot be the root path");
+    Preconditions.checkArgument(p.getParent().equals(path),
+        "childPath must be a child of path");
+    URI uri = p.toUri();
+    URI parentUri = path.toUri();
+    // If FileStatus' path is missing host, but should have one, add it.
+    if (uri.getHost() == null && parentUri.getHost() != null) {
+      try {
+        return new Path(new URI(parentUri.getScheme(), parentUri.getHost(),
+            uri.getPath(), uri.getFragment()));
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException("FileStatus path invalid with " +
+            " added " + parentUri.getScheme() + "://" + parentUri.getHost() +
+            " added", e);
+      }
+    }
+    return p;
+  }
+
+  private void checkPathAbsolute(Path p) {
+    Preconditions.checkNotNull(p, "path must be non-null");
+    Preconditions.checkArgument(p.isAbsolute(), "path must be absolute");
   }
 }

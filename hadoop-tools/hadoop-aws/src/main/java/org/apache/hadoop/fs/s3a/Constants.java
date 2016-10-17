@@ -230,6 +230,11 @@ public final class Constants {
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
+  /** Whether or not to allow MetadataStore to be source of truth. */
+  public static final String METADATASTORE_AUTHORITATIVE =
+      "fs.s3a.metadatastore.authoritative";
+  public static final boolean DEFAULT_METADATASTORE_AUTHORITATIVE = false;
+
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
   public static final long DEFAULT_READAHEAD_RANGE = 64 * 1024;

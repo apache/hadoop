@@ -24,10 +24,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -48,6 +51,7 @@ import java.util.Map;
 public class LocalMetadataStore implements MetadataStore {
 
   public static final Logger LOG = LoggerFactory.getLogger(MetadataStore.class);
+  // TODO HADOOP-13649: use time instead of capacity for eviction.
   public static final int DEFAULT_MAX_RECORDS = 128;
   public static final String CONF_MAX_RECORDS =
       "fs.metadatastore.local.max_records";
@@ -59,11 +63,28 @@ public class LocalMetadataStore implements MetadataStore {
   private LruHashMap<Path, DirListingMetadata> dirHash;
 
   private FileSystem fs;
+  private boolean isS3A;
+  /* Null iff this FS does not have an associated URI host. */
+  private String uriHost;
 
   @Override
   public void initialize(FileSystem fileSystem) throws IOException {
     Preconditions.checkNotNull(fileSystem);
     fs = fileSystem;
+
+    // Hate to take a dependency on S3A, but if the MetadataStore has to
+    // maintain S3AFileStatus#isEmptyDirectory, best to be able to to that
+    // under our own lock.
+    if (fs instanceof S3AFileSystem) {
+      isS3A = true;
+    }
+
+    URI fsURI = fs.getUri();
+    uriHost = fsURI.getHost();
+    if (uriHost != null && uriHost.equals("")) {
+      uriHost = null;
+    }
+
     Configuration conf = fs.getConf();
     Preconditions.checkNotNull(conf);
     int maxRecords = conf.getInt(CONF_MAX_RECORDS, DEFAULT_MAX_RECORDS);
@@ -85,18 +106,15 @@ public class LocalMetadataStore implements MetadataStore {
     doDelete(path, true);
   }
 
-  private synchronized void doDelete(Path path, boolean recursive) {
+  private synchronized void doDelete(Path p, boolean recursive) {
 
+    Path path = standardize(p);
     // We could implement positive hit for 'deleted' files.  For now we
     // do not track them.
 
     // Delete entry from file cache, then from cached parent directory, if any
 
-    // Remove target file/dir
-    fileHash.remove(path);
-
-    // Update this and parent dir listing, if any
-    dirHashDeleteFile(path);
+    removeHashEntries(path);
 
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
@@ -106,14 +124,23 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public synchronized PathMetadata get(Path path) throws IOException {
-    return fileHash.mruGet(path);
+  public synchronized PathMetadata get(Path p) throws IOException {
+    Path path = standardize(p);
+    PathMetadata m = fileHash.mruGet(path);
+    LOG.debug("get({}) -> {}", path, m == null ? "null" : m.prettyPrint());
+    return m;
   }
 
   @Override
-  public synchronized DirListingMetadata listChildren(Path path) throws
+  public synchronized DirListingMetadata listChildren(Path p) throws
       IOException {
-    return dirHash.mruGet(path);
+    Path path = standardize(p);
+    DirListingMetadata listing = dirHash.mruGet(path);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("listChildren({}) -> {}", path,
+          listing == null ? "null" : listing.prettyPrint());
+    }
+    return listing;
   }
 
   @Override
@@ -130,11 +157,13 @@ public class LocalMetadataStore implements MetadataStore {
 
       // 1. Delete pathsToDelete
       for (Path p : pathsToDelete) {
+        LOG.debug("move: deleting metadata {}", p);
         delete(p);
       }
 
       // 2. Create new destination path metadata
       for (PathMetadata meta : pathsToCreate) {
+        LOG.debug("move: adding metadata {}", meta);
         put(meta);
       }
 
@@ -155,11 +184,15 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public void put(PathMetadata meta) throws IOException {
 
+    Preconditions.checkNotNull(meta);
     FileStatus status = meta.getFileStatus();
-    Path path = status.getPath();
+    Path path = standardize(status.getPath());
     synchronized (this) {
 
       /* Add entry for this file. */
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("put {} -> {}", path, meta.prettyPrint());
+      }
       fileHash.put(path, meta);
 
       /* Directory case:
@@ -173,7 +206,6 @@ public class LocalMetadataStore implements MetadataStore {
        * saving round trips to underlying store for subsequent listStatus()
        */
 
-      /* If directory, go ahead and cache the fact that it is empty. */
       if (status.isDirectory()) {
         DirListingMetadata dir = dirHash.mruGet(path);
         if (dir == null) {
@@ -184,22 +216,32 @@ public class LocalMetadataStore implements MetadataStore {
 
       /* Update cached parent dir. */
       Path parentPath = path.getParent();
-      DirListingMetadata parent = dirHash.mruGet(parentPath);
-      if (parent == null) {
+      if (parentPath != null) {
+        DirListingMetadata parent = dirHash.mruGet(parentPath);
+        if (parent == null) {
         /* Track this new file's listing in parent.  Parent is not
          * authoritative, since there may be other items in it we don't know
          * about. */
-        parent = new DirListingMetadata(parentPath,
-            DirListingMetadata.EMPTY_DIR, false);
-        dirHash.put(parentPath, parent);
+          parent = new DirListingMetadata(parentPath,
+              DirListingMetadata.EMPTY_DIR, false);
+          dirHash.put(parentPath, parent);
+        } else {
+          // S3A-specific logic to maintain S3AFileStatus#isEmptyDirectory()
+          if (isS3A) {
+            setS3AIsEmpty(parentPath, false);
+          }
+        }
+        parent.put(status);
       }
-      parent.put(status);
     }
   }
 
   @Override
   public synchronized void put(DirListingMetadata meta) throws IOException {
-    dirHash.put(meta.getPath(), meta);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("put dirMeta {}", meta.prettyPrint());
+    }
+    dirHash.put(standardize(meta.getPath()), meta);
   }
 
   @Override
@@ -233,11 +275,19 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   /**
-   * Update dirHash to reflect deletion of file 'f'.  Call with lock held.
+   * Update fileHash and dirHash to reflect deletion of file 'f'.  Call with
+   * lock held.
    */
-  private void dirHashDeleteFile(Path path) {
+  private void removeHashEntries(Path path) {
+
+    // Remove target file/dir
+    LOG.debug("delete file entry for {}", path);
+    fileHash.remove(path);
+
+    // Update this and parent dir listing, if any
 
     /* If this path is a dir, remove its listing */
+    LOG.debug("removing listing of {}", path);
     dirHash.remove(path);
 
     /* Remove this path from parent's dir listing */
@@ -245,8 +295,92 @@ public class LocalMetadataStore implements MetadataStore {
     if (parent != null) {
       DirListingMetadata dir = dirHash.get(parent);
       if (dir != null) {
+        LOG.debug("removing parent's entry for {} ", path);
         dir.remove(path);
+
+        // S3A-specific logic dealing with S3AFileStatus#isEmptyDirectory()
+        if (isS3A) {
+          if (dir.isAuthoritative() && dir.numEntries() == 0) {
+            setS3AIsEmpty(parent, true);
+          } else if (dir.numEntries() == 0) {
+            // We do not know of any remaining entries in parent directory.
+            // However, we do not have authoritative listing, so there may
+            // still be some entries in the dir.  Since we cannot know the
+            // proper state of the parent S3AFileStatus#isEmptyDirectory, we
+            // will invalidate our entries for it.
+            // Better than deleting entries would be marking them as "missing
+            // metadata".  Deleting them means we lose consistent listing and
+            // ability to retry for eventual consistency for the parent path.
+
+            // TODO implement missing metadata feature
+            invalidateFileStatus(parent);
+          }
+          // else parent directory still has entries in it, isEmptyDirectory
+          // does not change
+        }
+
       }
     }
+  }
+
+  /**
+   * Invalidate any stored FileStatus's for path.  Call with lock held.
+   * @param path path to invalidate
+   */
+  private void invalidateFileStatus(Path path) {
+    // TODO implement missing metadata feature
+    fileHash.remove(path);
+    Path parent = path.getParent();
+    if (parent != null) {
+      DirListingMetadata parentListing = dirHash.get(parent);
+      if (parentListing != null) {
+        parentListing.remove(path);
+      }
+    }
+  }
+
+  private void setS3AIsEmpty(Path path, boolean isEmpty) {
+    // Update any file statuses in fileHash
+    PathMetadata meta = fileHash.get(path);
+    if (meta != null) {
+      S3AFileStatus s3aStatus =  (S3AFileStatus)meta.getFileStatus();
+      LOG.debug("Setting S3AFileStatus is empty dir ({}) for key {}, {}",
+          isEmpty, path, s3aStatus.getPath());
+      s3aStatus.setIsEmptyDirectory(isEmpty);
+    }
+    // Update any file statuses in dirHash
+    Path parent = path.getParent();
+    if (parent != null) {
+      DirListingMetadata dirMeta = dirHash.get(parent);
+      if (dirMeta != null) {
+        PathMetadata entry = dirMeta.get(path);
+        if (entry != null) {
+          S3AFileStatus s3aStatus =  (S3AFileStatus)entry.getFileStatus();
+          LOG.debug("Setting S3AFileStatus is empty dir ({}) for key " +
+                  "{}, {}", isEmpty, path, s3aStatus.getPath());
+          s3aStatus.setIsEmptyDirectory(isEmpty);
+        }
+      }
+    }
+  }
+
+  /**
+   * Return a "standardized" version of a path so we always have a consistent
+   * hash value.  Also asserts the path is absolute, and contains host
+   * component.
+   * @param p input Path
+   * @return standardized version of Path, suitable for hash key
+   */
+  private Path standardize(Path p) {
+    Preconditions.checkArgument(p.isAbsolute(), "Path must be absolute");
+    URI uri = p.toUri();
+    if (uriHost != null) {
+      Preconditions.checkArgument(!isEmpty(uri.getHost()));
+    }
+    return p;
+  }
+
+  private static boolean isEmpty(String s) {
+    return (s == null || s.isEmpty());
   }
 }

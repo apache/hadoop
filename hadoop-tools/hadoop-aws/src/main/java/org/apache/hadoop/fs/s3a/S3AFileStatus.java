@@ -68,6 +68,16 @@ public class S3AFileStatus extends FileStatus {
     return isEmptyDirectory;
   }
 
+  /**
+   * Should not be called by clients.  Only used so {@link org.apache.hadoop
+   * .fs.s3a.s3guard.MetadataStore} can maintain this flag when caching
+   * FileStatuses on behalf of s3a.
+   * @param value true iff empty
+   */
+  public void setIsEmptyDirectory(boolean value) {
+    isEmptyDirectory = value;
+  }
+
   /** Compare if this object is equal to another object.
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.

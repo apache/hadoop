@@ -86,6 +86,10 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -142,6 +146,8 @@ public class S3AFileSystem extends FileSystem {
   private long readAhead;
   private S3AInputPolicy inputPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  private MetadataStore metadataStore;
+  private boolean allowAuthoritative;
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
@@ -242,10 +248,13 @@ public class S3AFileSystem extends FileSystem {
       } else {
         LOG.debug("Using S3AOutputStream");
       }
+
+      metadataStore = S3Guard.getMetadataStore(this);
+      allowAuthoritative = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
+          DEFAULT_METADATASTORE_AUTHORITATIVE);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
-
   }
 
   /**
@@ -651,14 +660,17 @@ public class S3AFileSystem extends FileSystem {
   /**
    * The inner rename operation. See {@link #rename(Path, Path)} for
    * the description of the operation.
-   * @param src path to be renamed
-   * @param dst new path after rename
+   * @param source path to be renamed
+   * @param dest new path after rename
    * @return true if rename is successful
    * @throws IOException on IO failure.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  private boolean innerRename(Path src, Path dst) throws IOException,
+  private boolean innerRename(Path source, Path dest) throws IOException,
       AmazonClientException {
+    Path src = qualify(source);
+    Path dst = qualify(dest);
+
     LOG.debug("Rename path {} to {}", src, dst);
     incrementStatistic(INVOCATION_RENAME);
 
@@ -715,9 +727,20 @@ public class S3AFileSystem extends FileSystem {
       }
     }
 
+    // If we have a MetadataStore, track deletions/creations.
+    List<Path> srcPaths = null;
+    List<PathMetadata> dstMetas = null;
+    if (!S3Guard.isNullMetadataStore(metadataStore)) {
+      srcPaths = new ArrayList<>();
+      dstMetas = new ArrayList<>();
+    }
+    // HADOOP-13761 s3guard: retries when source paths are not visible yet
+    // TODO s3guard: performance: mark destination dirs as authoritative
+
     // Ok! Time to start
     if (srcStatus.isFile()) {
       LOG.debug("rename: renaming file {} to {}", src, dst);
+      long length = srcStatus.getLen();
       if (dstStatus != null && dstStatus.isDirectory()) {
         String newDstKey = dstKey;
         if (!newDstKey.endsWith("/")) {
@@ -726,9 +749,14 @@ public class S3AFileSystem extends FileSystem {
         String filename =
             srcKey.substring(pathToKey(src.getParent()).length()+1);
         newDstKey = newDstKey + filename;
-        copyFile(srcKey, newDstKey, srcStatus.getLen());
+        copyFile(srcKey, newDstKey, length);
+        S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src,
+            keyToQualifiedPath(newDstKey), length, getDefaultBlockSize(dst),
+            username);
       } else {
         copyFile(srcKey, dstKey, srcStatus.getLen());
+        S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src, dst,
+            length, getDefaultBlockSize(dst), username);
       }
       innerDelete(srcStatus, false);
     } else {
@@ -765,11 +793,24 @@ public class S3AFileSystem extends FileSystem {
 
       while (true) {
         for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-          keysToDelete.add(
-              new DeleteObjectsRequest.KeyVersion(summary.getKey()));
+          long length = summary.getSize();
+          keysToDelete
+              .add(new DeleteObjectsRequest.KeyVersion(summary.getKey()));
           String newDstKey =
               dstKey + summary.getKey().substring(srcKey.length());
-          copyFile(summary.getKey(), newDstKey, summary.getSize());
+          copyFile(summary.getKey(), newDstKey, length);
+
+          if (!S3Guard.isNullMetadataStore(metadataStore)) {
+            Path srcPath = keyToQualifiedPath(summary.getKey());
+            Path dstPath = keyToQualifiedPath(newDstKey);
+            if (objectRepresentsDirectory(summary.getKey(), length)) {
+              S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, srcPath,
+                  dstPath, username);
+            } else {
+              S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, srcPath,
+                  dstPath, length, getDefaultBlockSize(dstPath), username);
+            }
+          }
 
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
             removeKeys(keysToDelete, true, false);
@@ -785,7 +826,12 @@ public class S3AFileSystem extends FileSystem {
           break;
         }
       }
+
+      // We moved all the children, now move the top-level dir.
+      S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst, username);
     }
+
+    metadataStore.move(srcPaths, dstMetas);
 
     if (src.getParent() != dst.getParent()) {
       deleteUnnecessaryFakeDirectories(dst.getParent());
@@ -803,6 +849,11 @@ public class S3AFileSystem extends FileSystem {
   @VisibleForTesting
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
     return getObjectMetadata(pathToKey(path));
+  }
+
+  @VisibleForTesting
+  public boolean isMetadataStoreConfigured() {
+    return !S3Guard.isNullMetadataStore(metadataStore);
   }
 
   /**
@@ -1013,7 +1064,7 @@ public class S3AFileSystem extends FileSystem {
    * @param putObjectRequest the request
    * @return the upload initiated
    */
-  public Upload putObject(PutObjectRequest putObjectRequest) {
+  public UploadInfo putObject(PutObjectRequest putObjectRequest) {
     long len;
     if (putObjectRequest.getFile() != null) {
       len = putObjectRequest.getFile().length();
@@ -1024,7 +1075,7 @@ public class S3AFileSystem extends FileSystem {
     try {
       Upload upload = transfers.upload(putObjectRequest);
       incrementPutCompletedStatistics(true, len);
-      return upload;
+      return new UploadInfo(upload, len);
     } catch (AmazonClientException e) {
       incrementPutCompletedStatistics(false, len);
       throw e;
@@ -1224,7 +1275,9 @@ public class S3AFileSystem extends FileSystem {
 
       if (status.isEmptyDirectory()) {
         LOG.debug("Deleting fake empty directory {}", key);
+        // HADOOP-13761 s3guard: retries here
         deleteObject(key);
+        metadataStore.delete(f);
         instrumentation.directoryDeleted();
       } else {
         LOG.debug("Getting objects for directory prefix {} to delete", key);
@@ -1240,6 +1293,7 @@ public class S3AFileSystem extends FileSystem {
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
+              // HADOOP-13761 s3guard: retries
               removeKeys(keys, true, false);
             }
           }
@@ -1248,16 +1302,19 @@ public class S3AFileSystem extends FileSystem {
             objects = continueListObjects(objects);
           } else {
             if (!keys.isEmpty()) {
+              // HADOOP-13761 s3guard: retries
               removeKeys(keys, false, false);
             }
             break;
           }
         }
       }
+      metadataStore.deleteSubtree(f);
     } else {
       LOG.debug("delete: Path is a file");
       instrumentation.fileDeleted(1);
       deleteObject(key);
+      metadataStore.delete(f);
     }
 
     Path parent = f.getParent();
@@ -1345,6 +1402,11 @@ public class S3AFileSystem extends FileSystem {
         key = key + '/';
       }
 
+      DirListingMetadata dirMeta = metadataStore.listChildren(path);
+      if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
+        return S3Guard.dirMetaToStatuses(dirMeta);
+      }
+
       ListObjectsRequest request = createListObjectsRequest(key, "/");
       LOG.debug("listStatus: doing listObjects for directory {}", key);
 
@@ -1357,7 +1419,7 @@ public class S3AFileSystem extends FileSystem {
       while (files.hasNext()) {
         result.add(files.next());
       }
-      return result.toArray(new FileStatus[result.size()]);
+      return S3Guard.dirListingUnion(metadataStore, path, result, dirMeta);
     } else {
       LOG.debug("Adding: rd (not a dir): {}", path);
       FileStatus[] stats = new FileStatus[1];
@@ -1437,7 +1499,7 @@ public class S3AFileSystem extends FileSystem {
    * Make the given path and all non-existent parents into
    * directories.
    * See {@link #mkdirs(Path, FsPermission)}
-   * @param f path to create
+   * @param p path to create
    * @param permission to apply to f
    * @return true if a directory was created
    * @throws FileAlreadyExistsException there is a file at the path specified
@@ -1446,11 +1508,17 @@ public class S3AFileSystem extends FileSystem {
    */
   // TODO: If we have created an empty file at /foo/bar and we then call
   // mkdirs for /foo/bar/baz/roo what happens to the empty file /foo/bar/?
-  private boolean innerMkdirs(Path f, FsPermission permission)
+  private boolean innerMkdirs(Path p, FsPermission permission)
       throws IOException, FileAlreadyExistsException, AmazonClientException {
+    Path f = qualify(p);
     LOG.debug("Making directory: {}", f);
     incrementStatistic(INVOCATION_MKDIRS);
     FileStatus fileStatus;
+    List<Path> metadataStoreDirs = null;
+    if (!S3Guard.isNullMetadataStore(metadataStore)) {
+      metadataStoreDirs = new ArrayList<>();
+    }
+
     try {
       fileStatus = getFileStatus(f);
 
@@ -1460,7 +1528,11 @@ public class S3AFileSystem extends FileSystem {
         throw new FileAlreadyExistsException("Path is a file: " + f);
       }
     } catch (FileNotFoundException e) {
+      // Walk path to root, ensuring closest ancestor is a directory, not file
       Path fPart = f.getParent();
+      if (metadataStoreDirs != null) {
+        metadataStoreDirs.add(f);
+      }
       do {
         try {
           fileStatus = getFileStatus(fPart);
@@ -1474,12 +1546,18 @@ public class S3AFileSystem extends FileSystem {
           }
         } catch (FileNotFoundException fnfe) {
           instrumentation.errorIgnored();
+          // We create all missing directories in MetadataStore; it does not
+          // infer directories exist by prefix like S3.
+          if (metadataStoreDirs != null) {
+            metadataStoreDirs.add(fPart);
+          }
         }
         fPart = fPart.getParent();
       } while (fPart != null);
 
       String key = pathToKey(f);
       createFakeDirectory(key);
+      S3Guard.makeDirsOrdered(metadataStore, metadataStoreDirs, username);
       return true;
     }
   }
@@ -1496,20 +1574,30 @@ public class S3AFileSystem extends FileSystem {
     final Path path = qualify(f);
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({})", path , key);
+
+    // Check MetadataStore, if any.
+    PathMetadata pm = metadataStore.get(path);
+    if (pm != null) {
+      // HADOOP-13760: handle deleted files, i.e. PathMetadata#isDeleted() here
+      return (S3AFileStatus)pm.getFileStatus();
+    }
+
     if (!key.isEmpty()) {
       try {
         ObjectMetadata meta = getObjectMetadata(key);
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
           LOG.debug("Found exact file: fake directory");
-          return new S3AFileStatus(true, path, username);
+          return S3Guard.putAndReturn(metadataStore,
+              new S3AFileStatus(true, path, username));
         } else {
           LOG.debug("Found exact file: normal file");
-          return new S3AFileStatus(meta.getContentLength(),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username);
+          return S3Guard.putAndReturn(metadataStore,
+              new S3AFileStatus(meta.getContentLength(),
+                  dateToLong(meta.getLastModified()),
+                  path,
+                  getDefaultBlockSize(path),
+                  username));
         }
       } catch (AmazonServiceException e) {
         if (e.getStatusCode() != 404) {
@@ -1527,16 +1615,18 @@ public class S3AFileSystem extends FileSystem {
 
           if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
             LOG.debug("Found file (with /): fake directory");
-            return new S3AFileStatus(true, path, username);
+            return S3Guard.putAndReturn(metadataStore,
+                new S3AFileStatus(true, path, username));
           } else {
             LOG.warn("Found file (with /): real file? should not happen: {}",
                 key);
 
-            return new S3AFileStatus(meta.getContentLength(),
-                dateToLong(meta.getLastModified()),
-                path,
-                getDefaultBlockSize(path),
-                username);
+            return S3Guard.putAndReturn(metadataStore,
+                new S3AFileStatus(meta.getContentLength(),
+                    dateToLong(meta.getLastModified()),
+                    path,
+                    getDefaultBlockSize(path),
+                    username));
           }
         } catch (AmazonServiceException e) {
           if (e.getStatusCode() != 404) {
@@ -1573,10 +1663,12 @@ public class S3AFileSystem extends FileSystem {
           }
         }
 
-        return new S3AFileStatus(false, path, username);
+        return S3Guard.putAndReturn(metadataStore,
+            new S3AFileStatus(false, path, username));
       } else if (key.isEmpty()) {
         LOG.debug("Found root directory");
-        return new S3AFileStatus(true, path, username);
+        return S3Guard.putAndReturn(metadataStore,
+            new S3AFileStatus(true, path, username));
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {
@@ -1652,12 +1744,13 @@ public class S3AFileSystem extends FileSystem {
 
     final ObjectMetadata om = newObjectMetadata(srcfile.length());
     PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
-    Upload up = putObject(putObjectRequest);
+    UploadInfo info = putObject(putObjectRequest);
+    Upload upload = info.getUpload();
     ProgressableProgressListener listener = new ProgressableProgressListener(
-        this, key, up, null);
-    up.addProgressListener(listener);
+        this, key, upload, null);
+    upload.addProgressListener(listener);
     try {
-      up.waitForUploadResult();
+      upload.waitForUploadResult();
     } catch (InterruptedException e) {
       throw new InterruptedIOException("Interrupted copying " + src
           + " to "  + dst + ", cancelling");
@@ -1665,7 +1758,7 @@ public class S3AFileSystem extends FileSystem {
     listener.uploadCompleted();
 
     // This will delete unnecessary fake parent directories
-    finishedWrite(key);
+    finishedWrite(key, info.getLength());
 
     if (delSrc) {
       local.delete(src, false);
@@ -1688,6 +1781,10 @@ public class S3AFileSystem extends FileSystem {
       if (transfers != null) {
         transfers.shutdownNow(true);
         transfers = null;
+      }
+      if (metadataStore != null) {
+        metadataStore.close();
+        metadataStore = null;
       }
     }
   }
@@ -1756,10 +1853,26 @@ public class S3AFileSystem extends FileSystem {
   /**
    * Perform post-write actions.
    * @param key key written to
+   * @param length  total length of file written
    */
-  public void finishedWrite(String key) {
-    LOG.debug("Finished write to {}", key);
-    deleteUnnecessaryFakeDirectories(keyToPath(key).getParent());
+  public void finishedWrite(String key, long length) {
+    LOG.debug("Finished write to {}, len {}", key, length);
+    Path p = keyToQualifiedPath(key);
+    deleteUnnecessaryFakeDirectories(p.getParent());
+
+    // See note about failure semantics in s3guard.md doc.
+    try {
+      if (!S3Guard.isNullMetadataStore(metadataStore)) {
+        S3AFileStatus status = createUploadFileStatus(p,
+            S3AUtils.objectRepresentsDirectory(key, length), length,
+            getDefaultBlockSize(p), username);
+        metadataStore.put(new PathMetadata(status));
+      }
+    } catch (IOException e) {
+      LOG.error("s3guard: Error updating MetadataStore for write to {}:",
+          key, e);
+      instrumentation.errorIgnored();
+    }
   }
 
   /**
@@ -1813,9 +1926,9 @@ public class S3AFileSystem extends FileSystem {
     PutObjectRequest putObjectRequest = newPutObjectRequest(objectName,
         newObjectMetadata(0L),
         im);
-    Upload upload = putObject(putObjectRequest);
+    UploadInfo info = putObject(putObjectRequest);
     try {
-      upload.waitForUploadResult();
+      info.getUpload().waitForUploadResult();
     } catch (InterruptedException e) {
       throw new InterruptedIOException("Interrupted creating " + objectName);
     }
@@ -2060,6 +2173,9 @@ public class S3AFileSystem extends FileSystem {
                 new Listing.AcceptFilesOnly(path)));
       }
     } catch (AmazonClientException e) {
+      // TODO s3guard:
+      // 1. retry on file not found exception
+      // 2. merge listing with MetadataStore's view of directory tree
       throw translateException("listFiles", path, e);
     }
   }
@@ -2170,8 +2286,8 @@ public class S3AFileSystem extends FileSystem {
     /**
      * Callback on a successful write.
      */
-    void writeSuccessful() {
-      finishedWrite(key);
+    void writeSuccessful(long length) {
+      finishedWrite(key, length);
     }
 
     /**

@@ -1211,6 +1211,30 @@
 </property>
 
 <property>
+    <name>fs.s3a.metadatastore.authoritative</name>
+    <value>false</value>
+    <description>
+        When true, allow MetadataStore implementations to act as source of
+        truth for getting file status and directory listings.  Even if this
+        is set to true, MetadataStore implementations may choose not to
+        return authoritative results.  If the configured MetadataStore does
+        not support being authoritative, this setting will have no effect.
+    </description>
+</property>
+
+<property>
+    <name>fs.s3a.metadatastore.impl</name>
+    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+    <description>
+        Fully-qualified name of the class that implements the MetadataStore
+        to be used by s3a.  The default class, NullMetadataStore, has no
+        effect: s3a will continue to treat the backing S3 service as the one
+        and only source of truth for file and directory metadata.
+    </description>
+</property>
+
+
+<property>
   <name>fs.s3a.impl</name>
   <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
   <description>The implementation class of the S3A Filesystem</description>

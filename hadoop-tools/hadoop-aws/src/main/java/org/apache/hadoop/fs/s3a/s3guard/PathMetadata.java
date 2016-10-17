@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class PathMetadata {
+public class PathMetadata {
 
   private final FileStatus fileStatus;
 
@@ -71,5 +71,22 @@ class PathMetadata {
     return "PathMetadata{" +
         "fileStatus=" + fileStatus +
         '}';
+  }
+
+  /**
+   * Log contents to supplied StringBuilder in a pretty fashion.
+   * @param sb target StringBuilder
+   */
+  public void prettyPrint(StringBuilder sb) {
+    sb.append(String.format("%-5s %-20s %-7d",
+        fileStatus.isDirectory() ? "dir" : "file",
+        fileStatus.getPath().toString(), fileStatus.getLen()));
+    sb.append(fileStatus);
+  }
+
+  public String prettyPrint() {
+    StringBuilder sb = new StringBuilder();
+    prettyPrint(sb);
+    return sb.toString();
   }
 }
