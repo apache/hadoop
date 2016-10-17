@@ -82,8 +82,8 @@ public class DockerClientProvider extends AbstractClientProvider
       if (appConf.getComponentOptBool(roleGroup, AM_CONFIG_GENERATION, false)) {
         // build and localize configuration files
         Map<String, Map<String, String>> configurations =
-            providerUtils.buildConfigurations(appConf, appConf, null, roleGroup,
-                roleGroup, null);
+            providerUtils.buildConfigurations(appConf, appConf, null,
+                null, roleGroup, roleGroup, null);
         try {
           providerUtils.localizeConfigFiles(null, roleGroup, roleGroup, appConf,
               configurations, null, fs, null);
