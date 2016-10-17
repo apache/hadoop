@@ -213,7 +213,7 @@ public class TestDistCpOptions {
           new Path("hdfs://localhost:8020/target/"));
       options.setSyncFolder(true);
       options.setDeleteMissing(true);
-      options.setUseDiff(true, "s1", "s2");
+      options.setUseDiff("s1", "s2");
       assertFalse("-delete should be ignored when -diff is specified",
           options.shouldDeleteMissing());
     } catch (IllegalArgumentException e) {
@@ -305,7 +305,8 @@ public class TestDistCpOptions {
     DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
     final String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
         + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
-        + "append=false, useDiff=false, fromSnapshot=null, toSnapshot=null, "
+        + "append=false, useDiff=false, useRdiff=false, "
+        + "fromSnapshot=null, toSnapshot=null, "
         + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
         + "mapBandwidth=100, sslConfigurationFile='null', "
         + "copyStrategy='uniformsize', preserveStatus=[], "
@@ -432,7 +433,7 @@ public class TestDistCpOptions {
           new Path("hdfs://localhost:8020/source/first"),
           new Path("hdfs://localhost:8020/target/"));
       options.setSyncFolder(true);
-      options.setUseDiff(true, "s1", "s2");
+      options.setUseDiff("s1", "s2");
       Assert.assertTrue(options.shouldUseDiff());
       Assert.assertEquals("s1", options.getFromSnapshot());
       Assert.assertEquals("s2", options.getToSnapshot());
@@ -442,7 +443,7 @@ public class TestDistCpOptions {
           new Path("hdfs://localhost:8020/source/first"),
           new Path("hdfs://localhost:8020/target/"));
       options.setSyncFolder(true);
-      options.setUseDiff(true, "s1", ".");
+      options.setUseDiff("s1", ".");
       Assert.assertTrue(options.shouldUseDiff());
       Assert.assertEquals("s1", options.getFromSnapshot());
       Assert.assertEquals(".", options.getToSnapshot());
@@ -453,11 +454,11 @@ public class TestDistCpOptions {
       final DistCpOptions options = new DistCpOptions(
           new Path("hdfs://localhost:8020/source/first"),
           new Path("hdfs://localhost:8020/target/"));
-      options.setUseDiff(true, "s1", "s2");
+      options.setUseDiff("s1", "s2");
       fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       assertExceptionContains(
-          "Diff is valid only with update options", e);
+          "-diff/-rdiff is valid only with -update option", e);
     }
 
     try {
@@ -465,7 +466,7 @@ public class TestDistCpOptions {
           new Path("hdfs://localhost:8020/source/first"),
           new Path("hdfs://localhost:8020/target/"));
       options.setSyncFolder(true);
-      options.setUseDiff(true, "s1", "s2");
+      options.setUseDiff("s1", "s2");
       options.setDeleteMissing(true);
       assertFalse("-delete should be ignored when -diff is specified",
           options.shouldDeleteMissing());
@@ -477,12 +478,12 @@ public class TestDistCpOptions {
       final DistCpOptions options = new DistCpOptions(
           new Path("hdfs://localhost:8020/source/first"),
           new Path("hdfs://localhost:8020/target/"));
-      options.setUseDiff(true, "s1", "s2");
+      options.setUseDiff("s1", "s2");
       options.setDeleteMissing(true);
       fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       assertExceptionContains(
-          "Diff is valid only with update options", e);
+          "-diff/-rdiff is valid only with -update option", e);
     }
 
     try {
@@ -490,7 +491,7 @@ public class TestDistCpOptions {
           new Path("hdfs://localhost:8020/source/first"),
           new Path("hdfs://localhost:8020/target/"));
       options.setDeleteMissing(true);
-      options.setUseDiff(true, "s1", "s2");
+      options.setUseDiff("s1", "s2");
       fail("-delete should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       assertExceptionContains("Delete missing is applicable only with update " +

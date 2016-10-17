@@ -50,12 +50,21 @@ import java.util.HashSet;
 class DistCpSync {
   private DistCpOptions inputOptions;
   private Configuration conf;
+  // diffMap maps snapshot diff op type to a list of diff ops.
+  // It's initially created based on the snapshot diff. Then the individual
+  // diff stored there maybe modified instead of copied by the distcp algorithm
+  // afterwards, for better performance.
+  //
   private EnumMap<SnapshotDiffReport.DiffType, List<DiffInfo>> diffMap;
   private DiffInfo[] renameDiffs;
 
   DistCpSync(DistCpOptions options, Configuration conf) {
     this.inputOptions = options;
     this.conf = conf;
+  }
+
+  private boolean isRdiff() {
+    return inputOptions.shouldUseRdiff();
   }
 
   /**
@@ -77,21 +86,25 @@ class DistCpSync {
     final Path sourceDir = sourcePaths.get(0);
     final Path targetDir = inputOptions.getTargetPath();
 
-    final FileSystem sfs = sourceDir.getFileSystem(conf);
-    final FileSystem tfs = targetDir.getFileSystem(conf);
+    final FileSystem srcFs = sourceDir.getFileSystem(conf);
+    final FileSystem tgtFs = targetDir.getFileSystem(conf);
+    final FileSystem snapshotDiffFs = isRdiff() ? tgtFs : srcFs;
+    final Path snapshotDiffDir = isRdiff() ? targetDir : sourceDir;
+
     // currently we require both the source and the target file system are
     // DistributedFileSystem.
-    if (!(sfs instanceof DistributedFileSystem) ||
-        !(tfs instanceof DistributedFileSystem)) {
+    if (!(srcFs instanceof DistributedFileSystem) ||
+        !(tgtFs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("The FileSystems needs to" +
           " be DistributedFileSystem for using snapshot-diff-based distcp");
     }
-    final DistributedFileSystem targetFs = (DistributedFileSystem) tfs;
+
+    final DistributedFileSystem targetFs = (DistributedFileSystem) tgtFs;
 
     // make sure targetFS has no change between from and the current states
     if (!checkNoChange(targetFs, targetDir)) {
       // set the source path using the snapshot path
-      inputOptions.setSourcePaths(Arrays.asList(getSourceSnapshotPath(sourceDir,
+      inputOptions.setSourcePaths(Arrays.asList(getSnapshotPath(sourceDir,
           inputOptions.getToSnapshot())));
       return false;
     }
@@ -101,17 +114,27 @@ class DistCpSync {
 
     try {
       final FileStatus fromSnapshotStat =
-          sfs.getFileStatus(getSourceSnapshotPath(sourceDir, from));
+          snapshotDiffFs.getFileStatus(getSnapshotPath(snapshotDiffDir, from));
 
       final FileStatus toSnapshotStat =
-          sfs.getFileStatus(getSourceSnapshotPath(sourceDir, to));
+          snapshotDiffFs.getFileStatus(getSnapshotPath(snapshotDiffDir, to));
 
-      // If toSnapshot isn't current dir then do a time check
-      if (!to.equals("")
-          && fromSnapshotStat.getModificationTime() > toSnapshotStat
-              .getModificationTime()) {
-        throw new HadoopIllegalArgumentException("Snapshot " + to
-            + " should be newer than " + from);
+      if (isRdiff()) {
+        // If fromSnapshot isn't current dir then do a time check
+        if (!from.equals("")
+            && fromSnapshotStat.getModificationTime() < toSnapshotStat
+            .getModificationTime()) {
+          throw new HadoopIllegalArgumentException("Snapshot " + from
+              + " should be newer than " + to);
+        }
+      } else {
+        // If toSnapshot isn't current dir then do a time check
+        if(!to.equals("")
+            && fromSnapshotStat.getModificationTime() > toSnapshotStat
+            .getModificationTime()) {
+          throw new HadoopIllegalArgumentException("Snapshot " + to
+              + " should be newer than " + from);
+        }
       }
     } catch (FileNotFoundException nfe) {
       throw new InvalidInputException("Input snapshot is not found", nfe);
@@ -138,7 +161,8 @@ class DistCpSync {
     Path tmpDir = null;
     try {
       tmpDir = createTargetTmpDir(targetFs, targetDir);
-      DiffInfo[] renameAndDeleteDiffs = getRenameAndDeleteDiffs(targetDir);
+      DiffInfo[] renameAndDeleteDiffs =
+          getRenameAndDeleteDiffsForSync(targetDir);
       if (renameAndDeleteDiffs.length > 0) {
         // do the real sync work: deletion and rename
         syncDiff(renameAndDeleteDiffs, targetFs, tmpDir);
@@ -151,7 +175,7 @@ class DistCpSync {
       deleteTargetTmpDir(targetFs, tmpDir);
       // TODO: since we have tmp directory, we can support "undo" with failures
       // set the source path using the snapshot path
-      inputOptions.setSourcePaths(Arrays.asList(getSourceSnapshotPath(sourceDir,
+      inputOptions.setSourcePaths(Arrays.asList(getSnapshotPath(sourceDir,
           inputOptions.getToSnapshot())));
     }
   }
@@ -162,16 +186,16 @@ class DistCpSync {
    * no entry for a given DiffType, the associated value will be an empty list.
    */
   private boolean getAllDiffs() throws IOException {
-    List<Path> sourcePaths = inputOptions.getSourcePaths();
-    final Path sourceDir = sourcePaths.get(0);
+    Path ssDir = isRdiff()?
+        inputOptions.getTargetPath() : inputOptions.getSourcePaths().get(0);
+
     try {
       DistributedFileSystem fs =
-          (DistributedFileSystem) sourceDir.getFileSystem(conf);
+          (DistributedFileSystem) ssDir.getFileSystem(conf);
       final String from = getSnapshotName(inputOptions.getFromSnapshot());
       final String to = getSnapshotName(inputOptions.getToSnapshot());
-      SnapshotDiffReport report = fs.getSnapshotDiffReport(sourceDir,
+      SnapshotDiffReport report = fs.getSnapshotDiffReport(ssDir,
           from, to);
-
       this.diffMap = new EnumMap<>(SnapshotDiffReport.DiffType.class);
       for (SnapshotDiffReport.DiffType type :
           SnapshotDiffReport.DiffType.values()) {
@@ -185,25 +209,25 @@ class DistCpSync {
         if (entry.getSourcePath().length <= 0) {
           continue;
         }
-        List<DiffInfo> list = diffMap.get(entry.getType());
-
-        if (entry.getType() == SnapshotDiffReport.DiffType.MODIFY ||
-            entry.getType() == SnapshotDiffReport.DiffType.CREATE ||
-            entry.getType() == SnapshotDiffReport.DiffType.DELETE) {
+        SnapshotDiffReport.DiffType dt = entry.getType();
+        List<DiffInfo> list = diffMap.get(dt);
+        if (dt == SnapshotDiffReport.DiffType.MODIFY ||
+            dt == SnapshotDiffReport.DiffType.CREATE ||
+            dt == SnapshotDiffReport.DiffType.DELETE) {
           final Path source =
               new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
-          list.add(new DiffInfo(source, null, entry.getType()));
-        } else if (entry.getType() == SnapshotDiffReport.DiffType.RENAME) {
+          list.add(new DiffInfo(source, null, dt));
+        } else if (dt == SnapshotDiffReport.DiffType.RENAME) {
           final Path source =
               new Path(DFSUtilClient.bytes2String(entry.getSourcePath()));
           final Path target =
               new Path(DFSUtilClient.bytes2String(entry.getTargetPath()));
-          list.add(new DiffInfo(source, target, entry.getType()));
+          list.add(new DiffInfo(source, target, dt));
         }
       }
       return true;
     } catch (IOException e) {
-      DistCp.LOG.warn("Failed to compute snapshot diff on " + sourceDir, e);
+      DistCp.LOG.warn("Failed to compute snapshot diff on " + ssDir, e);
     }
     this.diffMap = null;
     return false;
@@ -213,11 +237,11 @@ class DistCpSync {
     return Path.CUR_DIR.equals(name) ? "" : name;
   }
 
-  private Path getSourceSnapshotPath(Path sourceDir, String snapshotName) {
+  private Path getSnapshotPath(Path inputDir, String snapshotName) {
     if (Path.CUR_DIR.equals(snapshotName)) {
-      return sourceDir;
+      return inputDir;
     } else {
-      return new Path(sourceDir,
+      return new Path(inputDir,
           HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + snapshotName);
     }
   }
@@ -249,8 +273,9 @@ class DistCpSync {
    */
   private boolean checkNoChange(DistributedFileSystem fs, Path path) {
     try {
+      final String from = getSnapshotName(inputOptions.getFromSnapshot());
       SnapshotDiffReport targetDiff =
-          fs.getSnapshotDiffReport(path, inputOptions.getFromSnapshot(), "");
+          fs.getSnapshotDiffReport(path, from, "");
       if (!targetDiff.getDiffList().isEmpty()) {
         DistCp.LOG.warn("The target has been modified since snapshot "
             + inputOptions.getFromSnapshot());
@@ -259,7 +284,8 @@ class DistCpSync {
         return true;
       }
     } catch (IOException e) {
-      DistCp.LOG.warn("Failed to compute snapshot diff on " + path, e);
+      DistCp.LOG.warn("Failed to compute snapshot diff on " + path
+          + " at snapshot " + inputOptions.getFromSnapshot(), e);
     }
     return false;
   }
@@ -281,12 +307,13 @@ class DistCpSync {
     Arrays.sort(diffs, DiffInfo.sourceComparator);
     Random random = new Random();
     for (DiffInfo diff : diffs) {
-      Path tmpTarget = new Path(tmpDir, diff.source.getName());
+      Path tmpTarget = new Path(tmpDir, diff.getSource().getName());
       while (targetFs.exists(tmpTarget)) {
-        tmpTarget = new Path(tmpDir, diff.source.getName() + random.nextInt());
+        tmpTarget = new Path(tmpDir,
+            diff.getSource().getName() + random.nextInt());
       }
       diff.setTmp(tmpTarget);
-      targetFs.rename(diff.source, tmpTarget);
+      targetFs.rename(diff.getSource(), tmpTarget);
     }
   }
 
@@ -300,11 +327,11 @@ class DistCpSync {
     // directories are created first.
     Arrays.sort(diffs, DiffInfo.targetComparator);
     for (DiffInfo diff : diffs) {
-      if (diff.target != null) {
-        if (!targetFs.exists(diff.target.getParent())) {
-          targetFs.mkdirs(diff.target.getParent());
+      if (diff.getTarget() != null) {
+        if (!targetFs.exists(diff.getTarget().getParent())) {
+          targetFs.mkdirs(diff.getTarget().getParent());
         }
-        targetFs.rename(diff.getTmp(), diff.target);
+        targetFs.rename(diff.getTmp(), diff.getTarget());
       }
     }
   }
@@ -313,17 +340,80 @@ class DistCpSync {
    * Get rename and delete diffs and add the targetDir as the prefix of their
    * source and target paths.
    */
-  private DiffInfo[] getRenameAndDeleteDiffs(Path targetDir) {
+  private DiffInfo[] getRenameAndDeleteDiffsForSync(Path targetDir) {
+    // NOTE: when HDFS-10263 is done, getRenameAndDeleteDiffsRdiff
+    // should be the same as getRenameAndDeleteDiffsFdiff. Specifically,
+    // we should just move the body of getRenameAndDeleteDiffsFdiff
+    // to here and remove both getRenameAndDeleteDiffsFdiff
+    // and getRenameAndDeleteDiffsDdiff.
+    if (isRdiff()) {
+      return getRenameAndDeleteDiffsRdiff(targetDir);
+    } else {
+      return getRenameAndDeleteDiffsFdiff(targetDir);
+    }
+  }
+
+  /**
+   * Get rename and delete diffs and add the targetDir as the prefix of their
+   * source and target paths.
+   */
+  private DiffInfo[] getRenameAndDeleteDiffsRdiff(Path targetDir) {
+    List<DiffInfo> renameDiffsList =
+        diffMap.get(SnapshotDiffReport.DiffType.RENAME);
+
+    // Prepare a renameDiffArray for translating deleted items below.
+    // Do a reversion here due to HDFS-10263.
+    List<DiffInfo> renameDiffsListReversed =
+        new ArrayList<DiffInfo>(renameDiffsList.size());
+    for (DiffInfo diff : renameDiffsList) {
+      renameDiffsListReversed.add(new DiffInfo(diff.getTarget(),
+          diff.getSource(), diff.getType()));
+    }
+    DiffInfo[] renameDiffArray =
+        renameDiffsListReversed.toArray(new DiffInfo[renameDiffsList.size()]);
+
+    Arrays.sort(renameDiffArray, DiffInfo.sourceComparator);
+
+    List<DiffInfo> renameAndDeleteDiff = new ArrayList<>();
+    // Traverse DELETE list, which we need to delete them in sync process.
+    // Use the renameDiffArray prepared to translate the path.
+    for (DiffInfo diff : diffMap.get(SnapshotDiffReport.DiffType.DELETE)) {
+      DiffInfo renameItem = getRenameItem(diff, renameDiffArray);
+      Path source;
+      if (renameItem != null) {
+        source = new Path(targetDir,
+            translateRenamedPath(diff.getSource(), renameItem));
+      } else {
+        source = new Path(targetDir, diff.getSource());
+      }
+      renameAndDeleteDiff.add(new DiffInfo(source, null,
+          SnapshotDiffReport.DiffType.DELETE));
+    }
+    for (DiffInfo diff : diffMap.get(SnapshotDiffReport.DiffType.RENAME)) {
+      // swap target and source here for Rdiff
+      Path source = new Path(targetDir, diff.getSource());
+      Path target = new Path(targetDir, diff.getTarget());
+      renameAndDeleteDiff.add(new DiffInfo(source, target, diff.getType()));
+    }
+    return renameAndDeleteDiff.toArray(
+        new DiffInfo[renameAndDeleteDiff.size()]);
+  }
+
+    /**
+   * Get rename and delete diffs and add the targetDir as the prefix of their
+   * source and target paths.
+   */
+  private DiffInfo[] getRenameAndDeleteDiffsFdiff(Path targetDir) {
     List<DiffInfo> renameAndDeleteDiff = new ArrayList<>();
     for (DiffInfo diff : diffMap.get(SnapshotDiffReport.DiffType.DELETE)) {
-      Path source = new Path(targetDir, diff.source);
-      renameAndDeleteDiff.add(new DiffInfo(source, diff.target,
+      Path source = new Path(targetDir, diff.getSource());
+      renameAndDeleteDiff.add(new DiffInfo(source, diff.getTarget(),
           diff.getType()));
     }
 
     for (DiffInfo diff : diffMap.get(SnapshotDiffReport.DiffType.RENAME)) {
-      Path source = new Path(targetDir, diff.source);
-      Path target = new Path(targetDir, diff.target);
+      Path source = new Path(targetDir, diff.getSource());
+      Path target = new Path(targetDir, diff.getTarget());
       renameAndDeleteDiff.add(new DiffInfo(source, target, diff.getType()));
     }
 
@@ -367,7 +457,7 @@ class DistCpSync {
    */
   private DiffInfo getRenameItem(DiffInfo diff, DiffInfo[] renameDiffArray) {
     for (DiffInfo renameItem : renameDiffArray) {
-      if (diff.source.equals(renameItem.source)) {
+      if (diff.getSource().equals(renameItem.getSource())) {
         // The same path string may appear in:
         // 1. both renamed and modified snapshot diff entries.
         // 2. both renamed and created snapshot diff entries.
@@ -377,7 +467,7 @@ class DistCpSync {
         if (diff.getType() == SnapshotDiffReport.DiffType.MODIFY) {
           return renameItem;
         }
-      } else if (isParentOf(renameItem.source, diff.source)) {
+      } else if (isParentOf(renameItem.getSource(), diff.getSource())) {
         // If rename entry is the parent of diff entry, then both MODIFY and
         // CREATE diff entries should be handled.
         return renameItem;
@@ -387,16 +477,27 @@ class DistCpSync {
   }
 
   /**
-   * For a given source path, get its target path based on the rename item.
+   * For a given sourcePath, get its real path if it or its parent was renamed.
+   *
+   * For example, if we renamed dirX to dirY, and created dirY/fileX,
+   * the initial snapshot diff would be a CREATE snapshot diff that looks like
+   *   + dirX/fileX
+   * The rename snapshot diff looks like
+   *   R dirX dirY
+   *
+   * We convert the soucePath dirX/fileX to dirY/fileX here.
+   *
    * @return target path
    */
-  private Path getTargetPath(Path sourcePath, DiffInfo renameItem) {
-    if (sourcePath.equals(renameItem.source)) {
-      return renameItem.target;
+  private Path translateRenamedPath(Path sourcePath,
+      DiffInfo renameItem) {
+    if (sourcePath.equals(renameItem.getSource())) {
+      return renameItem.getTarget();
     }
     StringBuffer sb = new StringBuffer(sourcePath.toString());
-    String remain = sb.substring(renameItem.source.toString().length() + 1);
-    return new Path(renameItem.target, remain);
+    String remain =
+        sb.substring(renameItem.getSource().toString().length() + 1);
+    return new Path(renameItem.getTarget(), remain);
   }
 
   /**
@@ -406,26 +507,35 @@ class DistCpSync {
    *
    * If the parent or self of a source path is renamed, we need to change its
    * target path according the correspondent rename item.
+   *
+   * For RDiff usage, the diff.getSource() is what we will use as its target
+   * path.
+   *
    * @return a diff list
    */
-  public ArrayList<DiffInfo> prepareDiffList() {
+  public ArrayList<DiffInfo> prepareDiffListForCopyListing() {
     DiffInfo[] modifyAndCreateDiffs = getCreateAndModifyDiffs();
-
-    List<DiffInfo> renameDiffsList =
-        diffMap.get(SnapshotDiffReport.DiffType.RENAME);
-    DiffInfo[] renameDiffArray =
-        renameDiffsList.toArray(new DiffInfo[renameDiffsList.size()]);
-    Arrays.sort(renameDiffArray, DiffInfo.sourceComparator);
-
     ArrayList<DiffInfo> finalListWithTarget = new ArrayList<>();
-    for (DiffInfo diff : modifyAndCreateDiffs) {
-      DiffInfo renameItem = getRenameItem(diff, renameDiffArray);
-      if (renameItem == null) {
-        diff.target = diff.source;
-      } else {
-        diff.target = getTargetPath(diff.source, renameItem);
+    if (isRdiff()) {
+      for (DiffInfo diff : modifyAndCreateDiffs) {
+        diff.setTarget(diff.getSource());
+        finalListWithTarget.add(diff);
       }
-      finalListWithTarget.add(diff);
+    } else {
+      List<DiffInfo> renameDiffsList =
+          diffMap.get(SnapshotDiffReport.DiffType.RENAME);
+      DiffInfo[] renameDiffArray =
+          renameDiffsList.toArray(new DiffInfo[renameDiffsList.size()]);
+      Arrays.sort(renameDiffArray, DiffInfo.sourceComparator);
+      for (DiffInfo diff : modifyAndCreateDiffs) {
+        DiffInfo renameItem = getRenameItem(diff, renameDiffArray);
+        if (renameItem == null) {
+          diff.setTarget(diff.getSource());
+        } else {
+          diff.setTarget(translateRenamedPath(diff.getSource(), renameItem));
+        }
+        finalListWithTarget.add(diff);
+      }
     }
     return finalListWithTarget;
   }
@@ -459,9 +569,9 @@ class DistCpSync {
     boolean foundChild = false;
     HashSet<String> excludeList = new HashSet<>();
     for (DiffInfo diff : renameDiffs) {
-      if (isParentOf(newDir, diff.target)) {
+      if (isParentOf(newDir, diff.getTarget())) {
         foundChild = true;
-        excludeList.add(new Path(prefix, diff.target).toUri().getPath());
+        excludeList.add(new Path(prefix, diff.getTarget()).toUri().getPath());
       } else if (foundChild) {
         // The renameDiffs was sorted, the matching section should be
         // contiguous.

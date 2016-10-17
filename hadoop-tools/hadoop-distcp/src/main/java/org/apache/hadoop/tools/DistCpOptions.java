@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.DistCpUtils;
@@ -42,7 +43,28 @@ public class DistCpOptions {
   private boolean append = false;
   private boolean skipCRC = false;
   private boolean blocking = true;
+  // When "-diff s1 s2 src tgt" is passed, apply forward snapshot diff (from s1
+  // to s2) of source cluster to the target cluster to sync target cluster with
+  // the source cluster. Referred to as "Fdiff" in the code.
+  // It's required that s2 is newer than s1.
   private boolean useDiff = false;
+
+  // When "-rdiff s2 s1 src tgt" is passed, apply reversed snapshot diff (from
+  // s2 to s1) of target cluster to the target cluster, so to make target
+  // cluster go back to s1. Referred to as "Rdiff" in the code.
+  // It's required that s2 is newer than s1, and src and tgt have exact same
+  // content at their s1, if src is not the same as tgt.
+  private boolean useRdiff = false;
+
+  // For both -diff and -rdiff, given the example command line switches, two
+  // steps are taken:
+  //   1. Sync Step. This step does renaming/deletion ops in the snapshot diff,
+  //      so to avoid copying files copied already but renamed later(HDFS-7535)
+  //   2. Copy Step. This step copy the necessary files from src to tgt
+  //      2.1 For -diff, it copies from snapshot s2 of src (HDFS-8828)
+  //      2.2 For -rdiff, it copies from snapshot s1 of src, where the src
+  //          could be the tgt itself (HDFS-9820).
+  //
 
   public static final int maxNumListstatusThreads = 40;
   private int numListstatusThreads = 0;  // Indicates that flag is not set.
@@ -131,6 +153,8 @@ public class DistCpOptions {
       this.overwrite = that.overwrite;
       this.skipCRC = that.skipCRC;
       this.blocking = that.blocking;
+      this.useDiff = that.useDiff;
+      this.useRdiff = that.useRdiff;
       this.numListstatusThreads = that.numListstatusThreads;
       this.maxMaps = that.maxMaps;
       this.mapBandwidth = that.mapBandwidth;
@@ -203,7 +227,7 @@ public class DistCpOptions {
   public void setDeleteMissing(boolean deleteMissing) {
     validate(DistCpOptionSwitch.DELETE_MISSING, deleteMissing);
     this.deleteMissing = deleteMissing;
-    ignoreDeleteMissingIfUseDiff();
+    ignoreDeleteMissingIfUseSnapshotDiff();
   }
 
   /**
@@ -211,9 +235,9 @@ public class DistCpOptions {
    * For backward compatibility, we ignore the -delete option here, instead of
    * throwing an IllegalArgumentException. See HDFS-10397 for more discussion.
    */
-  private void ignoreDeleteMissingIfUseDiff() {
-    if (deleteMissing && useDiff) {
-      OptionsParser.LOG.warn("-delete and -diff are mutually exclusive. " +
+  private void ignoreDeleteMissingIfUseSnapshotDiff() {
+    if (deleteMissing && (useDiff || useRdiff)) {
+      OptionsParser.LOG.warn("-delete and -diff/-rdiff are mutually exclusive. " +
           "The -delete option will be ignored.");
       deleteMissing = false;
     }
@@ -295,6 +319,14 @@ public class DistCpOptions {
     return this.useDiff;
   }
 
+  public boolean shouldUseRdiff() {
+    return this.useRdiff;
+  }
+
+  public boolean shouldUseSnapshotDiff() {
+    return shouldUseDiff() || shouldUseRdiff();
+  }
+
   public String getFromSnapshot() {
     return this.fromSnapshot;
   }
@@ -303,16 +335,20 @@ public class DistCpOptions {
     return this.toSnapshot;
   }
 
-  public void setUseDiff(boolean useDiff, String fromSnapshot, String toSnapshot) {
-    validate(DistCpOptionSwitch.DIFF, useDiff);
-    this.useDiff = useDiff;
-    this.fromSnapshot = fromSnapshot;
-    this.toSnapshot = toSnapshot;
-    ignoreDeleteMissingIfUseDiff();
+  public void setUseDiff(String fromSS, String toSS) {
+    this.fromSnapshot = fromSS;
+    this.toSnapshot = toSS;
+    validate(DistCpOptionSwitch.DIFF, true);
+    this.useDiff = true;
+    ignoreDeleteMissingIfUseSnapshotDiff();
   }
 
-  public void disableUsingDiff() {
-    this.useDiff = false;
+  public void setUseRdiff(String fromSS, String toSS) {
+    this.fromSnapshot = fromSS;
+    this.toSnapshot = toSS;
+    validate(DistCpOptionSwitch.RDIFF, true);
+    this.useRdiff = true;
+    ignoreDeleteMissingIfUseSnapshotDiff();
   }
 
   /**
@@ -601,6 +637,7 @@ public class DistCpOptions {
         value : this.skipCRC);
     boolean append = (option == DistCpOptionSwitch.APPEND ? value : this.append);
     boolean useDiff = (option == DistCpOptionSwitch.DIFF ? value : this.useDiff);
+    boolean useRdiff = (option == DistCpOptionSwitch.RDIFF ? value : this.useRdiff);
 
     if (syncFolder && atomicCommit) {
       throw new IllegalArgumentException("Atomic commit can't be used with " +
@@ -629,16 +666,29 @@ public class DistCpOptions {
       throw new IllegalArgumentException(
           "Append is disallowed when skipping CRC");
     }
-    if (!syncFolder && useDiff) {
+    if (!syncFolder && (useDiff || useRdiff)) {
       throw new IllegalArgumentException(
-          "Diff is valid only with update options");
+          "-diff/-rdiff is valid only with -update option");
+    }
+
+    if (useDiff || useRdiff) {
+      if (StringUtils.isBlank(fromSnapshot) ||
+          StringUtils.isBlank(toSnapshot)) {
+        throw new IllegalArgumentException(
+            "Must provide both the starting and ending " +
+            "snapshot names for -diff/-rdiff");
+      }
+    }
+    if (useDiff && useRdiff) {
+      throw new IllegalArgumentException(
+          "-diff and -rdiff are mutually exclusive");
     }
   }
 
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
-   * @param conf - Configruation object to which the options need to be added
+   * @param conf - Configuration object to which the options need to be added
    */
   public void appendToConf(Configuration conf) {
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.ATOMIC_COMMIT,
@@ -655,6 +705,8 @@ public class DistCpOptions {
         String.valueOf(append));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DIFF,
         String.valueOf(useDiff));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.RDIFF,
+        String.valueOf(useRdiff));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
         String.valueOf(skipCRC));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,
@@ -682,6 +734,7 @@ public class DistCpOptions {
         ", overwrite=" + overwrite +
         ", append=" + append +
         ", useDiff=" + useDiff +
+        ", useRdiff=" + useRdiff +
         ", fromSnapshot=" + fromSnapshot +
         ", toSnapshot=" + toSnapshot +
         ", skipCRC=" + skipCRC +

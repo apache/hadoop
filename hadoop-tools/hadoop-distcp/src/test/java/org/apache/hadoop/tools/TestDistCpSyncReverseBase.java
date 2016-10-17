@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.tools;
 
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -32,39 +32,116 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 
-public class TestDistCpSync {
+/**
+ * Base class to test "-rdiff s2 s1".
+ * Shared by "-rdiff s2 s1 src tgt" and "-rdiff s2 s1 tgt tgt"
+ */
+public abstract class TestDistCpSyncReverseBase {
   private MiniDFSCluster cluster;
   private final Configuration conf = new HdfsConfiguration();
   private DistributedFileSystem dfs;
   private DistCpOptions options;
-  private final Path source = new Path("/source");
+  private Path source;
+  private boolean isSrcNotSameAsTgt = true;
   private final Path target = new Path("/target");
-  private final long BLOCK_SIZE = 1024;
-  private final short DATA_NUM = 1;
+  private final long blockSize = 1024;
+  private final short dataNum = 1;
+
+  abstract void initSourcePath();
+
+  private static List<String> lsr(final String prefix,
+      final FsShell shell, Path rootDir) throws Exception {
+    return lsr(prefix, shell, rootDir.toString(), null);
+  }
+
+  private List<String> lsrSource(final String prefix,
+      final FsShell shell, Path rootDir) throws Exception {
+    final Path spath = isSrcNotSameAsTgt? rootDir :
+      new Path(rootDir.toString(),
+          HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
+    return lsr(prefix, shell, spath.toString(), null);
+  }
+
+  private static List<String> lsr(final String prefix,
+      final FsShell shell, String rootDir, String glob) throws Exception {
+    final String dir = glob == null ? rootDir : glob;
+    System.out.println(prefix + " lsr root=" + rootDir);
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldOut = System.out;
+    final PrintStream oldErr = System.err;
+    System.setOut(out);
+    System.setErr(out);
+    final String results;
+    try {
+      Assert.assertEquals(0, shell.run(new String[] {"-lsr", dir }));
+      results = bytes.toString();
+    } finally {
+      IOUtils.closeStream(out);
+      System.setOut(oldOut);
+      System.setErr(oldErr);
+    }
+    System.out.println("lsr results:\n" + results);
+    String dirname = rootDir;
+    if (rootDir.lastIndexOf(Path.SEPARATOR) != -1) {
+      dirname = rootDir.substring(rootDir.lastIndexOf(Path.SEPARATOR));
+    }
+
+    final List<String> paths = new ArrayList<String>();
+    for (StringTokenizer t = new StringTokenizer(results, "\n"); t
+        .hasMoreTokens();) {
+      final String s = t.nextToken();
+      final int i = s.indexOf(dirname);
+      if (i >= 0) {
+        paths.add(s.substring(i + dirname.length()));
+      }
+    }
+    Collections.sort(paths);
+    System.out
+        .println("lsr paths = " + paths.toString().replace(", ", ",\n  "));
+    return paths;
+  }
+
+  public void setSource(final Path src) {
+    this.source = src;
+  }
+
+  public void setSrcNotSameAsTgt(final boolean srcNotSameAsTgt) {
+    isSrcNotSameAsTgt = srcNotSameAsTgt;
+  }
 
   @Before
   public void setUp() throws Exception {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATA_NUM).build();
+    initSourcePath();
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dataNum).build();
     cluster.waitActive();
 
     dfs = cluster.getFileSystem();
-    dfs.mkdirs(source);
+    if (isSrcNotSameAsTgt) {
+      dfs.mkdirs(source);
+    }
     dfs.mkdirs(target);
 
     options = new DistCpOptions(Arrays.asList(source), target);
     options.setSyncFolder(true);
-    options.setUseDiff("s1", "s2");
+    options.setUseRdiff("s2", "s1");
     options.appendToConf(conf);
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
@@ -91,7 +168,7 @@ public class TestDistCpSync {
     Assert.assertFalse(sync());
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
-        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
     Assert.assertEquals(spath, options.getSourcePaths().get(0));
 
     // reset source path in options
@@ -104,9 +181,8 @@ public class TestDistCpSync {
 
     // reset source path in options
     options.setSourcePaths(Arrays.asList(source));
-    dfs.createSnapshot(source, "s1");
-    dfs.createSnapshot(source, "s2");
-    dfs.createSnapshot(target, "s1");
+    this.enableAndCreateFirstSnapshot();
+    dfs.createSnapshot(target, "s2");
     Assert.assertTrue(sync());
 
     // reset source paths in options
@@ -124,21 +200,40 @@ public class TestDistCpSync {
     Assert.assertTrue(sync());
   }
 
-  private void enableAndCreateFirstSnapshot() throws Exception {
-    dfs.allowSnapshot(source);
-    dfs.allowSnapshot(target);
-    dfs.createSnapshot(source, "s1");
-    dfs.createSnapshot(target, "s1");
-  }
-
   private void syncAndVerify() throws Exception {
+
+    final FsShell shell = new FsShell(conf);
+    lsrSource("Before sync source: ", shell, source);
+    lsr("Before sync target: ", shell, target);
+
     Assert.assertTrue(sync());
+
+    lsrSource("After sync source: ", shell, source);
+    lsr("After sync target: ", shell, target);
+
     verifyCopy(dfs.getFileStatus(source), dfs.getFileStatus(target), false);
   }
 
   private boolean sync() throws Exception {
     DistCpSync distCpSync = new DistCpSync(options, conf);
     return distCpSync.sync();
+  }
+
+  private void enableAndCreateFirstSnapshot() throws Exception {
+    if (isSrcNotSameAsTgt) {
+      dfs.allowSnapshot(source);
+      dfs.createSnapshot(source, "s1");
+    }
+    dfs.allowSnapshot(target);
+    dfs.createSnapshot(target, "s1");
+  }
+
+  private void createSecondSnapshotAtTarget() throws Exception {
+    dfs.createSnapshot(target, "s2");
+  }
+
+  private void createMiddleSnapshotAtTarget() throws Exception {
+    dfs.createSnapshot(target, "s1.5");
   }
 
   /**
@@ -159,10 +254,10 @@ public class TestDistCpSync {
     final Path f3 = new Path(d1, "f3");
     final Path f4 = new Path(d2, "f4");
 
-    DFSTestUtil.createFile(dfs, f1, BLOCK_SIZE, DATA_NUM, 0);
-    DFSTestUtil.createFile(dfs, f2, BLOCK_SIZE, DATA_NUM, 0);
-    DFSTestUtil.createFile(dfs, f3, BLOCK_SIZE, DATA_NUM, 0);
-    DFSTestUtil.createFile(dfs, f4, BLOCK_SIZE, DATA_NUM, 0);
+    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0);
+    DFSTestUtil.createFile(dfs, f2, blockSize, dataNum, 0);
+    DFSTestUtil.createFile(dfs, f3, blockSize, dataNum, 0);
+    DFSTestUtil.createFile(dfs, f4, blockSize, dataNum, 0);
   }
 
   /**
@@ -189,23 +284,24 @@ public class TestDistCpSync {
     final Path f2 = new Path(bar, "f2");
 
     final Path bar_d1 = new Path(bar, "d1");
-    int numCreatedModified = 0;
+    int numDeletedModified = 0;
     dfs.rename(d1, bar_d1);
-    numCreatedModified += 1; // modify ./foo
-    numCreatedModified += 1; // modify ./bar
+    numDeletedModified += 1; // modify ./foo
+    numDeletedModified += 1; // modify ./bar
     final Path f3 = new Path(bar_d1, "f3");
     dfs.delete(f3, true);
+    numDeletedModified += 1; // delete f3
     final Path newfoo = new Path(bar_d1, "foo");
     dfs.rename(foo, newfoo);
-    numCreatedModified += 1; // modify ./foo/d1
+    numDeletedModified += 1; // modify ./foo/d1
     final Path f1 = new Path(newfoo, "f1");
     dfs.delete(f1, true);
-    DFSTestUtil.createFile(dfs, f1, 2 * BLOCK_SIZE, DATA_NUM, 0);
-    numCreatedModified += 1; // create ./foo/f1
-    DFSTestUtil.appendFile(dfs, f2, (int) BLOCK_SIZE);
-    numCreatedModified += 1; // modify ./bar/f2
+    numDeletedModified += 1; // delete ./foo/f1
+    DFSTestUtil.createFile(dfs, f1, 2 * blockSize, dataNum, 0);
+    DFSTestUtil.appendFile(dfs, f2, (int) blockSize);
+    numDeletedModified += 1; // modify ./bar/f2
     dfs.rename(bar, new Path(dir, "foo"));
-    return numCreatedModified;
+    return numDeletedModified;
   }
 
   /**
@@ -213,37 +309,43 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync() throws Exception {
-    initData(source);
+    if (isSrcNotSameAsTgt) {
+      initData(source);
+    }
     initData(target);
     enableAndCreateFirstSnapshot();
 
-    // make changes under source
-    int numCreatedModified = changeData(source);
-    dfs.createSnapshot(source, "s2");
+    final FsShell shell = new FsShell(conf);
 
-    // before sync, make some further changes on source. this should not affect
-    // the later distcp since we're copying (s2-s1) to target
-    final Path toDelete = new Path(source, "foo/d1/foo/f1");
-    dfs.delete(toDelete, true);
-    final Path newdir = new Path(source, "foo/d1/foo/newdir");
-    dfs.mkdirs(newdir);
+    lsrSource("Before source: ", shell, source);
+    lsr("Before target: ", shell, target);
 
-    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    // make changes under target
+    int numDeletedModified = changeData(target);
+
+    createSecondSnapshotAtTarget();
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
 
     DistCpSync distCpSync = new DistCpSync(options, conf);
 
+    lsr("Before sync target: ", shell, target);
+
     // do the sync
     Assert.assertTrue(distCpSync.sync());
 
+    lsr("After sync target: ", shell, target);
+
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
-            HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
     Assert.assertEquals(spath, options.getSourcePaths().get(0));
 
     // build copy listing
     final Path listingPath = new Path("/tmp/META/fileList.seq");
-    CopyListing listing = new SimpleCopyListing(conf, new Credentials(), distCpSync);
+    CopyListing listing = new SimpleCopyListing(conf, new Credentials(),
+        distCpSync);
     listing.buildListing(listingPath, options);
 
     Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
@@ -255,15 +357,19 @@ public class TestDistCpSync {
     context.getConfiguration().setBoolean(
         DistCpOptionSwitch.APPEND.getConfigLabel(), true);
     copyMapper.setup(context);
-    for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing.entrySet()) {
+    for (Map.Entry<Text, CopyListingFileStatus> entry :
+      copyListing.entrySet()) {
       copyMapper.map(entry.getKey(), entry.getValue(), context);
     }
 
+    lsrSource("After mapper source: ", shell, source);
+    lsr("After mapper target: ", shell, target);
+
     // verify that we only list modified and created files/directories
-    Assert.assertEquals(numCreatedModified, copyListing.size());
+    Assert.assertEquals(numDeletedModified, copyListing.size());
 
     // verify that we only copied new appended data of f2 and the new file f1
-    Assert.assertEquals(BLOCK_SIZE * 3, stubContext.getReporter()
+    Assert.assertEquals(blockSize * 3, stubContext.getReporter()
         .getCounter(CopyMapper.Counter.BYTESCOPIED).getValue());
 
     // verify the source and target now has the same structure
@@ -272,15 +378,22 @@ public class TestDistCpSync {
 
   private Map<Text, CopyListingFileStatus> getListing(Path listingPath)
       throws Exception {
-    SequenceFile.Reader reader = new SequenceFile.Reader(conf,
-        SequenceFile.Reader.file(listingPath));
-    Text key = new Text();
-    CopyListingFileStatus value = new CopyListingFileStatus();
+    SequenceFile.Reader reader = null;
     Map<Text, CopyListingFileStatus> values = new HashMap<>();
-    while (reader.next(key, value)) {
-      values.put(key, value);
-      key = new Text();
-      value = new CopyListingFileStatus();
+    try {
+      reader = new SequenceFile.Reader(conf,
+          SequenceFile.Reader.file(listingPath));
+      Text key = new Text();
+      CopyListingFileStatus value = new CopyListingFileStatus();
+      while (reader.next(key, value)) {
+        values.put(key, value);
+        key = new Text();
+        value = new CopyListingFileStatus();
+      }
+    } finally {
+      if (reader != null) {
+        reader.close();
+      }
     }
     return values;
   }
@@ -307,23 +420,27 @@ public class TestDistCpSync {
   }
 
   /**
-   * Similar test with testSync, but the "to" snapshot is specified as "."
+   * Test the case that "current" is snapshotted as "s2".
    * @throws Exception
    */
   @Test
   public void testSyncWithCurrent() throws Exception {
-    options.setUseDiff("s1", ".");
-    initData(source);
+    options.setUseRdiff(".", "s1");
+    if (isSrcNotSameAsTgt) {
+      initData(source);
+    }
     initData(target);
     enableAndCreateFirstSnapshot();
 
-    // make changes under source
-    changeData(source);
+    // make changes under target
+    changeData(target);
 
     // do the sync
-    sync();
+    Assert.assertTrue(sync());
+    final Path spath = new Path(source,
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
     // make sure the source path is still unchanged
-    Assert.assertEquals(source, options.getSourcePaths().get(0));
+    Assert.assertEquals(spath, options.getSourcePaths().get(0));
   }
 
   private void initData2(Path dir) throws Exception {
@@ -334,9 +451,9 @@ public class TestDistCpSync {
     final Path f2 = new Path(foo, "f2");
     final Path f3 = new Path(bar, "f3");
 
-    DFSTestUtil.createFile(dfs, f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, f2, BLOCK_SIZE, DATA_NUM, 1L);
-    DFSTestUtil.createFile(dfs, f3, BLOCK_SIZE, DATA_NUM, 2L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, f2, blockSize, dataNum, 1L);
+    DFSTestUtil.createFile(dfs, f3, blockSize, dataNum, 2L);
   }
 
   private void changeData2(Path dir) throws Exception {
@@ -353,15 +470,18 @@ public class TestDistCpSync {
 
   @Test
   public void testSync2() throws Exception {
-    initData2(source);
+    if (isSrcNotSameAsTgt) {
+      initData2(source);
+    }
     initData2(target);
     enableAndCreateFirstSnapshot();
 
-    // make changes under source
-    changeData2(source);
-    dfs.createSnapshot(source, "s2");
+    // make changes under target
+    changeData2(target);
 
-    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    createSecondSnapshotAtTarget();
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
 
     syncAndVerify();
@@ -375,9 +495,9 @@ public class TestDistCpSync {
     final Path f2 = new Path(foo, "file");
     final Path f3 = new Path(bar, "file");
 
-    DFSTestUtil.createFile(dfs, f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, f2, BLOCK_SIZE * 2, DATA_NUM, 1L);
-    DFSTestUtil.createFile(dfs, f3, BLOCK_SIZE * 3, DATA_NUM, 2L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, f2, blockSize * 2, dataNum, 1L);
+    DFSTestUtil.createFile(dfs, f3, blockSize * 3, dataNum, 2L);
   }
 
   private void changeData3(Path dir) throws Exception {
@@ -401,15 +521,18 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync3() throws Exception {
-    initData3(source);
+    if (isSrcNotSameAsTgt) {
+      initData3(source);
+    }
     initData3(target);
     enableAndCreateFirstSnapshot();
 
-    // make changes under source
-    changeData3(source);
-    dfs.createSnapshot(source, "s2");
+    // make changes under target
+    changeData3(target);
 
-    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    createSecondSnapshotAtTarget();
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
 
     syncAndVerify();
@@ -420,19 +543,24 @@ public class TestDistCpSync {
     final Path d2 = new Path(d1, "d2");
     final Path f1 = new Path(d2, "f1");
 
-    DFSTestUtil.createFile(dfs, f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
   }
 
-  private void changeData4(Path dir) throws Exception {
+  private int changeData4(Path dir) throws Exception {
     final Path d1 = new Path(dir, "d1");
     final Path d11 = new Path(dir, "d11");
     final Path d2 = new Path(d1, "d2");
     final Path d21 = new Path(d1, "d21");
     final Path f1 = new Path(d2, "f1");
 
+    int numDeletedAndModified = 0;
     dfs.delete(f1, false);
+    numDeletedAndModified += 1;
     dfs.rename(d2, d21);
+    numDeletedAndModified += 1;
     dfs.rename(d1, d11);
+    numDeletedAndModified += 1;
+    return numDeletedAndModified;
   }
 
   /**
@@ -440,18 +568,24 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync4() throws Exception {
-    initData4(source);
+    if (isSrcNotSameAsTgt) {
+      initData4(source);
+    }
     initData4(target);
     enableAndCreateFirstSnapshot();
 
-    // make changes under source
-    changeData4(source);
-    dfs.createSnapshot(source, "s2");
+    final FsShell shell = new FsShell(conf);
+    lsr("Before change target: ", shell, target);
 
-    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    // make changes under target
+    int numDeletedAndModified = changeData4(target);
+
+    createSecondSnapshotAtTarget();
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
 
-    syncAndVerify();
+    testAndVerify(numDeletedAndModified);
   }
 
   private void initData5(Path dir) throws Exception {
@@ -460,21 +594,27 @@ public class TestDistCpSync {
     final Path f1 = new Path(d1, "f1");
     final Path f2 = new Path(d2, "f2");
 
-    DFSTestUtil.createFile(dfs, f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, f2, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, f2, blockSize, dataNum, 0L);
   }
 
-  private void changeData5(Path dir) throws Exception {
+  private int changeData5(Path dir) throws Exception {
     final Path d1 = new Path(dir, "d1");
     final Path d2 = new Path(dir, "d2");
     final Path f1 = new Path(d1, "f1");
     final Path tmp = new Path(dir, "tmp");
 
+    int numDeletedAndModified = 0;
     dfs.delete(f1, false);
+    numDeletedAndModified += 1;
     dfs.rename(d1, tmp);
+    numDeletedAndModified += 1;
     dfs.rename(d2, d1);
+    numDeletedAndModified += 1;
     final Path f2 = new Path(d1, "f2");
     dfs.delete(f2, false);
+    numDeletedAndModified += 1;
+    return numDeletedAndModified;
   }
 
    /**
@@ -482,32 +622,42 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync5() throws Exception {
-    initData5(source);
+    if (isSrcNotSameAsTgt) {
+      initData5(source);
+    }
     initData5(target);
     enableAndCreateFirstSnapshot();
 
-    // make changes under source
-    changeData5(source);
-    dfs.createSnapshot(source, "s2");
+    // make changes under target
+    int numDeletedAndModified = changeData5(target);
 
-    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    createSecondSnapshotAtTarget();
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
 
-    syncAndVerify();
+    testAndVerify(numDeletedAndModified);
   }
 
-  private void testAndVerify(int numCreatedModified)
+  private void testAndVerify(int numDeletedAndModified)
           throws Exception{
-    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(target, "s2", "s1");
     System.out.println(report);
+
+    final FsShell shell = new FsShell(conf);
+
+    lsrSource("Before sync source: ", shell, source);
+    lsr("Before sync target: ", shell, target);
 
     DistCpSync distCpSync = new DistCpSync(options, conf);
     // do the sync
-    Assert.assertTrue(distCpSync.sync());
+    distCpSync.sync();
+
+    lsr("After sync target: ", shell, target);
 
     // make sure the source path has been updated to the snapshot path
     final Path spath = new Path(source,
-            HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+            HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s1");
     Assert.assertEquals(spath, options.getSourcePaths().get(0));
 
     // build copy listing
@@ -530,7 +680,9 @@ public class TestDistCpSync {
     }
 
     // verify that we only list modified and created files/directories
-    Assert.assertEquals(numCreatedModified, copyListing.size());
+    Assert.assertEquals(numDeletedAndModified, copyListing.size());
+
+    lsr("After Copy target: ", shell, target);
 
     // verify the source and target now has the same structure
     verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
@@ -542,8 +694,8 @@ public class TestDistCpSync {
     final Path foo_f1 = new Path(foo, "f1");
     final Path bar_f1 = new Path(bar, "f1");
 
-    DFSTestUtil.createFile(dfs, foo_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, bar_f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, bar_f1, blockSize, dataNum, 0L);
   }
 
   private int changeData6(Path dir) throws Exception {
@@ -552,13 +704,13 @@ public class TestDistCpSync {
     final Path foo2 = new Path(dir, "foo2");
     final Path foo_f1 = new Path(foo, "f1");
 
-    int numCreatedModified = 0;
+    int numDeletedModified = 0;
     dfs.rename(foo, foo2);
     dfs.rename(bar, foo);
     dfs.rename(foo2, bar);
-    DFSTestUtil.appendFile(dfs, foo_f1, (int) BLOCK_SIZE);
-    numCreatedModified += 1; // modify ./bar/f1
-    return numCreatedModified;
+    DFSTestUtil.appendFile(dfs, foo_f1, (int) blockSize);
+    numDeletedModified += 1; // modify ./bar/f1
+    return numDeletedModified;
   }
 
   /**
@@ -566,13 +718,16 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync6() throws Exception {
-    initData6(source);
+    if (isSrcNotSameAsTgt) {
+      initData6(source);
+    }
     initData6(target);
     enableAndCreateFirstSnapshot();
-    int numCreatedModified = changeData6(source);
-    dfs.createSnapshot(source, "s2");
+    int numDeletedModified = changeData6(target);
 
-    testAndVerify(numCreatedModified);
+    createSecondSnapshotAtTarget();
+
+    testAndVerify(numDeletedModified);
   }
 
   private void initData7(Path dir) throws Exception {
@@ -581,8 +736,8 @@ public class TestDistCpSync {
     final Path foo_f1 = new Path(foo, "f1");
     final Path bar_f1 = new Path(bar, "f1");
 
-    DFSTestUtil.createFile(dfs, foo_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, bar_f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, bar_f1, blockSize, dataNum, 0L);
   }
 
   private int changeData7(Path dir) throws Exception {
@@ -593,17 +748,23 @@ public class TestDistCpSync {
     final Path foo_d1 = new Path(foo, "d1");
     final Path foo_d1_f3 = new Path(foo_d1, "f3");
 
-    int numCreatedModified = 0;
+    int numDeletedAndModified = 0;
     dfs.rename(foo, foo2);
-    DFSTestUtil.createFile(dfs, foo_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    numCreatedModified += 2; // create ./foo and ./foo/f1
-    DFSTestUtil.appendFile(dfs, foo_f1, (int) BLOCK_SIZE);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.appendFile(dfs, foo_f1, (int) blockSize);
     dfs.rename(foo_f1, foo2_f2);
-    numCreatedModified -= 1; // mv ./foo/f1
-    numCreatedModified += 2; // "M ./foo" and "+ ./foo/f2"
-    DFSTestUtil.createFile(dfs, foo_d1_f3, BLOCK_SIZE, DATA_NUM, 0L);
-    numCreatedModified += 2; // create ./foo/d1 and ./foo/d1/f3
-    return numCreatedModified;
+    /*
+     * Difference between snapshot s1 and current directory under directory
+       /target:
+M       .
++       ./foo
+R       ./foo -> ./foo2
+M       ./foo
++       ./foo/f2
+     */
+    numDeletedAndModified += 1; // "M ./foo"
+    DFSTestUtil.createFile(dfs, foo_d1_f3, blockSize, dataNum, 0L);
+    return numDeletedAndModified;
   }
 
   /**
@@ -612,13 +773,16 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync7() throws Exception {
-    initData7(source);
+    if (isSrcNotSameAsTgt) {
+      initData7(source);
+    }
     initData7(target);
     enableAndCreateFirstSnapshot();
-    int numCreatedModified = changeData7(source);
-    dfs.createSnapshot(source, "s2");
+    int numDeletedAndModified = changeData7(target);
 
-    testAndVerify(numCreatedModified);
+    createSecondSnapshotAtTarget();
+
+    testAndVerify(numDeletedAndModified);
   }
 
   private void initData8(Path dir) throws Exception {
@@ -629,12 +793,13 @@ public class TestDistCpSync {
     final Path bar_f1 = new Path(bar, "f1");
     final Path d1_f1 = new Path(d1, "f1");
 
-    DFSTestUtil.createFile(dfs, foo_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, bar_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    DFSTestUtil.createFile(dfs, d1_f1, BLOCK_SIZE, DATA_NUM, 0L);
+    DFSTestUtil.createFile(dfs, foo_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, bar_f1, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, d1_f1, blockSize, dataNum, 0L);
   }
 
-  private int changeData8(Path dir) throws Exception {
+  private int changeData8(Path dir, boolean createMiddleSnapshot)
+      throws Exception {
     final Path foo = new Path(dir, "foo");
     final Path createdDir = new Path(dir, "c");
     final Path d1 = new Path(dir, "d1");
@@ -647,20 +812,22 @@ public class TestDistCpSync {
     final Path bar = new Path(dir, "bar");
     final Path bar1 = new Path(dir, "bar1");
 
-    int numCreatedModified = 0;
-    DFSTestUtil.createFile(dfs, foo_f3, BLOCK_SIZE, DATA_NUM, 0L);
-    numCreatedModified += 1; // create  ./c/foo/f3
-    DFSTestUtil.createFile(dfs, createdDir_f1, BLOCK_SIZE, DATA_NUM, 0L);
-    numCreatedModified += 1; // create ./c
+    int numDeletedAndModified = 0;
+    DFSTestUtil.createFile(dfs, foo_f3, blockSize, dataNum, 0L);
+    DFSTestUtil.createFile(dfs, createdDir_f1, blockSize, dataNum, 0L);
     dfs.rename(createdDir_f1, foo_f4);
-    numCreatedModified += 1; // create ./c/foo/f4
     dfs.rename(d1_f1, createdDir_f1); // rename ./d1/f1 -> ./c/f1
-    numCreatedModified += 1; // modify ./c/foo/d1
+    numDeletedAndModified += 1; // modify ./c/foo/d1
+
+    if (createMiddleSnapshot) {
+      this.createMiddleSnapshotAtTarget();
+    }
+
     dfs.rename(d1, foo_d1);
-    numCreatedModified += 1; // modify ./c/foo
+    numDeletedAndModified += 1; // modify ./c/foo
     dfs.rename(foo, new_foo);
     dfs.rename(bar, bar1);
-    return numCreatedModified;
+    return numDeletedAndModified;
   }
 
   /**
@@ -668,75 +835,34 @@ public class TestDistCpSync {
    */
   @Test
   public void testSync8() throws Exception {
-    initData8(source);
+    if (isSrcNotSameAsTgt) {
+      initData8(source);
+    }
     initData8(target);
     enableAndCreateFirstSnapshot();
-    int numCreatedModified = changeData8(source);
-    dfs.createSnapshot(source, "s2");
+    int numDeletedModified = changeData8(target, false);
 
-    testAndVerify(numCreatedModified);
-  }
+    createSecondSnapshotAtTarget();
 
-  private void initData9(Path dir) throws Exception {
-    final Path foo = new Path(dir, "foo");
-    final Path foo_f1 = new Path(foo, "f1");
-
-    DFSTestUtil.createFile(dfs, foo_f1, BLOCK_SIZE, DATA_NUM, 0L);
-  }
-
-  private void changeData9(Path dir) throws Exception {
-    final Path foo = new Path(dir, "foo");
-    final Path foo_f2 = new Path(foo, "f2");
-
-    DFSTestUtil.createFile(dfs, foo_f2, BLOCK_SIZE, DATA_NUM, 0L);
+    testAndVerify(numDeletedModified);
   }
 
   /**
-   * Test a case where the source path is relative.
+   * Test a case where create a dir, then mv a existed dir into it.
+   * The difference between this one and testSync8 is, this one
+   * also creates a snapshot s1.5 in between s1 and s2.
    */
   @Test
   public void testSync9() throws Exception {
-
-    // use /user/$USER/source for source directory
-    Path sourcePath = new Path(dfs.getWorkingDirectory(), "source");
-    initData9(sourcePath);
-    initData9(target);
-    dfs.allowSnapshot(sourcePath);
-    dfs.allowSnapshot(target);
-    dfs.createSnapshot(sourcePath, "s1");
-    dfs.createSnapshot(target, "s1");
-    changeData9(sourcePath);
-    dfs.createSnapshot(sourcePath, "s2");
-
-    String[] args = new String[]{"-update","-diff", "s1", "s2",
-                                   "source", target.toString()};
-    new DistCp(conf, OptionsParser.parse(args)).execute();
-    verifyCopy(dfs.getFileStatus(sourcePath),
-                 dfs.getFileStatus(target), false);
-  }
-
-  @Test
-  public void testSyncSnapshotTimeStampChecking() throws Exception {
-    initData(source);
-    initData(target);
-    dfs.allowSnapshot(source);
-    dfs.allowSnapshot(target);
-    dfs.createSnapshot(source, "s2");
-    dfs.createSnapshot(target, "s1");
-    // Sleep one second to make snapshot s1 created later than s2
-    Thread.sleep(1000);
-    dfs.createSnapshot(source, "s1");
-
-    boolean threwException = false;
-    try {
-      DistCpSync distCpSync = new DistCpSync(options, conf);
-      // do the sync
-      distCpSync.sync();
-    } catch (HadoopIllegalArgumentException e) {
-      threwException = true;
-      GenericTestUtils.assertExceptionContains(
-          "Snapshot s2 should be newer than s1", e);
+    if (isSrcNotSameAsTgt) {
+      initData8(source);
     }
-    Assert.assertTrue(threwException);
+    initData8(target);
+    enableAndCreateFirstSnapshot();
+    int numDeletedModified = changeData8(target, true);
+
+    createSecondSnapshotAtTarget();
+
+    testAndVerify(numDeletedModified);
   }
 }
