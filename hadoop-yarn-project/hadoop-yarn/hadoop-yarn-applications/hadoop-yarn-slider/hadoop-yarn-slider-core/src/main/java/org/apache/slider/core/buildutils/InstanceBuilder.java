@@ -439,6 +439,10 @@ public class InstanceBuilder {
       }
       log.info("External appdefs after {}: {}", component, externalAppDefs);
 
+      SliderUtils.mergeMapsIgnoreDuplicateKeys(
+          appConf.getConfTree().credentials,
+          componentAppConf.getConfTree().credentials);
+
       mergeExternalComponent(appConf, componentAppConf, component, null);
       mergeExternalComponent(resources, componentConf.getResourceOperations(),
           component, getNextPriority());
