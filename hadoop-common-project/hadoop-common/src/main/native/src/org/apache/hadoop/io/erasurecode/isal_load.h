@@ -57,7 +57,7 @@ typedef void (*__d_ec_encode_data_update)(int, int, int, int, unsigned char*,
 #endif
 
 #ifdef WINDOWS
-// For erasure_code.h
+// For gf_util.h
 typedef unsigned char (__cdecl *__d_gf_mul)(unsigned char, unsigned char);
 typedef unsigned char (__cdecl *__d_gf_inv)(unsigned char);
 typedef void (__cdecl *__d_gf_gen_rs_matrix)(unsigned char *, int, int);
