@@ -41,6 +41,7 @@ import org.apache.slider.core.registry.docstore.ConfigFormat;
 import org.apache.slider.core.registry.docstore.ConfigUtils;
 import org.apache.slider.core.registry.docstore.ExportEntry;
 import org.apache.slider.providers.AbstractProviderService;
+import org.apache.slider.providers.MonitorDetail;
 import org.apache.slider.providers.ProviderCore;
 import org.apache.slider.providers.ProviderRole;
 import org.apache.slider.providers.ProviderUtils;
@@ -62,6 +63,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.regex.Pattern;
+
+import static org.apache.slider.api.RoleKeys.ROLE_PREFIX;
 
 public class DockerProviderService extends AbstractProviderService implements
     ProviderCore,
@@ -130,10 +134,13 @@ public class DockerProviderService extends AbstractProviderService implements
         DOCKER_USE_PRIVILEGED, false));
 
     // Set the environment
-    launcher.putEnv(SliderUtils.buildEnvMap(appComponent,
-        providerUtils.getStandardTokenMap(getAmState().getAppConfSnapshot(),
-            getAmState().getInternalsSnapshot(), roleName, roleGroup,
-            getClusterName())));
+    Map<String, String> standardTokens = providerUtils.getStandardTokenMap(
+        getAmState().getAppConfSnapshot(), getAmState().getInternalsSnapshot(),
+        roleName, roleGroup, container.getId().toString(), getClusterName());
+    Map<String, String> replaceTokens = providerUtils.filterSiteOptions(
+            appConf.getComponent(roleGroup).options, standardTokens);
+    replaceTokens.putAll(standardTokens);
+    launcher.putEnv(SliderUtils.buildEnvMap(appComponent, replaceTokens));
 
     String workDir = ApplicationConstants.Environment.PWD.$();
     launcher.setEnv("WORK_DIR", workDir);
@@ -169,8 +176,8 @@ public class DockerProviderService extends AbstractProviderService implements
           providerUtils.buildConfigurations(
               instanceDefinition.getAppConfOperations(),
               instanceDefinition.getInternalOperations(),
-              container.getId().toString(), roleName, roleGroup,
-              getAmState());
+              container.getId().toString(), getClusterName(),
+              roleName, roleGroup, getAmState());
       providerUtils.localizeConfigFiles(launcher, roleName, roleGroup,
           appConf, configurations, launcher.getEnv(), fileSystem,
           getClusterName());
@@ -251,8 +258,8 @@ public class DockerProviderService extends AbstractProviderService implements
     // build and localize configuration files
     Map<String, Map<String, String>> configurations =
         providerUtils.buildConfigurations(appConf, getAmState()
-            .getInternalsSnapshot(), null, clientName, clientName,
-            getAmState());
+            .getInternalsSnapshot(), null, getClusterName(), clientName,
+            clientName, getAmState());
 
     for (String configFileDN : configurations.keySet()) {
       String configFileName = appConf.getComponentOpt(clientName,
@@ -316,19 +323,45 @@ public class DockerProviderService extends AbstractProviderService implements
         getAmState().getAppConfSnapshot(), roleGroup);
 
     String hostKeyFormat = "${%s_HOST}";
+    String hostNameKeyFormat = "${%s_HOSTNAME}";
+    String ipKeyFormat = "${%s_IP}";
 
     // publish export groups if any
-    Map<String, String> replaceTokens =
-        providerUtils.filterSiteOptions(
-            appConf.getComponent(roleGroup).options,
-            providerUtils.getStandardTokenMap(appConf, internalsConf, roleName,
-                roleGroup, containerId, getClusterName()));
+    Map<String, String> standardTokens = providerUtils.getStandardTokenMap(
+        appConf, internalsConf, roleName, roleGroup, containerId,
+        getClusterName());
+    Map<String, String> replaceTokens = providerUtils.filterSiteOptions(
+            appConf.getComponent(roleGroup).options, standardTokens);
+    replaceTokens.putAll(standardTokens);
+
+    String rolePrefix = appConf.getComponentOpt(roleGroup, ROLE_PREFIX, "");
     for (Map.Entry<String, Map<String, ClusterNode>> entry :
         getAmState().getRoleClusterNodeMapping().entrySet()) {
-      String hostName = providerUtils.getHostsList(
+      String otherRolePrefix = appConf.getComponentOpt(entry.getKey(),
+          ROLE_PREFIX, "");
+      if (!otherRolePrefix.equals(rolePrefix)) {
+        // hostname replacements are only made within role prefix groups
+        continue;
+      }
+      String key = entry.getKey();
+      if (!rolePrefix.isEmpty()) {
+        if (!key.startsWith(rolePrefix)) {
+          log.warn("Something went wrong, {} doesn't start with {}", key,
+              rolePrefix);
+          continue;
+        }
+        key = key.substring(rolePrefix.length());
+      }
+      key = key.toUpperCase(Locale.ENGLISH);
+      String host = providerUtils.getHostsList(
           entry.getValue().values(), true).iterator().next();
-      replaceTokens.put(String.format(hostKeyFormat,
-          entry.getKey().toUpperCase(Locale.ENGLISH)), hostName);
+      replaceTokens.put(String.format(hostKeyFormat, key), host);
+      String hostName = providerUtils.getHostNamesList(
+          entry.getValue().values()).iterator().next();
+      replaceTokens.put(String.format(hostNameKeyFormat, key), hostName);
+      String ip = providerUtils.getIPsList(
+          entry.getValue().values()).iterator().next();
+      replaceTokens.put(String.format(ipKeyFormat, key), ip);
     }
     replaceTokens.put("${THIS_HOST}", thisHost);
 
@@ -338,7 +371,7 @@ public class DockerProviderService extends AbstractProviderService implements
       // replace host names and site properties
       for (String token : replaceTokens.keySet()) {
         if (value.contains(token)) {
-          value = value.replace(token, replaceTokens.get(token));
+          value = value.replaceAll(Pattern.quote(token), replaceTokens.get(token));
         }
       }
       ExportEntry entry = new ExportEntry();
@@ -350,6 +383,24 @@ public class DockerProviderService extends AbstractProviderService implements
       log.info("Preparing to publish. Key {} and Value {}",
           export.getKey(), value);
     }
-    providerUtils.publishExportGroup(entries, getAmState(), EXPORT_GROUP);
+    if (!entries.isEmpty()) {
+      providerUtils.publishExportGroup(entries, getAmState(), EXPORT_GROUP);
+    }
+  }
+
+  @Override
+  public Map<String, MonitorDetail> buildMonitorDetails(ClusterDescription clusterDesc) {
+    Map<String, MonitorDetail> details = super.buildMonitorDetails(clusterDesc);
+    buildRoleHostDetails(details);
+    return details;
+  }
+
+  private void buildRoleHostDetails(Map<String, MonitorDetail> details) {
+    for (Map.Entry<String, Map<String, ClusterNode>> entry :
+        getAmState().getRoleClusterNodeMapping().entrySet()) {
+      details.put(entry.getKey() + " Host(s)/Container(s)",
+          new MonitorDetail(providerUtils.getHostsList(
+              entry.getValue().values(), false).toString(), false));
+    }
   }
 }

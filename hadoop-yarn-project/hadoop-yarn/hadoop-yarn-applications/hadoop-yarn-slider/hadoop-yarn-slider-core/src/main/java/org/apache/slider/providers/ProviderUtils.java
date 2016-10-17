@@ -308,6 +308,7 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
   public Map<String, String> filterSiteOptions(Map<String, String> options,
       Map<String, String> tokenMap) {
     String prefix = OptionKeys.SITE_XML_PREFIX;
+    String format = "${%s}";
     Map<String, String> filteredOptions = new HashMap<>();
     for (Map.Entry<String, String> entry : options.entrySet()) {
       String key = entry.getKey();
@@ -319,7 +320,7 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
                 token.getValue());
           }
         }
-        filteredOptions.put(key, value);
+        filteredOptions.put(String.format(format, key), value);
       }
     }
     return filteredOptions;
@@ -545,9 +546,14 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
    * @param clusterName app name
    * @throws IOException file cannot be created
    */
-  private void createConfigFile(SliderFileSystem fileSystem, File file,
-      ConfigFormat configFormat, String configFileDN,
+  private synchronized void createConfigFile(SliderFileSystem fileSystem,
+      File file, ConfigFormat configFormat, String configFileDN,
       Map<String, String> config, String clusterName) throws IOException {
+    if (file.exists()) {
+      log.info("Skipping writing {} file {} because it already exists",
+          configFormat, file);
+      return;
+    }
     log.info("Writing {} file {}", configFormat, file);
 
     ConfigUtils.prepConfigForTemplateOutputter(configFormat, config,
@@ -643,11 +649,10 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     String fileName = ConfigUtils.replaceProps(config, configFileName);
     File localFile = new File(RESOURCE_DIR);
     if (!localFile.exists()) {
-      if (!localFile.mkdir()) {
+      if (!localFile.mkdir() && !localFile.exists()) {
         throw new IOException(RESOURCE_DIR + " could not be created!");
       }
     }
-    localFile = new File(localFile, new File(fileName).getName());
 
     String folder = null;
     if ("true".equals(config.get(PER_COMPONENT))) {
@@ -655,12 +660,25 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     } else if ("true".equals(config.get(PER_GROUP))) {
       folder = roleGroup;
     }
+    if (folder != null) {
+      localFile = new File(localFile, folder);
+      if (!localFile.exists()) {
+        if (!localFile.mkdir() && !localFile.exists()) {
+          throw new IOException(localFile + " could not be created!");
+        }
+      }
+    }
+    localFile = new File(localFile, new File(fileName).getName());
 
     log.info("Localizing {} configs to config file {} (destination {}) " +
             "based on {} configs", config.size(), localFile, fileName,
         configFileDN);
-    createConfigFile(fileSystem, localFile, configFormat, configFileDN, config,
-        clusterName);
+    if (!localFile.exists()) {
+      createConfigFile(fileSystem, localFile, configFormat, configFileDN,
+          config, clusterName);
+    } else {
+      log.info("Local {} file {} already exists", configFormat, localFile);
+    }
     Path destPath = uploadResource(localFile, fileSystem, folder, clusterName);
     LocalResource configResource = fileSystem.createAmResource(destPath,
         LocalResourceType.FILE);
@@ -807,12 +825,12 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
    */
   public Map<String, Map<String, String>> buildConfigurations(
       ConfTreeOperations appConf, ConfTreeOperations internalsConf,
-      String containerId, String roleName, String roleGroup,
+      String containerId, String clusterName, String roleName, String roleGroup,
       StateAccessForProviders amState) {
 
     Map<String, Map<String, String>> configurations = new TreeMap<>();
     Map<String, String> tokens = getStandardTokenMap(appConf,
-        internalsConf, roleName, roleGroup, containerId);
+        internalsConf, roleName, roleGroup, containerId, clusterName);
 
     Set<String> configs = new HashSet<>();
     configs.addAll(getApplicationConfigurationTypes(roleGroup, appConf));
@@ -1159,6 +1177,32 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
     List<String> hosts = new ArrayList<>();
     for (ClusterNode cn : values) {
       hosts.add(hostOnly ? cn.host : cn.host + "/" + cn.name);
+    }
+    return hosts;
+  }
+
+  /**
+   * Return a list of hostnames based on current ClusterNodes.
+   * @param values cluster nodes
+   * @return list of hosts
+   */
+  public Iterable<String> getHostNamesList(Collection<ClusterNode> values) {
+    List<String> hosts = new ArrayList<>();
+    for (ClusterNode cn : values) {
+      hosts.add(cn.hostname);
+    }
+    return hosts;
+  }
+
+  /**
+   * Return a list of IPs based on current ClusterNodes.
+   * @param values cluster nodes
+   * @return list of hosts
+   */
+  public Iterable<String> getIPsList(Collection<ClusterNode> values) {
+    List<String> hosts = new ArrayList<>();
+    for (ClusterNode cn : values) {
+      hosts.add(cn.ip);
     }
     return hosts;
   }

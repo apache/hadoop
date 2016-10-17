@@ -178,6 +178,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -918,57 +919,56 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       return;
     }
 
-    BufferedReader br = null;
-    try {
-      for (Entry<String, List<String>> cred : tree.credentials.entrySet()) {
-        String provider = cred.getKey()
-            .replaceAll(Pattern.quote("${CLUSTER_NAME}"), clusterName)
-            .replaceAll(Pattern.quote("${CLUSTER}"), clusterName);
-        List<String> aliases = cred.getValue();
-        if (aliases == null || aliases.isEmpty()) {
-          continue;
-        }
-        Configuration c = new Configuration(conf);
-        c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, provider);
-        CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
-        Set<String> existingAliases = new HashSet<>(credentialProvider.getAliases());
-        for (String alias : aliases) {
-          if (existingAliases.contains(alias.toLowerCase(Locale.ENGLISH))) {
-            log.info("Credentials for " + alias + " found in " + provider);
-          } else {
-            if (br == null) {
-              br = new BufferedReader(new InputStreamReader(System.in));
-            }
-            char[] pass = readPassword(alias, br);
-            credentialProvider.createCredentialEntry(alias, pass);
-            credentialProvider.flush();
-            Arrays.fill(pass, ' ');
+    Console console = System.console();
+    for (Entry<String, List<String>> cred : tree.credentials.entrySet()) {
+      String provider = cred.getKey()
+          .replaceAll(Pattern.quote("${CLUSTER_NAME}"), clusterName)
+          .replaceAll(Pattern.quote("${CLUSTER}"), clusterName);
+      List<String> aliases = cred.getValue();
+      if (aliases == null || aliases.isEmpty()) {
+        continue;
+      }
+      Configuration c = new Configuration(conf);
+      c.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, provider);
+      CredentialProvider credentialProvider = CredentialProviderFactory.getProviders(c).get(0);
+      Set<String> existingAliases = new HashSet<>(credentialProvider.getAliases());
+      for (String alias : aliases) {
+        if (existingAliases.contains(alias.toLowerCase(Locale.ENGLISH))) {
+          log.info("Credentials for " + alias + " found in " + provider);
+        } else {
+          if (console == null) {
+            throw new IOException("Unable to input password for " + alias +
+                " because System.console() is null; provider " + provider +
+                " must be populated manually");
           }
+          char[] pass = readPassword(alias, console);
+          credentialProvider.createCredentialEntry(alias, pass);
+          credentialProvider.flush();
+          Arrays.fill(pass, ' ');
         }
       }
-    } finally {
-      org.apache.hadoop.io.IOUtils.closeStream(br);
     }
   }
 
   private static char[] readOnePassword(String alias) throws IOException {
-    try(BufferedReader br = new BufferedReader(new InputStreamReader(System.in))) {
-      return readPassword(alias, br);
+    Console console = System.console();
+    if (console == null) {
+      throw new IOException("Unable to input password for " + alias +
+          " because System.console() is null");
     }
+    return readPassword(alias, console);
   }
 
-  // using a normal reader instead of a secure one,
-  // because stdin is not hooked up to the command line
-  private static char[] readPassword(String alias, BufferedReader br)
+  private static char[] readPassword(String alias, Console console)
       throws IOException {
     char[] cred = null;
 
     boolean noMatch;
     do {
-      log.info(String.format("%s %s: ", PASSWORD_PROMPT, alias));
-      char[] newPassword1 = br.readLine().toCharArray();
-      log.info(String.format("%s %s again: ", PASSWORD_PROMPT, alias));
-      char[] newPassword2 = br.readLine().toCharArray();
+      console.printf("%s %s: \n", PASSWORD_PROMPT, alias);
+      char[] newPassword1 = console.readPassword();
+      console.printf("%s %s again: \n", PASSWORD_PROMPT, alias);
+      char[] newPassword2 = console.readPassword();
       noMatch = !Arrays.equals(newPassword1, newPassword2);
       if (noMatch) {
         if (newPassword1 != null) Arrays.fill(newPassword1, ' ');
