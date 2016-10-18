@@ -67,6 +67,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13670. Update CHANGES.txt to reflect all the changes in branch-2.7.
     (Brahma Reddy Battula)
 
+    HADOOP-13535. Add jetty6 acceptor startup issue workaround to branch-2.
+    (Min Shen).
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
