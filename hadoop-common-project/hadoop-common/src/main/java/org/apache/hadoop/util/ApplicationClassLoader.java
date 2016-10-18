@@ -158,49 +158,49 @@ public class ApplicationClassLoader extends URLClassLoader {
   }
 
   @Override
-  protected synchronized Class<?> loadClass(String name, boolean resolve)
+  protected Class<?> loadClass(String name, boolean resolve)
       throws ClassNotFoundException {
-    
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Loading class: " + name);
-    }
+    synchronized (getClassLoadingLock(name)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Loading class: " + name);
+      }
 
-    Class<?> c = findLoadedClass(name);
-    ClassNotFoundException ex = null;
+      Class<?> c = findLoadedClass(name);
+      ClassNotFoundException ex = null;
 
-    if (c == null && !isSystemClass(name, systemClasses)) {
-      // Try to load class from this classloader's URLs. Note that this is like
-      // the servlet spec, not the usual Java 2 behaviour where we ask the
-      // parent to attempt to load first.
-      try {
-        c = findClass(name);
+      if (c == null && !isSystemClass(name, systemClasses)) {
+        // Try to load class from this classloader's URLs. Note that this is
+        // like the servlet spec, not the usual Java 2 behaviour where we ask
+        // the parent to attempt to load first.
+        try {
+          c = findClass(name);
+          if (LOG.isDebugEnabled() && c != null) {
+            LOG.debug("Loaded class: " + name + " ");
+          }
+        } catch (ClassNotFoundException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(e);
+          }
+          ex = e;
+        }
+      }
+
+      if (c == null) { // try parent
+        c = parent.loadClass(name);
         if (LOG.isDebugEnabled() && c != null) {
-          LOG.debug("Loaded class: " + name + " ");
+          LOG.debug("Loaded class from parent: " + name + " ");
         }
-      } catch (ClassNotFoundException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(e);
-        }
-        ex = e;
       }
-    }
 
-    if (c == null) { // try parent
-      c = parent.loadClass(name);
-      if (LOG.isDebugEnabled() && c != null) {
-        LOG.debug("Loaded class from parent: " + name + " ");
+      if (c == null) {
+        throw ex != null ? ex : new ClassNotFoundException(name);
       }
-    }
 
-    if (c == null) {
-      throw ex != null ? ex : new ClassNotFoundException(name);
+      if (resolve) {
+        resolveClass(c);
+      }
+      return c;
     }
-
-    if (resolve) {
-      resolveClass(c);
-    }
-
-    return c;
   }
 
   /**
