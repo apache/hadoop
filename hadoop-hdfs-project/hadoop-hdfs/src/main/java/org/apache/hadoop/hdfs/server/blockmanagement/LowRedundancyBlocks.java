@@ -155,7 +155,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   private int getPriority(BlockInfo block,
                           int curReplicas,
                           int readOnlyReplicas,
-                          int decommissionedReplicas,
+                          int outOfServiceReplicas,
                           int expectedReplicas) {
     assert curReplicas >= 0 : "Negative replicas!";
     if (curReplicas >= expectedReplicas) {
@@ -164,20 +164,20 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     }
     if (block.isStriped()) {
       BlockInfoStriped sblk = (BlockInfoStriped) block;
-      return getPriorityStriped(curReplicas, decommissionedReplicas,
+      return getPriorityStriped(curReplicas, outOfServiceReplicas,
           sblk.getRealDataBlockNum(), sblk.getParityBlockNum());
     } else {
       return getPriorityContiguous(curReplicas, readOnlyReplicas,
-          decommissionedReplicas, expectedReplicas);
+          outOfServiceReplicas, expectedReplicas);
     }
   }
 
   private int getPriorityContiguous(int curReplicas, int readOnlyReplicas,
-      int decommissionedReplicas, int expectedReplicas) {
+      int outOfServiceReplicas, int expectedReplicas) {
     if (curReplicas == 0) {
       // If there are zero non-decommissioned replicas but there are
-      // some decommissioned replicas, then assign them highest priority
-      if (decommissionedReplicas > 0) {
+      // some out of service replicas, then assign them highest priority
+      if (outOfServiceReplicas > 0) {
         return QUEUE_HIGHEST_PRIORITY;
       }
       if (readOnlyReplicas > 0) {
@@ -201,11 +201,11 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     }
   }
 
-  private int getPriorityStriped(int curReplicas, int decommissionedReplicas,
+  private int getPriorityStriped(int curReplicas, int outOfServiceReplicas,
       short dataBlkNum, short parityBlkNum) {
     if (curReplicas < dataBlkNum) {
       // There are some replicas on decommissioned nodes so it's not corrupted
-      if (curReplicas + decommissionedReplicas >= dataBlkNum) {
+      if (curReplicas + outOfServiceReplicas >= dataBlkNum) {
         return QUEUE_HIGHEST_PRIORITY;
       }
       return QUEUE_WITH_CORRUPT_BLOCKS;
@@ -227,18 +227,15 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    *
    * @param block a low redundancy block
    * @param curReplicas current number of replicas of the block
-   * @param decomissionedReplicas the number of decommissioned replicas
+   * @param outOfServiceReplicas the number of out-of-service replicas
    * @param expectedReplicas expected number of replicas of the block
    * @return true if the block was added to a queue.
    */
   synchronized boolean add(BlockInfo block,
-                           int curReplicas,
-                           int readOnlyReplicas,
-                           int decomissionedReplicas,
-                           int expectedReplicas) {
-    assert curReplicas >= 0 : "Negative replicas!";
+      int curReplicas, int readOnlyReplicas,
+      int outOfServiceReplicas, int expectedReplicas) {
     final int priLevel = getPriority(block, curReplicas, readOnlyReplicas,
-        decomissionedReplicas, expectedReplicas);
+        outOfServiceReplicas, expectedReplicas);
     if(priorityQueues.get(priLevel).add(block)) {
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS &&
           expectedReplicas == 1) {
@@ -257,12 +254,10 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
   /** Remove a block from a low redundancy queue. */
   synchronized boolean remove(BlockInfo block,
-                              int oldReplicas,
-                              int oldReadOnlyReplicas,
-                              int decommissionedReplicas,
-                              int oldExpectedReplicas) {
+      int oldReplicas, int oldReadOnlyReplicas,
+      int outOfServiceReplicas, int oldExpectedReplicas) {
     final int priLevel = getPriority(block, oldReplicas, oldReadOnlyReplicas,
-        decommissionedReplicas, oldExpectedReplicas);
+        outOfServiceReplicas, oldExpectedReplicas);
     boolean removedBlock = remove(block, priLevel);
     if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS &&
         oldExpectedReplicas == 1 &&
@@ -325,22 +320,22 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    * method call.
    * @param block a low redundancy block
    * @param curReplicas current number of replicas of the block
-   * @param decommissionedReplicas  the number of decommissioned replicas
+   * @param outOfServiceReplicas  the number of out-of-service replicas
    * @param curExpectedReplicas expected number of replicas of the block
    * @param curReplicasDelta the change in the replicate count from before
    * @param expectedReplicasDelta the change in the expected replica count
    *        from before
    */
   synchronized void update(BlockInfo block, int curReplicas,
-                           int readOnlyReplicas, int decommissionedReplicas,
-                           int curExpectedReplicas,
-                           int curReplicasDelta, int expectedReplicasDelta) {
+      int readOnlyReplicas, int outOfServiceReplicas,
+      int curExpectedReplicas,
+      int curReplicasDelta, int expectedReplicasDelta) {
     int oldReplicas = curReplicas-curReplicasDelta;
     int oldExpectedReplicas = curExpectedReplicas-expectedReplicasDelta;
     int curPri = getPriority(block, curReplicas, readOnlyReplicas,
-        decommissionedReplicas, curExpectedReplicas);
+        outOfServiceReplicas, curExpectedReplicas);
     int oldPri = getPriority(block, oldReplicas, readOnlyReplicas,
-        decommissionedReplicas, oldExpectedReplicas);
+        outOfServiceReplicas, oldExpectedReplicas);
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("LowRedundancyBlocks.update " +
         block +

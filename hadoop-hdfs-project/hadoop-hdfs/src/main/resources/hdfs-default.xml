@@ -548,6 +548,13 @@
 </property>
 
 <property>
+  <name>dfs.namenode.maintenance.replication.min</name>
+  <value>1</value>
+  <description>Minimal live block replication in existence of maintenance mode.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.safemode.replication.min</name>
   <value></value>
   <description>

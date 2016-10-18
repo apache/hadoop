@@ -146,8 +146,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   // Stores status of decommissioning.
   // If node is not decommissioning, do not use this object for anything.
-  public final DecommissioningStatus decommissioningStatus =
-      new DecommissioningStatus();
+  private final LeavingServiceStatus leavingServiceStatus =
+      new LeavingServiceStatus();
 
   private final Map<String, DatanodeStorageInfo> storageMap =
       new HashMap<>();
@@ -274,6 +274,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   public synchronized void setNeedKeyUpdate(boolean needKeyUpdate) {
     this.needKeyUpdate = needKeyUpdate;
+  }
+
+  public LeavingServiceStatus getLeavingServiceStatus() {
+    return leavingServiceStatus;
   }
 
   @VisibleForTesting
@@ -729,51 +733,54 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return (this == obj) || super.equals(obj);
   }
 
-  /** Decommissioning status */
-  public class DecommissioningStatus {
+  /** Leaving service status. */
+  public class LeavingServiceStatus {
     private int underReplicatedBlocks;
-    private int decommissionOnlyReplicas;
+    private int outOfServiceOnlyReplicas;
     private int underReplicatedInOpenFiles;
     private long startTime;
     
     synchronized void set(int underRep,
         int onlyRep, int underConstruction) {
-      if (!isDecommissionInProgress()) {
+      if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return;
       }
       underReplicatedBlocks = underRep;
-      decommissionOnlyReplicas = onlyRep;
+      outOfServiceOnlyReplicas = onlyRep;
       underReplicatedInOpenFiles = underConstruction;
     }
 
     /** @return the number of under-replicated blocks */
     public synchronized int getUnderReplicatedBlocks() {
-      if (!isDecommissionInProgress()) {
+      if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return 0;
       }
       return underReplicatedBlocks;
     }
-    /** @return the number of decommission-only replicas */
-    public synchronized int getDecommissionOnlyReplicas() {
-      if (!isDecommissionInProgress()) {
+    /** @return the number of blocks with out-of-service-only replicas */
+    public synchronized int getOutOfServiceOnlyReplicas() {
+      if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return 0;
       }
-      return decommissionOnlyReplicas;
+      return outOfServiceOnlyReplicas;
     }
     /** @return the number of under-replicated blocks in open files */
     public synchronized int getUnderReplicatedInOpenFiles() {
-      if (!isDecommissionInProgress()) {
+      if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return 0;
       }
       return underReplicatedInOpenFiles;
     }
     /** Set start time */
     public synchronized void setStartTime(long time) {
+      if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
+        return;
+      }
       startTime = time;
     }
     /** @return start time */
     public synchronized long getStartTime() {
-      if (!isDecommissionInProgress()) {
+      if (!isDecommissionInProgress() && !isEnteringMaintenance()) {
         return 0;
       }
       return startTime;

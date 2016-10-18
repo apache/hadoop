@@ -833,8 +833,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                          List<DatanodeStorageInfo> results,
                          boolean avoidStaleNodes) {
     // check if the node is (being) decommissioned
-    if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      logNodeIsNotChosen(node, "the node is (being) decommissioned ");
+    if (!node.isInService()) {
+      logNodeIsNotChosen(node, "the node isn't in service.");
       return false;
     }
 

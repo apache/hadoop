@@ -484,7 +484,7 @@ public class TestDecommission extends AdminStatesBaseTest {
       shutdownCluster();
     }
   }
-  
+
   /**
    * Tests cluster storage statistics during decommissioning for non
    * federated cluster

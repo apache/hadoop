@@ -54,6 +54,7 @@ public class HostsFileWriter {
     localFileSys = FileSystem.getLocal(conf);
     Path workingDir = new Path(MiniDFSCluster.getBaseDirectory());
     this.fullDir = new Path(workingDir, dir);
+    cleanup(); // In case there is some left over from previous run.
     assertTrue(localFileSys.mkdirs(this.fullDir));
 
     if (conf.getClass(

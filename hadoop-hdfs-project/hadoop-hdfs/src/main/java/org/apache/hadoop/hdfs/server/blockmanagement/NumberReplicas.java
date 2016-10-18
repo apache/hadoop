@@ -24,9 +24,11 @@ import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.Store
 import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.DECOMMISSIONING;
 import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.EXCESS;
 import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.LIVE;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.MAINTENANCE_FOR_READ;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.MAINTENANCE_NOT_FOR_READ;
+import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.READONLY;
 import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.REDUNDANT;
 import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.STALESTORAGE;
-import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.READONLY;
 
 /**
  * A immutable object that stores the number of live replicas and
@@ -41,6 +43,14 @@ public class NumberReplicas extends EnumCounters<NumberReplicas.StoredReplicaSta
     READONLY,
     DECOMMISSIONING,
     DECOMMISSIONED,
+    // We need live ENTERING_MAINTENANCE nodes to continue
+    // to serve read request while it is being transitioned to live
+    // IN_MAINTENANCE if these are the only replicas left.
+    // MAINTENANCE_NOT_FOR_READ == maintenanceReplicas -
+    // Live ENTERING_MAINTENANCE.
+    MAINTENANCE_NOT_FOR_READ,
+    // Live ENTERING_MAINTENANCE nodes to serve read requests.
+    MAINTENANCE_FOR_READ,
     CORRUPT,
     // excess replicas already tracked by blockmanager's excess map
     EXCESS,
@@ -106,4 +116,20 @@ public class NumberReplicas extends EnumCounters<NumberReplicas.StoredReplicaSta
   public int redundantInternalBlocks() {
     return (int) get(REDUNDANT);
   }
-} 
+
+  public int maintenanceNotForReadReplicas() {
+    return (int) get(MAINTENANCE_NOT_FOR_READ);
+  }
+
+  public int maintenanceReplicas() {
+    return (int) (get(MAINTENANCE_NOT_FOR_READ) + get(MAINTENANCE_FOR_READ));
+  }
+
+  public int outOfServiceReplicas() {
+    return maintenanceReplicas() + decommissionedAndDecommissioning();
+  }
+
+  public int liveEnteringMaintenanceReplicas() {
+    return (int)get(MAINTENANCE_FOR_READ);
+  }
+}

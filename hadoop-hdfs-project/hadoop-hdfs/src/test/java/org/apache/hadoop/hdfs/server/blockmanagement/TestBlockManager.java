@@ -415,9 +415,10 @@ public class TestBlockManager {
       throws Exception {
     assertEquals(0, bm.numOfUnderReplicatedBlocks());
     BlockInfo block = addBlockOnNodes(testIndex, origNodes);
-    assertFalse(bm.isNeededReconstruction(block, bm.countLiveNodes(block)));
+    assertFalse(bm.isNeededReconstruction(block,
+        bm.countNodes(block, fsn.isInStartupSafeMode())));
   }
-  
+
   @Test(timeout = 60000)
   public void testNeededReconstructionWhileAppending() throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -458,7 +459,8 @@ public class TestBlockManager {
         namenode.updatePipeline(clientName, oldBlock, newBlock,
             newLocatedBlock.getLocations(), newLocatedBlock.getStorageIDs());
         BlockInfo bi = bm.getStoredBlock(newBlock.getLocalBlock());
-        assertFalse(bm.isNeededReconstruction(bi, bm.countLiveNodes(bi)));
+        assertFalse(bm.isNeededReconstruction(bi, bm.countNodes(bi,
+            cluster.getNamesystem().isInStartupSafeMode())));
       } finally {
         IOUtils.closeStream(out);
       }

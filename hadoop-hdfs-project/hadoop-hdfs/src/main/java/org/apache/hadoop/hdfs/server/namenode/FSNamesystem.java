@@ -5462,11 +5462,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("underReplicatedBlocks",
-              node.decommissioningStatus.getUnderReplicatedBlocks())
+          node.getLeavingServiceStatus().getUnderReplicatedBlocks())
+           // TODO use another property name for outOfServiceOnlyReplicas.
           .put("decommissionOnlyReplicas",
-              node.decommissioningStatus.getDecommissionOnlyReplicas())
+          node.getLeavingServiceStatus().getOutOfServiceOnlyReplicas())
           .put("underReplicateInOpenFiles",
-              node.decommissioningStatus.getUnderReplicatedInOpenFiles())
+          node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
       info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
     }
@@ -5528,7 +5529,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
     for (Iterator<DatanodeDescriptor> it = live.iterator(); it.hasNext();) {
       DatanodeDescriptor node = it.next();
-      if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+      if (!node.isInService()) {
         it.remove();
       }
     }
