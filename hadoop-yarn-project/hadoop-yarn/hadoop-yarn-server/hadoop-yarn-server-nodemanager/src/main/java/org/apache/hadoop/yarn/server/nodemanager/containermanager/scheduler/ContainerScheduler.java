@@ -323,47 +323,45 @@ public class ContainerScheduler extends AbstractService implements
       int cpuVcores) {
     ResourceUtilization currentUtilization = this.utilizationManager
         .getCurrentUtilization();
-    synchronized (currentUtilization) {
-      // Check physical memory.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("pMemCheck [current={} + asked={} > allowed={}]",
-            currentUtilization.getPhysicalMemory(),
-            (pMemBytes >> 20),
-            (getContainersMonitor().getPmemAllocatedForContainers() >> 20));
-      }
-      if (currentUtilization.getPhysicalMemory() +
-          (int) (pMemBytes >> 20) >
-          (int) (getContainersMonitor()
-              .getPmemAllocatedForContainers() >> 20)) {
-        return false;
-      }
+    // Check physical memory.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("pMemCheck [current={} + asked={} > allowed={}]",
+          currentUtilization.getPhysicalMemory(),
+          (pMemBytes >> 20),
+          (getContainersMonitor().getPmemAllocatedForContainers() >> 20));
+    }
+    if (currentUtilization.getPhysicalMemory() +
+        (int) (pMemBytes >> 20) >
+        (int) (getContainersMonitor()
+            .getPmemAllocatedForContainers() >> 20)) {
+      return false;
+    }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("before vMemCheck" +
-            "[isEnabled={}, current={} + asked={} > allowed={}]",
-            getContainersMonitor().isVmemCheckEnabled(),
-            currentUtilization.getVirtualMemory(), (vMemBytes >> 20),
-            (getContainersMonitor().getVmemAllocatedForContainers() >> 20));
-      }
-      // Check virtual memory.
-      if (getContainersMonitor().isVmemCheckEnabled() &&
-          currentUtilization.getVirtualMemory() +
-              (int) (vMemBytes >> 20) >
-              (int) (getContainersMonitor()
-                  .getVmemAllocatedForContainers() >> 20)) {
-        return false;
-      }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("before vMemCheck" +
+              "[isEnabled={}, current={} + asked={} > allowed={}]",
+          getContainersMonitor().isVmemCheckEnabled(),
+          currentUtilization.getVirtualMemory(), (vMemBytes >> 20),
+          (getContainersMonitor().getVmemAllocatedForContainers() >> 20));
+    }
+    // Check virtual memory.
+    if (getContainersMonitor().isVmemCheckEnabled() &&
+        currentUtilization.getVirtualMemory() +
+            (int) (vMemBytes >> 20) >
+            (int) (getContainersMonitor()
+                .getVmemAllocatedForContainers() >> 20)) {
+      return false;
+    }
 
-      float vCores = (float) cpuVcores /
-              getContainersMonitor().getVCoresAllocatedForContainers();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("before cpuCheck [asked={} > allowed={}]",
-            currentUtilization.getCPU(), vCores);
-      }
-      // Check CPU.
-      if (currentUtilization.getCPU() + vCores > 1.0f) {
-        return false;
-      }
+    float vCores = (float) cpuVcores /
+        getContainersMonitor().getVCoresAllocatedForContainers();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("before cpuCheck [asked={} > allowed={}]",
+          currentUtilization.getCPU(), vCores);
+    }
+    // Check CPU.
+    if (currentUtilization.getCPU() + vCores > 1.0f) {
+      return false;
     }
     return true;
   }
