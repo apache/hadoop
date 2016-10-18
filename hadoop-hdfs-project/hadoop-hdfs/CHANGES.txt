@@ -52,6 +52,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
 
+    HDFS-10712. TestDataNodeVolumeFailure should pass not null
+    BlockReportContext. (Vinitha Gankidi via shv)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
@@ -162,6 +165,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-9333. Some tests using MiniDFSCluster errored complaining port in
     use. (iwasakims)
+
+    HDFS-10301. Remove FBR tracking state to fix false zombie storage
+    detection for interleaving block reports. (Vinitha Gankidi via shv)
 
 Release 2.7.3 - 2016-08-25
 
