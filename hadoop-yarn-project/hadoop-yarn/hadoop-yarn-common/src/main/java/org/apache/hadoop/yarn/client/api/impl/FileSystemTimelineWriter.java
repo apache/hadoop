@@ -106,13 +106,6 @@ public class FileSystemTimelineWriter extends TimelineWriter{
     super(authUgi, client, resURI);
 
     Configuration fsConf = new Configuration(conf);
-    fsConf.setBoolean("dfs.client.retry.policy.enabled", true);
-    String retryPolicy =
-        fsConf.get(YarnConfiguration.
-            TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC,
-          YarnConfiguration.
-              DEFAULT_TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_RETRY_POLICY_SPEC);
-    fsConf.set("dfs.client.retry.policy.spec", retryPolicy);
 
     activePath = new Path(fsConf.get(
       YarnConfiguration

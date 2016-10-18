@@ -95,13 +95,8 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
 
   void setFileSystem(Configuration conf) throws IOException {
     Configuration confCopy = new Configuration(conf);
-    confCopy.setBoolean("dfs.client.retry.policy.enabled", true);
-    String retryPolicy =
-        confCopy.get(YarnConfiguration.FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC,
-            YarnConfiguration.DEFAULT_FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC);
-    confCopy.set("dfs.client.retry.policy.spec", retryPolicy);
     fs = fsWorkingPath.getFileSystem(confCopy);
-    
+
     // if it's local file system, use RawLocalFileSystem instead of
     // LocalFileSystem, the latter one doesn't support append.
     if (fs.getScheme().equals("file")) {
