@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
@@ -29,10 +31,12 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
+import java.io.Closeable;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
@@ -50,6 +54,9 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AInstrumentation {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3AInstrumentation.class);
+
   public static final String CONTEXT = "S3AFileSystem";
   private final MetricsRegistry registry =
       new MetricsRegistry("S3AFileSystem").setContext(CONTEXT);
@@ -100,7 +107,23 @@ public class S3AInstrumentation {
       OBJECT_METADATA_REQUESTS,
       OBJECT_MULTIPART_UPLOAD_ABORTED,
       OBJECT_PUT_BYTES,
-      OBJECT_PUT_REQUESTS
+      OBJECT_PUT_REQUESTS,
+      OBJECT_PUT_REQUESTS_COMPLETED,
+      STREAM_WRITE_FAILURES,
+      STREAM_WRITE_BLOCK_UPLOADS,
+      STREAM_WRITE_BLOCK_UPLOADS_COMMITTED,
+      STREAM_WRITE_BLOCK_UPLOADS_ABORTED,
+      STREAM_WRITE_TOTAL_TIME,
+      STREAM_WRITE_TOTAL_DATA,
+  };
+
+
+  private static final Statistic[] GAUGES_TO_CREATE = {
+      OBJECT_PUT_REQUESTS_ACTIVE,
+      OBJECT_PUT_BYTES_PENDING,
+      STREAM_WRITE_BLOCK_UPLOADS_ACTIVE,
+      STREAM_WRITE_BLOCK_UPLOADS_PENDING,
+      STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
   };
 
   public S3AInstrumentation(URI name) {
@@ -142,6 +165,9 @@ public class S3AInstrumentation {
     ignoredErrors = counter(IGNORED_ERRORS);
     for (Statistic statistic : COUNTERS_TO_CREATE) {
       counter(statistic);
+    }
+    for (Statistic statistic : GAUGES_TO_CREATE) {
+      gauge(statistic.getSymbol(), statistic.getDescription());
     }
   }
 
@@ -254,18 +280,32 @@ public class S3AInstrumentation {
    * Lookup a counter by name. Return null if it is not known.
    * @param name counter name
    * @return the counter
+   * @throws IllegalStateException if the metric is not a counter
    */
   private MutableCounterLong lookupCounter(String name) {
     MutableMetric metric = lookupMetric(name);
     if (metric == null) {
       return null;
     }
-    Preconditions.checkNotNull(metric, "not found: " + name);
     if (!(metric instanceof MutableCounterLong)) {
       throw new IllegalStateException("Metric " + name
           + " is not a MutableCounterLong: " + metric);
     }
     return (MutableCounterLong) metric;
+  }
+
+  /**
+   * Look up a gauge.
+   * @param name gauge name
+   * @return the gauge or null
+   * @throws ClassCastException if the metric is not a Gauge.
+   */
+  public MutableGaugeLong lookupGauge(String name) {
+    MutableMetric metric = lookupMetric(name);
+    if (metric == null) {
+      LOG.debug("No gauge {}", name);
+    }
+    return (MutableGaugeLong) metric;
   }
 
   /**
@@ -347,6 +387,47 @@ public class S3AInstrumentation {
     MutableCounterLong counter = lookupCounter(op.getSymbol());
     if (counter != null) {
       counter.incr(count);
+    }
+  }
+  /**
+   * Increment a specific counter.
+   * No-op if not defined.
+   * @param op operation
+   * @param count atomic long containing value
+   */
+  public void incrementCounter(Statistic op, AtomicLong count) {
+    incrementCounter(op, count.get());
+  }
+
+  /**
+   * Increment a specific gauge.
+   * No-op if not defined.
+   * @param op operation
+   * @param count increment value
+   * @throws ClassCastException if the metric is of the wrong type
+   */
+  public void incrementGauge(Statistic op, long count) {
+    MutableGaugeLong gauge = lookupGauge(op.getSymbol());
+    if (gauge != null) {
+      gauge.incr(count);
+    } else {
+      LOG.debug("No Gauge: "+ op);
+    }
+  }
+
+  /**
+   * Decrement a specific gauge.
+   * No-op if not defined.
+   * @param op operation
+   * @param count increment value
+   * @throws ClassCastException if the metric is of the wrong type
+   */
+  public void decrementGauge(Statistic op, long count) {
+    MutableGaugeLong gauge = lookupGauge(op.getSymbol());
+    if (gauge != null) {
+      gauge.decr(count);
+    } else {
+      LOG.debug("No Gauge: " + op);
     }
   }
 
@@ -549,6 +630,167 @@ public class S3AInstrumentation {
       sb.append(", ReadsIncomplete=").append(readsIncomplete);
       sb.append(", BytesReadInClose=").append(bytesReadInClose);
       sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
+      sb.append('}');
+      return sb.toString();
+    }
+  }
+
+  /**
+   * Create a stream output statistics instance.
+   * @return the new instance
+   */
+
+  OutputStreamStatistics newOutputStreamStatistics() {
+    return new OutputStreamStatistics();
+  }
+
+  /**
+   * Merge in the statistics of a single output stream into
+   * the filesystem-wide statistics.
+   * @param statistics stream statistics
+   */
+  private void mergeOutputStreamStatistics(OutputStreamStatistics statistics) {
+    incrementCounter(STREAM_WRITE_TOTAL_TIME, statistics.totalUploadDuration());
+    incrementCounter(STREAM_WRITE_QUEUE_DURATION, statistics.queueDuration);
+    incrementCounter(STREAM_WRITE_TOTAL_DATA, statistics.bytesUploaded);
+    incrementCounter(STREAM_WRITE_BLOCK_UPLOADS,
+        statistics.blockUploadsCompleted);
+  }
+
+  /**
+   * Statistics updated by an output stream during its actual operation.
+   * Some of these stats may be relayed. However, as block upload is
+   * spans multiple
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public final class OutputStreamStatistics implements Closeable {
+    private final AtomicLong blocksSubmitted = new AtomicLong(0);
+    private final AtomicLong blocksInQueue = new AtomicLong(0);
+    private final AtomicLong blocksActive = new AtomicLong(0);
+    private final AtomicLong blockUploadsCompleted = new AtomicLong(0);
+    private final AtomicLong blockUploadsFailed = new AtomicLong(0);
+    private final AtomicLong bytesPendingUpload = new AtomicLong(0);
+
+    private final AtomicLong bytesUploaded = new AtomicLong(0);
+    private final AtomicLong transferDuration = new AtomicLong(0);
+    private final AtomicLong queueDuration = new AtomicLong(0);
+    private final AtomicLong exceptionsInMultipartFinalize = new AtomicLong(0);
+
+    /**
+     * Block is queued for upload.
+     */
+    void blockUploadQueued(int blockSize) {
+      blocksSubmitted.incrementAndGet();
+      blocksInQueue.incrementAndGet();
+      bytesPendingUpload.addAndGet(blockSize);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_PENDING, 1);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, blockSize);
+    }
+
+    /** Queued block has been scheduled for upload. */
+    void blockUploadStarted(long duration, int blockSize) {
+      queueDuration.addAndGet(duration);
+      blocksInQueue.decrementAndGet();
+      blocksActive.incrementAndGet();
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_PENDING, -1);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, 1);
+    }
+
+    /** A block upload has completed. */
+    void blockUploadCompleted(long duration, int blockSize) {
+      this.transferDuration.addAndGet(duration);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, -1);
+      blocksActive.decrementAndGet();
+      blockUploadsCompleted.incrementAndGet();
+    }
+
+    /**
+     *  A block upload has failed.
+     *  A final transfer completed event is still expected, so this
+     *  does not decrement the active block counter.
+     */
+    void blockUploadFailed(long duration, int blockSize) {
+      blockUploadsFailed.incrementAndGet();
+    }
+
+    /** Intermediate report of bytes uploaded. */
+    void bytesTransferred(long byteCount) {
+      bytesUploaded.addAndGet(byteCount);
+      bytesPendingUpload.addAndGet(-byteCount);
+      incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, -byteCount);
+    }
+
+    /**
+     * Note an exception in a multipart complete.
+     */
+    void exceptionInMultipartComplete() {
+      exceptionsInMultipartFinalize.incrementAndGet();
+    }
+
+    /**
+     * Note an exception in a multipart abort.
+     */
+    void exceptionInMultipartAbort() {
+      exceptionsInMultipartFinalize.incrementAndGet();
+    }
+
+    /**
+     * Get the number of bytes pending upload.
+     * @return the number of bytes in the pending upload state.
+     */
+    public long getBytesPendingUpload() {
+      return bytesPendingUpload.get();
+    }
+
+    /**
+     * Output stream has closed.
+     * Trigger merge in of all statistics not updated during operation.
+     */
+    @Override
+    public void close() {
+      if (bytesPendingUpload.get() > 0) {
+        LOG.warn("Closing output stream statistics while data is still marked" +
+            " as pending upload in {}", this);
+      }
+      mergeOutputStreamStatistics(this);
+    }
+
+    long averageQueueTime() {
+      return blocksSubmitted.get() > 0 ?
+          (queueDuration.get() / blocksSubmitted.get()) : 0;
+    }
+
+    double effectiveBandwidth() {
+      double duration = totalUploadDuration() / 1000.0;
+      return duration > 0 ?
+          (bytesUploaded.get() / duration) : 0;
+    }
+
+    long totalUploadDuration() {
+      return queueDuration.get() + transferDuration.get();
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "OutputStreamStatistics{");
+      sb.append("blocksSubmitted=").append(blocksSubmitted);
+      sb.append(", blocksInQueue=").append(blocksInQueue);
+      sb.append(", blocksActive=").append(blocksActive);
+      sb.append(", blockUploadsCompleted=").append(blockUploadsCompleted);
+      sb.append(", blockUploadsFailed=").append(blockUploadsFailed);
+      sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
+      sb.append(", bytesUploaded=").append(bytesUploaded);
+      sb.append(", exceptionsInMultipartFinalize=").append(
+          exceptionsInMultipartFinalize);
+      sb.append(", transferDuration=").append(transferDuration).append(" ms");
+      sb.append(", queueDuration=").append(queueDuration).append(" ms");
+      sb.append(", averageQueueTime=").append(averageQueueTime()).append(" ms");
+      sb.append(", totalUploadDuration=").append(totalUploadDuration())
+          .append(" ms");
+      sb.append(", effectiveBandwidth=").append(effectiveBandwidth())
+          .append(" bytes/s");
       sb.append('}');
       return sb.toString();
     }

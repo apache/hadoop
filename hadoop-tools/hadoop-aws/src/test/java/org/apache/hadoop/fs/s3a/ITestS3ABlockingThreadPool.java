@@ -72,6 +72,8 @@ public class ITestS3ABlockingThreadPool {
   @Test
   public void testFastMultiPartUpload() throws Exception {
     conf.setBoolean(Constants.FAST_UPLOAD, true);
+    conf.set(Constants.FAST_UPLOAD_BUFFER,
+        Constants.FAST_UPLOAD_BYTEBUFFER);
     fs = S3ATestUtils.createTestFileSystem(conf);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 16 * 1024 *
         1024);

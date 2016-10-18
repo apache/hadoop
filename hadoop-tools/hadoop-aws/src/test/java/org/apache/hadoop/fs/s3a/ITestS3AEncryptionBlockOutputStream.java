@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,33 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.contract.s3a;
-
-import static org.apache.hadoop.fs.s3a.Constants.*;
+package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
 /**
- * Contract test suite covering S3A integration with DistCp.
- * Uses the block output stream, buffered to disk. This is the
- * recommended output mechanism for DistCP due to its scalability.
+ * Run the encryption tests against the block output stream.
  */
-public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
-
-  private static final long MULTIPART_SETTING = MULTIPART_MIN_SIZE;
+public class ITestS3AEncryptionBlockOutputStream extends ITestS3AEncryption {
 
   @Override
   protected Configuration createConfiguration() {
-    Configuration newConf = super.createConfiguration();
-    newConf.setLong(MULTIPART_SIZE, MULTIPART_SETTING);
-    newConf.setBoolean(FAST_UPLOAD, true);
-    newConf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_DISK);
-    return newConf;
-  }
-
-  @Override
-  protected S3AContract createContract(Configuration conf) {
-    return new S3AContract(conf);
+    Configuration conf = super.createConfiguration();
+    conf.setBoolean(Constants.FAST_UPLOAD, true);
+    conf.set(Constants.FAST_UPLOAD_BUFFER,
+        Constants.FAST_UPLOAD_BYTEBUFFER);
+    return conf;
   }
 }

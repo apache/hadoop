@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,33 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.contract.s3a;
-
-import static org.apache.hadoop.fs.s3a.Constants.*;
+package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+import org.apache.hadoop.fs.s3a.Constants;
 
 /**
- * Contract test suite covering S3A integration with DistCp.
- * Uses the block output stream, buffered to disk. This is the
- * recommended output mechanism for DistCP due to its scalability.
+ * Use classic output for writing things; tweaks the configuration to do
+ * this after it has been set up in the superclass.
+ * The generator test has been copied and re
  */
-public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
-
-  private static final long MULTIPART_SETTING = MULTIPART_MIN_SIZE;
+public class ITestS3AHugeFilesClassicOutput extends AbstractSTestS3AHugeFiles {
 
   @Override
   protected Configuration createConfiguration() {
-    Configuration newConf = super.createConfiguration();
-    newConf.setLong(MULTIPART_SIZE, MULTIPART_SETTING);
-    newConf.setBoolean(FAST_UPLOAD, true);
-    newConf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_DISK);
-    return newConf;
+    final Configuration conf = super.createConfiguration();
+    conf.setBoolean(Constants.FAST_UPLOAD, false);
+    return conf;
   }
 
-  @Override
-  protected S3AContract createContract(Configuration conf) {
-    return new S3AContract(conf);
+  protected String getBlockOutputBufferName() {
+    return "classic";
   }
 }
