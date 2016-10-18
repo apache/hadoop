@@ -35,6 +35,9 @@ public final class Constants {
   private Constants() {
   }
 
+  /** The minimum multipart size which S3 supports. */
+  public static final int MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
+
   // s3 access key
   public static final String ACCESS_KEY = "fs.s3a.access.key";
 
@@ -124,13 +127,71 @@ public final class Constants {
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
-  // should we upload directly from memory rather than using a file buffer
+  // switch to the fast block-by-block upload mechanism
   public static final String FAST_UPLOAD = "fs.s3a.fast.upload";
   public static final boolean DEFAULT_FAST_UPLOAD = false;
 
   //initial size of memory buffer for a fast upload
+  @Deprecated
   public static final String FAST_BUFFER_SIZE = "fs.s3a.fast.buffer.size";
   public static final int DEFAULT_FAST_BUFFER_SIZE = 1048576; //1MB
+
+  /**
+   * What buffer to use.
+   * Default is {@link #FAST_UPLOAD_BUFFER_DISK}
+   * Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BUFFER =
+      "fs.s3a.fast.upload.buffer";
+
+  /**
+   * Buffer blocks to disk: {@value}.
+   * Capacity is limited to available disk space.
+   */
+
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BUFFER_DISK = "disk";
+
+  /**
+   * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BUFFER_ARRAY = "array";
+
+  /**
+   * Use a byte buffer. May be more memory efficient than the
+   * {@link #FAST_UPLOAD_BUFFER_ARRAY}: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_BYTEBUFFER = "bytebuffer";
+
+  /**
+   * Default buffer option: {@value}.
+   */
+  @InterfaceStability.Unstable
+  public static final String DEFAULT_FAST_UPLOAD_BUFFER =
+      FAST_UPLOAD_BUFFER_DISK;
+
+  /**
+   * Maximum Number of blocks a single output stream can have
+   * active (uploading, or queued to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS}
+   */
+  @InterfaceStability.Unstable
+  public static final String FAST_UPLOAD_ACTIVE_BLOCKS =
+      "fs.s3a.fast.upload.active.blocks";
+
+  /**
+   * Limit of queued block upload operations before writes
+   * block. Value: {@value}
+   */
+  @InterfaceStability.Unstable
+  public static final int DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS = 4;
 
   // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
   // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl
@@ -145,7 +206,7 @@ public final class Constants {
   // purge any multipart uploads older than this number of seconds
   public static final String PURGE_EXISTING_MULTIPART_AGE =
       "fs.s3a.multipart.purge.age";
-  public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 14400;
+  public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
   // s3 server-side encryption
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
@@ -215,4 +276,10 @@ public final class Constants {
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           S3ClientFactory.DefaultS3ClientFactory.class;
+
+  /**
+   * Maximum number of partitions in a multipart upload: {@value}.
+   */
+  @InterfaceAudience.Private
+  public static final int MAX_MULTIPART_COUNT = 10000;
 }
