@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.FileStatus;
 /**
  * Print statistics about path in specified format.
  * Format sequences:<br>
+ *   %a: Permissions in octal<br>
+ *   %A: Permissions in symbolic style<br>
  *   %b: Size of file in blocks<br>
  *   %F: Type<br>
  *   %g: Group name of owner<br>
@@ -56,7 +58,8 @@ class Stat extends FsCommand {
   public static final String USAGE = "[format] <path> ...";
   public static final String DESCRIPTION =
     "Print statistics about the file/directory at <path>" + NEWLINE +
-    "in the specified format. Format accepts filesize in" + NEWLINE +
+    "in the specified format. Format accepts permissions in" + NEWLINE +
+    "octal (%a) and symbolic (%A), filesize in" + NEWLINE +
     "blocks (%b), type (%F), group name of owner (%g)," + NEWLINE +
     "name (%n), block size (%o), replication (%r), user name" + NEWLINE +
     "of owner (%u), modification date (%y, %Y)." + NEWLINE +
@@ -95,6 +98,12 @@ class Stat extends FsCommand {
         // this silently drops a trailing %?
         if (i + 1 == fmt.length) break;
         switch (fmt[++i]) {
+          case 'a':
+            buf.append(stat.getPermission().toOctal());
+            break;
+          case 'A':
+            buf.append(stat.getPermission());
+            break;
           case 'b':
             buf.append(stat.getLen());
             break;

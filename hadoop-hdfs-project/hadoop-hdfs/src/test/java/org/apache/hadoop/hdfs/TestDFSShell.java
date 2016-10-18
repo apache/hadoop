@@ -2021,17 +2021,31 @@ public class TestDFSShell {
         out.toString(), String.format("%s%n%s%n", mtime1, mtime2));
 
     doFsStat(dfs.getConf(), "%F %u:%g %b %y %n");
-
     out.reset();
-    doFsStat(dfs.getConf(), "%F %u:%g %b %y %n", testDir1);
+
+    doFsStat(dfs.getConf(), "%F %a %A %u:%g %b %y %n", testDir1);
     assertTrue(out.toString(), out.toString().contains(mtime1));
     assertTrue(out.toString(), out.toString().contains("directory"));
     assertTrue(out.toString(), out.toString().contains(status1.getGroup()));
+    assertTrue(out.toString(),
+        out.toString().contains(status1.getPermission().toString()));
+
+    int n = status1.getPermission().toShort();
+    int octal = (n>>>9&1)*1000 + (n>>>6&7)*100 + (n>>>3&7)*10 + (n&7);
+    assertTrue(out.toString(),
+        out.toString().contains(String.valueOf(octal)));
 
     out.reset();
-    doFsStat(dfs.getConf(), "%F %u:%g %b %y %n", testDir1, testFile2);
+    doFsStat(dfs.getConf(), "%F %a %A %u:%g %b %y %n", testDir1, testFile2);
+
+    n = status2.getPermission().toShort();
+    octal = (n>>>9&1)*1000 + (n>>>6&7)*100 + (n>>>3&7)*10 + (n&7);
     assertTrue(out.toString(), out.toString().contains(mtime1));
     assertTrue(out.toString(), out.toString().contains("regular file"));
+    assertTrue(out.toString(),
+        out.toString().contains(status2.getPermission().toString()));
+    assertTrue(out.toString(),
+        out.toString().contains(String.valueOf(octal)));
     assertTrue(out.toString(), out.toString().contains(mtime2));
   }
 
