@@ -28,7 +28,7 @@ import java.util.Arrays;
  * Helpful utilities for implementing some raw erasure coders.
  */
 @InterfaceAudience.Private
-final class CoderUtil {
+public final class CoderUtil {
 
   private CoderUtil() {
     // No called

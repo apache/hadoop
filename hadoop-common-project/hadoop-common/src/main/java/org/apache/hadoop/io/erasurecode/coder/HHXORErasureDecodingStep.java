@@ -32,7 +32,7 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  * decoding a block group.
  */
 @InterfaceAudience.Private
-public class HHXORErasureDecodingStep extends AbstractHHErasureCodingStep {
+public class HHXORErasureDecodingStep extends HHErasureCodingStep {
   private int pbIndex;
   private int[] piggyBackIndex;
   private int[] piggyBackFullIndex;

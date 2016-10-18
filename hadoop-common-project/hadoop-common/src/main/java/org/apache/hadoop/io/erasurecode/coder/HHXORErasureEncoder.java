@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
@@ -38,16 +37,12 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  * This is Hitchhiker-XOR erasure encoder that encodes a block group.
  */
 @InterfaceAudience.Private
-public class HHXORErasureEncoder extends AbstractErasureEncoder {
+public class HHXORErasureEncoder extends ErasureEncoder {
   private RawErasureEncoder rsRawEncoder;
   private RawErasureEncoder xorRawEncoder;
 
-  public HHXORErasureEncoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
-  }
-
-  public HHXORErasureEncoder(ECSchema schema) {
-    super(schema);
+  public HHXORErasureEncoder(ErasureCoderOptions options) {
+    super(options);
   }
 
   @Override
@@ -65,21 +60,17 @@ public class HHXORErasureEncoder extends AbstractErasureEncoder {
 
   private RawErasureEncoder checkCreateRSRawEncoder() {
     if (rsRawEncoder == null) {
-      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
-          getNumDataUnits(), getNumParityUnits());
       rsRawEncoder = CodecUtil.createRawEncoder(getConf(),
-          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
+          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
     }
     return rsRawEncoder;
   }
 
   private RawErasureEncoder checkCreateXorRawEncoder() {
     if (xorRawEncoder == null) {
-      ErasureCoderOptions erasureCoderOptions = new ErasureCoderOptions(
-          getNumDataUnits(), getNumParityUnits());
       xorRawEncoder = CodecUtil.createRawEncoder(getConf(),
           ErasureCodeConstants.XOR_CODEC_NAME,
-          erasureCoderOptions);
+          getOptions());
     }
     return xorRawEncoder;
   }

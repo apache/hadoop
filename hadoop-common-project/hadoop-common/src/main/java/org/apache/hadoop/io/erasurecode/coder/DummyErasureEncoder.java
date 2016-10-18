@@ -17,56 +17,29 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.io.erasurecode.rawcoder.DummyRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
- * Reed-Solomon erasure encoder that encodes a block group.
- *
- * It implements {@link ErasureCoder}.
+ * Dummy erasure encoder does no real computation. Instead, it just returns
+ * zero bytes. This decoder can be used to isolate the performance issue to
+ * HDFS side logic instead of codec, and is intended for test only.
  */
-@InterfaceAudience.Private
-public class RSErasureEncoder extends ErasureEncoder {
-  private RawErasureEncoder rawEncoder;
-
-  public RSErasureEncoder(ErasureCoderOptions options) {
+public class DummyErasureEncoder extends ErasureEncoder {
+  public DummyErasureEncoder(ErasureCoderOptions options) {
     super(options);
   }
 
   @Override
-  protected ErasureCodingStep prepareEncodingStep(final ECBlockGroup blockGroup) {
-
-    RawErasureEncoder rawEncoder = checkCreateRSRawEncoder();
+  protected ErasureCodingStep prepareEncodingStep(ECBlockGroup blockGroup) {
+    RawErasureEncoder rawEncoder = new DummyRawEncoder(getOptions());
 
     ECBlock[] inputBlocks = getInputBlocks(blockGroup);
 
     return new ErasureEncodingStep(inputBlocks,
         getOutputBlocks(blockGroup), rawEncoder);
-  }
-
-  private RawErasureEncoder checkCreateRSRawEncoder() {
-    if (rawEncoder == null) {
-      // TODO: we should create the raw coder according to codec.
-      rawEncoder = CodecUtil.createRawEncoder(getConf(),
-          ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
-    }
-    return rawEncoder;
-  }
-
-  @Override
-  public void release() {
-    if (rawEncoder != null) {
-      rawEncoder.release();
-    }
-  }
-
-  @Override
-  public boolean preferDirectBuffer() {
-    return false;
   }
 }

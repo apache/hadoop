@@ -15,35 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.coder;
+
+package org.apache.hadoop.io.erasurecode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ECBlock;
 
 /**
- * Abstract class for Hitchhiker common facilities shared by
- * {@link HHXORErasureEncodingStep}and {@link HHXORErasureDecodingStep}.
- *
- * It implements {@link AbstractErasureCodingStep}.
+ * Erasure codec options.
  */
 @InterfaceAudience.Private
-public abstract class AbstractHHErasureCodingStep
-        extends AbstractErasureCodingStep {
+public class ErasureCodecOptions {
+  private ECSchema schema;
 
-  private static final int SUB_PACKET_SIZE = 2;
-
-  /**
-   * Constructor given input blocks and output blocks.
-   *
-   * @param inputBlocks
-   * @param outputBlocks
-   */
-  public AbstractHHErasureCodingStep(ECBlock[] inputBlocks,
-                                     ECBlock[] outputBlocks) {
-    super(inputBlocks, outputBlocks);
+  public ErasureCodecOptions(ECSchema schema) {
+    this.schema = schema;
   }
 
-  protected int getSubPacketSize() {
-    return SUB_PACKET_SIZE;
+  public ECSchema getSchema() {
+    return schema;
   }
 }

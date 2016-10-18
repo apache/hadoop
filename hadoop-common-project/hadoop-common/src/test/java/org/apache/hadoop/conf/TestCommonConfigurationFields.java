@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.local.LocalConfigKeys;
 import org.apache.hadoop.ha.SshFenceByTcpPort;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.CompositeGroupsMapping;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
@@ -49,6 +50,7 @@ import org.apache.hadoop.security.ssl.SSLFactory;
  * {@link org.apache.hadoop.security.LdapGroupsMapping}
  * {@link org.apache.hadoop.security.http.CrossOriginFilter}
  * {@link org.apache.hadoop.security.ssl.SSLFactory}
+ * {@link org.apache.hadoop.io.erasurecode.rawcoder.CoderUtil}
  * <p></p>
  * against core-site.xml for missing properties.  Currently only
  * throws an error if the class is missing a property.
@@ -71,7 +73,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         LdapGroupsMapping.class,
         ZKFailoverController.class,
         SSLFactory.class,
-        CompositeGroupsMapping.class
+        CompositeGroupsMapping.class,
+        CodecUtil.class
         };
 
     // Initialize used variables

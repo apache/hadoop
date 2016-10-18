@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
@@ -39,16 +38,12 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  * This is Hitchhiker-XOR erasure decoder that decodes a block group.
  */
 @InterfaceAudience.Private
-public class HHXORErasureDecoder extends AbstractErasureDecoder {
+public class HHXORErasureDecoder extends ErasureDecoder {
   private RawErasureDecoder rsRawDecoder;
   private RawErasureEncoder xorRawEncoder;
 
-  public HHXORErasureDecoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
-  }
-
-  public HHXORErasureDecoder(ECSchema schema) {
-    super(schema);
+  public HHXORErasureDecoder(ErasureCoderOptions options) {
+    super(options);
   }
 
   @Override
@@ -71,22 +66,23 @@ public class HHXORErasureDecoder extends AbstractErasureDecoder {
 
   private RawErasureDecoder checkCreateRSRawDecoder() {
     if (rsRawDecoder == null) {
-      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
-          getNumDataUnits(), getNumParityUnits());
       rsRawDecoder = CodecUtil.createRawDecoder(getConf(),
-              ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);
+              ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, getOptions());
     }
     return rsRawDecoder;
   }
 
   private RawErasureEncoder checkCreateXorRawEncoder() {
     if (xorRawEncoder == null) {
-      ErasureCoderOptions coderOptions = new ErasureCoderOptions(
-          getNumDataUnits(), getNumParityUnits());
       xorRawEncoder = CodecUtil.createRawEncoder(getConf(),
-          ErasureCodeConstants.XOR_CODEC_NAME, coderOptions);
+          ErasureCodeConstants.XOR_CODEC_NAME, getOptions());
     }
     return xorRawEncoder;
+  }
+
+  @Override
+  public boolean preferDirectBuffer() {
+    return false;
   }
 
   @Override
