@@ -387,8 +387,7 @@ public class TestOptionsParser {
     DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, "
         + "deleteMissing=false, ignoreFailures=false, overwrite=false, "
-        + "append=false, useDiff=false, useRdiff=false, "
-        + "fromSnapshot=null, toSnapshot=null, "
+        + "append=false, useDiff=false, fromSnapshot=null, toSnapshot=null, "
         + "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, "
         + "mapBandwidth=0.0, "
         + "copyStrategy='uniformsize', preserveStatus=[], "
@@ -702,66 +701,61 @@ public class TestOptionsParser {
     }
   }
 
-  // Test -diff or -rdiff
-  private void testSnapshotDiffOption(boolean isDiff) {
-    final String optionStr = isDiff? "-diff" : "-rdiff";
-    final String optionLabel = isDiff?
-        DistCpOptionSwitch.DIFF.getConfigLabel() :
-          DistCpOptionSwitch.RDIFF.getConfigLabel();
+  @Test
+  public void testDiffOption() {
     Configuration conf = new Configuration();
-    Assert.assertFalse(conf.getBoolean(optionLabel, false));
+    Assert.assertFalse(conf.getBoolean(DistCpOptionSwitch.DIFF.getConfigLabel(),
+        false));
 
     DistCpOptions options = OptionsParser.parse(new String[] { "-update",
-        optionStr, "s1", "s2",
+        "-diff", "s1", "s2",
         "hdfs://localhost:9820/source/first",
         "hdfs://localhost:9820/target/" });
     options.appendToConf(conf);
-    Assert.assertTrue(conf.getBoolean(optionLabel, false));
-    Assert.assertTrue(isDiff?
-        options.shouldUseDiff() : options.shouldUseRdiff());
+    Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.DIFF.getConfigLabel(), false));
+    Assert.assertTrue(options.shouldUseDiff());
     Assert.assertEquals("s1", options.getFromSnapshot());
     Assert.assertEquals("s2", options.getToSnapshot());
 
     options = OptionsParser.parse(new String[] {
-        optionStr, "s1", ".", "-update",
+        "-diff", "s1", ".", "-update",
         "hdfs://localhost:9820/source/first",
         "hdfs://localhost:9820/target/" });
     options.appendToConf(conf);
-    Assert.assertTrue(conf.getBoolean(optionLabel, false));
-    Assert.assertTrue(isDiff?
-        options.shouldUseDiff() : options.shouldUseRdiff());
+    Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.DIFF.getConfigLabel(),
+        false));
+    Assert.assertTrue(options.shouldUseDiff());
     Assert.assertEquals("s1", options.getFromSnapshot());
     Assert.assertEquals(".", options.getToSnapshot());
 
-    // -diff/-rdiff requires two option values
+    // -diff requires two option values
     try {
-      OptionsParser.parse(new String[] {optionStr, "s1", "-update",
+      OptionsParser.parse(new String[] {"-diff", "s1", "-update",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail with only one snapshot name");
+      fail("-diff should fail with only one snapshot name");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
           "Must provide both the starting and ending snapshot names", e);
     }
 
-    // make sure -diff/-rdiff is only valid when -update is specified
+    // make sure -diff is only valid when -update is specified
     try {
-      OptionsParser.parse(new String[] {optionStr, "s1", "s2",
+      OptionsParser.parse(new String[] { "-diff", "s1", "s2",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail if -update option is not specified");
+      fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "-diff/-rdiff is valid only with -update option", e);
+          "Diff is valid only with update options", e);
     }
 
     try {
       options = OptionsParser.parse(new String[] {
-          optionStr, "s1", "s2", "-update", "-delete",
+          "-diff", "s1", "s2", "-update", "-delete",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      assertFalse("-delete should be ignored when "
-          + optionStr + " is specified",
+      assertFalse("-delete should be ignored when -diff is specified",
           options.shouldDeleteMissing());
     } catch (IllegalArgumentException e) {
       fail("Got unexpected IllegalArgumentException: " + e.getMessage());
@@ -769,52 +763,27 @@ public class TestOptionsParser {
 
     try {
       options = OptionsParser.parse(new String[] {
-          optionStr, "s1", "s2", "-delete",
+          "-diff", "s1", "s2", "-delete",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail if -update option is not specified");
+      fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       assertFalse("-delete should be ignored when -diff is specified",
           options.shouldDeleteMissing());
       GenericTestUtils.assertExceptionContains(
-          "-diff/-rdiff is valid only with -update option", e);
+          "Diff is valid only with update options", e);
     }
 
     try {
-      OptionsParser.parse(new String[] {optionStr, "s1", "s2",
+      OptionsParser.parse(new String[] { "-diff", "s1", "s2",
           "-delete", "-overwrite",
           "hdfs://localhost:9820/source/first",
           "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail if -update option is not specified");
+      fail("-diff should fail if -update option is not specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-          "-diff/-rdiff is valid only with -update option", e);
+          "Diff is valid only with update options", e);
     }
-
-    final String optionStrOther = isDiff? "-rdiff" : "-diff";
-    try {
-      OptionsParser.parse(new String[] {
-          optionStr, "s1", "s2",
-          optionStrOther, "s2", "s1",
-          "-update",
-          "hdfs://localhost:9820/source/first",
-          "hdfs://localhost:9820/target/" });
-      fail(optionStr + " should fail if " + optionStrOther
-          + " is also specified");
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "-diff and -rdiff are mutually exclusive", e);
-    }
-  }
-
-  @Test
-  public void testDiffOption() {
-    testSnapshotDiffOption(true);
-  }
-
-  @Test
-  public void testRdiffOption() {
-    testSnapshotDiffOption(false);
   }
 
   @Test

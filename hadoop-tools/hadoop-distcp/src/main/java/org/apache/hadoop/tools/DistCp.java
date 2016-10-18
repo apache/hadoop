@@ -77,21 +77,6 @@ public class DistCp extends Configured implements Tool {
   private boolean submitted;
   private FileSystem jobFS;
 
-  private void prepareFileListing(Job job) throws Exception {
-    if (inputOptions.shouldUseSnapshotDiff()) {
-      try {
-        DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
-        distCpSync.sync();
-        createInputFileListingWithDiff(job, distCpSync);
-      } catch (IOException e) {
-        throw new Exception("DistCp"
-            + " sync failed, input options: " + inputOptions, e);
-      }
-    } else {
-      createInputFileListing(job);
-    }
-  }
-
   /**
    * Public Constructor. Creates DistCp object with specified input-parameters.
    * (E.g. source-paths, target-location, etc.)
@@ -191,7 +176,21 @@ public class DistCp extends Configured implements Tool {
         jobFS = metaFolder.getFileSystem(getConf());
         job = createJob();
       }
-      prepareFileListing(job);
+      if (inputOptions.shouldUseDiff()) {
+        DistCpSync distCpSync = new DistCpSync(inputOptions, getConf());
+        if (distCpSync.sync()) {
+          createInputFileListingWithDiff(job, distCpSync);
+        } else {
+          throw new Exception("DistCp sync failed, input options: "
+              + inputOptions);
+        }
+      }
+
+      // Fallback to default DistCp if without "diff" option or sync failed.
+      if (!inputOptions.shouldUseDiff()) {
+        createInputFileListing(job);
+      }
+
       job.submit();
       submitted = true;
     } finally {
@@ -201,8 +200,7 @@ public class DistCp extends Configured implements Tool {
     }
 
     String jobID = job.getJobID().toString();
-    job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID,
-        jobID);
+    job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID, jobID);
     LOG.info("DistCp job-id: " + jobID);
 
     return job;
