@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -35,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -415,6 +417,33 @@ public class ITestS3AConfiguration {
     fs = S3ATestUtils.createTestFileSystem(conf);
     fs.close();
     fs.close();
+  }
+
+  @Test
+  public void testDirectoryAllocatorDefval() throws Throwable {
+    conf = new Configuration();
+    conf.unset(Constants.BUFFER_DIR);
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    File tmp = fs.createTmpFileForWrite("out-", 1024, conf);
+    assertTrue("not found: " + tmp, tmp.exists());
+    tmp.delete();
+  }
+
+  @Test
+  public void testDirectoryAllocatorRR() throws Throwable {
+    File dir1 = GenericTestUtils.getRandomizedTestDir();
+    File dir2 = GenericTestUtils.getRandomizedTestDir();
+    dir1.mkdirs();
+    dir2.mkdirs();
+    conf = new Configuration();
+    conf.set(Constants.BUFFER_DIR, dir1 +", " + dir2);
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    File tmp1 = fs.createTmpFileForWrite("out-", 1024, conf);
+    tmp1.delete();
+    File tmp2 = fs.createTmpFileForWrite("out-", 1024, conf);
+    tmp2.delete();
+    assertNotEquals("round robin not working",
+        tmp1.getParent(), tmp2.getParent());
   }
 
   /**
