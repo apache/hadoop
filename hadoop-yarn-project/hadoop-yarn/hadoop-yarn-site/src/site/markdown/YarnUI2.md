@@ -18,30 +18,26 @@
 Hadoop: YARN-UI V2
 =================
 
-Prerequisites
--------------
-
-If you run RM locally in your computer for test purpose, you need the following things properly installed.
-
-- Install Node.js with NPM: https://nodejs.org/download
-- After Node.js installed, install `corsproxy`: `npm install -g corsproxy`.
-
-
 Configurations
 -------------
 
-*In yarn-site.xml*
+*In `yarn-site.xml`*
 
 | Configuration Property | Description |
 |:---- |:---- |
-| `yarn.resourcemanager.webapp.ui2.enable` | In the server side it indicates whether the new YARN-UI v2 is enabled or not. Defaults to `false`. |
-| `yarn.resourcemanager.webapp.ui2.address` | Specify the address of ResourceManager and port which host YARN-UI v2, defaults to `localhost:8288`. |
+| `yarn.webapp.ui2.enable` | *(Required)* In the server side it indicates whether the new YARN-UI v2 is enabled or not. Defaults to `false`. |
+| `yarn.webapp.ui2.war-file-path` | *(Optional)* WAR file path for launching yarn UI2 web application. By default this is empty and YARN will lookup required war file from classpath |
 
-*In $HADOOP_PREFIX/share/hadoop/yarn/webapps/rm/config/configs.env*
+Please note that, If you run YARN daemons locally in your machine for test purpose,
+you need the following configurations added to `yarn-site.xml` to enable cross
+origin (CORS) support.
 
-- Update timelineWebAddress and rmWebAddress to the actual addresses run resource manager and timeline server
-- If you run RM locally in you computer just for test purpose, you need to keep `corsproxy` running. Otherwise, you need to set `localBaseAddress` to empty.
+| Configuration Property | Value | Description |
+|:---- |:---- |:---- |
+| `yarn.timeline-service.http-cross-origin.enabled` | true | Enable CORS support for Timeline Server  |
+| `yarn.resourcemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Resource Manager  |
+| `yarn.nodemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Node Manager  |
 
 Use it
 -------------
-Open your browser, go to `rm-address:8288` and try it!
+Open your browser, go to `rm-address:8088/ui2` and try it!
