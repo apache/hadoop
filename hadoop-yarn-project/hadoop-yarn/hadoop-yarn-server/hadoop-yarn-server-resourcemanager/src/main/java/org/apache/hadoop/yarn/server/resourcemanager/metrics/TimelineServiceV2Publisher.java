@@ -19,7 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.metrics;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
@@ -104,6 +107,8 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     entityInfo.put(ApplicationMetricsConstants.TYPE_ENTITY_INFO,
         app.getApplicationType());
     entityInfo.put(ApplicationMetricsConstants.USER_ENTITY_INFO, app.getUser());
+    entityInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO,
+        app.getQueue());
     entityInfo.put(ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO,
         app.getSubmitTime());
     entityInfo.put(ApplicationMetricsConstants.APP_TAGS_INFO,
@@ -148,11 +153,6 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
   @Override
   public void appFinished(RMApp app, RMAppState state, long finishedTime) {
     ApplicationEntity entity = createApplicationEntity(app.getApplicationId());
-    RMAppMetrics appMetrics = app.getRMAppMetrics();
-    entity.addInfo(ApplicationMetricsConstants.APP_CPU_METRICS,
-        appMetrics.getVcoreSeconds());
-    entity.addInfo(ApplicationMetricsConstants.APP_MEM_METRICS,
-        appMetrics.getMemorySeconds());
 
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setId(ApplicationMetricsConstants.FINISHED_EVENT_TYPE);
@@ -174,8 +174,47 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
     }
     entity.setInfo(entityInfo);
 
+    RMAppMetrics appMetrics = app.getRMAppMetrics();
+    Set<TimelineMetric> entityMetrics =
+        getTimelinelineAppMetrics(appMetrics, finishedTime);
+    entity.setMetrics(entityMetrics);
+
     getDispatcher().getEventHandler().handle(new TimelineV2PublishEvent(
         SystemMetricsEventType.PUBLISH_ENTITY, entity, app.getApplicationId()));
+  }
+
+  private Set<TimelineMetric> getTimelinelineAppMetrics(
+      RMAppMetrics appMetrics, long timestamp) {
+    Set<TimelineMetric> entityMetrics = new HashSet<TimelineMetric>();
+
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_CPU_METRICS, timestamp,
+        appMetrics.getVcoreSeconds()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_MEM_METRICS, timestamp,
+        appMetrics.getMemorySeconds()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_RESOURCE_PREEMPTED_CPU, timestamp,
+        appMetrics.getResourcePreempted().getVirtualCores()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_RESOURCE_PREEMPTED_MEM, timestamp,
+        appMetrics.getResourcePreempted().getMemorySize()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_NON_AM_CONTAINER_PREEMPTED, timestamp,
+        appMetrics.getNumNonAMContainersPreempted()));
+    entityMetrics.add(getTimelineMetric(
+        ApplicationMetricsConstants.APP_AM_CONTAINER_PREEMPTED, timestamp,
+        appMetrics.getNumAMContainersPreempted()));
+
+    return entityMetrics;
+  }
+
+  private TimelineMetric getTimelineMetric(String name, long timestamp,
+      Number value) {
+    TimelineMetric metric = new TimelineMetric();
+    metric.setId(name);
+    metric.addValue(timestamp, value);
+    return metric;
   }
 
   @SuppressWarnings("unchecked")
