@@ -186,7 +186,8 @@ public class TestDataNodeVolumeFailure {
             new StorageBlockReport(dnStorage, blockList);
     }
     
-    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports, null);
+    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports,
+        new BlockReportContext(1, 0, System.nanoTime()));
 
     // verify number of blocks and files...
     verify(filename, filesize);
