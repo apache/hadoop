@@ -81,7 +81,7 @@ public class StorageTypeStats {
       final DatanodeDescriptor node) {
     capacityUsed += info.getDfsUsed();
     blockPoolUsed += info.getBlockPoolUsed();
-    if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+    if (node.isInService()) {
       capacityTotal += info.getCapacity();
       capacityRemaining += info.getRemaining();
     } else {
@@ -90,7 +90,7 @@ public class StorageTypeStats {
   }
 
   void addNode(final DatanodeDescriptor node) {
-    if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+    if (node.isInService()) {
       nodesInService++;
     }
   }
@@ -99,7 +99,7 @@ public class StorageTypeStats {
       final DatanodeDescriptor node) {
     capacityUsed -= info.getDfsUsed();
     blockPoolUsed -= info.getBlockPoolUsed();
-    if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+    if (node.isInService()) {
       capacityTotal -= info.getCapacity();
       capacityRemaining -= info.getRemaining();
     } else {
@@ -108,7 +108,7 @@ public class StorageTypeStats {
   }
 
   void subtractNode(final DatanodeDescriptor node) {
-    if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+    if (node.isInService()) {
       nodesInService--;
     }
   }

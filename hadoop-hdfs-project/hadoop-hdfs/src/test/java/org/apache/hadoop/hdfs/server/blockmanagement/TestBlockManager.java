@@ -414,7 +414,7 @@ public class TestBlockManager {
       throws Exception {
     assertEquals(0, bm.numOfUnderReplicatedBlocks());
     BlockInfo block = addBlockOnNodes(testIndex, origNodes);
-    assertFalse(bm.isNeededReplication(block, bm.countLiveNodes(block)));
+    assertFalse(bm.isNeededReplication(block, bm.countNodes(block)));
   }
 
   @Test(timeout = 60000)
@@ -458,7 +458,7 @@ public class TestBlockManager {
         namenode.updatePipeline(clientName, oldBlock, newBlock,
             oldLoactedBlock.getLocations(), oldLoactedBlock.getStorageIDs());
         BlockInfo bi = bm.getStoredBlock(newBlock.getLocalBlock());
-        assertFalse(bm.isNeededReplication(bi, bm.countLiveNodes(bi)));
+        assertFalse(bm.isNeededReplication(bi, bm.countNodes(bi)));
       } finally {
         IOUtils.closeStream(out);
       }

@@ -32,18 +32,29 @@ public class NumberReplicas {
   private int corruptReplicas;
   private int excessReplicas;
   private int replicasOnStaleNodes;
+  // We need live ENTERING_MAINTENANCE nodes to continue
+  // to serve read request while it is being transitioned to live
+  // IN_MAINTENANCE if these are the only replicas left.
+  // maintenanceNotForRead == maintenanceReplicas -
+  // Live ENTERING_MAINTENANCE.
+  private int maintenanceNotForRead;
+  // Live ENTERING_MAINTENANCE nodes to serve read requests.
+  private int maintenanceForRead;
 
   NumberReplicas() {
-    this(0, 0, 0, 0, 0, 0, 0);
+    this(0, 0, 0, 0, 0, 0, 0, 0, 0);
   }
 
   NumberReplicas(int live, int readonly, int decommissioned,
-      int decommissioning, int corrupt, int excess, int stale) {
-    set(live, readonly, decommissioned, decommissioning, corrupt, excess, stale);
+      int decommissioning, int corrupt, int excess, int stale,
+      int maintenanceNotForRead, int maintenanceForRead) {
+    set(live, readonly, decommissioned, decommissioning, corrupt,
+        excess, stale, maintenanceNotForRead, maintenanceForRead);
   }
 
   void set(int live, int readonly, int decommissioned, int decommissioning,
-      int corrupt, int excess, int stale) {
+      int corrupt, int excess, int stale, int maintenanceNotForRead,
+      int maintenanceForRead) {
     liveReplicas = live;
     readOnlyReplicas = readonly;
     this.decommissioning = decommissioning;
@@ -51,6 +62,8 @@ public class NumberReplicas {
     corruptReplicas = corrupt;
     excessReplicas = excess;
     replicasOnStaleNodes = stale;
+    this.maintenanceNotForRead = maintenanceNotForRead;
+    this.maintenanceForRead = maintenanceForRead;
   }
 
   public int liveReplicas() {
@@ -112,4 +125,20 @@ public class NumberReplicas {
   public int replicasOnStaleNodes() {
     return replicasOnStaleNodes;
   }
-} 
+
+  public int maintenanceNotForReadReplicas() {
+    return maintenanceNotForRead;
+  }
+
+  public int maintenanceReplicas() {
+    return maintenanceNotForRead + maintenanceForRead;
+  }
+
+  public int outOfServiceReplicas() {
+    return maintenanceReplicas() + decommissionedAndDecommissioning();
+  }
+
+  public int liveEnteringMaintenanceReplicas() {
+    return maintenanceForRead;
+  }
+}

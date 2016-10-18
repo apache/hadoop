@@ -195,9 +195,17 @@ public class TestNamenodeCapacityReport {
   private static final float EPSILON = 0.0001f;
   @Test
   public void testXceiverCount() throws Exception {
+    testXceiverCountInternal(0);
+    testXceiverCountInternal(1);
+  }
+
+  public void testXceiverCountInternal(int minMaintenanceR) throws Exception {
     Configuration conf = new HdfsConfiguration();
     // retry one time, if close fails
-    conf.setInt(HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 1);
+    conf.setInt(
+        HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
+        minMaintenanceR);
     MiniDFSCluster cluster = null;
 
     final int nodes = 8;
@@ -220,23 +228,23 @@ public class TestNamenodeCapacityReport {
       int expectedTotalLoad = nodes;  // xceiver server adds 1 to load
       int expectedInServiceNodes = nodes;
       int expectedInServiceLoad = nodes;
-      checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
-      
-      // shutdown half the nodes and force a heartbeat check to ensure
-      // counts are accurate
+      checkClusterHealth(nodes, namesystem, expectedTotalLoad,
+          expectedInServiceNodes, expectedInServiceLoad);
+
+      // Shutdown half the nodes followed by admin operations on those nodes.
+      // Ensure counts are accurate.
       for (int i=0; i < nodes/2; i++) {
         DataNode dn = datanodes.get(i);
         DatanodeDescriptor dnd = dnm.getDatanode(dn.getDatanodeId());
         dn.shutdown();
         DFSTestUtil.setDatanodeDead(dnd);
         BlockManagerTestUtil.checkHeartbeat(namesystem.getBlockManager());
-        //Verify decommission of dead node won't impact nodesInService metrics.
-        dnm.getDecomManager().startDecommission(dnd);
+        //Admin operations on dead nodes won't impact nodesInService metrics.
+        startDecommissionOrMaintenance(dnm, dnd, (i % 2 == 0));
         expectedInServiceNodes--;
         assertEquals(expectedInServiceNodes, namesystem.getNumLiveDataNodes());
         assertEquals(expectedInServiceNodes, getNumDNInService(namesystem));
-        //Verify recommission of dead node won't impact nodesInService metrics.
-        dnm.getDecomManager().stopDecommission(dnd);
+        stopDecommissionOrMaintenance(dnm, dnd, (i % 2 == 0));
         assertEquals(expectedInServiceNodes, getNumDNInService(namesystem));
       }
 
@@ -247,8 +255,9 @@ public class TestNamenodeCapacityReport {
       datanodes = cluster.getDataNodes();
       expectedInServiceNodes = nodes;
       assertEquals(nodes, datanodes.size());
-      checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
-      
+      checkClusterHealth(nodes, namesystem, expectedTotalLoad,
+          expectedInServiceNodes, expectedInServiceLoad);
+
       // create streams and hsync to force datastreamers to start
       DFSOutputStream[] streams = new DFSOutputStream[fileCount];
       for (int i=0; i < fileCount; i++) {
@@ -263,30 +272,32 @@ public class TestNamenodeCapacityReport {
       }
       // force nodes to send load update
       triggerHeartbeats(datanodes);
-      checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
+      checkClusterHealth(nodes, namesystem, expectedTotalLoad,
+          expectedInServiceNodes, expectedInServiceLoad);
 
-      // decomm a few nodes, substract their load from the expected load,
-      // trigger heartbeat to force load update
+      // admin operations on a few nodes, substract their load from the
+      // expected load, trigger heartbeat to force load update.
       for (int i=0; i < fileRepl; i++) {
         expectedInServiceNodes--;
         DatanodeDescriptor dnd =
             dnm.getDatanode(datanodes.get(i).getDatanodeId());
         expectedInServiceLoad -= dnd.getXceiverCount();
-        dnm.getDecomManager().startDecommission(dnd);
+        startDecommissionOrMaintenance(dnm, dnd, (i % 2 == 0));
         DataNodeTestUtils.triggerHeartbeat(datanodes.get(i));
         Thread.sleep(100);
-        checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
+        checkClusterHealth(nodes, namesystem, expectedTotalLoad,
+            expectedInServiceNodes, expectedInServiceLoad);
       }
-      
+
       // check expected load while closing each stream.  recalc expected
       // load based on whether the nodes in the pipeline are decomm
       for (int i=0; i < fileCount; i++) {
-        int decomm = 0;
+        int adminOps = 0;
         for (DatanodeInfo dni : streams[i].getPipeline()) {
           DatanodeDescriptor dnd = dnm.getDatanode(dni);
           expectedTotalLoad -= 2;
-          if (dnd.isDecommissionInProgress() || dnd.isDecommissioned()) {
-            decomm++;
+          if (!dnd.isInService()) {
+            adminOps++;
           } else {
             expectedInServiceLoad -= 2;
           }
@@ -297,16 +308,17 @@ public class TestNamenodeCapacityReport {
           // nodes will go decommissioned even if there's a UC block whose
           // other locations are decommissioned too.  we'll ignore that
           // bug for now
-          if (decomm < fileRepl) {
+          if (adminOps < fileRepl) {
             throw ioe;
           }
         }
         triggerHeartbeats(datanodes);
         // verify node count and loads 
-        checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
+        checkClusterHealth(nodes, namesystem, expectedTotalLoad,
+            expectedInServiceNodes, expectedInServiceLoad);
       }
 
-      // shutdown each node, verify node counts based on decomm state
+      // shutdown each node, verify node counts based on admin state
       for (int i=0; i < nodes; i++) {
         DataNode dn = datanodes.get(i);
         dn.shutdown();
@@ -320,19 +332,35 @@ public class TestNamenodeCapacityReport {
           expectedInServiceNodes--;
         }
         assertEquals(expectedInServiceNodes, getNumDNInService(namesystem));
-        
         // live nodes always report load of 1.  no nodes is load 0
         double expectedXceiverAvg = (i == nodes-1) ? 0.0 : 1.0;
         assertEquals((double)expectedXceiverAvg,
             getInServiceXceiverAverage(namesystem), EPSILON);
       }
-      
       // final sanity check
       checkClusterHealth(0, namesystem, 0.0, 0, 0.0);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  private void startDecommissionOrMaintenance(DatanodeManager dnm,
+      DatanodeDescriptor dnd, boolean decomm) {
+    if (decomm) {
+      dnm.getDecomManager().startDecommission(dnd);
+    } else {
+      dnm.getDecomManager().startMaintenance(dnd, Long.MAX_VALUE);
+    }
+  }
+
+  private void stopDecommissionOrMaintenance(DatanodeManager dnm,
+      DatanodeDescriptor dnd, boolean decomm) {
+    if (decomm) {
+      dnm.getDecomManager().stopDecommission(dnd);
+    } else {
+      dnm.getDecomManager().stopMaintenance(dnd);
     }
   }
 

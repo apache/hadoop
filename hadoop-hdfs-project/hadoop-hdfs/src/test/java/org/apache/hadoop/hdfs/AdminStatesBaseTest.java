@@ -102,6 +102,7 @@ public class AdminStatesBaseTest {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
 
     hostsFileWriter.initialize(conf, "temp/admin");
+
   }
 
   @After
@@ -110,17 +111,22 @@ public class AdminStatesBaseTest {
     shutdownCluster();
   }
 
-  protected void writeFile(FileSystem fileSys, Path name, int repl)
+  static public FSDataOutputStream writeIncompleteFile(FileSystem fileSys,
+      Path name, short repl, short numOfBlocks) throws IOException {
+    return writeFile(fileSys, name, repl, numOfBlocks, false);
+  }
+
+  static protected void writeFile(FileSystem fileSys, Path name, int repl)
       throws IOException {
     writeFile(fileSys, name, repl, 2);
   }
 
-  protected void writeFile(FileSystem fileSys, Path name, int repl,
+  static protected void writeFile(FileSystem fileSys, Path name, int repl,
       int numOfBlocks) throws IOException {
     writeFile(fileSys, name, repl, numOfBlocks, true);
   }
 
-  protected FSDataOutputStream writeFile(FileSystem fileSys, Path name,
+  static protected FSDataOutputStream writeFile(FileSystem fileSys, Path name,
       int repl, int numOfBlocks, boolean completeFile)
     throws IOException {
     // create and write a file that contains two blocks of data
@@ -136,6 +142,7 @@ public class AdminStatesBaseTest {
       stm.close();
       return null;
     } else {
+      stm.flush();
       // Do not close stream, return it
       // so that it is not garbage collected
       return stm;
@@ -353,7 +360,7 @@ public class AdminStatesBaseTest {
 
   protected void shutdownCluster() {
     if (cluster != null) {
-      cluster.shutdown();
+      cluster.shutdown(true);
     }
   }
 
@@ -362,12 +369,13 @@ public class AdminStatesBaseTest {
         refreshNodes(conf);
   }
 
-  protected DatanodeDescriptor getDatanodeDesriptor(
+  static private DatanodeDescriptor getDatanodeDesriptor(
       final FSNamesystem ns, final String datanodeUuid) {
     return ns.getBlockManager().getDatanodeManager().getDatanode(datanodeUuid);
   }
 
-  protected void cleanupFile(FileSystem fileSys, Path name) throws IOException {
+  static public void cleanupFile(FileSystem fileSys, Path name)
+      throws IOException {
     assertTrue(fileSys.exists(name));
     fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
