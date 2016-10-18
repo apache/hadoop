@@ -232,7 +232,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
-        ContainerState.COMPLETE, 40);
+        40, ContainerState.COMPLETE);
 
     // Now ascertain that the resources are localised correctly.
     ApplicationId appId = cId.getApplicationAttemptId().getApplicationId();

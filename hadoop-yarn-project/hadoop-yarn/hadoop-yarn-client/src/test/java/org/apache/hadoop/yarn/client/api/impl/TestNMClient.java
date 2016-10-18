@@ -27,6 +27,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -341,7 +342,8 @@ public class TestNMClient {
       // leave one container unclosed
       if (++i < size) {
         // NodeManager may still need some time to make the container started
-        testGetContainerStatus(container, i, ContainerState.RUNNING, "",
+        testGetContainerStatus(container, i,
+            EnumSet.of(ContainerState.RUNNING, ContainerState.SCHEDULED), "",
             Arrays.asList(new Integer[] {-1000}));
         // Test increase container API and make sure requests can reach NM
         testIncreaseContainerResource(container);
@@ -358,7 +360,8 @@ public class TestNMClient {
         try {
           // O is possible if CLEANUP_CONTAINER is executed too late
           // -105 is possible if the container is not terminated but killed
-          testGetContainerStatus(container, i, ContainerState.COMPLETE,
+          testGetContainerStatus(container, i,
+              EnumSet.of(ContainerState.COMPLETE),
               "Container killed by the ApplicationMaster.", Arrays.asList(
                   new Integer[] {ContainerExitStatus.KILLED_BY_APPMASTER,
                   ContainerExitStatus.SUCCESS}));
@@ -385,7 +388,8 @@ public class TestNMClient {
   }
 
   private void testGetContainerStatus(Container container, int index,
-      ContainerState state, String diagnostics, List<Integer> exitStatuses)
+      EnumSet<ContainerState> states, String diagnostics,
+      List<Integer> exitStatuses)
           throws YarnException, IOException {
     while (true) {
       try {
@@ -393,7 +397,7 @@ public class TestNMClient {
             container.getId(), container.getNodeId());
         // NodeManager may still need some time to get the stable
         // container status
-        if (status.getState() == state) {
+        if (states.contains(status.getState())) {
           assertEquals(container.getId(), status.getContainerId());
           assertTrue("" + index + ": " + status.getDiagnostics(),
               status.getDiagnostics().contains(diagnostics));
@@ -415,7 +419,7 @@ public class TestNMClient {
     try {
       nmClient.increaseContainerResource(container);
     } catch (YarnException e) {
-      // NM container will only be in LOCALIZED state, so expect the increase
+      // NM container will only be in SCHEDULED state, so expect the increase
       // action to fail.
       if (!e.getMessage().contains(
           "can only be changed when a container is in RUNNING state")) {

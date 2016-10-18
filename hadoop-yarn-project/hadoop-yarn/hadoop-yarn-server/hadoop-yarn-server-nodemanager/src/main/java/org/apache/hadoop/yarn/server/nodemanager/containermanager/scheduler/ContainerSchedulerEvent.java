@@ -16,26 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.event.AbstractEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
+    .Container;
 
-/**
- * <p>State of a <code>Container</code>.</p>
- */
-@Public
-@Stable
-public enum ContainerState {
-  /** New container */
-  NEW, 
-  
-  /** Running container */
-  RUNNING, 
-  
-  /** Completed container */
-  COMPLETE,
+public class ContainerSchedulerEvent extends
+    AbstractEvent<ContainerSchedulerEventType> {
 
-  /** Scheduled (awaiting resources) at the NM. */
-  SCHEDULED
+  private final Container container;
+
+  public ContainerSchedulerEvent(Container container,
+      ContainerSchedulerEventType eventType) {
+    super(eventType);
+    this.container = container;
+  }
+
+  public Container getContainer() {
+    return container;
+  }
 }

@@ -143,7 +143,7 @@ public class TestContainer {
       Map<Path, List<String>> localPaths = wc.localizeResources();
 
       // all resources should be localized
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       assertNotNull(wc.c.getLocalizedResources());
       for (Entry<Path, List<String>> loc : wc.c.getLocalizedResources()
           .entrySet()) {
@@ -421,7 +421,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       ContainerLaunch launcher = wc.launcher.running.get(wc.c.getContainerId());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
@@ -452,7 +452,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
       wc.containerSuccessful();
@@ -480,7 +480,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       wc.killContainer();
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
       wc.containerFailed(ExitCode.FORCE_KILLED.getExitCode());
@@ -507,7 +507,7 @@ public class TestContainer {
       wc = new WrappedContainer(17, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
-      assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
+      assertEquals(ContainerState.SCHEDULED, wc.c.getContainerState());
       ContainerLaunch launcher = wc.launcher.running.get(wc.c.getContainerId());
       launcher.call();
       wc.drainDispatcherEvents();

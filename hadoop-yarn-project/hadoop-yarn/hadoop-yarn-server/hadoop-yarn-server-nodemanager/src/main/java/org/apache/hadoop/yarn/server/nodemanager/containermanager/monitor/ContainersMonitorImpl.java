@@ -114,7 +114,6 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.monitoringThread = new MonitoringThread();
 
     this.containersUtilization = ResourceUtilization.newInstance(0, 0, 0.0f);
-    this.containersAllocation = ResourceUtilization.newInstance(0, 0, 0.0f);
   }
 
   @Override
@@ -743,6 +742,7 @@ public class ContainersMonitorImpl extends AbstractService implements
       LOG.warn("Container " + containerId.toString() + "does not exist");
       return;
     }
+    // TODO: Route this through the ContainerScheduler to fix containerAllocation
     container.setResource(resource);
   }
 
@@ -842,67 +842,6 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.containersUtilization = utilization;
   }
 
-  public ResourceUtilization getContainersAllocation() {
-    return this.containersAllocation;
-  }
-
-  /**
-   * @return true if there are available allocated resources for the given
-   *         container to start.
-   */
-  @Override
-  public boolean hasResourcesAvailable(ProcessTreeInfo pti) {
-    synchronized (this.containersAllocation) {
-      // Check physical memory.
-      if (this.containersAllocation.getPhysicalMemory() +
-          (int) (pti.getPmemLimit() >> 20) >
-          (int) (getPmemAllocatedForContainers() >> 20)) {
-        return false;
-      }
-      // Check virtual memory.
-      if (isVmemCheckEnabled() &&
-          this.containersAllocation.getVirtualMemory() +
-          (int) (pti.getVmemLimit() >> 20) >
-          (int) (getVmemAllocatedForContainers() >> 20)) {
-        return false;
-      }
-      // Check CPU.
-      if (this.containersAllocation.getCPU()
-          + allocatedCpuUsage(pti) > 1.0f) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @Override
-  public void increaseContainersAllocation(ProcessTreeInfo pti) {
-    synchronized (this.containersAllocation) {
-      increaseResourceUtilization(this.containersAllocation, pti);
-    }
-  }
-
-  @Override
-  public void decreaseContainersAllocation(ProcessTreeInfo pti) {
-    synchronized (this.containersAllocation) {
-      decreaseResourceUtilization(this.containersAllocation, pti);
-    }
-  }
-
-  @Override
-  public void increaseResourceUtilization(ResourceUtilization resourceUtil,
-      ProcessTreeInfo pti) {
-    resourceUtil.addTo((int) (pti.getPmemLimit() >> 20),
-        (int) (pti.getVmemLimit() >> 20), allocatedCpuUsage(pti));
-  }
-
-  @Override
-  public void decreaseResourceUtilization(ResourceUtilization resourceUtil,
-      ProcessTreeInfo pti) {
-    resourceUtil.subtractFrom((int) (pti.getPmemLimit() >> 20),
-        (int) (pti.getVmemLimit() >> 20), allocatedCpuUsage(pti));
-  }
-
   @Override
   public void subtractNodeResourcesFromResourceUtilization(
       ResourceUtilization resourceUtil) {
@@ -910,14 +849,13 @@ public class ContainersMonitorImpl extends AbstractService implements
         (int) (getVmemAllocatedForContainers() >> 20), 1.0f);
   }
 
-  /**
-   * Calculates the vCores CPU usage that is assigned to the given
-   * {@link ProcessTreeInfo}. In particular, it takes into account the number of
-   * vCores that are allowed to be used by the NM and returns the CPU usage
-   * as a normalized value between {@literal >=} 0 and {@literal <=} 1.
-   */
-  private float allocatedCpuUsage(ProcessTreeInfo pti) {
-    return (float) pti.getCpuVcores() / getVCoresAllocatedForContainers();
+  private float allocatedCpuUsage(int cpuVcores) {
+    return (float) cpuVcores / getVCoresAllocatedForContainers();
+  }
+
+  @Override
+  public float getVmemRatio() {
+    return vmemRatio;
   }
 
   @Override
@@ -988,5 +926,4 @@ public class ContainersMonitorImpl extends AbstractService implements
             startEvent.getVmemLimit(), startEvent.getPmemLimit(),
             startEvent.getCpuVcores()));
   }
-
 }

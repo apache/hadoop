@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.queuing;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -41,34 +41,35 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- * Class for testing the {@link QueuingContainerManagerImpl}.
- */
-public class TestQueuingContainerManager extends BaseContainerManagerTest {
-  public TestQueuingContainerManager() throws UnsupportedFileSystemException {
+import static org.mockito.Mockito.spy;
+
+public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
+  public TestContainerSchedulerQueuing() throws UnsupportedFileSystemException {
     super();
   }
 
   static {
-    LOG = LogFactory.getLog(TestQueuingContainerManager.class);
+    LOG = LogFactory.getLog(TestContainerSchedulerQueuing.class);
   }
 
-  boolean shouldDeleteWait = false;
+  boolean delayContainers = true;
 
   @Override
   protected ContainerManagerImpl createContainerManager(
       DeletionService delSrvc) {
-    return new QueuingContainerManagerImpl(context, exec, delSrvc,
+    return new ContainerManagerImpl(context, exec, delSrvc,
         nodeStatusUpdater, metrics, dirsHandler) {
       @Override
       public void
@@ -117,33 +118,29 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
   }
 
   @Override
-  protected DeletionService createDeletionService() {
-    return new DeletionService(exec) {
+  protected ContainerExecutor createContainerExecutor() {
+    DefaultContainerExecutor exec = new DefaultContainerExecutor() {
       @Override
-      public void delete(String user, Path subDir, Path... baseDirs) {
-        // Don't do any deletions.
-        if (shouldDeleteWait) {
+      public int launchContainer(ContainerStartContext ctx) throws IOException {
+        if (delayContainers) {
           try {
             Thread.sleep(10000);
-            LOG.info("\n\nSleeping Pseudo delete : user - " + user + ", " +
-                "subDir - " + subDir + ", " +
-                "baseDirs - " + Arrays.asList(baseDirs));
           } catch (InterruptedException e) {
-            e.printStackTrace();
+            // Nothing..
           }
-        } else {
-          LOG.info("\n\nPseudo delete : user - " + user + ", " +
-              "subDir - " + subDir + ", " +
-              "baseDirs - " + Arrays.asList(baseDirs));
         }
+        return super.launchContainer(ctx);
       }
     };
+    exec.setConf(conf);
+    return spy(exec);
   }
 
   @Override
   public void setup() throws IOException {
+    conf.setInt(
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
     super.setup();
-    shouldDeleteWait = false;
   }
 
   /**
@@ -152,7 +149,6 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
    */
   @Test
   public void testStartMultipleContainers() throws Exception {
-    shouldDeleteWait = true;
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -209,7 +205,6 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
    */
   @Test
   public void testQueueMultipleContainers() throws Exception {
-    shouldDeleteWait = true;
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -248,17 +243,18 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       Assert.assertEquals(
-          org.apache.hadoop.yarn.api.records.ContainerState.QUEUED,
+          org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
           status.getState());
     }
 
+    ContainerScheduler containerScheduler =
+        containerManager.getContainerScheduler();
     // Ensure both containers are properly queued.
-    Assert.assertEquals(2, containerManager.getContext().getQueuingContext()
-        .getQueuedContainers().size());
-    Assert.assertEquals(1, ((QueuingContainerManagerImpl) containerManager)
-        .getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(1, ((QueuingContainerManagerImpl) containerManager)
-        .getNumQueuedOpportunisticContainers());
+    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+    Assert.assertEquals(1,
+        containerScheduler.getNumQueuedGuaranteedContainers());
+    Assert.assertEquals(1,
+        containerScheduler.getNumQueuedOpportunisticContainers());
   }
 
   /**
@@ -268,7 +264,6 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
    */
   @Test
   public void testStartAndQueueMultipleContainers() throws Exception {
-    shouldDeleteWait = true;
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -319,18 +314,19 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
             status.getState());
       } else {
         Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.QUEUED,
+            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
             status.getState());
       }
     }
 
+    ContainerScheduler containerScheduler =
+        containerManager.getContainerScheduler();
     // Ensure two containers are properly queued.
-    Assert.assertEquals(2, containerManager.getContext().getQueuingContext()
-        .getQueuedContainers().size());
-    Assert.assertEquals(0, ((QueuingContainerManagerImpl) containerManager)
-        .getNumQueuedGuaranteedContainers());
-    Assert.assertEquals(2, ((QueuingContainerManagerImpl) containerManager)
-        .getNumQueuedOpportunisticContainers());
+    Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
+    Assert.assertEquals(0,
+        containerScheduler.getNumQueuedGuaranteedContainers());
+    Assert.assertEquals(2,
+        containerScheduler.getNumQueuedOpportunisticContainers());
   }
 
   /**
@@ -344,7 +340,6 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
    */
   @Test
   public void testKillOpportunisticForGuaranteedContainer() throws Exception {
-    shouldDeleteWait = true;
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -393,11 +388,11 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertTrue(status.getDiagnostics()
-            .contains("Container killed by the ApplicationMaster"));
+        Assert.assertTrue(status.getDiagnostics().contains(
+            "Container Killed to make room for Guaranteed Container"));
       } else if (status.getContainerId().equals(createContainerId(1))) {
         Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.QUEUED,
+            org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED,
             status.getState());
       } else if (status.getContainerId().equals(createContainerId(2))) {
         Assert.assertEquals(
@@ -427,7 +422,6 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
    */
   @Test
   public void testKillMultipleOpportunisticContainers() throws Exception {
-    shouldDeleteWait = true;
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -486,7 +480,7 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
         .getContainerStatuses(statRequest).getContainerStatuses();
     for (ContainerStatus status : containerStatuses) {
       if (status.getDiagnostics().contains(
-          "Container killed by the ApplicationMaster")) {
+          "Container Killed to make room for Guaranteed Container")) {
         killedContainers++;
       }
       System.out.println("\nStatus : [" + status + "]\n");
@@ -502,7 +496,6 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
    */
   @Test
   public void testStopQueuedContainer() throws Exception {
-    shouldDeleteWait = true;
     containerManager.start();
 
     ContainerLaunchContext containerLaunchContext =
@@ -553,7 +546,7 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
           org.apache.hadoop.yarn.api.records.ContainerState.RUNNING) {
         runningContainersNo++;
       } else if (status.getState() ==
-          org.apache.hadoop.yarn.api.records.ContainerState.QUEUED) {
+          org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED) {
         queuedContainersNo++;
       }
       System.out.println("\nStatus : [" + status + "]\n");
@@ -574,23 +567,35 @@ public class TestQueuingContainerManager extends BaseContainerManagerTest {
     for (int i = 0; i < 3; i++) {
       statList.add(createContainerId(i));
     }
+
     statRequest = GetContainerStatusesRequest.newInstance(statList);
-    containerStatuses = containerManager.getContainerStatuses(statRequest)
-        .getContainerStatuses();
-    for (ContainerStatus status : containerStatuses) {
-      if (status.getContainerId().equals(createContainerId(0))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-            status.getState());
-      } else if (status.getContainerId().equals(createContainerId(1))) {
-        Assert.assertTrue(status.getDiagnostics().contains(
-            "Queued container request removed"));
-      } else if (status.getContainerId().equals(createContainerId(2))) {
-        Assert.assertEquals(
-            org.apache.hadoop.yarn.api.records.ContainerState.QUEUED,
-            status.getState());
+    HashMap<org.apache.hadoop.yarn.api.records.ContainerState, ContainerStatus>
+        map = new HashMap<>();
+    for (int i=0; i < 10; i++) {
+      containerStatuses = containerManager.getContainerStatuses(statRequest)
+          .getContainerStatuses();
+      for (ContainerStatus status : containerStatuses) {
+        System.out.println("\nStatus : [" + status + "]\n");
+        map.put(status.getState(), status);
+        if (map.containsKey(
+                org.apache.hadoop.yarn.api.records.ContainerState.RUNNING) &&
+            map.containsKey(
+                org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED) &&
+            map.containsKey(
+                org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE)) {
+          break;
+        }
+        Thread.sleep(1000);
       }
-      System.out.println("\nStatus : [" + status + "]\n");
     }
+    Assert.assertEquals(createContainerId(0),
+        map.get(org.apache.hadoop.yarn.api.records.ContainerState.RUNNING)
+            .getContainerId());
+    Assert.assertEquals(createContainerId(1),
+        map.get(org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE)
+            .getContainerId());
+    Assert.assertEquals(createContainerId(2),
+        map.get(org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED)
+            .getContainerId());
   }
 }

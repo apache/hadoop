@@ -67,6 +67,9 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler
+    .ContainerScheduler;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
@@ -153,7 +156,7 @@ public abstract class BaseAMRMProxyTest {
    * rest. So the responses returned can be less than the number of end points
    * specified
    * 
-   * @param testContext
+   * @param testContexts
    * @param func
    * @return
    */
@@ -694,11 +697,6 @@ public abstract class BaseAMRMProxyTest {
 
     @Override
     public NodeStatusUpdater getNodeStatusUpdater() {
-      return null;
-    }
-
-    @Override
-    public QueuingContext getQueuingContext() {
       return null;
     }
 

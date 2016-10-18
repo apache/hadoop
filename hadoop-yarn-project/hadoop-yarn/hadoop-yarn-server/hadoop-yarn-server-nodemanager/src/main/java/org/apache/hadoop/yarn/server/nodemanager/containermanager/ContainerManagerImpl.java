@@ -136,6 +136,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Change
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
@@ -205,6 +208,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final WriteLock writeLock;
   private AMRMProxyService amrmProxyService;
   protected boolean amrmProxyEnabled = false;
+  private final ContainerScheduler containerScheduler;
 
   private long waitForContainersOnShutdownMillis;
 
@@ -231,6 +235,8 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(containersLauncher);
 
     this.nodeStatusUpdater = nodeStatusUpdater;
+    this.containerScheduler = createContainerScheduler(context);
+    addService(containerScheduler);
 
     // Start configurable services
     auxiliaryServices = new AuxServices();
@@ -259,7 +265,8 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.register(AuxServicesEventType.class, auxiliaryServices);
     dispatcher.register(ContainersMonitorEventType.class, containersMonitor);
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
-    
+    dispatcher.register(ContainerSchedulerEventType.class, containerScheduler);
+
     addService(dispatcher);
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -309,6 +316,10 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       LOG.info("AMRMProxyService is disabled");
     }
+  }
+
+  protected ContainerScheduler createContainerScheduler(Context context) {
+    return new ContainerScheduler(context);
   }
 
   protected ContainersMonitor createContainersMonitor(ContainerExecutor exec) {
@@ -1526,7 +1537,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public void updateQueuingLimit(ContainerQueuingLimit queuingLimit) {
-    LOG.trace("Implementation does not support queuing of Containers!!");
+    this.containerScheduler.updateQueuingLimit(queuingLimit);
   }
 
   @SuppressWarnings("unchecked")
@@ -1686,5 +1697,10 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       LOG.info("Container " + containerId + " no longer exists");
     }
+  }
+
+  @Override
+  public ContainerScheduler getContainerScheduler() {
+    return this.containerScheduler;
   }
 }

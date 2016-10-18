@@ -111,6 +111,8 @@ public class TestOpportunisticContainerAllocation {
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 512);
     conf.setBoolean(
         YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
+    conf.setInt(
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH, 10);
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 1);
     yarnCluster =
         new MiniYARNCluster(TestAMRMClient.class.getName(), nodeCount, 1, 1);
@@ -211,7 +213,7 @@ public class TestOpportunisticContainerAllocation {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 600000)
   public void testAMRMClient() throws YarnException, IOException {
     AMRMClient<AMRMClient.ContainerRequest> amClient = null;
     try {

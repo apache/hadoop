@@ -16,26 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-
-/**
- * <p>State of a <code>Container</code>.</p>
- */
-@Public
-@Stable
-public enum ContainerState {
-  /** New container */
-  NEW, 
-  
-  /** Running container */
-  RUNNING, 
-  
-  /** Completed container */
-  COMPLETE,
-
-  /** Scheduled (awaiting resources) at the NM. */
-  SCHEDULED
+public enum ContainerSchedulerEventType {
+  SCHEDULE_CONTAINER,
+  CONTAINER_COMPLETED,
 }

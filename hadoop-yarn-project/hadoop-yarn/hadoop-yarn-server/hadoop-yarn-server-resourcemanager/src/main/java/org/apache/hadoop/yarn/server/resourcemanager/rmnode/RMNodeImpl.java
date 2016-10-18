@@ -1394,7 +1394,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       // Process running containers
-      if (remoteContainer.getState() == ContainerState.RUNNING) {
+      if (remoteContainer.getState() == ContainerState.RUNNING ||
+          remoteContainer.getState() == ContainerState.SCHEDULED) {
         // Process only GUARANTEED containers in the RM.
         if (remoteContainer.getExecutionType() == ExecutionType.GUARANTEED) {
           ++numRemoteRunningContainers;

@@ -82,7 +82,7 @@ enum ContainerStateProto {
   C_NEW = 1;
   C_RUNNING = 2;
   C_COMPLETE = 3;
-  C_QUEUED = 4;
+  C_SCHEDULED = 4;
 }
 
 message ContainerProto {

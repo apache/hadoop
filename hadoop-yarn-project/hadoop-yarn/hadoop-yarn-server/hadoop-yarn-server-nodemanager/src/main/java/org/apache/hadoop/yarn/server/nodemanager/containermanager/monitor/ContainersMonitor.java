@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
@@ -28,19 +29,7 @@ public interface ContainersMonitor extends Service,
     EventHandler<ContainersMonitorEvent>, ResourceView {
   public ResourceUtilization getContainersUtilization();
 
-  ResourceUtilization getContainersAllocation();
-
-  boolean hasResourcesAvailable(ProcessTreeInfo pti);
-
-  void increaseContainersAllocation(ProcessTreeInfo pti);
-
-  void decreaseContainersAllocation(ProcessTreeInfo pti);
-
-  void increaseResourceUtilization(ResourceUtilization resourceUtil,
-      ProcessTreeInfo pti);
-
-  void decreaseResourceUtilization(ResourceUtilization resourceUtil,
-      ProcessTreeInfo pti);
+  float getVmemRatio();
 
   void subtractNodeResourcesFromResourceUtilization(
       ResourceUtilization resourceUtil);

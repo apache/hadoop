@@ -303,7 +303,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     Assert.assertEquals(null, reader.readLine());
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
-        ContainerState.COMPLETE, 60);
+        60, ContainerState.COMPLETE);
 
     List<ContainerId> containerIds = new ArrayList<ContainerId>();
     containerIds.add(cId);

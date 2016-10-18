@@ -215,4 +215,14 @@ public class MockContainer implements Container {
   public void commitUpgrade() {
 
   }
+
+  @Override
+  public void sendLaunchEvent() {
+
+  }
+
+  @Override
+  public void sendKillEvent(int exitStatus, String description) {
+
+  }
 }

@@ -74,6 +74,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerState;
@@ -286,7 +288,7 @@ public class ContainerImpl implements Container {
     // From NEW State
     .addTransition(ContainerState.NEW,
         EnumSet.of(ContainerState.LOCALIZING,
-            ContainerState.LOCALIZED,
+            ContainerState.SCHEDULED,
             ContainerState.LOCALIZATION_FAILED,
             ContainerState.DONE),
         ContainerEventType.INIT_CONTAINER, new RequestResourcesTransition())
@@ -298,7 +300,7 @@ public class ContainerImpl implements Container {
 
     // From LOCALIZING State
     .addTransition(ContainerState.LOCALIZING,
-        EnumSet.of(ContainerState.LOCALIZING, ContainerState.LOCALIZED),
+        EnumSet.of(ContainerState.LOCALIZING, ContainerState.SCHEDULED),
         ContainerEventType.RESOURCE_LOCALIZED, new LocalizedTransition())
     .addTransition(ContainerState.LOCALIZING,
         ContainerState.LOCALIZATION_FAILED,
@@ -309,7 +311,7 @@ public class ContainerImpl implements Container {
         UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.LOCALIZING, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER,
-        new KillDuringLocalizationTransition())
+        new KillBeforeRunningTransition())
 
     // From LOCALIZATION_FAILED State
     .addTransition(ContainerState.LOCALIZATION_FAILED,
@@ -323,7 +325,7 @@ public class ContainerImpl implements Container {
     // container not launched so kill is a no-op
     .addTransition(ContainerState.LOCALIZATION_FAILED,
         ContainerState.LOCALIZATION_FAILED,
-        ContainerEventType.KILL_CONTAINER)
+        ContainerEventType.KILL_CONTAINER, new KillBeforeRunningTransition())
     // container cleanup triggers a release of all resources
     // regardless of whether they were localized or not
     // LocalizedResource handles release event in all states
@@ -334,17 +336,18 @@ public class ContainerImpl implements Container {
         ContainerState.LOCALIZATION_FAILED,
         ContainerEventType.RESOURCE_FAILED)
 
-    // From LOCALIZED State
-    .addTransition(ContainerState.LOCALIZED, ContainerState.RUNNING,
+    // From SCHEDULED State
+    .addTransition(ContainerState.SCHEDULED, ContainerState.RUNNING,
         ContainerEventType.CONTAINER_LAUNCHED, new LaunchTransition())
-    .addTransition(ContainerState.LOCALIZED, ContainerState.EXITED_WITH_FAILURE,
+    .addTransition(ContainerState.SCHEDULED, ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
         new ExitedWithFailureTransition(true))
-    .addTransition(ContainerState.LOCALIZED, ContainerState.LOCALIZED,
+    .addTransition(ContainerState.SCHEDULED, ContainerState.SCHEDULED,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
-    .addTransition(ContainerState.LOCALIZED, ContainerState.KILLING,
-        ContainerEventType.KILL_CONTAINER, new KillTransition())
+    .addTransition(ContainerState.SCHEDULED, ContainerState.KILLING,
+        ContainerEventType.KILL_CONTAINER,
+        new KillBeforeRunningTransition())
 
     // From RUNNING State
     .addTransition(ContainerState.RUNNING,
@@ -353,7 +356,7 @@ public class ContainerImpl implements Container {
         new ExitedWithSuccessTransition(true))
     .addTransition(ContainerState.RUNNING,
         EnumSet.of(ContainerState.RELAUNCHING,
-            ContainerState.LOCALIZED,
+            ContainerState.SCHEDULED,
             ContainerState.EXITED_WITH_FAILURE),
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
         new RetryFailureTransition())
@@ -402,7 +405,7 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.REINITIALIZING, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
     .addTransition(ContainerState.REINITIALIZING,
-        ContainerState.LOCALIZED,
+        ContainerState.SCHEDULED,
         ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
         new KilledForReInitializationTransition())
 
@@ -499,6 +502,10 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.DONE, ContainerState.DONE,
         ContainerEventType.INIT_CONTAINER)
     .addTransition(ContainerState.DONE, ContainerState.DONE,
+        ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP)
+    .addTransition(ContainerState.DONE, ContainerState.DONE,
+        ContainerEventType.CONTAINER_LAUNCHED)
+    .addTransition(ContainerState.DONE, ContainerState.DONE,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
     // This transition may result when
@@ -520,9 +527,11 @@ public class ContainerImpl implements Container {
     case NEW:
     case LOCALIZING:
     case LOCALIZATION_FAILED:
-    case LOCALIZED:
+    case SCHEDULED:
+      return org.apache.hadoop.yarn.api.records.ContainerState.SCHEDULED;
     case RUNNING:
     case RELAUNCHING:
+    case REINITIALIZING:
     case EXITED_WITH_SUCCESS:
     case EXITED_WITH_FAILURE:
     case KILLING:
@@ -553,7 +562,7 @@ public class ContainerImpl implements Container {
   public Map<Path, List<String>> getLocalizedResources() {
     this.readLock.lock();
     try {
-      if (ContainerState.LOCALIZED == getContainerState()
+      if (ContainerState.SCHEDULED == getContainerState()
           || ContainerState.RELAUNCHING == getContainerState()) {
         return resourceSet.getLocalizedResources();
       } else {
@@ -690,6 +699,9 @@ public class ContainerImpl implements Container {
     ContainerStatus containerStatus = cloneAndGetContainerStatus();
     eventHandler.handle(new ApplicationContainerFinishedEvent(containerStatus));
 
+    // Tell the scheduler the container is Done
+    eventHandler.handle(new ContainerSchedulerEvent(this,
+        ContainerSchedulerEventType.CONTAINER_COMPLETED));
     // Remove the container from the resource-monitor
     eventHandler.handle(new ContainerStopMonitoringEvent(containerId));
     // Tell the logService too
@@ -698,7 +710,8 @@ public class ContainerImpl implements Container {
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
-  private void sendLaunchEvent() {
+  @Override
+  public void sendLaunchEvent() {
     ContainersLauncherEventType launcherEvent =
         ContainersLauncherEventType.LAUNCH_CONTAINER;
     if (recoveredStatus == RecoveredContainerStatus.LAUNCHED) {
@@ -708,6 +721,26 @@ public class ContainerImpl implements Container {
     containerLaunchStartTime = clock.getTime();
     dispatcher.getEventHandler().handle(
         new ContainersLauncherEvent(this, launcherEvent));
+  }
+
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  private void sendScheduleEvent() {
+    dispatcher.getEventHandler().handle(
+        new ContainerSchedulerEvent(this,
+            ContainerSchedulerEventType.SCHEDULE_CONTAINER)
+    );
+  }
+
+  @SuppressWarnings("unchecked") // dispatcher not typed
+  @Override
+  public void sendKillEvent(int exitStatus, String description) {
+    try {
+      context.getNMStateStore().storeContainerKilled(containerId);
+    } catch (IOException ioe) {
+      LOG.error("Could not log container state change to state store..", ioe);
+    }
+    dispatcher.getEventHandler().handle(
+        new ContainerKillEvent(containerId, exitStatus, description));
   }
 
   @SuppressWarnings("unchecked") // dispatcher not typed
@@ -781,7 +814,7 @@ public class ContainerImpl implements Container {
    * to the ResourceLocalizationManager and enters LOCALIZING state.
    * 
    * If there are no resources to localize, sends LAUNCH_CONTAINER event
-   * and enters LOCALIZED state directly.
+   * and enters SCHEDULED state directly.
    * 
    * If there are any invalid resources specified, enters LOCALIZATION_FAILED
    * directly.
@@ -847,9 +880,9 @@ public class ContainerImpl implements Container {
         }
         return ContainerState.LOCALIZING;
       } else {
-        container.sendLaunchEvent();
+        container.sendScheduleEvent();
         container.metrics.endInitingContainer();
-        return ContainerState.LOCALIZED;
+        return ContainerState.SCHEDULED;
       }
     }
   }
@@ -889,7 +922,7 @@ public class ContainerImpl implements Container {
           new ContainerLocalizationEvent(LocalizationEventType.
               CONTAINER_RESOURCES_LOCALIZED, container));
 
-      container.sendLaunchEvent();
+      container.sendScheduleEvent();
       container.metrics.endInitingContainer();
 
       // If this is a recovered container that has already launched, skip
@@ -909,7 +942,7 @@ public class ContainerImpl implements Container {
                 SharedCacheUploadEventType.UPLOAD));
       }
 
-      return ContainerState.LOCALIZED;
+      return ContainerState.SCHEDULED;
     }
   }
 
@@ -1099,7 +1132,7 @@ public class ContainerImpl implements Container {
   }
 
   /**
-   * Transition from LOCALIZED state to RUNNING state upon receiving
+   * Transition from SCHEDULED state to RUNNING state upon receiving
    * a CONTAINER_LAUNCHED event.
    */
   static class LaunchTransition extends ContainerTransition {
@@ -1257,7 +1290,7 @@ public class ContainerImpl implements Container {
             container.containerId.getApplicationAttemptId().getApplicationId(),
             container.containerId);
         new KilledForReInitializationTransition().transition(container, event);
-        return ContainerState.LOCALIZED;
+        return ContainerState.SCHEDULED;
       } else {
         new ExitedWithFailureTransition(true).transition(container, event);
         return ContainerState.EXITED_WITH_FAILURE;
@@ -1339,7 +1372,7 @@ public class ContainerImpl implements Container {
   }
 
   /**
-   * Transition to LOCALIZED and wait for RE-LAUNCH
+   * Transition to SCHEDULED and wait for RE-LAUNCH
    */
   static class KilledForReInitializationTransition extends ContainerTransition {
 
@@ -1364,7 +1397,7 @@ public class ContainerImpl implements Container {
       container.resourceSet =
           container.reInitContext.mergedResourceSet(container.resourceSet);
 
-      container.sendLaunchEvent();
+      container.sendScheduleEvent();
     }
   }
 
@@ -1392,7 +1425,7 @@ public class ContainerImpl implements Container {
    * Transition from LOCALIZING to KILLING upon receiving
    * KILL_CONTAINER event.
    */
-  static class KillDuringLocalizationTransition implements
+  static class KillBeforeRunningTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
@@ -1424,7 +1457,7 @@ public class ContainerImpl implements Container {
 
   /**
    * Transitions upon receiving KILL_CONTAINER.
-   * - LOCALIZED -> KILLING.
+   * - SCHEDULED -> KILLING.
    * - RUNNING -> KILLING.
    * - REINITIALIZING -> KILLING.
    */
@@ -1651,7 +1684,8 @@ public class ContainerImpl implements Container {
             stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
         LOG.warn("Can't handle this event at current state: Current: ["
-            + oldState + "], eventType: [" + event.getType() + "]", e);
+            + oldState + "], eventType: [" + event.getType() + "]," +
+            " container: [" + containerID + "]", e);
       }
       if (oldState != newState) {
         LOG.info("Container " + containerID + " transitioned from "
