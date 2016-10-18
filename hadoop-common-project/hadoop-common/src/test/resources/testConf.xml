@@ -859,7 +859,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*in the specified format. Format accepts filesize in( )*</expected-output>
+          <expected-output>^( |\t)*in the specified format. Format accepts permissions in( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*octal \(%a\) and symbolic \(%A\), filesize in( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
