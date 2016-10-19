@@ -758,7 +758,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return f;
   }
-  
+
   /**
    * Return the File associated with a block, without first
    * checking that it exists. This should be used when the
@@ -814,7 +814,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return info;
   }
-  
+
   /**
    * Get the meta info of a block stored in volumeMap. Block is looked up
    * without matching the generation stamp.
@@ -833,7 +833,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return info;
   }
-  
+
   /**
    * Returns handles to the block file and its metadata file
    */
@@ -1023,7 +1023,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param blockFile block file for which the checksum will be computed
    * @throws IOException
    */
-  private static void computeChecksum(File srcMeta, File dstMeta,
+  static void computeChecksum(File srcMeta, File dstMeta,
       File blockFile, int smallBufferSize, final Configuration conf)
       throws IOException {
     final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(srcMeta,
@@ -1088,20 +1088,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + ") to newlen (=" + newlen + ")");
     }
 
-    DataChecksum dcs = BlockMetadataHeader.readHeader(metaFile).getChecksum(); 
+    DataChecksum dcs = BlockMetadataHeader.readHeader(metaFile).getChecksum();
     int checksumsize = dcs.getChecksumSize();
     int bpc = dcs.getBytesPerChecksum();
     long n = (newlen - 1)/bpc + 1;
     long newmetalen = BlockMetadataHeader.getHeaderSize() + n*checksumsize;
     long lastchunkoffset = (n - 1)*bpc;
-    int lastchunksize = (int)(newlen - lastchunkoffset); 
-    byte[] b = new byte[Math.max(lastchunksize, checksumsize)]; 
+    int lastchunksize = (int)(newlen - lastchunkoffset);
+    byte[] b = new byte[Math.max(lastchunksize, checksumsize)];
 
     RandomAccessFile blockRAF = new RandomAccessFile(blockFile, "rw");
     try {
-      //truncate blockFile 
+      //truncate blockFile
       blockRAF.setLength(newlen);
- 
+
       //read last chunk
       blockRAF.seek(lastchunkoffset);
       blockRAF.readFully(b, 0, lastchunksize);
@@ -1113,7 +1113,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     dcs.update(b, 0, lastchunksize);
     dcs.writeValue(b, 0, false);
 
-    //update metaFile 
+    //update metaFile
     RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
     try {
       metaRAF.setLength(newmetalen);
@@ -1360,13 +1360,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Bump a replica's generation stamp to a new one.
    * Its on-disk meta file name is renamed to be the new one too.
-   * 
+   *
    * @param replicaInfo a replica
    * @param newGS new generation stamp
    * @throws IOException if rename fails
    */
-  private void bumpReplicaGS(ReplicaInfo replicaInfo, 
-      long newGS) throws IOException { 
+  private void bumpReplicaGS(ReplicaInfo replicaInfo,
+      long newGS) throws IOException {
     long oldGS = replicaInfo.getGenerationStamp();
     File oldmeta = replicaInfo.getMetaFile();
     replicaInfo.setGenerationStamp(newGS);
@@ -1458,7 +1458,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       try {
         try(AutoCloseableLock lock = datasetLock.acquire()) {
           ReplicaInfo replicaInfo = getReplicaInfo(b.getBlockPoolId(), b.getBlockId());
-          
+
           // check the replica's state
           if (replicaInfo.getState() != ReplicaState.RBW) {
             throw new ReplicaNotFoundException(
@@ -1687,7 +1687,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       finalizeReplica(b.getBlockPoolId(), replicaInfo);
     }
   }
-  
+
   private FinalizedReplica finalizeReplica(String bpid,
       ReplicaInfo replicaInfo) throws IOException {
     try(AutoCloseableLock lock = datasetLock.acquire()) {
@@ -1947,15 +1947,15 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     try(AutoCloseableLock lock = datasetLock.acquire()) {
       f = getFile(bpid, blockId, false);
     }
-    
+
     if(f != null ) {
       if(f.exists())
         return f;
-   
+
       // if file is not null, but doesn't exist - possibly disk failed
       datanode.checkDiskErrorAsync();
     }
-    
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("blockId=" + blockId + ", f=" + f);
     }
@@ -2193,7 +2193,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
       return info.getBlockFile();
     }
-    return null;    
+    return null;
   }
 
   /**
@@ -2346,7 +2346,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
        */
       if (memBlockInfo == null) {
         // Block is missing in memory - add the block to volumeMap
-        ReplicaInfo diskBlockInfo = new FinalizedReplica(blockId, 
+        ReplicaInfo diskBlockInfo = new FinalizedReplica(blockId,
             diskFile.length(), diskGS, vol, diskFile.getParentFile());
         volumeMap.add(bpid, diskBlockInfo);
         if (vol.isTransientStorage()) {
@@ -2856,7 +2856,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     for (int i = 0; i < curVolumes.size(); i++) {
       blocksVolumeIds.add(ByteBuffer.allocate(4).putInt(i).array());
     }
-    // Determine the index of the VolumeId of each block's volume, by comparing 
+    // Determine the index of the VolumeId of each block's volume, by comparing
     // the block's volume against the enumerated volumes
     for (int i = 0; i < blockIds.length; i++) {
       long blockId = blockIds[i];
@@ -3200,7 +3200,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     File f = getBlockFile(block);
     Path p = new Path(f.getAbsolutePath());
-    
+
     FsPermission oldPermission = localFS.getFileStatus(
         new Path(f.getAbsolutePath())).getPermission();
     //sticky bit is used for pinning purpose
@@ -3215,7 +3215,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return  false;
     }
     File f = getBlockFile(block);
-        
+
     FileStatus fss = localFS.getFileStatus(new Path(f.getAbsolutePath()));
     return fss.getPermission().getStickyBit();
   }

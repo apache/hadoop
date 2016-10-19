@@ -22,7 +22,9 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
@@ -104,5 +106,18 @@ public class FsDatasetUtil {
       throw new IOException("Failed to parse generation stamp: blockFile="
           + blockFile + ", metaFile=" + metaFile, nfe);
     }
+  }
+
+  /**
+   * Compute the checksum for a block file that does not already have
+   * its checksum computed, and save it to dstMeta file.
+   */
+  public static void computeChecksum(File srcMeta, File dstMeta, File blockFile,
+      int smallBufferSize, Configuration conf) throws IOException {
+    Preconditions.checkNotNull(srcMeta);
+    Preconditions.checkNotNull(dstMeta);
+    Preconditions.checkNotNull(blockFile);
+    FsDatasetImpl.computeChecksum(srcMeta, dstMeta, blockFile,
+        smallBufferSize, conf);
   }
 }
