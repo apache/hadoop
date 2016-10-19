@@ -232,7 +232,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     int destDirDepth = directoriesInPath(destDir);
     directoriesCreated.assertDiffEquals(state, 1);
-/*  TODO: uncomment once HADOOP-13222 is in
+/*  TODO: uncomment once HADOOP-13222 "s3a.mkdirs() to delete empty fake parent directories"
+    is in
     deleteRequests.assertDiffEquals(state,1);
     directoriesDeleted.assertDiffEquals(state,0);
     fakeDirectoriesDeleted.assertDiffEquals(state,destDirDepth);

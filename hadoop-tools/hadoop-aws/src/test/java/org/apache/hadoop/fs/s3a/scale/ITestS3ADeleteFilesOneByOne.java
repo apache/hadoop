@@ -27,8 +27,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 public class ITestS3ADeleteFilesOneByOne extends ITestS3ADeleteManyFiles {
 
   @Override
-  protected Configuration createConfiguration() {
-    Configuration configuration = super.createConfiguration();
+  protected Configuration createScaleConfiguration() {
+    Configuration configuration = super.createScaleConfiguration();
     configuration.setBoolean(Constants.ENABLE_MULTI_DELETE, false);
     return configuration;
   }

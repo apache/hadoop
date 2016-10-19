@@ -135,16 +135,9 @@ public interface S3ATestConstants {
   int DEFAULT_DIRECTORY_COUNT = 2;
 
   /**
-   * Default scale test timeout in seconds: {@value}.
-   */
-  int DEFAULT_TEST_TIMEOUT = 30 * 60;
-
-  /**
    * Default policy on scale tests: {@value}.
    */
   boolean DEFAULT_SCALE_TESTS_ENABLED = false;
-
-  String KEY_ENCRYPTION_TESTS = TEST_FS_S3A + "encryption.enabled";
 
   /**
    * Fork ID passed down from maven if the test is running in parallel.
@@ -159,7 +152,15 @@ public interface S3ATestConstants {
   int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
 
   /**
-   * Timeout in Milliseconds for Scale Tests: {@value}.
+   * Timeout in Seconds for Scale Tests: {@value}.
    */
-  int SCALE_TEST_TIMEOUT = 30 * 60 * 1000;
+  int SCALE_TEST_TIMEOUT_SECONDS = 30 * 60;
+
+  int SCALE_TEST_TIMEOUT_MILLIS = SCALE_TEST_TIMEOUT_SECONDS * 1000;
+  /**
+   * Optional custom endpoint for S3A configuration tests.
+   * This does <i>not</i> set the endpoint for s3 access elsewhere.
+   */
+  String CONFIGURATION_TEST_ENDPOINT =
+      "test.fs.s3a.endpoint";
 }

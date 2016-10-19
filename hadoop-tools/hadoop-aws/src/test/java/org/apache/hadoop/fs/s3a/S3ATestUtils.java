@@ -59,7 +59,7 @@ public class S3ATestUtils {
    */
   public static S3AFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
-    return createTestFileSystem(conf, true);
+    return createTestFileSystem(conf, false);
   }
 
   /**
