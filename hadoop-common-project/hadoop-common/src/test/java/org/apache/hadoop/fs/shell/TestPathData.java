@@ -30,9 +30,11 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -215,6 +217,23 @@ public class TestPathData {
         sortedString("../d2/f3"),
         sortedString(items)
     );
+  }
+
+  @Test
+  public void testGlobThrowsExceptionForUnreadableDir() throws Exception {
+    Path obscuredDir = new Path("foo");
+    Path subDir = new Path(obscuredDir, "bar"); //so foo is non-empty
+    fs.mkdirs(subDir);
+    fs.setPermission(obscuredDir, new FsPermission((short)0)); //no access
+    try {
+      PathData.expandAsGlob("foo/*", conf);
+      Assert.fail("Should throw IOException");
+    } catch (IOException ioe) {
+      // expected
+    } finally {
+      // make sure the test directory can be deleted
+      fs.setPermission(obscuredDir, new FsPermission((short)0755)); //default
+    }
   }
 
   @Test (timeout = 30000)

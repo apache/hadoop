@@ -170,6 +170,9 @@ While HDFS currently returns an alphanumerically sorted list, neither the Posix 
 nor Java's `File.listFiles()` API calls define any ordering of returned values. Applications
 which require a uniform sort order on the results must perform the sorting themselves.
 
+**Null return**: Local filesystems prior to 3.0.0 returned null upon access
+error. It is considered erroneous. Expect IOException upon access error.
+
 #### Atomicity and Consistency
 
 By the time the `listStatus()` operation returns to the caller, there
