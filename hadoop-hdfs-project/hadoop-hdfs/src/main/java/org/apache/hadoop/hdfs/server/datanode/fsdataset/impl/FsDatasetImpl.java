@@ -1031,7 +1031,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param conf the {@link Configuration}
    * @throws IOException
    */
-  private static void computeChecksum(ReplicaInfo srcReplica, File dstMeta,
+  static void computeChecksum(ReplicaInfo srcReplica, File dstMeta,
       int smallBufferSize, final Configuration conf)
       throws IOException {
     File srcMeta = new File(srcReplica.getMetadataURI());
