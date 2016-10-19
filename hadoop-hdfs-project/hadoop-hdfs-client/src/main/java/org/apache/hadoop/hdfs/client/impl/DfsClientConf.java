@@ -287,7 +287,7 @@ public class DfsClientConf {
     return classes;
   }
 
-  private DataChecksum.Type getChecksumType(Configuration conf) {
+  private static DataChecksum.Type getChecksumType(Configuration conf) {
     final String checksum = conf.get(
         DFS_CHECKSUM_TYPE_KEY,
         DFS_CHECKSUM_TYPE_DEFAULT);
@@ -302,7 +302,7 @@ public class DfsClientConf {
   }
 
   // Construct a checksum option from conf
-  private ChecksumOpt getChecksumOptFromConf(Configuration conf) {
+  public static ChecksumOpt getChecksumOptFromConf(Configuration conf) {
     DataChecksum.Type type = getChecksumType(conf);
     int bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
         DFS_BYTES_PER_CHECKSUM_DEFAULT);
