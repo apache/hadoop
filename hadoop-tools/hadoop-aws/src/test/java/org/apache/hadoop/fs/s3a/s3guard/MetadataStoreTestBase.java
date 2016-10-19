@@ -72,7 +72,8 @@ public abstract class MetadataStoreTestBase extends Assert {
     contract = createContract();
     ms = contract.getMetadataStore();
     assertNotNull("null MetadataStore", ms);
-    ms.initialize(contract.getConf());
+    assertNotNull("null FileSystem", contract.getFileSystem());
+    ms.initialize(contract.getFileSystem());
   }
 
   @After
@@ -146,9 +147,8 @@ public abstract class MetadataStoreTestBase extends Assert {
     assertFalse("Root not fully cached", dir.isAuthoritative());
     assertNotNull("have root dir file listing", dir.getListing());
     assertEquals("One file in root dir", 1, dir.getListing().size());
-    assertEquals("file1 in root dir", "/file1",
-        dir.getListing().iterator().next().getFileStatus().getPath()
-            .toString());
+    assertEquals("file1 in root dir", "/file1", dir.getListing().iterator()
+        .next().getFileStatus().getPath().toString());
   }
 
   @Test

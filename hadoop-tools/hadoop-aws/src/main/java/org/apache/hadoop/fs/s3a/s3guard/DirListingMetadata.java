@@ -38,6 +38,13 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class DirListingMetadata {
 
+  /**
+   * Convenience parameter for passing into
+   * {@link DirListingMetadata#DirListingMetadata(Path, Collection, boolean)}.
+   */
+  public static final Collection<PathMetadata> EMPTY_DIR =
+      Collections.emptyList();
+
   private final Path path;
 
   /** Using a map for fast find / remove with large directories. */
@@ -151,6 +158,8 @@ public class DirListingMetadata {
    */
   private void checkChildPath(Path childPath) {
     Preconditions.checkNotNull(childPath, "childPath must be non-null");
+    Preconditions.checkArgument(childPath.isAbsolute(), "childPath must be " +
+        "absolute");
     Preconditions.checkArgument(!childPath.isRoot(),
         "childPath cannot be the root path");
     Preconditions.checkArgument(childPath.getParent().equals(path),

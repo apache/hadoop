@@ -21,15 +21,15 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /**
  * {@code MetadataStore} defines the set of operations that any metadata store
- * implementation must provide.
+ * implementation must provide.  Note that all {@link Path} objects provided
+ * to methods must be absolute, not relative paths.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -38,10 +38,10 @@ public interface MetadataStore extends Closeable {
   /**
    * Performs one-time initialization of the metadata store.
    *
-   * @param conf {@code Configuration}
+   * @param fs {@code FileSystem} associated with the MetadataStore
    * @throws IOException if there is an error
    */
-  void initialize(Configuration conf) throws IOException;
+  void initialize(FileSystem fs) throws IOException;
 
   /**
    * Deletes exactly one path.
@@ -88,7 +88,7 @@ public interface MetadataStore extends Closeable {
    * recursively.
    *
    * @param src the source path
-   * @param dst the destination path
+   * @param dst the new path of the file/dir after the move
    * @throws IOException if there is an error
    */
   void move(Path src, Path dst) throws IOException;
@@ -99,7 +99,7 @@ public interface MetadataStore extends Closeable {
    * saving the full path ancestry.
    *
    * Implementations must update any {@code DirListingMetadata} objects which
-   * track the parent of this file.
+   * track the immediate parent of this file.
    *
    * @param meta the metadata to save
    * @throws IOException if there is an error

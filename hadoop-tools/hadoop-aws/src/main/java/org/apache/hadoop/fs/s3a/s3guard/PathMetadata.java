@@ -35,11 +35,14 @@ class PathMetadata {
 
   /**
    * Creates a new {@code PathMetadata} containing given {@code FileStatus}.
-   *
-   * @param fileStatus file status
+   * @param fileStatus file status containing an absolute path.
    */
   public PathMetadata(FileStatus fileStatus) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
+    Preconditions.checkNotNull(fileStatus.getPath(), "fileStatus path must be" +
+        " non-null");
+    Preconditions.checkArgument(fileStatus.getPath().isAbsolute(), "path must" +
+        " be absolute");
     this.fileStatus = fileStatus;
   }
 

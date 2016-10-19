@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 
 import java.io.IOException;
 
@@ -26,7 +26,8 @@ import java.io.IOException;
  * Test specification for MetadataStore contract tests. Supplies configuration
  * and MetadataStore instance.
  */
-public abstract class AbstractMSContract extends Configured {
+public abstract class AbstractMSContract {
 
+  public abstract FileSystem getFileSystem();
   public abstract MetadataStore getMetadataStore() throws IOException;
 }
