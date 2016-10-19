@@ -592,11 +592,13 @@ public class DockerContainerExecutor extends ContainerExecutor {
         // hence write pid to tmp file first followed by a mv
         pout.println("#!/usr/bin/env bash");
         pout.println();
+        // First launch the docker container 
+        // and then get the container pid
+        pout.println(dockerCommand + " bash \"" +
+          launchDst.toUri().getPath().toString() + "\"");
         pout.println("echo "+ dockerPidScript +" > " + pidFile.toString()
           + ".tmp");
         pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-        pout.println(dockerCommand + " bash \"" +
-          launchDst.toUri().getPath().toString() + "\"");
       } finally {
         IOUtils.cleanup(LOG, pout, out);
       }
