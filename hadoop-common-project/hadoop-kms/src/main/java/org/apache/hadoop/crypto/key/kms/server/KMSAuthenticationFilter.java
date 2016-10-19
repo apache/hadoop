@@ -145,9 +145,13 @@ public class KMSAuthenticationFilter
         requestURL.append("?").append(queryString);
       }
 
-      KMSWebApp.getKMSAudit().unauthenticated(
-          request.getRemoteHost(), method, requestURL.toString(),
-          kmsResponse.msg);
+      if (!method.equals("OPTIONS")) {
+        // an HTTP OPTIONS request is made as part of the SPNEGO authentication
+        // sequence. We do not need to audit log it, since it doesn't belong
+        // to KMS context. KMS server doesn't handle OPTIONS either.
+        KMSWebApp.getKMSAudit().unauthenticated(request.getRemoteHost(), method,
+            requestURL.toString(), kmsResponse.msg);
+      }
     }
   }
 
