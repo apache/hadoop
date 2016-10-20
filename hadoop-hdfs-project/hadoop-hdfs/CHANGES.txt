@@ -172,6 +172,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-9444. Add utility to find set of available ephemeral ports to
     ServerSocketUtil. (Masatake Iwasaki via Brahma Reddy Battula)
 
+    HDFS-10627. Volume Scanner marks a block as "suspect" even if
+    the exception is network-related. (Rushabh S Shah via kihwal)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
