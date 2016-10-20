@@ -71,9 +71,6 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13535. Add jetty6 acceptor startup issue workaround to branch-2.
     (Min Shen).
 
-    HADOOP-13236. truncate will fail when we use viewfilesystem.
-    (Brahma Reddy Battula)
-
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
