@@ -667,7 +667,7 @@ public class NameNode extends ReconfigurableBase implements
 
   NamenodeRegistration setRegistration() {
     nodeRegistration = new NamenodeRegistration(
-        NetUtils.getHostPortString(rpcServer.getRpcAddress()),
+        NetUtils.getHostPortString(getNameNodeAddress()),
         NetUtils.getHostPortString(getHttpAddress()),
         getFSImage().getStorage(), getRole());
     return nodeRegistration;
@@ -730,7 +730,7 @@ public class NameNode extends ReconfigurableBase implements
       // This is expected for MiniDFSCluster. Set it now using 
       // the RPC server's bind address.
       clientNamenodeAddress = 
-          NetUtils.getHostPortString(rpcServer.getRpcAddress());
+          NetUtils.getHostPortString(getNameNodeAddress());
       LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
           + " this namenode/service.");
     }
@@ -817,7 +817,7 @@ public class NameNode extends ReconfigurableBase implements
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info(getRole() + " RPC up at: " + rpcServer.getRpcAddress());
+    LOG.info(getRole() + " RPC up at: " + getNameNodeAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
       LOG.info(getRole() + " service RPC up at: "
           + rpcServer.getServiceRpcAddress());
@@ -1050,7 +1050,7 @@ public class NameNode extends ReconfigurableBase implements
    * @return NameNode RPC address in "host:port" string form
    */
   public String getNameNodeAddressHostPortString() {
-    return NetUtils.getHostPortString(rpcServer.getRpcAddress());
+    return NetUtils.getHostPortString(getNameNodeAddress());
   }
 
   /**
@@ -1059,7 +1059,7 @@ public class NameNode extends ReconfigurableBase implements
    */
   public InetSocketAddress getServiceRpcAddress() {
     final InetSocketAddress serviceAddr = rpcServer.getServiceRpcAddress();
-    return serviceAddr == null ? rpcServer.getRpcAddress() : serviceAddr;
+    return serviceAddr == null ? getNameNodeAddress() : serviceAddr;
   }
 
   /**
