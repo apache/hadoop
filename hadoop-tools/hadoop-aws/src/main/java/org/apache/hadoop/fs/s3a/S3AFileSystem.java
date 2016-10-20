@@ -547,7 +547,7 @@ public class S3AFileSystem extends FileSystem {
               progress,
               partSize,
               blockFactory,
-              instrumentation.newOutputStreamStatistics(),
+              instrumentation.newOutputStreamStatistics(statistics),
               new WriteOperationHelper(key)
           ),
           null);
