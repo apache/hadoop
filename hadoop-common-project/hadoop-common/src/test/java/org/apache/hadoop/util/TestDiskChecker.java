@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 public class TestDiskChecker {
@@ -191,26 +190,5 @@ public class TestDiskChecker {
     localDir.delete();
     System.out.println("checkDir success: " + success);
 
-  }
-
-  @Test (timeout = 30000)
-  public void testCheckDirsIOException() throws Throwable {
-    Path path = new Path("target", TestDiskChecker.class.getSimpleName());
-    File localDir = new File(path.toUri().getRawPath());
-    localDir.mkdir();
-    File localFile = new File(localDir, "test");
-    localFile.createNewFile();
-    File spyLocalDir = spy(localDir);
-    doReturn(localFile.toPath()).when(spyLocalDir).toPath();
-    try {
-      DiskChecker.checkDirs(spyLocalDir);
-      fail("Expected exception for I/O error");
-    } catch (DiskErrorException e) {
-      GenericTestUtils.assertExceptionContains("I/O error", e);
-      assertTrue(e.getCause() instanceof IOException);
-    } finally {
-      localFile.delete();
-      localDir.delete();
-    }
   }
 }
