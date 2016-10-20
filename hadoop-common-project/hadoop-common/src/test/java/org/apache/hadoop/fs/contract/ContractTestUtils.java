@@ -400,18 +400,18 @@ public class ContractTestUtils extends Assert {
    * @param fileSystem filesystem
    * @param path path to delete
    * @param recursive flag to indicate child entry deletion should be recursive
-   * @return the number of child entries found and deleted (not including
+   * @return the immediate child entries found and deleted (not including
    * any recursive children of those entries)
    * @throws IOException problem in the deletion process.
    */
-  public static int deleteChildren(FileSystem fileSystem,
+  public static FileStatus[] deleteChildren(FileSystem fileSystem,
       Path path,
       boolean recursive) throws IOException {
     FileStatus[] children = listChildren(fileSystem, path);
     for (FileStatus entry : children) {
       fileSystem.delete(entry.getPath(), recursive);
     }
-    return children.length;
+    return children;
   }
 
   /**
