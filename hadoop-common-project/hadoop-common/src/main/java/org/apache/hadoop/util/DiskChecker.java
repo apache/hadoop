@@ -20,9 +20,6 @@ package org.apache.hadoop.util;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.DirectoryIteratorException;
-import java.nio.file.Files;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -53,62 +50,6 @@ public class DiskChecker {
     }
   }
       
-  /** 
-   * The semantics of mkdirsWithExistsCheck method is different from the mkdirs
-   * method provided in the Sun's java.io.File class in the following way:
-   * While creating the non-existent parent directories, this method checks for
-   * the existence of those directories if the mkdir fails at any point (since
-   * that directory might have just been created by some other process).
-   * If both mkdir() and the exists() check fails for any seemingly 
-   * non-existent directory, then we signal an error; Sun's mkdir would signal
-   * an error (return false) if a directory it is attempting to create already
-   * exists or the mkdir fails.
-   * @param dir
-   * @return true on success, false on failure
-   */
-  public static boolean mkdirsWithExistsCheck(File dir) {
-    if (dir.mkdir() || dir.exists()) {
-      return true;
-    }
-    File canonDir = null;
-    try {
-      canonDir = dir.getCanonicalFile();
-    } catch (IOException e) {
-      return false;
-    }
-    String parent = canonDir.getParent();
-    return (parent != null) && 
-           (mkdirsWithExistsCheck(new File(parent)) &&
-                                      (canonDir.mkdir() || canonDir.exists()));
-  }
-
-  /**
-   * Recurse down a directory tree, checking all child directories.
-   * @param dir
-   * @throws DiskErrorException
-   */
-  public static void checkDirs(File dir) throws DiskErrorException {
-    checkDir(dir);
-    IOException ex = null;
-    try (DirectoryStream<java.nio.file.Path> stream =
-        Files.newDirectoryStream(dir.toPath())) {
-      for (java.nio.file.Path entry: stream) {
-        File child = entry.toFile();
-        if (child.isDirectory()) {
-          checkDirs(child);
-        }
-      }
-    } catch (DirectoryIteratorException de) {
-      ex = de.getCause();
-    } catch (IOException ie) {
-      ex = ie;
-    }
-    if (ex != null) {
-      throw new DiskErrorException("I/O error when open a directory: "
-          + dir.toString(), ex);
-    }
-  }
-
   /**
    * Create the directory if it doesn't exist and check that dir is readable,
    * writable and executable
@@ -121,7 +62,84 @@ public class DiskChecker {
       throw new DiskErrorException("Cannot create directory: "
                                    + dir.toString());
     }
-    checkDirAccess(dir);
+    checkAccessByFileMethods(dir);
+  }
+
+  /**
+   * Create the local directory if necessary, check permissions and also ensure
+   * it can be read from and written into.
+   *
+   * @param localFS local filesystem
+   * @param dir directory
+   * @param expected permission
+   * @throws DiskErrorException
+   * @throws IOException
+   */
+  public static void checkDir(LocalFileSystem localFS, Path dir,
+                              FsPermission expected)
+  throws DiskErrorException, IOException {
+    mkdirsWithExistsAndPermissionCheck(localFS, dir, expected);
+    checkAccessByFileMethods(localFS.pathToFile(dir));
+  }
+
+  /**
+   * Checks that the current running process can read, write, and execute the
+   * given directory by using methods of the File object.
+   * 
+   * @param dir File to check
+   * @throws DiskErrorException if dir is not readable, not writable, or not
+   *   executable
+   */
+  private static void checkAccessByFileMethods(File dir)
+      throws DiskErrorException {
+    if (!dir.isDirectory()) {
+      throw new DiskErrorException("Not a directory: "
+          + dir.toString());
+    }
+
+    if (!FileUtil.canRead(dir)) {
+      throw new DiskErrorException("Directory is not readable: "
+                                   + dir.toString());
+    }
+
+    if (!FileUtil.canWrite(dir)) {
+      throw new DiskErrorException("Directory is not writable: "
+                                   + dir.toString());
+    }
+
+    if (!FileUtil.canExecute(dir)) {
+      throw new DiskErrorException("Directory is not executable: "
+                                   + dir.toString());
+    }
+  }
+
+  /**
+   * The semantics of mkdirsWithExistsCheck method is different from the mkdirs
+   * method provided in the Sun's java.io.File class in the following way:
+   * While creating the non-existent parent directories, this method checks for
+   * the existence of those directories if the mkdir fails at any point (since
+   * that directory might have just been created by some other process).
+   * If both mkdir() and the exists() check fails for any seemingly
+   * non-existent directory, then we signal an error; Sun's mkdir would signal
+   * an error (return false) if a directory it is attempting to create already
+   * exists or the mkdir fails.
+   * @param dir
+   * @return true on success, false on failure
+   */
+  private static boolean mkdirsWithExistsCheck(File dir) {
+    if (dir.mkdir() || dir.exists()) {
+      return true;
+    }
+    File canonDir;
+    try {
+      canonDir = dir.getCanonicalFile();
+    } catch (IOException e) {
+      return false;
+    }
+    String parent = canonDir.getParent();
+    return (parent != null) &&
+        (mkdirsWithExistsCheck(new File(parent)) &&
+            (canonDir.mkdir() || canonDir.exists()));
   }
 
   /**
@@ -143,7 +161,7 @@ public class DiskChecker {
    * @param expected expected permission
    * @throws IOException
    */
-  public static void mkdirsWithExistsAndPermissionCheck(
+  static void mkdirsWithExistsAndPermissionCheck(
       LocalFileSystem localFS, Path dir, FsPermission expected)
       throws IOException {
     File directory = localFS.pathToFile(dir);
@@ -153,66 +171,6 @@ public class DiskChecker {
       created = mkdirsWithExistsCheck(directory);
 
     if (created || !localFS.getFileStatus(dir).getPermission().equals(expected))
-        localFS.setPermission(dir, expected);
-  }
-
-  /**
-   * Create the local directory if necessary, check permissions and also ensure
-   * it can be read from and written into.
-   *
-   * @param localFS local filesystem
-   * @param dir directory
-   * @param expected permission
-   * @throws DiskErrorException
-   * @throws IOException
-   */
-  public static void checkDir(LocalFileSystem localFS, Path dir,
-                              FsPermission expected)
-  throws DiskErrorException, IOException {
-    mkdirsWithExistsAndPermissionCheck(localFS, dir, expected);
-    checkDirAccess(localFS.pathToFile(dir));
-  }
-
-  /**
-   * Checks that the given file is a directory and that the current running
-   * process can read, write, and execute it.
-   * 
-   * @param dir File to check
-   * @throws DiskErrorException if dir is not a directory, not readable, not
-   *   writable, or not executable
-   */
-  private static void checkDirAccess(File dir) throws DiskErrorException {
-    if (!dir.isDirectory()) {
-      throw new DiskErrorException("Not a directory: "
-                                   + dir.toString());
-    }
-
-    checkAccessByFileMethods(dir);
-  }
-
-  /**
-   * Checks that the current running process can read, write, and execute the
-   * given directory by using methods of the File object.
-   * 
-   * @param dir File to check
-   * @throws DiskErrorException if dir is not readable, not writable, or not
-   *   executable
-   */
-  private static void checkAccessByFileMethods(File dir)
-      throws DiskErrorException {
-    if (!FileUtil.canRead(dir)) {
-      throw new DiskErrorException("Directory is not readable: "
-                                   + dir.toString());
-    }
-
-    if (!FileUtil.canWrite(dir)) {
-      throw new DiskErrorException("Directory is not writable: "
-                                   + dir.toString());
-    }
-
-    if (!FileUtil.canExecute(dir)) {
-      throw new DiskErrorException("Directory is not executable: "
-                                   + dir.toString());
-    }
+      localFS.setPermission(dir, expected);
   }
 }
