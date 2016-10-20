@@ -505,7 +505,7 @@ public class ViewFileSystem extends FileSystem {
       throws IOException {
     InodeTree.ResolveResult<FileSystem> res =
         fsState.resolve(getUriPath(f), true);
-    return res.targetFileSystem.truncate(f, newLength);
+    return res.targetFileSystem.truncate(res.remainingPath, newLength);
   }
   
   @Override
