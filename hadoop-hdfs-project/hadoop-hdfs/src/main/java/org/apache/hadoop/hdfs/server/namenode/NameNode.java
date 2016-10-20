@@ -637,7 +637,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   NamenodeRegistration setRegistration() {
     nodeRegistration = new NamenodeRegistration(
-        NetUtils.getHostPortString(rpcServer.getRpcAddress()),
+        NetUtils.getHostPortString(getNameNodeAddress()),
         NetUtils.getHostPortString(getHttpAddress()),
         getFSImage().getStorage(), getRole());
     return nodeRegistration;
@@ -696,7 +696,7 @@ public class NameNode implements NameNodeStatusMXBean {
       // This is expected for MiniDFSCluster. Set it now using 
       // the RPC server's bind address.
       clientNamenodeAddress = 
-          NetUtils.getHostPortString(rpcServer.getRpcAddress());
+          NetUtils.getHostPortString(getNameNodeAddress());
       LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
           + " this namenode/service.");
     }
@@ -771,7 +771,7 @@ public class NameNode implements NameNodeStatusMXBean {
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info(getRole() + " RPC up at: " + rpcServer.getRpcAddress());
+    LOG.info(getRole() + " RPC up at: " + getNameNodeAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
       LOG.info(getRole() + " service RPC up at: "
           + rpcServer.getServiceRpcAddress());
@@ -1004,7 +1004,7 @@ public class NameNode implements NameNodeStatusMXBean {
    * @return NameNode RPC address in "host:port" string form
    */
   public String getNameNodeAddressHostPortString() {
-    return NetUtils.getHostPortString(rpcServer.getRpcAddress());
+    return NetUtils.getHostPortString(getNameNodeAddress());
   }
 
   /**
@@ -1013,7 +1013,7 @@ public class NameNode implements NameNodeStatusMXBean {
    */
   public InetSocketAddress getServiceRpcAddress() {
     final InetSocketAddress serviceAddr = rpcServer.getServiceRpcAddress();
-    return serviceAddr == null ? rpcServer.getRpcAddress() : serviceAddr;
+    return serviceAddr == null ? getNameNodeAddress() : serviceAddr;
   }
 
   /**
