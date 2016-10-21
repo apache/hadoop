@@ -1823,6 +1823,20 @@ public class UserGroupInformation {
     }
   }
 
+  public static void logAllUserInfo(UserGroupInformation ugi) throws
+      IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("UGI: " + ugi);
+      if (ugi.getRealUser() != null) {
+        LOG.debug("+RealUGI: " + ugi.getRealUser());
+      }
+      LOG.debug("+LoginUGI: " + ugi.getLoginUser());
+      for (Token<?> token : ugi.getTokens()) {
+        LOG.debug("+UGI token: " + token);
+      }
+    }
+  }
+
   private void print() throws IOException {
     System.out.println("User: " + getUserName());
     System.out.print("Group Ids: ");
