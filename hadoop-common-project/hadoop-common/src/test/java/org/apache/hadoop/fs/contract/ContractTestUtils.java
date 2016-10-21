@@ -400,18 +400,18 @@ public class ContractTestUtils extends Assert {
    * @param fileSystem filesystem
    * @param path path to delete
    * @param recursive flag to indicate child entry deletion should be recursive
-   * @return the number of child entries found and deleted (not including
+   * @return the immediate child entries found and deleted (not including
    * any recursive children of those entries)
    * @throws IOException problem in the deletion process.
    */
-  public static int deleteChildren(FileSystem fileSystem,
+  public static FileStatus[] deleteChildren(FileSystem fileSystem,
       Path path,
       boolean recursive) throws IOException {
     FileStatus[] children = listChildren(fileSystem, path);
     for (FileStatus entry : children) {
       fileSystem.delete(entry.getPath(), recursive);
     }
-    return children.length;
+    return children;
   }
 
   /**
@@ -965,7 +965,7 @@ public class ContractTestUtils extends Assert {
    * @return the number of megabytes/second of the recorded operation
    */
   public static double bandwidthMBs(long bytes, long durationNS) {
-    return (bytes * 1000.0) / durationNS;
+    return bytes / (1024.0 * 1024) * 1.0e9 / durationNS;
   }
 
   /**
@@ -1415,6 +1415,14 @@ public class ContractTestUtils extends Assert {
       return endTime - startTime;
     }
 
+    /**
+     * Intermediate duration of the operation.
+     * @return how much time has passed since the start (in nanos).
+     */
+    public long elapsedTime() {
+      return now() - startTime;
+    }
+
     public double bandwidth(long bytes) {
       return bandwidthMBs(bytes, duration());
     }
@@ -1422,10 +1430,12 @@ public class ContractTestUtils extends Assert {
     /**
      * Bandwidth as bytes per second.
      * @param bytes bytes in
-     * @return the number of bytes per second this operation timed.
+     * @return the number of bytes per second this operation.
+     *         0 if duration == 0.
      */
     public double bandwidthBytes(long bytes) {
-      return (bytes * 1.0) / duration();
+      double duration = duration();
+      return duration > 0 ? bytes / duration : 0;
     }
 
     /**

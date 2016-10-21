@@ -18,24 +18,26 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
 /**
  * Contract test suite covering S3A integration with DistCp.
+ * Uses the block output stream, buffered to disk. This is the
+ * recommended output mechanism for DistCP due to its scalability.
  */
 public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
 
-  private static final long MULTIPART_SETTING = 8 * 1024 * 1024; // 8 MB
+  private static final long MULTIPART_SETTING = MULTIPART_MIN_SIZE;
 
   @Override
   protected Configuration createConfiguration() {
     Configuration newConf = super.createConfiguration();
-    newConf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_SETTING);
     newConf.setLong(MULTIPART_SIZE, MULTIPART_SETTING);
+    newConf.setBoolean(FAST_UPLOAD, true);
+    newConf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_DISK);
     return newConf;
   }
 

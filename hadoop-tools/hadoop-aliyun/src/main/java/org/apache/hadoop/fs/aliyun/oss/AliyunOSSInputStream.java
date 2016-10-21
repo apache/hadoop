@@ -123,7 +123,7 @@ public class AliyunOSSInputStream extends FSInputStream {
     }
 
     if (statistics != null && byteRead >= 0) {
-      statistics.incrementBytesRead(1);
+      statistics.incrementBytesRead(byteRead);
     }
     return byteRead;
   }

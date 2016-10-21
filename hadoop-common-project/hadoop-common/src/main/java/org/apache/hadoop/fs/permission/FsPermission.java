@@ -183,6 +183,18 @@ public class FsPermission implements Writable {
     return toShort();
   }
 
+  /**
+   * Returns the FsPermission in an octal format.
+   *
+   * @return short Unlike {@link #toShort()} which provides a binary
+   * representation, this method returns the standard octal style permission.
+   */
+  public short toOctal() {
+    int n = this.toShort();
+    int octal = (n>>>9&1)*1000 + (n>>>6&7)*100 + (n>>>3&7)*10 + (n&7);
+    return (short)octal;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (obj instanceof FsPermission) {

@@ -20,6 +20,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
  * An erasure coder to perform encoding or decoding given a group. Generally it
@@ -39,18 +40,25 @@ import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 public interface ErasureCoder extends Configurable {
 
   /**
-   * The number of data input units for the coding. A unit can be a byte,
-   * chunk or buffer or even a block.
+   * The number of data input units for the coding. A unit can be a byte, chunk
+   * or buffer or even a block.
    * @return count of data input units
    */
-  public int getNumDataUnits();
+  int getNumDataUnits();
 
   /**
    * The number of parity output units for the coding. A unit can be a byte,
    * chunk, buffer or even a block.
    * @return count of parity output units
    */
-  public int getNumParityUnits();
+  int getNumParityUnits();
+
+  /**
+   * The options of erasure coder. This option is passed to
+   * raw erasure coder as it is.
+   * @return erasure coder options
+   */
+  ErasureCoderOptions getOptions();
 
   /**
    * Calculate the encoding or decoding steps given a block blockGroup.
@@ -61,7 +69,7 @@ public interface ErasureCoder extends Configurable {
    * @param blockGroup the erasure coding block group containing all necessary
    *                   information for codec calculation
    */
-  public ErasureCodingStep calculateCoding(ECBlockGroup blockGroup);
+  ErasureCodingStep calculateCoding(ECBlockGroup blockGroup);
 
   /**
    * Tell if direct or off-heap buffer is preferred or not. It's for callers to
@@ -70,10 +78,11 @@ public interface ErasureCoder extends Configurable {
    * @return true if direct buffer is preferred for performance consideration,
    * otherwise false.
    */
-  public boolean preferDirectBuffer();
+  boolean preferDirectBuffer();
 
   /**
-   * Release the resources if any. Good chance to invoke RawErasureCoder#release.
+   * Release the resources if any. Good chance to invoke
+   * RawErasureCoder#release.
    */
-  public void release();
+  void release();
 }

@@ -49,7 +49,8 @@ HDFS Commands Guide
     * [storagepolicies](#storagepolicies)
     * [zkfc](#zkfc)
 * [Debug Commands](#Debug_Commands)
-    * [verify](#verify)
+    * [verifyMeta](#verifyMeta)
+    * [computeMeta](#computeMeta)
     * [recoverLease](#recoverLease)
 
 Overview
@@ -606,11 +607,11 @@ This comamnd starts a Zookeeper Failover Controller process for use with [HDFS H
 Debug Commands
 --------------
 
-Useful commands to help administrators debug HDFS issues, like validating block files and calling recoverLease.
+Useful commands to help administrators debug HDFS issues. These commands are for advanced users only.
 
-### `verify`
+### `verifyMeta`
 
-Usage: `hdfs debug verify -meta <metadata-file> [-block <block-file>]`
+Usage: `hdfs debug verifyMeta -meta <metadata-file> [-block <block-file>]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -618,6 +619,19 @@ Usage: `hdfs debug verify -meta <metadata-file> [-block <block-file>]`
 | `-meta` *metadata-file* | Absolute path for the metadata file on the local file system of the data node. |
 
 Verify HDFS metadata and block files. If a block file is specified, we will verify that the checksums in the metadata file match the block file.
+
+### `computeMeta`
+
+Usage: `hdfs debug computeMeta -block <block-file> -out <output-metadata-file>`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-block` *block-file* | Absolute path for the block file on the local file system of the data node. |
+| `-out` *output-metadata-file* | Absolute path for the output metadata file to store the checksum computation result from the block file. |
+
+Compute HDFS metadata from block files. If a block file is specified, we will compute the checksums from the block file, and save it to the specified output metadata file.
+
+**NOTE**: Use at your own risk! If the block file is corrupt and you overwrite it's meta file, it will show up as 'good' in HDFS, but you can't read the data. Only use as a last measure, and when you are 100% certain the block file is good.
 
 ### `recoverLease`
 

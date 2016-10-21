@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.io.erasurecode.codec;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodecOptions;
 import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
 import org.junit.Test;
 
@@ -25,10 +27,12 @@ import static org.junit.Assert.assertEquals;
 
 public class TestHHXORErasureCodec {
   private ECSchema schema = new ECSchema("hhxor", 10, 4);
+  private ErasureCodecOptions options = new ErasureCodecOptions(schema);
 
   @Test
   public void testGoodCodec() {
-    HHXORErasureCodec codec = new HHXORErasureCodec(schema);
+    HHXORErasureCodec codec
+        = new HHXORErasureCodec(new Configuration(), options);
     ErasureCoder encoder = codec.createEncoder();
     assertEquals(10, encoder.getNumDataUnits());
     assertEquals(4, encoder.getNumParityUnits());

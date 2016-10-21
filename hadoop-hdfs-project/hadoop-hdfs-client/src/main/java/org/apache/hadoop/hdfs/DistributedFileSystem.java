@@ -2478,11 +2478,12 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public Path getTrashRoot(Path path) {
-    if ((path == null) || path.isRoot() || !dfs.isHDFSEncryptionEnabled()) {
+    if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
       return super.getTrashRoot(path);
     }
 
-    String parentSrc = path.getParent().toUri().getPath();
+    String parentSrc = path.isRoot()?
+        path.toUri().getPath():path.getParent().toUri().getPath();
     try {
       EncryptionZone ez = dfs.getEZForPath(parentSrc);
       if ((ez != null)) {

@@ -989,20 +989,17 @@ public class Dispatcher {
   }
 
   private boolean shouldIgnore(DatanodeInfo dn) {
-    // ignore decommissioned nodes
-    final boolean decommissioned = dn.isDecommissioned();
-    // ignore decommissioning nodes
-    final boolean decommissioning = dn.isDecommissionInProgress();
+    // ignore out-of-service nodes
+    final boolean outOfService = !dn.isInService();
     // ignore nodes in exclude list
     final boolean excluded = Util.isExcluded(excludedNodes, dn);
     // ignore nodes not in the include list (if include list is not empty)
     final boolean notIncluded = !Util.isIncluded(includedNodes, dn);
 
-    if (decommissioned || decommissioning || excluded || notIncluded) {
+    if (outOfService || excluded || notIncluded) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Excluding datanode " + dn
-            + ": decommissioned=" + decommissioned
-            + ", decommissioning=" + decommissioning
+            + ": outOfService=" + outOfService
             + ", excluded=" + excluded
             + ", notIncluded=" + notIncluded);
       }

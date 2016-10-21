@@ -34,7 +34,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -130,9 +129,8 @@ public class TestTokenAspect {
     }
 
     @Override
-    public FileStatus[] listStatus(Path f) throws FileNotFoundException,
-        IOException {
-      return null;
+    public FileStatus[] listStatus(Path f) throws IOException {
+      return new FileStatus[0];
     }
 
     @Override

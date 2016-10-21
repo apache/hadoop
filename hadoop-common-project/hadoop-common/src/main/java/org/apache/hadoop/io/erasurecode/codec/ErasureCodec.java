@@ -18,34 +18,76 @@
 package org.apache.hadoop.io.erasurecode.codec;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.CodecUtil;
+import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCodecOptions;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
+import org.apache.hadoop.io.erasurecode.coder.ErasureDecoder;
+import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
 
 /**
- * Erasure Codec API that's to cover the essential specific aspects of a code.
- * Currently it cares only block grouper and erasure coder. In future we may
- * add more aspects here to make the behaviors customizable.
+ * Abstract Erasure Codec is defines the interface of each actual erasure
+ * codec classes.
  */
 @InterfaceAudience.Private
-public interface ErasureCodec extends Configurable {
+public abstract class ErasureCodec {
+
+  private ECSchema schema;
+  private ErasureCodecOptions codecOptions;
+  private ErasureCoderOptions coderOptions;
+
+  public ErasureCodec(Configuration conf,
+                      ErasureCodecOptions options) {
+    this.schema = options.getSchema();
+    this.codecOptions = options;
+    boolean allowChangeInputs = false;
+    this.coderOptions = new ErasureCoderOptions(schema.getNumDataUnits(),
+        schema.getNumParityUnits(), allowChangeInputs, false);
+  }
+
+  public String getName() {
+    return schema.getCodecName();
+  }
+
+  public ECSchema getSchema() {
+    return schema;
+  }
 
   /**
-   * Create block grouper
-   * @return block grouper
+   * Get a {@link ErasureCodecOptions}.
+   * @return erasure codec options
    */
-  public BlockGrouper createBlockGrouper();
+  public ErasureCodecOptions getCodecOptions() {
+    return codecOptions;
+  }
+
+  protected void setCodecOptions(ErasureCodecOptions options) {
+    this.codecOptions = options;
+    this.schema = options.getSchema();
+  }
 
   /**
-   * Create Erasure Encoder
-   * @return erasure encoder
+   * Get a {@link ErasureCoderOptions}.
+   * @return erasure coder options
    */
-  public ErasureCoder createEncoder();
+  public ErasureCoderOptions getCoderOptions() {
+    return coderOptions;
+  }
 
-  /**
-   * Create Erasure Decoder
-   * @return erasure decoder
-   */
-  public ErasureCoder createDecoder();
+  protected void setCoderOptions(ErasureCoderOptions options) {
+    this.coderOptions = options;
+  }
 
+  public abstract ErasureEncoder createEncoder();
+
+  public abstract ErasureDecoder createDecoder();
+
+  public BlockGrouper createBlockGrouper() {
+    BlockGrouper blockGrouper = new BlockGrouper();
+    blockGrouper.setSchema(getSchema());
+
+    return blockGrouper;
+  }
 }

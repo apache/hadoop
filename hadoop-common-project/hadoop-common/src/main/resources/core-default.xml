@@ -994,8 +994,8 @@
 <property>
   <name>fs.s3a.threads.max</name>
   <value>10</value>
-  <description> Maximum number of concurrent active (part)uploads,
-    which each use a thread from the threadpool.</description>
+  <description>The total number of threads available in the filesystem for data
+    uploads *or any other queued filesystem operation*.</description>
 </property>
 
 <property>
@@ -1008,8 +1008,7 @@
 <property>
   <name>fs.s3a.max.total.tasks</name>
   <value>5</value>
-  <description>Number of (part)uploads allowed to the queue before
-    blocking additional uploads.</description>
+  <description>The number of operations which can be queued for execution</description>
 </property>
 
 <property>
@@ -1047,13 +1046,21 @@
   <name>fs.s3a.multipart.purge</name>
   <value>false</value>
   <description>True if you want to purge existing multipart uploads that may not have been
-     completed/aborted correctly</description>
+    completed/aborted correctly. The corresponding purge age is defined in
+    fs.s3a.multipart.purge.age.
+    If set, when the filesystem is instantiated then all outstanding uploads
+    older than the purge age will be terminated -across the entire bucket.
+    This will impact multipart uploads by other applications and users. so should
+    be used sparingly, with an age value chosen to stop failed uploads, without
+    breaking ongoing operations.
+  </description>
 </property>
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
   <value>86400</value>
-  <description>Minimum age in seconds of multipart uploads to purge</description>
+  <description>Minimum age in seconds of multipart uploads to purge.
+  </description>
 </property>
 
 <property>
@@ -1086,10 +1093,50 @@
 <property>
   <name>fs.s3a.fast.upload</name>
   <value>false</value>
-  <description>Upload directly from memory instead of buffering to
-    disk first. Memory usage and parallelism can be controlled as up to
-    fs.s3a.multipart.size memory is consumed for each (part)upload actively
-    uploading (fs.s3a.threads.max) or queueing (fs.s3a.max.total.tasks)</description>
+  <description>
+    Use the incremental block-based fast upload mechanism with
+    the buffering mechanism set in fs.s3a.fast.upload.buffer.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.fast.upload.buffer</name>
+  <value>disk</value>
+  <description>
+    The buffering mechanism to use when using S3A fast upload
+    (fs.s3a.fast.upload=true). Values: disk, array, bytebuffer.
+    This configuration option has no effect if fs.s3a.fast.upload is false.
+
+    "disk" will use the directories listed in fs.s3a.buffer.dir as
+    the location(s) to save data prior to being uploaded.
+
+    "array" uses arrays in the JVM heap
+
+    "bytebuffer" uses off-heap memory within the JVM.
+
+    Both "array" and "bytebuffer" will consume memory in a single stream up to the number
+    of blocks set by:
+
+        fs.s3a.multipart.size * fs.s3a.fast.upload.active.blocks.
+
+    If using either of these mechanisms, keep this value low
+
+    The total number of threads performing work across all threads is set by
+    fs.s3a.threads.max, with fs.s3a.max.total.tasks values setting the number of queued
+    work items.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.fast.upload.active.blocks</name>
+  <value>4</value>
+  <description>
+    Maximum Number of blocks a single output stream can have
+    active (uploading, or queued to the central FileSystem
+    instance's pool of queued operations.
+
+    This stops a single stream overloading the shared thread pool.
+  </description>
 </property>
 
 <property>
@@ -1098,13 +1145,6 @@
   <description>Bytes to read ahead during a seek() before closing and
   re-opening the S3 HTTP connection. This option will be overridden if
   any call to setReadahead() is made to an open stream.</description>
-</property>
-
-<property>
-  <name>fs.s3a.fast.buffer.size</name>
-  <value>1048576</value>
-  <description>Size of initial memory buffer in bytes allocated for an
-    upload. No effect if fs.s3a.fast.upload is false.</description>
 </property>
 
 <property>

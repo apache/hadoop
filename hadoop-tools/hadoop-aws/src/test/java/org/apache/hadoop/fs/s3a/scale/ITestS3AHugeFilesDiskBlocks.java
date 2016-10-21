@@ -16,20 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.scale;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.Constants;
 
 /**
- * Run the encryption tests against the Fast output stream.
- * This verifies that both file writing paths can encrypt their data.
+ * Use {@link Constants#FAST_UPLOAD_BUFFER_DISK} for buffering.
  */
-public class ITestS3AEncryptionFastOutputStream extends ITestS3AEncryption {
+public class ITestS3AHugeFilesDiskBlocks extends AbstractSTestS3AHugeFiles {
 
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    conf.setBoolean(Constants.FAST_UPLOAD, true);
-    return conf;
+  protected String getBlockOutputBufferName() {
+    return Constants.FAST_UPLOAD_BUFFER_DISK;
   }
 }

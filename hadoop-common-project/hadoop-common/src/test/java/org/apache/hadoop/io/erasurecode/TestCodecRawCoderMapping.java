@@ -18,7 +18,6 @@
 package org.apache.hadoop.io.erasurecode;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoderLegacy;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
@@ -73,7 +72,7 @@ public class TestCodecRawCoderMapping {
     String dummyFactName = "DummyNoneExistingFactory";
     // set the dummy factory to rs-legacy and create a raw coder
     // with rs-default, which is OK as the raw coder key is not used
-    conf.set(CommonConfigurationKeys.
+    conf.set(CodecUtil.
         IO_ERASURECODE_CODEC_RS_LEGACY_RAWCODER_KEY, dummyFactName);
     RawErasureEncoder encoder = CodecUtil.createRawEncoder(conf,
         ErasureCodeConstants.RS_DEFAULT_CODEC_NAME, coderOptions);

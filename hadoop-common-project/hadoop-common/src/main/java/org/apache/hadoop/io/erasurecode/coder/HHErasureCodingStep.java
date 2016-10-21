@@ -21,26 +21,34 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 
 /**
- * Abstract class for common facilities shared by {@link ErasureEncodingStep}
- * and {@link ErasureDecodingStep}.
+ * Abstract class for Hitchhiker common facilities shared by
+ * {@link HHXORErasureEncodingStep}and {@link HHXORErasureDecodingStep}.
  *
- * It implements {@link ErasureEncodingStep}.
+ * It implements {@link ErasureCodingStep}.
  */
 @InterfaceAudience.Private
-public abstract class AbstractErasureCodingStep implements ErasureCodingStep {
+public abstract class HHErasureCodingStep
+        implements ErasureCodingStep {
 
   private ECBlock[] inputBlocks;
   private ECBlock[] outputBlocks;
 
+  private static final int SUB_PACKET_SIZE = 2;
+
   /**
    * Constructor given input blocks and output blocks.
+   *
    * @param inputBlocks
    * @param outputBlocks
    */
-  public AbstractErasureCodingStep(ECBlock[] inputBlocks,
-                                   ECBlock[] outputBlocks) {
+  public HHErasureCodingStep(ECBlock[] inputBlocks,
+                                     ECBlock[] outputBlocks) {
     this.inputBlocks = inputBlocks;
     this.outputBlocks = outputBlocks;
+  }
+
+  protected int getSubPacketSize() {
+    return SUB_PACKET_SIZE;
   }
 
   @Override
@@ -55,7 +63,6 @@ public abstract class AbstractErasureCodingStep implements ErasureCodingStep {
 
   @Override
   public void finish() {
-    // NOOP by default
+    // TODO: Finalize encoder/decoder if necessary
   }
-
 }

@@ -427,7 +427,7 @@ public class TestDiskspaceQuotaUpdate {
       testQuotaIssuesWhileCommittingHelper(nnSpy, (short) 1, (short) 1);
     } finally {
       for (MiniDFSCluster.DataNodeProperties dnprop : dnprops) {
-        cluster.restartDataNode(dnprop, true);
+        cluster.restartDataNode(dnprop);
       }
       cluster.waitActive();
     }

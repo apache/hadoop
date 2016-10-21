@@ -29,7 +29,7 @@ with extensions that add key assumptions to the system.
 1. The stream being read references a finite array of bytes.
 1. The length of the data does not change during the read process.
 1. The contents of the data does not change during the process.
-1. The source file remains present during the read process
+1. The source file remains present during the read process.
 1. Callers may use `Seekable.seek()` to offsets within the array of bytes, with future
 reads starting at this offset.
 1. The cost of forward and backward seeks is low.
@@ -104,7 +104,7 @@ Return the current position. The outcome when a stream is closed is undefined.
 
 Return the data at the current position.
 
-1. Implementations should fail when a stream is closed
+1. Implementations should fail when a stream is closed.
 1. There is no limit on how long `read()` may take to complete.
 
 #### Preconditions
@@ -124,7 +124,7 @@ Return the data at the current position.
 
 Read `length` bytes of data into the destination buffer, starting at offset
 `offset`. The source of the data is the current position of the stream,
-as implicitly set in `pos`
+as implicitly set in `pos`.
 
 #### Preconditions
 
@@ -166,7 +166,7 @@ the stream.
 
 That is, rather than `l` being simply defined as `min(length, len(data)-length)`,
 it strictly is an integer in the range `1..min(length, len(data)-length)`.
-While the caller may expect for as much as the buffer as possible to be filled
+While the caller may expect as much of the buffer as possible to be filled
 in, it is within the specification for an implementation to always return
 a smaller number, perhaps only ever 1 byte.
 
@@ -192,7 +192,7 @@ Some filesystems do not perform this check, relying on the `read()` contract
 to reject reads on a closed stream (e.g. `RawLocalFileSystem`).
 
 A `seek(0)` MUST always succeed, as  the seek position must be
-positive and less than the length of the Stream's:
+positive and less than the length of the Stream:
 
     s > 0 and ((s==0) or ((s < len(data)))) else raise [EOFException, IOException]
 
@@ -222,7 +222,7 @@ data at offset `offset`.
 
 #### Preconditions
 
-Not all subclasses implement the operation operation, and instead
+Not all subclasses implement this operation, and instead
 either raise an exception or return `False`.
 
     supported(FSDIS, Seekable.seekToNewSource) else raise [UnsupportedOperationException, IOException]
@@ -250,7 +250,7 @@ If the operation is supported and there is a new location for the data:
 
 The new data is the original data (or an updated version of it, as covered
 in the Consistency section below), but the block containing the data at `offset`
-sourced from a different replica.
+is sourced from a different replica.
 
 If there is no other copy, `FSDIS` is  not updated; the response indicates this:
 
@@ -258,7 +258,7 @@ If there is no other copy, `FSDIS` is  not updated; the response indicates this:
 
 Outside of test methods, the primary use of this method is in the {{FSInputChecker}}
 class, which can react to a checksum error in a read by attempting to source
-the data elsewhere. It a new source can be found it attempts to reread and
+the data elsewhere. If a new source can be found it attempts to reread and
 recheck that portion of the file.
 
 ## <a name="PositionedReadable"></a> interface `PositionedReadable`

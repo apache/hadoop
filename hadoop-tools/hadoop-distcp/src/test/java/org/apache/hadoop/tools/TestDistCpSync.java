@@ -64,7 +64,7 @@ public class TestDistCpSync {
 
     options = new DistCpOptions(Arrays.asList(source), target);
     options.setSyncFolder(true);
-    options.setUseDiff(true, "s1", "s2");
+    options.setUseDiff("s1", "s2");
     options.appendToConf(conf);
 
     conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, target.toString());
@@ -312,7 +312,7 @@ public class TestDistCpSync {
    */
   @Test
   public void testSyncWithCurrent() throws Exception {
-    options.setUseDiff(true, "s1", ".");
+    options.setUseDiff("s1", ".");
     initData(source);
     initData(target);
     enableAndCreateFirstSnapshot();

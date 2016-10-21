@@ -27,8 +27,9 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
  * an encoding step involved in the whole process of encoding a block group.
  */
 @InterfaceAudience.Private
-public class ErasureEncodingStep extends AbstractErasureCodingStep {
-
+public class ErasureEncodingStep implements ErasureCodingStep {
+  private ECBlock[] inputBlocks;
+  private ECBlock[] outputBlocks;
   private RawErasureEncoder rawEncoder;
 
   /**
@@ -39,7 +40,8 @@ public class ErasureEncodingStep extends AbstractErasureCodingStep {
    */
   public ErasureEncodingStep(ECBlock[] inputBlocks, ECBlock[] outputBlocks,
                              RawErasureEncoder rawEncoder) {
-    super(inputBlocks, outputBlocks);
+    this.inputBlocks = inputBlocks;
+    this.outputBlocks = outputBlocks;
     this.rawEncoder = rawEncoder;
   }
 
@@ -48,4 +50,18 @@ public class ErasureEncodingStep extends AbstractErasureCodingStep {
     rawEncoder.encode(inputChunks, outputChunks);
   }
 
+  @Override
+  public ECBlock[] getInputBlocks() {
+    return inputBlocks;
+  }
+
+  @Override
+  public ECBlock[] getOutputBlocks() {
+    return outputBlocks;
+  }
+
+  @Override
+  public void finish() {
+    rawEncoder.release();
+  }
 }

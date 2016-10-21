@@ -355,6 +355,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
+  public boolean truncate(Path path, long newLength) throws IOException {
+    return super.truncate(fullPath(path), newLength);
+  }
+
+  @Override
   public List<String> listXAttrs(Path path) throws IOException {
     return super.listXAttrs(fullPath(path));
   }

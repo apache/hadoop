@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -540,11 +541,20 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     res.totalFiles++;
     res.totalSize += fileLen;
     res.totalBlocks += blocks.locatedBlockCount();
+    String redundancyPolicy;
+    ErasureCodingPolicy ecPolicy = file.getErasureCodingPolicy();
+    if (ecPolicy == null) { // a replicated file
+      redundancyPolicy = "replicated: replication=" +
+          file.getReplication() + ",";
+    } else {
+      redundancyPolicy = "erasure-coded: policy=" + ecPolicy.getName() + ",";
+    }
+
     if (showOpenFiles && isOpen) {
-      out.print(path + " " + fileLen + " bytes, " +
+      out.print(path + " " + fileLen + " bytes, " + redundancyPolicy + " " +
         blocks.locatedBlockCount() + " block(s), OPENFORWRITE: ");
     } else if (showFiles) {
-      out.print(path + " " + fileLen + " bytes, " +
+      out.print(path + " " + fileLen + " bytes, " + redundancyPolicy + " " +
         blocks.locatedBlockCount() + " block(s): ");
     } else if (showprogress) {
       out.print('.');

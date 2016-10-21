@@ -17,37 +17,29 @@
  */
 package org.apache.hadoop.io.erasurecode.codec;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.grouper.BlockGrouper;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.ErasureCodecOptions;
+import org.apache.hadoop.io.erasurecode.coder.DummyErasureDecoder;
+import org.apache.hadoop.io.erasurecode.coder.DummyErasureEncoder;
+import org.apache.hadoop.io.erasurecode.coder.ErasureDecoder;
+import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 
 /**
- * Abstract Erasure Codec that implements {@link ErasureCodec}.
+ * Dummy erasure coder does not real coding computing. This is used for only
+ * test or performance comparison with other erasure coders.
  */
-@InterfaceAudience.Private
-public abstract class AbstractErasureCodec extends Configured
-    implements ErasureCodec {
-
-  private final ECSchema schema;
-
-  public AbstractErasureCodec(ECSchema schema) {
-    this.schema = schema;
-  }
-
-  public String getName() {
-    return schema.getCodecName();
-  }
-
-  public ECSchema getSchema() {
-    return schema;
+public class DummyErasureCodec extends ErasureCodec {
+  public DummyErasureCodec(Configuration conf, ErasureCodecOptions options) {
+    super(conf, options);
   }
 
   @Override
-  public BlockGrouper createBlockGrouper() {
-    BlockGrouper blockGrouper = new BlockGrouper();
-    blockGrouper.setSchema(getSchema());
+  public ErasureEncoder createEncoder() {
+    return new DummyErasureEncoder(getCoderOptions());
+  }
 
-    return blockGrouper;
+  @Override
+  public ErasureDecoder createDecoder() {
+    return new DummyErasureDecoder(getCoderOptions());
   }
 }

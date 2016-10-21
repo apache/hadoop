@@ -29,13 +29,19 @@ import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.TrashPolicyDefault.Emptier;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This class tests commands from Trash.
@@ -44,6 +50,13 @@ public class TestTrash extends TestCase {
 
   private final static Path TEST_DIR = new Path(GenericTestUtils.getTempPath(
       "testTrash"));
+
+  @Before
+  public void setUp() throws IOException {
+    // ensure each test initiates a FileSystem instance,
+    // avoid getting an old instance from cache.
+    FileSystem.closeAll();
+  }
 
   protected static Path mkdir(FileSystem fs, Path p) throws IOException {
     assertTrue(fs.mkdirs(p));
@@ -516,6 +529,81 @@ public class TestTrash extends TestCase {
     assertTrue(trash.getTrashPolicy().getClass().equals(TestTrashPolicy.class));
   }
 
+  @Test
+  public void testCheckpointInterval() throws IOException {
+    // Verify if fs.trash.checkpoint.interval is set to positive number
+    // but bigger than fs.trash.interval,
+    // the value should be reset to fs.trash.interval
+    verifyDefaultPolicyIntervalValues(10, 12, 10);
+
+    // Verify if fs.trash.checkpoint.interval is set to positive number
+    // and smaller than fs.trash.interval, the value should be respected
+    verifyDefaultPolicyIntervalValues(10, 5, 5);
+
+    // Verify if fs.trash.checkpoint.interval sets to 0
+    // the value should be reset to fs.trash.interval
+    verifyDefaultPolicyIntervalValues(10, 0, 10);
+
+    // Verify if fs.trash.checkpoint.interval sets to a negative number
+    // the value should be reset to fs.trash.interval
+    verifyDefaultPolicyIntervalValues(10, -1, 10);
+  }
+
+  @Test
+  public void testMoveEmptyDirToTrash() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setClass(FS_FILE_IMPL_KEY,
+        RawLocalFileSystem.class,
+        FileSystem.class);
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 1); // 1 min
+    FileSystem fs = FileSystem.get(conf);
+    verifyMoveEmptyDirToTrash(fs, conf);
+  }
+
+  /**
+   * Simulate the carrier process of the trash emptier restarts,
+   * verify it honors the <b>fs.trash.interval</b> before and after restart.
+   * @throws Exception
+   */
+  @Test
+  public void testTrashRestarts() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.trash.classname",
+        AuditableTrashPolicy.class,
+        TrashPolicy.class);
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    conf.set(FS_TRASH_INTERVAL_KEY, "50"); // in milliseconds for test
+    Trash trash = new Trash(conf);
+    // create 5 checkpoints
+    for(int i=0; i<5; i++) {
+      trash.checkpoint();
+    }
+
+    // Run the trash emptier for 120ms, it should run
+    // 2 times deletion as the interval is 50ms.
+    // Verify the checkpoints number when shutting down the emptier.
+    verifyAuditableTrashEmptier(trash, 120, 3);
+
+    // reconfigure the interval to 100 ms
+    conf.set(FS_TRASH_INTERVAL_KEY, "100");
+    Trash trashNew = new Trash(conf);
+
+    // Run the trash emptier for 120ms, it should run
+    // 1 time deletion.
+    verifyAuditableTrashEmptier(trashNew, 120, 2);
+  }
+
+  @Test
+  public void testTrashPermission()  throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.trash.classname",
+        TrashPolicyDefault.class,
+        TrashPolicy.class);
+    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
+    conf.set(FS_TRASH_INTERVAL_KEY, "0.2");
+    verifyTrashPermission(FileSystem.getLocal(conf), conf);
+  }
+
   public void testTrashEmptier() throws Exception {
     Configuration conf = new Configuration();
     // Trash with 12 second deletes and 6 seconds checkpoints
@@ -679,12 +767,143 @@ public class TestTrash extends TestCase {
         long factoredTime = first*factor;
         assertTrue(iterTime<factoredTime); //no more then twice of median first 10
       }
-    } 
+    }
   }
-  
-  public static void main(String [] arg) throws IOException{
-    // run performance piece as a separate test
-    performanceTestDeleteSameFile();
+
+  public static void verifyMoveEmptyDirToTrash(FileSystem fs,
+      Configuration conf) throws IOException {
+    Path caseRoot = new Path(
+        GenericTestUtils.getTempPath("testUserTrash"));
+    Path testRoot = new Path(caseRoot, "trash-users");
+    Path emptyDir = new Path(testRoot, "empty-dir");
+    try (FileSystem fileSystem = fs){
+      fileSystem.mkdirs(emptyDir);
+      Trash trash = new Trash(fileSystem, conf);
+      // Make sure trash root is clean
+      Path trashRoot = trash.getCurrentTrashDir(emptyDir);
+      fileSystem.delete(trashRoot, true);
+      // Move to trash should be succeed
+      assertTrue("Move an empty directory to trash failed",
+          trash.moveToTrash(emptyDir));
+      // Verify the empty dir is removed
+      assertFalse("The empty directory still exists on file system",
+          fileSystem.exists(emptyDir));
+      emptyDir = fileSystem.makeQualified(emptyDir);
+      Path dirInTrash = Path.mergePaths(trashRoot, emptyDir);
+      assertTrue("Directory wasn't moved to trash",
+          fileSystem.exists(dirInTrash));
+      FileStatus[] flist = fileSystem.listStatus(dirInTrash);
+      assertTrue("Directory is not empty",
+          flist!= null && flist.length == 0);
+    }
+  }
+
+  /**
+   * Create a bunch of files and set with different permission, after
+   * moved to trash, verify the location in trash directory is expected
+   * and the permission is reserved.
+   *
+   * @throws IOException
+   */
+  public static void verifyTrashPermission(FileSystem fs, Configuration conf)
+      throws IOException {
+    Path caseRoot = new Path(
+        GenericTestUtils.getTempPath("testTrashPermission"));
+    try (FileSystem fileSystem = fs){
+      Trash trash = new Trash(fileSystem, conf);
+      FileSystemTestWrapper wrapper =
+          new FileSystemTestWrapper(fileSystem);
+
+      short[] filePermssions = {
+          (short) 0600,
+          (short) 0644,
+          (short) 0660,
+          (short) 0700,
+          (short) 0750,
+          (short) 0755,
+          (short) 0775,
+          (short) 0777
+      };
+
+      for(int i=0; i<filePermssions.length; i++) {
+        // Set different permission to files
+        FsPermission fsPermission = new FsPermission(filePermssions[i]);
+        Path file = new Path(caseRoot, "file" + i);
+        byte[] randomBytes = new byte[new Random().nextInt(10)];
+        wrapper.writeFile(file, randomBytes);
+        wrapper.setPermission(file, fsPermission);
+
+        // Move file to trash
+        trash.moveToTrash(file);
+
+        // Verify the file is moved to trash, at expected location
+        Path trashDir = trash.getCurrentTrashDir(file);
+        if(!file.isAbsolute()) {
+          file = wrapper.makeQualified(file);
+        }
+        Path fileInTrash = Path.mergePaths(trashDir, file);
+        FileStatus fstat = wrapper.getFileStatus(fileInTrash);
+        assertTrue(String.format("File %s is not moved to trash",
+            fileInTrash.toString()),
+            wrapper.exists(fileInTrash));
+        // Verify permission not change
+        assertTrue(String.format("Expected file: %s is %s, but actual is %s",
+            fileInTrash.toString(),
+            fsPermission.toString(),
+            fstat.getPermission().toString()),
+            fstat.getPermission().equals(fsPermission));
+      }
+
+      // Verify the trash directory can be removed
+      Path trashRoot = trash.getCurrentTrashDir();
+      assertTrue(wrapper.delete(trashRoot, true));
+    }
+  }
+
+  private void verifyDefaultPolicyIntervalValues(long trashInterval,
+      long checkpointInterval, long expectedInterval) throws IOException {
+    Configuration conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, trashInterval);
+    conf.set("fs.trash.classname", TrashPolicyDefault.class.getName());
+    conf.setLong(FS_TRASH_CHECKPOINT_INTERVAL_KEY, checkpointInterval);
+    Trash trash = new Trash(conf);
+    Emptier emptier = (Emptier)trash.getEmptier();
+    assertEquals(expectedInterval, emptier.getEmptierInterval());
+  }
+
+  /**
+   * Launch the {@link Trash} emptier for given milliseconds,
+   * verify the number of checkpoints is expected.
+   */
+  private void verifyAuditableTrashEmptier(Trash trash,
+      long timeAlive,
+      int expectedNumOfCheckpoints)
+          throws IOException {
+    Thread emptierThread = null;
+    try {
+      Runnable emptier = trash.getEmptier();
+      emptierThread = new Thread(emptier);
+      emptierThread.start();
+
+      // Shutdown the emptier thread after a given time
+      Thread.sleep(timeAlive);
+      emptierThread.interrupt();
+      emptierThread.join();
+
+      AuditableTrashPolicy at = (AuditableTrashPolicy) trash.getTrashPolicy();
+      assertEquals(
+          String.format("Expected num of checkpoints is %s, but actual is %s",
+              expectedNumOfCheckpoints, at.getNumberOfCheckpoints()),
+          expectedNumOfCheckpoints,
+          at.getNumberOfCheckpoints());
+    } catch (InterruptedException  e) {
+      // Ignore
+    } finally {
+      // Avoid thread leak
+      if(emptierThread != null) {
+        emptierThread.interrupt();
+      }
+    }
   }
 
   // Test TrashPolicy. Don't care about implementation.
@@ -730,6 +949,129 @@ public class TestTrash extends TestCase {
     @Override
     public Runnable getEmptier() throws IOException {
       return null;
+    }
+  }
+
+  /**
+   * A fake {@link TrashPolicy} implementation, it keeps a count
+   * on number of checkpoints in the trash. It doesn't do anything
+   * other than updating the count.
+   *
+   */
+  public static class AuditableTrashPolicy extends TrashPolicy {
+
+    public AuditableTrashPolicy() {}
+
+    public AuditableTrashPolicy(Configuration conf)
+        throws IOException {
+      this.initialize(conf, null);
+    }
+
+    @Override
+    @Deprecated
+    public void initialize(Configuration conf, FileSystem fs, Path home) {
+      this.deletionInterval = (long)(conf.getFloat(
+          FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT));
+    }
+
+    @Override
+    public void initialize(Configuration conf, FileSystem fs) {
+      this.deletionInterval = (long)(conf.getFloat(
+          FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT));
+    }
+
+    @Override
+    public boolean moveToTrash(Path path) throws IOException {
+      return false;
+    }
+
+    @Override
+    public void createCheckpoint() throws IOException {
+      AuditableCheckpoints.add();
+    }
+
+    @Override
+    public void deleteCheckpoint() throws IOException {
+      AuditableCheckpoints.delete();
+    }
+
+    @Override
+    public Path getCurrentTrashDir() {
+      return null;
+    }
+
+    @Override
+    public Runnable getEmptier() throws IOException {
+      return new AuditableEmptier(getConf());
+    }
+
+    public int getNumberOfCheckpoints() {
+      return AuditableCheckpoints.get();
+    }
+
+    /**
+     * A fake emptier that simulates to delete a checkpoint
+     * in a fixed interval.
+     */
+    private class AuditableEmptier implements Runnable {
+      private Configuration conf = null;
+      public AuditableEmptier(Configuration conf) {
+        this.conf = conf;
+      }
+
+      @Override
+      public void run() {
+        AuditableTrashPolicy trash = null;
+        try {
+          trash = new AuditableTrashPolicy(conf);
+        } catch (IOException e1) {}
+        while(true) {
+          try {
+            Thread.sleep(deletionInterval);
+            trash.deleteCheckpoint();
+          } catch (IOException e) {
+            // no exception
+          } catch (InterruptedException e) {
+            break;
+          }
+        }
+      }
+    }
+
+    @Override
+    public boolean isEnabled() {
+      return true;
+    }
+  }
+
+  /**
+   * Only counts the number of checkpoints, not do anything more.
+   * Declared as an inner static class to share state between
+   * testing threads.
+   */
+  private static class AuditableCheckpoints {
+
+    private static AtomicInteger numOfCheckpoint =
+        new AtomicInteger(0);
+
+    private static void add() {
+      numOfCheckpoint.incrementAndGet();
+      System.out.println(String
+          .format("Create a checkpoint, current number of checkpoints %d",
+              numOfCheckpoint.get()));
+    }
+
+    private static void delete() {
+      if(numOfCheckpoint.get() > 0) {
+        numOfCheckpoint.decrementAndGet();
+        System.out.println(String
+            .format("Delete a checkpoint, current number of checkpoints %d",
+                numOfCheckpoint.get()));
+      }
+    }
+
+    private static int get() {
+      return numOfCheckpoint.get();
     }
   }
 }

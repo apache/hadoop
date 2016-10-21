@@ -124,40 +124,10 @@ public class DFSUtil {
   }
 
   /**
-   * Compartor for sorting DataNodeInfo[] based on decommissioned states.
-   * Decommissioned nodes are moved to the end of the array on sorting with
-   * this compartor.
+   * Comparator for sorting DataNodeInfo[] based on
+   * decommissioned and entering_maintenance states.
    */
-  public static final Comparator<DatanodeInfo> DECOM_COMPARATOR = 
-    new Comparator<DatanodeInfo>() {
-      @Override
-      public int compare(DatanodeInfo a, DatanodeInfo b) {
-        return a.isDecommissioned() == b.isDecommissioned() ? 0 : 
-          a.isDecommissioned() ? 1 : -1;
-      }
-    };
-
-
-  /**
-   * Comparator for sorting DataNodeInfo[] based on decommissioned/stale states.
-   * Decommissioned/stale nodes are moved to the end of the array on sorting
-   * with this comparator.
-   */ 
-  @InterfaceAudience.Private 
-  public static class DecomStaleComparator implements Comparator<DatanodeInfo> {
-    private final long staleInterval;
-
-    /**
-     * Constructor of DecomStaleComparator
-     * 
-     * @param interval
-     *          The time interval for marking datanodes as stale is passed from
-     *          outside, since the interval may be changed dynamically
-     */
-    public DecomStaleComparator(long interval) {
-      this.staleInterval = interval;
-    }
-
+  public static class ServiceComparator implements Comparator<DatanodeInfo> {
     @Override
     public int compare(DatanodeInfo a, DatanodeInfo b) {
       // Decommissioned nodes will still be moved to the end of the list
@@ -166,6 +136,45 @@ public class DFSUtil {
       } else if (b.isDecommissioned()) {
         return -1;
       }
+
+      // ENTERING_MAINTENANCE nodes should be after live nodes.
+      if (a.isEnteringMaintenance()) {
+        return b.isEnteringMaintenance() ? 0 : 1;
+      } else if (b.isEnteringMaintenance()) {
+        return -1;
+      } else {
+        return 0;
+      }
+    }
+  }
+
+  /**
+   * Comparator for sorting DataNodeInfo[] based on
+   * stale, decommissioned and entering_maintenance states.
+   * Order: live -> stale -> entering_maintenance -> decommissioned
+   */
+  @InterfaceAudience.Private 
+  public static class ServiceAndStaleComparator extends ServiceComparator {
+    private final long staleInterval;
+
+    /**
+     * Constructor of ServiceAndStaleComparator
+     * 
+     * @param interval
+     *          The time interval for marking datanodes as stale is passed from
+     *          outside, since the interval may be changed dynamically
+     */
+    public ServiceAndStaleComparator(long interval) {
+      this.staleInterval = interval;
+    }
+
+    @Override
+    public int compare(DatanodeInfo a, DatanodeInfo b) {
+      int ret = super.compare(a, b);
+      if (ret != 0) {
+        return ret;
+      }
+
       // Stale nodes will be moved behind the normal nodes
       boolean aStale = a.isStale(staleInterval);
       boolean bStale = b.isStale(staleInterval);

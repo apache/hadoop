@@ -96,7 +96,11 @@ public class TestDataNodeMXBean {
       int xceiverCount = (Integer)mbs.getAttribute(mxbeanName,
           "XceiverCount");
       Assert.assertEquals(datanode.getXceiverCount(), xceiverCount);
-
+      // Ensure mxbean's XmitsInProgress is same as the DataNode's
+      // live value.
+      int xmitsInProgress =
+          (Integer) mbs.getAttribute(mxbeanName, "XmitsInProgress");
+      Assert.assertEquals(datanode.getXmitsInProgress(), xmitsInProgress);
       String bpActorInfo = (String)mbs.getAttribute(mxbeanName,
           "BPServiceActorInfo");
       Assert.assertEquals(datanode.getBPServiceActorInfo(), bpActorInfo);

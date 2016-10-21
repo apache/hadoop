@@ -130,12 +130,14 @@ class ErasureCodingWork extends BlockReconstructionWork {
       // we only need to replicate one internal block to a new rack
       int sourceIndex = chooseSource4SimpleReplication();
       createReplicationWork(sourceIndex, targets[0]);
-    } else if (numberReplicas.decommissioning() > 0 && hasAllInternalBlocks()) {
-      List<Integer> decommissioningSources = findDecommissioningSources();
+    } else if ((numberReplicas.decommissioning() > 0 ||
+        numberReplicas.liveEnteringMaintenanceReplicas() > 0) &&
+        hasAllInternalBlocks()) {
+      List<Integer> leavingServiceSources = findLeavingServiceSources();
       // decommissioningSources.size() should be >= targets.length
-      final int num = Math.min(decommissioningSources.size(), targets.length);
+      final int num = Math.min(leavingServiceSources.size(), targets.length);
       for (int i = 0; i < num; i++) {
-        createReplicationWork(decommissioningSources.get(i), targets[i]);
+        createReplicationWork(leavingServiceSources.get(i), targets[i]);
       }
     } else {
       targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
@@ -162,10 +164,12 @@ class ErasureCodingWork extends BlockReconstructionWork {
     }
   }
 
-  private List<Integer> findDecommissioningSources() {
+  private List<Integer> findLeavingServiceSources() {
     List<Integer> srcIndices = new ArrayList<>();
     for (int i = 0; i < getSrcNodes().length; i++) {
-      if (getSrcNodes()[i].isDecommissionInProgress()) {
+      if (getSrcNodes()[i].isDecommissionInProgress() ||
+          (getSrcNodes()[i].isEnteringMaintenance() &&
+          getSrcNodes()[i].isAlive())) {
         srcIndices.add(i);
       }
     }

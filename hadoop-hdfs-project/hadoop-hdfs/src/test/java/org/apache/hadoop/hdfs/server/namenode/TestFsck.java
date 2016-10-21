@@ -1700,9 +1700,21 @@ public class TestFsck {
     // restart the cluster; bring up namenode but not the data nodes
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(0).format(false).build();
-    outStr = runFsck(conf, 1, true, "/");
+    outStr = runFsck(conf, 1, true, "/", "-files", "-blocks");
     // expect the result is corrupt
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+    String[] outLines = outStr.split("\\r?\\n");
+    for (String line: outLines) {
+      if (line.contains(largeFilePath.toString())) {
+        final HdfsFileStatus file = cluster.getNameNode().getRpcServer().
+            getFileInfo(largeFilePath.toString());
+        assertTrue(line.contains("policy=" +
+            file.getErasureCodingPolicy().getName()));
+      } else if (line.contains(replFilePath.toString())) {
+        assertTrue(line.contains("replication=" + cluster.getFileSystem().
+            getFileStatus(replFilePath).getReplication()));
+      }
+    }
     System.out.println(outStr);
   }
 

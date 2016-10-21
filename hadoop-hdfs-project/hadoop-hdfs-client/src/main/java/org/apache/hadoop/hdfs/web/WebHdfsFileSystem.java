@@ -91,6 +91,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -471,6 +472,13 @@ public class WebHdfsFileSystem extends FileSystem
       }
 
       IOException re = JsonUtilClient.toRemoteException(m);
+
+      //check if exception is due to communication with a Standby name node
+      if (re.getMessage() != null && re.getMessage().endsWith(
+          StandbyException.class.getSimpleName())) {
+        LOG.trace("Detected StandbyException", re);
+        throw new IOException(re);
+      }
       // extract UGI-related exceptions and unwrap InvalidToken
       // the NN mangles these exceptions but the DN does not and may need
       // to re-fetch a token if either report the token is expired

@@ -44,7 +44,7 @@ Interfaces have two main attributes: Audience and Stability
 
 Audience denotes the potential consumers of the interface. While many interfaces
 are internal/private to the implementation, other are public/external interfaces
-are meant for wider consumption by applications and/or clients. For example, in
+that are meant for wider consumption by applications and/or clients. For example, in
 posix, libc is an external or public interface, while large parts of the kernel
 are internal or private interfaces. Also, some interfaces are targeted towards
 other specific subsystems.
@@ -52,7 +52,7 @@ other specific subsystems.
 Identifying the audience of an interface helps define the impact of breaking
 it. For instance, it might be okay to break the compatibility of an interface
 whose audience is a small number of specific subsystems. On the other hand, it
-is probably not okay to break a protocol interfaces that millions of Internet
+is probably not okay to break a protocol interface that millions of Internet
 users depend on.
 
 Hadoop uses the following kinds of audience in order of increasing/wider visibility:
@@ -75,7 +75,7 @@ referred to as project-private).
 
 The interface is used by a specified set of projects or systems (typically
 closely related projects). Other projects or systems should not use the
-interface. Changes to the interface will be communicated/ negotiated with the
+interface. Changes to the interface will be communicated/negotiated with the
 specified projects. For example, in the Hadoop project, some interfaces are
 LimitedPrivate{HDFS, MapReduce} in that they are private to the HDFS and
 MapReduce projects.
@@ -92,16 +92,16 @@ the interface are allowed. Hadoop APIs have the following levels of stability.
 #### Stable
 
 Can evolve while retaining compatibility for minor release boundaries; in other
-words, incompatible changes to APIs marked Stable are allowed only at major
+words, incompatible changes to APIs marked as Stable are allowed only at major
 releases (i.e. at m.0).
 
 #### Evolving
 
-Evolving, but incompatible changes are allowed at minor release (i.e. m .x)
+Evolving, but incompatible changes are allowed at minor releases (i.e. m .x)
 
 #### Unstable
 
-Incompatible changes to Unstable APIs are allowed any time. This usually makes
+Incompatible changes to Unstable APIs are allowed at any time. This usually makes
 sense for only private interfaces.
 
 However one may call this out for a supposedly public interface to highlight
@@ -109,11 +109,11 @@ that it should not be used as an interface; for public interfaces, labeling it
 as Not-an-interface is probably more appropriate than "Unstable".
 
 Examples of publicly visible interfaces that are unstable
-(i.e. not-an-interface): GUI, CLIs whose output format will change
+(i.e. not-an-interface): GUI, CLIs whose output format will change.
 
 #### Deprecated
 
-APIs that could potentially removed in the future and should not be used.
+APIs that could potentially be removed in the future and should not be used.
 
 How are the Classifications Recorded?
 -------------------------------------
@@ -155,13 +155,13 @@ FAQ
         * e.g. In HDFS, NN-DN protocol is private but stable and can help
           implement rolling upgrades. It communicates that this interface should
           not be changed in incompatible ways even though it is private.
-        * e.g. In HDFS, FSImage stability can help provide more flexible roll backs.
+        * e.g. In HDFS, FSImage stability provides more flexible rollback.
 
 * What is the harm in applications using a private interface that is stable? How
   is it different than a public stable interface?
     * While a private interface marked as stable is targeted to change only at
       major releases, it may break at other times if the providers of that
-      interface are willing to changes the internal users of that
+      interface are willing to change the internal users of that
       interface. Further, a public stable interface is less likely to break even
       at major releases (even though it is allowed to break compatibility)
       because the impact of the change is larger. If you use a private interface
@@ -182,11 +182,11 @@ FAQ
       away with private then do so; if the interface is really for general use
       for all applications then do so. But remember that making an interface
       public has huge responsibility. Sometimes Limited-private is just right.
-    * A good example of a limited-private interface is BlockLocations, This is
+    * A good example of a limited-private interface is BlockLocations, This is a
       fairly low-level interface that we are willing to expose to MR and perhaps
       HBase. We are likely to change it down the road and at that time we will
-      have get a coordinated effort with the MR team to release matching
-      releases. While MR and HDFS are always released in sync today, they may
+      coordinate release effort with the MR team.
+      While MR and HDFS are always released in sync today, they may
       change down the road.
     * If you have a limited-private interface with many projects listed then you
       are fooling yourself. It is practically public.
@@ -207,7 +207,7 @@ FAQ
       break it at minor releases.
     * One example of a public interface that is unstable is where one is
       providing an implementation of a standards-body based interface that is
-      still under development. For example, many companies, in an attampt to be
+      still under development. For example, many companies, in an attempt to be
       first to market, have provided implementations of a new NFS protocol even
       when the protocol was not fully completed by IETF. The implementor cannot
       evolve the interface in a fashion that causes least distruption because

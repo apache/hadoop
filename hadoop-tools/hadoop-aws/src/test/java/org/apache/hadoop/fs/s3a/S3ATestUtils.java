@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
@@ -38,6 +37,12 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * Utilities for the S3A tests.
  */
 public class S3ATestUtils {
+
+  /**
+   * Value to set a system property to (in maven) to declare that
+   * a property has been unset.
+   */
+  public static final String UNSET_PROPERTY = "unset";
 
   /**
    * Create the test filesystem.
@@ -53,8 +58,25 @@ public class S3ATestUtils {
    */
   public static S3AFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
-    String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
+    return createTestFileSystem(conf, true);
+  }
 
+  /**
+   * Create the test filesystem with or without multipart purging
+   *
+   * If the test.fs.s3a.name property is not set, this will
+   * trigger a JUnit failure.
+   * @param conf configuration
+   * @param purge flag to enable Multipart purging
+   * @return the FS
+   * @throws IOException IO Problems
+   * @throws AssumptionViolatedException if the FS is not named
+   */
+  public static S3AFileSystem createTestFileSystem(Configuration conf,
+      boolean purge)
+      throws IOException {
+
+    String fsname = conf.getTrimmed(TEST_FS_S3A_NAME, "");
 
     boolean liveTest = !StringUtils.isEmpty(fsname);
     URI testURI = null;
@@ -70,8 +92,12 @@ public class S3ATestUtils {
     }
     S3AFileSystem fs1 = new S3AFileSystem();
     //enable purging in tests
-    conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
-    conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 0);
+    if (purge) {
+      conf.setBoolean(PURGE_EXISTING_MULTIPART, true);
+      // but a long delay so that parallel multipart tests don't
+      // suddenly start timing out
+      conf.setInt(PURGE_EXISTING_MULTIPART_AGE, 30 * 60);
+    }
     fs1.initialize(testURI, conf);
     return fs1;
   }
@@ -109,32 +135,6 @@ public class S3ATestUtils {
   }
 
   /**
-   * Repeatedly attempt a callback until timeout or a {@link FailFastException}
-   * is raised. This is modeled on ScalaTests {@code eventually(Closure)} code.
-   * @param timeout timeout
-   * @param callback callback to invoke
-   * @throws FailFastException any fast-failure
-   * @throws Exception the exception which caused the iterator to fail
-   */
-  public static void eventually(int timeout, Callable<Void> callback)
-      throws Exception {
-    Exception lastException;
-    long endtime = System.currentTimeMillis() + timeout;
-    do {
-      try {
-        callback.call();
-        return;
-      } catch (InterruptedException | FailFastException e) {
-        throw e;
-      } catch (Exception e) {
-        lastException = e;
-      }
-      Thread.sleep(500);
-    } while (endtime > System.currentTimeMillis());
-    throw lastException;
-  }
-
-  /**
    * patch the endpoint option so that irrespective of where other tests
    * are working, the IO performance tests can work with the landsat
    * images.
@@ -149,24 +149,118 @@ public class S3ATestUtils {
   }
 
   /**
-   * The exception to raise so as to exit fast from
-   * {@link #eventually(int, Callable)}.
+   * Get a long test property.
+   * <ol>
+   *   <li>Look up configuration value (which can pick up core-default.xml),
+   *       using {@code defVal} as the default value (if conf != null).
+   *   </li>
+   *   <li>Fetch the system property.</li>
+   *   <li>If the system property is not empty or "(unset)":
+   *   it overrides the conf value.
+   *   </li>
+   * </ol>
+   * This puts the build properties in charge of everything. It's not a
+   * perfect design; having maven set properties based on a file, as ant let
+   * you do, is better for customization.
+   *
+   * As to why there's a special (unset) value, see
+   * {@link http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven}
+   * @param conf config: may be null
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
    */
-  public static class FailFastException extends Exception {
-    public FailFastException() {
-    }
+  public static long getTestPropertyLong(Configuration conf,
+      String key, long defVal) {
+    return Long.valueOf(
+        getTestProperty(conf, key, Long.toString(defVal)));
+  }
+  /**
+   * Get a test property value in bytes, using k, m, g, t, p, e suffixes.
+   * {@link org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix#string2long(String)}
+   * <ol>
+   *   <li>Look up configuration value (which can pick up core-default.xml),
+   *       using {@code defVal} as the default value (if conf != null).
+   *   </li>
+   *   <li>Fetch the system property.</li>
+   *   <li>If the system property is not empty or "(unset)":
+   *   it overrides the conf value.
+   *   </li>
+   * </ol>
+   * This puts the build properties in charge of everything. It's not a
+   * perfect design; having maven set properties based on a file, as ant let
+   * you do, is better for customization.
+   *
+   * As to why there's a special (unset) value, see
+   * {@link http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven}
+   * @param conf config: may be null
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  public static long getTestPropertyBytes(Configuration conf,
+      String key, String defVal) {
+    return org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix
+        .string2long(getTestProperty(conf, key, defVal));
+  }
 
-    public FailFastException(String message) {
-      super(message);
-    }
+  /**
+   * Get an integer test property; algorithm described in
+   * {@link #getTestPropertyLong(Configuration, String, long)}.
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  public static int getTestPropertyInt(Configuration conf,
+      String key, int defVal) {
+    return (int) getTestPropertyLong(conf, key, defVal);
+  }
 
-    public FailFastException(String message, Throwable cause) {
-      super(message, cause);
-    }
+  /**
+   * Get a boolean test property; algorithm described in
+   * {@link #getTestPropertyLong(Configuration, String, long)}.
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+  public static boolean getTestPropertyBool(Configuration conf,
+      String key,
+      boolean defVal) {
+    return Boolean.valueOf(
+        getTestProperty(conf, key, Boolean.toString(defVal)));
+  }
 
-    public FailFastException(Throwable cause) {
-      super(cause);
-    }
+  /**
+   * Get a string test property.
+   * <ol>
+   *   <li>Look up configuration value (which can pick up core-default.xml),
+   *       using {@code defVal} as the default value (if conf != null).
+   *   </li>
+   *   <li>Fetch the system property.</li>
+   *   <li>If the system property is not empty or "(unset)":
+   *   it overrides the conf value.
+   *   </li>
+   * </ol>
+   * This puts the build properties in charge of everything. It's not a
+   * perfect design; having maven set properties based on a file, as ant let
+   * you do, is better for customization.
+   *
+   * As to why there's a special (unset) value, see
+   * @see <a href="http://stackoverflow.com/questions/7773134/null-versus-empty-arguments-in-maven">
+   *   Stack Overflow</a>
+   * @param conf config: may be null
+   * @param key key to look up
+   * @param defVal default value
+   * @return the evaluated test property.
+   */
+
+  public static String getTestProperty(Configuration conf,
+      String key,
+      String defVal) {
+    String confVal = conf != null ? conf.getTrimmed(key, defVal) : defVal;
+    String propval = System.getProperty(key);
+    return StringUtils.isNotEmpty(propval) && !UNSET_PROPERTY.equals(propval)
+        ? propval : confVal;
   }
 
   /**

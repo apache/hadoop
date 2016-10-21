@@ -28,6 +28,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -66,6 +67,13 @@ public class OptionsParser {
     }
   }
 
+  private static void checkSnapshotsArgs(final String[] snapshots) {
+    Preconditions.checkArgument(snapshots != null && snapshots.length == 2
+        && !StringUtils.isBlank(snapshots[0])
+        && !StringUtils.isBlank(snapshots[1]),
+        "Must provide both the starting and ending snapshot names");
+  }
+
   /**
    * The parse method parses the command-line options, and creates
    * a corresponding Options object.
@@ -74,7 +82,8 @@ public class OptionsParser {
    * @return The Options object, corresponding to the specified command-line.
    * @throws IllegalArgumentException Thrown if the parse fails.
    */
-  public static DistCpOptions parse(String args[]) throws IllegalArgumentException {
+  public static DistCpOptions parse(String[] args)
+      throws IllegalArgumentException {
 
     CommandLineParser parser = new CustomParser();
 
@@ -142,10 +151,16 @@ public class OptionsParser {
     parsePreserveStatus(command, option);
 
     if (command.hasOption(DistCpOptionSwitch.DIFF.getSwitch())) {
-      String[] snapshots = getVals(command, DistCpOptionSwitch.DIFF.getSwitch());
-      Preconditions.checkArgument(snapshots != null && snapshots.length == 2,
-          "Must provide both the starting and ending snapshot names");
-      option.setUseDiff(true, snapshots[0], snapshots[1]);
+      String[] snapshots = getVals(command,
+          DistCpOptionSwitch.DIFF.getSwitch());
+      checkSnapshotsArgs(snapshots);
+      option.setUseDiff(snapshots[0], snapshots[1]);
+    }
+    if (command.hasOption(DistCpOptionSwitch.RDIFF.getSwitch())) {
+      String[] snapshots = getVals(command,
+          DistCpOptionSwitch.RDIFF.getSwitch());
+      checkSnapshotsArgs(snapshots);
+      option.setUseRdiff(snapshots[0], snapshots[1]);
     }
 
     parseFileLimit(command);
@@ -332,7 +347,7 @@ public class OptionsParser {
             "source paths present");
       }
       option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.
-              SOURCE_FILE_LISTING.getSwitch())), targetPath);
+          SOURCE_FILE_LISTING.getSwitch())), targetPath);
     } else {
       if (sourcePaths.isEmpty()) {
         throw new IllegalArgumentException("Neither source file listing nor " +

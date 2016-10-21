@@ -20,6 +20,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 import org.apache.hadoop.io.erasurecode.ECChunk;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.TestCoderBase;
 
 import java.lang.reflect.Constructor;
@@ -158,10 +159,12 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected ErasureCoder createEncoder() {
     ErasureCoder encoder;
     try {
+      ErasureCoderOptions options = new ErasureCoderOptions(
+          numDataUnits, numParityUnits, allowChangeInputs, allowDump);
       Constructor<? extends ErasureCoder> constructor =
           (Constructor<? extends ErasureCoder>)
-              encoderClass.getConstructor(int.class, int.class);
-      encoder = constructor.newInstance(numDataUnits, numParityUnits);
+              encoderClass.getConstructor(ErasureCoderOptions.class);
+      encoder = constructor.newInstance(options);
     } catch (Exception e) {
       throw new RuntimeException("Failed to create encoder", e);
     }
@@ -177,10 +180,12 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected ErasureCoder createDecoder() {
     ErasureCoder decoder;
     try {
+      ErasureCoderOptions options = new ErasureCoderOptions(
+          numDataUnits, numParityUnits, allowChangeInputs, allowDump);
       Constructor<? extends ErasureCoder> constructor =
           (Constructor<? extends ErasureCoder>)
-              decoderClass.getConstructor(int.class, int.class);
-      decoder = constructor.newInstance(numDataUnits, numParityUnits);
+              decoderClass.getConstructor(ErasureCoderOptions.class);
+      decoder = constructor.newInstance(options);
     } catch (Exception e) {
       throw new RuntimeException("Failed to create decoder", e);
     }

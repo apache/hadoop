@@ -66,7 +66,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestDFSAdmin {
-  private static final Log LOG = LogFactory.getLog(DFSAdmin.class);
+  private static final Log LOG = LogFactory.getLog(TestDFSAdmin.class);
   private Configuration conf = null;
   private MiniDFSCluster cluster;
   private DFSAdmin admin;

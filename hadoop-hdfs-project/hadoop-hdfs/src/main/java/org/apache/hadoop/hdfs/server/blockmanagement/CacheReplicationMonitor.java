@@ -682,7 +682,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       if (datanode == null) {
         continue;
       }
-      if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
+      if (!datanode.isInService()) {
         continue;
       }
       if (corrupt != null && corrupt.contains(datanode)) {

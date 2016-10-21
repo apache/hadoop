@@ -18,9 +18,10 @@
 package org.apache.hadoop.io.erasurecode.coder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
  * An abstract erasure decoder that's to be inherited by new decoders.
@@ -28,14 +29,16 @@ import org.apache.hadoop.io.erasurecode.ECSchema;
  * It implements the {@link ErasureCoder} interface.
  */
 @InterfaceAudience.Private
-public abstract class AbstractErasureDecoder extends AbstractErasureCoder {
+public abstract class ErasureDecoder extends Configured
+    implements ErasureCoder {
+  private final int numDataUnits;
+  private final int numParityUnits;
+  private final ErasureCoderOptions options;
 
-  public AbstractErasureDecoder(int numDataUnits, int numParityUnits) {
-    super(numDataUnits, numParityUnits);
-  }
-
-  public AbstractErasureDecoder(ECSchema schema) {
-    super(schema);
+  public ErasureDecoder(ErasureCoderOptions options) {
+    this.options = options;
+    this.numDataUnits = options.getNumDataUnits();
+    this.numParityUnits = options.getNumParityUnits();
   }
 
   @Override
@@ -44,13 +47,20 @@ public abstract class AbstractErasureDecoder extends AbstractErasureCoder {
     return prepareDecodingStep(blockGroup);
   }
 
-  /**
-   * Perform decoding against a block blockGroup.
-   * @param blockGroup
-   * @return decoding step for caller to do the real work
-   */
-  protected abstract ErasureCodingStep prepareDecodingStep(
-      ECBlockGroup blockGroup);
+  @Override
+  public int getNumDataUnits() {
+    return this.numDataUnits;
+  }
+
+  @Override
+  public int getNumParityUnits() {
+    return this.numParityUnits;
+  }
+
+  @Override
+  public ErasureCoderOptions getOptions() {
+    return options;
+  }
 
   /**
    * We have all the data blocks and parity blocks as input blocks for
@@ -95,6 +105,24 @@ public abstract class AbstractErasureDecoder extends AbstractErasureCoder {
 
     return outputBlocks;
   }
+
+  @Override
+  public boolean preferDirectBuffer() {
+    return false;
+  }
+
+  @Override
+  public void release() {
+    // Nothing to do by default
+  }
+
+  /**
+   * Perform decoding against a block blockGroup.
+   * @param blockGroup
+   * @return decoding step for caller to do the real work
+   */
+  protected abstract ErasureCodingStep prepareDecodingStep(
+      ECBlockGroup blockGroup);
 
   /**
    * Get the number of erased blocks in the block group.

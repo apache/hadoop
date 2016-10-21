@@ -274,8 +274,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       // expected
     }
   }
-  
-  // TODO: update after fixing HADOOP-7352
+
   @Test
   public void testListStatusThrowsExceptionForUnreadableDir()
   throws Exception {
@@ -630,7 +629,26 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
         filteredPaths));
   }
-  
+
+  @Test
+  public void testGlobStatusThrowsExceptionForUnreadableDir()
+      throws Exception {
+    Path testRootDir = getTestRootPath(fSys, "test/hadoop/dir");
+    Path obscuredDir = new Path(testRootDir, "foo");
+    Path subDir = new Path(obscuredDir, "bar"); //so foo is non-empty
+    fSys.mkdirs(subDir);
+    fSys.setPermission(obscuredDir, new FsPermission((short)0)); //no access
+    try {
+      fSys.globStatus(getTestRootPath(fSys, "test/hadoop/dir/foo/*"));
+      Assert.fail("Should throw IOException");
+    } catch (IOException ioe) {
+      // expected
+    } finally {
+      // make sure the test directory can be deleted
+      fSys.setPermission(obscuredDir, new FsPermission((short)0755)); //default
+    }
+  }
+
   @Test
   public void testWriteReadAndDeleteEmptyFile() throws Exception {
     writeReadAndDelete(0);

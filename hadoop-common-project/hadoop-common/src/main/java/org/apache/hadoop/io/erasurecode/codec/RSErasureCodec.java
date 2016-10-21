@@ -18,8 +18,10 @@
 package org.apache.hadoop.io.erasurecode.codec;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.io.erasurecode.coder.ErasureCoder;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.erasurecode.ErasureCodecOptions;
+import org.apache.hadoop.io.erasurecode.coder.ErasureDecoder;
+import org.apache.hadoop.io.erasurecode.coder.ErasureEncoder;
 import org.apache.hadoop.io.erasurecode.coder.RSErasureDecoder;
 import org.apache.hadoop.io.erasurecode.coder.RSErasureEncoder;
 
@@ -27,19 +29,19 @@ import org.apache.hadoop.io.erasurecode.coder.RSErasureEncoder;
  * A Reed-Solomon erasure codec.
  */
 @InterfaceAudience.Private
-public class RSErasureCodec extends AbstractErasureCodec {
+public class RSErasureCodec extends ErasureCodec {
 
-  public RSErasureCodec(ECSchema schema) {
-    super(schema);
+  public RSErasureCodec(Configuration conf, ErasureCodecOptions options) {
+    super(conf, options);
   }
 
   @Override
-  public ErasureCoder createEncoder() {
-    return new RSErasureEncoder(getSchema());
+  public ErasureEncoder createEncoder() {
+    return new RSErasureEncoder(getCoderOptions());
   }
 
   @Override
-  public ErasureCoder createDecoder() {
-    return new RSErasureDecoder(getSchema());
+  public ErasureDecoder createDecoder() {
+    return new RSErasureDecoder(getCoderOptions());
   }
 }

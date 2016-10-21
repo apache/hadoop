@@ -220,6 +220,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.reconstruction.pending.timeout-sec";
   public static final int     DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT = -1;
 
+  public static final String  DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY =
+      "dfs.namenode.maintenance.replication.min";
+  public static final int     DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT
+      = 1;
+
   public static final String  DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY;
   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;

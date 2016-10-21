@@ -1566,7 +1566,8 @@ public class TestEncryptionZones {
   public void testRootDirEZTrash() throws Exception {
     final HdfsAdmin dfsAdmin =
         new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    dfsAdmin.createEncryptionZone(new Path("/"), TEST_KEY, NO_TRASH);
+    final Path rootDir = new Path("/");
+    dfsAdmin.createEncryptionZone(rootDir, TEST_KEY, NO_TRASH);
     final Path encFile = new Path("/encFile");
     final int len = 8192;
     DFSTestUtil.createFile(fs, encFile, len, (short) 1, 0xFEED);
@@ -1574,6 +1575,13 @@ public class TestEncryptionZones {
     clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
     FsShell shell = new FsShell(clientConf);
     verifyShellDeleteWithTrash(shell, encFile);
+
+    // Trash path should be consistent
+    // if root path is an encryption zone
+    Path encFileTrash = shell.getCurrentTrashDir(encFile);
+    Path rootDirTrash = shell.getCurrentTrashDir(rootDir);
+    assertEquals("Root trash should be equal with ezFile trash",
+        encFileTrash, rootDirTrash);
   }
 
   @Test(timeout = 120000)

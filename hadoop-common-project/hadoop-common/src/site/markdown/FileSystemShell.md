@@ -639,11 +639,11 @@ stat
 
 Usage: `hadoop fs -stat [format] <path> ...`
 
-Print statistics about the file/directory at \<path\> in the specified format. Format accepts filesize in blocks (%b), type (%F), group name of owner (%g), name (%n), block size (%o), replication (%r), user name of owner(%u), and modification date (%y, %Y). %y shows UTC date as "yyyy-MM-dd HH:mm:ss" and %Y shows milliseconds since January 1, 1970 UTC. If the format is not specified, %y is used by default.
+Print statistics about the file/directory at \<path\> in the specified format. Format accepts permissions in octal (%a) and symbolic (%A), filesize in blocks (%b), type (%F), group name of owner (%g), name (%n), block size (%o), replication (%r), user name of owner(%u), and modification date (%y, %Y). %y shows UTC date as "yyyy-MM-dd HH:mm:ss" and %Y shows milliseconds since January 1, 1970 UTC. If the format is not specified, %y is used by default.
 
 Example:
 
-* `hadoop fs -stat "%F %u:%g %b %y %n" /file`
+* `hadoop fs -stat "%F %a %u:%g %b %y %n" /file`
 
 Exit Code: Returns 0 on success and -1 on error.
 

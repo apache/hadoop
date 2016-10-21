@@ -522,16 +522,6 @@
   </property>
 
   <property>
-    <description>hdfs client retry policy specification. hdfs client retry
-    is always enabled. Specified in pairs of sleep-time and number-of-retries
-    and (t0, n0), (t1, n1), ..., the first n0 retries sleep t0 milliseconds on
-    average, the following n1 retries sleep t1 milliseconds on average, and so on.
-    </description>
-    <name>yarn.resourcemanager.fs.state-store.retry-policy-spec</name>
-    <value>2000, 500</value>
-  </property>
-
-  <property>
     <description>the number of retries to recover from IOException in
     FileSystemRMStateStore.
     </description>
@@ -2479,16 +2469,6 @@
     </description>
     <name>yarn.node-labels.enabled</name>
     <value>false</value>
-  </property>
-
-  <property>
-    <description>
-    Retry policy used for FileSystem node label store. The policy is
-    specified by N pairs of sleep-time in milliseconds and number-of-retries
-    "s1,n1,s2,n2,...".
-    </description>
-    <name>yarn.node-labels.fs-store.retry-policy-spec</name>
-    <value>2000, 500</value>
   </property>
 
   <property>

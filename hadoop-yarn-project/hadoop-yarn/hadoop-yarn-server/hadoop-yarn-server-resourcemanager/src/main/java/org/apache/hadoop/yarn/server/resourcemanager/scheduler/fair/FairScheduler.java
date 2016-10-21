@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -70,8 +69,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
@@ -92,8 +89,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -130,7 +125,6 @@ public class FairScheduler extends
 
   private Resource incrAllocation;
   private QueueManager queueMgr;
-  private volatile Clock clock;
   private boolean usePortForNodeName;
 
   private static final Log LOG = LogFactory.getLog(FairScheduler.class);
@@ -217,7 +211,6 @@ public class FairScheduler extends
 
   public FairScheduler() {
     super(FairScheduler.class.getName());
-    clock = SystemClock.getInstance();
     allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
     maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
@@ -383,7 +376,7 @@ public class FairScheduler extends
    * threshold for each type of task.
    */
   private void updateStarvationStats() {
-    lastPreemptionUpdateTime = clock.getTime();
+    lastPreemptionUpdateTime = getClock().getTime();
     for (FSLeafQueue sched : queueMgr.getLeafQueues()) {
       sched.updateStarvationStats();
     }
@@ -616,15 +609,6 @@ public class FairScheduler extends
     return continuousSchedulingSleepMs;
   }
 
-  public Clock getClock() {
-    return clock;
-  }
-
-  @VisibleForTesting
-  void setClock(Clock clock) {
-    this.clock = clock;
-  }
-
   public FairSchedulerEventLog getEventLog() {
     return eventLog;
   }
@@ -774,6 +758,12 @@ public class FairScheduler extends
           appRejectMsg = queueName + " is not a leaf queue";
         }
       }
+    } catch (IllegalStateException se) {
+      appRejectMsg = "Unable to match app " + rmApp.getApplicationId() +
+          " to a queue placement policy, and no valid terminal queue " +
+          " placement rule is configured. Please contact an administrator " +
+          " to confirm that the fair scheduler configuration contains a " +
+          " valid terminal queue placement rule.";
     } catch (InvalidQueueNameException qne) {
       appRejectMsg = qne.getMessage();
     } catch (IOException ioe) {
@@ -1047,67 +1037,17 @@ public class FairScheduler extends
         preemptionContainerIds, null, null,
         application.pullUpdatedNMTokens());
   }
-  
-  /**
-   * Process a heartbeat update from a node.
-   */
-  private void nodeUpdate(RMNode nm) {
+
+  @Override
+  protected synchronized void nodeUpdate(RMNode nm) {
     try {
       writeLock.lock();
       long start = getClock().getTime();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "nodeUpdate: " + nm + " cluster capacity: " + getClusterResource());
-      }
       eventLog.log("HEARTBEAT", nm.getHostName());
-      FSSchedulerNode node = getFSSchedulerNode(nm.getNodeID());
+      super.nodeUpdate(nm);
 
-      List<UpdatedContainerInfo> containerInfoList = nm.pullContainerUpdates();
-      List<ContainerStatus> newlyLaunchedContainers =
-          new ArrayList<ContainerStatus>();
-      List<ContainerStatus> completedContainers =
-          new ArrayList<ContainerStatus>();
-      for (UpdatedContainerInfo containerInfo : containerInfoList) {
-        newlyLaunchedContainers.addAll(
-            containerInfo.getNewlyLaunchedContainers());
-        completedContainers.addAll(containerInfo.getCompletedContainers());
-      }
-      // Processing the newly launched containers
-      for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
-        containerLaunchedOnNode(launchedContainer.getContainerId(), node);
-      }
-
-      // Process completed containers
-      for (ContainerStatus completedContainer : completedContainers) {
-        ContainerId containerId = completedContainer.getContainerId();
-        LOG.debug("Container FINISHED: " + containerId);
-        super.completedContainer(getRMContainer(containerId),
-            completedContainer, RMContainerEventType.FINISHED);
-      }
-
-      // If the node is decommissioning, send an update to have the total
-      // resource equal to the used resource, so no available resource to
-      // schedule.
-      if (nm.getState() == NodeState.DECOMMISSIONING) {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeResourceUpdateEvent(nm.getNodeID(), ResourceOption
-                .newInstance(
-                    getSchedulerNode(nm.getNodeID()).getAllocatedResource(),
-                    0)));
-      }
-
-      if (continuousSchedulingEnabled) {
-        if (!completedContainers.isEmpty()) {
-          attemptScheduling(node);
-        }
-      } else{
-        attemptScheduling(node);
-      }
-
-      // Updating node resource utilization
-      node.setAggregatedContainersUtilization(
-          nm.getAggregatedContainersUtilization());
-      node.setNodeUtilization(nm.getNodeUtilization());
+      FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
+      attemptScheduling(fsNode);
 
       long duration = getClock().getTime() - start;
       fsOpDurations.addNodeUpdateDuration(duration);
