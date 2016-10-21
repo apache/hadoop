@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -89,8 +88,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeDecreaseContainerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
@@ -105,7 +102,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedContainerCha
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
@@ -235,8 +231,6 @@ public class CapacityScheduler extends
   private boolean scheduleAsynchronously;
   private AsyncScheduleThread asyncSchedulerThread;
   private RMNodeLabelsManager labelManager;
-  private SchedulerHealth schedulerHealth = new SchedulerHealth();
-  volatile long lastNodeUpdateTime;
 
   /**
    * EXPERT
@@ -1099,93 +1093,24 @@ public class CapacityScheduler extends
     return root.getQueueUserAclInfo(user);
   }
 
-  private void nodeUpdate(RMNode nm) {
+  @Override
+  protected synchronized void nodeUpdate(RMNode nm) {
     try {
       writeLock.lock();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "nodeUpdate: " + nm + " clusterResources: " + getClusterResource());
-      }
-
-      Resource releaseResources = Resource.newInstance(0, 0);
-
-      FiCaSchedulerNode node = getNode(nm.getNodeID());
-
-      List<UpdatedContainerInfo> containerInfoList = nm.pullContainerUpdates();
-      List<ContainerStatus> newlyLaunchedContainers =
-          new ArrayList<ContainerStatus>();
-      List<ContainerStatus> completedContainers =
-          new ArrayList<ContainerStatus>();
-      for (UpdatedContainerInfo containerInfo : containerInfoList) {
-        newlyLaunchedContainers.addAll(
-            containerInfo.getNewlyLaunchedContainers());
-        completedContainers.addAll(containerInfo.getCompletedContainers());
-      }
-
-      // Processing the newly launched containers
-      for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
-        containerLaunchedOnNode(launchedContainer.getContainerId(), node);
-      }
-
-      // Processing the newly increased containers
-      List<Container> newlyIncreasedContainers =
-          nm.pullNewlyIncreasedContainers();
-      for (Container container : newlyIncreasedContainers) {
-        containerIncreasedOnNode(container.getId(), node, container);
-      }
-
-      // Process completed containers
-      int releasedContainers = 0;
-      for (ContainerStatus completedContainer : completedContainers) {
-        ContainerId containerId = completedContainer.getContainerId();
-        RMContainer container = getRMContainer(containerId);
-        super.completedContainer(container, completedContainer,
-            RMContainerEventType.FINISHED);
-        if (container != null) {
-          releasedContainers++;
-          Resource rs = container.getAllocatedResource();
-          if (rs != null) {
-            Resources.addTo(releaseResources, rs);
-          }
-          rs = container.getReservedResource();
-          if (rs != null) {
-            Resources.addTo(releaseResources, rs);
-          }
-        }
-      }
-
-      // If the node is decommissioning, send an update to have the total
-      // resource equal to the used resource, so no available resource to
-      // schedule.
-      // TODO: Fix possible race-condition when request comes in before
-      // update is propagated
-      if (nm.getState() == NodeState.DECOMMISSIONING) {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMNodeResourceUpdateEvent(nm.getNodeID(), ResourceOption
-                .newInstance(
-                    getSchedulerNode(nm.getNodeID()).getAllocatedResource(),
-                    0)));
-      }
-      schedulerHealth.updateSchedulerReleaseDetails(lastNodeUpdateTime,
-          releaseResources);
-      schedulerHealth.updateSchedulerReleaseCounts(releasedContainers);
-
-      // Updating node resource utilization
-      node.setAggregatedContainersUtilization(
-          nm.getAggregatedContainersUtilization());
-      node.setNodeUtilization(nm.getNodeUtilization());
-
-      // Now node data structures are upto date and ready for scheduling.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Node being looked for scheduling " + nm + " availableResource: "
-                + node.getUnallocatedResource());
+      setLastNodeUpdateTime(Time.now());
+      super.nodeUpdate(nm);
+      if (!scheduleAsynchronously) {
+        ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
+            nm.getNodeID());
+        allocateContainersToNode(getNode(nm.getNodeID()));
+        ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
+            nm.getNodeID());
       }
     } finally {
       writeLock.unlock();
     }
   }
-  
+
   /**
    * Process resource update on a node.
    */
@@ -1458,16 +1383,7 @@ public class CapacityScheduler extends
     case NODE_UPDATE:
     {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
-      RMNode node = nodeUpdatedEvent.getRMNode();
-      setLastNodeUpdateTime(Time.now());
-      nodeUpdate(node);
-      if (!scheduleAsynchronously) {
-        ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
-            node.getNodeID());
-        allocateContainersToNode(getNode(node.getNodeID()));
-        ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
-            node.getNodeID());
-      }
+      nodeUpdate(nodeUpdatedEvent.getRMNode());
     }
     break;
     case APP_ADDED:
@@ -2191,20 +2107,6 @@ public class CapacityScheduler extends
       }
     }
     return ret;
-  }
-
-  @Override
-  public SchedulerHealth getSchedulerHealth() {
-    return this.schedulerHealth;
-  }
-
-  private void setLastNodeUpdateTime(long time) {
-    this.lastNodeUpdateTime = time;
-  }
-
-  @Override
-  public long getLastNodeUpdateTime() {
-    return lastNodeUpdateTime;
   }
 
   @Override
