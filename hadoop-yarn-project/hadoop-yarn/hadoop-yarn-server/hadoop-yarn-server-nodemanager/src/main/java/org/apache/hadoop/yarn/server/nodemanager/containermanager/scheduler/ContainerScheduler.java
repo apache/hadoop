@@ -23,7 +23,6 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -38,12 +37,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 public class ContainerScheduler extends AbstractService implements
     EventHandler<ContainerSchedulerEvent> {
@@ -63,7 +62,8 @@ public class ContainerScheduler extends AbstractService implements
 
   // Used to keep track of containers that have been marked to be killed
   // to make room for a guaranteed container.
-  private final Set<ContainerId> oppContainersMarkedForKill = new HashSet<>();
+  private final Map<ContainerId, Container> oppContainersMarkedForKill =
+      new HashMap<>();
 
   // Containers launched by the Scheduler will take a while to actually
   // move to the RUNNING state, but should still be fair game for killing
@@ -120,7 +120,7 @@ public class ContainerScheduler extends AbstractService implements
   private void onContainerCompleted(Container container) {
     // decrement only if it was a running container
     if (runningContainers.containsKey(container.getContainerId())) {
-      this.utilizationManager.subtractResource(container.getResource());
+      this.utilizationManager.subtractContainerResource(container);
     }
     runningContainers.remove(container.getContainerId());
     oppContainersMarkedForKill.remove(container.getContainerId());
@@ -143,7 +143,7 @@ public class ContainerScheduler extends AbstractService implements
     boolean resourcesAvailable = true;
     while (cIter.hasNext() && resourcesAvailable) {
       Container container = cIter.next();
-      if (hasResourcesAvailable(container.getResource())) {
+      if (this.utilizationManager.hasResourcesAvailable(container)) {
         startAllocatedContainer(container);
         cIter.remove();
       } else {
@@ -160,7 +160,7 @@ public class ContainerScheduler extends AbstractService implements
     }
     if (queuedGuaranteedContainers.isEmpty() &&
         queuedOpportunisticContainers.isEmpty() &&
-        hasResourcesAvailable(container.getResource())) {
+        this.utilizationManager.hasResourcesAvailable(container)) {
       startAllocatedContainer(container);
     } else {
       try {
@@ -203,7 +203,7 @@ public class ContainerScheduler extends AbstractService implements
       contToKill.sendKillEvent(
           ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER,
           "Container Killed to make room for Guaranteed Container.");
-      oppContainersMarkedForKill.add(contToKill.getContainerId());
+      oppContainersMarkedForKill.put(contToKill.getContainerId(), contToKill);
       LOG.info(
           "Opportunistic container {} will be killed in order to start the "
               + "execution of guaranteed container {}.",
@@ -214,7 +214,7 @@ public class ContainerScheduler extends AbstractService implements
   private void startAllocatedContainer(Container container) {
     LOG.info("Starting container [" + container.getContainerId()+ "]");
     runningContainers.put(container.getContainerId(), container);
-    this.utilizationManager.addResource(container.getResource());
+    this.utilizationManager.addContainerResources(container);
     container.sendLaunchEvent();
   }
 
@@ -237,7 +237,8 @@ public class ContainerScheduler extends AbstractService implements
       if (runningCont.getContainerTokenIdentifier().getExecutionType() ==
           ExecutionType.OPPORTUNISTIC) {
 
-        if (oppContainersMarkedForKill.contains(runningCont.getContainerId())) {
+        if (oppContainersMarkedForKill.containsKey(
+            runningCont.getContainerId())) {
           // These containers have already been marked to be killed.
           // So exclude them..
           continue;
@@ -279,6 +280,15 @@ public class ContainerScheduler extends AbstractService implements
         break;
       }
     }
+
+    // These Resources have already been freed, due to demand from an
+    // earlier Guaranteed container.
+    for (Container container : oppContainersMarkedForKill.values()) {
+      ResourceUtilizationManager.decreaseResourceUtilization(
+          getContainersMonitor(), resourceAllocationToFreeUp,
+          container.getResource());
+    }
+
     // Subtract the overall node resources.
     getContainersMonitor().subtractNodeResourcesFromResourceUtilization(
         resourceAllocationToFreeUp);
@@ -310,60 +320,6 @@ public class ContainerScheduler extends AbstractService implements
       }
       numAllowed--;
     }
-  }
-
-  private boolean hasResourcesAvailable(Resource resource) {
-    long pMemBytes = resource.getMemorySize() * 1024 * 1024L;
-    return hasResourcesAvailable(pMemBytes,
-        (long) (getContainersMonitor().getVmemRatio()* pMemBytes),
-        resource.getVirtualCores());
-  }
-
-  private boolean hasResourcesAvailable(long pMemBytes, long vMemBytes,
-      int cpuVcores) {
-    ResourceUtilization currentUtilization = this.utilizationManager
-        .getCurrentUtilization();
-    // Check physical memory.
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("pMemCheck [current={} + asked={} > allowed={}]",
-          currentUtilization.getPhysicalMemory(),
-          (pMemBytes >> 20),
-          (getContainersMonitor().getPmemAllocatedForContainers() >> 20));
-    }
-    if (currentUtilization.getPhysicalMemory() +
-        (int) (pMemBytes >> 20) >
-        (int) (getContainersMonitor()
-            .getPmemAllocatedForContainers() >> 20)) {
-      return false;
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("before vMemCheck" +
-              "[isEnabled={}, current={} + asked={} > allowed={}]",
-          getContainersMonitor().isVmemCheckEnabled(),
-          currentUtilization.getVirtualMemory(), (vMemBytes >> 20),
-          (getContainersMonitor().getVmemAllocatedForContainers() >> 20));
-    }
-    // Check virtual memory.
-    if (getContainersMonitor().isVmemCheckEnabled() &&
-        currentUtilization.getVirtualMemory() +
-            (int) (vMemBytes >> 20) >
-            (int) (getContainersMonitor()
-                .getVmemAllocatedForContainers() >> 20)) {
-      return false;
-    }
-
-    float vCores = (float) cpuVcores /
-        getContainersMonitor().getVCoresAllocatedForContainers();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("before cpuCheck [asked={} > allowed={}]",
-          currentUtilization.getCPU(), vCores);
-    }
-    // Check CPU.
-    if (currentUtilization.getCPU() + vCores > 1.0f) {
-      return false;
-    }
-    return true;
   }
 
   public ContainersMonitor getContainersMonitor() {
