@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
@@ -133,32 +132,6 @@ public class S3ATestUtils {
     }
     FileContext fc = FileContext.getFileContext(testURI,conf);
     return fc;
-  }
-
-  /**
-   * Repeatedly attempt a callback until timeout or a {@link FailFastException}
-   * is raised. This is modeled on ScalaTests {@code eventually(Closure)} code.
-   * @param timeout timeout
-   * @param callback callback to invoke
-   * @throws FailFastException any fast-failure
-   * @throws Exception the exception which caused the iterator to fail
-   */
-  public static void eventually(int timeout, Callable<Void> callback)
-      throws Exception {
-    Exception lastException;
-    long endtime = System.currentTimeMillis() + timeout;
-    do {
-      try {
-        callback.call();
-        return;
-      } catch (InterruptedException | FailFastException e) {
-        throw e;
-      } catch (Exception e) {
-        lastException = e;
-      }
-      Thread.sleep(500);
-    } while (endtime > System.currentTimeMillis());
-    throw lastException;
   }
 
   /**
@@ -288,27 +261,6 @@ public class S3ATestUtils {
     String propval = System.getProperty(key);
     return StringUtils.isNotEmpty(propval) && !UNSET_PROPERTY.equals(propval)
         ? propval : confVal;
-  }
-
-  /**
-   * The exception to raise so as to exit fast from
-   * {@link #eventually(int, Callable)}.
-   */
-  public static class FailFastException extends Exception {
-    public FailFastException() {
-    }
-
-    public FailFastException(String message) {
-      super(message);
-    }
-
-    public FailFastException(String message, Throwable cause) {
-      super(message, cause);
-    }
-
-    public FailFastException(Throwable cause) {
-      super(cause);
-    }
   }
 
   /**
