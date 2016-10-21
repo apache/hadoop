@@ -212,6 +212,14 @@ Maven build goals:
     and it ignores the -Disal.prefix option. If -Disal.lib isn't given, the
     bundling and building will fail.
 
+ Special plugins: OWASP's dependency-check:
+
+   OWASP's dependency-check plugin will scan the third party dependencies
+   of this project for known CVEs (security vulnerabilities against them).
+   It will produce a report in target/dependency-check-report.html. To
+   invoke, run 'mvn dependency-check:aggregate'. Note that this plugin
+   requires maven 3.1.1 or greater.
+
 ----------------------------------------------------------------------------------
 Building components separately
 
