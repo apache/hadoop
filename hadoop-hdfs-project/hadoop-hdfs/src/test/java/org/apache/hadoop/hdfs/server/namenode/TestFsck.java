@@ -2013,6 +2013,9 @@ public class TestFsck {
 
     String outStr = runFsck(conf, 1, true, "/");
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+    assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
+    outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
+    assertTrue(outStr.contains("has 1 CORRUPT files"));
   }
 
   @Test (timeout = 300000)
@@ -2053,6 +2056,9 @@ public class TestFsck {
         "-locations");
     assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
     assertTrue(outStr.contains("Live_repl=" + (dataBlocks - 1)));
+    assertTrue(outStr.contains("Under-erasure-coded block groups:\t0"));
+    outStr = runFsck(conf, -1, true, "/", "-list-corruptfileblocks");
+    assertTrue(outStr.contains("has 1 CORRUPT files"));
   }
 
   private void waitForUnrecoverableBlockGroup(Configuration configuration)

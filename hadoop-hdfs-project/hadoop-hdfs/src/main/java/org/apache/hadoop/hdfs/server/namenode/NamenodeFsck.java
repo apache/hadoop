@@ -660,6 +660,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
           decommissioningReplicas;
       res.totalReplicas += totalReplicasPerBlock;
 
+      boolean isMissing;
+      if (storedBlock.isStriped()) {
+        isMissing = totalReplicasPerBlock < minReplication;
+      } else {
+        isMissing = totalReplicasPerBlock == 0;
+      }
+
       // count expected replicas
       short targetFileReplication;
       if (file.getErasureCodingPolicy() != null) {
@@ -697,7 +704,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.numMinReplicatedBlocks++;
 
       // count missing replicas / under replicated blocks
-      if (totalReplicasPerBlock < targetFileReplication && totalReplicasPerBlock > 0) {
+      if (totalReplicasPerBlock < targetFileReplication && !isMissing) {
         res.missingReplicas += (targetFileReplication - totalReplicasPerBlock);
         res.numUnderReplicatedBlocks += 1;
         underReplicatedPerFile++;
@@ -737,12 +744,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       String blkName = block.toString();
       report.append(blockNumber + ". " + blkName + " len=" +
           block.getNumBytes());
-      boolean isMissing;
-      if (storedBlock.isStriped()) {
-        isMissing = totalReplicasPerBlock < minReplication;
-      } else {
-        isMissing = totalReplicasPerBlock == 0;
-      }
       if (isMissing && !isCorrupt) {
         // If the block is corrupted, it means all its available replicas are
         // corrupted in the case of replication, and it means the state of the
