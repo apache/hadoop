@@ -252,7 +252,7 @@ public class TestDecommissionWithStriped {
     Thread.sleep(3000); // grace period to trigger decommissioning call
     // start datanode so that decommissioning live node will be finished
     for (DataNodeProperties dnp : stoppedDns) {
-      cluster.restartDataNode(dnp, true);
+      cluster.restartDataNode(dnp);
       LOG.info("Restarts stopped datanode:{} to trigger block reconstruction",
           dnp.datanode);
     }
