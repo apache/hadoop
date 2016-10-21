@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.util;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,14 +26,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Timer;
 
 import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This is a debugging class that can be used by callers to track
- * whether a specifc lock is being held for too long and periodically
+ * whether a specific lock is being held for too long and periodically
  * log a warning and stack trace, if so.
  *
  * The logged warnings are throttled so that logs are not spammed.
@@ -100,19 +98,19 @@ public class InstrumentedLock implements Lock {
   @Override
   public void lock() {
     lock.lock();
-    lockAcquireTimestamp = clock.monotonicNow();
+    startLockTiming();
   }
 
   @Override
   public void lockInterruptibly() throws InterruptedException {
     lock.lockInterruptibly();
-    lockAcquireTimestamp = clock.monotonicNow();
+    startLockTiming();
   }
 
   @Override
   public boolean tryLock() {
     if (lock.tryLock()) {
-      lockAcquireTimestamp = clock.monotonicNow();
+      startLockTiming();
       return true;
     }
     return false;
@@ -121,7 +119,7 @@ public class InstrumentedLock implements Lock {
   @Override
   public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
     if (lock.tryLock(time, unit)) {
-      lockAcquireTimestamp = clock.monotonicNow();
+      startLockTiming();
       return true;
     }
     return false;
@@ -151,6 +149,13 @@ public class InstrumentedLock implements Lock {
   }
 
   /**
+   * Starts timing for the instrumented lock.
+   */
+  protected void startLockTiming() {
+    lockAcquireTimestamp = clock.monotonicNow();
+  }
+
+  /**
    * Log a warning if the lock was held for too long.
    *
    * Should be invoked by the caller immediately AFTER releasing the lock.
@@ -158,7 +163,7 @@ public class InstrumentedLock implements Lock {
    * @param acquireTime  - timestamp just after acquiring the lock.
    * @param releaseTime - timestamp just before releasing the lock.
    */
-  private void check(long acquireTime, long releaseTime) {
+  protected void check(long acquireTime, long releaseTime) {
     if (!logger.isWarnEnabled()) {
       return;
     }
@@ -182,4 +187,11 @@ public class InstrumentedLock implements Lock {
     }
   }
 
+  protected Lock getLock() {
+    return lock;
+  }
+
+  protected Timer getTimer() {
+    return clock;
+  }
 }
