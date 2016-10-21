@@ -1605,6 +1605,34 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testAssignToBadDefaultQueue() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queuePlacementPolicy>");
+    out.println("<rule name=\"specified\" create=\"false\" />");
+    out.println("<rule name=\"default\" create=\"false\" />");
+    out.println("</queuePlacementPolicy>");
+    out.println("</allocations>");
+    out.close();
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
+
+    try {
+      FSLeafQueue queue1 = scheduler.assignToQueue(rmApp1, "default",
+          "asterix");
+    } catch (IllegalStateException ise) {
+      fail("Bad queue placement policy terminal rule should not throw " +
+          "exception ");
+    }
+  }
+
+  @Test
   public void testAssignToNonLeafQueueReturnsNull() throws Exception {
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.init(conf);

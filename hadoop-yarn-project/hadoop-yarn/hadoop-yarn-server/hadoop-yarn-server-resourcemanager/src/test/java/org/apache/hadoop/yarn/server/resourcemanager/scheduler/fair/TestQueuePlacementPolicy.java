@@ -131,9 +131,14 @@ public class TestQueuePlacementPolicy {
     StringBuffer sb = new StringBuffer();
     sb.append("<queuePlacementPolicy>");
     sb.append("  <rule name='secondaryGroupExistingQueue' create='true'/>");
-    sb.append("  <rule name='default' create='false'/>");
+    sb.append("  <rule name='default' queue='otherdefault' create='false'/>");
     sb.append("</queuePlacementPolicy>");
-    parse(sb.toString());
+    QueuePlacementPolicy policy = parse(sb.toString());
+    try {
+      policy.assignAppToQueue("root.otherdefault", "user1");
+      fail("Expect exception from having default rule with create=\'false\'");
+    } catch (IllegalStateException se) {
+    }
   }
   
   @Test
