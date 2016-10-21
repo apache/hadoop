@@ -247,7 +247,7 @@ public class StorageContainerManager
     for (int r = 0; r < reports.length; r++) {
       final BlockListAsLongs storageContainerList = reports[r].getBlocks();
       blockManager.processReport(registration, reports[r].getStorage(),
-          storageContainerList, context, r == (reports.length - 1));
+          storageContainerList, context);
     }
     return null;
   }
