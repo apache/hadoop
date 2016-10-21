@@ -774,6 +774,12 @@ public class FairScheduler extends
           appRejectMsg = queueName + " is not a leaf queue";
         }
       }
+    } catch (IllegalStateException se) {
+      appRejectMsg = "Unable to match app " + rmApp.getApplicationId() +
+          " to a queue placement policy, and no valid terminal queue " +
+          " placement rule is configured. Please contact an administrator " +
+          " to confirm that the fair scheduler configuration contains a " +
+          " valid terminal queue placement rule.";
     } catch (InvalidQueueNameException qne) {
       appRejectMsg = qne.getMessage();
     } catch (IOException ioe) {
