@@ -102,7 +102,7 @@ Deployment
   `io.erasurecode.codec.rs-default.rawcoder` for the default RS codec,
   `io.erasurecode.codec.rs-legacy.rawcoder` for the legacy RS codec,
   `io.erasurecode.codec.xor.rawcoder` for the XOR codec.
-  The default implementations for all of these codecs are pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the encoding and decoding calculation. Please refer to section "Enable Intel ISA-L" for more detail information.
+  The default implementations for all of these codecs are pure Java. For default RS codec, there is also a native implementation which leverages Intel ISA-L library to improve the performance of codec. For XOR codec, a native implementation which leverages Intel ISA-L library to improve the performance of codec is also supported. Please refer to section "Enable Intel ISA-L" for more detail information.
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 
@@ -118,6 +118,8 @@ Deployment
   3. Configure the `io.erasurecode.codec.rs-default.rawcoder` key with value `org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory` on HDFS client and DataNodes.
 
   To check ISA-L library enable state, try "Hadoop checknative" command. It will tell you if ISA-L library is enabled or not.
+
+  It also requires three steps to enable the native implementation of XOR codec. The first two steps are the same as the above step 1 and step 2. In step 3, configure the `io.erasurecode.codec.xor.rawcoder` key with `org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory` on both HDFS client and DataNodes.
 
 ### Administrative commands
 

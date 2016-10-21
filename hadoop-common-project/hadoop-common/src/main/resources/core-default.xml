@@ -647,7 +647,27 @@
   <name>io.erasurecode.codec.rs-default.rawcoder</name>
   <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactory</value>
   <description>
-    Raw coder implementation for the rs-default codec.
+    Raw coder implementation for the rs-default codec. The default value is a
+    pure Java implementation. There is also a native implementation. Its value
+    is org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory.
+  </description>
+</property>
+
+<property>
+  <name>io.erasurecode.codec.rs-legacy.rawcoder</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.RSRawErasureCoderFactoryLegacy</value>
+  <description>
+    Raw coder implementation for the rs-legacy codec.
+  </description>
+</property>
+
+<property>
+  <name>io.erasurecode.codec.xor.rawcoder</name>
+  <value>org.apache.hadoop.io.erasurecode.rawcoder.XORRawErasureCoderFactory</value>
+  <description>
+    Raw coder implementation for the xor codec. The default value is a pure Java
+    implementation. There is also a native implementation. Its value is
+    org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawErasureCoderFactory.
   </description>
 </property>
 
