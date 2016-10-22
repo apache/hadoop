@@ -225,6 +225,143 @@ The AltKerberos authentication mechanism is a partially implemented derivative o
     </web-app>
 ```
 
+### LDAP Configuration
+
+**IMPORTANT**: A LDAP server must be configured and running. When TLS is enabled for communication with LDAP server (either via ldaps scheme or 'start TLS' extension), configure the public certificate of the LDAP server in the local truststore.
+
+The LDAP authentication mechanism uses HTTP Basic authentication scheme to verify user specified credentials against a configured LDAP (or Active
+Directory) server. The authentication filter must be configured with the following init parameters:
+
+*   `[PREFIX.]type`: The keyword `ldap`.
+
+*   `[PREFIX.]ldap.providerurl`: The url of the LDAP server.
+
+*   `[PREFIX.]ldap.basedn`: The base distinguished name (DN) to be used with the LDAP server. This value is appended to the provided user id for authentication purpose. This property is not useful in case of Active Directory server.
+
+*   `[PREFIX.]ldap.binddomain`: The LDAP bind domain value to be used with the LDAP server. This property is optional and useful only in case of Active Directory server (e.g. example.com).
+
+*   `[PREFIX.]ldap.enablestarttls`: A boolean value used to define if the LDAP server supports 'StartTLS' extension.
+
+**Example**:
+
+```xml
+    <web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee">
+        ...
+
+        <filter>
+            <filter-name>authFilter</filter-name>
+            <filter-class>org.apache.hadoop.security.authentication.server.AuthenticationFilter</filter-class>
+            <init-param>
+                <param-name>type</param-name>
+                <param-value>ldap</param-value>
+            </init-param>
+            <init-param>
+                <param-name>ldap.providerurl</param-name>
+                <param-value>ldap://ldap-server-host:8920</param-value>
+            </init-param>
+            <init-param>
+                <param-name>ldap.basedn</param-name>
+                <param-value>ou=users,dc=example,dc=com</param-value>
+            </init-param>
+            <init-param>
+                <param-name>ldap.enablestarttls</param-name>
+                <param-value>true</param-value>
+            </init-param>
+         </filter>
+
+        <filter-mapping>
+            <filter-name>authFilter</filter-name>
+            <url-pattern>/ldap/*</url-pattern>
+        </filter-mapping>
+
+        ...
+    </web-app>
+```
+
+### Multi-scheme Configuration
+
+**IMPORTANT**: This configuration supports multiple authentication mechanisms (e.g. kerberos, ldap etc.) together. Please refer to the documentation for each individual scheme for configuration related details.
+
+The multi-scheme authentication mechanism supports multiple authentication mechanisms (e.g. kerberos, ldap etc.) by implementing a HTTP auth negotiation mechanism (Please refer to RFC-2616). For enabling each type of authentication mechanism (e.g. ldap) a corresponding authentication handler must be configured. Please refer to following configuration parameters:
+
+*   `[PREFIX.]type`: The keyword `multi-scheme`.
+
+*   `[PREFIX.]multi-scheme-auth-handler.schemes`: A comma separated list of HTTP authentication mechanisms supported by this handler. It is a required parameter and it does not have a default value (e.g. multi-scheme-auth-handler.schemes=basic,negotiate).
+
+*   `[PREFIX.]multi-scheme-auth-handler.schemes.<scheme-name>.handler`: The authentication handler implementation to be used for the specified authentication scheme. It does not have a default value (e.g. multi-scheme-auth-handler.schemes.negotiate.handler=kerberos). Add this handler configuration for each of the scheme configured.
+
+In addition to these parameters, please specify the init parameters for each handler configured as well.
+
+
+**Example**:
+
+```xml
+    <web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee">
+        ...
+
+        <filter>
+            <filter-name>authFilter</filter-name>
+            <filter-class>org.apache.hadoop.security.authentication.server.AuthenticationFilter</filter-class>
+            <init-param>
+                <param-name>type</param-name>
+                <param-value>multi-scheme</param-value>
+            </init-param>
+            <init-param>
+                <param-name>multi-scheme-auth-handler.schemes</param-name>
+                <param-value>basic,negotiate</param-value>
+            </init-param>
+            <init-param>
+                <param-name>multi-scheme-auth-handler.basic.handler</param-name>
+                <param-value>ldap</param-value>
+            </init-param>
+            <init-param>
+                <param-name>multi-scheme-auth-handler.negotiate.handler</param-name>
+                <param-value>kerberos</param-value>
+            </init-param>
+            <init-param>
+                <param-name>ldap.providerurl</param-name>
+                <param-value>ldap://ldap-server-host:8920</param-value>
+            </init-param>
+            <init-param>
+                <param-name>ldap.basedn</param-name>
+                <param-value>ou=users,dc=example,dc=com</param-value>
+            </init-param>
+            <init-param>
+                <param-name>ldap.enablestarttls</param-name>
+                <param-value>true</param-value>
+            </init-param>
+            <init-param>
+                <param-name>token.validity</param-name>
+                <param-value>30</param-value>
+            </init-param>
+            <init-param>
+                <param-name>cookie.domain</param-name>
+                <param-value>.foo.com</param-value>
+            </init-param>
+            <init-param>
+                <param-name>cookie.path</param-name>
+                <param-value>/</param-value>
+            </init-param>
+            <init-param>
+                <param-name>kerberos.principal</param-name>
+                <param-value>HTTP/localhost@LOCALHOST</param-value>
+            </init-param>
+            <init-param>
+                <param-name>kerberos.keytab</param-name>
+                <param-value>/tmp/auth.keytab</param-value>
+            </init-param>
+         </filter>
+
+        <filter-mapping>
+            <filter-name>authFilter</filter-name>
+            <url-pattern>/multi-scheme/*</url-pattern>
+        </filter-mapping>
+
+        ...
+    </web-app>
+```
+
+
 ### SignerSecretProvider Configuration
 
 The SignerSecretProvider is used to provide more advanced behaviors for the secret used for signing the HTTP Cookies.
