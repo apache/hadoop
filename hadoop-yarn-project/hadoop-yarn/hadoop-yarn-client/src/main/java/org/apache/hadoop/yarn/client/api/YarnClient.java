@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -855,4 +856,28 @@ public abstract class YarnClient extends AbstractService {
     throw new UnsupportedOperationException("The sub-class extending "
         + YarnClient.class.getName() + " is expected to implement this !");
   }
+
+  /**
+   * <p>
+   * Get the resource profiles available in the RM.
+   * </p>
+   * @return a Map of the resource profile names to their capabilities
+   * @throws YarnException if resource profiles are not enabled
+   * @throws IOException in case of other errors
+   */
+  public abstract Map<String, Resource> getResourceProfiles()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get the details of a specific resource profile from the RM.
+   * </p>
+   * @param profile the profile name
+   * @return the capabilities of the resource profile
+   * @throws YarnException if resource profiles are not enabled or the profile
+   *         cannot be found
+   * @throws IOException in case of other others
+   */
+  public abstract Resource getResourceProfile(String profile)
+      throws YarnException, IOException;
 }

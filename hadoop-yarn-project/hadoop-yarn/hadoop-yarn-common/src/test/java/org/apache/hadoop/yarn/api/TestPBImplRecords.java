@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenR
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.CancelDelegationTokenResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMasterResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetAllResourceProfilesResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationAttemptReportRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationAttemptReportResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationAttemptsRequestPBImpl;
@@ -74,6 +75,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueInfoRequestPBI
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueInfoResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueUserAclsInfoRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueUserAclsInfoResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetResourceProfileRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetResourceProfileResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.IncreaseContainersResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.IncreaseContainersResourceResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.KillApplicationRequestPBImpl;
@@ -127,6 +130,7 @@ import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.PreemptionResourceRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ProfileCapability;
 import org.apache.hadoop.yarn.api.records.QueueConfigurations;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -176,6 +180,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionContractPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProfileCapabilityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueUserACLInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
@@ -303,6 +308,10 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersRequestProto
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainersResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllResourceProfilesResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetResourceProfileRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetResourceProfileResponseProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ProfileCapabilityProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.AddToClusterNodeLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.CheckForDecommissioningNodesRequestPBImpl;
@@ -363,6 +372,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(NodeReport.class);
     generateByNewInstance(Token.class);
     generateByNewInstance(NMToken.class);
+    generateByNewInstance(ProfileCapability.class);
     generateByNewInstance(ResourceRequest.class);
     generateByNewInstance(ApplicationAttemptReport.class);
     generateByNewInstance(ApplicationResourceUsageReport.class);
@@ -1156,5 +1166,29 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   public void testExecutionTypeRequestPBImpl() throws Exception {
     validatePBImplRecord(ExecutionTypeRequestPBImpl.class,
         ExecutionTypeRequestProto.class);
+  }
+
+  @Test
+  public void testGetAllResourceProfilesResponsePBImpl() throws Exception {
+    validatePBImplRecord(GetAllResourceProfilesResponsePBImpl.class,
+        GetAllResourceProfilesResponseProto.class);
+  }
+
+  @Test
+  public void testGetResourceProfileRequestPBImpl() throws Exception {
+    validatePBImplRecord(GetResourceProfileRequestPBImpl.class,
+        GetResourceProfileRequestProto.class);
+  }
+
+  @Test
+  public void testGetResourceProfileResponsePBImpl() throws Exception {
+    validatePBImplRecord(GetResourceProfileResponsePBImpl.class,
+        GetResourceProfileResponseProto.class);
+  }
+
+  @Test
+  public void testProfileCapabilityPBImpl() throws Exception {
+    validatePBImplRecord(ProfileCapabilityPBImpl.class,
+        ProfileCapabilityProto.class);
   }
 }

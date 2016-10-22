@@ -48,6 +48,7 @@ message RegisterApplicationMasterResponseProto {
   optional string queue = 5;
   repeated NMTokenProto nm_tokens_from_previous_attempts = 6;
   repeated SchedulerResourceTypes scheduler_resource_types = 7;
+  optional ResourceProfilesProto resource_profiles = 8;
 }
 
 message FinishApplicationMasterRequestProto {
@@ -277,6 +278,21 @@ message UpdateApplicationTimeoutsRequestProto {
 
 message UpdateApplicationTimeoutsResponseProto {
     repeated ApplicationUpdateTimeoutMapProto application_timeouts = 1;
+}
+
+message GetAllResourceProfilesRequestProto {
+}
+
+message GetAllResourceProfilesResponseProto {
+  required ResourceProfilesProto resource_profiles = 1;
+}
+
+message GetResourceProfileRequestProto {
+  required string profile = 1;
+}
+
+message GetResourceProfileResponseProto {
+  required ResourceProto resources = 1;
 }
 
 //////////////////////////////////////////////////////
