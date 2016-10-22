@@ -65,6 +65,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -589,4 +593,37 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
   public UpdateApplicationTimeoutsResponse updateApplicationTimeouts(
       UpdateApplicationTimeoutsRequest request)
       throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get all the resource profiles that are
+   * available on the ResourceManager.
+   * </p>
+   * @param request request to get all the resource profiles
+   * @return Response containing a map of the profile name to Resource
+   *         capabilities
+   * @throws YarnException if resource profiles are not enabled on the RM
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface to get the details for a specific resource profile.
+   * </p>
+   * @param request request to get the details of a resource profile
+   * @return Response containing the details for a particular resource profile
+   * @throws YarnException if resource profiles are not enabled on the RM or
+   *         the profile cannot be found
+   * @throws IOException in case of other errors
+   */
+  @Public
+  @Unstable
+  GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException;
+
+
 }

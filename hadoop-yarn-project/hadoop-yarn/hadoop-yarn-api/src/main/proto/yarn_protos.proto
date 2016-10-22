@@ -81,6 +81,15 @@ message ResourceOptionProto {
   optional int32 over_commit_timeout = 2;
 }
 
+message ResourceProfileEntry {
+  required string name = 1;
+  required ResourceProto resources = 2;
+}
+
+message ResourceProfilesProto {
+  repeated ResourceProfileEntry resource_profiles_map = 1;
+}
+
 message NodeResourceMapProto {
   optional NodeIdProto node_id = 1;
   optional ResourceOptionProto resource_option = 2;
@@ -322,6 +331,11 @@ enum ExecutionTypeProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
+message ProfileCapabilityProto {
+  required string profile = 1;
+  required ResourceProto profileCapabilityOverride = 2;
+}
+
 message ResourceRequestProto {
   optional PriorityProto priority = 1;
   optional string resource_name = 2;
@@ -331,6 +345,7 @@ message ResourceRequestProto {
   optional string node_label_expression = 6;
   optional ExecutionTypeRequestProto execution_type_request = 7;
   optional int64 allocation_request_id = 8 [default = 0];
+  optional ProfileCapabilityProto profile = 9;
 }
 
 message ExecutionTypeRequestProto {
