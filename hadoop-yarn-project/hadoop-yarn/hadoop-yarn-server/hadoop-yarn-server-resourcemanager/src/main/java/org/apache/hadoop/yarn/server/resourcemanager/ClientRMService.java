@@ -111,6 +111,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityReque
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -144,6 +148,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInputValidator;
@@ -209,6 +214,8 @@ public class ClientRMService extends AbstractService implements
   private static final EnumSet<RMAppState> ACTIVE_APP_STATES = EnumSet.of(
       RMAppState.ACCEPTED, RMAppState.RUNNING);
 
+  private ResourceProfilesManager resourceProfilesManager;
+
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
       QueueACLsManager queueACLsManager,
@@ -231,6 +238,7 @@ public class ClientRMService extends AbstractService implements
     this.reservationSystem = rmContext.getReservationSystem();
     this.clock = clock;
     this.rValidator = new ReservationInputValidator(clock);
+    resourceProfilesManager = rmContext.getResourceProfilesManager();
   }
 
   @Override
@@ -1759,4 +1767,37 @@ public class ClientRMService extends AbstractService implements
     return application;
   }
 
+  @Override
+  public GetAllResourceProfilesResponse getResourceProfiles(
+      GetAllResourceProfilesRequest request) throws YarnException, IOException {
+    GetAllResourceProfilesResponse response =
+        GetAllResourceProfilesResponse.newInstance();
+    response.setResourceProfiles(getResourceProfiles());
+    return response;
+  }
+
+  @Override
+  public GetResourceProfileResponse getResourceProfile(
+      GetResourceProfileRequest request) throws YarnException, IOException {
+    Map<String, Resource> profiles = getResourceProfiles();
+    if (!profiles.containsKey(request.getProfileName())) {
+      throw new YarnException(
+          "Resource profile '" + request.getProfileName() + "' not found");
+    }
+    GetResourceProfileResponse response =
+        GetResourceProfileResponse.newInstance();
+    response.setResource(
+        resourceProfilesManager.getProfile(request.getProfileName()));
+    return response;
+  }
+
+  private Map<String, Resource> getResourceProfiles() throws YarnException {
+    boolean resourceProfilesEnabled = getConfig()
+        .getBoolean(YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_PROFILES_ENABLED);
+    if (!resourceProfilesEnabled) {
+      throw new YarnException("Resource profiles are not enabled");
+    }
+    return resourceProfilesManager.getResourceProfiles();
+  }
 }

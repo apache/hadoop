@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -516,5 +517,17 @@ public class ResourceMgrDelegate extends YarnClient {
   public void killApplication(ApplicationId appId, String diagnostics)
       throws YarnException, IOException {
     client.killApplication(appId, diagnostics);
+  }
+
+  @Override
+  public Map<String, Resource> getResourceProfiles()
+      throws YarnException, IOException {
+    return client.getResourceProfiles();
+  }
+
+  @Override
+  public Resource getResourceProfile(String profile)
+      throws YarnException, IOException {
+    return client.getResourceProfile(profile);
   }
 }
