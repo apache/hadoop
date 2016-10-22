@@ -29,6 +29,7 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -173,6 +174,27 @@ public class TestFetcher {
     verify(ss).copyFailed(map1ID, host, false, false);
     verify(ss).copyFailed(map2ID, host, false, false);
     
+    verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
+    verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
+  }
+
+  @Test
+  public void testCopyFromHostConnectionRejected() throws Exception {
+    when(connection.getResponseCode())
+        .thenReturn(Fetcher.TOO_MANY_REQ_STATUS_CODE);
+
+    Fetcher<Text, Text> fetcher = new FakeFetcher<>(job, id, ss, mm, r, metrics,
+        except, key, connection);
+    fetcher.copyFromHost(host);
+
+    Assert.assertEquals("No host failure is expected.",
+        ss.hostFailureCount(host.getHostName()), 0);
+    Assert.assertEquals("No fetch failure is expected.",
+        ss.fetchFailureCount(map1ID), 0);
+    Assert.assertEquals("No fetch failure is expected.",
+        ss.fetchFailureCount(map2ID), 0);
+
+    verify(ss).penalize(eq(host), anyLong());
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
   }
