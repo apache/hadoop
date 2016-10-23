@@ -1218,7 +1218,7 @@ public class ClientRMService extends AbstractService implements
           .contains(UserGroupInformation.getCurrentUser()
                   .getRealAuthenticationMethod());
     } else {
-      return false;
+      return true;
     }
   }
 
