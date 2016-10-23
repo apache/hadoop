@@ -454,7 +454,7 @@ public class ITestS3AConfiguration {
     assertNotNull(fs);
     long readAheadRange = fs.getReadAheadRange();
     assertNotNull(readAheadRange);
-    assertEquals("Read Ahead Range Incorrect.", readAheadRange, 300000);
+    assertEquals("Read Ahead Range Incorrect.", readAheadRange, 300*1024);
   }
 
   /**
