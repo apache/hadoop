@@ -26,6 +26,16 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class abstracts out how a container contributes to Resource Utilization.
+ * It is used by the {@link ContainerScheduler} to determine which
+ * OPPORTUNISTIC containers to be killed to make room for a GUARANTEED
+ * container.
+ * It currently equates resource utilization with the total resource allocated
+ * to the container. Another implementation might choose to use the actual
+ * resource utilization.
+ */
+
 public class ResourceUtilizationManager {
 
   private static final Logger LOG =
@@ -34,27 +44,45 @@ public class ResourceUtilizationManager {
   private ResourceUtilization containersAllocation;
   private ContainerScheduler scheduler;
 
-  public ResourceUtilizationManager(ContainerScheduler scheduler) {
+  ResourceUtilizationManager(ContainerScheduler scheduler) {
     this.containersAllocation = ResourceUtilization.newInstance(0, 0, 0.0f);
     this.scheduler = scheduler;
   }
 
+  /**
+   * Get the current accumulated utilization. Currently it is the accumulation
+   * of totally allocated resources to a container.
+   * @return ResourceUtilization Resource Utilization.
+   */
   public ResourceUtilization getCurrentUtilization() {
     return this.containersAllocation;
   }
 
+  /**
+   * Add Container's resources to the accumulated Utilization.
+   * @param container Container.
+   */
   public void addContainerResources(Container container) {
     increaseResourceUtilization(
         getContainersMonitor(), this.containersAllocation,
         container.getResource());
   }
 
+  /**
+   * Subtract Container's resources to the accumulated Utilization.
+   * @param container Container.
+   */
   public void subtractContainerResource(Container container) {
     decreaseResourceUtilization(
         getContainersMonitor(), this.containersAllocation,
         container.getResource());
   }
 
+  /**
+   * Check if NM has resources available currently to run the container.
+   * @param container Container.
+   * @return True, if NM has resources available currently to run the container.
+   */
   public boolean hasResourcesAvailable(Container container) {
     long pMemBytes = container.getResource().getMemorySize() * 1024 * 1024L;
     return hasResourcesAvailable(pMemBytes,

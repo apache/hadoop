@@ -213,7 +213,7 @@ public class TestOpportunisticContainerAllocation {
     }
   }
 
-  @Test(timeout = 600000)
+  @Test(timeout = 60000)
   public void testAMRMClient() throws YarnException, IOException {
     AMRMClient<AMRMClient.ContainerRequest> amClient = null;
     try {

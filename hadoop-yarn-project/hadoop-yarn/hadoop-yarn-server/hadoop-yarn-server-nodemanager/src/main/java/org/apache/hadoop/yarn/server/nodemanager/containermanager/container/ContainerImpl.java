@@ -166,6 +166,7 @@ public class ContainerImpl implements Container {
   private String ips;
   private volatile ReInitializationContext reInitContext;
   private volatile boolean isReInitializing = false;
+  private volatile boolean isMarkedToKill = false;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -325,7 +326,7 @@ public class ContainerImpl implements Container {
     // container not launched so kill is a no-op
     .addTransition(ContainerState.LOCALIZATION_FAILED,
         ContainerState.LOCALIZATION_FAILED,
-        ContainerEventType.KILL_CONTAINER, new KillBeforeRunningTransition())
+        ContainerEventType.KILL_CONTAINER)
     // container cleanup triggers a release of all resources
     // regardless of whether they were localized or not
     // LocalizedResource handles release event in all states
@@ -501,10 +502,6 @@ public class ContainerImpl implements Container {
         ContainerEventType.KILL_CONTAINER)
     .addTransition(ContainerState.DONE, ContainerState.DONE,
         ContainerEventType.INIT_CONTAINER)
-    .addTransition(ContainerState.DONE, ContainerState.DONE,
-        ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP)
-    .addTransition(ContainerState.DONE, ContainerState.DONE,
-        ContainerEventType.CONTAINER_LAUNCHED)
     .addTransition(ContainerState.DONE, ContainerState.DONE,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
@@ -734,11 +731,7 @@ public class ContainerImpl implements Container {
   @SuppressWarnings("unchecked") // dispatcher not typed
   @Override
   public void sendKillEvent(int exitStatus, String description) {
-    try {
-      context.getNMStateStore().storeContainerKilled(containerId);
-    } catch (IOException ioe) {
-      LOG.error("Could not log container state change to state store..", ioe);
-    }
+    this.isMarkedToKill = true;
     dispatcher.getEventHandler().handle(
         new ContainerKillEvent(containerId, exitStatus, description));
   }
@@ -1396,7 +1389,7 @@ public class ContainerImpl implements Container {
 
       container.resourceSet =
           container.reInitContext.mergedResourceSet(container.resourceSet);
-
+      container.isMarkedToKill = false;
       container.sendScheduleEvent();
     }
   }
@@ -1746,6 +1739,11 @@ public class ContainerImpl implements Container {
   @Override
   public boolean isReInitializing() {
     return this.isReInitializing;
+  }
+
+  @Override
+  public boolean isMarkedToKill() {
+    return this.isMarkedToKill;
   }
 
   @Override

@@ -849,10 +849,6 @@ public class ContainersMonitorImpl extends AbstractService implements
         (int) (getVmemAllocatedForContainers() >> 20), 1.0f);
   }
 
-  private float allocatedCpuUsage(int cpuVcores) {
-    return (float) cpuVcores / getVCoresAllocatedForContainers();
-  }
-
   @Override
   public float getVmemRatio() {
     return vmemRatio;

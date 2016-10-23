@@ -78,11 +78,15 @@ public class ContainerScheduler extends AbstractService implements
   private ResourceUtilizationManager utilizationManager;
 
   public ContainerScheduler(Context context) {
+    this(context, context.getConf().getInt(
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
+        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT));
+  }
+
+  @VisibleForTesting
+  public ContainerScheduler(Context context, int qLength) {
     super(ContainerScheduler.class.getName());
     this.context = context;
-    int qLength = context.getConf().getInt(
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
-        YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH_DEFAULT);
     this.maxOppQueueLength = (qLength <= 0) ? 0 : qLength;
     this.utilizationManager = new ResourceUtilizationManager(this);
   }
@@ -153,7 +157,8 @@ public class ContainerScheduler extends AbstractService implements
     return resourcesAvailable;
   }
 
-  private void scheduleContainer(Container container) {
+  @VisibleForTesting
+  protected void scheduleContainer(Container container) {
     if (maxOppQueueLength <= 0) {
       startAllocatedContainer(container);
       return;

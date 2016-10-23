@@ -217,6 +217,11 @@ public class MockContainer implements Container {
   }
 
   @Override
+  public boolean isMarkedToKill() {
+    return false;
+  }
+
+  @Override
   public void sendLaunchEvent() {
 
   }

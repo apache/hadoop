@@ -368,8 +368,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
             context.getContainerTokenSecretManager(), null,
             ExecutionType.GUARANTEED)));
 
-    StartContainersRequest allRequests =
-        StartContainersRequest.newInstance(list);
+    allRequests = StartContainersRequest.newInstance(list);
     containerManager.startContainers(allRequests);
 
     BaseContainerManagerTest.waitForNMContainerState(containerManager,
@@ -449,6 +448,12 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
             user, BuilderUtils.newResource(512, 1),
             context.getContainerTokenSecretManager(), null,
             ExecutionType.OPPORTUNISTIC)));
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    list = new ArrayList<>();
     list.add(StartContainerRequest.newInstance(
         containerLaunchContext,
         createContainerToken(createContainerId(3), DUMMY_RM_IDENTIFIER,

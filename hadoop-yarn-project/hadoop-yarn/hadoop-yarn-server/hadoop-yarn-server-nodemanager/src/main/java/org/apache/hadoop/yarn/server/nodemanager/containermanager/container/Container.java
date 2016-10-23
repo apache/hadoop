@@ -86,6 +86,8 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   boolean isReInitializing();
 
+  boolean isMarkedToKill();
+
   boolean canRollback();
 
   void commitUpgrade();

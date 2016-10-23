@@ -37,6 +37,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -331,6 +332,12 @@ public class TestNMClient {
           ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
       ContainerLaunchContext clc =
           Records.newRecord(ContainerLaunchContext.class);
+      if (Shell.WINDOWS) {
+        clc.setCommands(
+            Arrays.asList("ping", "-n", "100", "127.0.0.1", ">nul"));
+      } else {
+        clc.setCommands(Arrays.asList("sleep", "10"));
+      }
       clc.setTokens(securityTokens);
       try {
         nmClient.startContainer(container, clc);
@@ -342,8 +349,7 @@ public class TestNMClient {
       // leave one container unclosed
       if (++i < size) {
         // NodeManager may still need some time to make the container started
-        testGetContainerStatus(container, i,
-            EnumSet.of(ContainerState.RUNNING, ContainerState.SCHEDULED), "",
+        testGetContainerStatus(container, i, ContainerState.RUNNING, "",
             Arrays.asList(new Integer[] {-1000}));
         // Test increase container API and make sure requests can reach NM
         testIncreaseContainerResource(container);
@@ -360,8 +366,7 @@ public class TestNMClient {
         try {
           // O is possible if CLEANUP_CONTAINER is executed too late
           // -105 is possible if the container is not terminated but killed
-          testGetContainerStatus(container, i,
-              EnumSet.of(ContainerState.COMPLETE),
+          testGetContainerStatus(container, i, ContainerState.COMPLETE,
               "Container killed by the ApplicationMaster.", Arrays.asList(
                   new Integer[] {ContainerExitStatus.KILLED_BY_APPMASTER,
                   ContainerExitStatus.SUCCESS}));
@@ -388,8 +393,7 @@ public class TestNMClient {
   }
 
   private void testGetContainerStatus(Container container, int index,
-      EnumSet<ContainerState> states, String diagnostics,
-      List<Integer> exitStatuses)
+      ContainerState state, String diagnostics, List<Integer> exitStatuses)
           throws YarnException, IOException {
     while (true) {
       try {
@@ -397,7 +401,7 @@ public class TestNMClient {
             container.getId(), container.getNodeId());
         // NodeManager may still need some time to get the stable
         // container status
-        if (states.contains(status.getState())) {
+        if (status.getState() == state) {
           assertEquals(container.getId(), status.getContainerId());
           assertTrue("" + index + ": " + status.getDiagnostics(),
               status.getDiagnostics().contains(diagnostics));
