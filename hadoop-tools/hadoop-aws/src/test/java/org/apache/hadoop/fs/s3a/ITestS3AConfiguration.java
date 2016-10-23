@@ -446,6 +446,17 @@ public class ITestS3AConfiguration {
         tmp1.getParent(), tmp2.getParent());
   }
 
+  @Test
+  public void testReadAheadRange() throws Exception {
+    conf = new Configuration();
+    conf.set(Constants.READAHEAD_RANGE, "300k");
+    fs = S3ATestUtils.createTestFileSystem(conf);
+    assertNotNull(fs);
+    long readAheadRange = fs.getReadAheadRange();
+    assertNotNull(readAheadRange);
+    assertEquals("Read Ahead Range Incorrect.", readAheadRange, 300000);
+  }
+
   /**
    * Reads and returns a field from an object using reflection.  If the field
    * cannot be found, is null, or is not the expected type, then this method

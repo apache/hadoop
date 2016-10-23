@@ -182,7 +182,7 @@ public class S3AFileSystem extends FileSystem {
       longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
-      readAhead = longOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
+      readAhead = longBytesOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
       storageStatistics = (S3AStorageStatistics)
           GlobalStorageStatistics.INSTANCE
               .put(S3AStorageStatistics.NAME,
@@ -351,6 +351,16 @@ public class S3AFileSystem extends FileSystem {
   @VisibleForTesting
   AmazonS3 getAmazonS3Client() {
     return s3;
+  }
+
+  /**
+   * Returns the read ahead range value used by this filesystem
+   * @return
+   */
+
+  @VisibleForTesting
+  long getReadAheadRange() {
+    return readAhead;
   }
 
   /**
@@ -2262,6 +2272,26 @@ public class S3AFileSystem extends FileSystem {
       sb.append('}');
       return sb.toString();
     }
+  }
+
+  /**
+   * Get a longBytes option >= the minimum allowed value.
+   * @param conf configuration
+   * @param key key to look up
+   * @param defVal default value
+   * @param min minimum value
+   * @return the value
+   * @throws IllegalArgumentException if the value is below the minimum
+   */
+  static long longBytesOption(Configuration conf,
+                         String key,
+                         long defVal,
+                         long min) {
+    long v = conf.getLongBytes(key, defVal);
+    Preconditions.checkArgument(v >= min,
+            String.format("Value of %s: %d is below the minimum value %d",
+                    key, v, min));
+    return v;
   }
 
 }
