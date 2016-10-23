@@ -373,6 +373,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
   private final int authRetry;
+  private final UserGroupInformation actualUgi;
 
   @Override
   public String toString() {
@@ -454,6 +455,15 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
+    UserGroupInformation.AuthenticationMethod authMethod =
+        UserGroupInformation.getCurrentUser().getAuthenticationMethod();
+    if (authMethod == UserGroupInformation.AuthenticationMethod.PROXY) {
+      actualUgi = UserGroupInformation.getCurrentUser().getRealUser();
+    } else if (authMethod == UserGroupInformation.AuthenticationMethod.TOKEN) {
+      actualUgi = UserGroupInformation.getLoginUser();
+    } else {
+      actualUgi =UserGroupInformation.getCurrentUser();
+    }
   }
 
   private static Path extractKMSPath(URI uri) throws MalformedURLException, IOException {
@@ -520,9 +530,19 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       throws IOException {
     HttpURLConnection conn;
     try {
-      final String doAsUser = getDoAsUser();
-      conn = getActualUgi().doAs(new PrivilegedExceptionAction
-          <HttpURLConnection>() {
+      // if current UGI is different from UGI at constructor time, behave as
+      // proxyuser
+      UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+      final String doAsUser = (currentUgi.getAuthenticationMethod() ==
+          UserGroupInformation.AuthenticationMethod.PROXY)
+                              ? currentUgi.getShortUserName() : null;
+
+      // If current UGI contains kms-dt && is not proxy, doAs it to use its dt.
+      // Otherwise, create the HTTP connection using the UGI at constructor time
+      UserGroupInformation ugiToUse =
+          (currentUgiContainsKmsDt() && doAsUser == null) ?
+              currentUgi : actualUgi;
+      conn = ugiToUse.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
         @Override
         public HttpURLConnection run() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
@@ -899,7 +919,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           token, url, doAsUser);
       final DelegationTokenAuthenticatedURL authUrl =
           new DelegationTokenAuthenticatedURL(configurator);
-      return getActualUgi().doAs(
+      return actualUgi.doAs(
           new PrivilegedExceptionAction<Long>() {
             @Override
             public Long run() throws Exception {
@@ -922,7 +942,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       final String doAsUser = getDoAsUser();
       final DelegationTokenAuthenticatedURL.Token token =
           generateDelegationToken(dToken);
-      return getActualUgi().doAs(
+      return actualUgi.doAs(
           new PrivilegedExceptionAction<Void>() {
             @Override
             public Void run() throws Exception {
@@ -994,7 +1014,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
           new DelegationTokenAuthenticatedURL(configurator);
       try {
         final String doAsUser = getDoAsUser();
-        token = getActualUgi().doAs(new PrivilegedExceptionAction<Token<?>>() {
+        token = actualUgi.doAs(new PrivilegedExceptionAction<Token<?>>() {
           @Override
           public Token<?> run() throws Exception {
             // Not using the cached token here.. Creating a new token here
@@ -1038,26 +1058,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
     }
     return false;
-  }
-
-  private UserGroupInformation getActualUgi() throws IOException {
-    final UserGroupInformation currentUgi = UserGroupInformation
-        .getCurrentUser();
-    if (LOG.isDebugEnabled()) {
-      UserGroupInformation.logAllUserInfo(currentUgi);
-    }
-    // Use current user by default
-    UserGroupInformation actualUgi = currentUgi;
-    if (currentUgi.getRealUser() != null) {
-      // Use real user for proxy user
-      actualUgi = currentUgi.getRealUser();
-    } else if (!currentUgiContainsKmsDt() &&
-        !currentUgi.hasKerberosCredentials()) {
-      // Use login user for user that does not have either
-      // Kerberos credential or KMS delegation token for KMS operations
-      actualUgi = currentUgi.getLoginUser();
-    }
-    return actualUgi;
   }
 
   /**
