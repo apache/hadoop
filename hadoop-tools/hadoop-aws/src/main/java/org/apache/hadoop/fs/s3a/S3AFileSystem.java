@@ -152,6 +152,7 @@ public class S3AFileSystem extends FileSystem {
    *   for this FileSystem
    * @param conf the configuration
    */
+  @SuppressWarnings("deprecation")
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     setConf(conf);
@@ -181,7 +182,7 @@ public class S3AFileSystem extends FileSystem {
       longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
-      readAhead = longOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
+      readAhead = longByteOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
       storageStatistics = (S3AStorageStatistics)
           GlobalStorageStatistics.INSTANCE
               .put(S3AStorageStatistics.NAME,
@@ -1868,10 +1869,11 @@ public class S3AFileSystem extends FileSystem {
    */
   @Deprecated
   public long getDefaultBlockSize() {
-    return getConf().getLong(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
+    return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "S3AFileSystem{");
