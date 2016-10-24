@@ -28,11 +28,15 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Objects;
@@ -40,16 +44,26 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
- * CopyListingFileStatus is a specialized subclass of {@link FileStatus} for
- * attaching additional data members useful to distcp.  This class does not
- * override {@link FileStatus#compareTo}, because the additional data members
- * are not relevant to sort order.
+ * CopyListingFileStatus is a view of {@link FileStatus}, recording additional
+ * data members useful to distcp.
  */
 @InterfaceAudience.Private
-public final class CopyListingFileStatus extends FileStatus {
+public final class CopyListingFileStatus implements Writable {
 
   private static final byte NO_ACL_ENTRIES = -1;
   private static final int NO_XATTRS = -1;
+
+  // FileStatus fields
+  private Path path;
+  private long length;
+  private boolean isdir;
+  private short blockReplication;
+  private long blocksize;
+  private long modificationTime;
+  private long accessTime;
+  private FsPermission permission;
+  private String owner;
+  private String group;
 
   // Retain static arrays of enum values to prevent repeated allocation of new
   // arrays during deserialization.
@@ -64,6 +78,7 @@ public final class CopyListingFileStatus extends FileStatus {
    * Default constructor.
    */
   public CopyListingFileStatus() {
+    this(0, false, 0, 0, 0, 0, null, null, null, null);
   }
 
   /**
@@ -72,8 +87,76 @@ public final class CopyListingFileStatus extends FileStatus {
    *
    * @param fileStatus FileStatus to copy
    */
-  public CopyListingFileStatus(FileStatus fileStatus) throws IOException {
-    super(fileStatus);
+  public CopyListingFileStatus(FileStatus fileStatus) {
+    this(fileStatus.getLen(), fileStatus.isDirectory(),
+        fileStatus.getReplication(), fileStatus.getBlockSize(),
+        fileStatus.getModificationTime(), fileStatus.getAccessTime(),
+        fileStatus.getPermission(), fileStatus.getOwner(),
+        fileStatus.getGroup(),
+        fileStatus.getPath());
+  }
+
+  @SuppressWarnings("checkstyle:parameternumber")
+  public CopyListingFileStatus(long length, boolean isdir,
+      int blockReplication, long blocksize, long modificationTime,
+      long accessTime, FsPermission permission, String owner, String group,
+      Path path) {
+    this.length = length;
+    this.isdir = isdir;
+    this.blockReplication = (short)blockReplication;
+    this.blocksize = blocksize;
+    this.modificationTime = modificationTime;
+    this.accessTime = accessTime;
+    if (permission != null) {
+      this.permission = permission;
+    } else {
+      this.permission = isdir
+        ? FsPermission.getDirDefault()
+        : FsPermission.getFileDefault();
+    }
+    this.owner = (owner == null) ? "" : owner;
+    this.group = (group == null) ? "" : group;
+    this.path = path;
+  }
+
+  public Path getPath() {
+    return path;
+  }
+
+  public long getLen() {
+    return length;
+  }
+
+  public long getBlockSize() {
+    return blocksize;
+  }
+
+  public boolean isDirectory() {
+    return isdir;
+  }
+
+  public short getReplication() {
+    return blockReplication;
+  }
+
+  public long getModificationTime() {
+    return modificationTime;
+  }
+
+  public String getOwner() {
+    return owner;
+  }
+
+  public String getGroup() {
+    return group;
+  }
+
+  public long getAccessTime() {
+    return accessTime;
+  }
+
+  public FsPermission getPermission() {
+    return permission;
   }
 
   /**
@@ -115,7 +198,16 @@ public final class CopyListingFileStatus extends FileStatus {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    super.write(out);
+    Text.writeString(out, getPath().toString(), Text.DEFAULT_MAX_LEN);
+    out.writeLong(getLen());
+    out.writeBoolean(isDirectory());
+    out.writeShort(getReplication());
+    out.writeLong(getBlockSize());
+    out.writeLong(getModificationTime());
+    out.writeLong(getAccessTime());
+    getPermission().write(out);
+    Text.writeString(out, getOwner(), Text.DEFAULT_MAX_LEN);
+    Text.writeString(out, getGroup(), Text.DEFAULT_MAX_LEN);
     if (aclEntries != null) {
       // byte is sufficient, because 32 ACL entries is the max enforced by HDFS.
       out.writeByte(aclEntries.size());
@@ -152,7 +244,17 @@ public final class CopyListingFileStatus extends FileStatus {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
+    String strPath = Text.readString(in, Text.DEFAULT_MAX_LEN);
+    this.path = new Path(strPath);
+    this.length = in.readLong();
+    this.isdir = in.readBoolean();
+    this.blockReplication = in.readShort();
+    blocksize = in.readLong();
+    modificationTime = in.readLong();
+    accessTime = in.readLong();
+    permission.readFields(in);
+    owner = Text.readString(in, Text.DEFAULT_MAX_LEN);
+    group = Text.readString(in, Text.DEFAULT_MAX_LEN);
     byte aclEntriesSize = in.readByte();
     if (aclEntriesSize != NO_ACL_ENTRIES) {
       aclEntries = Lists.newArrayListWithCapacity(aclEntriesSize);
@@ -190,15 +292,16 @@ public final class CopyListingFileStatus extends FileStatus {
 
   @Override
   public boolean equals(Object o) {
-    if (!super.equals(o)) {
+    if (null == o) {
       return false;
     }
     if (getClass() != o.getClass()) {
       return false;
     }
     CopyListingFileStatus other = (CopyListingFileStatus)o;
-    return Objects.equal(aclEntries, other.aclEntries) &&
-        Objects.equal(xAttrs, other.xAttrs);
+    return getPath().equals(other.getPath())
+      && Objects.equal(aclEntries, other.aclEntries)
+      && Objects.equal(xAttrs, other.xAttrs);
   }
 
   @Override
