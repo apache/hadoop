@@ -195,6 +195,8 @@ public class TestWebHdfsTokens {
   public void testLazyTokenFetchForSWebhdfs() throws Exception {
     MiniDFSCluster cluster = null;
     SWebHdfsFileSystem fs = null;
+    String keystoresDir;
+    String sslConfDir;
     try {
       final Configuration clusterConf = new HdfsConfiguration(conf);
       SecurityUtil.setAuthenticationMethod(SIMPLE, clusterConf);
@@ -202,8 +204,6 @@ public class TestWebHdfsTokens {
 	    .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
       String BASEDIR = System.getProperty("test.build.dir",
 	      	  "target/test-dir") + "/" + TestWebHdfsTokens.class.getSimpleName();
-      String keystoresDir;
-      String sslConfDir;
 	    
       clusterConf.setBoolean(HdfsClientConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
       clusterConf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
@@ -241,6 +241,7 @@ public class TestWebHdfsTokens {
           cluster.shutdown();
         }
      }
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
   @Test

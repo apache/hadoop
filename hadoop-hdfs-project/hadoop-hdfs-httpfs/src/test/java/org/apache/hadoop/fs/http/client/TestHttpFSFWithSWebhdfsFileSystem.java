@@ -39,6 +39,7 @@ public class TestHttpFSFWithSWebhdfsFileSystem
   private static String classpathDir;
   private static final String BASEDIR = System.getProperty("test.build.dir",
       "target/test-dir") + "/" + UUID.randomUUID();
+  private static String keyStoreDir;
 
   private static Configuration sslConf;
 
@@ -56,7 +57,7 @@ public class TestHttpFSFWithSWebhdfsFileSystem
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
-    String keyStoreDir = new File(BASEDIR).getAbsolutePath();
+    keyStoreDir = new File(BASEDIR).getAbsolutePath();
     try {
       sslConf = new Configuration();
       KeyStoreTestUtil.setupSSLConfig(keyStoreDir, classpathDir, sslConf, false);
@@ -68,9 +69,10 @@ public class TestHttpFSFWithSWebhdfsFileSystem
   }
 
   @AfterClass
-  public static void cleanUp() {
+  public static void cleanUp() throws Exception {
     new File(classpathDir, "ssl-client.xml").delete();
     new File(classpathDir, "ssl-server.xml").delete();
+    KeyStoreTestUtil.cleanupSSLConfig(keyStoreDir, classpathDir);
   }
 
   public TestHttpFSFWithSWebhdfsFileSystem(Operation operation) {
