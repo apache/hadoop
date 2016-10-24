@@ -44,6 +44,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The ContainerScheduler manages a collection of runnable containers. It
+ * ensures that a container is launched only if all it launch criteria are
+ * met. It also ensures that OPPORTUNISTIC containers are killed to make
+ * room for GUARANTEED containers.
+ */
 public class ContainerScheduler extends AbstractService implements
     EventHandler<ContainerSchedulerEvent> {
 
@@ -77,6 +83,10 @@ public class ContainerScheduler extends AbstractService implements
   //
   private ResourceUtilizationManager utilizationManager;
 
+  /**
+   * Instantiate a Container Scheduler.
+   * @param context NodeManager Context.
+   */
   public ContainerScheduler(Context context) {
     this(context, context.getConf().getInt(
         YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_MAX_QUEUE_LENGTH,
@@ -91,6 +101,10 @@ public class ContainerScheduler extends AbstractService implements
     this.utilizationManager = new ResourceUtilizationManager(this);
   }
 
+  /**
+   * Handle ContainerSchedulerEvents.
+   * @param event ContainerSchedulerEvent.
+   */
   @Override
   public void handle(ContainerSchedulerEvent event) {
     switch (event.getType()) {
@@ -106,6 +120,10 @@ public class ContainerScheduler extends AbstractService implements
     }
   }
 
+  /**
+   * Return number of queued containers.
+   * @return Number of queued containers.
+   */
   public int getNumQueuedContainers() {
     return this.queuedGuaranteedContainers.size()
         + this.queuedOpportunisticContainers.size();
@@ -223,7 +241,7 @@ public class ContainerScheduler extends AbstractService implements
     container.sendLaunchEvent();
   }
 
-  protected List<Container> pickOpportunisticContainersToKill(
+  private List<Container> pickOpportunisticContainersToKill(
       ContainerId containerToStartId) {
     // The additional opportunistic containers that need to be killed for the
     // given container to start.

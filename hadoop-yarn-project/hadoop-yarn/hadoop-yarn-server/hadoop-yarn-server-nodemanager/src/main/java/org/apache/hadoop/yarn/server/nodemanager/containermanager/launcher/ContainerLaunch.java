@@ -106,8 +106,8 @@ public class ContainerLaunch implements Callable<Integer> {
   
   protected AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
   protected AtomicBoolean completed = new AtomicBoolean(false);
-  protected volatile boolean killedBeforeStart = false;
 
+  private volatile boolean killedBeforeStart = false;
   private long sleepDelayBeforeSigKill = 250;
   private long maxKillWaitTime = 2000;
 

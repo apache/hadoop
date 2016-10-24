@@ -905,12 +905,12 @@ public class MiniYARNCluster extends CompositeService {
 
         @Override
         public long getVmemAllocatedForContainers() {
-          return 16 * 1024l * 1024l * 1024l;
+          return 16 * 1024L * 1024L * 1024L;
         }
 
         @Override
         public long getPmemAllocatedForContainers() {
-          return 8 * 1024l * 1024l * 1024l;
+          return 8 * 1024L * 1024L * 1024L;
         }
 
         @Override

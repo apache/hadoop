@@ -55,6 +55,10 @@ import org.junit.Test;
 
 import static org.mockito.Mockito.spy;
 
+/**
+ * Tests to verify that the {@link ContainerScheduler} is able to queue and
+ * make room for containers.
+ */
 public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   public TestContainerSchedulerQueuing() throws UnsupportedFileSystemException {
     super();
@@ -64,7 +68,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     LOG = LogFactory.getLog(TestContainerSchedulerQueuing.class);
   }
 
-  boolean delayContainers = true;
+  private boolean delayContainers = true;
 
   @Override
   protected ContainerManagerImpl createContainerManager(
@@ -477,6 +481,76 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     int killedContainers = 0;
     List<ContainerId> statList = new ArrayList<ContainerId>();
     for (int i = 0; i < 4; i++) {
+      statList.add(createContainerId(i));
+    }
+    GetContainerStatusesRequest statRequest =
+        GetContainerStatusesRequest.newInstance(statList);
+    List<ContainerStatus> containerStatuses = containerManager
+        .getContainerStatuses(statRequest).getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
+      if (status.getDiagnostics().contains(
+          "Container Killed to make room for Guaranteed Container")) {
+        killedContainers++;
+      }
+      System.out.println("\nStatus : [" + status + "]\n");
+    }
+
+    Assert.assertEquals(2, killedContainers);
+  }
+
+  /**
+   * Submit four OPPORTUNISTIC containers that can run concurrently, and then
+   * two GUARANTEED that needs to kill Exactly two of the OPPORTUNISTIC for
+   * it to run. Make sure only 2 are killed.
+   * @throws Exception
+   */
+  @Test
+  public void testKillOnlyRequiredOpportunisticContainers() throws Exception {
+    containerManager.start();
+
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    List<StartContainerRequest> list = new ArrayList<>();
+    // Fill NM with Opportunistic containers
+    for (int i = 0; i < 4; i++) {
+      list.add(StartContainerRequest.newInstance(
+          containerLaunchContext,
+          createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
+              context.getNodeId(),
+              user, BuilderUtils.newResource(512, 1),
+              context.getContainerTokenSecretManager(), null,
+              ExecutionType.OPPORTUNISTIC)));
+    }
+
+    StartContainersRequest allRequests =
+        StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    list = new ArrayList<>();
+    // Now ask for two Guaranteed containers
+    for (int i = 4; i < 6; i++) {
+      list.add(StartContainerRequest.newInstance(
+          containerLaunchContext,
+          createContainerToken(createContainerId(i), DUMMY_RM_IDENTIFIER,
+              context.getNodeId(),
+              user, BuilderUtils.newResource(512, 1),
+              context.getContainerTokenSecretManager(), null,
+              ExecutionType.GUARANTEED)));
+    }
+
+    allRequests = StartContainersRequest.newInstance(list);
+    containerManager.startContainers(allRequests);
+
+    BaseContainerManagerTest.waitForNMContainerState(containerManager,
+        createContainerId(0), ContainerState.DONE, 40);
+    Thread.sleep(5000);
+
+    // Get container statuses. Container 0 should be killed, container 1
+    // should be queued and container 2 should be running.
+    int killedContainers = 0;
+    List<ContainerId> statList = new ArrayList<ContainerId>();
+    for (int i = 0; i < 6; i++) {
       statList.add(createContainerId(i));
     }
     GetContainerStatusesRequest statRequest =

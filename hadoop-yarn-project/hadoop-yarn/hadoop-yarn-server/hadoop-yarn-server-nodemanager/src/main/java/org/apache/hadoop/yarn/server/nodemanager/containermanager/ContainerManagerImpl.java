@@ -318,8 +318,8 @@ public class ContainerManagerImpl extends CompositeService implements
     }
   }
 
-  protected ContainerScheduler createContainerScheduler(Context context) {
-    return new ContainerScheduler(context);
+  protected ContainerScheduler createContainerScheduler(Context cntxt) {
+    return new ContainerScheduler(cntxt);
   }
 
   protected ContainersMonitor createContainersMonitor(ContainerExecutor exec) {

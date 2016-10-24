@@ -22,17 +22,29 @@ import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container
     .Container;
 
+/**
+ * Events consumed by the {@link ContainerScheduler}.
+ */
 public class ContainerSchedulerEvent extends
     AbstractEvent<ContainerSchedulerEventType> {
 
   private final Container container;
 
+  /**
+   * Create instance of Event.
+   * @param container Container.
+   * @param eventType EventType.
+   */
   public ContainerSchedulerEvent(Container container,
       ContainerSchedulerEventType eventType) {
     super(eventType);
     this.container = container;
   }
 
+  /**
+   * Get the container associated with the event.
+   * @return Container.
+   */
   public Container getContainer() {
     return container;
   }

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
+/**
+ * Event types associated with {@link ContainerSchedulerEvent}.
+ */
 public enum ContainerSchedulerEventType {
   SCHEDULE_CONTAINER,
   CONTAINER_COMPLETED,
