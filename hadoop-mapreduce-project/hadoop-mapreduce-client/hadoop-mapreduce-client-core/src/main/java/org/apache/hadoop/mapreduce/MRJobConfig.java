@@ -1295,4 +1295,44 @@ public interface MRJobConfig {
    */
   @Unstable
   String INPUT_FILE_MANDATORY_PREFIX = "mapreduce.job.input.file.must.";
+
+  /**
+   * Whether to enable the RM Container reuse or not.
+   */
+  String MR_AM_CONTAINER_REUSE_ENABLED = MR_PREFIX + "container.reuse.enabled";
+  boolean DEFAULT_MR_AM_CONTAINER_REUSE_ENABLED = false;
+
+  /**
+   * No of times can each container(Map Task) reuse. The Default value is -1,
+   * which implies there is no limit for reusing the container for map tasks.
+   */
+  String MR_AM_CONTAINER_REUSE_MAX_MAPTASKS = MR_PREFIX
+      + "container.reuse.max-maptasks";
+  int DEFAULT_MR_AM_CONTAINER_REUSE_MAX_MAPTASKS = -1;
+
+  /**
+   * No of tasks can each container(Reduce Task) reuse. The Default value is -1,
+   * which implies there is no limit for reusing the container for reduce tasks.
+   */
+  String MR_AM_CONTAINER_REUSE_MAX_REDUCETASKS = MR_PREFIX
+      + "container.reuse.max-reducetasks";
+  int DEFAULT_MR_AM_CONTAINER_REUSE_MAX_REDUCETASKS = -1;
+
+  /**
+   * No of Max Map task containers can be reused at any point of time. The
+   * Default value is -1, which implies there is no limit of having map task
+   * containers for reuse at any time.
+   */
+  String MR_AM_CONTAINER_REUSE_MAX_MAPTASKCONTAINERS = MR_PREFIX
+      + "container.reuse.max-maptaskcontainers";
+  int DEFAULT_MR_AM_CONTAINER_REUSE_MAX_MAPTASKCONTAINERS = -1;
+
+  /**
+   * No Of Max Reduce Task Containers can be reused at any point of time. The
+   * Default value is -1, which implies there is no limit of having reduce task
+   * containers for reuse at any time.
+   */
+  String MR_AM_CONTAINER_REUSE_MAX_REDUCETASKCONTAINERS = MR_PREFIX
+      + "container.reuse.max-reducetaskcontainers";
+  int DEFAULT_MR_AM_CONTAINER_REUSE_MAX_REDUCETASKCONTAINERS = -1;
 }

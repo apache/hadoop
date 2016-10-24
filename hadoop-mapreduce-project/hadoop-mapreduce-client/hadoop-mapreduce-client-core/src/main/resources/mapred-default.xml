@@ -2231,4 +2231,49 @@
   </description>
 </property>
 
+<property>
+  <description>
+    Whether to enable the RM Container reuse or not.
+  </description>
+  <name>yarn.app.mapreduce.container.reuse.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>
+    No of times can each container(Map Task) reuse. The Default value is -1,
+    which implies there is no limit for reusing the container for map tasks.
+  </description>
+  <name>yarn.app.mapreduce.container.reuse.max-maptasks</name>
+  <value>-1</value>
+</property>
+
+<property>
+  <description>
+    No of tasks can each container(Reduce Task) reuse. The Default value is -1,
+    which implies there is no limit for reusing the container for reduce tasks.
+  </description>
+  <name>yarn.app.mapreduce.container.reuse.max-reducetasks</name>
+  <value>-1</value>
+</property>
+
+<property>
+  <description>
+    No of Max Map task containers can be reused at any point of time. The
+    Default value is -1, which implies there is no limit of having map task
+    containers for reuse at any time.
+  </description>
+  <name>yarn.app.mapreduce.container.reuse.max-maptaskcontainers</name>
+  <value>-1</value>
+</property>
+
+<property>
+  <description>
+    No Of Max Reduce Task Containers can be reused at any point of time. The
+    Default value is -1, which implies there is no limit of having reduce task
+    containers for reuse at any time.
+  </description>
+  <name>yarn.app.mapreduce.container.reuse.max-reducetaskcontainers</name>
+  <value>-1</value>
+</property>
 </configuration>
