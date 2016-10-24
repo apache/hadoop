@@ -21,9 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Test;
@@ -35,7 +32,6 @@ import java.io.FileNotFoundException;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 
 /**
  * Test S3A Failure translation, including a functional test
