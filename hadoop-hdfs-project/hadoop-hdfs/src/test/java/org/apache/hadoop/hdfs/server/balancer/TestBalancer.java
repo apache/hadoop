@@ -43,6 +43,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
+import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -136,6 +137,8 @@ public class TestBalancer {
   final static private String username = "balancer";
   private static String principal;
   private static File baseDir;
+  private static String keystoresDir;
+  private static String sslConfDir;
   private static MiniKdc kdc;
   private static File keytabFile;
   private MiniDFSCluster cluster;
@@ -183,8 +186,8 @@ public class TestBalancer {
     conf.set(DFS_BALANCER_KEYTAB_FILE_KEY, keytab);
     conf.set(DFS_BALANCER_KERBEROS_PRINCIPAL_KEY, principal);
 
-    String keystoresDir = baseDir.getAbsolutePath();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestBalancer.class);
+    keystoresDir = baseDir.getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestBalancer.class);
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
 
     conf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
@@ -243,6 +246,15 @@ public class TestBalancer {
     LazyPersistTestCase.initCacheManipulator();
 
     conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
+  }
+
+  @AfterClass
+  public static void destroy() throws Exception {
+    if (kdc != null) {
+      kdc.stop();
+    }
+    FileUtil.fullyDelete(baseDir);
+      KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
   /* create a file with a length of <code>fileLen</code> */

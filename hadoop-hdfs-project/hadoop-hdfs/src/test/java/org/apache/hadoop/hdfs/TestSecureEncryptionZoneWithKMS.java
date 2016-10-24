@@ -86,6 +86,8 @@ public class TestSecureEncryptionZoneWithKMS {
   private static final Path TEST_PATH = new Path("/test-dir");
   private static HdfsConfiguration baseConf;
   private static File baseDir;
+  private static String keystoresDir;
+  private static String sslConfDir;
   private static final EnumSet< CreateEncryptionZoneFlag > NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
@@ -189,8 +191,8 @@ public class TestSecureEncryptionZoneWithKMS {
     baseConf.set(KMS_CLIENT_ENC_KEY_CACHE_SIZE, "4");
     baseConf.set(KMS_CLIENT_ENC_KEY_CACHE_LOW_WATERMARK, "0.5");
 
-    String keystoresDir = baseDir.getAbsolutePath();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(
+    keystoresDir = baseDir.getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(
         TestSecureEncryptionZoneWithKMS.class);
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, baseConf, false);
     baseConf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
@@ -225,7 +227,7 @@ public class TestSecureEncryptionZoneWithKMS {
   }
 
   @AfterClass
-  public static void destroy() {
+  public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
     }
@@ -233,6 +235,7 @@ public class TestSecureEncryptionZoneWithKMS {
       miniKMS.stop();
     }
     FileUtil.fullyDelete(baseDir);
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
   @Before

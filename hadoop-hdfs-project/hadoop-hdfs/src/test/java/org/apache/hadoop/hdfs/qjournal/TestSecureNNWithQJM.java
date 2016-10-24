@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import static org.junit.Assert.*;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
@@ -71,6 +73,8 @@ public class TestSecureNNWithQJM {
 
   private static HdfsConfiguration baseConf;
   private static File baseDir;
+  private static String keystoresDir;
+  private static String sslConfDir;
   private static MiniKdc kdc;
 
   private MiniDFSCluster cluster;
@@ -127,8 +131,8 @@ public class TestSecureNNWithQJM {
     baseConf.set(DFS_JOURNALNODE_HTTPS_ADDRESS_KEY, "localhost:0");
     baseConf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY, 10);
 
-    String keystoresDir = baseDir.getAbsolutePath();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(
+    keystoresDir = baseDir.getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(
       TestSecureNNWithQJM.class);
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, baseConf, false);
     baseConf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
@@ -138,11 +142,12 @@ public class TestSecureNNWithQJM {
   }
 
   @AfterClass
-  public static void destroy() {
+  public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
     }
     FileUtil.fullyDelete(baseDir);
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
   @Before
