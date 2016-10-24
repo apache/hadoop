@@ -179,7 +179,7 @@ public class S3AFileSystem extends FileSystem {
           MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
 
       //check but do not store the block size
-      longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
+      longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
       readAhead = longBytesOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
