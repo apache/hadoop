@@ -322,7 +322,9 @@ void RpcEngine::RpcCommsError(
 
     RetryAction retry = RetryAction::fail(""); // Default to fail
 
-    if (retry_policy()) {
+    if (status.notWorthRetry()) {
+      retry = RetryAction::fail(status.ToString().c_str());
+    } else if (retry_policy()) {
       retry = retry_policy()->ShouldRetry(status, req->IncrementRetryCount(), req->get_failover_count(), true);
     }
 
