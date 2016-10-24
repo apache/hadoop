@@ -449,7 +449,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testReadAheadRange() throws Exception {
     conf = new Configuration();
-    conf.set(Constants.READAHEAD_RANGE, "300k");
+    conf.set(Constants.READAHEAD_RANGE, "300K");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
     long readAheadRange = fs.getReadAheadRange();

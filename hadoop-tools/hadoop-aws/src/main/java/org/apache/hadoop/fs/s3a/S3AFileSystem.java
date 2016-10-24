@@ -1880,7 +1880,7 @@ public class S3AFileSystem extends FileSystem {
    */
   @Deprecated
   public long getDefaultBlockSize() {
-    return getConf().getLong(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
+    return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
   @Override
@@ -2272,26 +2272,6 @@ public class S3AFileSystem extends FileSystem {
       sb.append('}');
       return sb.toString();
     }
-  }
-
-  /**
-   * Get a longBytes option >= the minimum allowed value.
-   * @param conf configuration
-   * @param key key to look up
-   * @param defVal default value
-   * @param min minimum value
-   * @return the value
-   * @throws IllegalArgumentException if the value is below the minimum
-   */
-  static long longBytesOption(Configuration conf,
-                         String key,
-                         long defVal,
-                         long min) {
-    long v = conf.getLongBytes(key, defVal);
-    Preconditions.checkArgument(v >= min,
-            String.format("Value of %s: %d is below the minimum value %d",
-                    key, v, min));
-    return v;
   }
 
 }
