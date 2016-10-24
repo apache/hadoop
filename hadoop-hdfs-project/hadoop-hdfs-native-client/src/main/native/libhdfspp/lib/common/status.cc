@@ -22,6 +22,7 @@
 #include <sstream>
 #include <cstring>
 #include <map>
+#include <set>
 
 namespace hdfs {
 
@@ -49,6 +50,12 @@ const static std::map<std::string, int> kKnownServerExceptionClasses = {
                                             {kPathIsNotEmptyDirectoryException, Status::kPathIsNotEmptyDirectory}
                                         };
 
+// Errors that retry cannot fix. TODO: complete the list.
+const static std::set<int> noRetryExceptions = {
+  Status::kPermissionDenied,
+  Status::kAuthenticationFailed,
+  Status::kAccessControlException
+};
 
 Status::Status(int code, const char *msg1)
                : code_(code) {
@@ -120,7 +127,7 @@ Status Status::Exception(const char *exception_class_name, const char *error_mes
 }
 
 Status Status::Error(const char *error_message) {
-  return Status(kAuthenticationFailed, error_message);
+  return Exception("Exception", error_message);
 }
 
 Status Status::AuthenticationFailed() {
@@ -145,6 +152,10 @@ std::string Status::ToString() const {
   }
   ss << msg_;
   return ss.str();
+}
+
+bool Status::notWorthRetry() const {
+    return noRetryExceptions.find(code_) != noRetryExceptions.end();
 }
 
 }

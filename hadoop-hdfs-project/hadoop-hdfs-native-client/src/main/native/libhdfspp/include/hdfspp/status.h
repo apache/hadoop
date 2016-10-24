@@ -62,6 +62,9 @@ class Status {
   // get error code
   int code() const { return code_; }
 
+  // if retry can possibly recover an error
+  bool notWorthRetry() const;
+
   enum Code {
     kOk = 0,
     kInvalidArgument = static_cast<unsigned>(std::errc::invalid_argument),
