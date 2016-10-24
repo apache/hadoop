@@ -219,6 +219,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSDirEncryptionZoneOp.EncryptionKeyInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
@@ -1796,7 +1797,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
          * HDFS-7463. A better fix is to change the edit log of SetTime to
          * use inode id instead of a path.
          */
-        final INodesInPath iip = dir.resolvePath(pc, srcArg);
+        final INodesInPath iip = dir.resolvePath(pc, srcArg, DirOp.READ);
         src = iip.getPath();
 
         INode inode = iip.getLastINode();
@@ -2270,10 +2271,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
-    if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);
-    }
-  
     boolean skipSync = false;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -2281,7 +2278,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot recover the lease of " + src);
-      final INodesInPath iip = dir.resolvePathForWrite(pc, src);
+      final INodesInPath iip = dir.resolvePath(pc, src, DirOp.WRITE);
       src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (!inode.isUnderConstruction()) {
@@ -3283,12 +3280,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String fullName = bc.getName();
     try {
       if (fullName != null && fullName.startsWith(Path.SEPARATOR)
-          && dir.getINode(fullName) == bc) {
+          && dir.getINode(fullName, DirOp.READ) == bc) {
         // If file exists in normal path then no need to look in snapshot
         return false;
       }
-    } catch (UnresolvedLinkException e) {
-      LOG.error("Error while resolving the link : " + fullName, e);
+    } catch (IOException e) {
+      // the snapshot path and current path may contain symlinks, ancestor
+      // dirs replaced by files, etc.
+      LOG.error("Error while resolving the path : " + fullName, e);
       return false;
     }
     /*
@@ -5698,7 +5697,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     List<DirectorySnapshottableFeature> lsf = new ArrayList<>();
     if (snapshottableDirs != null) {
       for (String snap : snapshottableDirs) {
-        final INode isnap = getFSDirectory().getINode(snap, false);
+        final INode isnap = getFSDirectory().getINode(snap, DirOp.READ_LINK);
         final DirectorySnapshottableFeature sf =
             isnap.asDirectory().getDirectorySnapshottableFeature();
         if (sf == null) {
@@ -6791,7 +6790,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final INodesInPath iip = dir.resolvePath(pc, src);
+      final INodesInPath iip = dir.resolvePath(pc, src, DirOp.READ);
       src = iip.getPath();
       INode inode = iip.getLastINode();
       if (inode == null) {

@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AccessControlEnforcer;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
@@ -42,12 +45,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 class FSPermissionChecker implements AccessControlEnforcer {
   static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
 
-  private static String constructPath(INodeAttributes[] inodes, int end) {
-    byte[][] components = new byte[end+1][];
-    for (int i=0; i <= end; i++) {
-      components[i] = inodes[i].getLocalNameBytes();
-    }
-    return DFSUtil.byteArray2PathString(components);
+  private static String getPath(byte[][] components, int start, int end) {
+    return DFSUtil.byteArray2PathString(components, start, end - start + 1);
   }
 
   /** @return a string for throwing {@link AccessControlException} */
@@ -203,21 +202,27 @@ class FSPermissionChecker implements AccessControlEnforcer {
     for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
         ancestorIndex--);
 
-    checkTraverse(inodeAttrs, ancestorIndex);
+    try {
+      checkTraverse(inodeAttrs, inodes, components, ancestorIndex);
+    } catch (UnresolvedPathException | ParentNotDirectoryException ex) {
+      // must tunnel these exceptions out to avoid breaking interface for
+      // external enforcer
+      throw new TraverseAccessControlException(ex);
+    }
 
     final INodeAttributes last = inodeAttrs[inodeAttrs.length - 1];
     if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
         && inodeAttrs.length > 1 && last != null) {
-      checkStickyBit(inodeAttrs, inodeAttrs.length - 2);
+      checkStickyBit(inodeAttrs, components, inodeAttrs.length - 2);
     }
     if (ancestorAccess != null && inodeAttrs.length > 1) {
-      check(inodeAttrs, ancestorIndex, ancestorAccess);
+      check(inodeAttrs, components, ancestorIndex, ancestorAccess);
     }
     if (parentAccess != null && inodeAttrs.length > 1) {
-      check(inodeAttrs, inodeAttrs.length - 2, parentAccess);
+      check(inodeAttrs, components, inodeAttrs.length - 2, parentAccess);
     }
     if (access != null) {
-      check(inodeAttrs, inodeAttrs.length - 1, access);
+      check(inodeAttrs, components, inodeAttrs.length - 1, access);
     }
     if (subAccess != null) {
       INode rawLast = inodes[inodeAttrs.length - 1];
@@ -225,7 +230,7 @@ class FSPermissionChecker implements AccessControlEnforcer {
           snapshotId, subAccess, ignoreEmptyDir);
     }
     if (doCheckOwner) {
-      checkOwner(inodeAttrs, inodeAttrs.length - 1);
+      checkOwner(inodeAttrs, components, inodeAttrs.length - 1);
     }
   }
 
@@ -243,29 +248,27 @@ class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkOwner(INodeAttributes[] inodes, int i)
+  private void checkOwner(INodeAttributes[] inodes, byte[][] components, int i)
       throws AccessControlException {
     if (getUser().equals(inodes[i].getUserName())) {
       return;
     }
     throw new AccessControlException(
         "Permission denied. user=" + getUser() +
-        " is not the owner of inode=" + constructPath(inodes, i));
+        " is not the owner of inode=" + getPath(components, 0, i));
   }
 
-  /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkTraverse(INodeAttributes[] inodeAttrs, int last)
-      throws AccessControlException {
+  /** Guarded by {@link FSNamesystem#readLock()}
+   * @throws AccessControlException
+   * @throws ParentNotDirectoryException
+   * @throws UnresolvedPathException
+   */
+  private void checkTraverse(INodeAttributes[] inodeAttrs, INode[] inodes,
+      byte[][] components, int last) throws AccessControlException,
+          UnresolvedPathException, ParentNotDirectoryException {
     for (int i=0; i <= last; i++) {
-      INodeAttributes inode = inodeAttrs[i];
-      if (!inode.isDirectory()) {
-        throw new AccessControlException(
-            constructPath(inodeAttrs, i) + " (is not a directory)");
-      }
-      if (!hasPermission(inode, FsAction.EXECUTE)) {
-        throw new AccessControlException(toAccessControlString(
-            inode, constructPath(inodeAttrs, i), FsAction.EXECUTE));
-      }
+      checkIsDirectory(inodes[i], components, i);
+      check(inodeAttrs, components, i, FsAction.EXECUTE);
     }
   }
 
@@ -300,12 +303,12 @@ class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void check(INodeAttributes[] inodes, int i, FsAction access)
-      throws AccessControlException {
+  private void check(INodeAttributes[] inodes, byte[][] components, int i,
+      FsAction access) throws AccessControlException {
     INodeAttributes inode = (i >= 0) ? inodes[i] : null;
     if (inode != null && !hasPermission(inode, access)) {
       throw new AccessControlException(
-          toAccessControlString(inode, constructPath(inodes, i), access));
+          toAccessControlString(inode, getPath(components, 0, i), access));
     }
   }
 
@@ -415,8 +418,8 @@ class FSPermissionChecker implements AccessControlEnforcer {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkStickyBit(INodeAttributes[] inodes, int index)
-      throws AccessControlException {
+  private void checkStickyBit(INodeAttributes[] inodes, byte[][] components,
+      int index) throws AccessControlException {
     INodeAttributes parent = inodes[index];
     if (!parent.getFsPermission().getStickyBit()) {
       return;
@@ -436,10 +439,10 @@ class FSPermissionChecker implements AccessControlEnforcer {
     throw new AccessControlException(String.format(
         "Permission denied by sticky bit: user=%s, path=\"%s\":%s:%s:%s%s, " +
         "parent=\"%s\":%s:%s:%s%s", user,
-        constructPath(inodes, index + 1),
+        getPath(components, 0, index + 1),
         inode.getUserName(), inode.getGroupName(),
         inode.isDirectory() ? "d" : "-", inode.getFsPermission().toString(),
-        constructPath(inodes, index),
+        getPath(components, 0, index),
         parent.getUserName(), parent.getGroupName(),
         parent.isDirectory() ? "d" : "-", parent.getFsPermission().toString()));
   }
@@ -471,5 +474,101 @@ class FSPermissionChecker implements AccessControlEnforcer {
     throw new AccessControlException("Permission denied while accessing pool "
         + pool.getPoolName() + ": user " + getUser() + " does not have "
         + access.toString() + " permissions.");
+  }
+
+  /**
+   * Verifies that all existing ancestors are directories.  If a permission
+   * checker is provided then the user must have exec access.  Ancestor
+   * symlinks will throw an unresolved exception, and resolveLink determines
+   * if the last inode will throw an unresolved exception.  This method
+   * should always be called after a path is resolved into an IIP.
+   * @param pc for permission checker, null for no checking
+   * @param iip path to verify
+   * @param resolveLink whether last inode may be a symlink
+   * @throws AccessControlException
+   * @throws UnresolvedPathException
+   * @throws ParentNotDirectoryException
+   */
+  static void checkTraverse(FSPermissionChecker pc, INodesInPath iip,
+      boolean resolveLink) throws AccessControlException,
+          UnresolvedPathException, ParentNotDirectoryException {
+    try {
+      if (pc == null || pc.isSuperUser()) {
+        checkSimpleTraverse(iip);
+      } else {
+        pc.checkPermission(iip, false, null, null, null, null, false);
+      }
+    } catch (TraverseAccessControlException tace) {
+      // unwrap the non-ACE (unresolved, parent not dir) exception
+      // tunneled out of checker.
+      tace.throwCause();
+    }
+    // maybe check that the last inode is a symlink
+    if (resolveLink) {
+      int last = iip.length() - 1;
+      checkNotSymlink(iip.getINode(last), iip.getPathComponents(), last);
+    }
+  }
+
+  // rudimentary permission-less directory check
+  private static void checkSimpleTraverse(INodesInPath iip)
+      throws UnresolvedPathException, ParentNotDirectoryException {
+    byte[][] components = iip.getPathComponents();
+    for (int i=0; i < iip.length() - 1; i++) {
+      INode inode = iip.getINode(i);
+      if (inode == null) {
+        break;
+      }
+      checkIsDirectory(inode, components, i);
+    }
+  }
+
+  private static void checkIsDirectory(INode inode, byte[][] components, int i)
+      throws UnresolvedPathException, ParentNotDirectoryException {
+    if (inode != null && !inode.isDirectory()) {
+      checkNotSymlink(inode, components, i);
+      throw new ParentNotDirectoryException(
+          getPath(components, 0, i) + " (is not a directory)");
+    }
+  }
+
+  private static void checkNotSymlink(INode inode, byte[][] components, int i)
+      throws UnresolvedPathException {
+    if (inode != null && inode.isSymlink()) {
+      final int last = components.length - 1;
+      final String path = getPath(components, 0, last);
+      final String preceding = getPath(components, 0, i - 1);
+      final String remainder = getPath(components, i + 1, last);
+      final String target = inode.asSymlink().getSymlinkString();
+      if (LOG.isDebugEnabled()) {
+        final String link = inode.getLocalName();
+        LOG.debug("UnresolvedPathException " +
+            " path: " + path + " preceding: " + preceding +
+            " count: " + i + " link: " + link + " target: " + target +
+            " remainder: " + remainder);
+      }
+      throw new UnresolvedPathException(path, preceding, remainder, target);
+    }
+  }
+
+  //used to tunnel non-ACE exceptions encountered during path traversal.
+  //ops that create inodes are expected to throw ParentNotDirectoryExceptions.
+  //the signature of other methods requires the PNDE to be thrown as an ACE.
+  @SuppressWarnings("serial")
+  static class TraverseAccessControlException extends AccessControlException {
+    TraverseAccessControlException(IOException ioe) {
+      super(ioe);
+    }
+    public void throwCause() throws UnresolvedPathException,
+        ParentNotDirectoryException, AccessControlException {
+      Throwable ioe = getCause();
+      if (ioe instanceof UnresolvedPathException) {
+        throw (UnresolvedPathException)ioe;
+      }
+      if (ioe instanceof ParentNotDirectoryException) {
+        throw (ParentNotDirectoryException)ioe;
+      }
+      throw this;
+    }
   }
 }

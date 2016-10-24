@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 
@@ -424,8 +423,12 @@ public class TestPermissionSymlinks {
     try {
       myfc.access(badPath, FsAction.READ);
       fail("The access call should have failed");
-    } catch (FileNotFoundException e) {
+    } catch (AccessControlException ace) {
       // expected
+      String message = ace.getMessage();
+      assertTrue(message, message.contains("is not a directory"));
+      assertTrue(message.contains(target.toString()));
+      assertFalse(message.contains(badPath.toString()));
     }
   }
 }

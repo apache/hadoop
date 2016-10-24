@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -370,7 +371,7 @@ public class EncryptionZoneManager {
        contain a reference INode.
       */
       final String pathName = getFullPathName(ezi);
-      INodesInPath iip = dir.getINodesInPath(pathName, false);
+      INodesInPath iip = dir.getINodesInPath(pathName, DirOp.READ_LINK);
       INode lastINode = iip.getLastINode();
       if (lastINode == null || lastINode.getId() != ezi.getINodeId()) {
         continue;

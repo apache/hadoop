@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
@@ -143,9 +144,11 @@ public class NameNodeAdapter {
     final FSNamesystem fsn = nn.getNamesystem();
     INode inode;
     try {
-      inode = fsn.getFSDirectory().getINode(path, false);
+      inode = fsn.getFSDirectory().getINode(path, DirOp.READ);
     } catch (UnresolvedLinkException e) {
       throw new RuntimeException("Lease manager should not support symlinks");
+    } catch (IOException ioe) {
+      return null; // unresolvable path, ex. parent dir is a file
     }
     return inode == null ? null : fsn.leaseManager.getLease((INodeFile) inode);
   }
