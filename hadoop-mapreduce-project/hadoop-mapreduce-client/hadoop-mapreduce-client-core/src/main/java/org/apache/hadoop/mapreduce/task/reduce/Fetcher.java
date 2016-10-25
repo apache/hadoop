@@ -65,6 +65,11 @@ class Fetcher<K,V> extends Thread {
   /* Default read timeout (in milliseconds) */
   private final static int DEFAULT_READ_TIMEOUT = 3 * 60 * 1000;
 
+  // This should be kept in sync with ShuffleHandler.FETCH_RETRY_DELAY.
+  private static final long FETCH_RETRY_DELAY_DEFAULT = 1000L;
+  static final int TOO_MANY_REQ_STATUS_CODE = 429;
+  private static final String FETCH_RETRY_AFTER_HEADER = "Retry-After";
+
   protected final Reporter reporter;
   private static enum ShuffleErrors{IO_ERROR, WRONG_LENGTH, BAD_ID, WRONG_MAP,
                                     CONNECTION, WRONG_REDUCE}
@@ -269,6 +274,13 @@ class Fetcher<K,V> extends Thread {
       } else {
         input = new DataInputStream(connection.getInputStream());
       }
+    } catch (TryAgainLaterException te) {
+      LOG.warn("Connection rejected by the host " + te.host +
+          ". Will retry later.");
+      scheduler.penalize(host, te.backoff);
+      for (TaskAttemptID left : remaining) {
+        scheduler.putBackKnownMapOutput(host, left);
+      }
     } catch (IOException ie) {
       boolean connectExcpt = ie instanceof ConnectException;
       ioErrs.increment(1);
@@ -427,6 +439,19 @@ class Fetcher<K,V> extends Thread {
       throws IOException {
     // Validate response code
     int rc = connection.getResponseCode();
+    // See if the shuffleHandler rejected the connection due to too many
+    // reducer requests. If so, signal fetchers to back off.
+    if (rc == TOO_MANY_REQ_STATUS_CODE) {
+      long backoff = connection.getHeaderFieldLong(FETCH_RETRY_AFTER_HEADER,
+          FETCH_RETRY_DELAY_DEFAULT);
+      // in case we get a negative backoff from ShuffleHandler
+      if (backoff < 0) {
+        backoff = FETCH_RETRY_DELAY_DEFAULT;
+        LOG.warn("Get a negative backoff value from ShuffleHandler. Setting" +
+            " it to the default value " + FETCH_RETRY_DELAY_DEFAULT);
+      }
+      throw new TryAgainLaterException(backoff, url.getHost());
+    }
     if (rc != HttpURLConnection.HTTP_OK) {
       throw new IOException(
           "Got invalid response code " + rc + " from " + url +
@@ -726,6 +751,17 @@ class Fetcher<K,V> extends Thread {
         // update the total remaining connect-timeout
         lastTime = Time.monotonicNow();
       }
+    }
+  }
+
+  private static class TryAgainLaterException extends IOException {
+    public final long backoff;
+    public final String host;
+
+    public TryAgainLaterException(long backoff, String host) {
+      super("Too many requests to a map host");
+      this.backoff = backoff;
+      this.host = host;
     }
   }
 }

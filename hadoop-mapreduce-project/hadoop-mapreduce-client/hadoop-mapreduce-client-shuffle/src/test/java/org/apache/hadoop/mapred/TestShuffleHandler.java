@@ -36,7 +36,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.SocketException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -80,7 +79,6 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.AbstractChannel;
@@ -609,13 +607,20 @@ public class TestShuffleHandler {
 
     // This connection should be closed because it to above the limit
     try {
-      conns[2].getInputStream();
       rc = conns[2].getResponseCode();
-      Assert.fail("Expected a SocketException");
-    } catch (SocketException se) {
+      Assert.assertEquals("Expected a too-many-requests response code",
+          ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc);
+      long backoff = Long.valueOf(
+          conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
+      Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
+      conns[2].getInputStream();
+      Assert.fail("Expected an IOException");
+    } catch (IOException ioe) {
       LOG.info("Expected - connection should not be open");
+    } catch (NumberFormatException ne) {
+      Assert.fail("Expected a numerical value for RETRY_AFTER header field");
     } catch (Exception e) {
-      Assert.fail("Expected a SocketException");
+      Assert.fail("Expected a IOException");
     }
     
     shuffleHandler.stop(); 
