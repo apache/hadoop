@@ -44,8 +44,10 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.VersionInfo;
@@ -436,7 +438,7 @@ public class ITestS3AConfiguration {
     dir1.mkdirs();
     dir2.mkdirs();
     conf = new Configuration();
-    conf.set(Constants.BUFFER_DIR, dir1 +", " + dir2);
+    conf.set(Constants.BUFFER_DIR, dir1 + ", " + dir2);
     fs = S3ATestUtils.createTestFileSystem(conf);
     File tmp1 = fs.createTmpFileForWrite("out-", 1024, conf);
     tmp1.delete();
@@ -444,6 +446,25 @@ public class ITestS3AConfiguration {
     tmp2.delete();
     assertNotEquals("round robin not working",
         tmp1.getParent(), tmp2.getParent());
+  }
+
+  @Test
+  public void testUsernameFromUGI() throws Throwable {
+    final String alice = "alice";
+    UserGroupInformation fakeUser =
+        UserGroupInformation.createUserForTesting(alice,
+            new String[]{"users", "administrators"});
+    conf = new Configuration();
+    fs = fakeUser.doAs(new PrivilegedExceptionAction<S3AFileSystem>() {
+      @Override
+      public S3AFileSystem run() throws Exception{
+        return S3ATestUtils.createTestFileSystem(conf);
+      }
+    });
+    assertEquals("username", alice, fs.getUsername());
+    S3AFileStatus status = fs.getFileStatus(new Path("/"));
+    assertEquals("owner in " + status, alice, status.getOwner());
+    assertEquals("group in " + status, alice, status.getGroup());
   }
 
   /**
