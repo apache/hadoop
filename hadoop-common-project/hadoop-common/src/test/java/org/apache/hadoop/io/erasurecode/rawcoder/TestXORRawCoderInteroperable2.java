@@ -17,16 +17,21 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
+import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
+import org.junit.Assume;
 import org.junit.Before;
 
 /**
- * Test pure Java XOR encoding and decoding.
+ * Test raw XOR coder implemented in Java.
  */
-public class TestXORRawCoder extends TestXORRawCoderBase {
+public class TestXORRawCoderInteroperable2 extends TestXORRawCoderBase {
 
   @Before
   public void setup() {
-    this.encoderClass = XORRawEncoder.class;
+    Assume.assumeTrue(ErasureCodeNative.isNativeCodeLoaded());
+    this.encoderClass = NativeXORRawEncoder.class;
     this.decoderClass = XORRawDecoder.class;
+    setAllowDump(true);
   }
+
 }

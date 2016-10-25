@@ -17,16 +17,23 @@
  */
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
-import org.junit.Before;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 
 /**
- * Test pure Java XOR encoding and decoding.
+ * A raw coder factory for xor coder in native using Intel ISA-L library.
  */
-public class TestXORRawCoder extends TestXORRawCoderBase {
 
-  @Before
-  public void setup() {
-    this.encoderClass = XORRawEncoder.class;
-    this.decoderClass = XORRawDecoder.class;
+@InterfaceAudience.Private
+public class NativeXORRawErasureCoderFactory implements RawErasureCoderFactory {
+
+  @Override
+  public RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions) {
+    return new NativeXORRawEncoder(coderOptions);
+  }
+
+  @Override
+  public RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions) {
+    return new NativeXORRawDecoder(coderOptions);
   }
 }
