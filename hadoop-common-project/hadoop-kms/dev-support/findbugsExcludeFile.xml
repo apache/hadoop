@@ -43,6 +43,6 @@
   -->
   <Match>
     <Class name="org.apache.hadoop.crypto.key.kms.server.KMS"/>
-    <Bug pattern="REC"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
   </Match>
 </FindBugsFilter>
