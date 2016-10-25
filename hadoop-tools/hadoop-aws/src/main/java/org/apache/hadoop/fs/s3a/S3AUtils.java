@@ -241,17 +241,19 @@ public final class S3AUtils {
    * @param keyPath path to entry
    * @param summary summary from AWS
    * @param blockSize block size to declare.
+   * @param owner owner of the file
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
       S3ObjectSummary summary,
-      long blockSize) {
+      long blockSize,
+      String owner) {
     if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-      return new S3AFileStatus(true, true, keyPath);
+      return new S3AFileStatus(true, keyPath, owner);
     } else {
       return new S3AFileStatus(summary.getSize(),
           dateToLong(summary.getLastModified()), keyPath,
-          blockSize);
+          blockSize, owner);
     }
   }
 

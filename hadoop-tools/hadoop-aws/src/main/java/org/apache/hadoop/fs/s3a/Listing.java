@@ -298,7 +298,7 @@ public class Listing {
         // Skip over keys that are ourselves and old S3N _$folder$ files
         if (acceptor.accept(keyPath, summary) && filter.accept(keyPath)) {
           FileStatus status = createFileStatus(keyPath, summary,
-              owner.getDefaultBlockSize(keyPath));
+              owner.getDefaultBlockSize(keyPath), owner.getUsername());
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;
@@ -312,7 +312,8 @@ public class Listing {
       for (String prefix : objects.getCommonPrefixes()) {
         Path keyPath = owner.keyToQualifiedPath(prefix);
         if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
-          FileStatus status = new S3AFileStatus(true, false, keyPath);
+          FileStatus status = new S3AFileStatus(false, keyPath,
+              owner.getUsername());
           LOG.debug("Adding directory: {}", status);
           added++;
           stats.add(status);
