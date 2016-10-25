@@ -241,10 +241,10 @@ definitions:
         type: string
         description: Artifact type, like docker, tarball, etc. (optional).
         enum:
-          - docker
-          - tarball
-          - application
-        default: docker
+          - DOCKER
+          - TARBALL
+          - APPLICATION
+        default: DOCKER
       uri:
         type: string
         description: Artifact location to support multiple artifact stores (optional).
@@ -303,7 +303,7 @@ definitions:
         type: string
         description: E.g. HTTP (YARN will perform a simple REST call at a regular interval and expect a 204 No content).
         enum:
-          - http
+          - HTTP
       uri:
         type: string
         description: Fully qualified REST uri endpoint.
@@ -335,13 +335,13 @@ definitions:
         type: string
         description: Config file in the standard format like xml, properties, json, yaml, template.
         enum:
-          - xml
-          - properties
-          - json
-          - yaml
-          - template
-          - env
-          - hadoop_xml
+          - XML
+          - PROPERTIES
+          - JSON
+          - YAML
+          - TEMPLATE
+          - ENV
+          - HADOOP_XML
       dest_file:
         type: string
         description: The absolute path that this configuration file should be mounted as, in the application container.
@@ -386,11 +386,11 @@ definitions:
         type: string
         description: enum of the state of the application
         enum:
-          - accepted
-          - started
-          - ready
-          - stopped
-          - failed
+          - ACCEPTED
+          - STARTED
+          - READY
+          - STOPPED
+          - FAILED
   ContainerState:
     description: The current state of the container of an application.
     properties:
@@ -398,8 +398,8 @@ definitions:
         type: string
         description: enum of the state of the container
         enum:
-          - init
-          - ready
+          - INIT
+          - READY
   ApplicationStatus:
     description: The current status of a submitted application, returned as a response to the GET API.
     properties:
