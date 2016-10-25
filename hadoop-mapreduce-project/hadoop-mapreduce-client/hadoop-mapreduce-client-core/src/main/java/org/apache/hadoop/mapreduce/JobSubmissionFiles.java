@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -104,36 +105,60 @@ public class JobSubmissionFiles {
    * @param cluster
    * @param conf
    */
-  public static Path getStagingDir(Cluster cluster, Configuration conf) 
-  throws IOException,InterruptedException {
+  public static Path getStagingDir(Cluster cluster, Configuration conf)
+      throws IOException, InterruptedException {
+    UserGroupInformation user = UserGroupInformation.getLoginUser();
+    return getStagingDir(cluster, conf, user);
+  }
+
+  /**
+   * Initializes the staging directory and returns the path. It also
+   * keeps track of all necessary ownership and permissions.
+   * It is kept for unit testing.
+   *
+   * @param cluster  Information about the map/reduce cluster
+   * @param conf     Configuration object
+   * @param realUser UserGroupInformation of login user
+   * @return staging dir path object
+   * @throws IOException          when ownership of staging area directory does
+   *                              not match the login user or current user.
+   * @throws InterruptedException when getting the staging area directory path
+   */
+  @VisibleForTesting
+  public static Path getStagingDir(Cluster cluster, Configuration conf,
+      UserGroupInformation realUser) throws IOException, InterruptedException {
     Path stagingArea = cluster.getStagingAreaDir();
     FileSystem fs = stagingArea.getFileSystem(conf);
-    String realUser;
-    String currentUser;
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    realUser = ugi.getShortUserName();
-    currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    UserGroupInformation currentUser = realUser.getCurrentUser();
     if (fs.exists(stagingArea)) {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
-      String owner = fsStatus.getOwner();
-      if (!(owner.equals(currentUser) || owner.equals(realUser))) {
-         throw new IOException("The ownership on the staging directory " +
-                      stagingArea + " is not as expected. " +
-                      "It is owned by " + owner + ". The directory must " +
-                      "be owned by the submitter " + currentUser + " or " +
-                      "by " + realUser);
+      String fileOwner = fsStatus.getOwner();
+      if (!(fileOwner.equals(currentUser.getShortUserName()) || fileOwner
+          .equalsIgnoreCase(currentUser.getUserName()) || fileOwner
+          .equals(realUser.getShortUserName()) || fileOwner
+          .equalsIgnoreCase(realUser.getUserName()))) {
+        String errorMessage = "The ownership on the staging directory " +
+            stagingArea + " is not as expected. " +
+            "It is owned by " + fileOwner + ". The directory must " +
+            "be owned by the submitter " + currentUser.getShortUserName()
+            + " or " + currentUser.getUserName();
+        if (!realUser.getUserName().equals(currentUser.getUserName())) {
+          throw new IOException(
+              errorMessage + " or " + realUser.getShortUserName() + " or "
+                  + realUser.getUserName());
+        } else {
+          throw new IOException(errorMessage);
+        }
       }
       if (!fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
         LOG.info("Permissions on staging directory " + stagingArea + " are " +
-          "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
-          "to correct value " + JOB_DIR_PERMISSION);
+            "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
+            "to correct value " + JOB_DIR_PERMISSION);
         fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
       }
     } else {
-      fs.mkdirs(stagingArea, 
-          new FsPermission(JOB_DIR_PERMISSION));
+      fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
     }
     return stagingArea;
   }
-  
 }
