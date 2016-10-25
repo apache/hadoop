@@ -562,16 +562,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  private StorageType getStorageTypeFromLocations(
-      Collection<StorageLocation> dataLocations, File dir) {
-    for (StorageLocation dataLocation : dataLocations) {
-      if (dataLocation.getFile().equals(dir)) {
-        return dataLocation.getStorageType();
-      }
-    }
-    return StorageType.DEFAULT;
-  }
-
   /**
    * Return the total space used by dfs datanode
    */
@@ -635,7 +625,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         infos.length);
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getFile().getAbsolutePath());
+          info.getFailedStorageLocation().getNormalizedUri().toString());
     }
     return failedStorageLocations.toArray(
         new String[failedStorageLocations.size()]);
@@ -674,7 +664,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long estimatedCapacityLostTotal = 0;
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getFile().getAbsolutePath());
+          info.getFailedStorageLocation().getNormalizedUri().toString());
       long failureDate = info.getFailureDate();
       if (failureDate > lastVolumeFailureDate) {
         lastVolumeFailureDate = failureDate;

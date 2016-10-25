@@ -290,7 +290,7 @@ public class TestDFSAdmin {
         datanode.getConf());
     if (expectedSuccuss) {
       assertThat(locations.size(), is(1));
-      assertThat(locations.get(0).getFile(), is(newDir));
+      assertThat(new File(locations.get(0).getUri()), is(newDir));
       // Verify the directory is appropriately formatted.
       assertTrue(new File(newDir, Storage.STORAGE_DIR_CURRENT).isDirectory());
     } else {

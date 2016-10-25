@@ -648,7 +648,7 @@ public class DataNode extends ReconfigurableBase
     // Use the existing StorageLocation to detect storage type changes.
     Map<String, StorageLocation> existingLocations = new HashMap<>();
     for (StorageLocation loc : getStorageLocations(getConf())) {
-      existingLocations.put(loc.getFile().getCanonicalPath(), loc);
+      existingLocations.put(loc.getNormalizedUri().toString(), loc);
     }
 
     ChangedVolumes results = new ChangedVolumes();
@@ -661,11 +661,10 @@ public class DataNode extends ReconfigurableBase
       for (Iterator<StorageLocation> sl = results.newLocations.iterator();
            sl.hasNext(); ) {
         StorageLocation location = sl.next();
-        if (location.getFile().getCanonicalPath().equals(
-            dir.getRoot().getCanonicalPath())) {
+        if (location.matchesStorageDirectory(dir)) {
           sl.remove();
           StorageLocation old = existingLocations.get(
-              location.getFile().getCanonicalPath());
+              location.getNormalizedUri().toString());
           if (old != null &&
               old.getStorageType() != location.getStorageType()) {
             throw new IOException("Changing storage type is not allowed.");
@@ -2676,7 +2675,7 @@ public class DataNode extends ReconfigurableBase
         locations.add(location);
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
-            + location.getFile() + " : ", ioe);
+            + location + " : ", ioe);
         invalidDirs.append("\"").append(uri.getPath()).append("\" ");
       }
     }
