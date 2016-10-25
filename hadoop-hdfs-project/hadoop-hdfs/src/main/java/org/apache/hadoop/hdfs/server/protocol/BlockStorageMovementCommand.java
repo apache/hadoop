@@ -35,10 +35,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
  * service. After the block movement this DataNode sends response back to the
  * NameNode about the movement status.
  *
- * The coordinator datanode will use 'trackId' identifier to coordinate the block
- * movement of the given set of blocks. TrackId is a unique identifier that
- * represents a group of blocks. Namenode will generate this unique value and
- * send it to the coordinator datanode along with the
+ * The coordinator datanode will use 'trackId' identifier to coordinate the
+ * block movement of the given set of blocks. TrackId is a unique identifier
+ * that represents a group of blocks. Namenode will generate this unique value
+ * and send it to the coordinator datanode along with the
  * BlockStorageMovementCommand. Datanode will monitor the completion of the
  * block movements that grouped under this trackId and notifies Namenode about
  * the completion status.
@@ -153,11 +153,11 @@ public class BlockStorageMovementCommand extends DatanodeCommand {
       return new StringBuilder().append("BlockMovingInfo(\n  ")
           .append("Moving block: ").append(blk).append(" From: ")
           .append(Arrays.asList(sourceNodes)).append(" To: [")
-          .append(Arrays.asList(targetNodes)).append(")\n")
+          .append(Arrays.asList(targetNodes)).append("\n  ")
           .append(" sourceStorageTypes: ")
           .append(Arrays.toString(sourceStorageTypes))
           .append(" targetStorageTypes: ")
-          .append(Arrays.toString(targetStorageTypes)).toString();
+          .append(Arrays.toString(targetStorageTypes)).append(")").toString();
     }
   }
 }

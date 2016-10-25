@@ -33,7 +33,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -65,6 +64,8 @@ import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * StoragePolicySatisfyWorker handles the storage policy satisfier commands.
  * These commands would be issued from NameNode as part of Datanode's heart beat
@@ -82,8 +83,10 @@ public class StoragePolicySatisfyWorker {
 
   private final int moverThreads;
   private final ExecutorService moveExecutor;
-  private final CompletionService<Void> moverExecutorCompletionService;
-  private final List<Future<Void>> moverTaskFutures;
+  private final CompletionService<BlockMovementResult> moverCompletionService;
+  private final BlocksMovementsCompletionHandler handler;
+  private final BlockStorageMovementTracker movementTracker;
+  private Daemon movementTrackerThread;
 
   public StoragePolicySatisfyWorker(Configuration conf, DataNode datanode) {
     this.datanode = datanode;
@@ -92,9 +95,13 @@ public class StoragePolicySatisfyWorker {
     moverThreads = conf.getInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY,
         DFSConfigKeys.DFS_MOVER_MOVERTHREADS_DEFAULT);
     moveExecutor = initializeBlockMoverThreadPool(moverThreads);
-    moverExecutorCompletionService = new ExecutorCompletionService<>(
-        moveExecutor);
-    moverTaskFutures = new ArrayList<>();
+    moverCompletionService = new ExecutorCompletionService<>(moveExecutor);
+    handler = new BlocksMovementsCompletionHandler();
+    movementTracker = new BlockStorageMovementTracker(moverCompletionService,
+        handler);
+    movementTrackerThread = new Daemon(movementTracker);
+    movementTrackerThread.setName("BlockStorageMovementTracker");
+    movementTrackerThread.start();
     // TODO: Needs to manage the number of concurrent moves per DataNode.
   }
 
@@ -133,10 +140,6 @@ public class StoragePolicySatisfyWorker {
    * separate thread. Each task will move the block replica to the target node &
    * wait for the completion.
    *
-   * TODO: Presently this function is a blocking call, this has to be refined by
-   * moving the tracking logic to another tracker thread. HDFS-10884 jira
-   * addresses the same.
-   *
    * @param trackID
    *          unique tracking identifier
    * @param blockPoolID
@@ -146,68 +149,64 @@ public class StoragePolicySatisfyWorker {
    */
   public void processBlockMovingTasks(long trackID, String blockPoolID,
       Collection<BlockMovingInfo> blockMovingInfos) {
-    Future<Void> moveCallable = null;
     for (BlockMovingInfo blkMovingInfo : blockMovingInfos) {
       assert blkMovingInfo
           .getSources().length == blkMovingInfo.getTargets().length;
 
       for (int i = 0; i < blkMovingInfo.getSources().length; i++) {
         BlockMovingTask blockMovingTask = new BlockMovingTask(
-            blkMovingInfo.getBlock(), blockPoolID,
+            trackID, blockPoolID, blkMovingInfo.getBlock(),
             blkMovingInfo.getSources()[i], blkMovingInfo.getTargets()[i],
+            blkMovingInfo.getSourceStorageTypes()[i],
             blkMovingInfo.getTargetStorageTypes()[i]);
-        moveCallable = moverExecutorCompletionService.submit(blockMovingTask);
-        moverTaskFutures.add(moveCallable);
-      }
-    }
-
-    for (int i = 0; i < moverTaskFutures.size(); i++) {
-      try {
-        moveCallable = moverExecutorCompletionService.take();
-        moveCallable.get();
-      } catch (InterruptedException | ExecutionException e) {
-        // TODO: Failure retries and report back the error to NameNode.
-        LOG.error("Exception while moving block replica to target storage type",
-            e);
+        Future<BlockMovementResult> moveCallable = moverCompletionService
+            .submit(blockMovingTask);
+        movementTracker.addBlock(trackID, moveCallable);
       }
     }
   }
 
   /**
    * This class encapsulates the process of moving the block replica to the
-   * given target.
+   * given target and wait for the response.
    */
-  private class BlockMovingTask implements Callable<Void> {
+  private class BlockMovingTask implements Callable<BlockMovementResult> {
+    private final long trackID;
+    private final String blockPoolID;
     private final Block block;
     private final DatanodeInfo source;
     private final DatanodeInfo target;
+    private final StorageType srcStorageType;
     private final StorageType targetStorageType;
-    private String blockPoolID;
 
-    BlockMovingTask(Block block, String blockPoolID, DatanodeInfo source,
-        DatanodeInfo target, StorageType targetStorageType) {
-      this.block = block;
+    BlockMovingTask(long trackID, String blockPoolID, Block block,
+        DatanodeInfo source, DatanodeInfo target,
+        StorageType srcStorageType, StorageType targetStorageType) {
+      this.trackID = trackID;
       this.blockPoolID = blockPoolID;
+      this.block = block;
       this.source = source;
       this.target = target;
+      this.srcStorageType = srcStorageType;
       this.targetStorageType = targetStorageType;
     }
 
     @Override
-    public Void call() {
-      moveBlock();
-      return null;
+    public BlockMovementResult call() {
+      BlockMovementStatus status = moveBlock();
+      return new BlockMovementResult(trackID, block.getBlockId(), target,
+          status);
     }
 
-    private void moveBlock() {
-      LOG.info("Start moving block {}", block);
-
-      LOG.debug("Start moving block:{} from src:{} to destin:{} to satisfy "
-          + "storageType:{}", block, source, target, targetStorageType);
+    private BlockMovementStatus moveBlock() {
+      LOG.info("Start moving block:{} from src:{} to destin:{} to satisfy "
+              + "storageType, sourceStoragetype:{} and destinStoragetype:{}",
+          block, source, target, srcStorageType, targetStorageType);
       Socket sock = null;
       DataOutputStream out = null;
       DataInputStream in = null;
       try {
+        ExtendedBlock extendedBlock = new ExtendedBlock(blockPoolID, block);
         DNConf dnConf = datanode.getDnConf();
         String dnAddr = target.getXferAddr(dnConf.getConnectToDnViaHostname());
         sock = datanode.newSocket();
@@ -218,7 +217,6 @@ public class StoragePolicySatisfyWorker {
 
         OutputStream unbufOut = sock.getOutputStream();
         InputStream unbufIn = sock.getInputStream();
-        ExtendedBlock extendedBlock = new ExtendedBlock(blockPoolID, block);
         Token<BlockTokenIdentifier> accessToken = datanode.getBlockAccessToken(
             extendedBlock, EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
 
@@ -239,12 +237,14 @@ public class StoragePolicySatisfyWorker {
             "Successfully moved block:{} from src:{} to destin:{} for"
                 + " satisfying storageType:{}",
             block, source, target, targetStorageType);
+        return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_SUCCESS;
       } catch (IOException e) {
         // TODO: handle failure retries
         LOG.warn(
             "Failed to move block:{} from src:{} to destin:{} to satisfy "
                 + "storageType:{}",
             block, source, target, targetStorageType, e);
+        return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE;
       } finally {
         IOUtils.closeStream(out);
         IOUtils.closeStream(in);
@@ -271,5 +271,103 @@ public class StoragePolicySatisfyWorker {
       String logInfo = "reportedBlock move is failed";
       DataTransferProtoUtil.checkBlockOpStatus(response, logInfo);
     }
+  }
+
+  /**
+   * Block movement status code.
+   */
+  enum BlockMovementStatus {
+    /** Success. */
+    DN_BLK_STORAGE_MOVEMENT_SUCCESS(0),
+    /**
+     * Failure due to generation time stamp mismatches or network errors
+     * or no available space.
+     */
+    DN_BLK_STORAGE_MOVEMENT_FAILURE(-1);
+
+    // TODO: need to support different type of failures. Failure due to network
+    // errors, block pinned, no space available etc.
+
+    private final int code;
+
+    private BlockMovementStatus(int code) {
+      this.code = code;
+    }
+
+    /**
+     * @return the status code.
+     */
+    int getStatusCode() {
+      return code;
+    }
+  }
+
+  /**
+   * This class represents result from a block movement task. This will have the
+   * information of the task which was successful or failed due to errors.
+   */
+  static class BlockMovementResult {
+    private final long trackId;
+    private final long blockId;
+    private final DatanodeInfo target;
+    private final BlockMovementStatus status;
+
+    public BlockMovementResult(long trackId, long blockId,
+        DatanodeInfo target, BlockMovementStatus status) {
+      this.trackId = trackId;
+      this.blockId = blockId;
+      this.target = target;
+      this.status = status;
+    }
+
+    long getTrackId() {
+      return trackId;
+    }
+
+    long getBlockId() {
+      return blockId;
+    }
+
+    BlockMovementStatus getStatus() {
+      return status;
+    }
+
+    @Override
+    public String toString() {
+      return new StringBuilder().append("Block movement result(\n  ")
+          .append("track id: ").append(trackId).append(" block id: ")
+          .append(blockId).append(" target node: ").append(target)
+          .append(" movement status: ").append(status).append(")").toString();
+    }
+  }
+
+  /**
+   * Blocks movements completion handler, which is used to collect details of
+   * the completed list of block movements and notify the namenode about the
+   * success or failures.
+   */
+  static class BlocksMovementsCompletionHandler {
+    private final List<BlockMovementResult> completedBlocks = new ArrayList<>();
+
+    /**
+     * Collect all the block movement results and notify namenode.
+     *
+     * @param results
+     *          result of all the block movements per trackId
+     */
+    void handle(List<BlockMovementResult> results) {
+      completedBlocks.addAll(results);
+      // TODO: notify namenode about the success/failures.
+    }
+
+    @VisibleForTesting
+    List<BlockMovementResult> getCompletedBlocks() {
+      return completedBlocks;
+    }
+  }
+
+  @VisibleForTesting
+  BlocksMovementsCompletionHandler getBlocksMovementsCompletionHandler() {
+    return handler;
   }
 }
