@@ -22,6 +22,15 @@ Docker Container Executor
 * [Docker Image Requirements](#Docker_Image_Requirements)
 * [Working example of yarn launched docker containers](#Working_example_of_yarn_launched_docker_containers)
 
+DEPRECATED
+----------
+
+The Docker Container Executor is not a recommended solution for providing Docker
+support in a YARN cluster.  The Linux Container Executor should be used instead.
+The documentation on [using CGroups](NodeManagerCgroups.html) and
+[secure containers](SecureContainer.html) contain basic information about
+configuring the Linux Container Executor.
+
 Overview
 --------
 

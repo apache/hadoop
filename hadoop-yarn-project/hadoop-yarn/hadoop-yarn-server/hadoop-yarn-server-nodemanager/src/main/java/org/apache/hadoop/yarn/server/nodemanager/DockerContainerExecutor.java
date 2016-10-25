@@ -74,7 +74,13 @@ import com.google.common.base.Strings;
  * currently only supports simple authentication mode. It shares a lot of code
  * with the DefaultContainerExecutor (and it may make sense to pull out those
  * common pieces later).
+ * @deprecated The {@code DockerContainerExecutor} class has several
+ *  limitations, not the least of which is that if used, <b>all</b> containers
+ *  are launched in Docker containers. The {@link LinuxContainerExecutor}
+ *  supports selectively launching containers in Docker containers and should
+ *  be used instead.
  */
+@Deprecated
 public class DockerContainerExecutor extends ContainerExecutor {
   private static final Log LOG = LogFactory
     .getLog(DockerContainerExecutor.class);
@@ -324,11 +330,12 @@ public class DockerContainerExecutor extends ContainerExecutor {
     return 0;
   }
 
-  @Override
   /**
    * Filter the environment variables that may conflict with the ones set in
    * the docker image and write them out to an OutputStream.
+   * @throws IOException if there's an issue writing out the launch file.
    */
+  @Override
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
       Map<Path, List<String>> resources, List<String> command, Path logDir,
       String user) throws IOException {
@@ -336,7 +343,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
       ContainerLaunch.ShellScriptBuilder.create();
 
     //Remove environments that may conflict with the ones in Docker image.
-    Set<String> exclusionSet = new HashSet<String>();
+    Set<String> exclusionSet = new HashSet<>();
     exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
     exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
     exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
@@ -347,14 +354,23 @@ public class DockerContainerExecutor extends ContainerExecutor {
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
         if (!exclusionSet.contains(env.getKey())) {
-          sb.env(env.getKey().toString(), env.getValue().toString());
+          sb.env(env.getKey(), env.getValue());
         }
       }
     }
     if (resources != null) {
       for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
         for (String linkName : entry.getValue()) {
-          sb.symlink(entry.getKey(), new Path(linkName));
+          if (new Path(linkName).getName().equals(WILDCARD)) {
+            // If this is a wildcarded path, link to everything in the
+            // directory from the working directory
+            for (File wildLink : readDirAsUser(user, entry.getKey())) {
+              sb.symlink(new Path(wildLink.toString()),
+                  new Path(wildLink.getName()));
+            }
+          } else {
+            sb.symlink(entry.getKey(), new Path(linkName));
+          }
         }
       }
     }
@@ -370,26 +386,17 @@ public class DockerContainerExecutor extends ContainerExecutor {
 
     sb.command(command);
 
-    PrintStream pout = null;
-    PrintStream ps = null;
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    try {
-      pout = new PrintStream(out, false, "UTF-8");
-      if (LOG.isDebugEnabled()) {
-        ps = new PrintStream(baos, false, "UTF-8");
+    try (PrintStream pout = new PrintStream(out, false, "UTF-8")) {
+      sb.write(pout);
+    }
+
+    if (LOG.isDebugEnabled()) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+      try (PrintStream ps = new PrintStream(baos, false, "UTF-8")) {
         sb.write(ps);
       }
-      sb.write(pout);
 
-    } finally {
-      if (out != null) {
-        out.close();
-      }
-      if (ps != null) {
-        ps.close();
-      }
-    }
-    if (LOG.isDebugEnabled()) {
       LOG.debug("Script: " + baos.toString("UTF-8"));
     }
   }
