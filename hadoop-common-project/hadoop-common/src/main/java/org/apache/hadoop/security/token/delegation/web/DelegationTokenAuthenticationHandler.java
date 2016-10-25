@@ -112,6 +112,10 @@ public abstract class DelegationTokenAuthenticationHandler
     return tokenManager;
   }
 
+  AuthenticationHandler getAuthHandler() {
+    return authHandler;
+  }
+
   @Override
   public void init(Properties config) throws ServletException {
     authHandler.init(config);
@@ -162,6 +166,24 @@ public abstract class DelegationTokenAuthenticationHandler
 
   private static final String ENTER = System.getProperty("line.separator");
 
+  /**
+   * This method checks if the given HTTP request corresponds to a management
+   * operation.
+   *
+   * @param request The HTTP request
+   * @return true if the given HTTP request corresponds to a management
+   *         operation false otherwise
+   * @throws IOException In case of I/O error.
+   */
+  protected final boolean isManagementOperation(HttpServletRequest request)
+      throws IOException {
+    String op = ServletUtils.getParameter(request,
+        KerberosDelegationTokenAuthenticator.OP_PARAM);
+    op = (op != null) ? StringUtils.toUpperCase(op) : null;
+    return DELEGATION_TOKEN_OPS.contains(op) &&
+        !request.getMethod().equals("OPTIONS");
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public boolean managementOperation(AuthenticationToken token,
@@ -171,8 +193,7 @@ public abstract class DelegationTokenAuthenticationHandler
     String op = ServletUtils.getParameter(request,
         KerberosDelegationTokenAuthenticator.OP_PARAM);
     op = (op != null) ? StringUtils.toUpperCase(op) : null;
-    if (DELEGATION_TOKEN_OPS.contains(op) &&
-        !request.getMethod().equals("OPTIONS")) {
+    if (isManagementOperation(request)) {
       KerberosDelegationTokenAuthenticator.DelegationTokenOperation dtOp =
           KerberosDelegationTokenAuthenticator.
               DelegationTokenOperation.valueOf(op);

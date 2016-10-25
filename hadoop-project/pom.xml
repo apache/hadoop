@@ -82,6 +82,9 @@
     <tomcat.version>6.0.44</tomcat.version>
     <joda-time.version>2.9.4</joda-time.version>
 
+    <!-- Required for testing LDAP integration -->
+    <apacheds.version>2.0.0-M15</apacheds.version>
+
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.7</javac.version>
 
