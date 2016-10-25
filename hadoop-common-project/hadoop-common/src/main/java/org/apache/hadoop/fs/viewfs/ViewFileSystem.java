@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -104,9 +105,13 @@ public class ViewFileSystem extends FileSystem {
       src = srcPath;
       targets = targetURIs;
     }
+
+    @VisibleForTesting
     Path getSrc() {
       return src;
     }
+
+    @VisibleForTesting
     URI[] getTargets() {
       return targets;
     }
