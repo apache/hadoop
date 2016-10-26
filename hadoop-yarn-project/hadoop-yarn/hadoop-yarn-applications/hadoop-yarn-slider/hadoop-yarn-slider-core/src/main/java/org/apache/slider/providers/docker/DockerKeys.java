@@ -26,6 +26,7 @@ public interface DockerKeys {
   String DOCKER_START_COMMAND = DOCKER_PREFIX + "startCommand";
 
   String DEFAULT_DOCKER_NETWORK = "bridge";
+  Boolean DEFAULT_DOCKER_USE_PRIVILEGED = false;
 
   String OUT_FILE = "stdout.txt";
   String ERR_FILE = "stderr.txt";
