@@ -588,6 +588,8 @@ Mockito 1.8.5
 JUL to SLF4J bridge 1.7.25
 SLF4J API Module 1.7.25
 SLF4J LOG4J-12 Binding 1.7.25
+JCodings 1.0.8
+Joni 2.1.2
 --------------------------------------------------------------------------------
 
 The MIT License (MIT)
@@ -1646,6 +1648,12 @@ JLine 0.9.94
 leveldbjni-all 1.8
 Hamcrest Core 1.3
 xmlenc Library 0.52
+StringTemplate 4 4.0.7
+ANTLR 3 Tool 3.5
+ANTLR 3 Runtime 3.5
+ANTLR StringTemplate 3.2.1
+ASM All 5.0.2
+sqlline 1.1.8
 --------------------------------------------------------------------------------
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
