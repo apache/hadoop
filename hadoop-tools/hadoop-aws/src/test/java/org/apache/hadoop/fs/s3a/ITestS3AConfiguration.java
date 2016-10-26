@@ -68,34 +68,37 @@ public class ITestS3AConfiguration {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AConfiguration.class);
 
-  private static final String TEST_ENDPOINT = "test.fs.s3a.endpoint";
-
   @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
+  public Timeout testTimeout = new Timeout(
+      S3ATestConstants.S3A_TEST_TIMEOUT
+  );
 
   @Rule
   public final TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Test if custom endpoint is picked up.
-   * <p/>
-   * The test expects TEST_ENDPOINT to be defined in the Configuration
+   * <p>
+   * The test expects {@link S3ATestConstants#CONFIGURATION_TEST_ENDPOINT}
+   * to be defined in the Configuration
    * describing the endpoint of the bucket to which TEST_FS_S3A_NAME points
-   * (f.i. "s3-eu-west-1.amazonaws.com" if the bucket is located in Ireland).
+   * (i.e. "s3-eu-west-1.amazonaws.com" if the bucket is located in Ireland).
    * Evidently, the bucket has to be hosted in the region denoted by the
    * endpoint for the test to succeed.
-   * <p/>
+   * <p>
    * More info and the list of endpoint identifiers:
-   * http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+   * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region">endpoint list</a>.
    *
    * @throws Exception
    */
   @Test
   public void testEndpoint() throws Exception {
     conf = new Configuration();
-    String endpoint = conf.getTrimmed(TEST_ENDPOINT, "");
+    String endpoint = conf.getTrimmed(
+        S3ATestConstants.CONFIGURATION_TEST_ENDPOINT, "");
     if (endpoint.isEmpty()) {
-      LOG.warn("Custom endpoint test skipped as " + TEST_ENDPOINT + "config " +
+      LOG.warn("Custom endpoint test skipped as " +
+          S3ATestConstants.CONFIGURATION_TEST_ENDPOINT + "config " +
           "setting was not detected");
     } else {
       conf.set(Constants.ENDPOINT, endpoint);

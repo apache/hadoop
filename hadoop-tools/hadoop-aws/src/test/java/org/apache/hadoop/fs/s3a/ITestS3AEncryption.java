@@ -22,7 +22,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -48,14 +47,8 @@ public class ITestS3AEncryption extends AbstractS3ATestBase {
   }
 
   private static final int[] SIZES = {
-      0, 1, 2, 3, 4, 5, 254, 255, 256, 257, 2 ^ 10 - 3, 2 ^ 11 - 2, 2 ^ 12 - 1
+      0, 1, 2, 3, 4, 5, 254, 255, 256, 257, 2 ^ 12 - 1
   };
-
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    IOUtils.closeStream(getFileSystem());
-  }
 
   @Test
   public void testEncryption() throws Throwable {

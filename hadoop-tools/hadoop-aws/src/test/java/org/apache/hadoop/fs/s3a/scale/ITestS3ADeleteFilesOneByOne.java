@@ -20,9 +20,6 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
-import org.junit.Test;
-
-import java.io.IOException;
 
 /**
  * Tests file deletion with multi-delete disabled.
@@ -30,15 +27,10 @@ import java.io.IOException;
 public class ITestS3ADeleteFilesOneByOne extends ITestS3ADeleteManyFiles {
 
   @Override
-  protected Configuration createConfiguration() {
-    Configuration configuration = super.createConfiguration();
+  protected Configuration createScaleConfiguration() {
+    Configuration configuration = super.createScaleConfiguration();
     configuration.setBoolean(Constants.ENABLE_MULTI_DELETE, false);
     return configuration;
   }
 
-  @Override
-  @Test
-  public void testOpenCreate() throws IOException {
-
-  }
 }
