@@ -112,7 +112,7 @@ public class TestReservations {
   private void setup(CapacitySchedulerConfiguration csConf,
       boolean addUserLimits) throws Exception {
 
-    csConf.setBoolean("yarn.scheduler.capacity.user-metrics.enable", true);
+    csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     final String newRoot = "root" + System.currentTimeMillis();
     // final String newRoot = "root";
 
@@ -502,8 +502,8 @@ public class TestReservations {
     queues = new HashMap<String, CSQueue>();
     // test that the deadlock occurs when turned off
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setBoolean(
-        "yarn.scheduler.capacity.reservations-continue-look-all-nodes", false);
+    csConf.setBoolean(CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES,
+        false);
     setup(csConf);
 
     // Manipulate queue 'a'

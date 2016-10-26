@@ -11,6 +11,7 @@ import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import java.io.IOException;
 
@@ -45,8 +46,8 @@ public class GridmixTestUtils {
     Configuration conf = new Configuration();
 //    conf.set("mapred.queue.names", "default,q1,q2");
   conf.set("mapred.queue.names", "default");
-    conf.set("yarn.scheduler.capacity.root.queues", "default");
-    conf.set("yarn.scheduler.capacity.root.default.capacity", "100.0");
+    conf.set(PREFIX + "root.queues", "default");
+    conf.set(PREFIX + "root.default.capacity", "100.0");
     
     
     conf.setBoolean(GRIDMIX_USE_QUEUE_IN_TRACE, false);

@@ -154,9 +154,9 @@ public class TestLeafQueue {
     
     csConf = 
         new CapacitySchedulerConfiguration();
-    csConf.setBoolean("yarn.scheduler.capacity.user-metrics.enable", true);
-    csConf.setBoolean(
-        "yarn.scheduler.capacity.reservations-continue-look-all-nodes", false);
+    csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
+    csConf.setBoolean(CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES,
+        false);
     final String newRoot = "root" + System.currentTimeMillis();
     setupQueueConfiguration(csConf, newRoot);
     YarnConfiguration conf = new YarnConfiguration();

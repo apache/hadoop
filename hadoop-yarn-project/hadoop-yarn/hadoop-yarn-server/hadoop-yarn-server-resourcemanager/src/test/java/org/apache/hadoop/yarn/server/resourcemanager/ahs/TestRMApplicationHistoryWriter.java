@@ -389,10 +389,9 @@ public class TestRMApplicationHistoryWriter {
     YarnConfiguration conf = new YarnConfiguration();
     if (isFS) {
       conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
-      conf.set("yarn.resourcemanager.scheduler.class",
-          FairScheduler.class.getName());
+      conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     } else {
-      conf.set("yarn.resourcemanager.scheduler.class",
+      conf.set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
     }
     // don't process history events

@@ -26,6 +26,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,30 +51,30 @@ public class TestRMProxyUsersConf {
   public TestRMProxyUsersConf(int round) {
     conf = new YarnConfiguration();
     switch (round) {
-      case 0:
-        // hadoop.proxyuser prefix
-        conf.set("hadoop.proxyuser.foo.hosts", ipAddress);
-        conf.set("hadoop.proxyuser.foo.users", "bar");
-        conf.set("hadoop.proxyuser.foo.groups", "bar_group");
-        break;
-      case 1:
-        // yarn.resourcemanager.proxyuser prefix
-        conf.set("yarn.resourcemanager.proxyuser.foo.hosts", ipAddress);
-        conf.set("yarn.resourcemanager.proxyuser.foo.users", "bar");
-        conf.set("yarn.resourcemanager.proxyuser.foo.groups", "bar_group");
-        break;
-      case 2:
-        // hadoop.proxyuser prefix has been overwritten by
-        // yarn.resourcemanager.proxyuser prefix
-        conf.set("hadoop.proxyuser.foo.hosts", "xyz");
-        conf.set("hadoop.proxyuser.foo.users", "xyz");
-        conf.set("hadoop.proxyuser.foo.groups", "xyz");
-        conf.set("yarn.resourcemanager.proxyuser.foo.hosts", ipAddress);
-        conf.set("yarn.resourcemanager.proxyuser.foo.users", "bar");
-        conf.set("yarn.resourcemanager.proxyuser.foo.groups", "bar_group");
-        break;
-      default:
-        break;
+    case 0:
+      // hadoop.proxyuser prefix
+      conf.set("hadoop.proxyuser.foo.hosts", ipAddress);
+      conf.set("hadoop.proxyuser.foo.users", "bar");
+      conf.set("hadoop.proxyuser.foo.groups", "bar_group");
+      break;
+    case 1:
+      // yarn.resourcemanager.proxyuser prefix
+      conf.set(RM_PROXY_USER_PREFIX + "foo.hosts", ipAddress);
+      conf.set(RM_PROXY_USER_PREFIX + "foo.users", "bar");
+      conf.set(RM_PROXY_USER_PREFIX + "foo.groups", "bar_group");
+      break;
+    case 2:
+      // hadoop.proxyuser prefix has been overwritten by
+      // yarn.resourcemanager.proxyuser prefix
+      conf.set("hadoop.proxyuser.foo.hosts", "xyz");
+      conf.set("hadoop.proxyuser.foo.users", "xyz");
+      conf.set("hadoop.proxyuser.foo.groups", "xyz");
+      conf.set(RM_PROXY_USER_PREFIX + "foo.hosts", ipAddress);
+      conf.set(RM_PROXY_USER_PREFIX + "foo.users", "bar");
+      conf.set(RM_PROXY_USER_PREFIX + "foo.groups", "bar_group");
+      break;
+    default:
+      break;
     }
   }
 
