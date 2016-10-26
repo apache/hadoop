@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -339,11 +340,8 @@ public class TestApplicationLimits {
             );
 
     // Change the per-queue max AM resources percentage.
-    csConf.setFloat(
-      "yarn.scheduler.capacity." + 
-          queue.getQueuePath() + 
-          ".maximum-am-resource-percent",
-      0.5f);
+    csConf.setFloat(PREFIX + queue.getQueuePath()
+        + ".maximum-am-resource-percent", 0.5f);
     // Re-create queues to get new configs.
     queues = new HashMap<String, CSQueue>();
     root = 
@@ -364,10 +362,8 @@ public class TestApplicationLimits {
       Resource.newInstance(400*GB, 1));
 
     // Change the per-queue max applications.
-    csConf.setInt(
-      "yarn.scheduler.capacity." + 
-          queue.getQueuePath() + 
-          ".maximum-applications", 9999);
+    csConf.setInt(PREFIX + queue.getQueuePath() + ".maximum-applications",
+        9999);
     // Re-create queues to get new configs.
     queues = new HashMap<String, CSQueue>();
     root = 

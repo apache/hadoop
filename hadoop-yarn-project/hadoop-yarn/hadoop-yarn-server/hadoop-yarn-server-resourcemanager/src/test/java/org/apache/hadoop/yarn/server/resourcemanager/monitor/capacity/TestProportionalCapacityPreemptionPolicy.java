@@ -157,8 +157,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     // FairScheduler doesn't support this test,
     // Set CapacityScheduler as the scheduler for this test.
-    conf.set("yarn.resourcemanager.scheduler.class",
-        CapacityScheduler.class.getName());
+    conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
 
     mClock = mock(Clock.class);
     mCS = mock(CapacityScheduler.class);

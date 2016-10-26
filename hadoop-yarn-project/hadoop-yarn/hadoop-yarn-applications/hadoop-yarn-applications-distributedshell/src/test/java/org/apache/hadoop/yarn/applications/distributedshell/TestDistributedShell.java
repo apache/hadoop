@@ -220,7 +220,8 @@ public class TestDistributedShell {
         throw new RuntimeException("Could not find 'yarn-site.xml' dummy file in classpath");
       }
       Configuration yarnClusterConfig = yarnCluster.getConfig();
-      yarnClusterConfig.set("yarn.application.classpath", new File(url.getPath()).getParent());
+      yarnClusterConfig.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          new File(url.getPath()).getParent());
       //write the document to a buffer (not directly to the file, as that
       //can cause the file being written to get read -which will then fail.
       ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
@@ -234,8 +235,7 @@ public class TestDistributedShell {
     FileContext fsContext = FileContext.getLocalFSFileContext();
     fsContext
         .delete(
-            new Path(conf
-                .get("yarn.timeline-service.leveldb-timeline-store.path")),
+            new Path(conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH)),
             true);
     try {
       Thread.sleep(2000);
@@ -263,8 +263,7 @@ public class TestDistributedShell {
     FileContext fsContext = FileContext.getLocalFSFileContext();
     fsContext
         .delete(
-            new Path(conf
-                .get("yarn.timeline-service.leveldb-timeline-store.path")),
+            new Path(conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH)),
             true);
   }
 

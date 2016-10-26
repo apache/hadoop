@@ -170,7 +170,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private static class CapTestServletModule extends TestServletModule {
     @Override
     public void configureScheduler() {
-      conf.set("yarn.resourcemanager.scheduler.class",
+      conf.set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
     }
   }
@@ -196,8 +196,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       } catch (IOException e) {
       }
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
-      conf.set("yarn.resourcemanager.scheduler.class",
-          FairScheduler.class.getName());
+      conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     }
   }
 

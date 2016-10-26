@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -1704,8 +1705,7 @@ public class TestYarnCLI {
         "org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity."
         + "ProportionalCapacityPreemptionPolicy");
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
-    conf.setBoolean(
-        "yarn.scheduler.capacity.root.a.a1.disable_preemption", true);
+    conf.setBoolean(PREFIX + "root.a.a1.disable_preemption", true);
     MiniYARNCluster cluster =
         new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
 
