@@ -131,7 +131,7 @@ public class DockerProviderService extends AbstractProviderService implements
     launcher.setDockerNetwork(appConf.getComponentOpt(roleGroup, DOCKER_NETWORK,
         DEFAULT_DOCKER_NETWORK));
     launcher.setRunPrivilegedContainer(appConf.getComponentOptBool(roleGroup,
-        DOCKER_USE_PRIVILEGED, false));
+        DOCKER_USE_PRIVILEGED, DEFAULT_DOCKER_USE_PRIVILEGED));
 
     // Set the environment
     Map<String, String> standardTokens = providerUtils.getStandardTokenMap(
