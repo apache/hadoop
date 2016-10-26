@@ -2508,4 +2508,23 @@
       in audit logs.
     </description>
   </property>
+<!-- SequenceFile's Sorter properties -->
+  <property>
+    <name>seq.io.sort.mb</name>
+    <value>100</value>
+    <description>
+      The total amount of buffer memory to use while sorting files,
+      while using SequenceFile.Sorter, in megabytes. By default,
+      gives each merge stream 1MB, which should minimize seeks.
+    </description>
+  </property>
+  <property>
+    <name>seq.io.sort.factor</name>
+    <value>100</value>
+    <description>
+      The number of streams to merge at once while sorting
+      files using SequenceFile.Sorter.
+      This determines the number of open file handles.
+    </description>
+  </property>
 </configuration>
