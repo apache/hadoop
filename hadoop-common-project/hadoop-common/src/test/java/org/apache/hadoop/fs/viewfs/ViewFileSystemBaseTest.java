@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
@@ -54,6 +56,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
 
@@ -918,6 +922,32 @@ abstract public class ViewFileSystemBaseTest {
         }
       } catch (UnsupportedOperationException e) {
         // ignore
+      }
+    }
+  }
+
+  @Test
+  public void testConfLinkSlash() throws Exception {
+    String clusterName = "ClusterX";
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    Configuration newConf = new Configuration();
+    ConfigUtil.addLink(newConf, clusterName, "/",
+        new Path(targetTestRoot, "/").toUri());
+
+    String mtPrefix = Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + ".";
+    try {
+      FileSystem.get(viewFsUri, newConf);
+      fail("ViewFileSystem should error out on mount table entry: "
+          + mtPrefix + Constants.CONFIG_VIEWFS_LINK + "." + "/");
+    } catch (Exception e) {
+      if (e instanceof UnsupportedFileSystemException) {
+        String msg = Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH
+            + " is not supported yet.";
+        assertThat(e.getMessage(), containsString(msg));
+      } else {
+        fail("Unexpected exception: " + e.getMessage());
       }
     }
   }
