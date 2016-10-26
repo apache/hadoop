@@ -1372,7 +1372,7 @@
             <test.build.data>${test.build.data}</test.build.data>
             <test.build.webapps>${test.build.webapps}</test.build.webapps>
             <test.cache.data>${test.cache.data}</test.cache.data>
-            <test.build.classes>${test.build.classes}</test.build.classes>
+            <test.build.classes>${project.build.directory}/test-classes</test.build.classes>
 
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
