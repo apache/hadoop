@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.contract.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
@@ -31,6 +32,11 @@ import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
 
   private static final long MULTIPART_SETTING = MULTIPART_MIN_SIZE;
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    return SCALE_TEST_TIMEOUT_MILLIS;
+  }
 
   @Override
   protected Configuration createConfiguration() {

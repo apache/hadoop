@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with this
  * work for additional information regarding copyright ownership. The ASF
@@ -24,13 +24,13 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -39,26 +39,26 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 
-import org.junit.After;
-import static org.junit.Assert.assertTrue;
-import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
 
 /**
  * Tests that S3A is usable through a YARN application.
  */
-public class ITestS3AMiniYarnCluster {
+public class ITestS3AMiniYarnCluster extends AbstractS3ATestBase {
 
   private final Configuration conf = new YarnConfiguration();
   private S3AFileSystem fs;
   private MiniYARNCluster yarnCluster;
-  private final String rootPath = "/tests/MiniClusterWordCount/";
+  private Path rootPath;
 
-  @Before
-  public void beforeTest() throws IOException {
+  @Override
+  public void setup() throws Exception {
+    super.setup();
     fs = S3ATestUtils.createTestFileSystem(conf);
-    fs.mkdirs(new Path(rootPath + "input/"));
+    rootPath = path("MiniClusterWordCount");
+    Path workingDir = path("working");
+    fs.setWorkingDirectory(workingDir);
+    fs.mkdirs(new Path(rootPath, "input/"));
 
     yarnCluster = new MiniYARNCluster("MiniClusterWordCount", // testName
             1, // number of node managers
@@ -68,17 +68,19 @@ public class ITestS3AMiniYarnCluster {
     yarnCluster.start();
   }
 
-  @After
-  public void afterTest() throws IOException {
-    fs.delete(new Path(rootPath), true);
-    yarnCluster.stop();
+  @Override
+  public void teardown() throws Exception {
+    if (yarnCluster != null) {
+      yarnCluster.stop();
+    }
+    super.teardown();
   }
 
   @Test
   public void testWithMiniCluster() throws Exception {
-    Path input = new Path(rootPath + "input/in.txt");
+    Path input = new Path(rootPath, "input/in.txt");
     input = input.makeQualified(fs.getUri(), fs.getWorkingDirectory());
-    Path output = new Path(rootPath + "output/");
+    Path output = new Path(rootPath, "output/");
     output = output.makeQualified(fs.getUri(), fs.getWorkingDirectory());
 
     writeStringToFile(input, "first line\nsecond line\nthird line");
@@ -134,15 +136,9 @@ public class ITestS3AMiniYarnCluster {
   /**
    * helper method.
    */
-  private String readStringFromFile(Path path) {
-    try (FSDataInputStream in = fs.open(path)) {
-      long bytesLen = fs.getFileStatus(path).getLen();
-      byte[] buffer = new byte[(int) bytesLen];
-      IOUtils.readFully(in, buffer, 0, buffer.length);
-      return new String(buffer);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to read from [" + path + "]", e);
-    }
+  private String readStringFromFile(Path path) throws IOException {
+    return ContractTestUtils.readBytesToString(fs, path,
+        (int) fs.getFileStatus(path).getLen());
   }
 
 }

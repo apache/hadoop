@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,12 +52,12 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
    */
   @Test
   public void testBulkRenameAndDelete() throws Throwable {
-    final Path scaleTestDir = getTestPath();
+    final Path scaleTestDir = path("testBulkRenameAndDelete");
     final Path srcDir = new Path(scaleTestDir, "src");
     final Path finalDir = new Path(scaleTestDir, "final");
     final long count = getOperationCount();
+    final S3AFileSystem fs = getFileSystem();
     ContractTestUtils.rm(fs, scaleTestDir, true, false);
-
     fs.mkdirs(srcDir);
     fs.mkdirs(finalDir);
 
@@ -114,11 +116,4 @@ public class ITestS3ADeleteManyFiles extends S3AScaleTestBase {
     ContractTestUtils.assertDeleted(fs, finalDir, true, false);
   }
 
-  @Test
-  public void testOpenCreate() throws IOException {
-    final Path scaleTestDir = getTestPath();
-    final Path srcDir = new Path(scaleTestDir, "opencreate");
-    ContractTestUtils.createAndVerifyFile(fs, srcDir, 1024);
-    ContractTestUtils.createAndVerifyFile(fs, srcDir, 50 * 1024);
-  }
 }
