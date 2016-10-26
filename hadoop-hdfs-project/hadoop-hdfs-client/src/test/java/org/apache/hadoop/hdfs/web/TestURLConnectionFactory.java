@@ -22,11 +22,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import org.slf4j.LoggerFactory;
 
 public final class TestURLConnectionFactory {
 
@@ -46,5 +50,18 @@ public final class TestURLConnectionFactory {
 
     fc.openConnection(u);
     Assert.assertEquals(1, conns.size());
+  }
+
+  @Test
+  public void testSSLInitFailure() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "foo");
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(
+            LoggerFactory.getLogger(URLConnectionFactory.class));
+    URLConnectionFactory.newDefaultURLConnectionFactory(conf);
+    Assert.assertTrue("Expected log for ssl init failure not found!",
+        logs.getOutput().contains(
+        "Cannot load customized ssl related configuration"));
   }
 }
