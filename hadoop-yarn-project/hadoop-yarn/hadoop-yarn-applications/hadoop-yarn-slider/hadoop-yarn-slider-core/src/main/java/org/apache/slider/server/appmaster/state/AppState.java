@@ -91,6 +91,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.apache.slider.api.ResourceKeys.*;
 import static org.apache.slider.api.RoleKeys.*;
 import static org.apache.slider.api.StateValues.*;
+import static org.apache.slider.providers.docker.DockerKeys.DEFAULT_DOCKER_USE_PRIVILEGED;
+import static org.apache.slider.providers.docker.DockerKeys.DOCKER_IMAGE;
+import static org.apache.slider.providers.docker.DockerKeys.DOCKER_USE_PRIVILEGED;
 
 /**
  * The model of all the ongoing state of a Slider AM.
@@ -1822,6 +1825,15 @@ public class AppState {
           .getComponentOpt(role.getGroup(), ROLE_PREFIX, null);
       if (SliderUtils.isSet(prefix)) {
         cd.setRoleOpt(rolename, ROLE_PREFIX, SliderUtils.trimPrefix(prefix));
+      }
+      String dockerImage = instanceDefinition.getAppConfOperations()
+          .getComponentOpt(role.getGroup(), DOCKER_IMAGE, null);
+      if (SliderUtils.isSet(dockerImage)) {
+        cd.setRoleOpt(rolename, DOCKER_IMAGE, dockerImage);
+        Boolean dockerUsePrivileged = instanceDefinition.getAppConfOperations()
+            .getComponentOptBool(role.getGroup(), DOCKER_USE_PRIVILEGED,
+                DEFAULT_DOCKER_USE_PRIVILEGED);
+        cd.setRoleOpt(rolename, DOCKER_USE_PRIVILEGED, dockerUsePrivileged);
       }
       List<String> instances = instanceMap.get(rolename);
       int nodeCount = instances != null ? instances.size(): 0;
