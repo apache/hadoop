@@ -44,7 +44,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @XmlRootElement
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({ " name, state, resource, numberOfContainers, lifetime, containers " })
+@JsonPropertyOrder({ "name", "state", "resource", "number_of_containers",
+    "lifetime", "containers" })
 public class Application extends BaseResource {
   private static final long serialVersionUID = -4491694636566094885L;
 
@@ -174,8 +175,8 @@ public class Application extends BaseResource {
 
   @ApiModelProperty(example = "null", value = "The time when the application was created, e.g. 2016-03-16T01:01:49.000Z.")
   @JsonProperty("launch_time")
-  public String getLaunchTime() {
-    return launchTime == null ? null : launchTime.toString();
+  public Date getLaunchTime() {
+    return launchTime == null ? null : (Date) launchTime.clone();
   }
 
   @XmlElement(name = "launch_time")

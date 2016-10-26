@@ -280,6 +280,17 @@ public interface SliderClientAPI extends Service {
       throws YarnException, IOException;
 
   /**
+   * Status operation which returns the status object as a string instead of
+   * printing it to the console or file.
+   *
+   * @param clustername cluster name
+   * @return cluster status details
+   * @throws YarnException
+   * @throws IOException
+   */
+  String actionStatus(String clustername) throws YarnException, IOException;
+
+  /**
    * Version Details
    * @return exit code
    */
