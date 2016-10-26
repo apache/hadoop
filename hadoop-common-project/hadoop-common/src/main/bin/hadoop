@@ -230,7 +230,7 @@ fi
 if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   # shellcheck disable=SC2034
   HADOOP_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
-  if [[ -n "${HADOOP_SUBCMD_SECURESERVICE}" ]]; then
+  if [[ "${HADOOP_SUBCMD_SECURESERVICE}" = true ]]; then
     # shellcheck disable=SC2034
     HADOOP_LOGFILE="hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${HADOOP_SUBCMD}-${HOSTNAME}.log"
   else

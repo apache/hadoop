@@ -595,6 +595,8 @@ public class LogCLIHelpers implements Configurable {
     } catch (AccessControlException | AccessDeniedException ace) {
       logDirNoAccessPermission(remoteAppLogDir.toString(), appOwner,
         ace.getMessage());
+    } catch (IOException ioe) {
+      logDirIOError(remoteAppLogDir.toString(), ioe.getMessage());
     }
     return nodeFiles;
   }
@@ -642,6 +644,11 @@ public class LogCLIHelpers implements Configurable {
         + UserGroupInformation.getCurrentUser().getUserName() + " does not "
         + "have permission to access " + remoteAppLogDir
         + ". Error message found: " + errorMessage);
+  }
+
+  private static void logDirIOError(String remoteAppLogDir, String errMsg) {
+    System.err.println("Cannot access to " + remoteAppLogDir +
+        ". Error message found: " + errMsg);
   }
 
   @Private

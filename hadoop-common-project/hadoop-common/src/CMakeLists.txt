@@ -113,7 +113,9 @@ if (ISAL_LIBRARY)
         ${SRC}/io/erasurecode/jni_erasure_code_native.c
         ${SRC}/io/erasurecode/jni_common.c
         ${SRC}/io/erasurecode/jni_rs_encoder.c
-        ${SRC}/io/erasurecode/jni_rs_decoder.c)
+        ${SRC}/io/erasurecode/jni_rs_decoder.c
+        ${SRC}/io/erasurecode/jni_xor_encoder.c
+        ${SRC}/io/erasurecode/jni_xor_decoder.c)
 
         add_executable(erasure_code_test
         ${SRC}/io/erasurecode/isal_load.c

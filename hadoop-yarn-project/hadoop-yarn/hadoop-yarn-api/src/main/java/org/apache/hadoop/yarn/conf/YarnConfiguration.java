@@ -1392,18 +1392,6 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
-  /** The Docker image name(For DockerContainerExecutor).*/
-  public static final String NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
-    NM_PREFIX + "docker-container-executor.image-name";
-
-  /** The name of the docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-    NM_PREFIX + "docker-container-executor.exec-name";
-
-  /** The default docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-          "/usr/bin/docker";
-
   /** Prefix for runtime configuration constants. */
   public static final String LINUX_CONTAINER_RUNTIME_PREFIX = NM_PREFIX +
       "runtime.linux.";

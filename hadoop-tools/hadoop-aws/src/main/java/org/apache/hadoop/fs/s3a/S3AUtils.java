@@ -40,6 +40,9 @@ import org.slf4j.Logger;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.Date;
@@ -66,6 +69,8 @@ public final class S3AUtils {
       = "instantiation exception";
   static final String NOT_AWS_PROVIDER =
       "does not implement AWSCredentialsProvider";
+  static final String ABSTRACT_PROVIDER =
+      "is abstract and therefore cannot be created";
   static final String ENDPOINT_KEY = "Endpoint";
 
   private S3AUtils() {
@@ -236,17 +241,19 @@ public final class S3AUtils {
    * @param keyPath path to entry
    * @param summary summary from AWS
    * @param blockSize block size to declare.
+   * @param owner owner of the file
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
       S3ObjectSummary summary,
-      long blockSize) {
+      long blockSize,
+      String owner) {
     if (objectRepresentsDirectory(summary.getKey(), summary.getSize())) {
-      return new S3AFileStatus(true, true, keyPath);
+      return new S3AFileStatus(true, keyPath, owner);
     } else {
       return new S3AFileStatus(summary.getSize(),
           dateToLong(summary.getLastModified()), keyPath,
-          blockSize);
+          blockSize, owner);
     }
   }
 
@@ -305,9 +312,15 @@ public final class S3AUtils {
       credentials.add(new BasicAWSCredentialsProvider(
               creds.getUser(), creds.getPassword()));
       credentials.add(new EnvironmentVariableCredentialsProvider());
-      credentials.add(new InstanceProfileCredentialsProvider());
+      credentials.add(
+          SharedInstanceProfileCredentialsProvider.getInstance());
     } else {
       for (Class<?> aClass : awsClasses) {
+        if (aClass == InstanceProfileCredentialsProvider.class) {
+          LOG.debug("Found {}, but will use {} instead.", aClass.getName(),
+              SharedInstanceProfileCredentialsProvider.class.getName());
+          aClass = SharedInstanceProfileCredentialsProvider.class;
+        }
         credentials.add(createAWSCredentialProvider(conf,
             aClass,
             fsURI));
@@ -317,7 +330,19 @@ public final class S3AUtils {
   }
 
   /**
-   * Create an AWS credential provider.
+   * Create an AWS credential provider from its class by using reflection.  The
+   * class must implement one of the following means of construction, which are
+   * attempted in order:
+   *
+   * <ol>
+   * <li>a public constructor accepting java.net.URI and
+   *     org.apache.hadoop.conf.Configuration</li>
+   * <li>a public static method named getInstance that accepts no
+   *    arguments and returns an instance of
+   *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
+   * <li>a public default constructor.</li>
+   * </ol>
+   *
    * @param conf configuration
    * @param credClass credential class
    * @param uri URI of the FS
@@ -328,32 +353,54 @@ public final class S3AUtils {
       Configuration conf,
       Class<?> credClass,
       URI uri) throws IOException {
-    AWSCredentialsProvider credentials;
+    AWSCredentialsProvider credentials = null;
     String className = credClass.getName();
     if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
       throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
     }
-    try {
-      LOG.debug("Credential provider class is {}", className);
-      try {
-        credentials =
-            (AWSCredentialsProvider) credClass.getDeclaredConstructor(
-                URI.class, Configuration.class).newInstance(uri, conf);
-      } catch (NoSuchMethodException | SecurityException e) {
-        credentials =
-            (AWSCredentialsProvider) credClass.getDeclaredConstructor()
-                .newInstance();
-      }
-    } catch (NoSuchMethodException | SecurityException e) {
-      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
-          +".  A class specified in %s must provide an accessible constructor "
-          + "accepting URI and Configuration, or an accessible default "
-          + "constructor.", className, AWS_CREDENTIALS_PROVIDER), e);
-    } catch (ReflectiveOperationException | IllegalArgumentException e) {
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
+    if (Modifier.isAbstract(credClass.getModifiers())) {
+      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
     }
-    LOG.debug("Using {} for {}.", credentials, uri);
-    return credentials;
+    LOG.debug("Credential provider class is {}", className);
+
+    try {
+      // new X(uri, conf)
+      Constructor cons = getConstructor(credClass, URI.class,
+          Configuration.class);
+      if (cons != null) {
+        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
+        return credentials;
+      }
+
+      // X.getInstance()
+      Method factory = getFactoryMethod(credClass, AWSCredentialsProvider.class,
+          "getInstance");
+      if (factory != null) {
+        credentials = (AWSCredentialsProvider)factory.invoke(null);
+        return credentials;
+      }
+
+      // new X()
+      cons = getConstructor(credClass);
+      if (cons != null) {
+        credentials = (AWSCredentialsProvider)cons.newInstance();
+        return credentials;
+      }
+
+      // no supported constructor or factory method found
+      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
+          + ".  A class specified in %s must provide a public constructor "
+          + "accepting URI and Configuration, or a public factory method named "
+          + "getInstance that accepts no arguments, or a public default "
+          + "constructor.", className, AWS_CREDENTIALS_PROVIDER));
+    } catch (ReflectiveOperationException | IllegalArgumentException e) {
+      // supported constructor or factory method found, but the call failed
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION +".", e);
+    } finally {
+      if (credentials != null) {
+        LOG.debug("Using {} for {}.", credentials, uri);
+      }
+    }
   }
 
   /**
@@ -497,6 +544,49 @@ public final class S3AUtils {
       return Integer.MAX_VALUE;
     } else {
       return (int)size;
+    }
+  }
+
+  /**
+   * Returns the public constructor of {@code cl} specified by the list of
+   * {@code args} or {@code null} if {@code cl} has no public constructor that
+   * matches that specification.
+   * @param cl class
+   * @param args constructor argument types
+   * @return constructor or null
+   */
+  private static Constructor<?> getConstructor(Class<?> cl, Class<?>... args) {
+    try {
+      Constructor cons = cl.getDeclaredConstructor(args);
+      return Modifier.isPublic(cons.getModifiers()) ? cons : null;
+    } catch (NoSuchMethodException | SecurityException e) {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the public static method of {@code cl} that accepts no arguments
+   * and returns {@code returnType} specified by {@code methodName} or
+   * {@code null} if {@code cl} has no public static method that matches that
+   * specification.
+   * @param cl class
+   * @param returnType return type
+   * @param methodName method name
+   * @return method or null
+   */
+  private static Method getFactoryMethod(Class<?> cl, Class<?> returnType,
+      String methodName) {
+    try {
+      Method m = cl.getDeclaredMethod(methodName);
+      if (Modifier.isPublic(m.getModifiers()) &&
+          Modifier.isStatic(m.getModifiers()) &&
+          returnType.isAssignableFrom(m.getReturnType())) {
+        return m;
+      } else {
+        return null;
+      }
+    } catch (NoSuchMethodException | SecurityException e) {
+      return null;
     }
   }
 }

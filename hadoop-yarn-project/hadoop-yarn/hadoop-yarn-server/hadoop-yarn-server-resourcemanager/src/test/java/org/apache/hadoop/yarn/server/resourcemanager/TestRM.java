@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -136,7 +137,7 @@ public class TestRM extends ParameterizedSchedulerTestBase {
   public void testAppOnMultiNode() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    conf.set("yarn.scheduler.capacity.node-locality-delay", "-1");
+    conf.set(CapacitySchedulerConfiguration.NODE_LOCALITY_DELAY, "-1");
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);

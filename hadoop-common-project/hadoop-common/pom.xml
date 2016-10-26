@@ -235,7 +235,6 @@
     <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jsch</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.curator</groupId>
@@ -641,6 +640,8 @@
                     <javahClassName>org.apache.hadoop.io.erasurecode.ErasureCodeNative</javahClassName>
                     <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawEncoder</javahClassName>
                     <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawDecoder</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawEncoder</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawDecoder</javahClassName>
                     <javahClassName>org.apache.hadoop.crypto.OpensslCipher</javahClassName>
                     <javahClassName>org.apache.hadoop.crypto.random.OpensslSecureRandom</javahClassName>
                     <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>
@@ -781,6 +782,8 @@
                     <javahClassName>org.apache.hadoop.io.erasurecode.ErasureCodeNative</javahClassName>
                     <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawEncoder</javahClassName>
                     <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawDecoder</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawEncoder</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.erasurecode.rawcoder.NativeXORRawDecoder</javahClassName>
                     <javahClassName>org.apache.hadoop.crypto.OpensslCipher</javahClassName>
                     <javahClassName>org.apache.hadoop.crypto.random.OpensslSecureRandom</javahClassName>
                     <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>

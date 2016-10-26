@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -29,7 +29,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.security.AccessControlException;
 
 import java.io.IOException;
 import java.util.List;
@@ -43,17 +45,10 @@ class FSDirMkdirOp {
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     }
-    if (!DFSUtil.isValidName(src)) {
-      throw new InvalidPathException(src);
-    }
     FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.writeLock();
     try {
-      INodesInPath iip = fsd.resolvePathForWrite(pc, src);
-      src = iip.getPath();
-      if (fsd.isPermissionEnabled()) {
-        fsd.checkTraverse(pc, iip);
-      }
+      INodesInPath iip = fsd.resolvePath(pc, src, DirOp.CREATE);
 
       final INode lastINode = iip.getLastINode();
       if (lastINode != null && lastINode.isFile()) {
@@ -159,9 +154,10 @@ class FSDirMkdirOp {
   static void mkdirForEditLog(FSDirectory fsd, long inodeId, String src,
       PermissionStatus permissions, List<AclEntry> aclEntries, long timestamp)
       throws QuotaExceededException, UnresolvedLinkException, AclException,
-      FileAlreadyExistsException {
+      FileAlreadyExistsException, ParentNotDirectoryException,
+      AccessControlException {
     assert fsd.hasWriteLock();
-    INodesInPath iip = fsd.getINodesInPath(src, false);
+    INodesInPath iip = fsd.getINodesInPath(src, DirOp.WRITE_LINK);
     final byte[] localName = iip.getLastLocalName();
     final INodesInPath existing = iip.getParentINodesInPath();
     Preconditions.checkState(existing.getLastINode() != null);

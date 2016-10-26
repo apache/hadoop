@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.yarn.client;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.HATestUtil;
 import org.junit.Assert;
 import org.junit.Test;
-
 
 public class TestHedgingRequestRMFailoverProxyProvider {
 
@@ -63,8 +66,9 @@ public class TestHedgingRequestRMFailoverProxyProvider {
     // Transition rm5 to active;
     long start = System.currentTimeMillis();
     makeRMActive(cluster, 4);
-    // client will retry until the rm becomes active.
-    client.getAllQueues();
+
+    validateActiveRM(client);
+
     long end = System.currentTimeMillis();
     System.out.println("Client call succeeded at " + end);
     // should return the response fast
@@ -76,8 +80,27 @@ public class TestHedgingRequestRMFailoverProxyProvider {
             HAServiceProtocol.RequestSource.REQUEST_BY_USER));
 
     makeRMActive(cluster, 2);
-    client.getAllQueues();
+
+    validateActiveRM(client);
+
     cluster.stop();
+  }
+
+  private void validateActiveRM(YarnClient client) throws IOException {
+    // first check if exception is thrown correctly;
+    try {
+      // client will retry until the rm becomes active.
+      client.getApplicationReport(null);
+      Assert.fail();
+    } catch (YarnException e) {
+      Assert.assertTrue(e instanceof ApplicationNotFoundException);
+    }
+    // now make a valid call.
+    try {
+      client.getAllQueues();
+    } catch (YarnException e) {
+      Assert.fail(e.toString());
+    }
   }
 
   private void makeRMActive(final MiniYARNCluster cluster, final int index) {

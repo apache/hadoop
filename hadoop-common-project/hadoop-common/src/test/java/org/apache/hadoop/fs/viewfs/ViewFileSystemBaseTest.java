@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
@@ -39,13 +40,13 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
-import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
@@ -82,6 +83,8 @@ abstract public class ViewFileSystemBaseTest {
   Path targetTestRoot;
   Configuration conf;
   final FileSystemTestHelper fileSystemTestHelper;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ViewFileSystemBaseTest.class);
 
   public ViewFileSystemBaseTest() {
       this.fileSystemTestHelper = createFileSystemHelper();
@@ -144,6 +147,10 @@ abstract public class ViewFileSystemBaseTest {
   public void testGetMountPoints() {
     ViewFileSystem viewfs = (ViewFileSystem) fsView;
     MountPoint[] mountPoints = viewfs.getMountPoints();
+    for (MountPoint mountPoint : mountPoints) {
+      LOG.info("MountPoint: " + mountPoint.getSrc() + " => "
+          + Joiner.on(",").join(mountPoint.getTargets()));
+    }
     Assert.assertEquals(getExpectedMountPoints(), mountPoints.length); 
   }
   

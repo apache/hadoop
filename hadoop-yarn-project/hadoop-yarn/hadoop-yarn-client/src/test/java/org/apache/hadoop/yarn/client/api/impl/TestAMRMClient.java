@@ -235,6 +235,20 @@ public class TestAMRMClient {
       yarnCluster.stop();
     }
   }
+
+  @Test (timeout = 60000)
+  public void testAMRMClientNoMatchingRequests()
+      throws IOException, YarnException {
+    AMRMClient<ContainerRequest> amClient =  AMRMClient.createAMRMClient();
+    amClient.init(conf);
+    amClient.start();
+    amClient.registerApplicationMaster("Host", 10000, "");
+
+    Resource testCapability1 = Resource.newInstance(1024,  2);
+    List<? extends Collection<ContainerRequest>> matches =
+        amClient.getMatchingRequests(priority, node, testCapability1);
+    assertEquals("Expected no macthing requests.", matches.size(), 0);
+  }
   
   @Test (timeout=60000)
   public void testAMRMClientMatchingFit() throws YarnException, IOException {

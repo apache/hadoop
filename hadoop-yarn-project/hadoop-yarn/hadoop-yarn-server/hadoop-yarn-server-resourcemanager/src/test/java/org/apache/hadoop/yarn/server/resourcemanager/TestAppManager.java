@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -291,12 +292,11 @@ public class TestAppManager{
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
-    conf.set("yarn.scheduler.capacity.root.acl_submit_applications", " ");
-    conf.set("yarn.scheduler.capacity.root.acl_administer_queue", " ");
+    conf.set(PREFIX + "root.acl_submit_applications", " ");
+    conf.set(PREFIX + "root.acl_administer_queue", " ");
 
-    conf.set("yarn.scheduler.capacity.root.default.acl_submit_applications",
-        " ");
-    conf.set("yarn.scheduler.capacity.root.default.acl_administer_queue", " ");
+    conf.set(PREFIX + "root.default.acl_submit_applications", " ");
+    conf.set(PREFIX + "root.default.acl_administer_queue", " ");
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
     MockRM mockRM = new MockRM(conf);
     ClientRMService rmService = mockRM.getClientRMService();

@@ -65,6 +65,9 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * set/clrSpaceQuote are tested in {@link org.apache.hadoop.hdfs.TestQuota}.
+ */
 public class TestDFSAdmin {
   private static final Log LOG = LogFactory.getLog(TestDFSAdmin.class);
   private Configuration conf = null;

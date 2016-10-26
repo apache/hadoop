@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -77,7 +78,7 @@ final class FSDirErasureCodingOp {
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, src, false);
+      iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
       src = iip.getPath();
       xAttrs = createErasureCodingPolicyXAttr(fsn, iip, ecPolicy);
     } finally {
@@ -223,7 +224,7 @@ final class FSDirErasureCodingOp {
       final String srcArg) throws IOException {
     final FSDirectory fsd = fsn.getFSDirectory();
     final FSPermissionChecker pc = fsn.getPermissionChecker();
-    INodesInPath iip = fsd.resolvePath(pc, srcArg);
+    INodesInPath iip = fsd.resolvePath(pc, srcArg, DirOp.READ);
     if (fsn.isPermissionEnabled()) {
       fsn.getFSDirectory().checkPathAccess(pc, iip, FsAction.READ);
     }
