@@ -181,9 +181,6 @@
                   </includes>
                   <excludes>
                     <exclude>**/ITestJets3tNativeS3FileSystemContract.java</exclude>
-                    <exclude>**/ITestS3ABlockingThreadPool.java</exclude>
-                    <exclude>**/ITestS3AFileSystemContract.java</exclude>
-                    <exclude>**/ITestS3AMiniYarnCluster.java</exclude>
                     <exclude>**/ITest*Root*.java</exclude>
                     <exclude>**/ITestS3AFileContextStatistics.java</exclude>
                     <include>**/ITestS3AHuge*.java</include>
@@ -211,10 +208,6 @@
                   <!-- parallel execution. -->
                   <includes>
                     <include>**/ITestJets3tNativeS3FileSystemContract.java</include>
-                    <include>**/ITestS3ABlockingThreadPool.java</include>
-                    <include>**/ITestS3AFastOutputStream.java</include>
-                    <include>**/ITestS3AFileSystemContract.java</include>
-                    <include>**/ITestS3AMiniYarnCluster.java</include>
                     <include>**/ITest*Root*.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
                     <include>**/ITestS3AHuge*.java</include>

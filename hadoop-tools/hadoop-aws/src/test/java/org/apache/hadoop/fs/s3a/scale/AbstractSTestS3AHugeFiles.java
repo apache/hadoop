@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.util.Progressable;
 
@@ -70,27 +71,22 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private int partitionSize;
 
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
-
+  public void setup() throws Exception {
+    super.setup();
     final Path testPath = getTestPath();
     scaleTestDir = new Path(testPath, "scale");
     hugefile = new Path(scaleTestDir, "hugefile");
     hugefileRenamed = new Path(scaleTestDir, "hugefileRenamed");
   }
 
-  @Override
-  public void tearDown() throws Exception {
-    // do nothing. Specifically: do not delete the test dir
-  }
 
   /**
    * Note that this can get called before test setup.
    * @return the configuration to use.
    */
   @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
+  protected Configuration createScaleConfiguration() {
+    Configuration conf = super.createScaleConfiguration();
     partitionSize = (int)getTestPropertyBytes(conf,
         KEY_HUGE_PARTITION_SIZE,
         DEFAULT_PARTITION_SIZE);
@@ -155,6 +151,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     // perform the upload.
     // there's lots of logging here, so that a tail -f on the output log
     // can give a view of what is happening.
+    S3AFileSystem fs = getFileSystem();
     StorageStatistics storageStatistics = fs.getStorageStatistics();
     String putRequests = Statistic.OBJECT_PUT_REQUESTS.getSymbol();
     String putBytes = Statistic.OBJECT_PUT_BYTES.getSymbol();
@@ -286,12 +283,13 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   }
 
   void assumeHugeFileExists() throws IOException {
+    S3AFileSystem fs = getFileSystem();
     ContractTestUtils.assertPathExists(fs, "huge file not created", hugefile);
     ContractTestUtils.assertIsFile(fs, hugefile);
   }
 
   private void logFSState() {
-    LOG.info("File System state after operation:\n{}", fs);
+    LOG.info("File System state after operation:\n{}", getFileSystem());
   }
 
   @Test
@@ -305,6 +303,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     }
     String filetype = encrypted ? "encrypted file" : "file";
     describe("Positioned reads of %s %s", filetype, hugefile);
+    S3AFileSystem fs = getFileSystem();
     S3AFileStatus status = fs.getFileStatus(hugefile);
     long filesize = status.getLen();
     int ops = 0;
@@ -344,6 +343,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_050_readHugeFile() throws Throwable {
     assumeHugeFileExists();
     describe("Reading %s", hugefile);
+    S3AFileSystem fs = getFileSystem();
     S3AFileStatus status = fs.getFileStatus(hugefile);
     long filesize = status.getLen();
     long blocks = filesize / uploadBlockSize;
@@ -369,6 +369,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_100_renameHugeFile() throws Throwable {
     assumeHugeFileExists();
     describe("renaming %s to %s", hugefile, hugefileRenamed);
+    S3AFileSystem fs = getFileSystem();
     S3AFileStatus status = fs.getFileStatus(hugefile);
     long filesize = status.getLen();
     fs.delete(hugefileRenamed, false);
@@ -396,7 +397,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_999_DeleteHugeFiles() throws IOException {
     deleteHugeFile();
     ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
-
+    S3AFileSystem fs = getFileSystem();
     fs.delete(hugefileRenamed, false);
     timer2.end("time to delete %s", hugefileRenamed);
     ContractTestUtils.rm(fs, getTestPath(), true, true);
@@ -405,7 +406,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   protected void deleteHugeFile() throws IOException {
     describe("Deleting %s", hugefile);
     NanoTimer timer = new NanoTimer();
-    fs.delete(hugefile, false);
+    getFileSystem().delete(hugefile, false);
     timer.end("time to delete %s", hugefile);
   }
 

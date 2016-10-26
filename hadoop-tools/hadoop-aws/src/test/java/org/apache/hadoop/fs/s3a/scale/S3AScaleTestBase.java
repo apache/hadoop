@@ -21,20 +21,15 @@ package org.apache.hadoop.fs.s3a.scale;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
-import org.junit.After;
+
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,24 +40,34 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 /**
  * Base class for scale tests; here is where the common scale configuration
  * keys are defined.
+ * <p>
+ * Configuration setup is a bit more complex than in the parent classes,
+ * as the test timeout is desired prior to the {@link #getTestTimeoutMillis()}
+ * being called to set the test timeout rule; this happens before any of
+ * the methods tagged with {@code @Before} are invoked.
+ * <p>
+ * The algorithm is:
+ * <ol>
+ *   <li>Create a configuration on demand, via
+ *   {@link #demandCreateConfiguration()}</li>
+ *   <li>Have that return the value of {@link #conf} or create a new one
+ *   if that field is null (and set the field to the created value).</li>
+ *   <li>Override the superclasses {@link #createConfiguration()}
+ *   to return the demand created value; make that method final so that
+ *   subclasses don't break things by overridding it.</li>
+ *   <li>Add a new override point {@link #createScaleConfiguration()}
+ *   to create the config, one which subclasses can (and do) override.</li>
+ * </ol>
+ * Bear in mind that this process also takes place during initialization
+ * of the superclass; the overridden methods are being invoked before
+ * their instances are fully configured. This is considered
+ * <i>very bad form</i> in Java code (indeed, in C++ it is actually permitted;
+ * the base class implementations get invoked instead).
  */
-public class S3AScaleTestBase extends Assert implements S3ATestConstants {
-
-  @Rule
-  public final TestName methodName = new TestName();
-
-  @Rule
-  public Timeout testTimeout = createTestTimeout();
-
-  @Before
-  public void nameThread() {
-    Thread.currentThread().setName("JUnit");
-  }
+public class S3AScaleTestBase extends AbstractS3ATestBase {
 
   public static final int _1KB = 1024;
   public static final int _1MB = _1KB * _1KB;
-
-  protected S3AFileSystem fs;
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(S3AScaleTestBase.class);
@@ -71,14 +76,8 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
 
   private boolean enabled;
 
-  /**
-   * Configuration generator. May be overridden to inject
-   * some custom options.
-   * @return a configuration with which to create FS instances
-   */
-  protected Configuration createConfiguration() {
-    return new Configuration();
-  }
+
+  private Path testPath;
 
   /**
    * Get the configuration used to set up the FS.
@@ -88,44 +87,53 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
     return conf;
   }
 
-  /**
-   * Setup. This triggers creation of the configuration.
-   */
-  @Before
-  public void setUp() throws Exception {
-    demandCreateConfiguration();
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    testPath = path("/tests3ascale");
     LOG.debug("Scale test operation count = {}", getOperationCount());
     // multipart purges are disabled on the scale tests
-    fs = createTestFileSystem(conf, false);
     // check for the test being enabled
     enabled = getTestPropertyBool(
         getConf(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
     Assume.assumeTrue("Scale test disabled: to enable set property " +
-        KEY_SCALE_TESTS_ENABLED, enabled);
+        KEY_SCALE_TESTS_ENABLED, isEnabled());
   }
 
   /**
-   * Create the configuration if it is not already set up.
+   * Create the configuration if it is not already set up, calling
+   * {@link #createScaleConfiguration()} to do so.
    * @return the configuration.
    */
   private synchronized Configuration demandCreateConfiguration() {
     if (conf == null) {
-      conf = createConfiguration();
+      conf = createScaleConfiguration();
     }
     return conf;
   }
 
-  @After
-  public void tearDown() throws Exception {
-    ContractTestUtils.rm(fs, getTestPath(), true, true);
+  /**
+   * Returns the config created with {@link #demandCreateConfiguration()}.
+   * Subclasses must override {@link #createScaleConfiguration()}
+   * in order to customize their configurations.
+   * @return a configuration with which to create FS instances
+   */
+  protected final Configuration createConfiguration() {
+    return demandCreateConfiguration();
+  }
+
+  /**
+   * Override point: create a configuration.
+   * @return a configuration with which to create FS instances
+   */
+  protected Configuration createScaleConfiguration() {
+    return new Configuration();
   }
 
   protected Path getTestPath() {
-    String testUniqueForkId = System.getProperty("test.unique.fork.id");
-    return testUniqueForkId == null ? new Path("/tests3a") :
-        new Path("/" + testUniqueForkId, "tests3a");
+    return testPath;
   }
 
   protected long getOperationCount() {
@@ -133,34 +141,18 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
   }
 
   /**
-   * Create the timeout for tests. Some large tests may need a larger value.
-   * @return the test timeout to use
-   */
-  protected Timeout createTestTimeout() {
-    demandCreateConfiguration();
-    return new Timeout(
-        getTestTimeoutSeconds() * 1000);
-  }
-
-  /**
    * Get the test timeout in seconds.
    * @return the test timeout as set in system properties or the default.
    */
-  protected static int getTestTimeoutSeconds() {
-    return getTestPropertyInt(null,
+  protected int getTestTimeoutSeconds() {
+    return getTestPropertyInt(demandCreateConfiguration(),
         KEY_TEST_TIMEOUT,
-        DEFAULT_TEST_TIMEOUT);
+        SCALE_TEST_TIMEOUT_SECONDS);
   }
 
-  /**
-   * Describe a test in the logs.
-   * @param text text to print
-   * @param args arguments to format in the printing
-   */
-  protected void describe(String text, Object... args) {
-    LOG.info("\n\n{}: {}\n",
-        methodName.getMethodName(),
-        String.format(text, args));
+  @Override
+  protected int getTestTimeoutMillis() {
+    return getTestTimeoutSeconds() * 1000;
   }
 
   /**
@@ -189,20 +181,25 @@ public class S3AScaleTestBase extends Assert implements S3ATestConstants {
    * @return the value.
    */
   public long gaugeValue(Statistic statistic) {
-    S3AInstrumentation instrumentation = fs.getInstrumentation();
+    S3AInstrumentation instrumentation = getFileSystem().getInstrumentation();
     MutableGaugeLong gauge = instrumentation.lookupGauge(statistic.getSymbol());
     assertNotNull("No gauge " + statistic
         + " in " + instrumentation.dump("", " = ", "\n", true), gauge);
     return gauge.value();
   }
 
-  protected boolean isEnabled() {
+  /**
+   * Is the test enabled; this is controlled by the configuration
+   * and the {@code -Dscale} maven option.
+   * @return true if the scale tests are enabled.
+   */
+  protected final boolean isEnabled() {
     return enabled;
   }
 
   /**
-   * Flag to indicate that this test is being used sequentially. This
-   * is used by some of the scale tests to validate test time expectations.
+   * Flag to indicate that this test is being executed in parallel.
+   * This is used by some of the scale tests to validate test time expectations.
    * @return true if the build indicates this test is being run in parallel.
    */
   protected boolean isParallelExecution() {

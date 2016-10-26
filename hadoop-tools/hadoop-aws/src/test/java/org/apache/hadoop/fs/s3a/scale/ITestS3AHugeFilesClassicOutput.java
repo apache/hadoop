@@ -29,8 +29,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 public class ITestS3AHugeFilesClassicOutput extends AbstractSTestS3AHugeFiles {
 
   @Override
-  protected Configuration createConfiguration() {
-    final Configuration conf = super.createConfiguration();
+  protected Configuration createScaleConfiguration() {
+    final Configuration conf = super.createScaleConfiguration();
     conf.setBoolean(Constants.FAST_UPLOAD, false);
     return conf;
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,16 +18,11 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
-import org.junit.Rule;
+
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,18 +33,10 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.fileStatsToString;
 /**
  * S3A tests for configuring block size.
  */
-public class ITestS3ABlocksize extends AbstractFSContractTestBase {
+public class ITestS3ABlocksize extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ABlocksize.class);
-
-  @Override
-  protected AbstractFSContract createContract(Configuration conf) {
-    return new S3AContract(conf);
-  }
-
-  @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
 
   @Test
   @SuppressWarnings("deprecation")
