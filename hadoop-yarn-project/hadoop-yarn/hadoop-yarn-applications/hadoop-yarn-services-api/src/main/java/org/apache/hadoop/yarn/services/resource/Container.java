@@ -79,8 +79,8 @@ public class Container extends BaseResource {
 
   @ApiModelProperty(example = "null", value = "The time when the container was created, e.g. 2016-03-16T01:01:49.000Z. This will most likely be different from cluster launch time.")
   @JsonProperty("launch_time")
-  public String getLaunchTime() {
-    return launchTime == null ? null : launchTime.toString();
+  public Date getLaunchTime() {
+    return launchTime == null ? null : (Date) launchTime.clone();
   }
 
   @XmlElement(name = "launch_time")

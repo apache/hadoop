@@ -27,6 +27,7 @@ import java.util.Arrays;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.services.api.impl.ApplicationApiService;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.mortbay.jetty.webapp.Configuration;
@@ -95,13 +96,10 @@ public class ApplicationApiWebApp extends AbstractService {
         .setName("services-rest-api")
         .addEndpoint(URI.create("http://" + webHost + ":" + webPort)).build();
 
-    String apiPackages = "org.apache.hadoop.yarn.services.api" + SEP
-        + "org.apache.hadoop.yarn.services.api.impl" + SEP
-        + "org.apache.hadoop.yarn.services.resource" + SEP
-        + "org.apache.hadoop.yarn.services.utils" + SEP
-        + "org.apache.hadoop.yarn.services.webapp" + SEP
-        + GenericExceptionHandler.class.getPackage().getName() + SEP
-        + YarnJacksonJaxbJsonProvider.class.getPackage().getName();
+    String apiPackages =
+        ApplicationApiService.class.getPackage().getName() + SEP
+            + GenericExceptionHandler.class.getPackage().getName() + SEP
+            + YarnJacksonJaxbJsonProvider.class.getPackage().getName();
     applicationApiServer.addJerseyResourcePackage(apiPackages, CONTEXT_ROOT
         + "/*");
 
