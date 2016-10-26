@@ -55,6 +55,8 @@ Release 2.7.4 - UNRELEASED
     HDFS-10712. TestDataNodeVolumeFailure should pass not null
     BlockReportContext. (Vinitha Gankidi via shv)
 
+    HDFS-11053. Unnecessary superuser check in versionRequest() (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
