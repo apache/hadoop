@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.services.api.impl;
 import static org.apache.hadoop.yarn.services.utils.RestApiConstants.*;
 import static org.apache.hadoop.yarn.services.utils.RestApiErrorMessages.*;
 
-import java.io.File;
-import java.io.FileReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
@@ -36,7 +35,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -52,6 +50,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -78,7 +77,6 @@ import org.apache.slider.common.params.ActionFlexArgs;
 import org.apache.slider.common.params.ActionFreezeArgs;
 import org.apache.slider.common.params.ActionListArgs;
 import org.apache.slider.common.params.ActionRegistryArgs;
-import org.apache.slider.common.params.ActionStatusArgs;
 import org.apache.slider.common.params.ActionThawArgs;
 import org.apache.slider.common.params.ComponentArgsDelegate;
 import org.apache.slider.common.tools.SliderUtils;
@@ -98,6 +96,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.inject.Singleton;
 
 @Singleton
 @Path(APPLICATIONS_API_RESOURCE_PATH)
@@ -109,6 +108,11 @@ public class ApplicationApiService implements ApplicationApi {
   private static org.apache.hadoop.conf.Configuration SLIDER_CONFIG;
   private static UserGroupInformation SLIDER_USER;
   private static SliderClient SLIDER_CLIENT;
+  private static Response SLIDER_VERSION;
+  private static final JsonParser JSON_PARSER = new JsonParser();
+  private static final JsonObject EMPTY_JSON_OBJECT = new JsonObject();
+  private static final ActionListArgs ACTION_LIST_ARGS = new ActionListArgs();
+  private static final ActionFreezeArgs ACTION_FREEZE_ARGS = new ActionFreezeArgs();
 
   static {
     init();
@@ -119,24 +123,27 @@ public class ApplicationApiService implements ApplicationApi {
     SLIDER_CONFIG = getSliderClientConfiguration();
     SLIDER_USER = getSliderUser();
     SLIDER_CLIENT = createSliderClient();
+    SLIDER_VERSION = initSliderVersion();
   }
 
   @GET
-  @Path("/slider-version")
+  @Path("/versions/slider-version")
   @Consumes({ MediaType.APPLICATION_JSON })
   @Produces({ MediaType.APPLICATION_JSON })
   public Response getSliderVersion() {
     logger.info("GET: getSliderVersion");
+    return SLIDER_VERSION;
+  }
 
+  private static Response initSliderVersion() {
     Map<String, Object> metadata = new HashMap<>();
     BuildHelper.addBuildMetadata(metadata, "org.apache.hadoop.yarn.services");
     String sliderVersion = metadata.toString();
     logger.info("Slider version = {}", sliderVersion);
     String hadoopVersion = SliderVersionInfo.getHadoopVersionString();
     logger.info("Hadoop version = {}", hadoopVersion);
-    return Response.ok(
-        "{ \"slider_version\": \"" + sliderVersion
-            + "\", \"hadoop_version\": \"" + hadoopVersion + "\"}").build();
+    return Response.ok("{ \"slider_version\": \"" + sliderVersion
+        + "\", \"hadoop_version\": \"" + hadoopVersion + "\"}").build();
   }
 
   @POST
@@ -196,7 +203,8 @@ public class ApplicationApiService implements ApplicationApi {
     }
 
     // If the application has no components do top-level checks
-    if (application.getComponents() == null) {
+    if (application.getComponents() == null
+        || application.getComponents().size() == 0) {
       // artifact
       if (application.getArtifact() == null) {
         throw new IllegalArgumentException(ERROR_ARTIFACT_INVALID);
@@ -222,6 +230,9 @@ public class ApplicationApiService implements ApplicationApi {
       if (application.getNumberOfContainers() == null) {
         throw new IllegalArgumentException(ERROR_CONTAINERS_COUNT_INVALID);
       }
+
+      // Since it is a simple app with no components, create a default component
+      application.setComponents(getDefaultComponentAsList(application));
     } else {
       // If the application has components, then run checks for each component.
       // Let global values take effect if component level values are not
@@ -272,11 +283,6 @@ public class ApplicationApiService implements ApplicationApi {
               ERROR_CONTAINERS_COUNT_FOR_COMP_INVALID, comp.getName()));
         }
       }
-    }
-
-    // If it is a simple app with no components, then create a default component
-    if (application.getComponents() == null) {
-      application.setComponents(getDefaultComponentAsList(application));
     }
 
     // Application lifetime if not specified, is set to unlimited lifetime
@@ -853,15 +859,12 @@ public class ApplicationApiService implements ApplicationApi {
     // TODO: add status
     app.setState(ApplicationState.ACCEPTED);
     JsonObject appStatus = null;
-    JsonObject appRegistryDocker = null;
     JsonObject appRegistryQuicklinks = null;
     try {
       appStatus = getSliderApplicationStatus(appName);
-      appRegistryDocker = getSliderApplicationRegistry(appName, "docker");
       appRegistryQuicklinks = getSliderApplicationRegistry(appName,
           "quicklinks");
-      return populateAppData(app, appStatus, appRegistryDocker,
-          appRegistryQuicklinks);
+      return populateAppData(app, appStatus, appRegistryQuicklinks);
     } catch (BadClusterStateException | NotFoundException e) {
       logger.error(
           "Get application failed, application not in running state yet", e);
@@ -881,7 +884,7 @@ public class ApplicationApiService implements ApplicationApi {
   }
 
   private Response populateAppData(Application app, JsonObject appStatus,
-      JsonObject appRegistryDocker, JsonObject appRegistryQuicklinks) {
+      JsonObject appRegistryQuicklinks) {
     String appName = jsonGetAsString(appStatus, "name");
     Long totalNumberOfRunningContainers = 0L;
     Long totalExpectedNumberOfRunningContainers = 0L;
@@ -944,7 +947,7 @@ public class ApplicationApiService implements ApplicationApi {
     JsonObject applicationStatistics = jsonGetAsObject(appStatus, "statistics");
     if (applicationRoles == null) {
       // initialize to empty object to avoid too many null checks
-      applicationRoles = new JsonObject();
+      applicationRoles = EMPTY_JSON_OBJECT;
     }
     if (applicationStatus != null) {
       JsonObject applicationLive = jsonGetAsObject(applicationStatus, "live");
@@ -954,8 +957,9 @@ public class ApplicationApiService implements ApplicationApi {
             continue;
           }
           componentNames.add(entry.getKey());
-          JsonObject componentRole = applicationRoles.get(entry.getKey()) == null ? new JsonObject()
-              : applicationRoles.get(entry.getKey()).getAsJsonObject();
+          JsonObject componentRole = applicationRoles
+              .get(entry.getKey()) == null ? EMPTY_JSON_OBJECT
+                  : applicationRoles.get(entry.getKey()).getAsJsonObject();
           JsonObject liveContainers = entry.getValue().getAsJsonObject();
           if (liveContainers != null) {
             for (Map.Entry<String, JsonElement> liveContainerEntry : liveContainers
@@ -1052,67 +1056,57 @@ public class ApplicationApiService implements ApplicationApi {
 
   private JsonObject getSliderApplicationStatus(final String appName)
       throws IOException, YarnException, InterruptedException {
-    final File appStatusOutputFile = File.createTempFile("status_", ".json");
-    final ActionStatusArgs statusArgs = new ActionStatusArgs();
-    statusArgs.output = appStatusOutputFile.getAbsolutePath();
 
-    return invokeSliderClientRunnable(new SliderClientContextRunnable<JsonObject>() {
-      @Override
-      public JsonObject run(SliderClient sliderClient) throws YarnException,
-          IOException, InterruptedException {
-        sliderClient.actionStatus(appName, statusArgs);
-        JsonParser parser = new JsonParser();
-        FileReader reader = null;
-        JsonElement statusElement = null;
-        try {
-          reader = new FileReader(appStatusOutputFile);
-          statusElement = parser.parse(reader);
-        } finally {
-          if (reader != null) {
-            reader.close();
+    return invokeSliderClientRunnable(
+        new SliderClientContextRunnable<JsonObject>() {
+          @Override
+          public JsonObject run(SliderClient sliderClient)
+              throws YarnException, IOException, InterruptedException {
+            String status = null;
+            try {
+              status = sliderClient.actionStatus(appName);
+            } catch (Exception e) {
+              logger.error("Exception calling slider.actionStatus", e);
+              return EMPTY_JSON_OBJECT;
+            }
+            JsonElement statusElement = JSON_PARSER.parse(status);
+            return (statusElement == null || statusElement instanceof JsonNull)
+                ? EMPTY_JSON_OBJECT : (JsonObject) statusElement;
           }
-          appStatusOutputFile.delete();
-        }
-        return (statusElement == null || statusElement instanceof JsonNull) ?
-            new JsonObject() : (JsonObject) statusElement;
-      }
-    });
+        });
   }
 
   private JsonObject getSliderApplicationRegistry(final String appName,
-      final String registryName) throws IOException, YarnException,
-      InterruptedException {
-    final File appRegistryOutputFile = File
-        .createTempFile("registry_", ".json");
+      final String registryName)
+      throws IOException, YarnException, InterruptedException {
     final ActionRegistryArgs registryArgs = new ActionRegistryArgs();
-    registryArgs.out = appRegistryOutputFile;
     registryArgs.name = appName;
     registryArgs.getConf = registryName;
     registryArgs.format = ConfigFormat.JSON.toString();
 
-    return invokeSliderClientRunnable(new SliderClientContextRunnable<JsonObject>() {
-      @Override
-      public JsonObject run(SliderClient sliderClient) throws YarnException,
-          IOException, InterruptedException {
-        sliderClient.actionRegistry(registryArgs);
-        JsonParser parser = new JsonParser();
-        FileReader reader = null;
-        JsonElement registryElement = null;
-        try {
-          reader = new FileReader(appRegistryOutputFile);
-          registryElement = parser.parse(reader);
-        } catch (Throwable t) {
-          logger.error("Error reading file {}", appRegistryOutputFile);
-        } finally {
-          if (reader != null) {
-            reader.close();
+    return invokeSliderClientRunnable(
+        new SliderClientContextRunnable<JsonObject>() {
+          @Override
+          public JsonObject run(SliderClient sliderClient)
+              throws YarnException, IOException, InterruptedException {
+            String registry = null;
+            try {
+              registry = sliderClient.actionRegistryGetConfig(registryArgs)
+                .asJson();
+            } catch (FileNotFoundException | PathNotFoundException e) {
+              // ignore and return empty object
+              return EMPTY_JSON_OBJECT;
+            } catch (Exception e) {
+              logger.error("Exception calling slider.actionRegistryGetConfig",
+                  e);
+              return EMPTY_JSON_OBJECT;
+            }
+            JsonElement registryElement = JSON_PARSER.parse(registry);
+            return (registryElement == null
+                || registryElement instanceof JsonNull) ? EMPTY_JSON_OBJECT
+                    : (JsonObject) registryElement;
           }
-          appRegistryOutputFile.delete();
-        }
-        return (registryElement == null || registryElement instanceof JsonNull) ?
-            new JsonObject() : (JsonObject) registryElement;
-      }
-    });
+        });
   }
 
   private Integer getSliderList(final String appName)
@@ -1130,8 +1124,7 @@ public class ApplicationApiService implements ApplicationApi {
         if (liveOnly) {
           status = sliderClient.actionList(appName);
         } else {
-          ActionListArgs listArgs = new ActionListArgs();
-          status = sliderClient.actionList(appName, listArgs);
+          status = sliderClient.actionList(appName, ACTION_LIST_ARGS);
         }
         return status;
       }
@@ -1228,8 +1221,7 @@ public class ApplicationApiService implements ApplicationApi {
       @Override
       public Response run(SliderClient sliderClient) throws YarnException,
           IOException, InterruptedException {
-        ActionFreezeArgs freezeArgs = new ActionFreezeArgs();
-        int returnCode = sliderClient.actionFreeze(appName, freezeArgs);
+        int returnCode = sliderClient.actionFreeze(appName, ACTION_FREEZE_ARGS);
         if (returnCode == 0) {
           logger.info("Successfully stopped application {}", appName);
           return Response.status(Status.NO_CONTENT).build();

@@ -3137,20 +3137,29 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
 
   @Override
   @VisibleForTesting
-  public int actionStatus(String clustername, ActionStatusArgs statusArgs) throws
-                                              YarnException,
-                                              IOException {
-    verifyBindingsDefined();
-    validateClusterName(clustername);
+  public int actionStatus(String clustername, ActionStatusArgs statusArgs)
+      throws YarnException, IOException {
+    ClusterDescription status = verifyAndGetClusterDescription(clustername);
     String outfile = statusArgs.getOutput();
-    ClusterDescription status = getClusterDescription(clustername);
-    String text = status.toJsonString();
     if (outfile == null) {
-      log.info(text);
+      log.info(status.toJsonString());
     } else {
       status.save(new File(outfile).getAbsoluteFile());
     }
     return EXIT_SUCCESS;
+  }
+
+  @Override
+  public String actionStatus(String clustername)
+      throws YarnException, IOException {
+    return verifyAndGetClusterDescription(clustername).toJsonString();
+  }
+
+  private ClusterDescription verifyAndGetClusterDescription(String clustername)
+      throws YarnException, IOException {
+    verifyBindingsDefined();
+    validateClusterName(clustername);
+    return getClusterDescription(clustername);
   }
 
   @Override
