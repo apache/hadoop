@@ -41,3 +41,8 @@ origin (CORS) support.
 Use it
 -------------
 Open your browser, go to `rm-address:8088/ui2` and try it!
+
+Notes
+-------------
+
+- This UI framework is not verified under security environment, please use with caution under security environment.
