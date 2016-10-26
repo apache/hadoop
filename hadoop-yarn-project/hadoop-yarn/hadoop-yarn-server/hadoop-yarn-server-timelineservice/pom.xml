@@ -184,6 +184,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>net.sourceforge.findbugs</groupId>
+          <artifactId>annotations</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
