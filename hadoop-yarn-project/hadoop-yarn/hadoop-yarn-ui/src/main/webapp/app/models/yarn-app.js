@@ -86,14 +86,17 @@ export default DS.Model.extend({
   }.property("progress"),
 
   finalStatusStyle: function() {
-    var style = "default";
     var finalStatus = this.get("finalStatus");
+    var style = "";
+
     if (finalStatus == "KILLED") {
       style = "warning";
     } else if (finalStatus == "FAILED") {
       style = "danger";
-    } else {
+    } else if (finalStatus == "SUCCEEDED") {
       style = "success";
+    } else {
+      style = "default";
     }
 
     return "label label-" + style;
