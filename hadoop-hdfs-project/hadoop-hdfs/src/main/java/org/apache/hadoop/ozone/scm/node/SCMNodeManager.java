@@ -1,18 +1,19 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership.  The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.ozone.scm.node;
 
@@ -24,6 +25,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.ozone.OzoneClientUtils;
+import org.apache.hadoop.ozone.protocol.StorageContainerNodeProtocol;
+import org.apache.hadoop.ozone.protocol.VersionResponse;
+import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
+import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.RegisteredCmdResponseProto.ErrorCode;
+import org.apache.hadoop.ozone.protocol.proto.StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+
+import org.apache.hadoop.ozone.scm.VersionInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -45,38 +55,30 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 /**
  * Maintains information about the Datanodes on SCM side.
- * <p/>
+ * <p>
  * Heartbeats under SCM is very simple compared to HDFS heartbeatManager.
- * <p/>
+ * <p>
  * Here we maintain 3 maps, and we propagate a node from healthyNodesMap to
- * staleNodesMap to deadNodesMap. This moving of a node from one map to
- * another is controlled by 4 configuration variables. These variables define
- * how many heartbeats must go missing for the node to move from one map to
- * another.
- * <p/>
+ * staleNodesMap to deadNodesMap. This moving of a node from one map to another
+ * is controlled by 4 configuration variables. These variables define how many
+ * heartbeats must go missing for the node to move from one map to another.
+ * <p>
  * Each heartbeat that SCMNodeManager receives is  put into heartbeatQueue. The
  * worker thread wakes up and grabs that heartbeat from the queue. The worker
  * thread will lookup the healthynodes map and update the timestamp if the entry
  * is there. if not it will look up stale and deadnodes map.
- * <p/>
- *
- * TODO: Replace with Node Registration code.
- * if the node is not found in any of these tables it is treated as new node for
- * time being and added to the healthy nodes list.
- *
- * <p/>
- *
- * The getNode(byState) functions make copy of node maps and then creates a
- * list based on that. It should be assumed that these get functions always
- * report *stale* information. For example, getting the deadNodeCount
- * followed by
+ * <p>
+ * The getNode(byState) functions make copy of node maps and then creates a list
+ * based on that. It should be assumed that these get functions always report
+ * *stale* information. For example, getting the deadNodeCount followed by
  * getNodes(DEAD) could very well produce totally different count. Also
  * getNodeCount(HEALTHY) + getNodeCount(DEAD) + getNodeCode(STALE), is not
  * guaranteed to add up to the total nodes that we know off. Please treat all
- * get functions in this file as a snap-shot of information that is
- * inconsistent as soon as you read it.
+ * get functions in this file as a snap-shot of information that is inconsistent
+ * as soon as you read it.
  */
-public class SCMNodeManager implements NodeManager {
+public class SCMNodeManager
+    implements NodeManager, StorageContainerNodeProtocol {
 
   @VisibleForTesting
   static final Logger LOG =
@@ -103,12 +105,15 @@ public class SCMNodeManager implements NodeManager {
   private long lastHBProcessedCount;
   private int chillModeNodeCount;
   private final int maxHBToProcessPerLoop;
+  private final String clusterID;
+  private final VersionInfo version;
   private Optional<Boolean> inManualChillMode;
+  private final CommandQueue commandQueue;
 
   /**
    * Constructs SCM machine Manager.
    */
-  public SCMNodeManager(Configuration conf) {
+  public SCMNodeManager(Configuration conf, String clusterID) {
     heartbeatQueue = new ConcurrentLinkedQueue<>();
     healthyNodes = new ConcurrentHashMap<>();
     deadNodes = new ConcurrentHashMap<>();
@@ -119,6 +124,9 @@ public class SCMNodeManager implements NodeManager {
     staleNodeCount = new AtomicInteger(0);
     deadNodeCount = new AtomicInteger(0);
     totalNodes = new AtomicInteger(0);
+    this.clusterID = clusterID;
+    this.version = VersionInfo.getLatestVersion();
+    commandQueue = new CommandQueue();
 
     // TODO: Support this value as a Percentage of known machines.
     chillModeNodeCount = 1;
@@ -133,52 +141,11 @@ public class SCMNodeManager implements NodeManager {
     executorService = HadoopExecutors.newScheduledThreadPool(1,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("SCM Heartbeat Processing Thread - %d").build());
-    this.inManualChillMode =  Optional.absent();
+    this.inManualChillMode = Optional.absent();
 
     Preconditions.checkState(heartbeatCheckerIntervalMs > 0);
     executorService.schedule(this, heartbeatCheckerIntervalMs,
         TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Add a New Datanode to the NodeManager. This function is invoked with
-   * synchronised(this) being held.
-   *
-   * @param nodeReg - node to register
-   */
-  @Override
-  public void registerNode(DatanodeID nodeReg) {
-    if (nodes.containsKey(nodeReg.getDatanodeUuid())) {
-      LOG.error("Datanode is already registered. Datanode: {}",
-          nodeReg.toString());
-      return;
-    }
-    nodes.put(nodeReg.getDatanodeUuid(), nodeReg);
-    totalNodes.incrementAndGet();
-    healthyNodes.put(nodeReg.getDatanodeUuid(), monotonicNow());
-    healthyNodeCount.incrementAndGet();
-    LOG.info("Data node with ID: {} Registered.", nodeReg.getDatanodeUuid());
-  }
-
-  /**
-   * Register the heartbeat with Machine Manager.
-   *
-   * This requires no synchronization since the heartbeat queue is
-   * ConcurrentLinkedQueue. Hence we don't protect it specifically via a lock.
-   *
-   * @param datanodeID - Name of the datanode that send us heartbeat.
-   */
-  @Override
-  public void updateHeartbeat(DatanodeID datanodeID) {
-    // Checking for NULL to make sure that we don't get
-    // an exception from ConcurrentList.
-    // This could be a problem in tests, if this function is invoked via
-    // protobuf, transport layer will guarantee that this is not null.
-    if (datanodeID != null) {
-      heartbeatQueue.add(datanodeID);
-      return;
-    }
-    LOG.error("Datanode ID in heartbeat is null");
   }
 
   /**
@@ -203,7 +170,7 @@ public class SCMNodeManager implements NodeManager {
    */
   @Override
   public List<DatanodeID> getNodes(NODESTATE nodestate)
-      throws IllegalArgumentException{
+      throws IllegalArgumentException {
     Map<String, Long> set;
     switch (nodestate) {
     case HEALTHY:
@@ -226,7 +193,7 @@ public class SCMNodeManager implements NodeManager {
     }
 
     return set.entrySet().stream().map(entry -> nodes.get(entry.getKey()))
-            .collect(Collectors.toList());
+        .collect(Collectors.toList());
   }
 
   /**
@@ -241,7 +208,7 @@ public class SCMNodeManager implements NodeManager {
       set = Collections.unmodifiableMap(new HashMap<>(nodes));
     }
     return set.entrySet().stream().map(entry -> nodes.get(entry.getKey()))
-            .collect(Collectors.toList());
+        .collect(Collectors.toList());
   }
 
   /**
@@ -257,7 +224,7 @@ public class SCMNodeManager implements NodeManager {
   /**
    * Sets the Minimum chill mode nodes count, used only in testing.
    *
-   * @param count  - Number of nodes.
+   * @param count - Number of nodes.
    */
   @VisibleForTesting
   public void setMinimumChillModeNodes(int count) {
@@ -329,7 +296,7 @@ public class SCMNodeManager implements NodeManager {
    */
   @Override
   public boolean isInManualChillMode() {
-    if(this.inManualChillMode.isPresent()) {
+    if (this.inManualChillMode.isPresent()) {
       return this.inManualChillMode.get();
     }
     return false;
@@ -373,6 +340,7 @@ public class SCMNodeManager implements NodeManager {
 
   /**
    * Used for testing.
+   *
    * @return true if the HB check is done.
    */
   @VisibleForTesting
@@ -383,14 +351,14 @@ public class SCMNodeManager implements NodeManager {
   /**
    * This is the real worker thread that processes the HB queue. We do the
    * following things in this thread.
-   *
-   * Process the Heartbeats that are in the HB Queue.
-   * Move Stale or Dead node to healthy if we got a heartbeat from them.
-   * Move Stales Node to dead node table if it is needed.
-   * Move healthy nodes to stale nodes if it is needed.
-   *
+   * <p>
+   * Process the Heartbeats that are in the HB Queue. Move Stale or Dead node to
+   * healthy if we got a heartbeat from them. Move Stales Node to dead node
+   * table if it is needed. Move healthy nodes to stale nodes if it is needed.
+   * <p>
    * if it is a new node, we call register node and add it to the list of nodes.
    * This will be replaced when we support registration of a node in SCM.
+   *
    * @see Thread#run()
    */
   @Override
@@ -553,10 +521,7 @@ public class SCMNodeManager implements NodeManager {
       healthyNodes.put(datanodeID.getDatanodeUuid(), monotonicNow());
       deadNodeCount.decrementAndGet();
       healthyNodeCount.incrementAndGet();
-      return;
     }
-
-    registerNode(datanodeID);
   }
 
   /**
@@ -587,4 +552,103 @@ public class SCMNodeManager implements NodeManager {
     return lastHBProcessedCount;
   }
 
+  /**
+   * Gets the version info from SCM.
+   *
+   * @param versionRequest - version Request.
+   * @return - returns SCM version info and other required information needed by
+   * datanode.
+   */
+  @Override
+  public VersionResponse getVersion(SCMVersionRequestProto versionRequest) {
+    return VersionResponse.newBuilder()
+        .setVersion(this.version.getVersion())
+        .build();
+  }
+
+  /**
+   * Register the node if the node finds that it is not registered with any
+   * SCM.
+   *
+   * @param datanodeID - Send datanodeID with Node info. This function
+   *                   generates and assigns new datanode ID for the datanode.
+   *                   This allows SCM to be run independent of Namenode if
+   *                   required.
+   *
+   * @return SCMHeartbeatResponseProto
+   */
+  @Override
+  public SCMCommand register(DatanodeID datanodeID) {
+
+    SCMCommand errorCode = verifyDatanodeUUID(datanodeID);
+    if (errorCode != null) {
+      return errorCode;
+    }
+    DatanodeID newDatanodeID = new DatanodeID(UUID.randomUUID().toString(),
+        datanodeID);
+    nodes.put(newDatanodeID.getDatanodeUuid(), newDatanodeID);
+    totalNodes.incrementAndGet();
+    healthyNodes.put(newDatanodeID.getDatanodeUuid(), monotonicNow());
+    healthyNodeCount.incrementAndGet();
+    LOG.info("Data node with ID: {} Registered.",
+        newDatanodeID.getDatanodeUuid());
+    return RegisteredCommand.newBuilder()
+        .setErrorCode(ErrorCode.success)
+        .setDatanodeUUID(newDatanodeID.getDatanodeUuid())
+        .setClusterID(this.clusterID)
+        .build();
+  }
+
+  /**
+   * Verifies the datanode does not have a valid UUID already.
+   *
+   * @param datanodeID - Datanode UUID.
+   * @return SCMCommand
+   */
+  private SCMCommand verifyDatanodeUUID(DatanodeID datanodeID) {
+
+    // Make sure that we return the right error code, so that
+    // data node can log the correct error. if it is already registered then
+    // datanode should move to heartbeat state. It implies that somehow we
+    // have an error where the data node is trying to re-register.
+    //
+    // We are going to let the datanode know that there is an error but allow it
+    // to recover by sending it the right info that is needed for recovery.
+
+    if (datanodeID.getDatanodeUuid() != null &&
+        nodes.containsKey(datanodeID.getDatanodeUuid())) {
+      LOG.error("Datanode is already registered. Datanode: {}",
+          datanodeID.toString());
+      return RegisteredCommand.newBuilder()
+          .setErrorCode(ErrorCode.errorNodeAlreadyRegistered)
+          .setClusterID(this.clusterID)
+          .setDatanodeUUID(datanodeID.getDatanodeUuid())
+          .build();
+    }
+    return null;
+  }
+
+  /**
+   * Send heartbeat to indicate the datanode is alive and doing well.
+   *
+   * @param datanodeID - Datanode ID.
+   * @return SCMheartbeat response.
+   * @throws IOException
+   */
+  @Override
+  public List<SCMCommand> sendHeartbeat(DatanodeID datanodeID) {
+
+    // Checking for NULL to make sure that we don't get
+    // an exception from ConcurrentList.
+    // This could be a problem in tests, if this function is invoked via
+    // protobuf, transport layer will guarantee that this is not null.
+    if (datanodeID != null) {
+      heartbeatQueue.add(datanodeID);
+
+    } else {
+      LOG.error("Datanode ID in heartbeat is null");
+    }
+
+    return commandQueue.getCommand(datanodeID);
+  }
 }

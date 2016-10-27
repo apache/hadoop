@@ -1,24 +1,24 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with this
- * work for additional information regarding copyright ownership.  The ASF
- * licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p/>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.ozone.scm.node;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
-import org.apache.hadoop.hdfs.server.blockmanagement.UnresolvedTopologyException;
 
 import java.io.Closeable;
 import java.util.List;
@@ -47,21 +47,6 @@ import java.util.List;
  */
 public interface NodeManager extends Closeable, Runnable {
 
-  /**
-   * Update the heartbeat timestamp.
-   *
-   * @param datanodeID - Name of the datanode that send us heatbeat.
-   */
-  void updateHeartbeat(DatanodeID datanodeID);
-
-  /**
-   * Add a New Datanode to the NodeManager.
-   *
-   * @param nodeReg - Datanode ID.
-   * @throws UnresolvedTopologyException
-   */
-  void registerNode(DatanodeID nodeReg)
-      throws UnresolvedTopologyException;
 
   /**
    * Removes a data node from the management of this Node Manager.
@@ -73,7 +58,7 @@ public interface NodeManager extends Closeable, Runnable {
 
   /**
    * Gets all Live Datanodes that is currently communicating with SCM.
-   *
+   * @param nodestate - State of the node
    * @return List of Datanodes that are Heartbeating SCM.
    */
 
@@ -81,7 +66,7 @@ public interface NodeManager extends Closeable, Runnable {
 
   /**
    * Returns the Number of Datanodes that are communicating with SCM.
-   *
+   * @param nodestate - State of the node
    * @return int -- count
    */
   int getNodeCount(NODESTATE nodestate);
