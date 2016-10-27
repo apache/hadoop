@@ -173,21 +173,8 @@ Commands useful for administrators of a Hadoop cluster.
 
 ### `daemonlog`
 
-Usage:
-
-```
-   yarn daemonlog -getlevel <host:httpport> <classname> 
-   yarn daemonlog -setlevel <host:httpport> <classname> <level>
-```
-
-| COMMAND\_OPTIONS | Description |
-|:---- |:---- |
-| -getlevel `<host:httpport>` `<classname>` | Prints the log level of the log identified by a qualified `<classname>`, in the daemon running at `<host:httpport>`. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>` |
-| -setlevel `<host:httpport> <classname> <level>` | Sets the log level of the log identified by a qualified `<classname>` in the daemon running at `<host:httpport>`. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>&level=<level>` |
-
-Get/Set the log level for a Log identified by a qualified class name in the daemon.
-
-Example: `$ bin/yarn daemonlog -setlevel 127.0.0.1:8088 org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl DEBUG`
+Get/Set the log level for a Log identified by a qualified class name in the daemon dynamically.
+See the Hadoop [Commands Manual](../../hadoop-project-dist/hadoop-common/CommandsManual.html#daemonlog) for more information.
 
 ### `nodemanager`
 
