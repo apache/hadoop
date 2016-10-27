@@ -29,10 +29,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -50,7 +48,6 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationCompactionDimension;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.AggregationOperation;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.Attribute;
-import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTable;
 
 /**
  * A bunch of utility functions used across TimelineReader and TimelineWriter.
@@ -565,22 +562,5 @@ public final class TimelineStorageUtils {
       }
     }
     return appId;
-  }
-
-  public static boolean isFlowRunTable(HRegionInfo hRegionInfo,
-      Configuration conf) {
-    String regionTableName = hRegionInfo.getTable().getNameAsString();
-    String flowRunTableName = conf.get(FlowRunTable.TABLE_NAME_CONF_NAME,
-        FlowRunTable.DEFAULT_TABLE_NAME);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("regionTableName=" + regionTableName);
-    }
-    if (flowRunTableName.equalsIgnoreCase(regionTableName)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(" table is the flow run table!! " + flowRunTableName);
-      }
-      return true;
-    }
-    return false;
   }
 }
