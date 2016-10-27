@@ -86,6 +86,43 @@ public class TestDatanodeManager {
   }
 
   /**
+   * This test checks that if a node is re-registered with a new software
+   * version after the heartbeat expiry interval but before the HeartbeatManager
+   * has a chance to detect this and remove it, the node's version will still
+   * be correctly decremented.
+   */
+  @Test
+  public void testNumVersionsCorrectAfterReregister()
+      throws IOException, InterruptedException {
+    //Create the DatanodeManager which will be tested
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 0);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 10);
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    String storageID = "someStorageID1";
+    String ip = "someIP" + storageID;
+
+    // Register then reregister the same node but with a different version
+    for (int i = 0; i <= 1; i++) {
+      dm.registerDatanode(new DatanodeRegistration(
+          new DatanodeID(ip, "", storageID, 9000, 0, 0, 0),
+          null, null, "version" + i));
+      if (i == 0) {
+        Thread.sleep(25);
+      }
+    }
+
+    //Verify DatanodeManager has the correct count
+    Map<String, Integer> mapToCheck = dm.getDatanodesSoftwareVersions();
+    assertNull("should be no more version0 nodes", mapToCheck.get("version0"));
+    assertEquals("should be one version1 node",
+        mapToCheck.get("version1").intValue(), 1);
+  }
+
+  /**
    * This test sends a random sequence of node registrations and node removals
    * to the DatanodeManager (of nodes with different IDs and versions), and
    * checks that the DatanodeManager keeps a correct count of different software
