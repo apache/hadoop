@@ -159,7 +159,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       } else {
         EntityRowKey entityRowKey =
             new EntityRowKey(clusterId, userId, flowName, flowRunId, appId,
-                te.getType(), te.getId());
+                te.getType(), te.getIdPrefix(), te.getId());
         rowKey = entityRowKey.getRowKey();
       }
 

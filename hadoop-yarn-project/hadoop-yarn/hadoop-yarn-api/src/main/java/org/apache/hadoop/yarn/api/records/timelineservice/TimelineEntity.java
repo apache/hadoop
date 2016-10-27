@@ -54,6 +54,7 @@ import org.codehaus.jackson.annotate.JsonSetter;
 @InterfaceStability.Unstable
 public class TimelineEntity implements Comparable<TimelineEntity> {
   protected final static String SYSTEM_INFO_KEY_PREFIX = "SYSTEM_INFO_";
+  public final static long DEFAULT_ENTITY_PREFIX = 0L;
 
   /**
    * Identifier of timeline entity(entity id + entity type).
@@ -145,6 +146,7 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
   private HashMap<String, Set<String>> relatesToEntities = new HashMap<>();
   private Long createdTime;
+  private long idPrefix;
 
   public TimelineEntity() {
     identifier = new Identifier();
@@ -579,6 +581,40 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
       return identifier.toString();
     } else {
       return real.toString();
+    }
+  }
+
+  @XmlElement(name = "idprefix")
+  public long getIdPrefix() {
+    if (real == null) {
+      return idPrefix;
+    } else {
+      return real.getIdPrefix();
+    }
+  }
+
+  /**
+   * Sets idPrefix for an entity.
+   * <p>
+   * <b>Note</b>: Entities will be stored in the order of idPrefix specified.
+   * If users decide to set idPrefix for an entity, they <b>MUST</b> provide
+   * the same prefix for every update of this entity.
+   * </p>
+   * Example: <blockquote><pre>
+   * TimelineEntity entity = new TimelineEntity();
+   * entity.setIdPrefix(value);
+   * </pre></blockquote>
+   * Users can use {@link TimelineServiceHelper#invertLong(long)} to invert
+   * the prefix if necessary.
+   *
+   * @param entityIdPrefix prefix for an entity.
+   */
+  @JsonSetter("idprefix")
+  public void setIdPrefix(long entityIdPrefix) {
+    if (real == null) {
+      this.idPrefix = entityIdPrefix;
+    } else {
+      real.setIdPrefix(entityIdPrefix);
     }
   }
 }
