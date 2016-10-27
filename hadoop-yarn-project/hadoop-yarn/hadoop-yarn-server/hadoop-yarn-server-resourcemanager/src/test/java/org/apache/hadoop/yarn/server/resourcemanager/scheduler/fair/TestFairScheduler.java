@@ -165,7 +165,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test (timeout = 30000)
   public void testConfValidation() throws Exception {
-    scheduler = new FairScheduler();
     Configuration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 2048);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
@@ -237,7 +236,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   
   @Test  
   public void testNonMinZeroResourcesSettings() throws IOException {
-    scheduler = new FairScheduler();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 256);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 1);
@@ -255,7 +253,6 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   
   @Test  
   public void testMinZeroResourcesSettings() throws IOException {  
-    scheduler = new FairScheduler();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 0);
