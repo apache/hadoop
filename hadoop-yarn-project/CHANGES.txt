@@ -53,6 +53,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5382. RM does not audit log kill request for active applications
     (Vrushali C via jlowe)
 
+    YARN-3432.  Cluster metrics have wrong Total Memory when there is reserved
+    memory on CS. (Brahma Reddy Battula via curino)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
