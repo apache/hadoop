@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 
 @XmlRootElement(name = "clusterMetrics")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -87,8 +88,14 @@ public class ClusterMetricsInfo {
     this.containersPending = metrics.getPendingContainers();
     this.containersReserved = metrics.getReservedContainers();
 
-    this.totalMB = availableMB + allocatedMB;
-    this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
+    if (rs instanceof CapacityScheduler) {
+      this.totalMB = availableMB + allocatedMB + reservedMB;
+      this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores
+          + containersReserved;
+    } else {
+      this.totalMB = availableMB + allocatedMB;
+      this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
+    }
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
     this.unhealthyNodes = clusterMetrics.getUnhealthyNMs();
