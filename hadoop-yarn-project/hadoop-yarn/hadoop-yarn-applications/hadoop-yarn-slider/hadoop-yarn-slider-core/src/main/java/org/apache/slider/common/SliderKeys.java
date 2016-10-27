@@ -182,7 +182,7 @@ public interface SliderKeys extends SliderXmlConfKeys {
   /**
    * Slider AM log4j file name : {@value}
    */
-  String LOG4J_SERVER_PROP_FILENAME = "log4j-server.properties";
+  String LOG4J_SERVER_PROP_FILENAME = "slideram-log4j.properties";
 
   /**
    * Standard log4j file name  : {@value}

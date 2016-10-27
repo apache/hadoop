@@ -25,6 +25,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -1399,6 +1400,22 @@ public final class SliderUtils {
     }
   }
 
+  public static String getLibDir() {
+    String[] libDirs = getLibDirs();
+    if (libDirs == null || libDirs.length == 0) {
+      return null;
+    }
+    return libDirs[0];
+  }
+
+  public static String[] getLibDirs() {
+    String libDirStr = System.getProperty(SliderKeys.PROPERTY_LIB_DIR);
+    if (isUnset(libDirStr)) {
+      return ArrayUtils.EMPTY_STRING_ARRAY;
+    }
+    return StringUtils.split(libDirStr, ',');
+  }
+
   /**
    * Submit a JAR containing a specific class and map it
    * @param providerResources provider map to build up
@@ -1962,31 +1979,34 @@ public final class SliderUtils {
   /**
    * Given a source folder create a tar.gz file
    * 
-   * @param srcFolder
+   * @param libDirs
    * @param tarGzipFile
    * 
    * @throws IOException
    */
-  public static void tarGzipFolder(File srcFolder, File tarGzipFile,
+  public static void tarGzipFolder(String[] libDirs, File tarGzipFile,
       FilenameFilter filter) throws IOException {
-    log.info("Tar-gzipping folder {} to {}", srcFolder.getAbsolutePath(),
+    log.info("Tar-gzipping folders {} to {}", libDirs,
         tarGzipFile.getAbsolutePath());
-    List<String> files = new ArrayList<>();
-    generateFileList(files, srcFolder, srcFolder, true, filter);
 
     try(TarArchiveOutputStream taos =
             new TarArchiveOutputStream(new GZIPOutputStream(
         new BufferedOutputStream(new FileOutputStream(tarGzipFile))))) {
-      for (String file : files) {
-        File srcFile = new File(srcFolder, file);
-        TarArchiveEntry tarEntry = new TarArchiveEntry(
-            srcFile, file);
-        taos.putArchiveEntry(tarEntry);
-        try(FileInputStream in = new FileInputStream(srcFile)) {
-          org.apache.commons.io.IOUtils.copy(in, taos);
+      for (String libDir : libDirs) {
+        File srcFolder = new File(libDir);
+        List<String> files = new ArrayList<>();
+        generateFileList(files, srcFolder, srcFolder, true, filter);
+        for (String file : files) {
+          File srcFile = new File(srcFolder, file);
+          TarArchiveEntry tarEntry = new TarArchiveEntry(
+              srcFile, file);
+          taos.putArchiveEntry(tarEntry);
+          try(FileInputStream in = new FileInputStream(srcFile)) {
+            org.apache.commons.io.IOUtils.copy(in, taos);
+          }
+          taos.flush();
+          taos.closeArchiveEntry();
         }
-        taos.flush();
-        taos.closeArchiveEntry();
       }
     }
   }

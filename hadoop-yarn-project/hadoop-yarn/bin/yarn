@@ -49,7 +49,9 @@ function hadoop_usage
   hadoop_add_subcommand "router" daemon "run the Router daemon"
   hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
   hadoop_add_subcommand "scmadmin" admin "SharedCacheManager admin tools"
+  hadoop_add_subcommand "services-api" "run slider services api"
   hadoop_add_subcommand "sharedcachemanager" daemon "run the SharedCacheManager daemon"
+  hadoop_add_subcommand "slider" "run a slider app"
   hadoop_add_subcommand "timelinereader" client "run the timeline reader server"
   hadoop_add_subcommand "timelineserver" daemon "run the timeline server"
   hadoop_add_subcommand "top" client "view cluster information"
@@ -149,9 +151,37 @@ function yarncmd_case
     scmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.SCMAdmin'
     ;;
+    services-api)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider"'/*'
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/services-api"'/*'
+      HADOOP_CLASSNAME='org.apache.hadoop.yarn.services.webapp.ApplicationApiWebApp'
+      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS} \
+-Dslider.libdir=${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider,\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
+    ;;
     sharedcachemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
+    ;;
+    slider)
+      hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider"'/*'
+      HADOOP_CLASSNAME='org.apache.slider.Slider'
+      hadoop_debug "Append YARN_CLIENT_OPTS onto HADOOP_OPTS"
+      HADOOP_OPTS="${HADOOP_OPTS} ${YARN_CLIENT_OPTS} \
+-Dslider.libdir=${HADOOP_YARN_HOME}/${YARN_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR},\
+${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}/slider,\
+${HADOOP_HDFS_HOME}/${HDFS_DIR},\
+${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
+${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     ;;
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
