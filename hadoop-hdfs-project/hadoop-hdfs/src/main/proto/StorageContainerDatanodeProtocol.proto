@@ -67,25 +67,44 @@ message SCMVersionResponseProto {
  * registeration of a datanode.
  */
 message RegisteredCmdResponseProto {
-  required string datanodeUUID = 1;
-  required string clusterID = 2;
+  enum ErrorCode {
+    success = 1;
+    errorNodeAlreadyRegistered = 2;
+    errorNodeNotPermitted = 3;
+  }
+  required ErrorCode errorCode = 1;
+  optional string datanodeUUID = 2;
+  optional string clusterID = 3;
+}
+
+/**
+ * Empty Command Response
+ */
+message NullCmdResponseProto {
+
 }
 
 /*
  * These are commands returned by SCM for to the datanode to execute.
  */
-
-message SCMHeartbeatResponseProto {
+message SCMCommandResponseProto  {
   enum Type {
     nullCmd = 1;
     registeredCmd = 2; // Returns the datanode ID after registeration.
   }
 
   required Type cmdType = 1; // Type of the command
-  optional  RegisteredCmdResponseProto  registerNode = 2;
-
+  optional NullCmdResponseProto nullCommand = 2;
+  optional  RegisteredCmdResponseProto  registerNode = 3;
 }
 
+
+/*
+ * A group of commands for the datanode to execute
+ */
+message SCMHeartbeatResponseProto {
+  repeated SCMCommandResponseProto commands = 1;
+}
 
 
 /**
@@ -151,8 +170,6 @@ message SCMHeartbeatResponseProto {
  * Once in the heartbeat state, datanode sends heartbeats and container reports
  * to SCM and process commands issued by SCM until it is shutdown.
  *
- * For time being we are going to use SCMHeartbeatResponseProto as the return
- * type for register and sendheartbeat messages.
  */
 service StorageContainerDatanodeProtocolService {
 
@@ -164,13 +181,12 @@ service StorageContainerDatanodeProtocolService {
   /**
   * Registers a data node with SCM.
   */
-  rpc register(SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
+  rpc register(SCMHeartbeatRequestProto) returns (SCMCommandResponseProto);
 
   /**
    * Send heartbeat from datanode to SCM. HB's under SCM looks more
    * like life line protocol than HB's under HDFS. In other words, it is
    * extremely light weight and contains no data payload.
    */
-  rpc sendHeartbeat(SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
-
+  rpc sendHeartbeat (SCMHeartbeatRequestProto) returns (SCMHeartbeatResponseProto);
 }
