@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.apptoflow.AppToFlowRowKey;
@@ -135,34 +136,37 @@ public class TestRowKeys {
 
   @Test
   public void testEntityRowKey() {
-    String entityId = "!ent!ity!!id!";
-    String entityType = "entity!Type";
+    TimelineEntity entity = new TimelineEntity();
+    entity.setId("!ent!ity!!id!");
+    entity.setType("entity!Type");
+
     byte[] byteRowKey =
         new EntityRowKey(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID, APPLICATION_ID,
-            entityType, entityId).getRowKey();
+            entity.getType(), entity.getIdPrefix(),
+            entity.getId()).getRowKey();
     EntityRowKey rowKey = EntityRowKey.parseRowKey(byteRowKey);
     assertEquals(CLUSTER, rowKey.getClusterId());
     assertEquals(USER, rowKey.getUserId());
     assertEquals(FLOW_NAME, rowKey.getFlowName());
     assertEquals(FLOW_RUN_ID, rowKey.getFlowRunId());
     assertEquals(APPLICATION_ID, rowKey.getAppId());
-    assertEquals(entityType, rowKey.getEntityType());
-    assertEquals(entityId, rowKey.getEntityId());
+    assertEquals(entity.getType(), rowKey.getEntityType());
+    assertEquals(entity.getId(), rowKey.getEntityId());
 
     byte[] byteRowKeyPrefix =
         new EntityRowKeyPrefix(CLUSTER, USER, FLOW_NAME, FLOW_RUN_ID,
-            APPLICATION_ID, entityType).getRowKeyPrefix();
+            APPLICATION_ID, entity.getType()).getRowKeyPrefix();
     byte[][] splits =
         Separator.QUALIFIERS.split(
             byteRowKeyPrefix,
             new int[] {Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE,
                 Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
                 AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE,
-                Separator.VARIABLE_SIZE});
-    assertEquals(7, splits.length);
-    assertEquals(0, splits[6].length);
+                Bytes.SIZEOF_LONG, Separator.VARIABLE_SIZE });
+    assertEquals(8, splits.length);
+    assertEquals(entity.getIdPrefix(), splits[7].length);
     assertEquals(APPLICATION_ID, new AppIdKeyConverter().decode(splits[4]));
-    assertEquals(entityType,
+    assertEquals(entity.getType(),
         Separator.QUALIFIERS.decode(Bytes.toString(splits[5])));
     verifyRowPrefixBytes(byteRowKeyPrefix);
 
