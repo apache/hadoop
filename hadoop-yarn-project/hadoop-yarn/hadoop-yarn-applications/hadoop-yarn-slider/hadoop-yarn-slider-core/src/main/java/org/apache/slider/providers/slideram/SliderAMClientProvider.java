@@ -184,19 +184,20 @@ public class SliderAMClientProvider extends AbstractClientProvider
         libdir,
         miniClusterTestRun);
 
-    String libDirProp =
-        System.getProperty(SliderKeys.PROPERTY_LIB_DIR);
     log.info("Loading all dependencies for AM.");
     // If slider.tar.gz is available in hdfs use it, else upload all jars
     Path dependencyLibTarGzip = fileSystem.getDependencyTarGzip();
     if (fileSystem.isFile(dependencyLibTarGzip)) {
       SliderUtils.putAmTarGzipAndUpdate(providerResources, fileSystem);
     } else {
-      ProviderUtils.addAllDependencyJars(providerResources,
-                                         fileSystem,
-                                         tempPath,
-                                         libdir,
-                                         libDirProp);
+      for (String libDirProp : SliderUtils.getLibDirs()) {
+        ProviderUtils.addAllDependencyJars(providerResources,
+                                           fileSystem,
+                                           tempPath,
+                                           libdir,
+                                           libDirProp);
+
+      }
     }
     addKeytabResourceIfNecessary(fileSystem,
                                  instanceDescription,

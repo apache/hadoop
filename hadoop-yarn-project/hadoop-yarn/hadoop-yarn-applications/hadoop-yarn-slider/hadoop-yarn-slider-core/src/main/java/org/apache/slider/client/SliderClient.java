@@ -2162,6 +2162,24 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
           new File(confDir, SliderKeys.LOG4J_SERVER_PROP_FILENAME);
       hasServerLog4jProperties = log4jserver.isFile();
     }
+    if (!hasServerLog4jProperties) {
+      // check for log4j properties in hadoop conf dir
+      String hadoopConfDir = System.getenv(ApplicationConstants.Environment
+          .HADOOP_CONF_DIR.name());
+      if (hadoopConfDir != null) {
+        File localFile = new File(hadoopConfDir, SliderKeys
+            .LOG4J_SERVER_PROP_FILENAME);
+        if (localFile.exists()) {
+          Path localFilePath = createLocalPath(localFile);
+          remoteConfPath = new Path(clusterDirectory,
+              SliderKeys.SUBMITTED_CONF_DIR);
+          Path remoteFilePath = new Path(remoteConfPath, SliderKeys
+              .LOG4J_SERVER_PROP_FILENAME);
+          copy(config, localFilePath, remoteFilePath);
+          hasServerLog4jProperties = true;
+        }
+      }
+    }
     // the assumption here is that minimr cluster => this is a test run
     // and the classpath can look after itself
 
@@ -2300,7 +2318,7 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
     // enable asserts
     commandLine.enableJavaAssertions();
     
-    // if the conf dir has a log4j-server.properties, switch to that
+    // if the conf dir has a slideram-log4j.properties, switch to that
     if (hasServerLog4jProperties) {
       commandLine.sysprop(SYSPROP_LOG4J_CONFIGURATION, LOG4J_SERVER_PROP_FILENAME);
       commandLine.sysprop(SYSPROP_LOG_DIR, ApplicationConstants.LOG_DIR_EXPANSION_VAR);
@@ -4471,14 +4489,13 @@ public class SliderClient extends AbstractSliderLaunchedService implements RunSe
       return EXIT_SUCCESS;
     }
     
-    String libDir = System.getProperty(SliderKeys.PROPERTY_LIB_DIR);
-    if (isSet(libDir)) {
-      File srcFolder = new File(libDir);
+    String[] libDirs = SliderUtils.getLibDirs();
+    if (libDirs.length > 0) {
       File tempLibTarGzipFile = File.createTempFile(
           SliderKeys.SLIDER_DEPENDENCY_TAR_GZ_FILE_NAME + "_",
           SliderKeys.SLIDER_DEPENDENCY_TAR_GZ_FILE_EXT);
-      // copy all jars except slider-core-<version>.jar
-      tarGzipFolder(srcFolder, tempLibTarGzipFile, createJarFilter());
+      // copy all jars
+      tarGzipFolder(libDirs, tempLibTarGzipFile, createJarFilter());
 
       log.info("Uploading dependency for AM (version {}) from {} to {}",
           version, tempLibTarGzipFile.toURI(), dependencyLibTarGzip.toUri());

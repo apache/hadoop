@@ -562,8 +562,7 @@ public class AgentClientProvider extends AbstractClientProvider
   }
 
   private void expandAgentTar(File agentPkgDir) throws IOException {
-    String libDirProp =
-        System.getProperty(PROPERTY_LIB_DIR);
+    String libDirProp = SliderUtils.getLibDir();
     File tarFile = new File(libDirProp, AGENT_TAR);
     expandTar(tarFile, agentPkgDir);
   }

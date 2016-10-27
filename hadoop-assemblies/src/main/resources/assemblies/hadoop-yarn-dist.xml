@@ -86,6 +86,32 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-slider/hadoop-yarn-slider-core/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-slider/hadoop-yarn-slider-core/conf</directory>
+      <outputDirectory>etc/hadoop</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-slider/hadoop-yarn-slider-core/target/hadoop-yarn-slider-core-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib/slider</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services-api/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-services-api/target/hadoop-yarn-services-api-${project.version}</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib/services-api</outputDirectory>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-applications-unmanaged-am-launcher/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>
