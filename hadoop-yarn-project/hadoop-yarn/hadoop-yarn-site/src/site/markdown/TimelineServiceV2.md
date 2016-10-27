@@ -143,6 +143,7 @@ New configuration parameters that are introduced with v.2 are marked bold.
 | **`yarn.timeline-service.writer.class`** | The class for the backend storage writer. Defaults to HBase storage writer. |
 | **`yarn.timeline-service.reader.class`** | The class for the backend storage reader. Defaults to HBase storage reader. |
 | **`yarn.system-metrics-publisher.enabled`** | The setting that controls whether yarn system metrics is published on the Timeline service or not by RM And NM. Defaults to `false`. |
+| **`yarn.timeline-service.schema.prefix`** | The schema prefix for hbase tables. Defaults to "prod.". |
 
 #### Advanced configuration
 
@@ -194,7 +195,8 @@ Finally, run the schema creator tool to create the necessary tables:
 
 The `TimelineSchemaCreator` tool supports a few options that may come handy especially when you
 are testing. For example, you can use `-skipExistingTable` (`-s` for short) to skip existing tables
-and continue to create other tables rather than failing the schema creation.
+and continue to create other tables rather than failing the schema creation. By default, the tables
+will have a schema prefix of "prod."
 
 #### Enabling Timeline Service v.2
 Following are the basic configurations to start Timeline service v.2:
