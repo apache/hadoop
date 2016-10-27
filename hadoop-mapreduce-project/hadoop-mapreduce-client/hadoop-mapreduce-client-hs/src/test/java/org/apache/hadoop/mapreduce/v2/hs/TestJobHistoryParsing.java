@@ -772,6 +772,8 @@ public class TestJobHistoryParsing {
       app.submit(configuration);
       Job job = app.getContext().getAllJobs().values().iterator().next();
       app.waitForState(job, JobState.SUCCEEDED);
+      // make sure job history events are handled
+      app.waitForState(Service.STATE.STOPPED);
 
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(configuration);
