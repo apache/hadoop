@@ -1506,16 +1506,20 @@ public class ContainerImpl implements Container {
   static class KillOnNewTransition extends ContainerDoneTransition {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
-      ContainerKillEvent killEvent = (ContainerKillEvent) event;
-      container.exitCode = killEvent.getContainerExitStatus();
-      container.addDiagnostics(killEvent.getDiagnostic(), "\n");
-      container.addDiagnostics("Container is killed before being launched.\n");
-      container.metrics.killedContainer();
-      NMAuditLogger.logSuccess(container.user,
-          AuditConstants.FINISH_KILLED_CONTAINER, "ContainerImpl",
-          container.containerId.getApplicationAttemptId().getApplicationId(),
-          container.containerId);
-      super.transition(container, event);
+      if (container.recoveredStatus == RecoveredContainerStatus.COMPLETED) {
+        container.sendFinishedEvents();
+      } else {
+        ContainerKillEvent killEvent = (ContainerKillEvent) event;
+        container.exitCode = killEvent.getContainerExitStatus();
+        container.addDiagnostics(killEvent.getDiagnostic(), "\n");
+        container.addDiagnostics("Container is killed before being launched.\n");
+        container.metrics.killedContainer();
+        NMAuditLogger.logSuccess(container.user,
+            AuditConstants.FINISH_KILLED_CONTAINER, "ContainerImpl",
+            container.containerId.getApplicationAttemptId().getApplicationId(),
+            container.containerId);
+        super.transition(container, event);
+      }
     }
   }
 
