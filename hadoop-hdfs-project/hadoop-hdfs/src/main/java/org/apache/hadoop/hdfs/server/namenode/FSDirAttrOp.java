@@ -84,12 +84,10 @@ public class FSDirAttrOp {
       fsd.checkOwner(pc, iip);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
-          throw new AccessControlException("User " + pc.getUser()
-              + " is not a super user (non-super user cannot change owner).");
+          throw new AccessControlException("Non-super user cannot change owner");
         }
         if (group != null && !pc.isMemberOfGroup(group)) {
-          throw new AccessControlException(
-              "User " + pc.getUser() + " does not belong to " + group);
+          throw new AccessControlException("User does not belong to " + group);
         }
       }
       unprotectedSetOwner(fsd, iip, username, group);
