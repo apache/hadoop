@@ -33,18 +33,21 @@ public class EntityRowKey {
   private final Long flowRunId;
   private final String appId;
   private final String entityType;
+  private final long entityIdPrefix;
   private final String entityId;
   private final KeyConverter<EntityRowKey> entityRowKeyConverter =
       new EntityRowKeyConverter();
 
   public EntityRowKey(String clusterId, String userId, String flowName,
-      Long flowRunId, String appId, String entityType, String entityId) {
+      Long flowRunId, String appId, String entityType, long entityIdPrefix,
+      String entityId) {
     this.clusterId = clusterId;
     this.userId = userId;
     this.flowName = flowName;
     this.flowRunId = flowRunId;
     this.appId = appId;
     this.entityType = entityType;
+    this.entityIdPrefix = entityIdPrefix;
     this.entityId = entityId;
   }
 
@@ -74,6 +77,10 @@ public class EntityRowKey {
 
   public String getEntityId() {
     return entityId;
+  }
+
+  public long getEntityIdPrefix() {
+    return entityIdPrefix;
   }
 
   /**
@@ -126,7 +133,7 @@ public class EntityRowKey {
     private static final int[] SEGMENT_SIZES = {Separator.VARIABLE_SIZE,
         Separator.VARIABLE_SIZE, Separator.VARIABLE_SIZE, Bytes.SIZEOF_LONG,
         AppIdKeyConverter.getKeySize(), Separator.VARIABLE_SIZE,
-        Separator.VARIABLE_SIZE };
+        Bytes.SIZEOF_LONG, Separator.VARIABLE_SIZE };
 
     /*
      * (non-Javadoc)
@@ -172,11 +179,15 @@ public class EntityRowKey {
       byte[] entityType =
           Separator.encode(rowKey.getEntityType(), Separator.SPACE,
               Separator.TAB, Separator.QUALIFIERS);
+
+      byte[] enitityIdPrefix = Bytes.toBytes(rowKey.getEntityIdPrefix());
+
       byte[] entityId =
           rowKey.getEntityId() == null ? Separator.EMPTY_BYTES : Separator
               .encode(rowKey.getEntityId(), Separator.SPACE, Separator.TAB,
                   Separator.QUALIFIERS);
-      byte[] fourth = Separator.QUALIFIERS.join(entityType, entityId);
+      byte[] fourth =
+          Separator.QUALIFIERS.join(entityType, enitityIdPrefix, entityId);
       return Separator.QUALIFIERS.join(first, second, third, fourth);
     }
 
@@ -196,7 +207,7 @@ public class EntityRowKey {
     public EntityRowKey decode(byte[] rowKey) {
       byte[][] rowKeyComponents =
           Separator.QUALIFIERS.split(rowKey, SEGMENT_SIZES);
-      if (rowKeyComponents.length != 7) {
+      if (rowKeyComponents.length != 8) {
         throw new IllegalArgumentException("the row key is not valid for "
             + "an entity");
       }
@@ -215,11 +226,14 @@ public class EntityRowKey {
       String entityType =
           Separator.decode(Bytes.toString(rowKeyComponents[5]),
               Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
+
+      long entityPrefixId = Bytes.toLong(rowKeyComponents[6]);
+
       String entityId =
-          Separator.decode(Bytes.toString(rowKeyComponents[6]),
+          Separator.decode(Bytes.toString(rowKeyComponents[7]),
               Separator.QUALIFIERS, Separator.TAB, Separator.SPACE);
       return new EntityRowKey(clusterId, userId, flowName, flowRunId, appId,
-          entityType, entityId);
+          entityType, entityPrefixId, entityId);
     }
   }
 }
