@@ -1059,8 +1059,8 @@ public class TestNodeLabelContainerAllocation {
     
     rm1.close();
   }
-  
-  @Test
+
+  @Test(timeout=60000)
   public void
       testQueueMaxCapacitiesWillNotBeHonoredWhenNotRespectingExclusivity()
           throws Exception {
