@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -398,14 +399,13 @@ public class DirectoryScanner implements Runnable {
         diffs.put(bpid, diffRecord);
         
         statsRecord.totalBlocks = blockpoolReport.length;
-        List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
-        ReplicaInfo[] memReport = bl.toArray(new ReplicaInfo[bl.size()]);
-        Arrays.sort(memReport); // Sort based on blockId
+        final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
+        Collections.sort(bl); // Sort based on blockId
   
         int d = 0; // index for blockpoolReport
         int m = 0; // index for memReprot
-        while (m < memReport.length && d < blockpoolReport.length) {
-          ReplicaInfo memBlock = memReport[m];
+        while (m < bl.size() && d < blockpoolReport.length) {
+          ReplicaInfo memBlock = bl.get(m);
           ScanInfo info = blockpoolReport[d];
           if (info.getBlockId() < memBlock.getBlockId()) {
             if (!dataset.isDeletingBlock(bpid, info.getBlockId())) {
@@ -452,8 +452,8 @@ public class DirectoryScanner implements Runnable {
             ++m;
           }
         }
-        while (m < memReport.length) {
-          ReplicaInfo current = memReport[m++];
+        while (m < bl.size()) {
+          ReplicaInfo current = bl.get(m++);
           addDifference(diffRecord, statsRecord,
                         current.getBlockId(), current.getVolume());
         }
