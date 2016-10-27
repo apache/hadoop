@@ -283,7 +283,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;

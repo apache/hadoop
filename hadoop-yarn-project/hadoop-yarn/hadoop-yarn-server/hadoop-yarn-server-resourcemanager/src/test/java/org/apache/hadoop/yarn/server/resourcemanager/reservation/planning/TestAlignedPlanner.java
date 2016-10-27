@@ -49,7 +49,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 public class TestAlignedPlanner {
 
@@ -701,7 +701,7 @@ public class TestAlignedPlanner {
     // Initialize random seed
     long seed = rand.nextLong();
     rand.setSeed(seed);
-    Log.info("Running with seed: " + seed);
+    Log.getLog().info("Running with seed: " + seed);
 
     // Set cluster parameters
     long timeWindow = 1000000L;

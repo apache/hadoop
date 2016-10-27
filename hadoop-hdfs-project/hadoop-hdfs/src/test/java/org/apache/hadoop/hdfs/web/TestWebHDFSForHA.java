@@ -56,7 +56,7 @@ import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;

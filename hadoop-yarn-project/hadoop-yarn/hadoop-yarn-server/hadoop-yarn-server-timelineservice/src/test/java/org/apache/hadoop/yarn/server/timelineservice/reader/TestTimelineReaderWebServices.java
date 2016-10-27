@@ -35,6 +35,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -184,7 +185,8 @@ public class TestTimelineReaderWebServices {
           "timeline/clusters/cluster1/apps/app1/entities/app/id_1");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
@@ -207,7 +209,8 @@ public class TestTimelineReaderWebServices {
           "userid=user1&flowname=flow1&flowrunid=1");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
@@ -227,7 +230,8 @@ public class TestTimelineReaderWebServices {
           "fields=CONFIGS,Metrics,info");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
@@ -253,7 +257,8 @@ public class TestTimelineReaderWebServices {
           "fields=ALL");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
@@ -289,7 +294,8 @@ public class TestTimelineReaderWebServices {
           "timeline/apps/app1/entities/app/id_1");
       ClientResponse resp = getResponse(client, uri);
       TimelineEntity entity = resp.getEntity(TimelineEntity.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entity);
       assertEquals("id_1", entity.getId());
       assertEquals("app", entity.getType());
@@ -299,7 +305,8 @@ public class TestTimelineReaderWebServices {
       resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(4, entities.size());
     } finally {
@@ -316,7 +323,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(4, entities.size());
       assertTrue("Entities id_1, id_2, id_3 and id_4 should have been" +
@@ -339,7 +347,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       // Entities returned are based on most recent created time.
@@ -352,7 +361,8 @@ public class TestTimelineReaderWebServices {
           "clusters/cluster1/apps/app1/entities/app?limit=3");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       // Even though 2 entities out of 4 have same created time, one entity
       // is left out due to limit
@@ -372,7 +382,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_4 should have been present in response.",
@@ -383,7 +394,8 @@ public class TestTimelineReaderWebServices {
           "=1425016502010");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(3, entities.size());
       assertFalse("Entity with id_4 should not have been present in response.",
@@ -394,7 +406,8 @@ public class TestTimelineReaderWebServices {
           "1425016502010");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_4 should have been present in response.",
@@ -414,7 +427,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_1 should have been present in response.",
@@ -425,7 +439,8 @@ public class TestTimelineReaderWebServices {
           "type1:tid1_2,type2:tid2_1%60");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_1 should have been present in response.",
@@ -436,7 +451,8 @@ public class TestTimelineReaderWebServices {
           "type1:tid1_1:tid1_2,type2:tid2_1%60");
       resp = getResponse(client, uri);
       entities = resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_1 should have been present in response.",
@@ -456,7 +472,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_3 should have been present in response.",
@@ -476,7 +493,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_3 should have been present in response.",
@@ -496,7 +514,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(2, entities.size());
       assertTrue("Entities with id_1 and id_2 should have been present" +
@@ -518,7 +537,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(1, entities.size());
       assertTrue("Entity with id_3 should have been present in response.",
@@ -541,7 +561,8 @@ public class TestTimelineReaderWebServices {
       ClientResponse resp = getResponse(client, uri);
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>(){});
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       assertEquals(0, entities.size());
     } finally {
@@ -580,7 +601,8 @@ public class TestTimelineReaderWebServices {
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>() {
           });
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       int totalEntities = entities.size();
       assertEquals(2, totalEntities);
@@ -633,7 +655,8 @@ public class TestTimelineReaderWebServices {
       TimelineEntity entities1 =
           resp.getEntity(new GenericType<TimelineEntity>() {
           });
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities1);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/"
@@ -663,7 +686,8 @@ public class TestTimelineReaderWebServices {
       Set<TimelineEntity> entities =
           resp.getEntity(new GenericType<Set<TimelineEntity>>() {
           });
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities);
       int totalEntities = entities.size();
       assertEquals(3, totalEntities);
@@ -734,7 +758,8 @@ public class TestTimelineReaderWebServices {
       TimelineEntity entities1 =
           resp.getEntity(new GenericType<TimelineEntity>() {
           });
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, resp.getType());
+      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          resp.getType().toString());
       assertNotNull(entities1);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/"

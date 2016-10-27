@@ -93,23 +93,33 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty</artifactId>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
+      <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
-      <artifactId>jetty-sslengine</artifactId>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-webapp</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util-ajax</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>javax.servlet.jsp</groupId>
@@ -410,6 +420,18 @@
                 </includes>
               </source>
               <output>${project.build.directory}/generated-test-sources/java</output>
+            </configuration>
+          </execution>
+          <execution>
+            <id>resource-gz</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>resource-gz</goal>
+            </goals>
+            <configuration>
+              <inputDirectory>${basedir}/src/main/webapps/static</inputDirectory>
+              <outputDirectory>${basedir}/target/webapps/static</outputDirectory>
+              <extensions>js,css</extensions>
             </configuration>
           </execution>
         </executions>

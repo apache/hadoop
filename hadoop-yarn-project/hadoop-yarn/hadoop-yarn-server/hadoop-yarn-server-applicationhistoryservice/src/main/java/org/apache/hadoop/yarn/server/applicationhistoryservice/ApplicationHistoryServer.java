@@ -56,8 +56,8 @@ import org.apache.hadoop.yarn.server.timeline.webapp.CrossOriginFilterInitialize
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.mortbay.jetty.servlet.FilterHolder;
-import org.mortbay.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.servlet.FilterHolder;
+import org.eclipse.jetty.webapp.WebAppContext;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -316,27 +316,31 @@ public class ApplicationHistoryServer extends CompositeService {
            YarnConfiguration.TIMELINE_SERVICE_UI_NAMES);
        WebAppContext webAppContext = httpServer.getWebAppContext();
 
-       for (String name : names) {
-         String webPath = conf.get(
-             YarnConfiguration.TIMELINE_SERVICE_UI_WEB_PATH_PREFIX + name);
-         String onDiskPath = conf.get(
-             YarnConfiguration.TIMELINE_SERVICE_UI_ON_DISK_PATH_PREFIX + name);
-         WebAppContext uiWebAppContext = new WebAppContext();
-         uiWebAppContext.setContextPath(webPath);
-         uiWebAppContext.setWar(onDiskPath);
-         final String[] ALL_URLS = { "/*" };
-         FilterHolder[] filterHolders =
-           webAppContext.getServletHandler().getFilters();
-         for (FilterHolder filterHolder: filterHolders) {
-           if (!"guice".equals(filterHolder.getName())) {
-             HttpServer2.defineFilter(uiWebAppContext, filterHolder.getName(),
-                 filterHolder.getClassName(), filterHolder.getInitParameters(),
-                 ALL_URLS);
-           }
-         }
-         LOG.info("Hosting " + name + " from " + onDiskPath + " at " + webPath);
-         httpServer.addContext(uiWebAppContext, true);
-       }
+      for (String name : names) {
+        String webPath = conf.get(
+            YarnConfiguration.TIMELINE_SERVICE_UI_WEB_PATH_PREFIX + name);
+        String onDiskPath = conf.get(
+            YarnConfiguration.TIMELINE_SERVICE_UI_ON_DISK_PATH_PREFIX + name);
+        WebAppContext uiWebAppContext = new WebAppContext();
+        uiWebAppContext.setContextPath(webPath);
+        if (onDiskPath.endsWith(".war")) {
+          uiWebAppContext.setWar(onDiskPath);
+        } else {
+          uiWebAppContext.setResourceBase(onDiskPath);
+        }
+        final String[] ALL_URLS = {"/*"};
+        FilterHolder[] filterHolders =
+            webAppContext.getServletHandler().getFilters();
+        for (FilterHolder filterHolder : filterHolders) {
+          if (!"guice".equals(filterHolder.getName())) {
+            HttpServer2.defineFilter(uiWebAppContext, filterHolder.getName(),
+                filterHolder.getClassName(), filterHolder.getInitParameters(),
+                ALL_URLS);
+          }
+        }
+        LOG.info("Hosting " + name + " from " + onDiskPath + " at " + webPath);
+        httpServer.addHandlerAtFront(uiWebAppContext);
+      }
        httpServer.start();
        conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
         YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,

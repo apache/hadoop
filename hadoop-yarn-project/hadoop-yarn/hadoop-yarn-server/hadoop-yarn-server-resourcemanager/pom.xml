@@ -35,7 +35,7 @@
   <dependencies>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
@@ -143,8 +143,12 @@
       <artifactId>jersey-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
+      <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util-ajax</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>

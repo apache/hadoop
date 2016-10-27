@@ -24,14 +24,19 @@ import java.net.ServerSocket;
 import java.net.URL;
 import java.net.UnknownHostException;
 
-import org.apache.hadoop.security.ssl.SslSelectChannelConnectorSecure;
-import org.junit.Test;
+import org.apache.hadoop.http.JettyUtils;
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.SecureRequestCustomizer;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.security.SslSelectChannelConnector;
 
 public class TestJettyHelper implements MethodRule {
   private boolean ssl;
@@ -88,20 +93,27 @@ public class TestJettyHelper implements MethodRule {
       ServerSocket ss = new ServerSocket(0, 50, localhost);
       int port = ss.getLocalPort();
       ss.close();
-      Server server = new Server(0);
-      if (!ssl) {
-        server.getConnectors()[0].setHost(host);
-        server.getConnectors()[0].setPort(port);
-      } else {
-        SslSelectChannelConnector c = new SslSelectChannelConnectorSecure();
-        c.setHost(host);
-        c.setPort(port);
-        c.setNeedClientAuth(false);
-        c.setKeystore(keyStore);
-        c.setKeystoreType(keyStoreType);
-        c.setKeyPassword(keyStorePassword);
-        server.setConnectors(new Connector[] {c});
+      Server server = new Server();
+      ServerConnector conn = new ServerConnector(server);
+      HttpConfiguration http_config = new HttpConfiguration();
+      http_config.setRequestHeaderSize(JettyUtils.HEADER_SIZE);
+      http_config.setResponseHeaderSize(JettyUtils.HEADER_SIZE);
+      http_config.setSecureScheme("https");
+      http_config.addCustomizer(new SecureRequestCustomizer());
+      ConnectionFactory connFactory = new HttpConnectionFactory(http_config);
+      conn.addConnectionFactory(connFactory);
+      conn.setHost(host);
+      conn.setPort(port);
+      if (ssl) {
+        SslContextFactory sslContextFactory = new SslContextFactory();
+        sslContextFactory.setNeedClientAuth(false);
+        sslContextFactory.setKeyStorePath(keyStore);
+        sslContextFactory.setKeyStoreType(keyStoreType);
+        sslContextFactory.setKeyStorePassword(keyStorePassword);
+        conn.addFirstConnectionFactory(new SslConnectionFactory(sslContextFactory,
+            HttpVersion.HTTP_1_1.asString()));
       }
+      server.addConnector(conn);
       return server;
     } catch (Exception ex) {
       throw new RuntimeException("Could not start embedded servlet container, " + ex.getMessage(), ex);
@@ -117,8 +129,8 @@ public class TestJettyHelper implements MethodRule {
     Server server = getJettyServer();
     try {
       InetAddress add =
-        InetAddress.getByName(server.getConnectors()[0].getHost());
-      int port = server.getConnectors()[0].getPort();
+        InetAddress.getByName(((ServerConnector)server.getConnectors()[0]).getHost());
+      int port = ((ServerConnector)server.getConnectors()[0]).getPort();
       return new InetSocketAddress(add, port);
     } catch (UnknownHostException ex) {
       throw new RuntimeException(ex);
@@ -157,8 +169,8 @@ public class TestJettyHelper implements MethodRule {
     try {
       String scheme = (helper.ssl) ? "https" : "http";
       return new URL(scheme + "://" +
-          helper.server.getConnectors()[0].getHost() + ":" +
-          helper.server.getConnectors()[0].getPort());
+          ((ServerConnector)helper.server.getConnectors()[0]).getHost() + ":" +
+          ((ServerConnector)helper.server.getConnectors()[0]).getPort());
     } catch (MalformedURLException ex) {
       throw new RuntimeException("It should never happen, " + ex.getMessage(), ex);
     }

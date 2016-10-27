@@ -15,32 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.http;
 
-import java.io.IOException;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.eclipse.jetty.servlet.DefaultServlet;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * General servlet which is admin-authorized.
- *
+ * Contains utility methods and constants relating to Jetty.
  */
-public class AdminAuthorizedServlet extends DefaultServlet {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public final class JettyUtils {
+  public static final String UTF_8 = "charset=utf-8";
+  public static final int HEADER_SIZE = 1024 * 64;
 
-  private static final long serialVersionUID = 1L;
-
-  @Override
-  protected void doGet(HttpServletRequest request, HttpServletResponse response)
- throws ServletException, IOException {
-    // Do the authorization
-    if (HttpServer2.hasAdministratorAccess(getServletContext(), request,
-        response)) {
-      // Authorization is done. Just call super.
-      super.doGet(request, response);
-    }
+  private JettyUtils() {
   }
 }

@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.http.JettyUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import javax.ws.rs.Produces;
@@ -41,7 +42,7 @@ import java.util.Map;
  * to their JSON representation.
  */
 @Provider
-@Produces(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
 @InterfaceAudience.Private
 public class KMSJSONWriter implements MessageBodyWriter<Object> {
 

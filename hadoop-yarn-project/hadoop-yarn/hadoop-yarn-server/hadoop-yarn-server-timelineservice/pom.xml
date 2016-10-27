@@ -83,7 +83,7 @@
 
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
 
     <dependency>
@@ -139,6 +139,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -172,6 +176,18 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty-sslengine</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

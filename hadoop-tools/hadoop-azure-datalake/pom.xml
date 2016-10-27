@@ -135,7 +135,7 @@
       <artifactId>hadoop-client</artifactId>
       <exclusions>
         <exclusion>
-          <artifactId>servlet-api</artifactId>
+          <artifactId>javax.servlet-api</artifactId>
           <groupId>javax.servlet</groupId>
         </exclusion>
       </exclusions>

@@ -92,7 +92,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mockito;
-import org.mortbay.jetty.HttpHeaders;
+import org.eclipse.jetty.http.HttpHeader;
 
 public class TestShuffleHandler {
   static final long MiB = 1024 * 1024; 
@@ -299,7 +299,8 @@ public class TestShuffleHandler {
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    Assert.assertEquals("close", conn.getHeaderField(HttpHeaders.CONNECTION));
+    Assert.assertEquals("close",
+        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
     input.close();
@@ -409,15 +410,15 @@ public class TestShuffleHandler {
             + "map=attempt_12345_1_m_1_0");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpHeaders.KEEP_ALIVE,
-      conn.getHeaderField(HttpHeaders.CONNECTION));
+    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     Assert.assertEquals("timeout=1",
-      conn.getHeaderField(HttpHeaders.KEEP_ALIVE));
+        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
@@ -429,15 +430,15 @@ public class TestShuffleHandler {
             + "map=attempt_12345_1_m_1_0&keepAlive=true");
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
-      ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+        ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpHeaders.KEEP_ALIVE,
-      conn.getHeaderField(HttpHeaders.CONNECTION));
+    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+        conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     Assert.assertEquals("timeout=1",
-      conn.getHeaderField(HttpHeaders.KEEP_ALIVE));
+        conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     header = new ShuffleHeader();
     header.readFields(input);

@@ -132,7 +132,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.mortbay.util.MultiException;
+import org.eclipse.jetty.util.MultiException;
 
 import com.google.common.base.Supplier;
 

@@ -28,6 +28,8 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -36,8 +38,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
-import org.mortbay.jetty.Connector;
-import org.mortbay.util.ajax.JSON;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -50,6 +50,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
@@ -81,6 +82,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
+      response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       Map<String, String[]> params = request.getParameterMap();
       SortedSet<String> keys = new TreeSet<String>(params.keySet());
@@ -108,6 +110,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
+      response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       SortedSet<String> sortedKeys = new TreeSet<String>();
       Enumeration<String> keys = request.getParameterNames();
@@ -130,7 +133,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
-      response.setContentType("text/html");
+      response.setContentType(MediaType.TEXT_HTML + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       out.print("hello world");
       out.close();
@@ -222,7 +225,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/plain; charset=utf-8", conn.getContentType());
+    assertEquals(MediaType.TEXT_PLAIN + ";" + JettyUtils.UTF_8,
+        conn.getContentType());
 
     // We should ignore parameters for mime types - ie a parameter
     // ending in .css should not change mime type
@@ -230,14 +234,16 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/plain; charset=utf-8", conn.getContentType());
+    assertEquals(MediaType.TEXT_PLAIN + ";" + JettyUtils.UTF_8,
+        conn.getContentType());
 
     // Servlets that specify text/html should get that content type
     servletUrl = new URL(baseUrl, "/htmlcontent");
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html; charset=utf-8", conn.getContentType());
+    assertEquals(MediaType.TEXT_HTML + ";" + JettyUtils.UTF_8,
+        conn.getContentType());
   }
 
   @Test
@@ -488,7 +494,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> parse(String jsonString) {
-    return (Map<String, Object>)JSON.parse(jsonString);
+    return (Map<String, Object>) JSON.parse(jsonString);
   }
 
   @Test public void testJersey() throws Exception {
@@ -592,7 +598,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       // not bound, ephemeral should return requested port (0 for ephemeral)
       List<?> listeners = (List<?>) Whitebox.getInternalState(server,
           "listeners");
-      Connector listener = (Connector) listeners.get(0);
+      ServerConnector listener = (ServerConnector)listeners.get(0);
 
       assertEquals(port, listener.getPort());
       // verify hostname is what was given

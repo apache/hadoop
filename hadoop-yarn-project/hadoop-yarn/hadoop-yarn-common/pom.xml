@@ -68,14 +68,14 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
+      <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
     </dependency>
     <dependency>
@@ -279,7 +279,18 @@
               <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
-
+          <execution>
+            <id>resource-gz</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>resource-gz</goal>
+            </goals>
+            <configuration>
+              <inputDirectory>${basedir}/src/main/resources/webapps/static</inputDirectory>
+              <outputDirectory>${basedir}/target/classes/webapps/static</outputDirectory>
+              <extensions>js,css</extensions>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

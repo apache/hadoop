@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlockBlobWrapper;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -760,7 +760,7 @@ public class BlockBlobAppendStream extends OutputStream {
               dataPayload.length, new BlobRequestOptions(), opContext);
           break;
         } catch(Exception ioe) {
-          Log.debug("Encountered exception during uploading block for Blob : {} Exception : {}", key, ioe);
+          Log.getLog().debug("Encountered exception during uploading block for Blob : {} Exception : {}", key, ioe);
           uploadRetryAttempts++;
           lastLocalException = new IOException("Encountered Exception while uploading block", ioe);
           try {
@@ -814,7 +814,7 @@ public class BlockBlobAppendStream extends OutputStream {
           Thread.currentThread().interrupt();
         }
 
-        Log.debug("Attempting to renew append lease on {}", key);
+        Log.getLog().debug("Attempting to renew append lease on {}", key);
 
         try {
           if (!leaseFreed) {
