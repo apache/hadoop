@@ -3272,6 +3272,17 @@
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault</value>
   <description>
     Class representing block placement policy for non-striped files.
+    There are four block placement policies currently being supported:
+    BlockPlacementPolicyDefault, BlockPlacementPolicyWithNodeGroup,
+    BlockPlacementPolicyRackFaultTolerant and BlockPlacementPolicyWithUpgradeDomain.
+    BlockPlacementPolicyDefault chooses the desired number of targets
+    for placing block replicas in a default way. BlockPlacementPolicyWithNodeGroup
+    places block replicas on environment with node-group layer. BlockPlacementPolicyRackFaultTolerant
+    places the replicas to more racks.
+    BlockPlacementPolicyWithUpgradeDomain places block replicas that honors upgrade domain policy.
+    The details of placing replicas are documented in the javadoc of the corresponding policy classes.
+    The default policy is BlockPlacementPolicyDefault, and the corresponding class is
+    org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault.
   </description>
 </property>
 
