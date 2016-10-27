@@ -41,7 +41,8 @@ public class EntityRowKeyPrefix extends EntityRowKey implements
    */
   public EntityRowKeyPrefix(String clusterId, String userId, String flowName,
       Long flowRunId, String appId, String entityType) {
-    super(clusterId, userId, flowName, flowRunId, appId, entityType, null);
+    // TODO YARN-5585, change prefix id from 0L
+    super(clusterId, userId, flowName, flowRunId, appId, entityType, 0L, null);
   }
 
   /**
@@ -57,7 +58,8 @@ public class EntityRowKeyPrefix extends EntityRowKey implements
    */
   public EntityRowKeyPrefix(String clusterId, String userId, String flowName,
       Long flowRunId, String appId) {
-    super(clusterId, userId, flowName, flowRunId, appId, null, null);
+    // TODO YARN-5585, change prefix id from 0L
+    super(clusterId, userId, flowName, flowRunId, appId, null, 0L, null);
   }
 
   /*
