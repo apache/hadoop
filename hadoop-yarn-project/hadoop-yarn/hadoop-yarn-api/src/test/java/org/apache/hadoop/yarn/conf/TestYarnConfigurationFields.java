@@ -135,10 +135,6 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare = new HashSet<String>();
     xmlPrefixToSkipCompare = new HashSet<String>();
 
-    // Should probably be moved from yarn-default.xml to mapred-default.xml
-    xmlPropsToSkipCompare.add("mapreduce.job.hdfs-servers");
-    xmlPropsToSkipCompare.add("mapreduce.job.jar");
-
     // Possibly obsolete, but unable to verify 100%
     xmlPropsToSkipCompare.add("yarn.nodemanager.aux-services.mapreduce_shuffle.class");
     xmlPropsToSkipCompare.add("yarn.resourcemanager.container.liveness-monitor.interval-ms");
