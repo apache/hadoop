@@ -74,6 +74,10 @@ Release 2.7.4 - UNRELEASED
     HADOOP-13236. truncate will fail when we use viewfilesystem.
     (Brahma Reddy Battula)
 
+    HADOOP-13201. Print the directory paths when ViewFs denies the rename
+    operation on internal dirs.
+    (Contributed by Tianyin Xiu via Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
