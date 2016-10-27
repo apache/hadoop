@@ -57,6 +57,8 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11053. Unnecessary superuser check in versionRequest() (kihwal)
 
+    HDFS-11069. Tighten the authorization in datanode RPC. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
