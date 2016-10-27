@@ -2138,7 +2138,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             ApplicationEventType.APPLICATION_LOG_HANDLING_INITED) };
     checkEvents(appEventHandler, expectedInitEvents, false, "getType",
         "getApplicationID");
-    reset(appEventHandler);
+    reset(new EventHandler[] {appEventHandler});
 
     logAggregationService.handle(new LogHandlerAppFinishedEvent(appId));
     logAggregationService.stop();
