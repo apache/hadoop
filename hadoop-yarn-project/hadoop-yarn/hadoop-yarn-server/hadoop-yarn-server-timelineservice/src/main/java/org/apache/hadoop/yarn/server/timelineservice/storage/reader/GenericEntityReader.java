@@ -502,7 +502,9 @@ class GenericEntityReader extends TimelineEntityReader {
     byte[] rowKey =
         new EntityRowKey(context.getClusterId(), context.getUserId(),
             context.getFlowName(), context.getFlowRunId(), context.getAppId(),
-            context.getEntityType(), context.getEntityId()).getRowKey();
+            // TODO YARN-5585, change prefix id from 0L
+            context.getEntityType(), 0L, context.getEntityId()).getRowKey();
+
     Get get = new Get(rowKey);
     get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
