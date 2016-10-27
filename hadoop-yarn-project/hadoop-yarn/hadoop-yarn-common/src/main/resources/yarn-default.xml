@@ -2354,6 +2354,18 @@
     <value>259200000</value>
   </property>
 
+  <property>
+    <description>
+    The value of this parameter sets the prefix for all tables that are part of
+    timeline service in the hbase storage schema. It can be set to "dev."
+    or "staging." if it is to be used for development or staging instances.
+    This way the data in production tables stays in a separate set of tables
+    prefixed by "prod.".
+    </description>
+    <name>yarn.timeline-service.hbase-schema.prefix</name>
+    <value>prod.</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
 
   <property>

@@ -30,7 +30,6 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -51,6 +50,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContex
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.HBaseTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineSchemaCreator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnHelper;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.junit.AfterClass;
@@ -155,8 +155,9 @@ public class TestHBaseStorageFlowActivity {
 
     Connection conn = ConnectionFactory.createConnection(c1);
     // check in flow activity table
-    Table table1 = conn.getTable(TableName
-        .valueOf(FlowActivityTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTable.getTableName(c1, FlowActivityTable.TABLE_NAME_CONF_NAME,
+            FlowActivityTable.DEFAULT_TABLE_NAME));
     byte[] startRow =
         new FlowActivityRowKey(cluster, minStartTs, user, flow).getRowKey();
     Get g = new Get(startRow);
@@ -286,8 +287,9 @@ public class TestHBaseStorageFlowActivity {
             .getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
-    Table table1 = conn.getTable(TableName
-        .valueOf(FlowActivityTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTable.getTableName(c1, FlowActivityTable.TABLE_NAME_CONF_NAME,
+            FlowActivityTable.DEFAULT_TABLE_NAME));
     ResultScanner scanner = table1.getScanner(s);
     int rowCount = 0;
     for (Result result : scanner) {
@@ -424,13 +426,13 @@ public class TestHBaseStorageFlowActivity {
         new FlowActivityRowKey(cluster, appCreatedTime, user, flow).getRowKey();
     s.setStartRow(startRow);
     String clusterStop = cluster + "1";
-    byte[] stopRow =
-        new FlowActivityRowKey(clusterStop, appCreatedTime, user, flow)
-        .getRowKey();
+    byte[] stopRow = new FlowActivityRowKey(clusterStop, appCreatedTime, user,
+        flow).getRowKey();
     s.setStopRow(stopRow);
     Connection conn = ConnectionFactory.createConnection(c1);
-    Table table1 = conn.getTable(TableName
-        .valueOf(FlowActivityTable.DEFAULT_TABLE_NAME));
+    Table table1 = conn.getTable(
+        BaseTable.getTableName(c1, FlowActivityTable.TABLE_NAME_CONF_NAME,
+            FlowActivityTable.DEFAULT_TABLE_NAME));
     ResultScanner scanner = table1.getScanner(s);
     int rowCount = 0;
     for (Result result : scanner) {
