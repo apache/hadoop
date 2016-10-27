@@ -776,6 +776,8 @@ public class TestJobHistoryParsing {
       JobId jobId = job.getID();
       LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
       app.waitForState(job, JobState.SUCCEEDED);
+      // make sure job history events are handled
+      app.waitForState(Service.STATE.STOPPED);
 
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(configuration);
