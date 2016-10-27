@@ -313,9 +313,11 @@ public class OpportunisticContainerAllocatorAMService
           appAttempt.getApplicationAttemptId(), container.getNodeId(),
           appAttempt.getUser(), rmContext, isRemotelyAllocated);
       appAttempt.addRMContainer(container.getId(), rmContainer);
+      ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(
+          container.getNodeId()).allocateContainer(rmContainer);
       rmContainer.handle(
           new RMContainerEvent(container.getId(),
-              RMContainerEventType.LAUNCHED));
+              RMContainerEventType.ACQUIRED));
     }
   }
 
