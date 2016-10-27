@@ -738,7 +738,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   ReplicaInfo getBlockReplica(String bpid, long blockId) throws IOException {
     ReplicaInfo r = validateBlockFile(bpid, blockId);
     if (r == null) {
-      throw new IOException("BlockId " + blockId + " is not valid.");
+      throw new FileNotFoundException("BlockId " + blockId + " is not valid.");
     }
     return r;
   }
