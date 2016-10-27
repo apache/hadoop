@@ -150,15 +150,16 @@ class BlockPoolManager {
     LOG.info("Refresh request received for nameservices: " + conf.get
             (DFSConfigKeys.DFS_NAMESERVICES));
 
-    final Map<String, Map<String, InetSocketAddress>> newAddressMap =
+    Map<String, Map<String, InetSocketAddress>> newAddressMap =
         new HashMap<>();
-    final Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap =
+    Map<String, Map<String, InetSocketAddress>> newLifelineAddressMap =
         new HashMap<>();
 
     try {
-      newAddressMap.putAll(DFSUtil.getNNServiceRpcAddressesForCluster(conf));
-      newLifelineAddressMap.putAll(
-          DFSUtil.getNNLifelineRpcAddressesForCluster(conf));
+      newAddressMap =
+          DFSUtil.getNNServiceRpcAddressesForCluster(conf);
+      newLifelineAddressMap =
+          DFSUtil.getNNLifelineRpcAddressesForCluster(conf);
     } catch (IOException ioe) {
       LOG.warn("Unable to get NameNode addresses. " +
           "This may be an Ozone-only cluster.");
