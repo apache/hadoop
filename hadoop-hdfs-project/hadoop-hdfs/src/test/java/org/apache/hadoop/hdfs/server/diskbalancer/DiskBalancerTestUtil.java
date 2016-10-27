@@ -47,7 +47,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Helper class to create various cluster configrations at run time.
+ * Helper class to create various cluster configurations at run time.
  */
 public class DiskBalancerTestUtil {
   public static final long MB = 1024 * 1024L;
