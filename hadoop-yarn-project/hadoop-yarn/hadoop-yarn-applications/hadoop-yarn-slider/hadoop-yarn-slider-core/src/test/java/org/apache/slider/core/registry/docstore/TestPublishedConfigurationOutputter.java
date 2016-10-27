@@ -82,16 +82,14 @@ public class TestPublishedConfigurationOutputter {
 
     String output = configurationOutputter.asString().replaceAll("( |\\r|\\n)",
         "");
-    assert output.contains(
-        "<configuration><property><name>key1</name><value>val1</value><source/></property></configuration>");
+    assert output.contains("<name>key1</name><value>val1</value>");
 
     File file = tmpDir.newFile();
     configurationOutputter.save(file);
 
     assert FileUtils.readFileToString(file, Charsets.UTF_8)
         .replaceAll("( |\\r|\\n)", "")
-        .contains(
-            "<configuration><property><name>key1</name><value>val1</value><source/></property></configuration>");
+        .contains("<name>key1</name><value>val1</value>");
   }
 
   @Test
@@ -103,14 +101,14 @@ public class TestPublishedConfigurationOutputter {
 
     String output = configurationOutputter.asString().replaceAll("( |\\r|\\n)",
         "");
-    assert output.contains("<configuration><property><name>key1</name><value>val1</value><source/></property></configuration>");
+    assert output.contains("<name>key1</name><value>val1</value>");
 
     File file = tmpDir.newFile();
     configurationOutputter.save(file);
 
     assert FileUtils.readFileToString(file, Charsets.UTF_8)
         .replaceAll("( |\\r|\\n)", "")
-        .contains( "<configuration><property><name>key1</name><value>val1</value><source/></property></configuration>");
+        .contains("<name>key1</name><value>val1</value>");
   }
 
   @Test
