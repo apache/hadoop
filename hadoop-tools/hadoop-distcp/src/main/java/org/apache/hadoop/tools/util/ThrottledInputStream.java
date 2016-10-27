@@ -84,6 +84,9 @@ public class ThrottledInputStream extends InputStream {
   /** {@inheritDoc} */
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
+    if (len == 0) {
+      return 0;
+    }
     throttle();
     int readLen = rawStream.read(b, off, len);
     if (readLen != -1) {
