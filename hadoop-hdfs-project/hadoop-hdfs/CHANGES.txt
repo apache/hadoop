@@ -181,6 +181,9 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11015. Enforce timeout in balancer. (kihwal via zhz)
 
+    HDFS-9500. Fix software version counts for DataNodes during rolling upgrade.
+    (Erik Krogen via shv)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
