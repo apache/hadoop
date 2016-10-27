@@ -968,6 +968,9 @@ public class HarFileSystem extends FileSystem {
       @Override
       public synchronized int read(byte[] b, int offset, int len) 
         throws IOException {
+        if (len == 0) {
+          return 0;
+        }
         int newlen = len;
         int ret = -1;
         if (position + len > end) {

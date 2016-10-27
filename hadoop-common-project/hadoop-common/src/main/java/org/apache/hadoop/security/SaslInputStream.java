@@ -246,6 +246,9 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    */
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
+    if (len == 0) {
+      return 0;
+    }
     if (!useWrap) {
       return inStream.read(b, off, len);
     }
