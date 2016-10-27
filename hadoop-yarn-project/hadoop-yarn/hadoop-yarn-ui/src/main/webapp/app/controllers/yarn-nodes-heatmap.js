@@ -27,7 +27,7 @@ export default Ember.Controller.extend({
     routeName: 'application'
   }, {
     text: "Nodes",
-    routeName: 'yarn-nodes',
+    routeName: 'yarn-nodes.table',
   }, {
     text: "Heatmap",
     routeName: 'yarn-nodes-heatmap',
