@@ -113,7 +113,7 @@ public class ZKRMStateStore extends RMStateStore {
   private List<ACL> zkAcl;
   private List<ZKUtil.ZKAuthInfo> zkAuths;
 
-  class ZKSyncOperationCallback implements AsyncCallback.VoidCallback {
+  static class ZKSyncOperationCallback implements AsyncCallback.VoidCallback {
     @Override
     public void processResult(int rc, String path, Object ctx){
       if (rc == Code.OK.intValue()) {

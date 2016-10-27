@@ -394,4 +394,9 @@
     <Bug pattern="UI_INHERITANCE_UNSAFE_GETRESOURCE"/>
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt" />
+    <Field name="queue" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
 </FindBugsFilter>
