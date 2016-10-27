@@ -24,6 +24,11 @@
 <configuration>
 
 <property>
+  <name>mapreduce.job.hdfs-servers</name>
+  <value>${fs.defaultFS}</value>
+</property>
+
+<property>
   <name>mapreduce.job.committer.setup.cleanup.needed</name>
   <value>true</value>
   <description> true, if job needs job-setup and job-cleanup.
