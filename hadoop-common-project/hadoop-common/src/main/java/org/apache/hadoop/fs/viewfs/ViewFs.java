@@ -472,14 +472,16 @@ public class ViewFs extends AbstractFileSystem {
   
     if (resSrc.isInternalDir()) {
       throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: it is readOnly");
+          "Cannot Rename within internal dirs of mount table: src=" + src
+              + " is readOnly");
     }
-      
+
     InodeTree.ResolveResult<AbstractFileSystem> resDst = 
                                 fsState.resolve(getUriPath(dst), false);
     if (resDst.isInternalDir()) {
       throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: it is readOnly");
+          "Cannot Rename within internal dirs of mount table: dest=" + dst
+              + " is readOnly");
     }
     
     /**
