@@ -33,6 +33,13 @@ export default Ember.Controller.extend({
       routeName: 'yarn-app',
       model: appId
     }];
-  })
+  }),
 
+  amHostHttpAddressFormatted: function() {
+    var amHostAddress = this.get('model.app.amHostHttpAddress');
+    if (amHostAddress.indexOf('http://') < 0) {
+      amHostAddress = 'http://' + amHostAddress;
+    }
+    return amHostAddress;
+  }.property('model.app.amHostHttpAddress')
 });
