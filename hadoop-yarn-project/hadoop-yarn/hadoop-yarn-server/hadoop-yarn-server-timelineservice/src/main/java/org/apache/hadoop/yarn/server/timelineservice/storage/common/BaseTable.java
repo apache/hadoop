@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * Implements behavior common to tables used in the timeline service storage. It
@@ -114,16 +115,42 @@ public abstract class BaseTable<T> {
   }
 
   /**
-   * Get the table name for this table.
+   * Get the table name for the input table.
    *
-   * @param hbaseConf HBase configuration from which table name will be fetched.
+   * @param conf HBase configuration from which table name will be fetched.
+   * @param tableName name of the table to be fetched
    * @return A {@link TableName} object.
    */
-  public TableName getTableName(Configuration hbaseConf) {
-    TableName table =
-        TableName.valueOf(hbaseConf.get(tableNameConfName, defaultTableName));
-    return table;
+  public static TableName getTableName(Configuration conf, String tableName) {
+    String tableSchemaPrefix =  conf.get(
+        YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX);
+    return TableName.valueOf(tableSchemaPrefix + tableName);
+  }
 
+  /**
+   * Get the table name for this table.
+   *
+   * @param conf HBase configuration from which table name will be fetched.
+   * @return A {@link TableName} object.
+   */
+  public TableName getTableName(Configuration conf) {
+    String tableName = conf.get(tableNameConfName, defaultTableName);
+    return getTableName(conf, tableName);
+  }
+
+  /**
+   * Get the table name based on the input config parameters.
+   *
+   * @param conf HBase configuration from which table name will be fetched.
+   * @param tableNameInConf the table name parameter in conf.
+   * @param defaultTableName the default table name.
+   * @return A {@link TableName} object.
+   */
+  public static TableName getTableName(Configuration conf,
+      String tableNameInConf, String defaultTableName) {
+    String tableName = conf.get(tableNameInConf, defaultTableName);
+    return getTableName(conf, tableName);
   }
 
   /**

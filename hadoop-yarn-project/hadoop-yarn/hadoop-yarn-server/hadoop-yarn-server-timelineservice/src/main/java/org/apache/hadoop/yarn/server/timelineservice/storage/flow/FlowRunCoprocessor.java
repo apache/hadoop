@@ -71,7 +71,7 @@ public class FlowRunCoprocessor extends BaseRegionObserver {
     if (e instanceof RegionCoprocessorEnvironment) {
       RegionCoprocessorEnvironment env = (RegionCoprocessorEnvironment) e;
       this.region = env.getRegion();
-      isFlowRunRegion = TimelineStorageUtils.isFlowRunTable(
+      isFlowRunRegion = FlowRunTable.isFlowRunTable(
           region.getRegionInfo(), env.getConfiguration());
     }
   }
