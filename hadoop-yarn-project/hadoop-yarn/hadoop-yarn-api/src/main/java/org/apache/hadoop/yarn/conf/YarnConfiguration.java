@@ -2099,7 +2099,7 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_PREFIX + "with-user-dir";
 
   /**
-   * Settings for timeline service v2.0
+   * Settings for timeline service v2.0.
    */
   public static final String TIMELINE_SERVICE_WRITER_CLASS =
       TIMELINE_SERVICE_PREFIX + "writer.class";
@@ -2115,6 +2115,17 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.timelineservice" +
           ".storage.HBaseTimelineReaderImpl";
 
+  /**
+   * default schema prefix for hbase tables.
+   */
+  public static final String DEFAULT_TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX =
+      "prod.";
+
+  /**
+   * config param name to override schema prefix.
+   */
+  public static final String TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME =
+      TIMELINE_SERVICE_PREFIX + "hbase-schema.prefix";
 
   /** The setting that controls how often the timeline collector flushes the
    * timeline writer.
