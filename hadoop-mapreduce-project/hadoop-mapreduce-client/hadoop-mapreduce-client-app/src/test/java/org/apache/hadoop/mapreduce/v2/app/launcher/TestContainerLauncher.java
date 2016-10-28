@@ -31,6 +31,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
@@ -480,6 +482,13 @@ public class TestContainerLauncher {
     public ResourceLocalizationResponse localize(
         ResourceLocalizationRequest request) throws YarnException, IOException {
       return null;
+    }
+  
+    @Override
+    public GetContainerLaunchContextResponse getContainerLaunchContext(
+        GetContainerLaunchContextRequest request) throws YarnException, IOException {
+      throw new UnsupportedOperationException("getting the container launch context is not " +
+          "supported for this implementation of ContainerManagementProtocol");
     }
 
     @Override

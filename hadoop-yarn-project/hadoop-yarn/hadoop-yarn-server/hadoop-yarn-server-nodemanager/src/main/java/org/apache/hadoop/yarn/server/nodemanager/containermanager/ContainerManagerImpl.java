@@ -39,6 +39,8 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
@@ -69,9 +71,11 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.SerializedException;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.client.NMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -144,6 +148,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProv
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -155,6 +160,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -861,8 +867,16 @@ public class ContainerManagerImpl extends CompositeService implements
               .equals(ContainerType.APPLICATION_MASTER)) {
             this.getAMRMProxyService().processApplicationStartRequest(request);
           }
-          performContainerPreStartChecks(nmTokenIdentifier, request,
-              containerTokenIdentifier);
+          if(!request.getIsMove()) {
+            performContainerPreStartChecks(nmTokenIdentifier, request,
+                containerTokenIdentifier);
+          } else {
+            // if the request does not have a container launch context,
+            // just authorize the container start and update the NMToken
+            authorizeStartAndResourceIncreaseRequest(
+                nmTokenIdentifier, containerTokenIdentifier, true);
+            updateNMTokenIdentifier(nmTokenIdentifier);
+          }
           startContainerInternal(containerTokenIdentifier, request);
           succeededContainers.add(containerId);
         } catch (YarnException e) {
@@ -966,10 +980,25 @@ public class ContainerManagerImpl extends CompositeService implements
     ContainerId containerId = containerTokenIdentifier.getContainerID();
     String containerIdStr = containerId.toString();
     String user = containerTokenIdentifier.getApplicationSubmitter();
+    ContainerManagementProtocol proxy = null;
 
     LOG.info("Start request for " + containerIdStr + " by user " + user);
-
-    ContainerLaunchContext launchContext = request.getContainerLaunchContext();
+  
+    ContainerLaunchContext launchContext = null;
+    Configuration conf = null;
+    YarnRPC rpc = null;
+    if(request.getIsMove()) {
+      // In case of a relocation request, the launch context is borrowed from the origin container
+      conf = getConfig();
+      rpc = YarnRPC.create(conf);
+      // get the proxy to the origin NM
+      proxy = getCMClient(containerId, request.getOriginNodeId(), conf, rpc, request.getOriginNMToken());
+      // request the launch context from the origin NM
+      launchContext =  proxy.getContainerLaunchContext(GetContainerLaunchContextRequest.newInstance(
+          request.getOriginContainerId())).getContainerLaunchContext();
+    } else {
+      launchContext = request.getContainerLaunchContext();
+    }
 
     Credentials credentials =
         YarnServerSecurityUtils.parseCredentials(launchContext);
@@ -1044,12 +1073,23 @@ public class ContainerManagerImpl extends CompositeService implements
         // launch. A finished Application will not launch containers.
         metrics.launchedContainer();
         metrics.allocateContainer(containerTokenIdentifier.getResource());
+        LOG.debug("Started container " + containerId + " on node " + context.getNodeId() +
+            " with commands " +  launchContext.getCommands());
+        // In case of a relocation request, shut down the origin container
+        if(request.getIsMove()) {
+          proxy.stopContainers(StopContainersRequest.newInstance(Collections.singletonList(request
+              .getOriginContainerId())));
+        }
       } else {
         throw new YarnException(
             "Container start failed as the NodeManager is " +
             "in the process of shutting down");
       }
     } finally {
+      // stop the proxy to the origin NM
+      if(proxy != null) {
+        rpc.stopProxy(proxy, conf);
+      }
       this.readLock.unlock();
     }
   }
@@ -1128,6 +1168,24 @@ public class ContainerManagerImpl extends CompositeService implements
     }
     return IncreaseContainersResourceResponse.newInstance(
         successfullyIncreasedContainers, failedContainers);
+  }
+  
+  @Override
+  public GetContainerLaunchContextResponse getContainerLaunchContext(
+      GetContainerLaunchContextRequest request) throws YarnException, IOException {
+    ContainerId containerId = request.getContainerId();
+    // Getting the launch context of the origin container locally
+    ContainerLaunchContext launchContext = context.getContainers().get(containerId)
+        .getLaunchContext();
+    LOG.debug("Got launch context of container " + containerId + " on node " + context.getNodeId());
+    // We copy the launch context in order to avoid ConcurrentModificationException
+    ContainerLaunchContext launchContextCopy;
+    try {
+      launchContextCopy = launchContext.copy();
+    } catch (Exception e) {
+      throw new YarnException("Unable to copy container launch context");
+    }
+    return GetContainerLaunchContextResponse.newInstance(launchContextCopy);
   }
 
   @SuppressWarnings("unchecked")
@@ -1242,6 +1300,7 @@ public class ContainerManagerImpl extends CompositeService implements
         authorizeGetAndStopContainerRequest(id, container, true, identifier);
         stopContainerInternal(id);
         succeededRequests.add(id);
+        LOG.debug("Stopped container " + id + " on node " + context.getNodeId());
       } catch (YarnException e) {
         failedRequests.put(id, SerializedException.newInstance(e));
       }
@@ -1682,5 +1741,28 @@ public class ContainerManagerImpl extends CompositeService implements
     } else {
       LOG.info("Container " + containerId + " no longer exists");
     }
+  }
+  
+  /**
+   * Sets up an NM Client to the specified NM; uses the given token for authentication
+   */
+  private ContainerManagementProtocol getCMClient(ContainerId containerId, NodeId
+      originNodeId, Configuration conf, YarnRPC rpc, Token token) {
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 0);
+    UserGroupInformation ugi = null;
+    try {
+      ugi =
+          UserGroupInformation.createRemoteUser(containerId
+              .getApplicationAttemptId().toString());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    InetSocketAddress serverAddress = NetUtils.createSocketAddrForHost(originNodeId.getHost(),
+        originNodeId.getPort());
+    org.apache.hadoop.security.token.Token<NMTokenIdentifier> nmToken =
+        ConverterUtils.convertFromYarn(token, serverAddress);
+    ugi.addToken(nmToken);
+    return NMProxy.createNMProxy(conf, ContainerManagementProtocol.class, ugi, rpc, serverAddress);
   }
 }

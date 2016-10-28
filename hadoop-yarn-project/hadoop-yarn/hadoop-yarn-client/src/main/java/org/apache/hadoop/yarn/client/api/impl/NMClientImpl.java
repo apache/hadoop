@@ -172,14 +172,13 @@ public class NMClientImpl extends NMClient {
           + startedContainer.containerId.toString() + " is already started");
     }
   }
-
-  @Override
-  public Map<String, ByteBuffer> startContainer(
-      Container container, ContainerLaunchContext containerLaunchContext)
-          throws YarnException, IOException {
+  
+  public Map<String, ByteBuffer> startContainer(Container container, ContainerLaunchContext containerLaunchContext)
+      throws YarnException, IOException {
     // Do synchronization on StartedContainer to prevent race condition
     // between startContainer and stopContainer only when startContainer is
     // in progress for a given container.
+    
     StartedContainer startingContainer =
         new StartedContainer(container.getId(), container.getNodeId());
     synchronized (startingContainer) {
@@ -188,12 +187,24 @@ public class NMClientImpl extends NMClient {
       Map<String, ByteBuffer> allServiceResponse;
       ContainerManagementProtocolProxyData proxy = null;
       try {
+        StartContainerRequest scRequest = null;
+        
+        if (container.getIsMove()) {
+          // If the container corresponds to a relocation request, get the token
+          // for the origin node and put it into the StartContainerRequest. We
+          // do not need any container launch context here.
+          NodeId originNodeId = container.getOriginNodeId();
+          String containerManagerBindAddr = originNodeId.toString();
+          Token token = getNMTokenCache().getToken(containerManagerBindAddr);
+          scRequest = StartContainerRequest.newInstance(container.getContainerToken(),
+              container.getOriginContainerId(), originNodeId, token);
+        } else {
+          scRequest = StartContainerRequest.newInstance(containerLaunchContext,
+              container.getContainerToken());
+        }
         proxy =
             cmProxy.getProxy(container.getNodeId().toString(),
                 container.getId());
-        StartContainerRequest scRequest =
-            StartContainerRequest.newInstance(containerLaunchContext,
-              container.getContainerToken());
         List<StartContainerRequest> list = new ArrayList<StartContainerRequest>();
         list.add(scRequest);
         StartContainersRequest allRequests =
@@ -209,6 +220,11 @@ public class NMClientImpl extends NMClient {
         }
         allServiceResponse = response.getAllServicesMetaData();
         startingContainer.state = ContainerState.RUNNING;
+        if (container.getIsMove()) {
+          // After the relocation, the origin container will be shut down,
+          // so remove it from startedContainers
+          startedContainers.remove(container.getOriginContainerId());
+        }
       } catch (YarnException | IOException e) {
         startingContainer.state = ContainerState.COMPLETE;
         // Remove the started container if it failed to start

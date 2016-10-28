@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerMoveRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -162,6 +163,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   protected final Set<ResourceRequest> ask = new TreeSet<ResourceRequest>(
       new org.apache.hadoop.yarn.api.records.ResourceRequest.ResourceRequestComparator());
+  protected final Map<ContainerId, ContainerMoveRequest> moveAsk = new HashMap<>();
+  protected final Map<ContainerId, ContainerMoveRequest> pendingMoveAsk = new HashMap<>();
   protected final Set<ContainerId> release = new TreeSet<ContainerId>();
   // pendingRelease holds history of release requests.
   // request is removed only if RM sends completedContainer.
@@ -255,6 +258,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         "Progress indicator should not be negative");
     AllocateResponse allocateResponse = null;
     List<ResourceRequest> askList = null;
+    Map<ContainerId, ContainerMoveRequest> oldMoveAsk = new HashMap<>();
+    List<ContainerMoveRequest> moveAskList = null;
     List<ContainerId> releaseList = null;
     AllocateRequest allocateRequest = null;
     List<String> blacklistToAdd = new ArrayList<String>();
@@ -264,12 +269,15 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     try {
       synchronized (this) {
         askList = cloneAsks();
+        oldMoveAsk.putAll(moveAsk);
+        moveAskList = cloneMoveAsks();
         // Save the current change for recovery
         oldChange.putAll(change);
         List<UpdateContainerRequest> updateList = createUpdateList();
         releaseList = new ArrayList<ContainerId>(release);
         // optimistically clear this collection assuming no RPC failure
         ask.clear();
+        moveAsk.clear();
         release.clear();
         change.clear();
 
@@ -282,7 +290,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         
         allocateRequest =
             AllocateRequest.newInstance(lastResponseId, progressIndicator,
-                askList, releaseList, blacklistRequest, updateList);
+                askList, releaseList, blacklistRequest, updateList, moveAskList);
         // clear blacklistAdditions and blacklistRemovals before
         // unsynchronized part
         blacklistAdditions.clear();
@@ -306,6 +314,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
               addResourceRequestToAsk(reqIter.next().remoteRequest);
             }
           }
+          moveAsk.putAll(pendingMoveAsk);
           change.putAll(this.pendingChange);
         }
         // re register with RM
@@ -324,6 +333,24 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         }
         if (allocateResponse.getAMRMToken() != null) {
           updateAMRMToken(allocateResponse.getAMRMToken());
+        }
+        if (!pendingMoveAsk.isEmpty()) {
+          List<ContainerStatus> completed =
+              allocateResponse.getCompletedContainersStatuses();
+          List<ContainerId> moved = new ArrayList<>();
+          for(Container container : allocateResponse.getAllocatedContainers()) {
+            if(container.getIsMove()) {
+              moved.add(container.getOriginContainerId());
+            }
+          }
+          for (ContainerStatus status : completed) {
+            ContainerId containerId = status.getContainerId();
+            pendingMoveAsk.remove(containerId);
+          }
+          // remove all container move requests that have been satisfied
+          if (!moved.isEmpty()) {
+            removePendingMoveRequests(moved);
+          }
         }
         if (!pendingRelease.isEmpty()
             && !allocateResponse.getCompletedContainersStatuses().isEmpty()) {
@@ -365,6 +392,22 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           for(ResourceRequest oldAsk : askList) {
             if(!ask.contains(oldAsk)) {
               ask.add(oldAsk);
+            }
+          }
+          // Container move requests could have been added or deleted during call to
+          // allocate. If container move requests were added/removed then there is
+          // nothing to do since the ContainerMoveRequest object in moveAsk would have
+          // the actual new value. If moveAsk does not have this ContainerMoveRequest
+          // then it was unchanged and so we can add the value back safely.
+          // This assumes that there will no concurrent calls to allocate() and
+          // so we dont have to worry about moveAsk being changed in the
+          // synchronized block at the beginning of this method.
+          for (Map.Entry<ContainerId, ContainerMoveRequest> entry :
+              oldMoveAsk.entrySet()) {
+            ContainerId oldContainerId = entry.getKey();
+            ContainerMoveRequest request = entry.getValue();
+            if (!moveAsk.containsKey(oldContainerId)) {
+              moveAsk.put(oldContainerId, request);
             }
           }
           // change requests could have been added during the allocate call.
@@ -423,6 +466,33 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       askList.add(rr);
     }
     return askList;
+  }
+  
+  private List<ContainerMoveRequest> cloneMoveAsks() {
+    List<ContainerMoveRequest> moveAskList = new ArrayList<>(moveAsk.size());
+    for(ContainerMoveRequest mr : moveAsk.values()) {
+      // create a copy of ContainerMoveRequest as we might change it while the
+      // RPC layer is using it to send info across
+      moveAskList.add(ContainerMoveRequest.newInstance(mr.getPriority(),
+          mr.getOriginContainerId(), mr.getTargetHost()));
+    }
+    return moveAskList;
+  }
+  
+  protected void removePendingMoveRequests(
+      List<ContainerId> movedContainers) {
+    for (ContainerId containerId : movedContainers) {
+      if (pendingMoveAsk.get(containerId) == null) {
+        continue;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("RM has confirmed move request for "
+            + "container " + containerId + "."
+            + "Remove pending move request:"
+            + pendingMoveAsk.get(containerId));
+      }
+      pendingMoveAsk.remove(containerId);
+    }
   }
 
   protected void removePendingReleaseRequests(
@@ -559,6 +629,13 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         req.getExecutionTypeRequest(), req.getCapability(), req,
         req.getRelaxLocality(), req.getNodeLabelExpression());
   }
+  
+  @Override
+  public void addContainerMoveRequest(ContainerMoveRequest req) {
+    ContainerId containerId = req.getOriginContainerId();
+    moveAsk.put(containerId, req);
+    pendingMoveAsk.put(containerId, req);
+  }
 
   @Override
   public synchronized void removeContainerRequest(T req) {
@@ -612,6 +689,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         "ContainerId can not be null.");
     pendingRelease.add(containerId);
     release.add(containerId);
+    pendingMoveAsk.remove(containerId);
     pendingChange.remove(containerId);
   }
   

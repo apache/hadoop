@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerMoveRequest;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -69,6 +70,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCap
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AbstractContainerAllocator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.ContainerAllocator;
+
+import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -250,6 +253,53 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     } finally {
       writeLock.unlock();
     }
+  }
+  
+  /**
+   * Converts all container move requests into resource requests and add them to the ask list.
+   * The created resource requests are flagged as move requests and carry information about
+   * the original move requests.
+   *
+   * @param moveAsk the list of container move requests to convert and append to the ask list
+   * @param ask the ask list of the current allocation
+   */
+  public void convertAndAppendMoveAsk(List<ContainerMoveRequest> moveAsk, List<ResourceRequest> ask) {
+    for (ContainerMoveRequest moveRequest : moveAsk) {
+      String host = moveRequest.getTargetHost();
+      ask.add(convertMoveRequest(moveRequest, host, true));
+      ask.add(convertMoveRequest(moveRequest, resolveRack(host), false));
+      ask.add(convertMoveRequest(moveRequest, ResourceRequest.ANY, false));
+    }
+  }
+  
+  /**
+   * Converts a container move request to a resource request with the given locality constraint
+   */
+  private ResourceRequest convertMoveRequest(ContainerMoveRequest moveRequest, String location,
+      boolean relaxLocality) {
+    ContainerId originContainerId = moveRequest.getOriginContainerId();
+    RMContainer rmContainer = getRMContainer(originContainerId);
+    ResourceRequest request = ResourceRequest.newInstance(moveRequest.getPriority(), location,
+        rmContainer.getContainer().getResource(), 1, relaxLocality);
+    request.setIsMove(true);
+    request.setOriginContainerId(originContainerId);
+    return request;
+  }
+  
+  /**
+   * Resolves the rack for a given host.
+   */
+  private String resolveRack(String host) {
+    String rack;
+    if (host != null) {
+      rack = RackResolver.resolve(host).getNetworkLocation();
+    } else {
+      rack = null;
+    }
+    if (rack == null) {
+      LOG.warn("Failed to resolve rack for node " + host + ".");
+    }
+    return rack;
   }
 
   public boolean unreserve(SchedulerRequestKey schedulerKey,

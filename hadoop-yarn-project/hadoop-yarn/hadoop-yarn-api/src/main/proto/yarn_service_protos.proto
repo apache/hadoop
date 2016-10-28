@@ -86,6 +86,7 @@ message AllocateRequestProto {
   optional int32 response_id = 4;
   optional float progress = 5;
   repeated UpdateContainerRequestProto update_requests = 6;
+  repeated ContainerMoveRequestProto move_ask = 20;
 }
 
 message NMTokenProto {
@@ -274,6 +275,10 @@ message SignalContainerResponseProto {
 message StartContainerRequestProto {
   optional ContainerLaunchContextProto container_launch_context = 1;
   optional hadoop.common.TokenProto container_token = 2;
+  optional bool is_move = 20;
+  optional ContainerIdProto origin_container_id = 21;
+  optional NodeIdProto origin_node_id = 22;
+  optional hadoop.common.TokenProto origin_nm_token = 23;
 }
 
 message StartContainerResponseProto {
@@ -354,6 +359,14 @@ message IncreaseContainersResourceRequestProto {
 message IncreaseContainersResourceResponseProto {
   repeated ContainerIdProto succeeded_requests = 1;
   repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+message GetContainerLaunchContextRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+
+message GetContainerLaunchContextResponseProto {
+  optional ContainerLaunchContextProto container_launch_context = 1;
 }
 
 //////////////////////////////////////////////////////

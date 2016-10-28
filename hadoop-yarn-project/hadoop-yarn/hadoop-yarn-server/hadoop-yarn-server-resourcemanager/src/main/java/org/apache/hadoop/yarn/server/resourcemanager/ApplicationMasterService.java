@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security
     .AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
@@ -528,10 +529,22 @@ public class ApplicationMasterService extends AbstractService implements
                  " state, ignore container allocate request.");
         allocation = EMPTY_ALLOCATION;
       } else {
-        allocation =
-            this.rScheduler.allocate(appAttemptId, ask, release,
-                blacklistAdditions, blacklistRemovals,
-                increaseResourceReqs, decreaseResourceReqs);
+        // Currently, container relocation logic is implemented only for FifoScheduler,
+        // hence we check the type of the scheduler in use
+        if (rScheduler instanceof FifoScheduler) {
+          // TODO normalize and validate moveAsk
+          // Sending the container move requests with the allocate heartbeat
+          allocation =
+              ((FifoScheduler) this.rScheduler).allocate(appAttemptId, ask, release,
+                  blacklistAdditions, blacklistRemovals,
+                  increaseResourceReqs, decreaseResourceReqs,
+                  request.getMoveAskList());
+        } else {
+          allocation =
+              this.rScheduler.allocate(appAttemptId, ask, release,
+                  blacklistAdditions, blacklistRemovals,
+                  increaseResourceReqs, decreaseResourceReqs);
+        }
       }
 
       if (!blacklistAdditions.isEmpty() || !blacklistRemovals.isEmpty()) {

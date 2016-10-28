@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerMoveRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -429,6 +430,12 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * @param req Resource request
    */
   public abstract void addContainerRequest(T req);
+  
+  /**
+   * Request a container to be relocated before calling <code>allocate</code>
+   * @param req container move request to be sent to the resource manager
+   */
+  public abstract void addContainerMoveRequest(ContainerMoveRequest req);
 
   /**
    * Remove previous container request. The previous container request may have 

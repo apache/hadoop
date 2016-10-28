@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerMoveRequest;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
@@ -52,6 +53,11 @@ import org.apache.hadoop.yarn.util.Records;
  *     the <code>ResourceManager</code> about the change in
  *     requirements of running containers.
  *   </li>
+ *   <li>
+ *     A list of {@link ContainerMoveRequest} to inform
+ *     the <code>ResourceManager</code> about the application's
+ *     container relocation needs.
+ *   </li>
  * </ul>
  * 
  * @see ApplicationMasterProtocol#allocate(AllocateRequest)
@@ -77,6 +83,19 @@ public abstract class AllocateRequest {
       List<ContainerId> containersToBeReleased,
       ResourceBlacklistRequest resourceBlacklistRequest,
       List<UpdateContainerRequest> updateRequests) {
+    return newInstance(responseID, appProgress, resourceAsk,
+        containersToBeReleased, resourceBlacklistRequest, updateRequests,
+        null);
+  }
+  
+  @Public
+  @Stable
+  public static AllocateRequest newInstance(int responseID, float appProgress,
+      List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased,
+      ResourceBlacklistRequest resourceBlacklistRequest,
+      List<UpdateContainerRequest> updateRequests,
+      List<ContainerMoveRequest> moveAsk) {
     AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
     allocateRequest.setResponseId(responseID);
     allocateRequest.setProgress(appProgress);
@@ -84,6 +103,7 @@ public abstract class AllocateRequest {
     allocateRequest.setReleaseList(containersToBeReleased);
     allocateRequest.setResourceBlacklistRequest(resourceBlacklistRequest);
     allocateRequest.setUpdateRequests(updateRequests);
+    allocateRequest.setMoveAskList(moveAsk);
     return allocateRequest;
   }
   
@@ -211,4 +231,27 @@ public abstract class AllocateRequest {
   @Unstable
   public abstract void setUpdateRequests(
       List<UpdateContainerRequest> updateRequests);
+  
+  /**
+   * Get the list of container move requests being sent by the
+   * <code>ApplicationMaster</code>.
+   *
+   * @return list of <code>ContainerMoveRequest</code>
+   *         being sent by the <code>ApplicationMaster</code>.
+   */
+  @Public
+  @Unstable
+  public abstract List<ContainerMoveRequest> getMoveAskList();
+  
+  /**
+   * Set the list of container move requests to inform the
+   * <code>ResourceManager</code> about the containers that need to be
+   * relocated.
+   *
+   * @param containerMoveRequests list of <code>ContainerMoveRequest</code>
+   *                              for containers that need to be relocated.
+   */
+  @Public
+  @Unstable
+  public abstract void setMoveAskList(List<ContainerMoveRequest> containerMoveRequests);
 }

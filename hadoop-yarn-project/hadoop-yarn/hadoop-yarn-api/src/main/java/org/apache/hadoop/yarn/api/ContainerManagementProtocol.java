@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerLaunchContextResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -51,7 +53,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 /**
  * <p>The protocol between an <code>ApplicationMaster</code> and a 
  * <code>NodeManager</code> to start/stop and increase resource of containers
- * and to get status of running containers.</p>
+ * and to get status and launch context of running containers.</p>
  *
  * <p>If security is enabled the <code>NodeManager</code> verifies that the
  * <code>ApplicationMaster</code> has truly been allocated the container
@@ -220,6 +222,22 @@ public interface ContainerManagementProtocol {
   @Unstable
   ResourceLocalizationResponse localize(ResourceLocalizationRequest request)
     throws YarnException, IOException;
+  
+  /**
+   * Gets container launch context for a container specified in
+   * {@link GetContainerLaunchContextRequest}.
+   * This protocol is only used by the container relocation logic, between node managers, to
+   * transfer the launch context of the container to be relocated to the target node.
+   *
+   * @param request specifies the id of the container for which the launch context is requested
+   * @return Response that contains the requested container launch context
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Stable
+  GetContainerLaunchContextResponse getContainerLaunchContext(
+      GetContainerLaunchContextRequest request) throws YarnException, IOException;
 
   /**
    * ReInitialize the Container with a new Launch Context.

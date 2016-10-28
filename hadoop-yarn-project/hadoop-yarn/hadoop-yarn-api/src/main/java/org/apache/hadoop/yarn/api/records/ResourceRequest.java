@@ -23,6 +23,7 @@ import java.io.Serializable;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -49,6 +50,14 @@ import org.apache.hadoop.yarn.util.Records;
  *     which tells the {@code ResourceManager} if the application wants
  *     locality to be loose (i.e. allows fall-through to rack or <em>any</em>)
  *     or strict (i.e. specify hard constraint on resource allocation).
+ *   </li>
+ *   <li>
+ *     A boolean <em>isMove</em> flag, defaulting to {@code false}.
+ *     This flag is used only around the resource manager to indicate whether
+ *     this resource request comes from a {@code ContainerMoveRequest}.
+ *     If <em>isMove</em> is true, then <em>originContainerId</em> tells which
+ *     container should be relocated according to that container move
+ *     request.
  *   </li>
  * </ul>
  * 
@@ -372,6 +381,44 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   public void setAllocationRequestId(long allocationRequestID) {
     throw new UnsupportedOperationException();
   }
+  
+  /**
+   * Gets whether this resource request is associated with a container relocation.
+   * @return whether this resource request is associated with a container relocation
+   */
+  @Public
+  @Unstable
+  public abstract boolean getIsMove();
+  
+  /**
+   * Sets whether this resource request is associated with a container relocation.
+   * @param isMove whether this resource request is associated with a container relocation
+   */
+  @Public
+  @Unstable
+  public abstract void setIsMove(boolean isMove);
+  
+  /**
+   * Gets the origin container id for this resource request.
+   * The origin container id is set if and only if this resource request is associated
+   * with a container relocation. It identifies the container that should be relocated.
+   *
+   * @return the origin container id for this resource request
+   */
+  @Public
+  @Unstable
+  public abstract ContainerId getOriginContainerId();
+  
+  /**
+   * Sets the origin container id for this resource request.
+   * The origin container id should be set if and only if this resource request is associated
+   * with a container relocation. It identifies the container that should be relocated.
+   *
+   * @param originContainerId the origin container id for this resource request
+   */
+  @Public
+  @Unstable
+  public abstract void setOriginContainerId(ContainerId originContainerId);
   
   @Override
   public int hashCode() {
