@@ -39,6 +39,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -170,7 +171,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
   private static class CapTestServletModule extends TestServletModule {
     @Override
     public void configureScheduler() {
-      conf.set("yarn.resourcemanager.scheduler.class",
+      conf.set(YarnConfiguration.RM_SCHEDULER,
           CapacityScheduler.class.getName());
     }
   }
@@ -196,8 +197,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       } catch (IOException e) {
       }
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
-      conf.set("yarn.resourcemanager.scheduler.class",
-          FairScheduler.class.getName());
+      conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     }
   }
 
@@ -969,7 +969,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     System.out.println("RESPONSE:" + response);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
 
     assertEquals("incorrect number of elements", 1, json.length());
@@ -1056,7 +1057,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     System.out.println("RESPONSE:" + response);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
   }
@@ -1105,7 +1107,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     System.out.println("RESPONSE:" + response);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
   }
 
@@ -1135,7 +1138,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return null;
     }
 
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     assertResponseStatusCode(status, response.getStatusInfo());
 
     return response.getEntity(JSONObject.class);

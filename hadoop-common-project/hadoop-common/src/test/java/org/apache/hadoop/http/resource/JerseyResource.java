@@ -32,7 +32,8 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.mortbay.util.ajax.JSON;
+import org.apache.hadoop.http.JettyUtils;
+import org.eclipse.jetty.util.ajax.JSON;
 
 /**
  * A simple Jersey resource class TestHttpServer.
@@ -48,7 +49,7 @@ public class JerseyResource {
 
   @GET
   @Path("{" + PATH + ":.*}")
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
   public Response get(
       @PathParam(PATH) @DefaultValue("UNKNOWN_" + PATH) final String path,
       @QueryParam(OP) @DefaultValue("UNKNOWN_" + OP) final String op

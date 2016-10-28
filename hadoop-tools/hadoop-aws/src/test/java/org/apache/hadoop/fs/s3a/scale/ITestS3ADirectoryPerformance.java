@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -40,8 +41,9 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testListOperations() throws Throwable {
     describe("Test recursive list operations");
-    final Path scaleTestDir = getTestPath();
+    final Path scaleTestDir = path("testListOperations");
     final Path listDir = new Path(scaleTestDir, "lists");
+    S3AFileSystem fs = getFileSystem();
 
     // scale factor.
     int scale = getConf().getInt(KEY_DIRECTORY_COUNT, DEFAULT_DIRECTORY_COUNT);
@@ -137,15 +139,16 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testTimeToStatEmptyDirectory() throws Throwable {
     describe("Time to stat an empty directory");
-    Path path = new Path(getTestPath(), "empty");
-    fs.mkdirs(path);
+    Path path = path("empty");
+    getFileSystem().mkdirs(path);
     timeToStatPath(path);
   }
 
   @Test
   public void testTimeToStatNonEmptyDirectory() throws Throwable {
     describe("Time to stat a non-empty directory");
-    Path path = new Path(getTestPath(), "dir");
+    Path path = path("dir");
+    S3AFileSystem fs = getFileSystem();
     fs.mkdirs(path);
     touch(fs, new Path(path, "file"));
     timeToStatPath(path);
@@ -154,8 +157,8 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   @Test
   public void testTimeToStatFile() throws Throwable {
     describe("Time to stat a simple file");
-    Path path = new Path(getTestPath(), "file");
-    touch(fs, path);
+    Path path = path("file");
+    touch(getFileSystem(), path);
     timeToStatPath(path);
   }
 
@@ -167,6 +170,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
 
   private void timeToStatPath(Path path) throws IOException {
     describe("Timing getFileStatus(\"%s\")", path);
+    S3AFileSystem fs = getFileSystem();
     MetricDiff metadataRequests =
         new MetricDiff(fs, Statistic.OBJECT_METADATA_REQUESTS);
     MetricDiff listRequests =

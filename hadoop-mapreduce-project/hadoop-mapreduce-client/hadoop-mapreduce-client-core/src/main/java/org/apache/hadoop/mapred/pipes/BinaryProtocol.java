@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -200,8 +201,8 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
       file = new FileOutputStream(filename);
     }
     public void write(byte b[], int off, int len) throws IOException {
-      file.write(b,off,len);
-      out.write(b,off,len);
+      file.write(b, off, len);
+      out.write(b, off, len);
     }
 
     public void write(int b) throws IOException {
@@ -215,9 +216,12 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     }
 
     public void close() throws IOException {
-      flush();
-      file.close();
-      out.close();
+      try {
+        flush();
+      } finally {
+        IOUtils.closeStream(file);
+        IOUtils.closeStream(out);
+      }
     }
   }
 

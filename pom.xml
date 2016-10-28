@@ -372,8 +372,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
-	    <exclude>**/build/**</exclude>
+            <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
+            <exclude>**/*.js</exclude>
          </excludes>
        </configuration>
       </plugin>

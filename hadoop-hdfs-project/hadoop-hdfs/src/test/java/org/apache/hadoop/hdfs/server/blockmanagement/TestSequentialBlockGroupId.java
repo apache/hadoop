@@ -124,6 +124,11 @@ public class TestSequentialBlockGroupId {
       assertThat("BlockGrpId mismatches!", nextBlockGrpId,
           is(nextBlockExpectedId));
     }
+
+    // verify that the blockGroupId resets on #clear call.
+    cluster.getNamesystem().getBlockManager().clear();
+    assertThat("BlockGrpId mismatches!", blockGrpIdGenerator.getCurrentValue(),
+        is(Long.MIN_VALUE));
   }
 
   /**

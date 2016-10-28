@@ -95,7 +95,7 @@ public class URLConnectionFactory {
     try {
       conn = newSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, conf);
     } catch (Exception e) {
-      LOG.debug(
+      LOG.warn(
           "Cannot load customized ssl related configuration. Fallback to" +
               " system-generic settings.",
           e);

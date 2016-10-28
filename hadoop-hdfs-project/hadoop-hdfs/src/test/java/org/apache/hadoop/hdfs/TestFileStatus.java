@@ -117,8 +117,8 @@ public class TestFileStatus {
       dfsClient.getFileInfo("non-absolute");
       fail("getFileInfo for a non-absolute path did not throw IOException");
     } catch (RemoteException re) {
-      assertTrue("Wrong exception for invalid file name", 
-          re.toString().contains("Invalid file name"));
+      assertTrue("Wrong exception for invalid file name: "+re,
+          re.toString().contains("Absolute path required"));
     }
   }
 

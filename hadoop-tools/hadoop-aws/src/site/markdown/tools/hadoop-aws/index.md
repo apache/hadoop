@@ -39,7 +39,7 @@ higher performance.
 
 The specifics of using these filesystems are documented below.
 
-### Warning #1: Object Stores are not filesystems.
+### Warning #1: Object Stores are not filesystems
 
 Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
@@ -56,14 +56,38 @@ recursive file-by-file operations. They take time at least proportional to
 the number of files, during which time partial updates may be visible. If
 the operations are interrupted, the filesystem is left in an intermediate state.
 
-### Warning #2: Because Object stores don't track modification times of directories,
-features of Hadoop relying on this can have unexpected behaviour. E.g. the
+### Warning #2: Object stores don't track modification times of directories
+
+Features of Hadoop relying on this can have unexpected behaviour. E.g. the
 AggregatedLogDeletionService of YARN will not remove the appropriate logfiles.
 
 For further discussion on these topics, please consult
 [The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
-### Warning #3: your AWS credentials are valuable
+### Warning #3: Object stores have differerent authorization models
+
+The object authorization model of S3 is much different from the file
+authorization model of HDFS and traditional file systems.  It is not feasible to
+persist file ownership and permissions in S3, so S3A reports stub information
+from APIs that would query this metadata:
+
+* File owner is reported as the current user.
+* File group also is reported as the current user.  Prior to Apache Hadoop
+2.8.0, file group was reported as empty (no group associated), which is a
+potential incompatibility problem for scripts that perform positional parsing of
+shell output and other clients that expect to find a well-defined group.
+* Directory permissions are reported as 777.
+* File permissions are reported as 666.
+
+S3A does not really enforce any authorization checks on these stub permissions.
+Users authenticate to an S3 bucket using AWS credentials.  It's possible that
+object ACLs have been defined to enforce authorization at the S3 side, but this
+happens entirely within the S3 service, not within the S3A implementation.
+
+For further discussion on these topics, please consult
+[The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
+
+### Warning #4: Your AWS credentials are valuable
 
 Your AWS credentials not only pay for services, they offer read and write
 access to the data. Anyone with the credentials can not only read your datasets
@@ -78,7 +102,7 @@ Do not inadvertently share these credentials through means such as
 
 If you do any of these: change your credentials immediately!
 
-### Warning #4: the S3 client provided by Amazon EMR are not from the Apache
+### Warning #5: The S3 client provided by Amazon EMR are not from the Apache
 Software foundation, and are only supported by Amazon.
 
 Specifically: on Amazon EMR, s3a is not supported, and amazon recommend
@@ -272,15 +296,37 @@ of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
         com.amazonaws.auth.AWSCredentialsProvider.
 
         These are loaded and queried in sequence for a valid set of credentials.
-        Each listed class must provide either an accessible constructor accepting
-        java.net.URI and org.apache.hadoop.conf.Configuration, or an accessible
-        default constructor.
+        Each listed class must implement one of the following means of
+        construction, which are attempted in order:
+        1. a public constructor accepting java.net.URI and
+            org.apache.hadoop.conf.Configuration,
+        2. a public static method named getInstance that accepts no
+           arguments and returns an instance of
+           com.amazonaws.auth.AWSCredentialsProvider, or
+        3. a public default constructor.
 
         Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
         anonymous access to a publicly accessible S3 bucket without any credentials.
         Please note that allowing anonymous access to an S3 bucket compromises
         security and therefore is unsuitable for most use cases. It can be useful
         for accessing public data sets without requiring AWS credentials.
+
+        If unspecified, then the default list of credential provider classes,
+        queried in sequence, is:
+        1. org.apache.hadoop.fs.s3a.BasicAWSCredentialsProvider: supports
+            static configuration of AWS access key ID and secret access key.
+            See also fs.s3a.access.key and fs.s3a.secret.key.
+        2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
+            configuration of AWS access key ID and secret access key in
+            environment variables named AWS_ACCESS_KEY_ID and
+            AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
+        3. org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider:
+            a shared instance of
+            com.amazonaws.auth.InstanceProfileCredentialsProvider from the AWS
+            SDK, which supports use of instance profile credentials if running
+            in an EC2 VM.  Using this shared instance potentially reduces load
+            on the EC2 instance metadata service for multi-threaded
+            applications.
       </description>
     </property>
 
@@ -353,12 +399,13 @@ AWS Credential Providers are classes which can be used by the Amazon AWS SDK to
 obtain an AWS login from a different source in the system, including environment
 variables, JVM properties and configuration files.
 
-There are three AWS Credential Providers inside the `hadoop-aws` JAR:
+There are four AWS Credential Providers inside the `hadoop-aws` JAR:
 
 | classname | description |
 |-----------|-------------|
 | `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`| Session Credentials |
 | `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`| Simple name/secret credentials |
+| `org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider`| Shared instance of EC2 Metadata Credentials, which can reduce load on the EC2 instance metadata service.  (See below.) |
 | `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`| Anonymous Login |
 
 There are also many in the Amazon SDKs, in particular two which are automatically
@@ -369,6 +416,25 @@ set up in the authentication chain:
 | `com.amazonaws.auth.InstanceProfileCredentialsProvider`| EC2 Metadata Credentials |
 | `com.amazonaws.auth.EnvironmentVariableCredentialsProvider`| AWS Environment Variables |
 
+
+*EC2 Metadata Credentials with `SharedInstanceProfileCredentialsProvider`*
+
+Applications running in EC2 may associate an IAM role with the VM and query the
+[EC2 Instance Metadata Service](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
+for credentials to access S3.  Within the AWS SDK, this functionality is
+provided by `InstanceProfileCredentialsProvider`.  Heavily multi-threaded
+applications may trigger a high volume of calls to the instance metadata service
+and trigger throttling: either an HTTP 429 response or a forcible close of the
+connection.
+
+To mitigate against this problem, `hadoop-aws` ships with a variant of
+`InstanceProfileCredentialsProvider` called
+`SharedInstanceProfileCredentialsProvider`.  Using this ensures that all
+instances of S3A reuse the same instance profile credentials instead of issuing
+a large volume of redundant metadata service calls.  If
+`fs.s3a.aws.credentials.provider` refers to
+`com.amazonaws.auth.InstanceProfileCredentialsProvider`, S3A automatically uses
+`org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider` instead.
 
 *Session Credentials with `TemporaryAWSCredentialsProvider`*
 
@@ -468,7 +534,7 @@ This means that the default S3A authentication chain can be defined as
       <value>
       org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
       com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
-      com.amazonaws.auth.InstanceProfileCredentialsProvider
+      org.apache.hadoop.fs.s3a.SharedInstanceProfileCredentialsProvider
       </value>
     </property>
 

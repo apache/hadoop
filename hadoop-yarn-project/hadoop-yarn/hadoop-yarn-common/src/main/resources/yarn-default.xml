@@ -1798,30 +1798,7 @@
     <value></value>
   </property>
 
-  <!-- Docker Configuration -->
-
-  <property>
-    <name>yarn.nodemanager.docker-container-executor.exec-name</name>
-    <value>/usr/bin/docker</value>
-    <description>
-      Name or path to the Docker client.
-    </description>
-  </property>
-
-  <property>
-    <description>
-    The Docker image name to use for DockerContainerExecutor
-    </description>
-    <name>yarn.nodemanager.docker-container-executor.image-name</name>
-    <value></value>
-  </property>
-
   <!-- Map Reduce Configuration -->
-
-  <property>
-    <name>mapreduce.job.hdfs-servers</name>
-    <value>${fs.defaultFS}</value>
-  </property>
 
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>

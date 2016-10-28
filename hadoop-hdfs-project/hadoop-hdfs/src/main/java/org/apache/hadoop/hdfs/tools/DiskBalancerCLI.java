@@ -450,37 +450,44 @@ public class DiskBalancerCLI extends Configured implements Tool {
   private int dispatch(CommandLine cmd, Options opts)
       throws Exception {
     Command dbCmd = null;
-    if (cmd.hasOption(DiskBalancerCLI.PLAN)) {
-      dbCmd = new PlanCommand(getConf(), printStream);
-    }
+    try {
+      if (cmd.hasOption(DiskBalancerCLI.PLAN)) {
+        dbCmd = new PlanCommand(getConf(), printStream);
+      }
 
-    if (cmd.hasOption(DiskBalancerCLI.EXECUTE)) {
-      dbCmd = new ExecuteCommand(getConf());
-    }
+      if (cmd.hasOption(DiskBalancerCLI.EXECUTE)) {
+        dbCmd = new ExecuteCommand(getConf());
+      }
 
-    if (cmd.hasOption(DiskBalancerCLI.QUERY)) {
-      dbCmd = new QueryCommand(getConf());
-    }
+      if (cmd.hasOption(DiskBalancerCLI.QUERY)) {
+        dbCmd = new QueryCommand(getConf());
+      }
 
-    if (cmd.hasOption(DiskBalancerCLI.CANCEL)) {
-      dbCmd = new CancelCommand(getConf());
-    }
+      if (cmd.hasOption(DiskBalancerCLI.CANCEL)) {
+        dbCmd = new CancelCommand(getConf());
+      }
 
-    if (cmd.hasOption(DiskBalancerCLI.REPORT)) {
-      dbCmd = new ReportCommand(getConf(), this.printStream);
-    }
+      if (cmd.hasOption(DiskBalancerCLI.REPORT)) {
+        dbCmd = new ReportCommand(getConf(), this.printStream);
+      }
 
-    if (cmd.hasOption(DiskBalancerCLI.HELP)) {
-      dbCmd = new HelpCommand(getConf());
-    }
+      if (cmd.hasOption(DiskBalancerCLI.HELP)) {
+        dbCmd = new HelpCommand(getConf());
+      }
 
-    // Invoke main help here.
-    if (dbCmd == null) {
-      new HelpCommand(getConf()).execute(null);
-      return 1;
-    }
+      // Invoke main help here.
+      if (dbCmd == null) {
+        dbCmd = new HelpCommand(getConf());
+        dbCmd.execute(null);
+        return 1;
+      }
 
-    dbCmd.execute(cmd);
-    return 0;
+      dbCmd.execute(cmd);
+      return 0;
+    } finally {
+      if (dbCmd != null) {
+        dbCmd.close();
+      }
+    }
   }
 }

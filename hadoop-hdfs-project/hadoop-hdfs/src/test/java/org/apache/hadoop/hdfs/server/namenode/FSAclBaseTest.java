@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -862,8 +863,8 @@ public abstract class FSAclBaseTest {
     fs.setPermission(path,
       new FsPermissionExtension(FsPermission.
           createImmutable((short)0755), true, true));
-    INode inode = cluster.getNamesystem().getFSDirectory().getINode(
-        path.toUri().getPath(), false);
+    INode inode = cluster.getNamesystem().getFSDirectory()
+        .getINode(path.toUri().getPath(), DirOp.READ_LINK);
     assertNotNull(inode);
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
@@ -1764,7 +1765,7 @@ public abstract class FSAclBaseTest {
   public static AclFeature getAclFeature(Path pathToCheck,
       MiniDFSCluster cluster) throws IOException {
     INode inode = cluster.getNamesystem().getFSDirectory()
-        .getINode(pathToCheck.toUri().getPath(), false);
+        .getINode(pathToCheck.toUri().getPath(), DirOp.READ_LINK);
     assertNotNull(inode);
     AclFeature aclFeature = inode.getAclFeature();
     return aclFeature;

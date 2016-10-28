@@ -120,7 +120,7 @@ public class TestTransferFsImage {
   /**
    * Test to verify the read timeout
    */
-  @Test(timeout = 5000)
+  @Test(timeout = 10000)
   public void testGetImageTimeout() throws Exception {
     HttpServer2 testServer = HttpServerFunctionalTest.createServer("hdfs");
     try {

@@ -1034,9 +1034,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
       firstOne = false;
       if (cur == null) {
-        LOG.warn("No excess replica can be found. excessTypes: {}." +
-            " moreThanOne: {}. exactlyOne: {}.", excessTypes, moreThanOne,
-            exactlyOne);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No excess replica can be found. excessTypes: {}." +
+              " moreThanOne: {}. exactlyOne: {}.", excessTypes,
+              moreThanOne, exactlyOne);
+        }
         break;
       }
 

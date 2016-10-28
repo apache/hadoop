@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -108,7 +109,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    */
   public void setSnapshottable(final String path, boolean checkNestedSnapshottable)
       throws IOException {
-    final INodesInPath iip = fsdir.getINodesInPath4Write(path);
+    final INodesInPath iip = fsdir.getINodesInPath(path, DirOp.WRITE);
     final INodeDirectory d = INodeDirectory.valueOf(iip.getLastINode(), path);
     if (checkNestedSnapshottable) {
       checkNestedSnapshottable(d, path);
@@ -149,7 +150,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @throws SnapshotException if there are snapshots in the directory.
    */
   public void resetSnapshottable(final String path) throws IOException {
-    final INodesInPath iip = fsdir.getINodesInPath4Write(path);
+    final INodesInPath iip = fsdir.getINodesInPath(path, DirOp.WRITE);
     final INodeDirectory d = INodeDirectory.valueOf(iip.getLastINode(), path);
     DirectorySnapshottableFeature sf = d.getDirectorySnapshottableFeature();
     if (sf == null) {

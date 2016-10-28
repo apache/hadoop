@@ -46,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -90,7 +91,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/about")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public TimelineAbout about(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res) {
@@ -99,7 +101,8 @@ public class AHSWebServices extends WebServices {
   }
 
   @GET
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   public AppsInfo get(@Context HttpServletRequest req,
       @Context HttpServletResponse res) {
     return getApps(req, res, null, Collections.<String> emptySet(), null, null,
@@ -108,7 +111,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/apps")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppsInfo getApps(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @QueryParam("state") String stateQuery,
@@ -131,7 +135,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/apps/{appid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppInfo getApp(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId) {
@@ -141,7 +146,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/apps/{appid}/appattempts")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId) {
@@ -151,7 +157,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/apps/{appid}/appattempts/{appattemptid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppAttemptInfo getAppAttempt(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId,
@@ -162,7 +169,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/apps/{appid}/appattempts/{appattemptid}/containers")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public ContainersInfo getContainers(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId,
@@ -173,7 +181,8 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/apps/{appid}/appattempts/{appattemptid}/containers/{containerid}")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public ContainerInfo getContainer(@Context HttpServletRequest req,
       @Context HttpServletResponse res, @PathParam("appid") String appId,
@@ -206,7 +215,7 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Path("/containerlogs/{containerid}/{filename}")
-  @Produces({ MediaType.TEXT_PLAIN })
+  @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
   @Public
   @Unstable
   public Response getLogs(@Context HttpServletRequest req,

@@ -1832,7 +1832,7 @@ public class UserGroupInformation {
       }
       LOG.debug("+LoginUGI: " + ugi.getLoginUser());
       for (Token<?> token : ugi.getTokens()) {
-        LOG.debug("+UGI token: " + token);
+        LOG.debug("+UGI token:" + token);
       }
     }
   }

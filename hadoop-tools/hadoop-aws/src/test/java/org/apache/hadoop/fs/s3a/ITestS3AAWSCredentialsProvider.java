@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 import com.amazonaws.auth.AWSCredentials;
@@ -41,12 +40,10 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.junit.Assert.*;
 
 /**
- * Tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
- *
+ * Integration tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
  */
 public class ITestS3AAWSCredentialsProvider {
   private static final Logger LOG =
@@ -54,21 +51,6 @@ public class ITestS3AAWSCredentialsProvider {
 
   @Rule
   public Timeout testTimeout = new Timeout(1 * 60 * 1000);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  /**
-   * Declare what exception to raise, and the text which must be found
-   * in it.
-   * @param exceptionClass class of exception
-   * @param text text in exception
-   */
-  private void expectException(Class<? extends Throwable> exceptionClass,
-      String text) {
-    exception.expect(exceptionClass);
-    exception.expectMessage(text);
-  }
 
   @Test
   public void testBadConfiguration() throws IOException {
@@ -154,97 +136,4 @@ public class ITestS3AAWSCredentialsProvider {
     assertNotNull(stat);
     assertEquals(testFile, stat.getPath());
   }
-
-  /**
-   * A credential provider whose constructor signature doesn't match.
-   */
-  static class ConstructorSignatureErrorProvider
-      implements AWSCredentialsProvider {
-
-    @SuppressWarnings("unused")
-    public ConstructorSignatureErrorProvider(String str) {
-    }
-
-    @Override
-    public AWSCredentials getCredentials() {
-      return null;
-    }
-
-    @Override
-    public void refresh() {
-    }
-  }
-
-  /**
-   * A credential provider whose constructor raises an NPE.
-   */
-  static class ConstructorFailureProvider
-      implements AWSCredentialsProvider {
-
-    @SuppressWarnings("unused")
-    public ConstructorFailureProvider() {
-      throw new NullPointerException("oops");
-    }
-
-    @Override
-    public AWSCredentials getCredentials() {
-      return null;
-    }
-
-    @Override
-    public void refresh() {
-    }
-  }
-
-  @Test
-  public void testProviderWrongClass() throws Exception {
-    expectProviderInstantiationFailure(this.getClass().getName(),
-        NOT_AWS_PROVIDER);
-  }
-
-  @Test
-  public void testProviderNotAClass() throws Exception {
-    expectProviderInstantiationFailure("NoSuchClass",
-        "ClassNotFoundException");
-  }
-
-  private void expectProviderInstantiationFailure(String option,
-      String expectedErrorText) throws IOException {
-    Configuration conf = new Configuration();
-    conf.set(AWS_CREDENTIALS_PROVIDER, option);
-    Path testFile = new Path(
-        conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-    expectException(IOException.class, expectedErrorText);
-    URI uri = testFile.toUri();
-    S3AUtils.createAWSCredentialProviderSet(uri, conf, uri);
-  }
-
-  @Test
-  public void testProviderConstructorError() throws Exception {
-    expectProviderInstantiationFailure(
-        ConstructorSignatureErrorProvider.class.getName(),
-        CONSTRUCTOR_EXCEPTION);
-  }
-
-  @Test
-  public void testProviderFailureError() throws Exception {
-    expectProviderInstantiationFailure(
-        ConstructorFailureProvider.class.getName(),
-        INSTANTIATION_EXCEPTION);
-  }
-
-  @Test
-  public void testInstantiationChain() throws Throwable {
-    Configuration conf = new Configuration();
-    conf.set(AWS_CREDENTIALS_PROVIDER,
-        TemporaryAWSCredentialsProvider.NAME
-            + ", \t" + SimpleAWSCredentialsProvider.NAME
-            + " ,\n " + AnonymousAWSCredentialsProvider.NAME);
-    Path testFile = new Path(
-        conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
-
-    URI uri = testFile.toUri();
-    S3AUtils.createAWSCredentialProviderSet(uri, conf, uri);
-  }
-
 }

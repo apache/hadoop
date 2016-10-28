@@ -200,6 +200,11 @@ public class TestSnapshotPathINodes {
     // SnapshotRootIndex should be 3: {root, Testsnapshot, sub1, s1, file1}
     final Snapshot snapshot = getSnapshot(nodesInPath, "s1", 3);
     assertSnapshot(nodesInPath, true, snapshot, 3);
+    assertEquals(".snapshot/s1",
+        DFSUtil.bytes2String(nodesInPath.getPathComponent(3)));
+    assertTrue(nodesInPath.getINode(3) instanceof Snapshot.Root);
+    assertEquals("s1", nodesInPath.getINode(3).getLocalName());
+
     // Check the INode for file1 (snapshot file)
     INode snapshotFileNode = nodesInPath.getLastINode();
     assertINodeFile(snapshotFileNode, file1);
@@ -219,6 +224,9 @@ public class TestSnapshotPathINodes {
     // The number of INodes returned should still be components.length
     // since we put a null in the inode array for ".snapshot"
     assertEquals(nodesInPath.length(), components.length);
+    assertEquals(".snapshot",
+        DFSUtil.bytes2String(nodesInPath.getLastLocalName()));
+    assertNull(nodesInPath.getLastINode());
     // ensure parent inodes can strip the .snapshot
     assertEquals(sub1.toString(),
         nodesInPath.getParentINodesInPath().getPath());

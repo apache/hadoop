@@ -127,7 +127,7 @@ import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
-import org.mortbay.jetty.HttpHeaders;
+import org.eclipse.jetty.http.HttpHeader;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -1137,13 +1137,15 @@ public class ShuffleHandler extends AuxiliaryService {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Setting connection close header...");
         }
-        response.headers().set(HttpHeaders.CONNECTION, CONNECTION_CLOSE);
+        response.headers().set(HttpHeader.CONNECTION.asString(),
+            CONNECTION_CLOSE);
       } else {
-        response.headers().set(HttpHeaders.CONTENT_LENGTH,
+        response.headers().set(HttpHeader.CONTENT_LENGTH.asString(),
           String.valueOf(contentLength));
-        response.headers().set(HttpHeaders.CONNECTION, HttpHeaders.KEEP_ALIVE);
-        response.headers().set(HttpHeaders.KEEP_ALIVE, "timeout="
-            + connectionKeepAliveTimeOut);
+        response.headers().set(HttpHeader.CONNECTION.asString(),
+            HttpHeader.KEEP_ALIVE.asString());
+        response.headers().set(HttpHeader.KEEP_ALIVE.asString(),
+            "timeout=" + connectionKeepAliveTimeOut);
         LOG.info("Content Length in shuffle : " + contentLength);
       }
     }

@@ -68,14 +68,14 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.mortbay.jetty</groupId>
+      <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util</artifactId>
     </dependency>
     <dependency>
@@ -228,6 +228,10 @@
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/images/Sorting icons.psd</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/js/jquery.dataTables.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.9.1.custom.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-1.8.2.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
@@ -279,7 +283,18 @@
               <output>${project.build.directory}/generated-sources/java</output>
             </configuration>
           </execution>
-
+          <execution>
+            <id>resource-gz</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>resource-gz</goal>
+            </goals>
+            <configuration>
+              <inputDirectory>${basedir}/src/main/resources/webapps/static</inputDirectory>
+              <outputDirectory>${basedir}/target/classes/webapps/static</outputDirectory>
+              <extensions>js,css</extensions>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

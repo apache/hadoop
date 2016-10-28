@@ -96,7 +96,10 @@ public class FifoPolicy extends SchedulingPolicy {
         earliest = schedulable;
       }
     }
-    earliest.setFairShare(Resources.clone(totalResources));
+
+    if (earliest != null) {
+      earliest.setFairShare(Resources.clone(totalResources));
+    }
   }
 
   @Override

@@ -66,7 +66,8 @@ public class TestCapacitySchedulerQueueACLs extends QueueACLsTestBase {
     csConf.setAcls(CapacitySchedulerConfiguration.ROOT, aclsOnRootQueue);
 
     csConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
-    csConf.set("yarn.resourcemanager.scheduler.class", CapacityScheduler.class.getName());
+    csConf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getName());
 
     return csConf;
   }

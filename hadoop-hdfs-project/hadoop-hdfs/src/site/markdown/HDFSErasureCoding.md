@@ -106,9 +106,10 @@ Deployment
 
   Erasure coding background recovery work on the DataNodes can also be tuned via the following configuration parameters:
 
-  1. `dfs.datanode.stripedread.timeout.millis` - Timeout for striped reads. Default value is 5000 ms.
-  1. `dfs.datanode.stripedread.threads` - Number of concurrent reader threads. Default value is 20 threads.
-  1. `dfs.datanode.stripedread.buffer.size` - Buffer size for reader service. Default value is 256KB.
+  1. `dfs.datanode.ec.reconstruction.stripedread.timeout.millis` - Timeout for striped reads. Default value is 5000 ms.
+  1. `dfs.datanode.ec.reconstruction.stripedread.threads` - Number of concurrent reader threads. Default value is 20 threads.
+  1. `dfs.datanode.ec.reconstruction.stripedread.buffer.size` - Buffer size for reader service. Default value is 64KB.
+  1. `dfs.datanode.ec.reconstruction.stripedblock.threads.size` - Number of threads used by the Datanode for background reconstruction work. Default value is 8 threads.
 
 ### Enable Intel ISA-L
 

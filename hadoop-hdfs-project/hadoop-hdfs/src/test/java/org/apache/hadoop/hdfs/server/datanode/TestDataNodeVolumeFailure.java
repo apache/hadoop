@@ -253,7 +253,7 @@ public class TestDataNodeVolumeFailure {
     FsDatasetSpi<? extends FsVolumeSpi> data = dn0.getFSDataset();
     try (FsDatasetSpi.FsVolumeReferences vols = data.getFsVolumeReferences()) {
       for (FsVolumeSpi volume : vols) {
-        assertFalse(volume.getStorageLocation().getFile()
+        assertFalse(new File(volume.getStorageLocation().getUri())
             .getAbsolutePath().startsWith(dn0Vol1.getAbsolutePath()
         ));
       }
@@ -262,7 +262,7 @@ public class TestDataNodeVolumeFailure {
     // 3. all blocks on dn0Vol1 have been removed.
     for (ReplicaInfo replica : FsDatasetTestUtil.getReplicas(data, bpid)) {
       assertNotNull(replica.getVolume());
-      assertFalse(replica.getVolume().getStorageLocation().getFile()
+      assertFalse(new File(replica.getVolume().getStorageLocation().getUri())
           .getAbsolutePath().startsWith(dn0Vol1.getAbsolutePath()
       ));
     }

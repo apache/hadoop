@@ -33,9 +33,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.util.Time;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.junit.Test;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
+import org.eclipse.jetty.server.Server;
 
 public class TestHTestCase extends HTestCase {
 
@@ -132,11 +132,11 @@ public class TestHTestCase extends HTestCase {
   @Test
   @TestJetty
   public void testJetty() throws Exception {
-    Context context = new Context();
+    ServletContextHandler context = new ServletContextHandler();
     context.setContextPath("/");
     context.addServlet(MyServlet.class, "/bar");
     Server server = TestJettyHelper.getJettyServer();
-    server.addHandler(context);
+    server.setHandler(context);
     server.start();
     URL url = new URL(TestJettyHelper.getJettyURL(), "/bar");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();

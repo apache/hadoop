@@ -44,8 +44,10 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.VersionInfo;
@@ -66,34 +68,37 @@ public class ITestS3AConfiguration {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AConfiguration.class);
 
-  private static final String TEST_ENDPOINT = "test.fs.s3a.endpoint";
-
   @Rule
-  public Timeout testTimeout = new Timeout(30 * 60 * 1000);
+  public Timeout testTimeout = new Timeout(
+      S3ATestConstants.S3A_TEST_TIMEOUT
+  );
 
   @Rule
   public final TemporaryFolder tempDir = new TemporaryFolder();
 
   /**
    * Test if custom endpoint is picked up.
-   * <p/>
-   * The test expects TEST_ENDPOINT to be defined in the Configuration
+   * <p>
+   * The test expects {@link S3ATestConstants#CONFIGURATION_TEST_ENDPOINT}
+   * to be defined in the Configuration
    * describing the endpoint of the bucket to which TEST_FS_S3A_NAME points
-   * (f.i. "s3-eu-west-1.amazonaws.com" if the bucket is located in Ireland).
+   * (i.e. "s3-eu-west-1.amazonaws.com" if the bucket is located in Ireland).
    * Evidently, the bucket has to be hosted in the region denoted by the
    * endpoint for the test to succeed.
-   * <p/>
+   * <p>
    * More info and the list of endpoint identifiers:
-   * http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+   * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region">endpoint list</a>.
    *
    * @throws Exception
    */
   @Test
   public void testEndpoint() throws Exception {
     conf = new Configuration();
-    String endpoint = conf.getTrimmed(TEST_ENDPOINT, "");
+    String endpoint = conf.getTrimmed(
+        S3ATestConstants.CONFIGURATION_TEST_ENDPOINT, "");
     if (endpoint.isEmpty()) {
-      LOG.warn("Custom endpoint test skipped as " + TEST_ENDPOINT + "config " +
+      LOG.warn("Custom endpoint test skipped as " +
+          S3ATestConstants.CONFIGURATION_TEST_ENDPOINT + "config " +
           "setting was not detected");
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
@@ -436,7 +441,7 @@ public class ITestS3AConfiguration {
     dir1.mkdirs();
     dir2.mkdirs();
     conf = new Configuration();
-    conf.set(Constants.BUFFER_DIR, dir1 +", " + dir2);
+    conf.set(Constants.BUFFER_DIR, dir1 + ", " + dir2);
     fs = S3ATestUtils.createTestFileSystem(conf);
     File tmp1 = fs.createTmpFileForWrite("out-", 1024, conf);
     tmp1.delete();
@@ -455,6 +460,25 @@ public class ITestS3AConfiguration {
     long readAheadRange = fs.getReadAheadRange();
     assertNotNull(readAheadRange);
     assertEquals("Read Ahead Range Incorrect.", readAheadRange, 300*1024);
+  }
+
+  @Test
+  public void testUsernameFromUGI() throws Throwable {
+    final String alice = "alice";
+    UserGroupInformation fakeUser =
+        UserGroupInformation.createUserForTesting(alice,
+            new String[]{"users", "administrators"});
+    conf = new Configuration();
+    fs = fakeUser.doAs(new PrivilegedExceptionAction<S3AFileSystem>() {
+      @Override
+      public S3AFileSystem run() throws Exception{
+        return S3ATestUtils.createTestFileSystem(conf);
+      }
+    });
+    assertEquals("username", alice, fs.getUsername());
+    S3AFileStatus status = fs.getFileStatus(new Path("/"));
+    assertEquals("owner in " + status, alice, status.getOwner());
+    assertEquals("group in " + status, alice, status.getGroup());
   }
 
   /**

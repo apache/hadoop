@@ -50,6 +50,8 @@ import org.junit.BeforeClass;
 public abstract class SaslDataTransferTestCase {
 
   private static File baseDir;
+  private static String keystoresDir;
+  private static String sslConfDir;
   private static String hdfsPrincipal;
   private static String userPrincipal;
   private static MiniKdc kdc;
@@ -99,11 +101,12 @@ public abstract class SaslDataTransferTestCase {
   }
 
   @AfterClass
-  public static void shutdownKdc() {
+  public static void shutdownKdc() throws Exception {
     if (kdc != null) {
       kdc.stop();
     }
     FileUtil.fullyDelete(baseDir);
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
   /**
@@ -129,8 +132,8 @@ public abstract class SaslDataTransferTestCase {
     conf.set(DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
     conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY, 10);
 
-    String keystoresDir = baseDir.getAbsolutePath();
-    String sslConfDir = KeyStoreTestUtil.getClasspathDir(this.getClass());
+    keystoresDir = baseDir.getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(this.getClass());
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
     conf.set(DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
         KeyStoreTestUtil.getClientSSLConfigFileName());

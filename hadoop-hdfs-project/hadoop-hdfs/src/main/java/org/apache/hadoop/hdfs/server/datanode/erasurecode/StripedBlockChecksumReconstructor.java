@@ -132,6 +132,7 @@ public class StripedBlockChecksumReconstructor extends StripedReconstructor {
       // case-2) length of data bytes which is less than bytesPerCRC
       if (partialLength > 0) {
         byte[] partialCrc = new byte[getChecksum().getChecksumSize()];
+        getChecksum().reset();
         getChecksum().update(outputData, dataOffset, partialLength);
         getChecksum().writeValue(partialCrc, 0, true);
         digester.update(partialCrc);

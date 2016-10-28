@@ -55,6 +55,8 @@ public class TestNameNodeRespectsBindHostKeys {
   public static final Log LOG = LogFactory.getLog(TestNameNodeRespectsBindHostKeys.class);
   private static final String WILDCARD_ADDRESS = "0.0.0.0";
   private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1:0";
+  private static String keystoresDir;
+  private static String sslConfDir;
 
   private static String getRpcServerAddress(MiniDFSCluster cluster) {
     NameNodeRpcServer rpcServer = (NameNodeRpcServer) cluster.getNameNodeRpc();
@@ -250,8 +252,8 @@ public class TestNameNodeRespectsBindHostKeys {
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     assertTrue(base.mkdirs());
-    final String keystoresDir = new File(BASEDIR).getAbsolutePath();
-    final String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestNameNodeRespectsBindHostKeys.class);
+    keystoresDir = new File(BASEDIR).getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestNameNodeRespectsBindHostKeys.class);
 
     KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
   }
@@ -308,6 +310,10 @@ public class TestNameNodeRespectsBindHostKeys {
     } finally {
       if (cluster != null) {
         cluster.shutdown();
+      }
+      if (keystoresDir != null && !keystoresDir.isEmpty()
+          && sslConfDir != null && !sslConfDir.isEmpty()) {
+        KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
       }
     }
   }  

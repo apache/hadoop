@@ -436,7 +436,8 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     describe("read over a buffer, making sure that the requests" +
         " spans readahead ranges");
     int datasetLen = _32K;
-    Path dataFile = new Path(getTestPath(), "testReadOverBuffer.bin");
+    S3AFileSystem fs = getFileSystem();
+    Path dataFile = path("testReadOverBuffer.bin");
     byte[] sourceData = dataset(datasetLen, 0, 64);
     // relies on the field 'fs' referring to the R/W FS
     writeDataset(fs, dataFile, sourceData, datasetLen, _16K, true);

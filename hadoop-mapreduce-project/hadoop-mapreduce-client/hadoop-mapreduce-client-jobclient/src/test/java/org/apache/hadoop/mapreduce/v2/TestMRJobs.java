@@ -163,7 +163,7 @@ public class TestMRJobs {
       Configuration conf = new Configuration();
       conf.set("fs.defaultFS", remoteFs.getUri().toString());   // use HDFS
       conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/apps_staging_dir");
-      conf.setInt("yarn.cluster.max-application-priority", 10);
+      conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY, 10);
       mrCluster.init(conf);
       mrCluster.start();
     }
@@ -418,8 +418,7 @@ public class TestMRJobs {
     // set master address to local to test that local mode applied if framework
     // equals local
     sleepConf.set(MRConfig.MASTER_ADDRESS, "local");
-    sleepConf
-        .setInt("yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms", 5);
+    sleepConf.setInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS, 5);
 
     SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(sleepConf);
