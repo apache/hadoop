@@ -1842,16 +1842,23 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Get the list of finalized blocks from in-memory blockmap for a block pool.
+   * Gets a list of references to the finalized blocks for the given block pool.
+   * <p>
+   * Callers of this function should call
+   * {@link FsDatasetSpi#acquireDatasetLock} to avoid blocks' status being
+   * changed during list iteration.
+   * </p>
+   * @return a list of references to the finalized blocks for the given block
+   *         pool.
    */
   @Override
   public List<FinalizedReplica> getFinalizedBlocks(String bpid) {
     try(AutoCloseableLock lock = datasetLock.acquire()) {
-      ArrayList<FinalizedReplica> finalized =
+      final ArrayList<FinalizedReplica> finalized =
           new ArrayList<FinalizedReplica>(volumeMap.size(bpid));
       for (ReplicaInfo b : volumeMap.replicas(bpid)) {
         if (b.getState() == ReplicaState.FINALIZED) {
-          finalized.add(new FinalizedReplica((FinalizedReplica) b));
+          finalized.add((FinalizedReplica)b);
         }
       }
       return finalized;
