@@ -25,11 +25,8 @@ export default AbstractAdapter.extend({
   serverName: "NM",
 
   urlForFindRecord(id, modelName, snapshot) {
-    var extension = this.get("host").split('/').pop();
-    if (extension != id) {
-      this.host = this.get("host") + id;
-    }
     var url = this._buildURL();
+    url = url.replace("{nodeAddress}", id);
     return url;
   },
 
