@@ -76,6 +76,7 @@ public class ParentQueue extends AbstractCSQueue {
   volatile int numApplications;
   private final CapacitySchedulerContext scheduler;
   private boolean needToResortQueuesAtNextAllocation = false;
+  private int offswitchPerHeartbeatLimit;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -123,6 +124,9 @@ public class ParentQueue extends AbstractCSQueue {
       }
     }
 
+    offswitchPerHeartbeatLimit =
+        csContext.getConfiguration().getOffSwitchPerHeartbeatLimit();
+
     LOG.info(queueName +
         ", capacity=" + this.queueCapacities.getCapacity() +
         ", asboluteCapacity=" + this.queueCapacities.getAbsoluteCapacity() +
@@ -130,7 +134,8 @@ public class ParentQueue extends AbstractCSQueue {
         ", asboluteMaxCapacity=" + this.queueCapacities.getAbsoluteMaximumCapacity() + 
         ", state=" + state +
         ", acls=" + aclsString + 
-        ", labels=" + labelStrBuilder.toString() + "\n" +
+        ", labels=" + labelStrBuilder.toString() +
+        ", offswitchPerHeartbeatLimit = " + getOffSwitchPerHeartbeatLimit() +
         ", reservationsContinueLooking=" + reservationsContinueLooking);
   }
 
@@ -194,6 +199,11 @@ public class ParentQueue extends AbstractCSQueue {
     queueInfo.setChildQueues(childQueuesInfo);
     
     return queueInfo;
+  }
+
+  @Private
+  public int getOffSwitchPerHeartbeatLimit() {
+    return offswitchPerHeartbeatLimit;
   }
 
   private synchronized QueueUserACLInfo getUserAclInfo(
@@ -383,6 +393,8 @@ public class ParentQueue extends AbstractCSQueue {
   public synchronized CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, ResourceLimits resourceLimits,
       SchedulingMode schedulingMode) {
+    int offswitchCount = 0;
+
     // if our queue cannot access this node, just return
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !accessibleToPartition(node.getPartition())) {
@@ -478,13 +490,18 @@ public class ParentQueue extends AbstractCSQueue {
           + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity());
       }
 
-      // Do not assign more than one container if this isn't the root queue
-      // or if we've already assigned an off-switch container
-      if (!rootQueue || assignment.getType() == NodeType.OFF_SWITCH) {
+      if (assignment.getType() == NodeType.OFF_SWITCH) {
+        offswitchCount++;
+      }
+
+      // Do not assign more containers if this isn't the root queue
+      // or if we've already assigned enough OFF_SWITCH containers in
+      // this pass
+      if (!rootQueue || offswitchCount >= getOffSwitchPerHeartbeatLimit()) {
         if (LOG.isDebugEnabled()) {
-          if (rootQueue && assignment.getType() == NodeType.OFF_SWITCH) {
-            LOG.debug("Not assigning more than one off-switch container," +
-                " assignments so far: " + assignment);
+          if (rootQueue && offswitchCount >= getOffSwitchPerHeartbeatLimit()) {
+            LOG.debug("Assigned maximum number of off-switch containers: " +
+                offswitchCount + ", assignments so far: " + assignment);
           }
         }
         break;
