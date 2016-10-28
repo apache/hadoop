@@ -191,6 +191,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       PREFIX + "rack-locality-full-reset";
 
   @Private
+  public static final int DEFAULT_OFFSWITCH_PER_HEARTBEAT_LIMIT = 1;
+
+  @Private
+  public static final String OFFSWITCH_PER_HEARTBEAT_LIMIT =
+      PREFIX + "per-node-heartbeat.maximum-offswitch-assignments";
+
+  @Private
   public static final boolean DEFAULT_RACK_LOCALITY_FULL_RESET = true;
 
   @Private
@@ -711,6 +718,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public boolean getEnableUserMetrics() {
     return getBoolean(ENABLE_USER_METRICS, DEFAULT_ENABLE_USER_METRICS);
+  }
+
+  public int getOffSwitchPerHeartbeatLimit() {
+    int limit = getInt(OFFSWITCH_PER_HEARTBEAT_LIMIT,
+        DEFAULT_OFFSWITCH_PER_HEARTBEAT_LIMIT);
+    if (limit < 1) {
+      LOG.warn(OFFSWITCH_PER_HEARTBEAT_LIMIT + "(" + limit + ") < 1. Using 1.");
+      limit = 1;
+    }
+    return limit;
+  }
+
+  public void setOffSwitchPerHeartbeatLimit(int limit) {
+    setInt(OFFSWITCH_PER_HEARTBEAT_LIMIT, limit);
   }
 
   public int getNodeLocalityDelay() {
