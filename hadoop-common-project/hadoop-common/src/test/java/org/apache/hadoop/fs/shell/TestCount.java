@@ -467,11 +467,16 @@ public class TestCount {
         + "The -v option displays a header line.\n"
         + "The -x option excludes snapshots from being calculated. \n"
         + "The -t option displays quota by storage types.\n"
-        + "It must be used with -q option.\n"
+        + "It should be used with -q or -u option, "
+        + "otherwise it will be ignored.\n"
         + "If a comma-separated list of storage types is given after the -t option, \n"
         + "it displays the quota and usage for the specified types. \n"
         + "Otherwise, it displays the quota and usage for all the storage \n"
-        + "types that support quota \n"
+        + "types that support quota. The list of possible storage "
+        + "types(case insensitive):\n"
+        + "ram_disk, ssd, disk and archive.\n"
+        + "It can also pass the value '', 'all' or 'ALL' to specify all the "
+        + "storage types.\n"
         + "The -u option shows the quota and \n"
         + "the usage against the quota without the detailed content summary.";
 
