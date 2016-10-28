@@ -825,7 +825,7 @@ from placing its declaration on the command line.
 
     <property>
       <name>fs.s3a.block.size</name>
-      <value>33554432</value>
+      <value>32M</value>
       <description>Block size to use when reading files using s3a: file system.
       </description>
     </property>
@@ -859,7 +859,7 @@ from placing its declaration on the command line.
 
     <property>
       <name>fs.s3a.readahead.range</name>
-      <value>65536</value>
+      <value>64K</value>
       <description>Bytes to read ahead during a seek() before closing and
       re-opening the S3 HTTP connection. This option will be overridden if
       any call to setReadahead() is made to an open stream.</description>
