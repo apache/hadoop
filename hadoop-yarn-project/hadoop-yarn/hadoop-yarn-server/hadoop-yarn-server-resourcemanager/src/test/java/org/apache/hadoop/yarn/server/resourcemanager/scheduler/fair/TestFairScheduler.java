@@ -4761,4 +4761,56 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     rm1.stop();
     rm2.stop();
   }
+
+  @Test
+  public void testReservationMetrics() throws IOException {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    QueueMetrics metrics = scheduler.getRootQueueMetrics();
+
+    RMNode node1 =
+        MockNodes
+            .newNodeInfo(1, Resources.createResource(4096, 4), 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent);
+
+    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
+    createApplicationWithAMResource(appAttemptId, "default", "user1", null);
+
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    createSchedulingRequestExistingApplication(1024, 1, 1, appAttemptId);
+    scheduler.handle(updateEvent);
+
+    // no reservation yet
+    assertEquals(0, metrics.getReservedContainers());
+    assertEquals(0, metrics.getReservedMB());
+    assertEquals(0, metrics.getReservedVirtualCores());
+
+    // create reservation of {4096, 4}
+    createSchedulingRequestExistingApplication(4096, 4, 1, appAttemptId);
+    scheduler.update();
+    scheduler.handle(updateEvent);
+
+    // reservation created
+    assertEquals(1, metrics.getReservedContainers());
+    assertEquals(4096, metrics.getReservedMB());
+    assertEquals(4, metrics.getReservedVirtualCores());
+
+    // remove AppAttempt
+    AppAttemptRemovedSchedulerEvent attRemoveEvent =
+        new AppAttemptRemovedSchedulerEvent(
+            appAttemptId,
+            RMAppAttemptState.KILLED,
+            false);
+    scheduler.handle(attRemoveEvent);
+
+    // The reservation metrics should be subtracted
+    assertEquals(0, metrics.getReservedContainers());
+    assertEquals(0, metrics.getReservedMB());
+    assertEquals(0, metrics.getReservedVirtualCores());
+  }
 }
