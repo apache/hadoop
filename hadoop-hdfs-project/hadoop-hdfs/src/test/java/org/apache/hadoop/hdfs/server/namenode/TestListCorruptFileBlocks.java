@@ -67,6 +67,7 @@ public class TestListCorruptFileBlocks {
     
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       // Set short retry timeouts so this test runs faster
@@ -138,6 +139,8 @@ public class TestListCorruptFileBlocks {
 
     try {
       Configuration conf = new HdfsConfiguration();
+      // max list corrupt file blocks returned
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
       // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
       // datanode sends block reports
@@ -260,6 +263,7 @@ public class TestListCorruptFileBlocks {
   @Test (timeout=300000)
   public void testlistCorruptFileBlocks() throws Exception {
     Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans
                                                            // directories
@@ -371,6 +375,7 @@ public class TestListCorruptFileBlocks {
   @Test (timeout=300000)
   public void testlistCorruptFileBlocksDFS() throws Exception {
     Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans
                                                            // directories
@@ -448,11 +453,12 @@ public class TestListCorruptFileBlocks {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 2 * 100);
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
       final int maxCorruptFileBlocks = 
-        FSNamesystem.DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED;
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
 
       // create 110 files with one block each
       DFSTestUtil util = new DFSTestUtil.Builder().setName("testMaxCorruptFiles").
@@ -533,6 +539,7 @@ public class TestListCorruptFileBlocks {
   @Test(timeout = 60000)
   public void testListCorruptFileBlocksOnRelativePath() throws Exception {
     Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_CORRUPT_FILE_BLOCKS_RETURNED_KEY, 100);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
 
