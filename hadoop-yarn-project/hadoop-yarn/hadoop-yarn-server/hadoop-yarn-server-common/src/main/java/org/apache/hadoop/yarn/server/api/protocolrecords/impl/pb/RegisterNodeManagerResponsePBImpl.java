@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
@@ -32,11 +31,15 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
-
-public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeManagerResponseProto> implements RegisterNodeManagerResponse {
-  RegisterNodeManagerResponseProto proto = RegisterNodeManagerResponseProto.getDefaultInstance();
-  RegisterNodeManagerResponseProto.Builder builder = null;
-  boolean viaProto = false;
+/**
+ * PBImpl class for RegisterNodeManagerResponse.
+ */
+public class RegisterNodeManagerResponsePBImpl
+    extends RegisterNodeManagerResponse {
+  private RegisterNodeManagerResponseProto proto =
+      RegisterNodeManagerResponseProto.getDefaultInstance();
+  private RegisterNodeManagerResponseProto.Builder builder = null;
+  private boolean viaProto = false;
   private Resource resource = null;
 
   private MasterKey containerTokenMasterKey = null;
