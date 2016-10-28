@@ -270,6 +270,15 @@ public class TestAuditLogs {
     verifyAuditLogsCheckPattern(true, 3, webOpenPattern);
   }
 
+  /** make sure that "\r\n" isn't made into a newline in audit log */
+  @Test
+  public void testAuditCharacterEscape() throws Exception {
+    final Path file = new Path("foo" + "\r\n" + "bar");
+    setupAuditLogs();
+    fs.create(file);
+    verifyAuditLogsRepeat(true, 1);
+  }
+
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
