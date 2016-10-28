@@ -38,6 +38,9 @@ origin (CORS) support.
 | `yarn.resourcemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Resource Manager  |
 | `yarn.nodemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Node Manager  |
 
+Also please ensure that CORS related configurations are enabled in `core-site.xml`.
+Kindly refer [here](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/HttpAuthentication.html)
+
 Use it
 -------------
 Open your browser, go to `rm-address:8088/ui2` and try it!
