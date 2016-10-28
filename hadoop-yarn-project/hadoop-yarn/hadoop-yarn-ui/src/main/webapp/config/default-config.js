@@ -27,6 +27,6 @@ module.exports = { // Yarn UI App configurations
       timeline: 'ws/v1/applicationhistory',
       cluster: 'ws/v1/cluster',
       metrics: 'ws/v1/cluster/metrics',
-      node: 'ws/v1/node'
+      node: '{nodeAddress}/ws/v1/node'
     },
 };

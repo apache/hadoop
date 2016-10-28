@@ -68,7 +68,7 @@ export default DS.JSONAPISerializer.extend({
     // expected return response is of the form { data: [ {}, {} ] }
     var normalizedArrayResponse = {};
     // payload is of the form { "apps" : { "app": [ {},{},{} ]  } }
-    if (payload.apps) {
+    if (payload.apps && payload.apps.app) {
       normalizedArrayResponse.data = payload.apps.app.map(singleApp => {
           return this.internalNormalizeSingleResponse(store, primaryModelClass,
               singleApp);

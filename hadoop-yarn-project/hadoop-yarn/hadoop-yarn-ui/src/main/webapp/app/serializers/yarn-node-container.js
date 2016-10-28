@@ -54,7 +54,7 @@ export default DS.JSONAPISerializer.extend({
       requestType) {
     // expected return response is of the form { data: [ {}, {} ] }
     var normalizedArrayResponse = {};
-    if (payload.containers) {
+    if (payload.containers && payload.containers.container) {
       // payload is of the form { "containers" : { "container": [ {},{},{} ]  } }
       normalizedArrayResponse.data =
           payload.containers.container.map(singleContainer => {
