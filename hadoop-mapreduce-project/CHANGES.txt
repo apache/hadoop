@@ -29,6 +29,8 @@ Release 2.7.4 - UNRELEASED
     MAPREDUCE-6763. Shuffle server listen queue is too small.
     (Jason Lowe via Varun Saxena)
 
+    MAPREDUCE-6724. Single shuffle to memory must not exceed
+    Integer#MAX_VALUE. (Haibo Chen via jlowe)
 
 Release 2.7.3 - 2016-08-25
 
