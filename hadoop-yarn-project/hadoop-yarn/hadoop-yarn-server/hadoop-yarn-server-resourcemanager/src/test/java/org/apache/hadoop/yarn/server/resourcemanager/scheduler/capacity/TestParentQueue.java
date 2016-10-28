@@ -29,6 +29,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
@@ -613,6 +614,8 @@ public class TestParentQueue {
   public void testOffSwitchScheduling() throws Exception {
     // Setup queue configs
     setupSingleLevelQueues(csConf);
+    csConf.setOffSwitchPerHeartbeatLimit(2);
+
     
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
@@ -643,12 +646,18 @@ public class TestParentQueue {
     queues.get(CapacitySchedulerConfiguration.ROOT).getQueueResourceUsage()
     .incPending(Resources.createResource(1 * GB));
     
-    // Simulate B returning a container on node_0
-    stubQueueAllocation(a, clusterResource, node_0, 0*GB, NodeType.OFF_SWITCH);
+    // Simulate returning 2 containers on node_0 before offswitch limit
+    stubQueueAllocation(a, clusterResource, node_0, 1*GB, NodeType.OFF_SWITCH);
     stubQueueAllocation(b, clusterResource, node_0, 1*GB, NodeType.OFF_SWITCH);
+
     root.assignContainers(clusterResource, node_0, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    verifyQueueMetrics(a, 0*GB, clusterResource);
+    InOrder allocationOrder = inOrder(a, b);
+    allocationOrder.verify(a, times(1)).assignContainers(eq(clusterResource),
+        any(FiCaSchedulerNode.class), anyResourceLimits(), any(SchedulingMode.class));
+    allocationOrder.verify(b, times(1)).assignContainers(eq(clusterResource),
+        any(FiCaSchedulerNode.class), anyResourceLimits(), any(SchedulingMode.class));
+    verifyQueueMetrics(a, 1*GB, clusterResource);
     verifyQueueMetrics(b, 1*GB, clusterResource);
     
     // Now, A should get the scheduling opportunity since A=0G/6G, B=1G/14G
@@ -657,27 +666,28 @@ public class TestParentQueue {
     stubQueueAllocation(b, clusterResource, node_1, 1*GB, NodeType.OFF_SWITCH);
     root.assignContainers(clusterResource, node_1, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    InOrder allocationOrder = inOrder(a, b);
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
+    allocationOrder = inOrder(a, b);
+    allocationOrder.verify(a, times(1)).assignContainers(eq(clusterResource),
         any(FiCaSchedulerNode.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
+    allocationOrder.verify(b, times(1)).assignContainers(eq(clusterResource),
         any(FiCaSchedulerNode.class), anyResourceLimits(), any(SchedulingMode.class));
-    verifyQueueMetrics(a, 2*GB, clusterResource);
+    verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);
     
     // Now, B should get the scheduling opportunity 
     // since A has 2/6G while B has 2/14G, 
-    // However, since B returns off-switch, A won't get an opportunity
+    // A also gets an opportunity because offswitchlimit not reached
     stubQueueAllocation(a, clusterResource, node_0, 1*GB, NodeType.NODE_LOCAL);
     stubQueueAllocation(b, clusterResource, node_0, 2*GB, NodeType.OFF_SWITCH);
+
     root.assignContainers(clusterResource, node_0, 
         new ResourceLimits(clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
     allocationOrder = inOrder(b, a);
-    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
+    allocationOrder.verify(b, times(1)).assignContainers(eq(clusterResource),
         any(FiCaSchedulerNode.class), anyResourceLimits(), any(SchedulingMode.class));
-    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
+    allocationOrder.verify(a, times(1)).assignContainers(eq(clusterResource),
         any(FiCaSchedulerNode.class), anyResourceLimits(), any(SchedulingMode.class));
-    verifyQueueMetrics(a, 2*GB, clusterResource);
+    verifyQueueMetrics(a, 4*GB, clusterResource);
     verifyQueueMetrics(b, 4*GB, clusterResource);
 
   }
