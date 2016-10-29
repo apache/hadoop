@@ -24,10 +24,12 @@ import org.apache.maven.plugins.annotations.Parameter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -101,17 +103,21 @@ public class ResourceGzMojo extends AbstractMojo {
       }
       try {
         File outFile = new File(outputDir, path.toFile().getCanonicalPath()
-            .replaceFirst(inputDir.getCanonicalPath(), "") + ".gz");
-        outFile.getParentFile().mkdirs();
-        try (
-            GZIPOutputStream os = new GZIPOutputStream(
-                new FileOutputStream(outFile));
-            BufferedReader is = Files.newBufferedReader(path)
-        ) {
-          getLog().info("Compressing " + path + " to " + outFile);
-          IOUtils.copy(is, os);
-        } catch (Throwable t) {
-          this.throwable = t;
+            .replaceFirst(Matcher.quoteReplacement(
+                inputDir.getCanonicalPath()), "") + ".gz");
+        if (outFile.getParentFile().isDirectory() ||
+            outFile.getParentFile().mkdirs()) {
+          try (
+              GZIPOutputStream os = new GZIPOutputStream(
+                  new FileOutputStream(outFile));
+              BufferedReader is = Files.newBufferedReader(path)
+          ) {
+            getLog().info("Compressing " + path + " to " + outFile);
+            IOUtils.copy(is, os);
+          }
+        } else {
+          throw new IOException("Directory " + outFile.getParent()
+              + " does not exist or was unable to be created");
         }
       } catch (Throwable t) {
         this.throwable = t;
