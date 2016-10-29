@@ -32,4 +32,6 @@ public interface CSAMContainerLaunchDiagnosticsConstants {
   String USER_AM_RESOURCE_LIMIT_EXCEED = "User's AM resource limit exceeded. ";
   String LAST_NODE_PROCESSED_MSG =
       " Last Node which was processed for the application : ";
+  String CLUSTER_RESOURCE_EMPTY =
+      "Skipping AM assignment as cluster resource is empty. ";
 }

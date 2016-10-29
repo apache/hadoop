@@ -2916,12 +2916,14 @@ public class TestCapacityScheduler {
   @Test(timeout = 30000)
   public void testAMUsedResource() throws Exception {
     MockRM rm = setUpMove();
+    rm.registerNode("127.0.0.1:1234", 4 * GB);
+
     Configuration conf = rm.getConfig();
     int minAllocMb =
         conf.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
     int amMemory = 50;
-    assertTrue("AM memory is greater than or equql to minAllocation",
+    assertTrue("AM memory is greater than or equal to minAllocation",
         amMemory < minAllocMb);
     Resource minAllocResource = Resource.newInstance(minAllocMb, 1);
     String queueName = "a1";
@@ -3270,6 +3272,7 @@ public class TestCapacityScheduler {
   private void verifyAMLimitForLeafQueue(CapacitySchedulerConfiguration config)
       throws Exception {
     MockRM rm = setUpMove(config);
+    rm.registerNode("127.0.0.1:1234", 2 * GB);
 
     String queueName = "a1";
     String userName = "user_0";
