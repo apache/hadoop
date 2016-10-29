@@ -1651,7 +1651,7 @@ public class TestClientRMService {
     MockRM rm = new MockRM(conf);
     rm.init(conf);
     rm.start();
-
+    rm.registerNode("host1:1234", 1024);
     // Start app1 with appPriority 5
     RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
 

@@ -752,9 +752,11 @@ public class LeafQueue extends AbstractCSQueue {
           } else{
             application.updateAMContainerDiagnostics(AMState.INACTIVATED,
                 CSAMContainerLaunchDiagnosticsConstants.QUEUE_AM_RESOURCE_LIMIT_EXCEED);
-            LOG.info("Not activating application " + applicationId
-                + " as  amIfStarted: " + amIfStarted + " exceeds amLimit: "
-                + amLimit);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Not activating application " + applicationId
+                  + " as  amIfStarted: " + amIfStarted + " exceeds amLimit: "
+                  + amLimit);
+            }
             continue;
           }
         }
@@ -785,10 +787,11 @@ public class LeafQueue extends AbstractCSQueue {
           } else{
             application.updateAMContainerDiagnostics(AMState.INACTIVATED,
                 CSAMContainerLaunchDiagnosticsConstants.USER_AM_RESOURCE_LIMIT_EXCEED);
-            LOG.info(
-                "Not activating application " + applicationId + " for user: "
-                    + user + " as userAmIfStarted: " + userAmIfStarted
-                    + " exceeds userAmLimit: " + userAMLimit);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Not activating application " + applicationId
+                  + " for user: " + user + " as userAmIfStarted: "
+                  + userAmIfStarted + " exceeds userAmLimit: " + userAMLimit);
+            }
             continue;
           }
         }
@@ -824,7 +827,16 @@ public class LeafQueue extends AbstractCSQueue {
           application);
 
       // Activate applications
-      activateApplications();
+      if (Resources.greaterThan(resourceCalculator, lastClusterResource,
+          lastClusterResource, Resources.none())) {
+        activateApplications();
+      } else {
+        application.updateAMContainerDiagnostics(AMState.INACTIVATED,
+            CSAMContainerLaunchDiagnosticsConstants.CLUSTER_RESOURCE_EMPTY);
+        LOG.info("Skipping activateApplications for "
+            + application.getApplicationAttemptId()
+            + " since cluster resource is " + Resources.none());
+      }
 
       LOG.info(
           "Application added -" + " appId: " + application.getApplicationId()

@@ -693,15 +693,17 @@ public class TestApplicationPriority {
       Thread.sleep(500);
     }
 
-    // Before NM registration, AMResourceLimit threshold is 0. So 1st
-    // applications get activated nevertheless of AMResourceLimit threshold
-    // Two applications are in pending
-    Assert.assertEquals(1, defaultQueue.getNumActiveApplications());
-    Assert.assertEquals(2, defaultQueue.getNumPendingApplications());
+    // Before NM registration, AMResourceLimit threshold is 0. So no
+    // applications get activated.
+    Assert.assertEquals(0, defaultQueue.getNumActiveApplications());
 
     // NM resync to new RM
     nm1.registerNode();
     dispatcher1.await();
+
+    Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
+    Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
+
 
     // wait for activating one applications
     count = 5;
