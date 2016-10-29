@@ -23,10 +23,10 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,8 +60,8 @@ public class OpportunisticContainerContext {
   private ContainerIdGenerator containerIdGenerator =
       new ContainerIdGenerator();
 
-  private volatile List<NodeId> nodeList = new LinkedList<>();
-  private final Map<String, NodeId> nodeMap = new LinkedHashMap<>();
+  private volatile List<RemoteNode> nodeList = new LinkedList<>();
+  private final Map<String, RemoteNode> nodeMap = new LinkedHashMap<>();
 
   private final Set<String> blacklist = new HashSet<>();
 
@@ -89,11 +89,11 @@ public class OpportunisticContainerContext {
     this.containerIdGenerator = containerIdGenerator;
   }
 
-  public Map<String, NodeId> getNodeMap() {
+  public Map<String, RemoteNode> getNodeMap() {
     return Collections.unmodifiableMap(nodeMap);
   }
 
-  public synchronized void updateNodeList(List<NodeId> newNodeList) {
+  public synchronized void updateNodeList(List<RemoteNode> newNodeList) {
     // This is an optimization for centralized placement. The
     // OppContainerAllocatorAMService has a cached list of nodes which it sets
     // here. The nodeMap needs to be updated only if the backing node list is
@@ -101,8 +101,8 @@ public class OpportunisticContainerContext {
     if (newNodeList != nodeList) {
       nodeList = newNodeList;
       nodeMap.clear();
-      for (NodeId n : nodeList) {
-        nodeMap.put(n.getHost(), n);
+      for (RemoteNode n : nodeList) {
+        nodeMap.put(n.getNodeId().getHost(), n);
       }
     }
   }

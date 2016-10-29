@@ -49,6 +49,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.ApplicationMasterProtocol.ApplicationMasterProtocolService;
 
+
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -74,6 +76,7 @@ import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -97,7 +100,7 @@ public class OpportunisticContainerAllocatorAMService
   private final int k;
 
   private final long cacheRefreshInterval;
-  private List<NodeId> cachedNodeIds;
+  private List<RemoteNode> cachedNodes;
   private long lastCacheUpdateTime;
 
   public OpportunisticContainerAllocatorAMService(RMContext rmContext,
@@ -105,7 +108,7 @@ public class OpportunisticContainerAllocatorAMService
     super(OpportunisticContainerAllocatorAMService.class.getName(),
         rmContext, scheduler);
     this.oppContainerAllocator = new OpportunisticContainerAllocator(
-        rmContext.getContainerTokenSecretManager(), 0);
+        rmContext.getContainerTokenSecretManager());
     this.k = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED_DEFAULT);
@@ -372,14 +375,29 @@ public class OpportunisticContainerAllocatorAMService
     );
   }
 
-  private synchronized List<NodeId> getLeastLoadedNodes() {
+  private synchronized List<RemoteNode> getLeastLoadedNodes() {
     long currTime = System.currentTimeMillis();
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
-        || cachedNodeIds == null) {
-      cachedNodeIds = this.nodeMonitor.selectLeastLoadedNodes(this.k);
+        || cachedNodes == null) {
+      cachedNodes = convertToRemoteNodes(
+          this.nodeMonitor.selectLeastLoadedNodes(this.k));
       lastCacheUpdateTime = currTime;
     }
-    return cachedNodeIds;
+    return cachedNodes;
+  }
+
+  private List<RemoteNode> convertToRemoteNodes(List<NodeId> nodeIds) {
+    ArrayList<RemoteNode> retNodes = new ArrayList<>();
+    for (NodeId nId : nodeIds) {
+      retNodes.add(convertToRemoteNode(nId));
+    }
+    return retNodes;
+  }
+
+  private RemoteNode convertToRemoteNode(NodeId nodeId) {
+    return RemoteNode.newInstance(nodeId,
+        ((AbstractYarnScheduler)rmContext.getScheduler()).getNode(nodeId)
+            .getHttpAddress());
   }
 
   private Resource createMaxContainerResource() {

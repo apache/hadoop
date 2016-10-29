@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -99,10 +98,11 @@ public abstract class RegisterDistributedSchedulingAMResponse {
 
   @Public
   @Unstable
-  public abstract void setNodesForScheduling(List<NodeId> nodesForScheduling);
+  public abstract void setNodesForScheduling(
+      List<RemoteNode> nodesForScheduling);
 
   @Public
   @Unstable
-  public abstract List<NodeId> getNodesForScheduling();
+  public abstract List<RemoteNode> getNodesForScheduling();
 
 }
