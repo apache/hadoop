@@ -114,7 +114,8 @@ public class TestDataDirs {
     List<StorageLocation> checkedLocations =
         DataNode.checkStorageLocations(locations, fs, diskChecker);
     assertEquals("number of valid data dirs", 1, checkedLocations.size());
-    String validDir = checkedLocations.iterator().next().getFile().getPath();
+    String validDir =
+        new File(checkedLocations.iterator().next().getUri()).getPath();
     assertThat("p3 should be valid", new File("/p3/").getPath(), is(validDir));
   }
 }

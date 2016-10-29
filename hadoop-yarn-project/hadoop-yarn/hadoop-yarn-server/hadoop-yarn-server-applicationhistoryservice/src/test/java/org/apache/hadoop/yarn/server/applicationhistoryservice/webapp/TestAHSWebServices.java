@@ -43,6 +43,7 @@ import javax.ws.rs.core.MediaType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -314,7 +315,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("ws").path("v1").path("applicationhistory").path("about")
         .queryParam("user.name", USERS[round])
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     TimelineAbout actualAbout = response.getEntity(TimelineAbout.class);
     TimelineAbout expectedAbout =
         TimelineUtils.createTimelineAbout("Generic History Service API");
@@ -343,7 +345,8 @@ public class TestAHSWebServices extends JerseyTestBase {
           .queryParam("state", YarnApplicationState.FINISHED.toString())
           .queryParam("user.name", USERS[round])
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject apps = json.getJSONObject("apps");
@@ -362,7 +365,8 @@ public class TestAHSWebServices extends JerseyTestBase {
           .queryParam("user.name", USERS[round])
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject app = json.getJSONObject("app");
@@ -391,7 +395,8 @@ public class TestAHSWebServices extends JerseyTestBase {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject appAttempts = json.getJSONObject("appAttempts");
@@ -417,7 +422,8 @@ public class TestAHSWebServices extends JerseyTestBase {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject appAttempt = json.getJSONObject("appAttempt");
@@ -446,7 +452,8 @@ public class TestAHSWebServices extends JerseyTestBase {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject containers = json.getJSONObject("containers");
@@ -474,7 +481,8 @@ public class TestAHSWebServices extends JerseyTestBase {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject container = json.getJSONObject("container");

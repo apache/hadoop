@@ -52,6 +52,7 @@ import org.codehaus.jackson.map.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
@@ -74,7 +75,7 @@ import java.util.TreeSet;
 /**
  * Common interface for command handling.
  */
-public abstract class Command extends Configured {
+public abstract class Command extends Configured implements Closeable {
   private static final ObjectReader READER =
       new ObjectMapper().reader(HashMap.class);
   static final Logger LOG = LoggerFactory.getLogger(Command.class);
@@ -104,6 +105,22 @@ public abstract class Command extends Configured {
     // These arguments are valid for all commands.
     topNodes = 0;
     this.ps = ps;
+  }
+
+  /**
+   * Cleans any resources held by this command.
+   * <p>
+   * The main goal is to delete id file created in
+   * {@link org.apache.hadoop.hdfs.server.balancer
+   * .NameNodeConnector#checkAndMarkRunning}
+   * , otherwise, it's not allowed to run multiple commands in a row.
+   * </p>
+   */
+  @Override
+  public void close() throws IOException {
+    if (fs != null) {
+      fs.close();
+    }
   }
 
   /**

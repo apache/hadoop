@@ -52,6 +52,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions.*;
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
 
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+
 /**
  * Implement the registry security ... a self contained service for
  * testability.
@@ -595,6 +597,16 @@ public class RegistrySecurity extends AbstractService {
    * Note the semicolon on the last entry
    */
   private static final String JAAS_ENTRY =
+      (IBM_JAVA ?
+      "%s { %n"
+      + " %s required%n"
+      + " useKeytab=\"%s\"%n"
+      + " debug=true%n"
+      + " principal=\"%s\"%n"
+      + " credsType=both%n"
+      + " refreshKrb5Config=true;%n"
+      + "}; %n"
+      :
       "%s { %n"
       + " %s required%n"
       // kerberos module
@@ -606,7 +618,7 @@ public class RegistrySecurity extends AbstractService {
       + " doNotPrompt=true%n"
       + " storeKey=true;%n"
       + "}; %n"
-      ;
+     );
 
   /**
    * Create a JAAS entry for insertion

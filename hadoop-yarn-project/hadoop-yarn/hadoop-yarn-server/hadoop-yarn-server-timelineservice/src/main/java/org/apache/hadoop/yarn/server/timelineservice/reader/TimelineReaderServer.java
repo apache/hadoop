@@ -119,14 +119,7 @@ public class TimelineReaderServer extends CompositeService {
             .addEndpoint(URI.create("http://" + bindAddress));
       readerWebServer = builder.build();
 
-      Map<String, String> options = new HashMap<>();
-      String username = conf.get(HADOOP_HTTP_STATIC_USER,
-          DEFAULT_HADOOP_HTTP_STATIC_USER);
-      options.put(HADOOP_HTTP_STATIC_USER, username);
-      HttpServer2.defineFilter(readerWebServer.getWebAppContext(),
-          "static_user_filter_timeline",
-          StaticUserWebFilter.StaticUserFilter.class.getName(),
-          options, new String[] {"/*"});
+      setupOptions(conf);
 
       readerWebServer.addJerseyResourcePackage(
           TimelineReaderWebServices.class.getPackage().getName() + ";"
@@ -141,6 +134,22 @@ public class TimelineReaderServer extends CompositeService {
       LOG.error(msg, e);
       throw new YarnRuntimeException(msg, e);
     }
+  }
+
+  /**
+   * Sets up some options and filters.
+   *
+   * @param conf Configuration
+   */
+  protected void setupOptions(Configuration conf) {
+    Map<String, String> options = new HashMap<>();
+    String username = conf.get(HADOOP_HTTP_STATIC_USER,
+        DEFAULT_HADOOP_HTTP_STATIC_USER);
+    options.put(HADOOP_HTTP_STATIC_USER, username);
+    HttpServer2.defineFilter(readerWebServer.getWebAppContext(),
+        "static_user_filter_timeline",
+        StaticUserWebFilter.StaticUserFilter.class.getName(),
+        options, new String[] {"/*"});
   }
 
   @VisibleForTesting

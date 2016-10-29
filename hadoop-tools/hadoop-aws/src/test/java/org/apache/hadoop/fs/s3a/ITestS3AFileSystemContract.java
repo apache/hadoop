@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,18 +41,44 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
   protected static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileSystemContract.class);
 
+  private Path basePath;
+
+  @Rule
+  public TestName methodName = new TestName();
+
+  @Before
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
+  }
+
   @Override
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
 
     fs = S3ATestUtils.createTestFileSystem(conf);
+    basePath = fs.makeQualified(
+        S3ATestUtils.createTestPath(new Path("/s3afilesystemcontract")));
     super.setUp();
+  }
+
+  /**
+   * This path explicitly places all absolute paths under the per-test suite
+   * path directory; this allows the test to run in parallel.
+   * @param pathString path string as input
+   * @return a qualified path string.
+   */
+  protected Path path(String pathString) {
+    if (pathString.startsWith("/")) {
+      return fs.makeQualified(new Path(basePath, pathString));
+    } else {
+      return super.path(pathString);
+    }
   }
 
   @Override
   protected void tearDown() throws Exception {
     if (fs != null) {
-      fs.delete(path("test"), true);
+      fs.delete(basePath, true);
     }
     super.tearDown();
   }

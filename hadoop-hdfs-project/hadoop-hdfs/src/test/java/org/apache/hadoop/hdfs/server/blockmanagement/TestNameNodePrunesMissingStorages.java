@@ -231,9 +231,9 @@ public class TestNameNodePrunesMissingStorages {
       // it would be re-initialized with a new storage ID.)
       assertNotNull(volumeLocationToRemove);
       datanodeToRemoveStorageFrom.shutdown();
-      FileUtil.fullyDelete(volumeLocationToRemove.getFile());
+      FileUtil.fullyDelete(new File(volumeLocationToRemove.getUri()));
       FileOutputStream fos = new FileOutputStream(
-          volumeLocationToRemove.getFile().toString());
+          new File(volumeLocationToRemove.getUri()));
       try {
         fos.write(1);
       } finally {
@@ -327,7 +327,8 @@ public class TestNameNodePrunesMissingStorages {
       final String newStorageId = DatanodeStorage.generateUuid();
       try {
         File currentDir = new File(
-            volumeRefs.get(0).getStorageLocation().getFile(), "current");
+            new File(volumeRefs.get(0).getStorageLocation().getUri()),
+            "current");
         File versionFile = new File(currentDir, "VERSION");
         rewriteVersionFile(versionFile, newStorageId);
       } finally {

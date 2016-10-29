@@ -42,7 +42,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 /** Test class to verify RollingLevelDBTimelineStore. */
 @InterfaceAudience.Private
@@ -368,7 +368,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     long start = System.currentTimeMillis();
     int num = 1000000;
 
-    Log.info("Start test for " + num);
+    Log.getLog().info("Start test for " + num);
 
     final String tezTaskAttemptId = "TEZ_TA";
     final String tezEntityId = "attempt_1429158534256_0001_1_00_000000_";
@@ -414,7 +414,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     }
 
     long duration = System.currentTimeMillis() - start;
-    Log.info("Duration for " + num + ": " + duration);
+    Log.getLog().info("Duration for " + num + ": " + duration);
   }
 
   public static void main(String[] args) throws Exception {

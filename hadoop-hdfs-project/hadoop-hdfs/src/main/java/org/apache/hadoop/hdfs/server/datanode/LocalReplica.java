@@ -351,7 +351,13 @@ abstract public class LocalReplica extends ReplicaInfo {
   @Override
   public void updateWithReplica(StorageLocation replicaLocation) {
     // for local replicas, the replica location is assumed to be a file.
-    File diskFile = replicaLocation.getFile();
+    File diskFile = null;
+    try {
+      diskFile = new File(replicaLocation.getUri());
+    } catch (IllegalArgumentException e) {
+      diskFile = null;
+    }
+
     if (null == diskFile) {
       setDirInternal(null);
     } else {

@@ -1832,6 +1832,9 @@ public class WebHdfsFileSystem extends FileSystem
       if (runnerState == RunnerState.CLOSED) {
         throw new IOException("Stream closed");
       }
+      if (len == 0) {
+        return 0;
+      }
 
       // Before the first read, pos and fileLength will be 0 and readBuffer
       // will all be null. They will be initialized once the first connection

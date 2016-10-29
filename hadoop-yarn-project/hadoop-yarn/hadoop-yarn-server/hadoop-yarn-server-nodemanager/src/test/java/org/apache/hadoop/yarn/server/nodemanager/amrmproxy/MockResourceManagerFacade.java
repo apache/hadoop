@@ -113,7 +113,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 /**
  * Mock Resource Manager facade implementation that exposes all the methods
@@ -156,7 +156,7 @@ public class MockResourceManagerFacade implements
       RegisterApplicationMasterRequest request) throws YarnException,
       IOException {
     String amrmToken = getAppIdentifier();
-    Log.info("Registering application attempt: " + amrmToken);
+    Log.getLog().info("Registering application attempt: " + amrmToken);
 
     synchronized (applicationContainerIdMap) {
       Assert.assertFalse("The application id is already registered: "
@@ -175,7 +175,7 @@ public class MockResourceManagerFacade implements
       FinishApplicationMasterRequest request) throws YarnException,
       IOException {
     String amrmToken = getAppIdentifier();
-    Log.info("Finishing application attempt: " + amrmToken);
+    Log.getLog().info("Finishing application attempt: " + amrmToken);
 
     synchronized (applicationContainerIdMap) {
       // Remove the containers that were being tracked for this application
@@ -252,7 +252,8 @@ public class MockResourceManagerFacade implements
 
     if (request.getReleaseList() != null
         && request.getReleaseList().size() > 0) {
-      Log.info("Releasing containers: " + request.getReleaseList().size());
+      Log.getLog().info("Releasing containers: "
+          + request.getReleaseList().size());
       synchronized (applicationContainerIdMap) {
         Assert.assertTrue(
             "The application id is not registered before allocate(): "
@@ -292,7 +293,7 @@ public class MockResourceManagerFacade implements
       }
     }
 
-    Log.info("Allocating containers: " + containerList.size()
+    Log.getLog().info("Allocating containers: " + containerList.size()
         + " for application attempt: " + conf.get("AMRMTOKEN"));
     return AllocateResponse.newInstance(0,
         new ArrayList<ContainerStatus>(), containerList,

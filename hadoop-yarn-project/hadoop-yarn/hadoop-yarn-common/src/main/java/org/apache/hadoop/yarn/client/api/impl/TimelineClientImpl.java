@@ -98,6 +98,7 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 public class TimelineClientImpl extends TimelineClient {
 
   private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String RESOURCE_URI_STR_V1 = "/ws/v1/timeline/";
   private static final String RESOURCE_URI_STR_V2 = "/ws/v2/timeline/";
   private static final Joiner JOINER = Joiner.on("");
@@ -765,15 +766,14 @@ public class TimelineClientImpl extends TimelineClient {
       LOG.error("File [" + jsonFile.getAbsolutePath() + "] doesn't exist");
       return;
     }
-    ObjectMapper mapper = new ObjectMapper();
-    YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+    YarnJacksonJaxbJsonProvider.configObjectMapper(MAPPER);
     TimelineEntities entities = null;
     TimelineDomains domains = null;
     try {
       if (type.equals(ENTITY_DATA_TYPE)) {
-        entities = mapper.readValue(jsonFile, TimelineEntities.class);
+        entities = MAPPER.readValue(jsonFile, TimelineEntities.class);
       } else if (type.equals(DOMAIN_DATA_TYPE)){
-        domains = mapper.readValue(jsonFile, TimelineDomains.class);
+        domains = MAPPER.readValue(jsonFile, TimelineDomains.class);
       }
     } catch (Exception e) {
       LOG.error("Error when reading  " + e.getMessage());

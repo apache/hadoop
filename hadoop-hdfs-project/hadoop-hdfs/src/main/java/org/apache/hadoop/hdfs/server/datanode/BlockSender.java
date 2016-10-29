@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -322,6 +323,12 @@ class BlockSender implements java.io.Closeable {
           } else {
             LOG.warn("Could not find metadata file for " + block);
           }
+        } catch (FileNotFoundException e) {
+          // The replica is on its volume map but not on disk
+          datanode.notifyNamenodeDeletedBlock(block, replica.getStorageUuid());
+          datanode.data.invalidate(block.getBlockPoolId(),
+              new Block[]{block.getLocalBlock()});
+          throw e;
         } finally {
           if (!keepMetaInOpen) {
             IOUtils.closeStream(metaIn);

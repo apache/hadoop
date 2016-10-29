@@ -44,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
@@ -199,7 +200,7 @@ public class TimelineReaderWebServices {
    * @return information about the cluster including timeline version.
    */
   @GET
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineAbout about(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res) {
@@ -276,7 +277,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/app-uid/{uid}/entities/{entitytype}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -414,7 +415,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/apps/{appid}/entities/{entitytype}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -524,7 +525,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/clusters/{clusterid}/apps/{appid}/entities/{entitytype}")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -621,7 +622,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/entity-uid/{uid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -716,7 +717,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/apps/{appid}/entities/{entitytype}/{entityid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -787,7 +788,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/clusters/{clusterid}/apps/{appid}/entities/{entitytype}/{entityid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -859,7 +860,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/run-uid/{uid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -927,7 +928,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/users/{userid}/flows/{flowname}/runs/{flowrunid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -968,7 +969,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/"
       + "runs/{flowrunid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getFlowRun(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1050,7 +1051,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/flow-uid/{uid}/runs/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowRuns(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1135,7 +1136,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/users/{userid}/flows/{flowname}/runs/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowRuns(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1190,7 +1191,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/runs/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowRuns(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1271,7 +1272,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/flows/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlows(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1317,7 +1318,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/clusters/{clusterid}/flows/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlows(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1401,7 +1402,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/app-uid/{uid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getApp(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1492,7 +1493,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/apps/{appid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getApp(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1556,7 +1557,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/clusters/{clusterid}/apps/{appid}/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public TimelineEntity getApp(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1671,7 +1672,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/run-uid/{uid}/apps")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1798,7 +1799,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/users/{userid}/flows/{flowname}/runs/{flowrunid}/apps/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1899,7 +1900,7 @@ public class TimelineReaderWebServices {
   @GET
   @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/runs/"
       + "{flowrunid}/apps/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowRunApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -1997,7 +1998,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/users/{userid}/flows/{flowname}/apps/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -2094,7 +2095,7 @@ public class TimelineReaderWebServices {
    */
   @GET
   @Path("/clusters/{clusterid}/users/{userid}/flows/{flowname}/apps/")
-  @Produces(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
   public Set<TimelineEntity> getFlowApps(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,

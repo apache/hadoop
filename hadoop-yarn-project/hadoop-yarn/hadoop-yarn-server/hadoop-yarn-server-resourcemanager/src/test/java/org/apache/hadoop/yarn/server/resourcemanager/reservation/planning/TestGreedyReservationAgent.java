@@ -60,7 +60,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 @RunWith(Parameterized.class)
 public class TestGreedyReservationAgent {
@@ -89,7 +89,7 @@ public class TestGreedyReservationAgent {
 
     long seed = rand.nextLong();
     rand.setSeed(seed);
-    Log.info("Running with seed: " + seed);
+    Log.getLog().info("Running with seed: " + seed);
 
     // setting completely loose quotas
     long timeWindow = 1000000L;

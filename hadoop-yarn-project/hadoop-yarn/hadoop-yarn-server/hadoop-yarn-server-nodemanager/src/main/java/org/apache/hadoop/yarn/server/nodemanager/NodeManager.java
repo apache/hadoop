@@ -750,7 +750,7 @@ public class NodeManager extends CompositeService
       // Failed to start if we're a Unix based system but we don't have bash.
       // Bash is necessary to launch containers under Unix-based systems.
       if (!Shell.WINDOWS) {
-        if (!Shell.isBashSupported) {
+        if (!Shell.checkIsBashSupported()) {
           String message =
               "Failing NodeManager start since we're on a "
                   + "Unix-based system but bash doesn't seem to be available.";

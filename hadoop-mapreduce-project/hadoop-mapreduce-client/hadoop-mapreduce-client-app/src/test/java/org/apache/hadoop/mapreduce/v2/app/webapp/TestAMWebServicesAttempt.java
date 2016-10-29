@@ -32,6 +32,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -152,7 +153,8 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .path("attempts").path(attid).path("state")
               .queryParam("user.name", webserviceUserName)
               .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-          assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+          assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
+                  + JettyUtils.UTF_8, response.getType().toString());
           JSONObject json = response.getEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
           assertEquals(att.getState().toString(), json.get("state"));
@@ -180,7 +182,8 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .queryParam("user.name", webserviceUserName)
               .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
 
-          assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+          assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+              response.getType().toString());
           String xml = response.getEntity(String.class);
           DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
           DocumentBuilder db = dbf.newDocumentBuilder();
@@ -219,7 +222,8 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .accept(MediaType.APPLICATION_JSON)
               .type(MediaType.APPLICATION_JSON)
               .put(ClientResponse.class, "{\"state\":\"KILLED\"}");
-          assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+          assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
+                  + JettyUtils.UTF_8, response.getType().toString());
           JSONObject json = response.getEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
           assertEquals(TaskAttemptState.KILLED.toString(), json.get("state"));
@@ -252,7 +256,8 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
               .put(ClientResponse.class,
                   "<jobTaskAttemptState><state>KILLED" +
                       "</state></jobTaskAttemptState>");
-          assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+          assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+              response.getType().toString());
           String xml = response.getEntity(String.class);
           DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
           DocumentBuilder db = dbf.newDocumentBuilder();

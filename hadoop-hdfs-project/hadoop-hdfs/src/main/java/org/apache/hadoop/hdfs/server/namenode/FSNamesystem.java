@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.commons.lang.StringEscapeUtils.escapeJava;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -283,7 +284,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Logger;
-import org.mortbay.util.ajax.JSON;
+import org.eclipse.jetty.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -6877,6 +6878,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (auditLog.isDebugEnabled() ||
           (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
         final StringBuilder sb = STRING_BUILDER.get();
+        src = escapeJava(src);
+        dst = escapeJava(dst);
         sb.setLength(0);
         sb.append("allowed=").append(succeeded).append("\t");
         sb.append("ugi=").append(userName).append("\t");

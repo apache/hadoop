@@ -29,16 +29,20 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -144,7 +148,37 @@ public class TestDatanodeReport {
       cluster.shutdown();
     }
   }
-  
+
+  @Test
+  public void testDatanodeReportMissingBlock() throws Exception {
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    conf.setLong(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 1);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(NUM_OF_DATANODES).build();
+    try {
+      // wait until the cluster is up
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/testDatanodeReportMissingBlock");
+      DFSTestUtil.writeFile(fs, p, new String("testdata"));
+      LocatedBlock lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+      assertEquals(3, lb.getLocations().length);
+      ExtendedBlock b = lb.getBlock();
+      cluster.corruptBlockOnDataNodesByDeletingBlockFile(b);
+      try {
+        DFSTestUtil.readFile(fs, p);
+        Assert.fail("Must throw exception as the block doesn't exists on disk");
+      } catch (IOException e) {
+        // all bad datanodes
+      }
+      cluster.triggerHeartbeats(); // IBR delete ack
+      lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+      assertEquals(0, lb.getLocations().length);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   final static Comparator<StorageReport> CMP = new Comparator<StorageReport>() {
     @Override
     public int compare(StorageReport left, StorageReport right) {

@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.text.StrBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
     .DiskBalancerDataNode;
@@ -147,11 +148,17 @@ public class PlanCommand extends Command {
 
     try {
       if (plan != null && plan.getVolumeSetPlans().size() > 0) {
-        outputLine = String.format("Writing plan to: %s", getOutputPath());
+        outputLine = String.format("Writing plan to:");
         recordOutput(result, outputLine);
-        try (FSDataOutputStream planStream = create(String.format(
+
+        final String planFileName = String.format(
             DiskBalancerCLI.PLAN_TEMPLATE,
-            cmd.getOptionValue(DiskBalancerCLI.PLAN)))) {
+            cmd.getOptionValue(DiskBalancerCLI.PLAN));
+        final String planFileFullName =
+            new Path(getOutputPath(), planFileName).toString();
+        recordOutput(result, planFileFullName);
+
+        try (FSDataOutputStream planStream = create(planFileName)) {
           planStream.write(plan.toJson().getBytes(StandardCharsets.UTF_8));
         }
       } else {
@@ -173,7 +180,7 @@ public class PlanCommand extends Command {
       result.appendln(Throwables.getStackTraceAsString(e));
     }
 
-    getPrintStream().println(result.toString());
+    getPrintStream().print(result.toString());
   }
 
 

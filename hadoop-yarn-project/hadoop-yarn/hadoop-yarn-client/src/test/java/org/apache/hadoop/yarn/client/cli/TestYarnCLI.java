@@ -84,7 +84,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.eclipse.jetty.util.log.Log;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -325,11 +325,11 @@ public class TestYarnCLI {
         "http://host:2345", "");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
-    Log.info("ExpectedOutput");
-    Log.info("["+appReportStr+"]");
-    Log.info("OutputFrom command");
+    Log.getLog().info("ExpectedOutput");
+    Log.getLog().info("["+appReportStr+"]");
+    Log.getLog().info("OutputFrom command");
     String actualOutput = sysOutStream.toString("UTF-8");
-    Log.info("["+actualOutput+"]");
+    Log.getLog().info("["+actualOutput+"]");
     Assert.assertEquals(appReportStr, actualOutput);
   }
   

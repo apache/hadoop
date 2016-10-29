@@ -23,6 +23,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -79,7 +80,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
@@ -89,7 +91,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 11);
@@ -139,7 +142,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
@@ -149,7 +153,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
@@ -172,7 +177,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       Thread.sleep(1000);
@@ -181,7 +187,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
@@ -218,7 +225,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
@@ -228,7 +236,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
@@ -269,7 +278,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
@@ -278,7 +288,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
@@ -295,7 +306,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
@@ -304,7 +316,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
@@ -329,7 +342,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
@@ -338,7 +352,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
@@ -373,7 +388,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       nm.nodeHeartbeat(true);
@@ -383,7 +399,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
@@ -519,7 +536,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
       nm.nodeHeartbeat(true);
       Thread.sleep(5000);
@@ -528,7 +546,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
@@ -571,7 +590,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
       nm.nodeHeartbeat(true);
       Thread.sleep(5000);
@@ -580,7 +600,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 10);
@@ -623,7 +644,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
       nm.nodeHeartbeat(true);
       Thread.sleep(5000);
@@ -632,7 +654,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
@@ -657,14 +680,16 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 0);
@@ -705,7 +730,8 @@ public class TestRMWebServicesSchedulerActivities
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
@@ -714,7 +740,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 1);
@@ -726,7 +753,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
@@ -735,7 +763,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 2);
@@ -755,7 +784,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       nm2.nodeHeartbeat(true);
@@ -764,7 +794,8 @@ public class TestRMWebServicesSchedulerActivities
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/app-activities").queryParams(params).accept(
           MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
       verifyNumberOfAllocations(json, 3);

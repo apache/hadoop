@@ -140,7 +140,7 @@ The jobs resource provides a list of the MapReduce jobs that have finished. It d
 
 #### Query Parameters Supported
 
-Multiple paramters can be specified. The started and finished times have a begin and end parameter to allow you to specify ranges. For example, one could request all jobs that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specfied, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
+Multiple parameters can be specified. The started and finished times have a begin and end parameter to allow you to specify ranges. For example, one could request all jobs that started between 1:00am and 2:00pm on 12/19/2011 with startedTimeBegin=1324256400&startedTimeEnd=1324303200. If the Begin parameter is not specfied, it defaults to 0, and if the End parameter is not specified, it defaults to infinity.
 
       * user - user name
       * state - the job state
