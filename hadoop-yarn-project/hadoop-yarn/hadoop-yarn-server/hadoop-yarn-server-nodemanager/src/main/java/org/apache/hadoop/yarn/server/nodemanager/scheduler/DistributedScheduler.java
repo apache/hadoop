@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyApplicationContext;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AbstractRequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
@@ -198,7 +199,7 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
     setNodeList(registerResponse.getNodesForScheduling());
   }
 
-  private void setNodeList(List<NodeId> nodeList) {
+  private void setNodeList(List<RemoteNode> nodeList) {
     oppContainerContext.updateNodeList(nodeList);
   }
 
