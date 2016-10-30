@@ -965,7 +965,6 @@
     <description>who will execute(launch) the containers.</description>
     <name>yarn.nodemanager.container-executor.class</name>
     <value>org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor</value>
-<!--<value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>-->
   </property>
 
   <property>
