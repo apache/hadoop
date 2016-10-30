@@ -337,7 +337,7 @@ public class TestPermission {
       fail("Expect ACE when a non-super user tries to change a file to a " +
           "group where the user does not belong.");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith("User does not belong to"));
+      assertThat(e.getMessage(), startsWith("User null does not belong to"));
     }
   }
 
@@ -371,8 +371,8 @@ public class TestPermission {
       userfs.setOwner(file, NOUSER, null);
       fail("Expect ACE when a non-super user tries to change owner");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith(
-          "Non-super user cannot change owner"));
+      assertThat(e.getMessage(), startsWith("User " + NOUSER
+          + " is not a super user (non-super user cannot change owner)"));
     }
   }
 
@@ -397,8 +397,8 @@ public class TestPermission {
       fail("Expect ACE or FNFE when a non-super user tries to change owner " +
           "for a non-existent file");
     } catch (AccessControlException e) {
-      assertThat(e.getMessage(), startsWith(
-          "Non-super user cannot change owner"));
+      assertThat(e.getMessage(), startsWith("User " + NOUSER
+          + " is not a super user (non-super user cannot change owner)"));
     } catch (FileNotFoundException e) {
     }
   }
