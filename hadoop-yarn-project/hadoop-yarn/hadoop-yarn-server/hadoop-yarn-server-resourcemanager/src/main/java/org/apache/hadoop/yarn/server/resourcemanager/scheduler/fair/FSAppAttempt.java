@@ -294,11 +294,27 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           rackLocalityThreshold;
 
       // Relax locality constraints once we've surpassed threshold.
-      if (getSchedulingOpportunities(schedulerKey) > (numNodes * threshold)) {
+      int schedulingOpportunities = getSchedulingOpportunities(schedulerKey);
+      double thresholdNum = numNodes * threshold;
+      if (schedulingOpportunities > thresholdNum) {
         if (allowed.equals(NodeType.NODE_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("SchedulingOpportunities: " + schedulingOpportunities
+                + ", nodeLocalityThreshold: " + thresholdNum
+                + ", change allowedLocality from NODE_LOCAL to RACK_LOCAL"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.RACK_LOCAL);
           resetSchedulingOpportunities(schedulerKey);
         } else if (allowed.equals(NodeType.RACK_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("SchedulingOpportunities: " + schedulingOpportunities
+                + ", rackLocalityThreshold: " + thresholdNum
+                + ", change allowedLocality from RACK_LOCAL to OFF_SWITCH"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.OFF_SWITCH);
           resetSchedulingOpportunities(schedulerKey);
         }
@@ -365,9 +381,23 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       if (waitTime > thresholdTime) {
         if (allowed.equals(NodeType.NODE_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Waiting time: " + waitTime
+                + " ms, nodeLocalityDelay time: " + nodeLocalityDelayMs + " ms"
+                + ", change allowedLocality from NODE_LOCAL to RACK_LOCAL"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.RACK_LOCAL);
           resetSchedulingOpportunities(schedulerKey, currentTimeMs);
         } else if (allowed.equals(NodeType.RACK_LOCAL)) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Waiting time: " + waitTime
+                + " ms, nodeLocalityDelay time: " + nodeLocalityDelayMs + " ms"
+                + ", change allowedLocality from RACK_LOCAL to OFF_SWITCH"
+                + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           allowedLocalityLevel.put(schedulerKey, NodeType.OFF_SWITCH);
           resetSchedulingOpportunities(schedulerKey, currentTimeMs);
         }
@@ -818,6 +848,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && localRequest != null && localRequest.getNumContainers() != 0) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Assign container on " + node.getNodeName()
+                + " node, assignType: NODE_LOCAL" + ", allowedLocality: "
+                + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           return assignContainer(node, localRequest, NodeType.NODE_LOCAL,
               reserved, schedulerKey);
         }
@@ -829,6 +865,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
             && (allowedLocality.equals(NodeType.RACK_LOCAL) || allowedLocality
             .equals(NodeType.OFF_SWITCH))) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Assign container on " + node.getNodeName()
+                + " node, assignType: RACK_LOCAL" + ", allowedLocality: "
+                + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                + ", app attempt id: " + this.attemptId);
+          }
           return assignContainer(node, rackLocalRequest, NodeType.RACK_LOCAL,
               reserved, schedulerKey);
         }
@@ -843,9 +885,22 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
             && offSwitchRequest.getNumContainers() != 0) {
           if (!hasNodeOrRackLocalRequests(schedulerKey) || allowedLocality
               .equals(NodeType.OFF_SWITCH)) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Assign container on " + node.getNodeName()
+                  + " node, assignType: OFF_SWITCH" + ", allowedLocality: "
+                  + allowedLocality + ", priority: " + schedulerKey.getPriority()
+                  + ", app attempt id: " + this.attemptId);
+            }
             return assignContainer(node, offSwitchRequest, NodeType.OFF_SWITCH,
                 reserved, schedulerKey);
           }
+        }
+
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Can't assign container on " + node.getNodeName()
+              + " node, allowedLocality: " + allowedLocality + ", priority: "
+              + schedulerKey.getPriority() + ", app attempt id: "
+              + this.attemptId);
         }
       }
     } finally {
