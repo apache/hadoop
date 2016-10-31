@@ -12,6 +12,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-10597. RPC Server signals backoff to clients when all request
     queues are full. (Ming Ma via Arpit Agarwal)
 
+    HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
+    (Anu Engineer via xyao)
+
   OPTIMIZATIONS
 
   BUG FIXES

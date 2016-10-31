@@ -87,7 +87,7 @@ public class MetricsAsserts {
    * Call getMetrics on source and get a record builder mock to verify
    * @param source  the metrics source
    * @param all     if true, return all metrics even if not changed
-   * @return the record builder mock to verify
+   * @return the record builder mock to verifyÏ
    */
   public static MetricsRecordBuilder getMetrics(MetricsSource source,
                                                 boolean all) {
