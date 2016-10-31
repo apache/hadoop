@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -308,6 +309,23 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         Resources.addTo(ret,
             Resources.multiply(rr.getCapability(), rr.getNumContainers()));
       }
+    }
+    return ret;
+  }
+
+  public synchronized Map<String, Resource> getTotalPendingRequestsPerPartition() {
+
+    Map<String, Resource> ret = new HashMap<String, Resource>();
+    Resource res = null;
+    for (Priority  priority : appSchedulingInfo.getPriorities()) {
+      ResourceRequest rr = appSchedulingInfo.getResourceRequest(priority, "*");
+      if ((res = ret.get(rr.getNodeLabelExpression())) == null) {
+        res = Resources.createResource(0, 0);
+        ret.put(rr.getNodeLabelExpression(), res);
+      }
+
+      Resources.addTo(res,
+          Resources.multiply(rr.getCapability(), rr.getNumContainers()));
     }
     return ret;
   }
