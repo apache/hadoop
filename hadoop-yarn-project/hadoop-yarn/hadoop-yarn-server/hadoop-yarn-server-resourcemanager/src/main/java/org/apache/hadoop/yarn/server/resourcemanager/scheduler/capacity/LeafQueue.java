@@ -519,6 +519,7 @@ public class LeafQueue extends AbstractCSQueue {
       // queue metrics are updated, more resource may be available
       // activate the pending applications if possible
       activateApplications();
+
     } finally {
       writeLock.unlock();
     }
@@ -1148,8 +1149,9 @@ public class LeafQueue extends AbstractCSQueue {
       Resource clusterResource, FiCaSchedulerApp application,
       String partition) {
     return getHeadroom(user, queueCurrentLimit, clusterResource,
-        computeUserLimit(application, clusterResource, user, partition,
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), partition);
+        computeUserLimit(application.getUser(), clusterResource, user,
+            partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
+        partition);
   }
 
   private Resource getHeadroom(User user,
@@ -1221,7 +1223,7 @@ public class LeafQueue extends AbstractCSQueue {
     // Compute user limit respect requested labels,
     // TODO, need consider headroom respect labels also
     Resource userLimit =
-        computeUserLimit(application, clusterResource, queueUser,
+        computeUserLimit(application.getUser(), clusterResource, queueUser,
             nodePartition, schedulingMode);
 
     setQueueResourceLimitsInfo(clusterResource);
@@ -1259,7 +1261,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Lock(NoLock.class)
-  private Resource computeUserLimit(FiCaSchedulerApp application,
+  private Resource computeUserLimit(String userName,
       Resource clusterResource, User user,
       String nodePartition, SchedulingMode schedulingMode) {
     Resource partitionResource = labelManager.getResourceByLabel(nodePartition,
@@ -1359,7 +1361,6 @@ public class LeafQueue extends AbstractCSQueue {
             minimumAllocation);
 
     if (LOG.isDebugEnabled()) {
-      String userName = application.getUser();
       LOG.debug("User limit computation for " + userName +
           " in queue " + getQueueName() +
           " userLimitPercent=" + userLimit +
@@ -2010,6 +2011,17 @@ public class LeafQueue extends AbstractCSQueue {
         .getSchedulableEntities());
   }
 
+  /**
+   * Obtain (read-only) collection of all applications.
+   */
+  public Collection<FiCaSchedulerApp> getAllApplications() {
+    Collection<FiCaSchedulerApp> apps = new HashSet<FiCaSchedulerApp>(
+        pendingOrderingPolicy.getSchedulableEntities());
+    apps.addAll(orderingPolicy.getSchedulableEntities());
+
+    return Collections.unmodifiableCollection(apps);
+  }
+
   // Consider the headroom for each user in the queue.
   // Total pending for the queue =
   //   sum(for each user(min((user's headroom), sum(user's pending requests))))
@@ -2026,7 +2038,7 @@ public class LeafQueue extends AbstractCSQueue {
         if (!userNameToHeadroom.containsKey(userName)) {
           User user = getUser(userName);
           Resource headroom = Resources.subtract(
-              computeUserLimit(app, resources, user, partition,
+              computeUserLimit(app.getUser(), resources, user, partition,
                   SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
               user.getUsed(partition));
           // Make sure headroom is not negative.
@@ -2046,6 +2058,16 @@ public class LeafQueue extends AbstractCSQueue {
       readLock.unlock();
     }
 
+  }
+
+  public synchronized Resource getUserLimitPerUser(String userName,
+      Resource resources, String partition) {
+
+    // Check user resource limit
+    User user = getUser(userName);
+
+    return computeUserLimit(userName, resources, user, partition,
+        SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
   }
 
   @Override
@@ -2103,8 +2125,8 @@ public class LeafQueue extends AbstractCSQueue {
   }
   
   /**
-   * return all ignored partition exclusivity RMContainers in the LeafQueue, this
-   * will be used by preemption policy.
+   * @return all ignored partition exclusivity RMContainers in the LeafQueue,
+   *         this will be used by preemption policy.
    */
   public Map<String, TreeSet<RMContainer>>
       getIgnoreExclusivityRMContainers() {

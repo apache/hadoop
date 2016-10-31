@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -33,9 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -111,9 +106,11 @@ public class FifoCandidatesSelector
                 // Skip already selected containers
                 continue;
               }
-              boolean preempted = tryPreemptContainerAndDeductResToObtain(
-                  resToObtainByPartition, c, clusterResource, selectedCandidates,
-                  totalPreemptionAllowed);
+              boolean preempted = CapacitySchedulerPreemptionUtils
+                  .tryPreemptContainerAndDeductResToObtain(rc,
+                      preemptionContext, resToObtainByPartition, c,
+                      clusterResource, selectedCandidates,
+                      totalPreemptionAllowed);
               if (!preempted) {
                 continue;
               }
@@ -184,76 +181,15 @@ public class FifoCandidatesSelector
         break;
       }
 
-      boolean preempted =
-          tryPreemptContainerAndDeductResToObtain(resToObtainByPartition, c,
-              clusterResource, preemptMap, totalPreemptionAllowed);
+      boolean preempted = CapacitySchedulerPreemptionUtils
+          .tryPreemptContainerAndDeductResToObtain(rc, preemptionContext,
+              resToObtainByPartition, c, clusterResource, preemptMap,
+              totalPreemptionAllowed);
       if (preempted) {
         Resources.subtractFrom(skippedAMSize, c.getAllocatedResource());
       }
     }
     skippedAMContainerlist.clear();
-  }
-
-  private boolean preemptMapContains(
-      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
-      ApplicationAttemptId attemptId, RMContainer rmContainer) {
-    Set<RMContainer> rmContainers;
-    if (null == (rmContainers = preemptMap.get(attemptId))) {
-      return false;
-    }
-    return rmContainers.contains(rmContainer);
-  }
-
-  /**
-   * Return should we preempt rmContainer. If we should, deduct from
-   * <code>resourceToObtainByPartition</code>
-   */
-  private boolean tryPreemptContainerAndDeductResToObtain(
-      Map<String, Resource> resourceToObtainByPartitions,
-      RMContainer rmContainer, Resource clusterResource,
-      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
-      Resource totalPreemptionAllowed) {
-    ApplicationAttemptId attemptId = rmContainer.getApplicationAttemptId();
-
-    // We will not account resource of a container twice or more
-    if (preemptMapContains(preemptMap, attemptId, rmContainer)) {
-      return false;
-    }
-
-    String nodePartition = getPartitionByNodeId(rmContainer.getAllocatedNode());
-    Resource toObtainByPartition =
-        resourceToObtainByPartitions.get(nodePartition);
-
-    if (null != toObtainByPartition && Resources.greaterThan(rc,
-        clusterResource, toObtainByPartition, Resources.none()) && Resources
-        .fitsIn(rc, clusterResource, rmContainer.getAllocatedResource(),
-            totalPreemptionAllowed)) {
-      Resources.subtractFrom(toObtainByPartition,
-          rmContainer.getAllocatedResource());
-      Resources.subtractFrom(totalPreemptionAllowed,
-          rmContainer.getAllocatedResource());
-
-      // When we have no more resource need to obtain, remove from map.
-      if (Resources.lessThanOrEqual(rc, clusterResource, toObtainByPartition,
-          Resources.none())) {
-        resourceToObtainByPartitions.remove(nodePartition);
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(this.getClass().getName() + " Marked container=" + rmContainer
-            .getContainerId() + " from partition=" + nodePartition + " queue="
-            + rmContainer.getQueueName() + " to be preemption candidates");
-      }
-      // Add to preemptMap
-      addToPreemptMap(preemptMap, attemptId, rmContainer);
-      return true;
-    }
-
-    return false;
-  }
-
-  private String getPartitionByNodeId(NodeId nodeId) {
-    return preemptionContext.getScheduler().getSchedulerNode(nodeId)
-        .getPartition();
   }
 
   /**
@@ -267,10 +203,6 @@ public class FifoCandidatesSelector
       Map<ApplicationAttemptId, Set<RMContainer>> selectedContainers,
       Resource totalPreemptionAllowed) {
     ApplicationAttemptId appId = app.getApplicationAttemptId();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Looking at application=" + app.getApplicationAttemptId()
-          + " resourceToObtain=" + resToObtainByPartition);
-    }
 
     // first drop reserved containers towards rsrcPreempt
     List<RMContainer> reservedContainers =
@@ -285,8 +217,9 @@ public class FifoCandidatesSelector
       }
 
       // Try to preempt this container
-      tryPreemptContainerAndDeductResToObtain(resToObtainByPartition, c,
-          clusterResource, selectedContainers, totalPreemptionAllowed);
+      CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
+          rc, preemptionContext, resToObtainByPartition, c, clusterResource,
+          selectedContainers, totalPreemptionAllowed);
 
       if (!preemptionContext.isObserveOnly()) {
         preemptionContext.getRMContext().getDispatcher().getEventHandler()
@@ -327,39 +260,9 @@ public class FifoCandidatesSelector
       }
 
       // Try to preempt this container
-      tryPreemptContainerAndDeductResToObtain(resToObtainByPartition, c,
-          clusterResource, selectedContainers, totalPreemptionAllowed);
+      CapacitySchedulerPreemptionUtils.tryPreemptContainerAndDeductResToObtain(
+          rc, preemptionContext, resToObtainByPartition, c, clusterResource,
+          selectedContainers, totalPreemptionAllowed);
     }
-  }
-
-  /**
-   * Compare by reversed priority order first, and then reversed containerId
-   * order
-   * @param containers
-   */
-  @VisibleForTesting
-  static void sortContainers(List<RMContainer> containers){
-    Collections.sort(containers, new Comparator<RMContainer>() {
-      @Override
-      public int compare(RMContainer a, RMContainer b) {
-        int schedKeyComp = b.getAllocatedSchedulerKey()
-                .compareTo(a.getAllocatedSchedulerKey());
-        if (schedKeyComp != 0) {
-          return schedKeyComp;
-        }
-        return b.getContainerId().compareTo(a.getContainerId());
-      }
-    });
-  }
-
-  private void addToPreemptMap(
-      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
-      ApplicationAttemptId appAttemptId, RMContainer containerToPreempt) {
-    Set<RMContainer> set;
-    if (null == (set = preemptMap.get(appAttemptId))) {
-      set = new HashSet<>();
-      preemptMap.put(appAttemptId, set);
-    }
-    set.add(containerToPreempt);
   }
 }
