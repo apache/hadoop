@@ -68,6 +68,51 @@
         <configuration>
         </configuration>
       </plugin>
+
+      <!--
+           The "dist" profile automatically attaches many artifacts
+           to the module.
+
+           Disable these, since we are only concerned with assembling
+           the dist layout.
+      -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <phase>never</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>hadoop-java-sources</id>
+            <phase>never</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>module-javadocs</id>
+            <phase>never</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Disable install plugin too, since we disabled all the artifacts -->
+      <plugin>
+        <artifactId>maven-install-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-install</id>
+            <phase>never</phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
