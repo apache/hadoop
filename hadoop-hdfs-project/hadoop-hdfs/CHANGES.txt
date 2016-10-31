@@ -59,6 +59,8 @@ Release 2.7.4 - UNRELEASED
 
     HDFS-11069. Tighten the authorization in datanode RPC. (kihwal)
 
+     HDFS-8709. Clarify automatic sync in FSEditLog#logEdit. (wang)
+
   OPTIMIZATIONS
 
     HDFS-10896. Move lock logging logic from FSNamesystem into FSNamesystemLock.
