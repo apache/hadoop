@@ -510,6 +510,27 @@ public final class S3AUtils {
   }
 
   /**
+   * Get a long option >= the minimum allowed value, supporting memory
+   * prefixes K,M,G,T,P.
+   * @param conf configuration
+   * @param key key to look up
+   * @param defVal default value
+   * @param min minimum value
+   * @return the value
+   * @throws IllegalArgumentException if the value is below the minimum
+   */
+  static long longBytesOption(Configuration conf,
+                             String key,
+                             long defVal,
+                             long min) {
+    long v = conf.getLongBytes(key, defVal);
+    Preconditions.checkArgument(v >= min,
+            String.format("Value of %s: %d is below the minimum value %d",
+                    key, v, min));
+    return v;
+  }
+
+  /**
    * Get a size property from the configuration: this property must
    * be at least equal to {@link Constants#MULTIPART_MIN_SIZE}.
    * If it is too small, it is rounded up to that minimum, and a warning
@@ -521,7 +542,7 @@ public final class S3AUtils {
    */
   public static long getMultipartSizeProperty(Configuration conf,
       String property, long defVal) {
-    long partSize = conf.getLong(property, defVal);
+    long partSize = conf.getLongBytes(property, defVal);
     if (partSize < MULTIPART_MIN_SIZE) {
       LOG.warn("{} must be at least 5 MB; configured value is {}",
           property, partSize);

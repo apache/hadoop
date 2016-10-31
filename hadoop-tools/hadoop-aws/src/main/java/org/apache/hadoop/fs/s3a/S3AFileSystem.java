@@ -183,10 +183,11 @@ public class S3AFileSystem extends FileSystem {
           MIN_MULTIPART_THRESHOLD, DEFAULT_MIN_MULTIPART_THRESHOLD);
 
       //check but do not store the block size
-      longOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
+      longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
-      readAhead = longOption(conf, READAHEAD_RANGE, DEFAULT_READAHEAD_RANGE, 0);
+      readAhead = longBytesOption(conf, READAHEAD_RANGE,
+          DEFAULT_READAHEAD_RANGE, 0);
       storageStatistics = (S3AStorageStatistics)
           GlobalStorageStatistics.INSTANCE
               .put(S3AStorageStatistics.NAME,
@@ -355,6 +356,16 @@ public class S3AFileSystem extends FileSystem {
   @VisibleForTesting
   AmazonS3 getAmazonS3Client() {
     return s3;
+  }
+
+  /**
+   * Returns the read ahead range value used by this filesystem
+   * @return
+   */
+
+  @VisibleForTesting
+  long getReadAheadRange() {
+    return readAhead;
   }
 
   /**
@@ -1883,7 +1894,7 @@ public class S3AFileSystem extends FileSystem {
    */
   @Deprecated
   public long getDefaultBlockSize() {
-    return getConf().getLong(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
+    return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
   @Override
