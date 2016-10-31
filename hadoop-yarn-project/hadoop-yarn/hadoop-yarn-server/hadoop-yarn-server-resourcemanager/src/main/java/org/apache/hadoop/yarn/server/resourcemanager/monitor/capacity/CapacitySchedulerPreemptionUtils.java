@@ -19,11 +19,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -40,7 +43,8 @@ public class CapacitySchedulerPreemptionUtils {
         continue;
       }
 
-      //  Only add resToObtainByPartition when actuallyToBePreempted resource >= 0
+      // Only add resToObtainByPartition when actuallyToBePreempted resource >=
+      // 0
       if (Resources.greaterThan(context.getResourceCalculator(),
           clusterResource, qT.getActuallyToBePreempted(), Resources.none())) {
         resToObtainByPartition.put(qT.partition,
@@ -57,8 +61,8 @@ public class CapacitySchedulerPreemptionUtils {
       return false;
     }
 
-    Set<RMContainer> containers = selectedCandidates.get(
-        container.getApplicationAttemptId());
+    Set<RMContainer> containers = selectedCandidates
+        .get(container.getApplicationAttemptId());
     if (containers == null) {
       return false;
     }
@@ -70,8 +74,8 @@ public class CapacitySchedulerPreemptionUtils {
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates) {
     for (Set<RMContainer> containers : selectedCandidates.values()) {
       for (RMContainer c : containers) {
-        SchedulerNode schedulerNode = context.getScheduler().getSchedulerNode(
-            c.getAllocatedNode());
+        SchedulerNode schedulerNode = context.getScheduler()
+            .getSchedulerNode(c.getAllocatedNode());
         if (null == schedulerNode) {
           continue;
         }
@@ -89,8 +93,113 @@ public class CapacitySchedulerPreemptionUtils {
         if (null != res) {
           tq.deductActuallyToBePreempted(context.getResourceCalculator(),
               tq.totalPartitionResource, res);
+          Collection<TempAppPerPartition> tas = tq.getApps();
+          if (null == tas || tas.isEmpty()) {
+            continue;
+          }
+
+          deductPreemptableResourcePerApp(context, tq.totalPartitionResource,
+              tas, res, partition);
         }
       }
     }
+  }
+
+  private static void deductPreemptableResourcePerApp(
+      CapacitySchedulerPreemptionContext context,
+      Resource totalPartitionResource, Collection<TempAppPerPartition> tas,
+      Resource res, String partition) {
+    for (TempAppPerPartition ta : tas) {
+      ta.deductActuallyToBePreempted(context.getResourceCalculator(),
+          totalPartitionResource, res, partition);
+    }
+  }
+
+  /**
+   * Invoke this method to preempt container based on resToObtain.
+   *
+   * @param rc
+   *          resource calculator
+   * @param context
+   *          preemption context
+   * @param resourceToObtainByPartitions
+   *          map to hold resource to obtain per partition
+   * @param rmContainer
+   *          container
+   * @param clusterResource
+   *          total resource
+   * @param preemptMap
+   *          map to hold preempted containers
+   * @param totalPreemptionAllowed
+   *          total preemption allowed per round
+   * @return should we preempt rmContainer. If we should, deduct from
+   *         <code>resourceToObtainByPartition</code>
+   */
+  public static boolean tryPreemptContainerAndDeductResToObtain(
+      ResourceCalculator rc, CapacitySchedulerPreemptionContext context,
+      Map<String, Resource> resourceToObtainByPartitions,
+      RMContainer rmContainer, Resource clusterResource,
+      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      Resource totalPreemptionAllowed) {
+    ApplicationAttemptId attemptId = rmContainer.getApplicationAttemptId();
+
+    // We will not account resource of a container twice or more
+    if (preemptMapContains(preemptMap, attemptId, rmContainer)) {
+      return false;
+    }
+
+    String nodePartition = getPartitionByNodeId(context,
+        rmContainer.getAllocatedNode());
+    Resource toObtainByPartition = resourceToObtainByPartitions
+        .get(nodePartition);
+
+    if (null != toObtainByPartition
+        && Resources.greaterThan(rc, clusterResource, toObtainByPartition,
+            Resources.none())
+        && Resources.fitsIn(rc, clusterResource,
+            rmContainer.getAllocatedResource(), totalPreemptionAllowed)) {
+      Resources.subtractFrom(toObtainByPartition,
+          rmContainer.getAllocatedResource());
+      Resources.subtractFrom(totalPreemptionAllowed,
+          rmContainer.getAllocatedResource());
+
+      // When we have no more resource need to obtain, remove from map.
+      if (Resources.lessThanOrEqual(rc, clusterResource, toObtainByPartition,
+          Resources.none())) {
+        resourceToObtainByPartitions.remove(nodePartition);
+      }
+
+      // Add to preemptMap
+      addToPreemptMap(preemptMap, attemptId, rmContainer);
+      return true;
+    }
+
+    return false;
+  }
+
+  private static String getPartitionByNodeId(
+      CapacitySchedulerPreemptionContext context, NodeId nodeId) {
+    return context.getScheduler().getSchedulerNode(nodeId).getPartition();
+  }
+
+  private static void addToPreemptMap(
+      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      ApplicationAttemptId appAttemptId, RMContainer containerToPreempt) {
+    Set<RMContainer> set = preemptMap.get(appAttemptId);
+    if (null == set) {
+      set = new HashSet<>();
+      preemptMap.put(appAttemptId, set);
+    }
+    set.add(containerToPreempt);
+  }
+
+  private static boolean preemptMapContains(
+      Map<ApplicationAttemptId, Set<RMContainer>> preemptMap,
+      ApplicationAttemptId attemptId, RMContainer rmContainer) {
+    Set<RMContainer> rmContainers = preemptMap.get(attemptId);
+    if (null == rmContainers) {
+      return false;
+    }
+    return rmContainers.contains(rmContainer);
   }
 }
