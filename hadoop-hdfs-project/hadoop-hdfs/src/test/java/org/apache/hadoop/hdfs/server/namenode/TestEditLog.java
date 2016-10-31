@@ -591,12 +591,8 @@ public class TestEditLog {
 
       // Log an edit from thread A
       doLogEdit(threadA, editLog, "thread-a 1");
-      // async log is doing batched syncs in background.  logSync just ensures
-      // the edit is durable, so the txid may increase prior to sync
-      if (!useAsyncEditLog) {
-        assertEquals("logging edit without syncing should do not affect txid",
-            1, editLog.getSyncTxId());
-      }
+      assertEquals("logging edit without syncing should do not affect txid",
+          1, editLog.getSyncTxId());
       // logSyncAll in Thread B
       doCallLogSyncAll(threadB, editLog);
       assertEquals("logSyncAll should sync thread A's transaction",
