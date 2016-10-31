@@ -1631,6 +1631,14 @@
 </property>
 
 <property>
+  <name>mapreduce.jobhistory.webapp.https.address</name>
+  <value>0.0.0.0:19890</value>
+  <description>
+    The https address the MapReduce JobHistory Server WebApp is on.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.jobhistory.keytab</name>
   <description>
     Location of the kerberos keytab file for the MapReduce
