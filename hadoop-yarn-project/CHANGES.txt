@@ -56,6 +56,9 @@ Release 2.7.4 - UNRELEASED
     YARN-3432.  Cluster metrics have wrong Total Memory when there is reserved
     memory on CS. (Brahma Reddy Battula via curino)
 
+    YARN-5001. Aggregated Logs root directory is created with wrong group if
+    nonexistent (Haibo Chen via jlowe)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
