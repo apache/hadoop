@@ -186,65 +186,31 @@ public abstract class AbstractContractCreateTest extends
       }
     }
   }
-  
-  @Test
-  public void testCreatedFileIsVisibleOnFlush() throws Throwable {
-    describe("verify that a newly created file exists once a flush has taken place");
-    Path path = path("testCreatedFileIsVisibleOnFlush");
-    FileSystem fs = getFileSystem();
-    try(FSDataOutputStream out = fs.create(path,
-          false,
-          4096,
-          (short) 1,
-          1024)) {
-      out.write('a');
-      out.flush();
-      if (!fs.exists(path)) {
-
-        if (isSupported(IS_BLOBSTORE)) {
-          // object store: downgrade to a skip so that the failure is visible
-          // in test results
-          skip( "Filesystem is an object store and newly created files are not immediately visible");
-        }
-        assertPathExists("expected path to be visible before file closed",
-            path);
-      }
-    }
-  }
 
   @Test
   public void testCreatedFileIsEventuallyVisible() throws Throwable {
-    describe("verify a written to file is visible after the stream is closed");
+    describe("verify a written to file is eventually visible");
     Path path = path("testCreatedFileIsEventuallyVisible");
     FileSystem fs = getFileSystem();
-    try( 
-      FSDataOutputStream out = fs.create(path,
-          false,
-          4096,
-          (short) 1,
-          1024)
-      ) {
-      out.write(0x01);
-      out.close();
-      getFileStatusEventually(fs, path, CREATE_TIMEOUT);
-    }
+    writeDataset(fs, path, new byte[]{ 0x01 }, 1, 1024 * 1024, false);
+    getFileStatusEventually(fs, path, CREATE_TIMEOUT);
+  }
+
+  @Test
+  public void testFileStatusRoot() throws Throwable {
+    describe("validate the block size of the root path of a filesystem");
+    long rootPath = getFileSystem().getDefaultBlockSize(path("/"));
+    assertTrue("Root block size is invalid " + rootPath, rootPath > 0);
   }
 
   @Test
   public void testFileStatusBlocksizeNonEmptyFile() throws Throwable {
     describe("validate the block size of a filesystem and files within it");
     FileSystem fs = getFileSystem();
-
-    long rootPath = fs.getDefaultBlockSize(path("/"));
-    assertTrue("Root block size is invalid " + rootPath,
-        rootPath > 0);
-
     Path path = path("testFileStatusBlocksizeNonEmptyFile");
     byte[] data = dataset(256, 'a', 'z');
-
     writeDataset(fs, path, data, data.length, 1024 * 1024, false);
-
-    validateBlockSize(fs, path, 1);
+    verifyMinumumBlockSize(fs, path, 1);
   }
 
   @Test
@@ -253,13 +219,22 @@ public abstract class AbstractContractCreateTest extends
     FileSystem fs = getFileSystem();
     Path path = path("testFileStatusBlocksizeEmptyFile");
     ContractTestUtils.touch(fs, path);
-    validateBlockSize(fs, path, 0);
+    verifyMinumumBlockSize(fs, path, 0);
   }
 
-  private void validateBlockSize(FileSystem fs, Path path, int minValue)
-      throws IOException, InterruptedException {
-    FileStatus status =
-        getFileStatusEventually(fs, path, CREATE_TIMEOUT);
+  /**
+   * Verify that that the block size of a path is greater than or equal
+   * the minimum value supplied. The operation supports eventually consistent
+   * filesystems by retrying until the object is visible, or
+   * {@link #CREATE_TIMEOUT} expires.
+   * @param fs filesystem
+   * @param path path to check
+   * @param minValue minimum value
+   * @throws Exception on any failure
+   */
+  private void verifyMinumumBlockSize(FileSystem fs, Path path, int minValue)
+      throws Exception {
+    FileStatus status = getFileStatusEventually(fs, path, CREATE_TIMEOUT);
     String statusDetails = status.toString();
     assertTrue("File status block size too low:  " + statusDetails
             + " min value: " + minValue,

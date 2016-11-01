@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.junit.Assert;
 import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -46,6 +48,7 @@ import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
@@ -1105,26 +1108,18 @@ public class ContractTestUtils extends Assert {
    * @param path path to look for
    * @param timeout timeout in milliseconds
    * @return the status
-   * @throws IOException thrown if an I/O error occurs while writing or reading the test file
-   *    <i>other than file not found</i>
+   * @throws Exception any exception raised after the timeout was eventually
+   * reached.
    */
   public static FileStatus getFileStatusEventually(FileSystem fs, Path path,
-      int timeout) throws IOException, InterruptedException {
-    long endTime = System.currentTimeMillis() + timeout;
-    FileStatus stat = null;
-    do {
-      try {
-        stat = fs.getFileStatus(path);
-      } catch (FileNotFoundException e) {
-        if (System.currentTimeMillis() > endTime) {
-          // timeout, raise an assert with more diagnostics
-          assertPathExists(fs, "Path not found after " + timeout + " mS", path);
-        } else {
-          Thread.sleep(50);
-        }
-      }
-    } while (stat == null);
-    return stat;
+      int timeout) throws Exception {
+    return LambdaTestUtils.eventually(timeout, 100,
+        new Callable<FileStatus>() {
+          @Override
+          public FileStatus call() throws IOException {
+            return fs.getFileStatus(path);
+          }
+        });
   }
 
   /**
