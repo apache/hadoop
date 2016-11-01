@@ -172,6 +172,10 @@ public class ApplicationApiService implements ApplicationApi {
         applicationStatus.setDiagnostics(ERROR_APPLICATION_IN_USE);
         return Response.status(Status.BAD_REQUEST).entity(applicationStatus)
             .build();
+      } else if (se.getExitCode() == SliderExitCodes.EXIT_INSTANCE_EXISTS) {
+        applicationStatus.setDiagnostics(ERROR_APPLICATION_INSTANCE_EXISTS);
+        return Response.status(Status.BAD_REQUEST).entity(applicationStatus)
+            .build();
       } else {
         applicationStatus.setDiagnostics(se.getMessage());
       }
