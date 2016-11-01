@@ -190,7 +190,7 @@ public class TestAuxServices {
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId1, 1);
     ContainerTokenIdentifier cti = new ContainerTokenIdentifier(
         ContainerId.newContainerId(attemptId, 1), "", "",
-        Resource.newInstance(1, 1), 0,0,0, Priority.newInstance(0), 0);
+        Resource.newInstance(1, 1, 1), 0,0,0, Priority.newInstance(0), 0);
     Container container = new ContainerImpl(null, null, null, null, null,
         null, cti);
     ContainerId containerId = container.getContainerId();

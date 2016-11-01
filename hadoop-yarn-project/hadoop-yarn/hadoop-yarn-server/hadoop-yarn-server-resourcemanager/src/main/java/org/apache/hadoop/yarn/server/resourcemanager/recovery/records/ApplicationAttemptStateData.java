@@ -62,15 +62,6 @@ public abstract class ApplicationAttemptStateData {
   public static ApplicationAttemptStateData newInstance(
       ApplicationAttemptId attemptId, Container masterContainer,
       Credentials attemptTokens, long startTime, long memorySeconds,
-      long vcoreSeconds) {
-    return newInstance(attemptId, masterContainer, attemptTokens,
-        startTime, null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
-        memorySeconds, vcoreSeconds);
-    }
-
-  public static ApplicationAttemptStateData newInstance(
-      ApplicationAttemptId attemptId, Container masterContainer,
-      Credentials attemptTokens, long startTime, long memorySeconds,
       long vcoreSeconds, long GPUSeconds) {
     return newInstance(attemptId, masterContainer, attemptTokens,
         startTime, null, "N/A", "", null, ContainerExitStatus.INVALID, 0,

@@ -257,7 +257,7 @@ public class FairSchedulerConfiguration extends Configuration {
       val = StringUtils.toLowerCase(val);
       int memory = findResource(val, "mb");
       int vcores = findResource(val, "vcores");
-      int GPUs = findResource(val, "GPUs");
+      int GPUs = findResource(val, "gpus");
       return BuilderUtils.newResource(memory, vcores, GPUs);
     } catch (AllocationConfigurationException ex) {
       throw ex;

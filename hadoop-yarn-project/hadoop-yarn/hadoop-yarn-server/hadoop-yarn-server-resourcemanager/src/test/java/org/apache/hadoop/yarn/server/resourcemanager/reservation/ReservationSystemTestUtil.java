@@ -333,7 +333,7 @@ public class ReservationSystemTestUtil {
     int par = (rand.nextInt(1000) + 1) * gang;
     long dur = rand.nextInt(2 * 3600 * 1000); // random duration within 2h
     ReservationRequest r =
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1), par,
+        ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1), par,
             gang, dur);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setReservationResources(Collections.singletonList(r));
@@ -365,7 +365,7 @@ public class ReservationSystemTestUtil {
     int par = 100000; // 100k tasks
     long dur = rand.nextInt(60 * 1000); // 1min tasks
     ReservationRequest r =
-        ReservationRequest.newInstance(Resource.newInstance(1024, 1), par,
+        ReservationRequest.newInstance(Resource.newInstance(1024, 1, 1), par,
             gang, dur);
     ReservationRequests reqs = new ReservationRequestsPBImpl();
     reqs.setReservationResources(Collections.singletonList(r));
@@ -385,14 +385,14 @@ public class ReservationSystemTestUtil {
     for (int i = 0; i < alloc.length; i++) {
       req.put(new ReservationInterval(startTime + i * step, startTime + (i + 1)
           * step), ReservationRequest.newInstance(
-          Resource.newInstance(1024, 1), alloc[i]));
+          Resource.newInstance(1024, 1, 1), alloc[i]));
     }
     return req;
   }
 
   public static Resource calculateClusterResource(int numContainers) {
     Resource clusterResource = Resource.newInstance(numContainers * 1024,
-        numContainers);
+        numContainers, numContainers);
     return clusterResource;
   }
 }

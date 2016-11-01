@@ -208,7 +208,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(expectedMaxVCores[0], maxVCores);
 
     RMNode node1 = MockNodes.newNodeInfo(
-        0, Resources.createResource(1024, node1MaxVCores), 1, "127.0.0.2");
+        0, Resources.createResource(1024, node1MaxVCores, 1), 1, "127.0.0.2");
     scheduler.handle(new NodeAddedSchedulerEvent(node1));
     Assert.assertEquals(1, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
@@ -220,14 +220,14 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(expectedMaxVCores[2], maxVCores);
 
     RMNode node2 = MockNodes.newNodeInfo(
-        0, Resources.createResource(1024, node2MaxVCores), 2, "127.0.0.3");
+        0, Resources.createResource(1024, node2MaxVCores, 1), 2, "127.0.0.3");
     scheduler.handle(new NodeAddedSchedulerEvent(node2));
     Assert.assertEquals(1, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
     Assert.assertEquals(expectedMaxVCores[3], maxVCores);
 
     RMNode node3 = MockNodes.newNodeInfo(
-        0, Resources.createResource(1024, node3MaxVCores), 3, "127.0.0.4");
+        0, Resources.createResource(1024, node3MaxVCores, 1), 3, "127.0.0.4");
     scheduler.handle(new NodeAddedSchedulerEvent(node3));
     Assert.assertEquals(2, scheduler.getNumClusterNodes());
     maxVCores = scheduler.getMaximumResourceCapability().getVirtualCores();
@@ -243,14 +243,104 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
   }
 
   @Test
+  public void testMaximimumAllocationGPUs() throws Exception {
+    final int node1MaxGPUs = 15;
+    final int node2MaxGPUs = 5;
+    final int node3MaxGPUs = 6;
+    final int configuredMaxGPUs = 10;
+    configureScheduler();
+    YarnConfiguration conf = getConf();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+            configuredMaxGPUs);
+    conf.setLong(
+            YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
+            1000 * 1000);
+    MockRM rm = new MockRM(conf);
+    try {
+      rm.start();
+      testMaximumAllocationGPUsHelper(
+              (AbstractYarnScheduler) rm.getResourceScheduler(),
+              node1MaxGPUs, node2MaxGPUs, node3MaxGPUs,
+              configuredMaxGPUs, configuredMaxGPUs, configuredMaxGPUs,
+              configuredMaxGPUs, configuredMaxGPUs, configuredMaxGPUs);
+    } finally {
+      rm.stop();
+    }
+
+    conf.setLong(
+            YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
+            0);
+    rm = new MockRM(conf);
+    try {
+      rm.start();
+      testMaximumAllocationGPUsHelper(
+              (AbstractYarnScheduler) rm.getResourceScheduler(),
+              node1MaxGPUs, node2MaxGPUs, node3MaxGPUs,
+              configuredMaxGPUs, configuredMaxGPUs, configuredMaxGPUs,
+              node2MaxGPUs, node3MaxGPUs, node2MaxGPUs);
+    } finally {
+      rm.stop();
+    }
+  }
+
+  private void testMaximumAllocationGPUsHelper(
+          AbstractYarnScheduler scheduler,
+          final int node1MaxGPUs, final int node2MaxGPUs,
+          final int node3MaxGPUs, final int... expectedMaxGPUs)
+          throws Exception {
+    Assert.assertEquals(6, expectedMaxGPUs.length);
+
+    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    int maxGPUs = scheduler.getMaximumResourceCapability().getGPUs();
+    Assert.assertEquals(expectedMaxGPUs[0], maxGPUs);
+
+    RMNode node1 = MockNodes.newNodeInfo(
+            0, Resources.createResource(1024, 1, node1MaxGPUs), 1, "127.0.0.2");
+    scheduler.handle(new NodeAddedSchedulerEvent(node1));
+    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    maxGPUs = scheduler.getMaximumResourceCapability().getGPUs();
+    Assert.assertEquals(expectedMaxGPUs[1], maxGPUs);
+
+    scheduler.handle(new NodeRemovedSchedulerEvent(node1));
+    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+    maxGPUs = scheduler.getMaximumResourceCapability().getGPUs();
+    Assert.assertEquals(expectedMaxGPUs[2], maxGPUs);
+
+    RMNode node2 = MockNodes.newNodeInfo(
+            0, Resources.createResource(1024, 1, node2MaxGPUs), 2, "127.0.0.3");
+    scheduler.handle(new NodeAddedSchedulerEvent(node2));
+    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    maxGPUs = scheduler.getMaximumResourceCapability().getGPUs();
+    Assert.assertEquals(expectedMaxGPUs[3], maxGPUs);
+
+    RMNode node3 = MockNodes.newNodeInfo(
+            0, Resources.createResource(1024, 1, node3MaxGPUs), 3, "127.0.0.4");
+    scheduler.handle(new NodeAddedSchedulerEvent(node3));
+    Assert.assertEquals(2, scheduler.getNumClusterNodes());
+    maxGPUs = scheduler.getMaximumResourceCapability().getGPUs();
+    Assert.assertEquals(expectedMaxGPUs[4], maxGPUs);
+
+    scheduler.handle(new NodeRemovedSchedulerEvent(node3));
+    Assert.assertEquals(1, scheduler.getNumClusterNodes());
+    maxGPUs = scheduler.getMaximumResourceCapability().getGPUs();
+    Assert.assertEquals(expectedMaxGPUs[5], maxGPUs);
+
+    scheduler.handle(new NodeRemovedSchedulerEvent(node2));
+    Assert.assertEquals(0, scheduler.getNumClusterNodes());
+  }
+
+  @Test
   public void testUpdateMaxAllocationUsesTotal() throws IOException {
+    final int configuredMaxGPUs = 20;
     final int configuredMaxVCores = 20;
     final int configuredMaxMemory = 10 * 1024;
     Resource configuredMaximumResource = Resource.newInstance
-        (configuredMaxMemory, configuredMaxVCores);
+        (configuredMaxMemory, configuredMaxVCores, configuredMaxGPUs);
 
     configureScheduler();
     YarnConfiguration conf = getConf();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+        configuredMaxGPUs);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         configuredMaxVCores);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -265,9 +355,9 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       AbstractYarnScheduler scheduler = (AbstractYarnScheduler) rm
           .getResourceScheduler();
 
-      Resource emptyResource = Resource.newInstance(0, 0);
-      Resource fullResource1 = Resource.newInstance(1024, 5);
-      Resource fullResource2 = Resource.newInstance(2048, 10);
+      Resource emptyResource = Resource.newInstance(0, 0, 0);
+      Resource fullResource1 = Resource.newInstance(1024, 5, 5);
+      Resource fullResource2 = Resource.newInstance(2048, 10, 10);
 
       SchedulerNode mockNode1 = mock(SchedulerNode.class);
       when(mockNode1.getNodeID()).thenReturn(NodeId.newInstance("foo", 8080));
@@ -305,13 +395,16 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
   @Test
   public void testMaxAllocationAfterUpdateNodeResource() throws IOException {
+    final int configuredMaxGPUs = 20;
     final int configuredMaxVCores = 20;
     final int configuredMaxMemory = 10 * 1024;
     Resource configuredMaximumResource = Resource.newInstance
-        (configuredMaxMemory, configuredMaxVCores);
+        (configuredMaxMemory, configuredMaxVCores, configuredMaxGPUs);
 
     configureScheduler();
     YarnConfiguration conf = getConf();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS,
+            configuredMaxGPUs);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         configuredMaxVCores);
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -327,10 +420,10 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
           .getResourceScheduler();
       verifyMaximumResourceCapability(configuredMaximumResource, scheduler);
 
-      Resource resource1 = Resource.newInstance(2048, 5);
-      Resource resource2 = Resource.newInstance(4096, 10);
-      Resource resource3 = Resource.newInstance(512, 1);
-      Resource resource4 = Resource.newInstance(1024, 2);
+      Resource resource1 = Resource.newInstance(2048, 5, 5);
+      Resource resource2 = Resource.newInstance(4096, 10, 10);
+      Resource resource3 = Resource.newInstance(512, 1, 1);
+      Resource resource4 = Resource.newInstance(1024, 2, 2);
 
       RMNode node1 = MockNodes.newNodeInfo(
           0, resource1, 1, "127.0.0.2");
@@ -456,5 +549,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
         schedulerMaximumResourceCapability.getMemory());
     Assert.assertEquals(expectedMaximumResource.getVirtualCores(),
         schedulerMaximumResourceCapability.getVirtualCores());
+    Assert.assertEquals(expectedMaximumResource.getGPUs(),
+        schedulerMaximumResourceCapability.getGPUs());
   }
 }

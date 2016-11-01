@@ -87,7 +87,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     // Add one node
     String host = "127.0.0.1";
     RMNode node1 = MockNodes.newNodeInfo(
-        1, Resources.createResource(4096, 4), 1, host);
+        1, Resources.createResource(4096, 4, 4), 1, host);
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
     NodeUpdateSchedulerEvent nodeUpdateEvent = new NodeUpdateSchedulerEvent(node1);
@@ -102,7 +102,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     scheduler.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<>();
-    ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
+    ask.add(createResourceRequest(1024, 1, 1, ResourceRequest.ANY, 1, 1, true));
     scheduler.allocate(
         appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
     FSAppAttempt app = scheduler.getSchedulerApp(appAttemptId);

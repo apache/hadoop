@@ -253,7 +253,7 @@ public class TestNMLeveldbStateStoreService {
     ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
         localResources, env, containerCmds, serviceData, containerTokens,
         acls);
-    Resource containerRsrc = Resource.newInstance(1357, 3);
+    Resource containerRsrc = Resource.newInstance(1357, 3, 3);
     ContainerTokenIdentifier containerTokenId =
         new ContainerTokenIdentifier(containerId, "host", "user",
             containerRsrc, 9876543210L, 42, 2468, Priority.newInstance(7),

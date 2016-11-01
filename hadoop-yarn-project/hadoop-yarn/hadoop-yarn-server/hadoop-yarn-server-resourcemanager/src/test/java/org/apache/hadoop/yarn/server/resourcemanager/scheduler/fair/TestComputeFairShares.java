@@ -177,16 +177,16 @@ public class TestComputeFairShares {
    */
   @Test
   public void testCPU() {
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 20),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 20, 20),
         new ResourceWeights(2.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 0),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 0, 0),
         new ResourceWeights(1.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 5),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 5, 5),
         new ResourceWeights(1.0f)));
-    scheds.add(new FakeSchedulable(Resources.createResource(0, 15),
+    scheds.add(new FakeSchedulable(Resources.createResource(0, 15, 15),
         new ResourceWeights(0.5f)));
     ComputeFairShares.computeShares(scheds,
-        Resources.createResource(0, 45), ResourceType.CPU);
+        Resources.createResource(0, 45, 45), ResourceType.CPU);
     verifyCPUShares(20, 5, 5, 15);
   }
   

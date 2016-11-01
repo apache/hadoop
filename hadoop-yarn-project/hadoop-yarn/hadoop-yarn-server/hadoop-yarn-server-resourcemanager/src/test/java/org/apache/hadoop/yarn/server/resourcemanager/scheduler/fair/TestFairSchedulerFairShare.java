@@ -59,10 +59,10 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
 
   private void createClusterWithQueuesAndOneNode(int mem, String policy)
       throws IOException {
-    createClusterWithQueuesAndOneNode(mem, 0, policy);
+    createClusterWithQueuesAndOneNode(mem, 0, 0, policy);
   }
 
-  private void createClusterWithQueuesAndOneNode(int mem, int vCores,
+  private void createClusterWithQueuesAndOneNode(int mem, int vCores, int GPUs,
       String policy) throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -91,7 +91,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
 
     RMNode node1 = MockNodes.newNodeInfo(1,
-        Resources.createResource(mem, vCores), 1, "127.0.0.1");
+        Resources.createResource(mem, vCores, GPUs), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
   }
@@ -272,7 +272,8 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
       throws IOException {
     int nodeMem = 16 * 1024;
     int nodeVCores = 10;
-    createClusterWithQueuesAndOneNode(nodeMem, nodeVCores, "drf");
+    int nodeGPUs = 10;
+    createClusterWithQueuesAndOneNode(nodeMem, nodeVCores, nodeGPUs, "drf");
 
     // Run apps in childA1,childA2 which are under parentA
     createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");

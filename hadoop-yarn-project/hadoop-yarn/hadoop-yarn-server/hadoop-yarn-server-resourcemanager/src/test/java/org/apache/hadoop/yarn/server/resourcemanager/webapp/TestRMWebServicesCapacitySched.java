@@ -579,7 +579,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   @Test
   public void testResourceInfo() {
-    Resource res = Resources.createResource(10, 1);
+    Resource res = Resources.createResource(10, 1, 1);
     // If we add a new resource (e.g disks), then
     // CapacitySchedulerPage and these RM WebServices + docs need to be updated
     // eg. ResourceInfo

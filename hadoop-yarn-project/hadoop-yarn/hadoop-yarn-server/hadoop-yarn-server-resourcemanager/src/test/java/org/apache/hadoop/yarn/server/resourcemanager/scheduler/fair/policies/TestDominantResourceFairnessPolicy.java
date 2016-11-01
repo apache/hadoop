@@ -40,7 +40,7 @@ public class TestDominantResourceFairnessPolicy {
   private Comparator<Schedulable> createComparator(int clusterMem,
       int clusterCpu) {
     DominantResourceFairnessPolicy policy = new DominantResourceFairnessPolicy();
-    policy.initialize(BuilderUtils.newResource(clusterMem, clusterCpu));
+    policy.initialize(BuilderUtils.newResource(clusterMem, clusterCpu, 0));
     return policy.getComparator();
   }
   
@@ -62,10 +62,10 @@ public class TestDominantResourceFairnessPolicy {
   
   private Schedulable createSchedulable(int memUsage, int cpuUsage,
       ResourceWeights weights, int minMemShare, int minCpuShare) {
-    Resource usage = BuilderUtils.newResource(memUsage, cpuUsage);
-    Resource minShare = BuilderUtils.newResource(minMemShare, minCpuShare);
+    Resource usage = BuilderUtils.newResource(memUsage, cpuUsage, 0);
+    Resource minShare = BuilderUtils.newResource(minMemShare, minCpuShare, 0);
     return new FakeSchedulable(minShare,
-        Resources.createResource(Integer.MAX_VALUE, Integer.MAX_VALUE),
+        Resources.createResource(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE),
         weights, Resources.none(), usage, 0l);
   }
   
@@ -127,27 +127,27 @@ public class TestDominantResourceFairnessPolicy {
   @Test
   public void testUnevenWeightsSameDominantResource() {
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(3000, 1, new ResourceWeights(2.0f, 1.0f)),
+        createSchedulable(3000, 1, new ResourceWeights(2.0f, 1.0f, 0.0f)),
         createSchedulable(2000, 1)) < 0);
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(1000, 3, new ResourceWeights(1.0f, 2.0f)),
+        createSchedulable(1000, 3, new ResourceWeights(1.0f, 2.0f, 0.0f)),
         createSchedulable(1000, 2)) < 0);
   }
   
   @Test
   public void testUnevenWeightsDifferentDominantResource() {
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(1000, 3, new ResourceWeights(1.0f, 2.0f)),
+        createSchedulable(1000, 3, new ResourceWeights(1.0f, 2.0f, 0.0f)),
         createSchedulable(2000, 1)) < 0);
     assertTrue(createComparator(8000, 8).compare(
-        createSchedulable(3000, 1, new ResourceWeights(2.0f, 1.0f)),
+        createSchedulable(3000, 1, new ResourceWeights(2.0f, 1.0f, 0.0f)),
         createSchedulable(1000, 2)) < 0);
   }
   
   @Test
   public void testCalculateShares() {
-    Resource used = Resources.createResource(10, 5);
-    Resource capacity = Resources.createResource(100, 10);
+    Resource used = Resources.createResource(10, 5, 0);
+    Resource capacity = Resources.createResource(100, 10, 0);
     ResourceType[] resourceOrder = new ResourceType[2];
     ResourceWeights shares = new ResourceWeights();
     DominantResourceFairnessPolicy.DominantResourceFairnessComparator comparator =

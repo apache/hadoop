@@ -237,7 +237,7 @@ public class TestFifoScheduler {
     scheduler.reinitialize(conf, rm.getRMContext());
 
     RMNode node = MockNodes.newNodeInfo(1,
-            Resources.createResource(1024, 4), 1, "127.0.0.1");
+            Resources.createResource(1024, 4, 4), 1, "127.0.0.1");
     scheduler.handle(new NodeAddedSchedulerEvent(node));
 
     ApplicationId appId = ApplicationId.newInstance(0, 1);
@@ -397,9 +397,9 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        "rack1", BuilderUtils.newResource(GB, 1), 1));
+        "rack1", BuilderUtils.newResource(GB, 1, 1), 1));
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1, 1), 1));
     fs.allocate(appAttemptId1, ask1, emptyId, Collections.singletonList(host_1_0), null);
     
     // Trigger container assignment
@@ -425,7 +425,7 @@ public class TestFifoScheduler {
     // this time, rack0 is also in blacklist, so only host_1_1 is available to
     // be assigned
     ask2.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1, 1), 1));
     fs.allocate(appAttemptId1, ask2, emptyId, Collections.singletonList("rack0"), null);
     
     // verify n1 is not qualified to be allocated
@@ -502,13 +502,13 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1, 1), 1));
     fs.allocate(appAttemptId1, ask1, emptyId, null, null);
 
     // Ask for a 2 GB container for app 2
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ask2.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, BuilderUtils.newResource(2 * GB, 1), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(2 * GB, 1, 1), 1));
     fs.allocate(appAttemptId2, ask2, emptyId, null, null);
     
     // Trigger container assignment
@@ -575,7 +575,7 @@ public class TestFifoScheduler {
     Map<NodeId, ResourceOption> nodeResourceMap = 
         new HashMap<NodeId, ResourceOption>();
     nodeResourceMap.put(nm1.getNodeId(), 
-        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1), -1));
+        ResourceOption.newInstance(Resource.newInstance(2 * GB, 1, 1), -1));
     UpdateNodeResourceRequest request = 
         UpdateNodeResourceRequest.newInstance(nodeResourceMap);
     AdminService as = rm.adminService;

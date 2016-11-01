@@ -45,8 +45,8 @@ public abstract class TestSchedulerPlanFollowerBase {
   protected Clock mClock = null;
   protected ResourceScheduler scheduler = null;
   protected ReservationAgent mAgent;
-  protected Resource minAlloc = Resource.newInstance(GB, 1);
-  protected Resource maxAlloc = Resource.newInstance(GB * 8, 8);
+  protected Resource minAlloc = Resource.newInstance(GB, 1, 1);
+  protected Resource maxAlloc = Resource.newInstance(GB * 8, 8, 8);
   protected CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
   protected Plan plan;
   private ResourceCalculator res = new DefaultResourceCalculator();

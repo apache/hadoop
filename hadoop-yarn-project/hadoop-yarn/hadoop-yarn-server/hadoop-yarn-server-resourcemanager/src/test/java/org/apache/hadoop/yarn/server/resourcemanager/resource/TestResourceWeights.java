@@ -38,7 +38,7 @@ public class TestResourceWeights {
         rw2.getWeight(ResourceType.MEMORY), 0.00001f);
 
     // set each individually
-    ResourceWeights rw3 = new ResourceWeights(1.5f, 2.0f);
+    ResourceWeights rw3 = new ResourceWeights(1.5f, 2.0f, 2.0f);
     Assert.assertEquals("The CPU weight should be 2.0f", 2.0f, 
         rw3.getWeight(ResourceType.CPU), 0.00001f);
     Assert.assertEquals("The memory weight should be 1.5f", 1.5f, 

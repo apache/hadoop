@@ -309,7 +309,7 @@ public class TestRMAppAttemptTransitions {
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
     when(submissionContext.getQueue()).thenReturn(queue);
-    Resource resource = BuilderUtils.newResource(1536, 1);
+    Resource resource = BuilderUtils.newResource(1536, 1, 1);
     ContainerLaunchContext amContainerSpec =
         BuilderUtils.newContainerLaunchContext(null, null,
             null, null, null, null);
@@ -524,7 +524,7 @@ public class TestRMAppAttemptTransitions {
   }
 
   /**
-   * {@link RMAppAttemptState#LAUNCH}
+   * {@link RMAppAttemptState#LAUNCHED}
    */
   private void testAppAttemptLaunchedState(Container container) {
     assertEquals(RMAppAttemptState.LAUNCHED, 
@@ -639,7 +639,7 @@ public class TestRMAppAttemptTransitions {
     
     // Mock the allocation of AM container 
     Container container = mock(Container.class);
-    Resource resource = BuilderUtils.newResource(2048, 1);
+    Resource resource = BuilderUtils.newResource(2048, 1, 1);
     when(container.getId()).thenReturn(
         BuilderUtils.newContainerId(applicationAttempt.getAppAttemptId(), 1));
     when(container.getResource()).thenReturn(resource);
@@ -1523,7 +1523,7 @@ public class TestRMAppAttemptTransitions {
                 (ResourceRequest) ((List) invocation.getArguments()[1]).get(0);
             
             // capacity shouldn't changed
-            assertEquals(Resource.newInstance(3333, 1), rr.getCapability());
+            assertEquals(Resource.newInstance(3333, 1, 1), rr.getCapability());
             assertEquals("label-expression", rr.getNodeLabelExpression());
             
             // priority, #container, relax-locality will be changed
@@ -1543,7 +1543,7 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(),
             spyRMContext, scheduler, masterService, submissionContext,
             new Configuration(), true, ResourceRequest.newInstance(
-                Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1), 3,
+                Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1, 1), 3,
                 false, "label-expression"));
     new RMAppAttemptImpl.ScheduleTransition().transition(
         (RMAppAttemptImpl) applicationAttempt, null);

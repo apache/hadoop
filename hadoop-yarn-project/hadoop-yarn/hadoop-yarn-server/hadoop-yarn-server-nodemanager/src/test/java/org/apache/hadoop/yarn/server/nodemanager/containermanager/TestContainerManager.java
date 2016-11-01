@@ -805,7 +805,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
       NMContainerTokenSecretManager containerTokenSecretManager,
       LogAggregationContext logAggregationContext)
       throws IOException {
-    Resource r = BuilderUtils.newResource(1024, 1);
+    Resource r = BuilderUtils.newResource(1024, 1, 1);
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(cId, nodeId.toString(), user, r,
           System.currentTimeMillis() + 100000L, 123, rmIdentifier,

@@ -112,15 +112,15 @@ public class TestResourceUsage {
     check(0, 0, res);
 
     // Add 1,1 should returns 1,1
-    inc(usage, suffix, Resource.newInstance(1, 1), label);
+    inc(usage, suffix, Resource.newInstance(1, 1, 1), label);
     check(1, 1, get(usage, suffix, label));
 
     // Set 2,2
-    set(usage, suffix, Resource.newInstance(2, 2), label);
+    set(usage, suffix, Resource.newInstance(2, 2, 2), label);
     check(2, 2, get(usage, suffix, label));
 
     // dec 2,2
-    dec(usage, suffix, Resource.newInstance(2, 2), label);
+    dec(usage, suffix, Resource.newInstance(2, 2, 2), label);
     check(0, 0, get(usage, suffix, label));
   }
 

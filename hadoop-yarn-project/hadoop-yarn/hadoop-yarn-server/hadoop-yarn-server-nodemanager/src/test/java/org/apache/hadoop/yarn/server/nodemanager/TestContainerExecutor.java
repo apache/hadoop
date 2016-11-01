@@ -83,7 +83,7 @@ public class TestContainerExecutor {
     assumeTrue(Shell.WINDOWS);
     Configuration conf = new Configuration();
     String[] command = containerExecutor.getRunCommand("echo", "group1", null, null,
-        conf, Resource.newInstance(1024, 1));
+        conf, Resource.newInstance(1024, 1, 1));
     // Assert the cpu and memory limits are set correctly in the command
     String[] expected = { Shell.WINUTILS, "task", "create", "-m", "-1", "-c",
         "-1", "group1", "cmd /c " + "echo" };
@@ -97,7 +97,7 @@ public class TestContainerExecutor {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED, "true");
     String[] command = containerExecutor.getRunCommand("echo", "group1", null, null,
-        conf, Resource.newInstance(1024, 1));
+        conf, Resource.newInstance(1024, 1, 1));
     // Assert the cpu and memory limits are set correctly in the command
     String[] expected = { Shell.WINUTILS, "task", "create", "-m", "1024", "-c",
         "-1", "group1", "cmd /c " + "echo" };
@@ -112,7 +112,7 @@ public class TestContainerExecutor {
     conf.set(YarnConfiguration.NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED, "true");
     conf.set(YarnConfiguration.NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED, "true");
     String[] command = containerExecutor.getRunCommand("echo", "group1", null, null,
-        conf, Resource.newInstance(1024, 1));
+        conf, Resource.newInstance(1024, 1, 1));
     float yarnProcessors = NodeManagerHardwareUtils.getContainersCores(
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf),
         conf);
