@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -68,7 +69,7 @@ public class TestGetBlockLocations {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        INodesInPath iip = fsd.getINodesInPath(FILE_PATH, true);
+        INodesInPath iip = fsd.getINodesInPath(FILE_PATH, DirOp.READ);
         FSDirDeleteOp.delete(fsd, iip, new INode.BlocksMapUpdateInfo(),
                              new ArrayList<INode>(), new ArrayList<Long>(),
                              now());
@@ -119,7 +120,7 @@ public class TestGetBlockLocations {
     final FSNamesystem fsn = new FSNamesystem(conf, image, true);
 
     final FSDirectory fsd = fsn.getFSDirectory();
-    INodesInPath iip = fsd.getINodesInPath("/", true);
+    INodesInPath iip = fsd.getINodesInPath("/", DirOp.READ);
     PermissionStatus perm = new PermissionStatus(
         "hdfs", "supergroup",
         FsPermission.createImmutable((short) 0x1ff));

@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 
 import java.io.IOException;
 
@@ -55,7 +56,7 @@ class FSDirSymlinkOp {
     INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, link, false);
+      iip = fsd.resolvePath(pc, link, DirOp.WRITE_LINK);
       link = iip.getPath();
       if (!createParent) {
         fsd.verifyParentDir(iip);

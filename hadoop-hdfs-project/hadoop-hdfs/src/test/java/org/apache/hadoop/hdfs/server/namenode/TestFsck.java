@@ -95,6 +95,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.Result;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSck;
@@ -881,7 +882,7 @@ public class TestFsck {
 
     // intentionally corrupt NN data structure
     INodeFile node = (INodeFile) cluster.getNamesystem().dir.getINode(
-        fileName, true);
+        fileName, DirOp.READ);
     final BlockInfo[] blocks = node.getBlocks();
     assertEquals(blocks.length, 1);
     blocks[0].setNumBytes(-1L);  // set the block length to be negative
@@ -1132,8 +1133,8 @@ public class TestFsck {
     when(fsName.getBlockManager()).thenReturn(blockManager);
     when(fsName.getFSDirectory()).thenReturn(fsd);
     when(fsd.getFSNamesystem()).thenReturn(fsName);
-    when(fsd.resolvePath(any(FSPermissionChecker.class), anyString()))
-        .thenReturn(iip);
+    when(fsd.resolvePath(any(FSPermissionChecker.class),
+        anyString(), any(DirOp.class))).thenReturn(iip);
     when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 
     NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out,

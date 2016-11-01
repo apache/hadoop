@@ -24,12 +24,12 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -54,15 +54,12 @@ class FSDirRenameOp {
       NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src +
           " to " + dst);
     }
-    if (!DFSUtil.isValidName(dst)) {
-      throw new IOException("Invalid name: " + dst);
-    }
     FSPermissionChecker pc = fsd.getPermissionChecker();
 
     // Rename does not operate on link targets
     // Do not resolveLink when checking permissions of src and dst
-    INodesInPath srcIIP = fsd.resolvePathForWrite(pc, src, false);
-    INodesInPath dstIIP = fsd.resolvePathForWrite(pc, dst, false);
+    INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
+    INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.CREATE_LINK);
     dstIIP = dstForRenameTo(srcIIP, dstIIP);
     return renameTo(fsd, pc, srcIIP, dstIIP, logRetryCache);
   }
@@ -115,8 +112,8 @@ class FSDirRenameOp {
   @Deprecated
   static INodesInPath renameForEditLog(FSDirectory fsd, String src, String dst,
       long timestamp) throws IOException {
-    final INodesInPath srcIIP = fsd.getINodesInPath4Write(src, false);
-    INodesInPath dstIIP = fsd.getINodesInPath4Write(dst, false);
+    final INodesInPath srcIIP = fsd.getINodesInPath(src, DirOp.WRITE_LINK);
+    INodesInPath dstIIP = fsd.getINodesInPath(dst, DirOp.WRITE_LINK);
     // this is wrong but accidentally works.  the edit contains the full path
     // so the following will do nothing, but shouldn't change due to backward
     // compatibility when maybe full path wasn't logged.
@@ -242,9 +239,6 @@ class FSDirRenameOp {
       NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options -" +
           " " + src + " to " + dst);
     }
-    if (!DFSUtil.isValidName(dst)) {
-      throw new InvalidPathException("Invalid name: " + dst);
-    }
     final FSPermissionChecker pc = fsd.getPermissionChecker();
 
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
@@ -260,8 +254,8 @@ class FSDirRenameOp {
       String src, String dst, BlocksMapUpdateInfo collectedBlocks,
       boolean logRetryCache,Options.Rename... options)
           throws IOException {
-    final INodesInPath srcIIP = fsd.resolvePathForWrite(pc, src, false);
-    final INodesInPath dstIIP = fsd.resolvePathForWrite(pc, dst, false);
+    final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
+    final INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.CREATE_LINK);
     if (fsd.isPermissionEnabled()) {
       boolean renameToTrash = false;
       if (null != options &&
@@ -330,8 +324,8 @@ class FSDirRenameOp {
       Options.Rename... options)
       throws IOException {
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    final INodesInPath srcIIP = fsd.getINodesInPath4Write(src, false);
-    final INodesInPath dstIIP = fsd.getINodesInPath4Write(dst, false);
+    final INodesInPath srcIIP = fsd.getINodesInPath(src, DirOp.WRITE_LINK);
+    final INodesInPath dstIIP = fsd.getINodesInPath(dst, DirOp.WRITE_LINK);
     unprotectedRenameTo(fsd, srcIIP, dstIIP, timestamp,
         collectedBlocks, options);
     if (!collectedBlocks.getToDeleteList().isEmpty()) {

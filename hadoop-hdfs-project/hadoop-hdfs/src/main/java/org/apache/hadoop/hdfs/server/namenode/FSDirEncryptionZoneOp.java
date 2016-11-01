@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.SecurityUtil;
 
 import com.google.common.base.Preconditions;
@@ -157,7 +158,7 @@ final class FSDirEncryptionZoneOp {
     final INodesInPath iip;
     fsd.writeLock();
     try {
-      iip = fsd.resolvePathForWrite(pc, srcArg);
+      iip = fsd.resolvePath(pc, srcArg, DirOp.WRITE);
       final XAttr ezXAttr = fsd.ezManager.createEncryptionZone(iip, suite,
           version, keyName);
       xAttrs.add(ezXAttr);
@@ -183,7 +184,7 @@ final class FSDirEncryptionZoneOp {
     final EncryptionZone ret;
     fsd.readLock();
     try {
-      iip = fsd.resolvePath(pc, srcArg);
+      iip = fsd.resolvePath(pc, srcArg, DirOp.READ);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ);
       }

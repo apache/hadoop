@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -146,7 +147,7 @@ public class TestSnapshotReplication {
     }
     // Then check replication for every snapshot
     for (Path ss : snapshotRepMap.keySet()) {
-      final INodesInPath iip = fsdir.getINodesInPath(ss.toString(), true);
+      final INodesInPath iip = fsdir.getINodesInPath(ss.toString(), DirOp.READ);
       final INodeFile ssInode = iip.getLastINode().asFile();
       // The replication number derived from the
       // INodeFileWithLink#getPreferredBlockReplication should

@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
@@ -84,9 +85,9 @@ class FSDirSnapshotOp {
       FSDirectory fsd, SnapshotManager snapshotManager, String snapshotRoot,
       String snapshotName, boolean logRetryCache)
       throws IOException {
-    final INodesInPath iip = fsd.getINodesInPath4Write(snapshotRoot);
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    final INodesInPath iip = fsd.resolvePath(pc, snapshotRoot, DirOp.WRITE);
     if (fsd.isPermissionEnabled()) {
-      FSPermissionChecker pc = fsd.getPermissionChecker();
       fsd.checkOwner(pc, iip);
     }
 
@@ -114,9 +115,9 @@ class FSDirSnapshotOp {
   static void renameSnapshot(FSDirectory fsd, SnapshotManager snapshotManager,
       String path, String snapshotOldName, String snapshotNewName,
       boolean logRetryCache) throws IOException {
-    final INodesInPath iip = fsd.getINodesInPath4Write(path);
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    final INodesInPath iip = fsd.resolvePath(pc, path, DirOp.WRITE);
     if (fsd.isPermissionEnabled()) {
-      FSPermissionChecker pc = fsd.getPermissionChecker();
       fsd.checkOwner(pc, iip);
     }
     verifySnapshotName(fsd, snapshotNewName, path);
@@ -150,11 +151,11 @@ class FSDirSnapshotOp {
     final FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
+      INodesInPath iip = fsd.resolvePath(pc, path, DirOp.READ);
       if (fsd.isPermissionEnabled()) {
         checkSubtreeReadPermission(fsd, pc, path, fromSnapshot);
         checkSubtreeReadPermission(fsd, pc, path, toSnapshot);
       }
-      INodesInPath iip = fsd.getINodesInPath(path, true);
       diffs = snapshotManager.diff(iip, path, fromSnapshot, toSnapshot);
     } finally {
       fsd.readUnlock();
@@ -205,9 +206,9 @@ class FSDirSnapshotOp {
       FSDirectory fsd, SnapshotManager snapshotManager, String snapshotRoot,
       String snapshotName, boolean logRetryCache)
       throws IOException {
-    final INodesInPath iip = fsd.getINodesInPath4Write(snapshotRoot);
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    final INodesInPath iip = fsd.resolvePath(pc, snapshotRoot, DirOp.WRITE);
     if (fsd.isPermissionEnabled()) {
-      FSPermissionChecker pc = fsd.getPermissionChecker();
       fsd.checkOwner(pc, iip);
     }
 
@@ -238,7 +239,7 @@ class FSDirSnapshotOp {
     final String fromPath = snapshot == null ?
         snapshottablePath : Snapshot.getSnapshotPath(snapshottablePath,
         snapshot);
-    INodesInPath iip = fsd.getINodesInPath(fromPath, true);
+    INodesInPath iip = fsd.resolvePath(pc, fromPath, DirOp.READ);
     fsd.checkPermission(pc, iip, false, null, null, FsAction.READ,
         FsAction.READ);
   }
