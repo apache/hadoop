@@ -116,6 +116,7 @@ function hdfscmd_case
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DFSAdmin
     ;;
     diskbalancer)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.DiskBalancerCLI
     ;;
     envvars)
