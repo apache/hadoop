@@ -469,8 +469,9 @@ public class TestRMAdminCLI {
               "[username]] [-addToClusterNodeLabels " +
               "<\"label1(exclusive=true),label2(exclusive=false),label3\">] " +
               "[-removeFromClusterNodeLabels <label1,label2,label3>] " +
-              "[-replaceLabelsOnNode [-failOnUnknownNodes] " +
-              "<\"node1[:port]=label1,label2 node2[:port]=label1\">] " +
+              "[-replaceLabelsOnNode " +
+              "<\"node1[:port]=label1,label2 node2[:port]=label1\"> " +
+              "[-failOnUnknownNodes]] " +
               "[-directlyAccessNodeLabelStore] [-refreshClusterMaxPriority] " +
               "[-updateNodeResource [NodeID] [MemSize] [vCores] " +
               "([OvercommitTimeout]) [-help [cmd]]"));
@@ -564,8 +565,8 @@ public class TestRMAdminCLI {
               + " [username]] [-addToClusterNodeLabels <\"label1(exclusive=true),"
                   + "label2(exclusive=false),label3\">]"
               + " [-removeFromClusterNodeLabels <label1,label2,label3>] [-replaceLabelsOnNode "
-              + "[-failOnUnknownNodes] "
-              + "<\"node1[:port]=label1,label2 node2[:port]=label1\">] [-directlyAccessNodeLabelStore] "
+              + "<\"node1[:port]=label1,label2 node2[:port]=label1\"> "
+              + "[-failOnUnknownNodes]] [-directlyAccessNodeLabelStore] "
               + "[-refreshClusterMaxPriority] "
               + "[-updateNodeResource [NodeID] [MemSize] [vCores] "
               + "([OvercommitTimeout]) "
@@ -614,13 +615,11 @@ public class TestRMAdminCLI {
     dummyNodeLabelsManager.removeFromClusterNodeLabels(ImmutableSet.of("x", "y"));
     
     // change the sequence of "-directlyAccessNodeLabelStore" and labels,
-    // should not matter
+    // should fail
     args =
         new String[] { "-addToClusterNodeLabels",
             "-directlyAccessNodeLabelStore", "x,y" };
-    assertEquals(0, rmAdminCLI.run(args));
-    assertTrue(dummyNodeLabelsManager.getClusterNodeLabelNames().containsAll(
-        ImmutableSet.of("x", "y")));
+    assertEquals(-1, rmAdminCLI.run(args));
     
     // local node labels manager will be close after running
     assertTrue(dummyNodeLabelsManager.getServiceState() == STATE.STOPPED);
@@ -767,6 +766,10 @@ public class TestRMAdminCLI {
 
     // no labels, should fail
     args = new String[] { "-replaceLabelsOnNode" };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    // no labels, should fail
+    args = new String[] { "-replaceLabelsOnNode", "-failOnUnknownNodes" };
     assertTrue(0 != rmAdminCLI.run(args));
 
     // no labels, should fail
