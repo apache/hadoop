@@ -1126,57 +1126,52 @@ public class CapacityScheduler extends
       writeLock.unlock();
     }
   }
-  
+
   /**
    * Process node labels update on a node.
    */
   private void updateLabelsOnNode(NodeId nodeId,
       Set<String> newLabels) {
-    try {
-      writeLock.lock();
-      FiCaSchedulerNode node = nodeTracker.getNode(nodeId);
-      if (null == node) {
-        return;
-      }
-
-      // Get new partition, we have only one partition per node
-      String newPartition;
-      if (newLabels.isEmpty()) {
-        newPartition = RMNodeLabelsManager.NO_LABEL;
-      } else{
-        newPartition = newLabels.iterator().next();
-      }
-
-      // old partition as well
-      String oldPartition = node.getPartition();
-
-      // Update resources of these containers
-      for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
-        FiCaSchedulerApp application = getApplicationAttempt(
-            rmContainer.getApplicationAttemptId());
-        if (null != application) {
-          application.nodePartitionUpdated(rmContainer, oldPartition,
-              newPartition);
-        } else{
-          LOG.warn("There's something wrong, some RMContainers running on"
-              + " a node, but we cannot find SchedulerApplicationAttempt "
-              + "for it. Node=" + node.getNodeID() + " applicationAttemptId="
-              + rmContainer.getApplicationAttemptId());
-          continue;
-        }
-      }
-
-      // Unreserve container on this node
-      RMContainer reservedContainer = node.getReservedContainer();
-      if (null != reservedContainer) {
-        killReservedContainer(reservedContainer);
-      }
-
-      // Update node labels after we've done this
-      node.updateLabels(newLabels);
-    } finally {
-      writeLock.unlock();
+    FiCaSchedulerNode node = nodeTracker.getNode(nodeId);
+    if (null == node) {
+      return;
     }
+
+    // Get new partition, we have only one partition per node
+    String newPartition;
+    if (newLabels.isEmpty()) {
+      newPartition = RMNodeLabelsManager.NO_LABEL;
+    } else{
+      newPartition = newLabels.iterator().next();
+    }
+
+    // old partition as well
+    String oldPartition = node.getPartition();
+
+    // Update resources of these containers
+    for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
+      FiCaSchedulerApp application = getApplicationAttempt(
+          rmContainer.getApplicationAttemptId());
+      if (null != application) {
+        application.nodePartitionUpdated(rmContainer, oldPartition,
+            newPartition);
+      } else{
+        LOG.warn("There's something wrong, some RMContainers running on"
+            + " a node, but we cannot find SchedulerApplicationAttempt "
+            + "for it. Node=" + node.getNodeID() + " applicationAttemptId="
+            + rmContainer.getApplicationAttemptId());
+        continue;
+      }
+    }
+
+    // Unreserve container on this node
+    RMContainer reservedContainer = node.getReservedContainer();
+    if (null != reservedContainer) {
+      killReservedContainer(reservedContainer);
+    }
+
+    // Update node labels after we've done this
+    node.updateLabels(newLabels);
   }
 
   private void updateSchedulerHealth(long now, FiCaSchedulerNode node,
@@ -1371,13 +1366,8 @@ public class CapacityScheduler extends
     {
       NodeLabelsUpdateSchedulerEvent labelUpdateEvent =
           (NodeLabelsUpdateSchedulerEvent) event;
-      
-      for (Entry<NodeId, Set<String>> entry : labelUpdateEvent
-          .getUpdatedNodeToLabels().entrySet()) {
-        NodeId id = entry.getKey();
-        Set<String> labels = entry.getValue();
-        updateLabelsOnNode(id, labels);
-      }
+
+      updateNodeLabelsAndQueueResource(labelUpdateEvent);
     }
     break;
     case NODE_UPDATE:
@@ -1479,6 +1469,27 @@ public class CapacityScheduler extends
     break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+    }
+  }
+
+  /**
+   * Process node labels update.
+   */
+  private void updateNodeLabelsAndQueueResource(
+      NodeLabelsUpdateSchedulerEvent labelUpdateEvent) {
+    try {
+      writeLock.lock();
+      for (Entry<NodeId, Set<String>> entry : labelUpdateEvent
+          .getUpdatedNodeToLabels().entrySet()) {
+        NodeId id = entry.getKey();
+        Set<String> labels = entry.getValue();
+        updateLabelsOnNode(id, labels);
+      }
+      Resource clusterResource = getClusterResource();
+      root.updateClusterResource(clusterResource,
+          new ResourceLimits(clusterResource));
+    } finally {
+      writeLock.unlock();
     }
   }
 
