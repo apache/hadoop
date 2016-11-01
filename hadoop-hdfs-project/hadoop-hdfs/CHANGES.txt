@@ -241,6 +241,9 @@ Release 2.7.4 - UNRELEASED
     HDFS-11615. FSNamesystemLock metrics can be inaccurate due to millisecond precision.
     (Erik Krogen via zhz)
 
+    HDFS-10455. Logging the username when deny the setOwner operation.
+    (Tianyi Xu and Rakesh R via Brahma Reddy Battula)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
