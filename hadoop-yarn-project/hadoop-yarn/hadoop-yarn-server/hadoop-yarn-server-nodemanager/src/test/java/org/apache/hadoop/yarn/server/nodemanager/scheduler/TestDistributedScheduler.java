@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
@@ -74,7 +75,8 @@ public class TestDistributedScheduler {
     RequestInterceptor finalReqIntcptr = setup(conf, distributedScheduler);
 
     registerAM(distributedScheduler, finalReqIntcptr, Arrays.asList(
-        NodeId.newInstance("a", 1), NodeId.newInstance("b", 2)));
+        RemoteNode.newInstance(NodeId.newInstance("a", 1), "http://a:1"),
+        RemoteNode.newInstance(NodeId.newInstance("b", 2), "http://b:2")));
 
     final AtomicBoolean flipFlag = new AtomicBoolean(true);
     Mockito.when(
@@ -87,10 +89,16 @@ public class TestDistributedScheduler {
             flipFlag.set(!flipFlag.get());
             if (flipFlag.get()) {
               return createAllocateResponse(Arrays.asList(
-                  NodeId.newInstance("c", 3), NodeId.newInstance("d", 4)));
+                  RemoteNode.newInstance(
+                      NodeId.newInstance("c", 3), "http://c:3"),
+                  RemoteNode.newInstance(
+                      NodeId.newInstance("d", 4), "http://d:4")));
             } else {
               return createAllocateResponse(Arrays.asList(
-                  NodeId.newInstance("d", 4), NodeId.newInstance("c", 3)));
+                  RemoteNode.newInstance(
+                      NodeId.newInstance("d", 4), "http://d:4"),
+                  RemoteNode.newInstance(
+                      NodeId.newInstance("c", 3), "http://c:3")));
             }
           }
         });
@@ -164,7 +172,7 @@ public class TestDistributedScheduler {
   }
 
   private void registerAM(DistributedScheduler distributedScheduler,
-      RequestInterceptor finalReqIntcptr, List<NodeId> nodeList)
+      RequestInterceptor finalReqIntcptr, List<RemoteNode> nodeList)
       throws Exception {
     RegisterDistributedSchedulingAMResponse distSchedRegisterResponse =
         Records.newRecord(RegisterDistributedSchedulingAMResponse.class);
@@ -208,7 +216,7 @@ public class TestDistributedScheduler {
     };
     nmContainerTokenSecretManager.setMasterKey(mKey);
     OpportunisticContainerAllocator containerAllocator =
-        new OpportunisticContainerAllocator(nmContainerTokenSecretManager, 77);
+        new OpportunisticContainerAllocator(nmContainerTokenSecretManager);
 
     NMTokenSecretManagerInNM nmTokenSecretManagerInNM =
         new NMTokenSecretManagerInNM();
@@ -236,7 +244,7 @@ public class TestDistributedScheduler {
   }
 
   private DistributedSchedulingAllocateResponse createAllocateResponse(
-      List<NodeId> nodes) {
+      List<RemoteNode> nodes) {
     DistributedSchedulingAllocateResponse distSchedAllocateResponse =
         Records.newRecord(DistributedSchedulingAllocateResponse.class);
     distSchedAllocateResponse

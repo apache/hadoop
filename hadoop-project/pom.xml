@@ -1568,9 +1568,6 @@
                 <goals>
                   <goal>jar</goal>
                 </goals>
-                <configuration>
-                  <destDir>${project.build.directory}</destDir>
-                </configuration>
               </execution>
             </executions>
           </plugin>

@@ -549,7 +549,9 @@ public class AMRMProxyService extends AbstractService implements
           AMRMProxyService.this.stopApplication(event.getApplicationID());
           break;
         default:
-          LOG.debug("AMRMProxy is ignoring event: " + event.getType());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("AMRMProxy is ignoring event: " + event.getType());
+          }
           break;
         }
       } else {

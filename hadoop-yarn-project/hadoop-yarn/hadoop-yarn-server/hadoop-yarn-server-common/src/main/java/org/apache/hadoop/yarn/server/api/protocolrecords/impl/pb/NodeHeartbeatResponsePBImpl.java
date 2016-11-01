@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
@@ -57,12 +56,14 @@ import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.ContainerQueuingLimitPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
-
-public class NodeHeartbeatResponsePBImpl extends
-    ProtoBase<NodeHeartbeatResponseProto> implements NodeHeartbeatResponse {
-  NodeHeartbeatResponseProto proto = NodeHeartbeatResponseProto.getDefaultInstance();
-  NodeHeartbeatResponseProto.Builder builder = null;
-  boolean viaProto = false;
+/**
+ * PBImpl class for NodeHeartbeatResponse.
+ */
+public class NodeHeartbeatResponsePBImpl extends NodeHeartbeatResponse {
+  private NodeHeartbeatResponseProto proto = NodeHeartbeatResponseProto
+      .getDefaultInstance();
+  private NodeHeartbeatResponseProto.Builder builder = null;
+  private boolean viaProto = false;
 
   private List<ContainerId> containersToCleanup = null;
   private List<ContainerId> containersToBeRemovedFromNM = null;

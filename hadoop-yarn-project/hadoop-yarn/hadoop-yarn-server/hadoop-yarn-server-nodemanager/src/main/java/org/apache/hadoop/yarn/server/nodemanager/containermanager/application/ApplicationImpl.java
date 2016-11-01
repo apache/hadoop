@@ -591,8 +591,10 @@ public class ApplicationImpl implements Application {
 
     try {
       ApplicationId applicationID = event.getApplicationID();
-      LOG.debug("Processing " + applicationID + " of type " + event.getType());
-
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Processing " + applicationID + " of type " + event.getType());
+      }
       ApplicationState oldState = stateMachine.getCurrentState();
       ApplicationState newState = null;
       try {

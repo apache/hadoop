@@ -241,9 +241,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   List<ReplicaInfo> getFinalizedBlocks(String bpid);
 
-  /** @return a list of finalized blocks for the given block pool. */
-  List<ReplicaInfo> getFinalizedBlocksOnPersistentStorage(String bpid);
-
   /**
    * Check whether the in-memory block record matches the block on the disk,
    * and, in case that they are not matched, update the record or mark it

@@ -762,16 +762,20 @@ from placing its declaration on the command line.
 
     <property>
       <name>fs.s3a.multipart.size</name>
-      <value>104857600</value>
+      <value>100M</value>
       <description>How big (in bytes) to split upload or copy operations up into.
-      This also controls the partition size in renamed files, as rename() involves
-      copying the source file(s)</description>
+        A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
+      </description>
     </property>
 
     <property>
       <name>fs.s3a.multipart.threshold</name>
       <value>2147483647</value>
-      <description>Threshold before uploads or copies use parallel multipart operations.</description>
+      <description>How big (in bytes) to split upload or copy operations up into.
+        This also controls the partition size in renamed files, as rename() involves
+        copying the source file(s).
+        A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
+      </description>
     </property>
 
     <property>
@@ -825,7 +829,7 @@ from placing its declaration on the command line.
 
     <property>
       <name>fs.s3a.block.size</name>
-      <value>33554432</value>
+      <value>32M</value>
       <description>Block size to use when reading files using s3a: file system.
       </description>
     </property>
@@ -859,7 +863,7 @@ from placing its declaration on the command line.
 
     <property>
       <name>fs.s3a.readahead.range</name>
-      <value>65536</value>
+      <value>64K</value>
       <description>Bytes to read ahead during a seek() before closing and
       re-opening the S3 HTTP connection. This option will be overridden if
       any call to setReadahead() is made to an open stream.</description>
@@ -1029,9 +1033,9 @@ S3 endpoints, as disks are not used for intermediate data storage.
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>104857600</value>
-  <description>
-  How big (in bytes) to split upload or copy operations up into.
+  <value>100M</value>
+  <description>How big (in bytes) to split upload or copy operations up into.
+    A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
 </property>
 

@@ -1347,9 +1347,14 @@ public class JobConf extends Configuration {
    * <b id="NoOfReduces">How many reduces?</b>
    * 
    * <p>The right number of reduces seems to be <code>0.95</code> or 
-   * <code>1.75</code> multiplied by (&lt;<i>no. of nodes</i>&gt; * 
-   * <a href="{@docRoot}/../mapred-default.html#mapreduce.tasktracker.reduce.tasks.maximum">
-   * mapreduce.tasktracker.reduce.tasks.maximum</a>).
+   * <code>1.75</code> multiplied by (
+   * <i>available memory for reduce tasks</i>
+   * (The value of this should be smaller than
+   * numNodes * yarn.nodemanager.resource.memory-mb
+   * since the resource of memory is shared by map tasks and other
+   * applications) /
+   * <a href="{@docRoot}/../hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml#mapreduce.reduce.memory.mb">
+   * mapreduce.reduce.memory.mb</a>).
    * </p>
    * 
    * <p>With <code>0.95</code> all of the reduces can launch immediately and 
