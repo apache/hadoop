@@ -18,15 +18,18 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode.ReclaimContext;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ChunkedArrayList;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -102,7 +105,7 @@ class FSDirDeleteOp {
       throw new InvalidPathException(src);
     }
 
-    final INodesInPath iip = fsd.resolvePathForWrite(pc, src, false);
+    final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
     if (fsd.isPermissionEnabled()) {
       fsd.checkPermission(pc, iip, false, null, FsAction.WRITE, null,
                           FsAction.ALL, true);
@@ -276,10 +279,14 @@ class FSDirDeleteOp {
    * @param iip directory whose descendants are to be checked.
    * @throws AccessControlException if a non-empty protected descendant
    *                                was found.
+   * @throws ParentNotDirectoryException
+   * @throws UnresolvedLinkException
+   * @throws FileNotFoundException
    */
   private static void checkProtectedDescendants(
       FSDirectory fsd, INodesInPath iip)
-          throws AccessControlException, UnresolvedLinkException {
+          throws AccessControlException, UnresolvedLinkException,
+          ParentNotDirectoryException {
     final SortedSet<String> protectedDirs = fsd.getProtectedDirectories();
     if (protectedDirs.isEmpty()) {
       return;
@@ -298,8 +305,8 @@ class FSDirDeleteOp {
     // character after '/'.
     for (String descendant :
             protectedDirs.subSet(src + Path.SEPARATOR, src + "0")) {
-      if (fsd.isNonEmptyDirectory(fsd.getINodesInPath4Write(
-              descendant, false))) {
+      INodesInPath subdirIIP = fsd.getINodesInPath(descendant, DirOp.WRITE);
+      if (fsd.isNonEmptyDirectory(subdirIIP)) {
         throw new AccessControlException(
             "Cannot delete non-empty protected subdirectory " + descendant);
       }

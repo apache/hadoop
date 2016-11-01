@@ -22,7 +22,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -37,9 +36,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.security.AccessControlException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -50,14 +51,8 @@ import static org.apache.hadoop.util.Time.now;
 class FSDirStatAndListingOp {
   static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
       byte[] startAfter, boolean needLocation) throws IOException {
-    final INodesInPath iip;
-    if (fsd.isPermissionEnabled()) {
-      FSPermissionChecker pc = fsd.getPermissionChecker();
-      iip = fsd.resolvePath(pc, srcArg);
-    } else {
-      String src = FSDirectory.resolvePath(srcArg, fsd);
-      iip = fsd.getINodesInPath(src, true);
-    }
+    final FSPermissionChecker pc = fsd.getPermissionChecker();
+    final INodesInPath iip = fsd.resolvePath(pc, srcArg, DirOp.READ);
 
     // Get file name when startAfter is an INodePath.  This is not the
     // common case so avoid any unnecessary processing unless required.
@@ -78,11 +73,8 @@ class FSDirStatAndListingOp {
 
     boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
-      FSPermissionChecker pc = fsd.getPermissionChecker();
       if (iip.getLastINode() != null && iip.getLastINode().isDirectory()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ_EXECUTE);
-      } else {
-        fsd.checkTraverse(pc, iip);
       }
       isSuperUser = pc.isSuperUser();
     }
@@ -102,18 +94,20 @@ class FSDirStatAndListingOp {
   static HdfsFileStatus getFileInfo(
       FSDirectory fsd, String srcArg, boolean resolveLink)
       throws IOException {
-    String src = srcArg;
-    if (!DFSUtil.isValidName(src)) {
-      throw new InvalidPathException("Invalid file name: " + src);
-    }
+    DirOp dirOp = resolveLink ? DirOp.READ : DirOp.READ_LINK;
+    FSPermissionChecker pc = fsd.getPermissionChecker();
     final INodesInPath iip;
-    if (fsd.isPermissionEnabled()) {
-      FSPermissionChecker pc = fsd.getPermissionChecker();
-      iip = fsd.resolvePath(pc, srcArg, resolveLink);
-      fsd.checkPermission(pc, iip, false, null, null, null, null, false);
+    if (pc.isSuperUser()) {
+      // superuser can only get an ACE if an existing ancestor is a file.
+      // right or (almost certainly) wrong, current fs contracts expect
+      // superuser to receive null instead.
+      try {
+        iip = fsd.resolvePath(pc, srcArg, dirOp);
+      } catch (AccessControlException ace) {
+        return null;
+      }
     } else {
-      src = FSDirectory.resolvePath(srcArg, fsd);
-      iip = fsd.getINodesInPath(src, resolveLink);
+      iip = fsd.resolvePath(pc, srcArg, dirOp);
     }
     return getFileInfo(fsd, iip);
   }
@@ -123,17 +117,14 @@ class FSDirStatAndListingOp {
    */
   static boolean isFileClosed(FSDirectory fsd, String src) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    final INodesInPath iip = fsd.resolvePath(pc, src);
-    if (fsd.isPermissionEnabled()) {
-      fsd.checkTraverse(pc, iip);
-    }
+    final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
     return !INodeFile.valueOf(iip.getLastINode(), src).isUnderConstruction();
   }
 
   static ContentSummary getContentSummary(
       FSDirectory fsd, String src) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    final INodesInPath iip = fsd.resolvePath(pc, src, false);
+    final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
     if (fsd.isPermissionEnabled()) {
       fsd.checkPermission(pc, iip, false, null, null, null,
           FsAction.READ_EXECUTE);
@@ -156,7 +147,7 @@ class FSDirStatAndListingOp {
     BlockManager bm = fsd.getBlockManager();
     fsd.readLock();
     try {
-      final INodesInPath iip = fsd.resolvePath(pc, src);
+      final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.READ);
       src = iip.getPath();
       final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
       if (fsd.isPermissionEnabled()) {
@@ -529,7 +520,7 @@ class FSDirStatAndListingOp {
     final INodesInPath iip;
     fsd.readLock();
     try {
-      iip = fsd.resolvePath(pc, src, false);
+      iip = fsd.resolvePath(pc, src, DirOp.READ_LINK);
       if (fsd.isPermissionEnabled()) {
         fsd.checkPermission(pc, iip, false, null, null, null,
             FsAction.READ_EXECUTE);

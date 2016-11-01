@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -112,11 +113,11 @@ public class TestReservedRawPaths {
     FSDirectory fsd = cluster.getNamesystem().getFSDirectory();
     final String path = "/path";
 
-    INodesInPath iip = fsd.resolvePath(null, path);
+    INodesInPath iip = fsd.resolvePath(null, path, DirOp.READ);
     assertFalse(iip.isRaw());
     assertEquals(path, iip.getPath());
 
-    iip = fsd.resolvePath(null, "/.reserved/raw" + path);
+    iip = fsd.resolvePath(null, "/.reserved/raw" + path, DirOp.READ);
     assertTrue(iip.isRaw());
     assertEquals(path, iip.getPath());
   }
