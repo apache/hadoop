@@ -258,6 +258,21 @@ public class LogAggregationService extends AbstractService implements
                 remoteFS.getWorkingDirectory());
         remoteFS.mkdirs(qualified, new FsPermission(TLDIR_PERMISSIONS));
         remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
+
+        UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+        String primaryGroupName = null;
+        try {
+          primaryGroupName = loginUser.getPrimaryGroupName();
+        } catch (IOException e) {
+          LOG.warn("No primary group found. The remote root log directory" +
+              " will be created with the HDFS superuser being its group " +
+              "owner. JobHistoryServer may be unable to read the directory.");
+        }
+        // set owner on the remote directory only if the primary group exists
+        if (primaryGroupName != null) {
+          remoteFS.setOwner(qualified,
+              loginUser.getShortUserName(), primaryGroupName);
+        }
       } catch (IOException e) {
         throw new YarnRuntimeException("Failed to create remoteLogDir ["
             + this.remoteRootLogDir + "]", e);
