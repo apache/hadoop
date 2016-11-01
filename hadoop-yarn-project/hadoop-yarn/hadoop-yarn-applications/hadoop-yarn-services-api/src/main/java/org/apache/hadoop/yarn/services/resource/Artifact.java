@@ -40,7 +40,7 @@ public class Artifact implements Serializable {
   private String id = null;
 
   public enum TypeEnum {
-    DOCKER("docker"), TARBALL("tarball"), APPLICATION("application");
+    DOCKER("DOCKER"), TARBALL("TARBALL"), APPLICATION("APPLICATION");
 
     private String value;
 
