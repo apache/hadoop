@@ -26,6 +26,11 @@ public interface RestApiErrorMessages {
 
   String ERROR_APPLICATION_NOT_RUNNING = "Application not running";
   String ERROR_APPLICATION_DOES_NOT_EXIST = "Application not found";
+  String ERROR_APPLICATION_IN_USE = "Application already exists in started"
+      + " state";
+  String ERROR_APPLICATION_INSTANCE_EXISTS = "Application already exists in"
+      + " stopped/failed state (either restart with PUT or destroy with DELETE"
+      + " before creating a new one)";
 
   String ERROR_SUFFIX_FOR_COMPONENT =
       " for component %s (nor at the global level)";
@@ -66,7 +71,6 @@ public interface RestApiErrorMessages {
   String ERROR_RESOURCE_PROFILE_NOT_SUPPORTED_YET =
       "Resource profile is not " + "supported yet. Please specify cpus/memory.";
 
-  String ERROR_APPLICATION_IN_USE = "Application name is already in use";
   String ERROR_NULL_ARTIFACT_ID =
       "Artifact Id can not be null if artifact type is none";
   String ERROR_ABSENT_NUM_OF_INSTANCE =
@@ -74,6 +78,6 @@ public interface RestApiErrorMessages {
   String ERROR_ABSENT_LAUNCH_COMMAND =
       "launch command should appear if type is slider-zip or none";
 
-  String ERROR_QUICKLINKS_FOR_COMP_INVALID =
-      "Quicklinks specified at component level, needs corresponding values set at application level";
+  String ERROR_QUICKLINKS_FOR_COMP_INVALID = "Quicklinks specified at"
+      + " component level, needs corresponding values set at application level";
 }

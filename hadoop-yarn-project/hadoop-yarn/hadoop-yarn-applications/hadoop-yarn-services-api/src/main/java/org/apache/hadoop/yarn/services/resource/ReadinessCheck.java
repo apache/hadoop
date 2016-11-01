@@ -39,7 +39,7 @@ public class ReadinessCheck implements Serializable {
   private static final long serialVersionUID = -3836839816887186801L;
 
   public enum TypeEnum {
-    HTTP("http");
+    HTTP("HTTP");
 
     private String value;
 

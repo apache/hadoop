@@ -43,8 +43,8 @@ public class ConfigFile implements Serializable {
   private static final long serialVersionUID = -7009402089417704612L;
 
   public enum TypeEnum {
-    XML("xml"), PROPERTIES("properties"), JSON("json"), YAML("yaml"), TEMPLATE(
-        "template"), ENV("env"), HADOOP_XML("hadoop_xml");
+    XML("XML"), PROPERTIES("PROPERTIES"), JSON("JSON"), YAML("YAML"), TEMPLATE(
+        "TEMPLATE"), ENV("ENV"), HADOOP_XML("HADOOP_XML");
 
     private String value;
 
