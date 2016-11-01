@@ -124,7 +124,7 @@
         <!-- Checks for Size Violations.                    -->
         <!-- See http://checkstyle.sf.net/config_sizes.html -->
         <module name="LineLength">
-          <property name="ignorePattern" value="^import"/>
+          <property name="ignorePattern" value="^(package|import) .*"/>
         </module>
         <module name="MethodLength"/>
         <module name="ParameterNumber"/>
