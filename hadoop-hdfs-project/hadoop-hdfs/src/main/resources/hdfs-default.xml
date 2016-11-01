@@ -4294,8 +4294,10 @@
     <name>dfs.disk.balancer.plan.threshold.percent</name>
     <value>10</value>
     <description>
-        The percentage that disk tolerance that we are ok with in
-      a plan.
+      The percentage threshold value for volume Data Density in a plan.
+      If the absolute value of volume Data Density which is out of
+      threshold value in a node, it means that the volumes corresponding to
+      the disks should do the balancing in the plan. The default value is 10.
     </description>
   </property>
 
