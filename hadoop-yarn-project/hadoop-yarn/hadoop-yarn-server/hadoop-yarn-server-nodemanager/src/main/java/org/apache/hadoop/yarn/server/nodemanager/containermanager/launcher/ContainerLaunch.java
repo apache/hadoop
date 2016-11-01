@@ -571,8 +571,9 @@ public class ContainerLaunch implements Callable<Integer> {
           + " No cleanup needed to be done");
       return;
     }
-
-    LOG.debug("Marking container " + containerIdStr + " as inactive");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Marking container " + containerIdStr + " as inactive");
+    }
     // this should ensure that if the container process has not launched 
     // by this time, it will never be launched
     exec.deactivateContainer(containerId);
@@ -596,10 +597,10 @@ public class ContainerLaunch implements Callable<Integer> {
       // kill process
       if (processId != null) {
         String user = container.getUser();
-        LOG.debug("Sending signal to pid " + processId
-            + " as user " + user
-            + " for container " + containerIdStr);
-
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sending signal to pid " + processId + " as user " + user
+              + " for container " + containerIdStr);
+        }
         final Signal signal = sleepDelayBeforeSigKill > 0
           ? Signal.TERM
           : Signal.KILL;
@@ -611,12 +612,11 @@ public class ContainerLaunch implements Callable<Integer> {
                 .setPid(processId)
                 .setSignal(signal)
                 .build());
-
-        LOG.debug("Sent signal " + signal + " to pid " + processId
-          + " as user " + user
-          + " for container " + containerIdStr
-          + ", result=" + (result? "success" : "failed"));
-
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sent signal " + signal + " to pid " + processId
+              + " as user " + user + " for container " + containerIdStr
+              + ", result=" + (result ? "success" : "failed"));
+        }
         if (sleepDelayBeforeSigKill > 0) {
           new DelayedProcessKiller(container, user,
               processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
@@ -744,8 +744,10 @@ public class ContainerLaunch implements Callable<Integer> {
     String containerIdStr = 
         container.getContainerId().toString();
     String processId = null;
-    LOG.debug("Accessing pid for container " + containerIdStr
-        + " from pid file " + pidFilePath);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Accessing pid for container " + containerIdStr
+          + " from pid file " + pidFilePath);
+    }
     int sleepCounter = 0;
     final int sleepInterval = 100;
 
@@ -754,8 +756,10 @@ public class ContainerLaunch implements Callable<Integer> {
     while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
-        LOG.debug("Got pid " + processId + " for container "
-            + containerIdStr);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Got pid " + processId + " for container " + containerIdStr);
+        }
         break;
       }
       else if ((sleepCounter*sleepInterval) > maxKillWaitTime) {

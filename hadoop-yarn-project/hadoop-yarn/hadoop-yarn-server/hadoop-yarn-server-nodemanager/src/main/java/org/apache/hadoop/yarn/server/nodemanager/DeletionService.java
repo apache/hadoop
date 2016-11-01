@@ -239,7 +239,9 @@ public class DeletionService extends AbstractService {
       boolean error = false;
       if (null == user) {
         if (baseDirs == null || baseDirs.size() == 0) {
-          LOG.debug("NM deleting absolute path : " + subDir);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("NM deleting absolute path : " + subDir);
+          }
           try {
             lfs.delete(subDir, true);
           } catch (IOException e) {
@@ -249,7 +251,9 @@ public class DeletionService extends AbstractService {
         } else {
           for (Path baseDir : baseDirs) {
             Path del = subDir == null? baseDir : new Path(baseDir, subDir);
-            LOG.debug("NM deleting path : " + del);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("NM deleting path : " + del);
+            }
             try {
               lfs.delete(del, true);
             } catch (IOException e) {
@@ -260,7 +264,10 @@ public class DeletionService extends AbstractService {
         }
       } else {
         try {
-          LOG.debug("Deleting path: [" + subDir + "] as user: [" + user + "]");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "Deleting path: [" + subDir + "] as user: [" + user + "]");
+          }
           if (baseDirs == null || baseDirs.size() == 0) {
             delService.exec.deleteAsUser(new DeletionAsUserContext.Builder()
                 .setUser(user)

@@ -446,9 +446,10 @@ public class ContainersMonitorImpl extends AbstractService implements
             if (pId == null || !isResourceCalculatorAvailable()) {
               continue; // processTree cannot be tracked
             }
-
-            LOG.debug("Constructing ProcessTree for : PID = " + pId
-                + " ContainerId = " + containerId);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Constructing ProcessTree for : PID = " + pId
+                  + " ContainerId = " + containerId);
+            }
             ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
             pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getVirtualMemorySize();
@@ -527,9 +528,9 @@ public class ContainersMonitorImpl extends AbstractService implements
         if (pId != null) {
           // pId will be null, either if the container is not spawned yet
           // or if the container's pid is removed from ContainerExecutor
-          LOG.debug("Tracking ProcessTree " + pId
-                  + " for the first time");
-
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Tracking ProcessTree " + pId + " for the first time");
+          }
           ResourceCalculatorProcessTree pt =
                   ResourceCalculatorProcessTree.
                         getResourceCalculatorProcessTree(
