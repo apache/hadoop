@@ -847,8 +847,9 @@
   <name>dfs.namenode.safemode.extension</name>
   <value>30000</value>
   <description>
-    Determines extension of safe mode in milliseconds 
-    after the threshold level is reached.
+    Determines extension of safe mode in milliseconds after the threshold level
+    is reached.  Support multiple time unit suffix (case insensitive), as
+    described in dfs.heartbeat.interval.
   </description>
 </property>
 
