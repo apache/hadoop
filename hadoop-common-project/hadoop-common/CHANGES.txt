@@ -15,6 +15,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-12325. RPC Metrics : Add the ability track and log slow RPCs.
     (Anu Engineer via xyao)
 
+    HADOOP-10300. Allowed deferred sending of call responses. (Daryn Sharp via
+    yliu)
+
   OPTIMIZATIONS
 
   BUG FIXES
