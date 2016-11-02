@@ -41,10 +41,11 @@ public class FederationPolicyInitializationContext {
 
   public FederationPolicyInitializationContext(
       SubClusterPolicyConfiguration policy, SubClusterResolver resolver,
-      FederationStateStoreFacade storeFacade) {
+      FederationStateStoreFacade storeFacade, SubClusterId home) {
     this.federationPolicyConfiguration = policy;
     this.federationSubclusterResolver = resolver;
     this.federationStateStoreFacade = storeFacade;
+    this.homeSubcluster = home;
   }
 
   /**

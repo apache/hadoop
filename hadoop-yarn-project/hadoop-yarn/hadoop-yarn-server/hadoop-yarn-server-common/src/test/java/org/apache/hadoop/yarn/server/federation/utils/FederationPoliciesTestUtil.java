@@ -143,7 +143,7 @@ public final class FederationPoliciesTestUtil {
       SubClusterInfo> activeSubclusters) throws YarnException {
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext(null, initResolver(),
-            initFacade());
+            initFacade(), SubClusterId.newInstance("homesubcluster"));
     initializePolicyContext(context, policy, policyInfo, activeSubclusters);
   }
 
