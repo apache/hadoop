@@ -20,13 +20,13 @@ package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
 import java.util.Collection;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -89,22 +89,11 @@ public final class ErasureCodingWorker {
     stripedReadPool.allowCoreThreadTimeOut(true);
   }
 
-  private void initializeStripedBlkReconstructionThreadPool(int num) {
-    LOG.debug("Using striped block reconstruction; pool threads={}", num);
-    stripedReconstructionPool = new ThreadPoolExecutor(2, num, 60,
-        TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(),
-        new Daemon.DaemonFactory() {
-          private final AtomicInteger threadIdx = new AtomicInteger(0);
-
-          @Override
-          public Thread newThread(Runnable r) {
-            Thread t = super.newThread(r);
-            t.setName("stripedBlockReconstruction-"
-                + threadIdx.getAndIncrement());
-            return t;
-          }
-        });
+  private void initializeStripedBlkReconstructionThreadPool(int numThreads) {
+    LOG.debug("Using striped block reconstruction; pool threads={}",
+        numThreads);
+    stripedReconstructionPool = DFSUtilClient.getThreadPoolExecutor(2,
+        numThreads, 60, "StripedBlockReconstruction-", false);
     stripedReconstructionPool.allowCoreThreadTimeOut(true);
   }
 
