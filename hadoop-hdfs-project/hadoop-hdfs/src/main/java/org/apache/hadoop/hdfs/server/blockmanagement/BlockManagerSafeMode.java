@@ -35,12 +35,16 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Daemon;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY;
@@ -96,7 +100,8 @@ class BlockManagerSafeMode {
   private long blockReplQueueThreshold;
 
   /** How long (in ms) is the extension period. */
-  private final int extension;
+  @VisibleForTesting
+  final long extension;
   /** Timestamp of the first time when thresholds are met. */
   private final AtomicLong reachedTime = new AtomicLong();
   /** Timestamp of the safe mode initialized. */
@@ -143,7 +148,9 @@ class BlockManagerSafeMode {
     this.replQueueThreshold =
         conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
             (float) threshold);
-    this.extension = conf.getInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    this.extension = conf.getTimeDuration(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY,
+        DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT,
+        MILLISECONDS);
 
     this.inRollBack = isInRollBackMode(NameNode.getStartupOption(conf));
 
