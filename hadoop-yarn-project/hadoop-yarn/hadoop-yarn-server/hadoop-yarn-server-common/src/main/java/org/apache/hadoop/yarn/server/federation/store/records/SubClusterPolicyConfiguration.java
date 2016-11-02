@@ -40,6 +40,7 @@ import java.nio.ByteBuffer;
 @Unstable
 public abstract class SubClusterPolicyConfiguration {
 
+
   @Private
   @Unstable
   public static SubClusterPolicyConfiguration newInstance(String queue,
@@ -49,6 +50,18 @@ public abstract class SubClusterPolicyConfiguration {
     policy.setQueue(queue);
     policy.setType(policyType);
     policy.setParams(policyParams);
+    return policy;
+  }
+
+  @Private
+  @Unstable
+  public static SubClusterPolicyConfiguration newInstance(
+      SubClusterPolicyConfiguration conf) {
+    SubClusterPolicyConfiguration policy =
+        Records.newRecord(SubClusterPolicyConfiguration.class);
+    policy.setQueue(conf.getQueue());
+    policy.setType(conf.getType());
+    policy.setParams(conf.getParams());
     return policy;
   }
 

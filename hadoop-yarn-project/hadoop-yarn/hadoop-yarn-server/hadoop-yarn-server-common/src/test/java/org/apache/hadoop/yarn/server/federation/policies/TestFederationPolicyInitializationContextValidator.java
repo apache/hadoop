@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMR
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -38,6 +39,7 @@ public class TestFederationPolicyInitializationContextValidator {
   private SubClusterPolicyConfiguration goodConfig;
   private SubClusterResolver goodSR;
   private FederationStateStoreFacade goodFacade;
+  private SubClusterId goodHome;
   private FederationPolicyInitializationContext context;
 
   @Before
@@ -45,8 +47,9 @@ public class TestFederationPolicyInitializationContextValidator {
     goodFacade = FederationPoliciesTestUtil.initFacade();
     goodConfig = new MockPolicyManager().serializeConf();
     goodSR = FederationPoliciesTestUtil.initResolver();
+    goodHome = SubClusterId.newInstance("homesubcluster");
     context = new FederationPolicyInitializationContext(goodConfig, goodSR,
-        goodFacade);
+        goodFacade, goodHome);
   }
 
   @Test
