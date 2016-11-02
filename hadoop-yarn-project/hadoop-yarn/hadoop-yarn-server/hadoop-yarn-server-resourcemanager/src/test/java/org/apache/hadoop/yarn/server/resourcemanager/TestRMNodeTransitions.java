@@ -561,12 +561,14 @@ public class TestRMNodeTransitions {
     Resource oldCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
     assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    assertEquals("GPU resource is not match.", oldCapacity.getGPUs(), 4);
     node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
         ResourceOption.newInstance(Resource.newInstance(2048, 2, 2),
             RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
     Resource newCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
     assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+    assertEquals("GPU resource is not match.", newCapacity.getGPUs(), 2);
     
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     Assert.assertNotNull(nodesListManagerEvent);
@@ -580,12 +582,14 @@ public class TestRMNodeTransitions {
     Resource oldCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
     assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    assertEquals("GPU resource is not match.", oldCapacity.getGPUs(), 4);
     node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
         ResourceOption.newInstance(Resource.newInstance(2048, 2, 2),
             RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
     Resource newCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
     assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+    assertEquals("GPU resource is not match.", newCapacity.getGPUs(), 2);
     
     Assert.assertEquals(NodeState.NEW, node.getState());
   }
@@ -596,12 +600,14 @@ public class TestRMNodeTransitions {
     Resource oldCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
     assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
+    assertEquals("GPU resource is not match.", oldCapacity.getGPUs(), 4);
     node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
         ResourceOption.newInstance(Resource.newInstance(2048, 2, 2),
             RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
     Resource newCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
     assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
+    assertEquals("GPU resource is not match.", newCapacity.getGPUs(), 2);
     
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
   }

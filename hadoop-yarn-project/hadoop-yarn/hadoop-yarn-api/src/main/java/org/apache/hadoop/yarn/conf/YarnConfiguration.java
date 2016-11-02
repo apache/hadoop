@@ -856,9 +856,9 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_GPUS = 8;
 
   /** Percentage of overall GPU which can be allocated for containers. */
-  public static final String NM_RESOURCE_PERCENTAGE_GPU_LIMIT =
+  public static final String NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT =
           NM_PREFIX + "resource.percentage-GPU-limit";
-  public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_GPU_LIMIT =
+  public static final int DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_GPU_LIMIT =
           100;
   
   /** NM Webapp address.**/

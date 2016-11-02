@@ -517,7 +517,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         Integer.parseInt(getChildNodeByName(resourcesUsed, "memory")
             .getTextContent());
         Integer.parseInt(getChildNodeByName(resourcesUsed, "vCores")
-              .getTextContent());
+            .getTextContent());
+        Integer.parseInt(getChildNodeByName(resourcesUsed, "GPUs")
+            .getTextContent());
       }
     } finally {
       rm.stop();
@@ -527,6 +529,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   private void checkResourcesUsed(JSONObject queue) throws JSONException {
     queue.getJSONObject("resourcesUsed").getInt("memory");
     queue.getJSONObject("resourcesUsed").getInt("vCores");
+    queue.getJSONObject("resourcesUsed").getInt("GPUs");
   }
 
   //Also checks resourcesUsed
@@ -583,6 +586,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     // If we add a new resource (e.g disks), then
     // CapacitySchedulerPage and these RM WebServices + docs need to be updated
     // eg. ResourceInfo
-    assertEquals("<memory:10, vCores:1>", res.toString());
+    assertEquals("<memory:10, vCores:1, GPUs:1>", res.toString());
   }
 }

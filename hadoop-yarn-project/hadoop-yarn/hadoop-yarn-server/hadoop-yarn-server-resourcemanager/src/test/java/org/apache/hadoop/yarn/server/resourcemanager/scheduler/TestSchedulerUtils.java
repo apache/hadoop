@@ -161,14 +161,14 @@ public class TestSchedulerUtils {
   public void testNormalizeRequestWithDominantResourceCalculator() {
     ResourceCalculator resourceCalculator = new DominantResourceCalculator();
     
-    Resource minResource = Resources.createResource(1024, 1, 1);
-    Resource maxResource = Resources.createResource(10240, 10, 10);
-    Resource clusterResource = Resources.createResource(10 * 1024, 10, 10);
+    Resource minResource = Resources.createResource(1024, 1, 0);
+    Resource maxResource = Resources.createResource(10240, 10, 0);
+    Resource clusterResource = Resources.createResource(10 * 1024, 10, 0);
     
     ResourceRequest ask = new ResourceRequestPBImpl();
 
     // case negative memory/vcores
-    ask.setCapability(Resources.createResource(-1024, -1, -1));
+    ask.setCapability(Resources.createResource(-1024, -1, 0));
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource, maxResource);
     assertEquals(minResource, ask.getCapability());
@@ -185,7 +185,7 @@ public class TestSchedulerUtils {
     ask.setCapability(Resources.createResource(1536, 0, 0));
     SchedulerUtils.normalizeRequest(
         ask, resourceCalculator, clusterResource, minResource, maxResource);
-    assertEquals(Resources.createResource(2048, 1, 1), ask.getCapability());
+    assertEquals(Resources.createResource(2048, 1, 0), ask.getCapability());
     assertEquals(1, ask.getCapability().getVirtualCores());
     assertEquals(2048, ask.getCapability().getMemory());
   }
@@ -209,7 +209,7 @@ public class TestSchedulerUtils {
 
     // queue has labels, success cases
     try {
-      // set queue accessible node labesl to [x, y]
+      // set queue accessible node labels to [x, y]
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
@@ -246,7 +246,7 @@ public class TestSchedulerUtils {
     // same as above, but cluster node labels don't contains label being
     // requested. should fail
     try {
-      // set queue accessible node labesl to [x, y]
+      // set queue accessible node labels to [x, y]
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
       Resource resource = Resources.createResource(
@@ -265,7 +265,7 @@ public class TestSchedulerUtils {
     
     // queue has labels, failed cases (when ask a label not included by queue)
     try {
-      // set queue accessible node labesl to [x, y]
+      // set queue accessible node labels to [x, y]
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
@@ -291,7 +291,7 @@ public class TestSchedulerUtils {
     // we don't allow specify more than two node labels in a single expression
     // now
     try {
-      // set queue accessible node labesl to [x, y]
+      // set queue accessible node labels to [x, y]
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
@@ -419,7 +419,7 @@ public class TestSchedulerUtils {
     
     // we don't allow resource name other than ANY and specify label
     try {
-      // set queue accessible node labesl to [x, y]
+      // set queue accessible node labels to [x, y]
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
       rmContext.getNodeLabelManager().addToCluserNodeLabels(
@@ -444,7 +444,7 @@ public class TestSchedulerUtils {
     // we don't allow resource name other than ANY and specify label even if
     // queue has accessible label = *
     try {
-      // set queue accessible node labesl to *
+      // set queue accessible node labels to *
       queueAccessibleNodeLabels.clear();
       queueAccessibleNodeLabels.addAll(Arrays
           .asList(CommonNodeLabelsManager.ANY));
@@ -497,7 +497,8 @@ public class TestSchedulerUtils {
     try {
       Resource resource =
           Resources.createResource(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0, 0);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -505,6 +506,21 @@ public class TestSchedulerUtils {
           mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       fail("Zero vcores should be accepted");
+    }
+
+    // zero GPUs
+    try {
+      Resource resource =
+          Resources.createResource(
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 0);
+      ResourceRequest resReq =
+          BuilderUtils.newResourceRequest(mock(Priority.class),
+              ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
+    } catch (InvalidResourceRequestException e) {
+      fail("Zero GPUs should be accepted");
     }
 
     // max memory
@@ -529,7 +545,7 @@ public class TestSchedulerUtils {
           Resources.createResource(
               YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
               YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
@@ -537,6 +553,22 @@ public class TestSchedulerUtils {
           mockScheduler, rmContext);
     } catch (InvalidResourceRequestException e) {
       fail("Max vcores should not be accepted");
+    }
+
+    // max GPUs
+    try {
+      Resource resource =
+          Resources.createResource(
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS);
+      ResourceRequest resReq =
+          BuilderUtils.newResourceRequest(mock(Priority.class),
+              ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
+    } catch (InvalidResourceRequestException e) {
+      fail("Max GPUs should not be accepted");
     }
 
     // negative memory
@@ -559,13 +591,30 @@ public class TestSchedulerUtils {
     try {
       Resource resource =
           Resources.createResource(
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, -1, -1);
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB, -1,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
           mockScheduler, rmContext);
       fail("Negative vcores should not be accepted");
+    } catch (InvalidResourceRequestException e) {
+      // expected
+    }
+
+    // negative GPUs
+    try {
+      Resource resource =
+          Resources.createResource(
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, -1);
+      ResourceRequest resReq =
+          BuilderUtils.newResourceRequest(mock(Priority.class),
+              ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
+      fail("Negative GPUs should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
     }
@@ -594,13 +643,31 @@ public class TestSchedulerUtils {
               .createResource(
                   YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
                   YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES + 1,
-                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS + 1);
+                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS);
       ResourceRequest resReq =
           BuilderUtils.newResourceRequest(mock(Priority.class),
               ResourceRequest.ANY, resource, 1);
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
           mockScheduler, rmContext);
       fail("More than max vcores should not be accepted");
+    } catch (InvalidResourceRequestException e) {
+      // expected
+    }
+
+    // more than max GPUs
+    try {
+      Resource resource =
+          Resources
+              .createResource(
+                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+                  YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_GPUS + 1);
+      ResourceRequest resReq =
+          BuilderUtils.newResourceRequest(mock(Priority.class),
+              ResourceRequest.ANY, resource, 1);
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, null,
+          mockScheduler, rmContext);
+      fail("More than max GPUs should not be accepted");
     } catch (InvalidResourceRequestException e) {
       // expected
     }

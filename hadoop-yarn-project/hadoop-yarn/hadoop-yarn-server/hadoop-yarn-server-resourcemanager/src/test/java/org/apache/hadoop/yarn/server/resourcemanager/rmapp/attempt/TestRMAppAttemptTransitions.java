@@ -298,6 +298,7 @@ public class TestRMAppAttemptTransitions {
         mock(ApplicationResourceUsageReport.class);
     when(appResUsgRpt.getMemorySeconds()).thenReturn(0L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(0L);
+    when(appResUsgRpt.getGPUSeconds()).thenReturn(0L);
     when(resourceScheduler
         .getAppResourceUsageReport((ApplicationAttemptId)Matchers.any()))
      .thenReturn(appResUsgRpt);
@@ -758,6 +759,7 @@ public class TestRMAppAttemptTransitions {
             mock(ApplicationResourceUsageReport.class);
     when(appResUsgRpt.getMemorySeconds()).thenReturn(123456L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(55544L);
+    when(appResUsgRpt.getGPUSeconds()).thenReturn(55544L);
     when(scheduler.getAppResourceUsageReport(any(ApplicationAttemptId.class)))
     .thenReturn(appResUsgRpt);
 
@@ -773,10 +775,12 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getApplicationResourceUsageReport();
     Assert.assertEquals(123456L, report.getMemorySeconds());
     Assert.assertEquals(55544L, report.getVcoreSeconds());
+    Assert.assertEquals(55544L, report.getGPUSeconds());
 
     // finish app attempt and remove it from scheduler 
     when(appResUsgRpt.getMemorySeconds()).thenReturn(223456L);
     when(appResUsgRpt.getVcoreSeconds()).thenReturn(75544L);
+    when(appResUsgRpt.getGPUSeconds()).thenReturn(75544L);
     sendAttemptUpdateSavedEvent(applicationAttempt);
     NodeId anyNodeId = NodeId.newInstance("host", 1234);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
@@ -789,6 +793,7 @@ public class TestRMAppAttemptTransitions {
     report = applicationAttempt.getApplicationResourceUsageReport();
     Assert.assertEquals(223456, report.getMemorySeconds());
     Assert.assertEquals(75544, report.getVcoreSeconds());
+    Assert.assertEquals(75544, report.getGPUSeconds());
   }
 
   @Test

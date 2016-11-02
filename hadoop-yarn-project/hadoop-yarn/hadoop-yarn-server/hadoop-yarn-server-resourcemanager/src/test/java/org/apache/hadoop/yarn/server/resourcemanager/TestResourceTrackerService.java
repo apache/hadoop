@@ -383,6 +383,7 @@ public class TestResourceTrackerService {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, "2048");
     conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, "4");
+    conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_GPUS, "4");
     rm = new MockRM(conf);
     rm.start();
 
@@ -401,6 +402,7 @@ public class TestResourceTrackerService {
     
     capability.setMemory(2048);
     capability.setVirtualCores(1);
+    capability.setGPUs(1);
     req.setResource(capability);
     RegisterNodeManagerResponse response2 =
         resourceTrackerService.registerNodeManager(req);
@@ -408,6 +410,7 @@ public class TestResourceTrackerService {
     
     capability.setMemory(1024);
     capability.setVirtualCores(4);
+    capability.setGPUs(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response3 =
         resourceTrackerService.registerNodeManager(req);
@@ -415,6 +418,7 @@ public class TestResourceTrackerService {
     
     capability.setMemory(2048);
     capability.setVirtualCores(4);
+    capability.setGPUs(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response4 =
         resourceTrackerService.registerNodeManager(req);

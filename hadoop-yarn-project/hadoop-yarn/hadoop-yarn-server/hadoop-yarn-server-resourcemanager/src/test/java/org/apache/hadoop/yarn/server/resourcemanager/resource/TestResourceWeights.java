@@ -30,12 +30,16 @@ public class TestResourceWeights {
         rw1.getWeight(ResourceType.CPU), 0.00001f);
     Assert.assertEquals("Default memory weight should be 0.0f", 0.0f, 
         rw1.getWeight(ResourceType.MEMORY), 0.00001f);
+    Assert.assertEquals("Default GPU weight should be 0.0f.", 0.0f,
+        rw1.getWeight(ResourceType.GPU), 0.00001f);
 
     ResourceWeights rw2 = new ResourceWeights(2.0f);
     Assert.assertEquals("The CPU weight should be 2.0f.", 2.0f, 
         rw2.getWeight(ResourceType.CPU), 0.00001f);
     Assert.assertEquals("The memory weight should be 2.0f", 2.0f, 
         rw2.getWeight(ResourceType.MEMORY), 0.00001f);
+    Assert.assertEquals("The GPU weight should be 2.0f.", 2.0f,
+        rw2.getWeight(ResourceType.GPU), 0.00001f);
 
     // set each individually
     ResourceWeights rw3 = new ResourceWeights(1.5f, 2.0f, 2.0f);
@@ -43,6 +47,8 @@ public class TestResourceWeights {
         rw3.getWeight(ResourceType.CPU), 0.00001f);
     Assert.assertEquals("The memory weight should be 1.5f", 1.5f, 
         rw3.getWeight(ResourceType.MEMORY), 0.00001f);
+    Assert.assertEquals("The GPU weight should be 2.0f", 2.0f,
+        rw3.getWeight(ResourceType.GPU), 0.00001f);
 
     // reset weights
     rw3.setWeight(ResourceType.CPU, 2.5f);
@@ -51,5 +57,8 @@ public class TestResourceWeights {
     rw3.setWeight(ResourceType.MEMORY, 4.0f);
     Assert.assertEquals("The memory weight should be set to 4.0f.", 4.0f, 
         rw3.getWeight(ResourceType.MEMORY), 0.00001f);
+    rw3.setWeight(ResourceType.GPU, 2.5f);
+    Assert.assertEquals("The GPU weight should be set to 2.5f.", 2.5f,
+        rw3.getWeight(ResourceType.GPU), 0.00001f);
   }
 }

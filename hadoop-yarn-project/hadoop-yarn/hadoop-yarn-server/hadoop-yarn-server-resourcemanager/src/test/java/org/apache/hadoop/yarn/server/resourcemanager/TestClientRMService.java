@@ -330,6 +330,7 @@ public class TestClientRMService {
           report.getApplicationResourceUsageReport();
       Assert.assertEquals(10, usageReport.getMemorySeconds());
       Assert.assertEquals(3, usageReport.getVcoreSeconds());
+      Assert.assertEquals(3, usageReport.getGPUSeconds());
     } finally {
       rmService.close();
     }
@@ -1191,11 +1192,11 @@ public class TestClientRMService {
     ApplicationId applicationId3 = getApplicationId(3);
     YarnConfiguration config = new YarnConfiguration();
     apps.put(applicationId1, getRMApp(rmContext, yarnScheduler, applicationId1,
-        config, "testqueue", 10, 3));
+        config, "testqueue", 10, 3, 3));
     apps.put(applicationId2, getRMApp(rmContext, yarnScheduler, applicationId2,
-        config, "a", 20, 2));
+        config, "a", 20, 2, 3));
     apps.put(applicationId3, getRMApp(rmContext, yarnScheduler, applicationId3,
-        config, "testqueue", 40, 5));
+        config, "testqueue", 40, 5, 5));
     return apps;
   }
   
@@ -1218,7 +1219,7 @@ public class TestClientRMService {
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
       ApplicationId applicationId3, YarnConfiguration config, String queueName,
-      final long memorySeconds, final long vcoreSeconds) {
+      final long memorySeconds, final long vcoreSeconds, final long GPUSeconds) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
 
@@ -1238,6 +1239,7 @@ public class TestClientRMService {
                         report.getApplicationResourceUsageReport();
                     usageReport.setMemorySeconds(memorySeconds);
                     usageReport.setVcoreSeconds(vcoreSeconds);
+                    usageReport.setGPUSeconds(GPUSeconds);
                     report.setApplicationResourceUsageReport(usageReport);
                     return report;
                   }

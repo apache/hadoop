@@ -167,4 +167,11 @@ public class WindowsResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     refreshIfNeeded();
     return cpuUsage;
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public int getNumGPUs() {
+    refreshIfNeeded();
+    return -1;
+  }
 }

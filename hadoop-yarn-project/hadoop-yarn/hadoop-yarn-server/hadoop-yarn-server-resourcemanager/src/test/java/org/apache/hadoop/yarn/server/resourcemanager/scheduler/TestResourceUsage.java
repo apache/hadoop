@@ -109,24 +109,25 @@ public class TestResourceUsage {
 
     // First get returns 0 always
     res = get(usage, suffix, label);
-    check(0, 0, res);
+    check(0, 0, 0, res);
 
     // Add 1,1 should returns 1,1
     inc(usage, suffix, Resource.newInstance(1, 1, 1), label);
-    check(1, 1, get(usage, suffix, label));
+    check(1, 1, 1, get(usage, suffix, label));
 
     // Set 2,2
     set(usage, suffix, Resource.newInstance(2, 2, 2), label);
-    check(2, 2, get(usage, suffix, label));
+    check(2, 2, 2, get(usage, suffix, label));
 
     // dec 2,2
     dec(usage, suffix, Resource.newInstance(2, 2, 2), label);
-    check(0, 0, get(usage, suffix, label));
+    check(0, 0, 0, get(usage, suffix, label));
   }
 
-  void check(int mem, int cpu, Resource res) {
+  void check(int mem, int cpu, int gpu, Resource res) {
     Assert.assertEquals(mem, res.getMemory());
     Assert.assertEquals(cpu, res.getVirtualCores());
+    Assert.assertEquals(gpu, res.getGPUs());
   }
 
   @Test

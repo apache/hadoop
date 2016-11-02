@@ -95,28 +95,31 @@ public class TestSchedulerApplicationAttempt {
     app.reservedContainers.put(prio1, reservations);
     oldMetrics.reserveResource(user, reservedResource);
     
-    checkQueueMetrics(oldMetrics, 1, 1, 1536, 2, 2048, 3, 3072, 4);
-    checkQueueMetrics(newMetrics, 0, 0, 0, 0, 0, 0, 0, 0);
-    checkQueueMetrics(parentMetrics, 1, 1, 1536, 2, 2048, 3, 3072, 4);
+    checkQueueMetrics(oldMetrics, 1, 1, 1536, 2, 2, 2048, 3, 3, 3072, 4, 4);
+    checkQueueMetrics(newMetrics, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    checkQueueMetrics(parentMetrics, 1, 1, 1536, 2, 2, 2048, 3, 3, 3072, 4, 4);
     
     app.move(newQueue);
     
-    checkQueueMetrics(oldMetrics, 0, 0, 0, 0, 0, 0, 0, 0);
-    checkQueueMetrics(newMetrics, 1, 1, 1536, 2, 2048, 3, 3072, 4);
-    checkQueueMetrics(parentMetrics, 1, 1, 1536, 2, 2048, 3, 3072, 4);
+    checkQueueMetrics(oldMetrics, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    checkQueueMetrics(newMetrics, 1, 1, 1536, 2, 2, 2048, 3, 3, 3072, 4, 4);
+    checkQueueMetrics(parentMetrics, 1, 1, 1536, 2, 2, 2048, 3, 3, 3072, 4, 4);
   }
   
   private void checkQueueMetrics(QueueMetrics metrics, int activeApps,
-      int runningApps, int allocMb, int allocVcores, int reservedMb,
-      int reservedVcores, int pendingMb, int pendingVcores) {
+      int runningApps, int allocMb, int allocVcores, int allocGPUs, int reservedMb,
+      int reservedVcores, int reservedGPUs, int pendingMb, int pendingVcores, int pendingGPUs) {
     assertEquals(activeApps, metrics.getActiveApps());
     assertEquals(runningApps, metrics.getAppsRunning());
     assertEquals(allocMb, metrics.getAllocatedMB());
     assertEquals(allocVcores, metrics.getAllocatedVirtualCores());
+    assertEquals(allocGPUs, metrics.getAllocatedGPUs());
     assertEquals(reservedMb, metrics.getReservedMB());
     assertEquals(reservedVcores, metrics.getReservedVirtualCores());
+    assertEquals(reservedGPUs, metrics.getReservedGPUs());
     assertEquals(pendingMb, metrics.getPendingMB());
     assertEquals(pendingVcores, metrics.getPendingVirtualCores());
+    assertEquals(pendingGPUs, metrics.getPendingGPUs());
   }
   
   private SchedulerNode createNode() {
