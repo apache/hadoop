@@ -50,7 +50,6 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -905,6 +904,10 @@ public class ApplicationApiService implements ApplicationApi {
 
     // state
     String appState = jsonGetAsString(appStatus, "state");
+    if (appState == null) {
+      // consider that app is still in ACCEPTED state
+      appState = String.valueOf(StateValues.STATE_INCOMPLETE);
+    }
     switch (Integer.parseInt(appState)) {
       case StateValues.STATE_LIVE:
         app.setState(ApplicationState.STARTED);
@@ -1069,6 +1072,9 @@ public class ApplicationApiService implements ApplicationApi {
             String status = null;
             try {
               status = sliderClient.actionStatus(appName);
+            } catch (BadClusterStateException e) {
+              logger.warn("Application not running yet", e);
+              return EMPTY_JSON_OBJECT;
             } catch (Exception e) {
               logger.error("Exception calling slider.actionStatus", e);
               return EMPTY_JSON_OBJECT;
@@ -1097,7 +1103,7 @@ public class ApplicationApiService implements ApplicationApi {
             try {
               registry = sliderClient.actionRegistryGetConfig(registryArgs)
                 .asJson();
-            } catch (FileNotFoundException | PathNotFoundException e) {
+            } catch (FileNotFoundException | NotFoundException e) {
               // ignore and return empty object
               return EMPTY_JSON_OBJECT;
             } catch (Exception e) {
@@ -1192,23 +1198,33 @@ public class ApplicationApiService implements ApplicationApi {
     // little longer for it to stop from YARN point of view. Slider destroy
     // fails if the application is not completely stopped. Hence the need to
     // call destroy in a controlled loop few times (only if exit code is
-    // EXIT_APPLICATION_IN_USE), before giving up.
+    // EXIT_APPLICATION_IN_USE or EXIT_INSTANCE_EXISTS), before giving up.
     boolean keepTrying = true;
-    int maxDeleteAttempt = 5;
-    int deleteAttempt = 0;
-    while (keepTrying && deleteAttempt < maxDeleteAttempt) {
+    int maxDeleteAttempts = 5;
+    int deleteAttempts = 0;
+    int sleepIntervalInMillis = 500;
+    while (keepTrying && deleteAttempts < maxDeleteAttempts) {
       try {
         destroySliderApplication(appName);
         keepTrying = false;
       } catch (SliderException e) {
-        logger.error("Delete application threw exception", e);
-        if (e.getExitCode() == SliderExitCodes.EXIT_APPLICATION_IN_USE) {
-          deleteAttempt++;
+        if (e.getExitCode() == SliderExitCodes.EXIT_APPLICATION_IN_USE
+            || e.getExitCode() == SliderExitCodes.EXIT_INSTANCE_EXISTS) {
+          deleteAttempts++;
+          // If we used up all the allowed delete attempts, let's log it as
+          // error before giving up. Otherwise log as warn.
+          if (deleteAttempts < maxDeleteAttempts) {
+            logger.warn("Application not in stopped state, waiting for {}ms"
+                + " before trying delete again", sleepIntervalInMillis);
+          } else {
+            logger.error("Delete application failed", e);
+          }
           try {
-            Thread.sleep(500);
+            Thread.sleep(sleepIntervalInMillis);
           } catch (InterruptedException e1) {
           }
         } else {
+          logger.error("Delete application threw exception", e);
           return Response.status(Status.INTERNAL_SERVER_ERROR).build();
         }
       } catch (Exception e) {
