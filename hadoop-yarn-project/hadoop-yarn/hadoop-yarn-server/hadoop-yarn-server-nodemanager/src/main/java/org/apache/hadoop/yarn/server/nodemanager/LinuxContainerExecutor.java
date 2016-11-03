@@ -270,6 +270,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         this.linuxContainerRuntime = runtime;
       }
     } catch (ContainerExecutionException e) {
+      LOG.error("Failed to initialize linux container runtime(s)!", e);
       throw new IOException("Failed to initialize linux container runtime(s)!");
     }
 
