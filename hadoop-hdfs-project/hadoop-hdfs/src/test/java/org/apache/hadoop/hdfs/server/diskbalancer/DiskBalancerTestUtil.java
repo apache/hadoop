@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -262,6 +263,23 @@ public class DiskBalancerTestUtil {
       final int defaultBlockSize,
       final int fileLen)
       throws IOException, InterruptedException, TimeoutException {
+    return newImbalancedCluster(
+      conf,
+      numDatanodes,
+      storageCapacities,
+      defaultBlockSize,
+      fileLen,
+      null);
+  }
+
+  public static MiniDFSCluster newImbalancedCluster(
+      final Configuration conf,
+      final int numDatanodes,
+      final long[] storageCapacities,
+      final int defaultBlockSize,
+      final int fileLen,
+      final StartupOption dnOption)
+      throws IOException, InterruptedException, TimeoutException {
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, defaultBlockSize);
@@ -281,6 +299,7 @@ public class DiskBalancerTestUtil {
         .storageCapacities(storageCapacities)
         .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
         .storagesPerDatanode(2)
+        .dnStartupOption(dnOption)
         .build();
     FsVolumeImpl source = null;
     FsVolumeImpl dest = null;
