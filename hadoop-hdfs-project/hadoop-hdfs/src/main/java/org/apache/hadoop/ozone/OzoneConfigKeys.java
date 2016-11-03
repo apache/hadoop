@@ -43,8 +43,8 @@ public final class OzoneConfigKeys {
       "ozone.trace.enabled";
   public static final boolean OZONE_TRACE_ENABLED_DEFAULT = false;
 
-  public static final String OZONE_METADATA_DIRS =
-      "ozone.metadata.dirs";
+  public static final String OZONE_CONTAINER_METADATA_DIRS =
+      "ozone.container.metadata.dirs";
 
   public static final String OZONE_KEY_CACHE = "ozone.key.cache.size";
   public static final int OZONE_KEY_CACHE_DEFAULT = 1024;
@@ -93,6 +93,54 @@ public final class OzoneConfigKeys {
       "ozone.scm.stale.node.interval.ms";
   public static final long OZONE_SCM_STALENODE_INTERVAL_DEFAULT =
       OZONE_SCM_HEARBEAT_INTERVAL_SECONDS_DEFAULT * 1000L * 3L;
+
+  public static final String OZONE_SCM_CONTAINER_THREADS =
+      "ozone.scm.container.threads";
+  public static final int OZONE_SCM_CONTAINER_THREADS_DEFAULT =
+      Runtime.getRuntime().availableProcessors() * 2;
+
+  public static final String OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_MS =
+      "ozone.scm.heartbeat.rpc-timeout.ms";
+  public static final int OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_MS_DEFAULT =
+      100;
+
+  /**
+   * Defines how frequently we will log the missing of heartbeat to a specific
+   * SCM. In the default case we will write a warning message for each 10
+   * sequential heart beats that we miss to a specific SCM. This is to avoid
+   * overrunning the log with lots of HB missed Log statements.
+   */
+  public static final String OZONE_SCM_HEARTBEAT_LOG_WARN_INTERVAL_COUNT =
+      "ozone.scm.heartbeat.log.warn.interval.count";
+  public static final int OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT =
+      10;
+
+  public static final String OZONE_CONTAINER_TASK_WAIT =
+      "ozone.container.task.wait.seconds";
+  public static final long OZONE_CONTAINER_TASK_WAIT_DEFAULT = 5;
+
+
+  // ozone.scm.names key is a set of DNS | DNS:PORT | IP Address | IP:PORT.
+  // Written as a comma separated string. e.g. scm1, scm2:8020, 7.7.7.7:7777
+  //
+  // If this key is not specified datanodes will not be able to find
+  // SCM. The SCM membership can be dynamic, so this key should contain
+  // all possible SCM names. Once the SCM leader is discovered datanodes will
+  // get the right list of SCMs to heartbeat to from the leader.
+  // While it is good for the datanodes to know the names of all SCM nodes,
+  // it is sufficient to actually know the name of on working SCM. That SCM
+  // will be able to return the information about other SCMs that are part of
+  // the SCM replicated Log.
+  //
+  //In case of a membership change, any one of the SCM machines will be
+  // able to send back a new list to the datanodes.
+  public static final String OZONE_SCM_NAMES = "ozone.scm.names";
+
+  public static final int OZONE_SCM_DEFAULT_PORT = 9862;
+  // Full path the location where datanode ID is to written to.
+  // if this value is not set then container startup will fail.
+  public static final String OZONE_SCM_DATANODE_ID = "ozone.scm.datanode.id";
+
 
 
   /**

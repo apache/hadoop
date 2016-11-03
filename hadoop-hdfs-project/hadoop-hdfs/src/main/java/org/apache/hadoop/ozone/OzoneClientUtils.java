@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.scm.ScmConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,17 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_DEADNODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_DEADNODE_INTERVAL_MS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_HEARTBEAT_INTERVAL_SECONDS;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_SCM_HEARTBEAT_LOG_WARN_INTERVAL_COUNT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL_MS;
+
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_MS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys
+    .OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_MS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_STALENODE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_STALENODE_INTERVAL_MS;
 
@@ -179,19 +190,50 @@ public final class OzoneClientUtils {
       Configuration conf, String ... keys) {
     for (final String key : keys) {
       final String value = conf.getTrimmed(key);
-      if (value != null && !value.isEmpty()) {
-        String[] splits = value.split(":");
-
-        if(splits.length < 1 || splits.length > 2) {
-          throw new IllegalArgumentException(
-              "Invalid value " + value + " for config key " + key +
-                  ". It should be in 'host' or 'host:port' format");
-        }
-        return Optional.of(splits[0]);
+      Optional<String> splits = getHostName(value);
+      if (splits.isPresent()) {
+        return splits;
       }
     }
     return Optional.absent();
   }
+
+  /**
+   * Returns a hostname from the hostname:port or hostname.
+   * @param value
+   * @return
+   */
+  private static Optional<String> getHostComponent(String value, int pos) {
+    if (value != null && !value.isEmpty()) {
+      String[] splits = value.split(":");
+
+      if(splits.length < 1 || splits.length > 2) {
+        throw new IllegalArgumentException(
+            "Invalid value " + value + ". It should be in " +
+                "'host' or 'host:port' format");
+      }
+
+      if(splits.length >= pos + 1) {
+        return Optional.of(splits[pos]);
+      }
+    }
+    return Optional.absent();
+  }
+
+  public static Optional<String> getHostName(String value) {
+    final int hostIndex = 0;
+    return getHostComponent(value, hostIndex); //hostname:
+  }
+
+  public static Optional<Integer> getHostPort(String value) {
+    final int portIndex = 1;
+    Optional<String> portString = getHostComponent(value, portIndex);
+    if(portString.isPresent()){
+      return Optional.of(Integer.parseInt(portString.get()));
+    }
+    return Optional.absent();
+  }
+
 
   /**
    * Retrieve the port number, trying the supplied config keys in order.
@@ -205,23 +247,11 @@ public final class OzoneClientUtils {
    * @throws IllegalArgumentException if any values are not in the 'host'
    *             or host:port format.
    */
-  static Optional<Integer> getPortNumberFromConfigKeys(
+  public static Optional<Integer> getPortNumberFromConfigKeys(
       Configuration conf, String ... keys) {
     for (final String key : keys) {
       final String value = conf.getTrimmed(key);
-      if (value != null && !value.isEmpty()) {
-        String[] splits = value.split(":");
-
-        if(splits.length < 1 || splits.length > 2) {
-          throw new IllegalArgumentException(
-              "Invalid value " + value + " for config key " + key +
-                  ". It should be in 'host' or 'host:port' format");
-        }
-
-        if (splits.length == 2) {
-          return Optional.of(Integer.parseInt(splits[1]));
-        }
-      }
+      return getHostPort(value);
     }
     return Optional.absent();
   }
@@ -378,4 +408,38 @@ public final class OzoneClientUtils {
     return conf.getInt(OZONE_SCM_MAX_HB_COUNT_TO_PROCESS,
         OZONE_SCM_MAX_HB_COUNT_TO_PROCESS_DEFAULT);
   }
+
+  /**
+   * Timeout value for the RPC from Datanode to SCM, primarily used for
+   * Heartbeats and container reports.
+   *
+   * @param conf - Ozone Config
+   * @return - Rpc timeout in Milliseconds.
+   */
+  public static int getScmRpcTimeOutInMilliseconds(Configuration conf) {
+    return conf.getInt(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_MS,
+        OZONE_SCM_HEARTBEAT_RPC_TIMEOUT_MS_DEFAULT);
+  }
+
+  /**
+   * Log Warn interval.
+   *
+   * @param conf - Ozone Config
+   * @return - Log warn interval.
+   */
+  public static int getLogWarnInterval(Configuration conf) {
+    return conf.getInt(OZONE_SCM_HEARTBEAT_LOG_WARN_INTERVAL_COUNT,
+        OZONE_SCM_HEARTBEAT_LOG_WARN_DEFAULT);
+  }
+
+  /**
+   * returns the Container port.
+   * @param conf - Conf
+   * @return port number.
+   */
+  public static int getContainerPort(Configuration conf) {
+    return conf.getInt(ScmConfigKeys.DFS_CONTAINER_IPC_PORT, ScmConfigKeys
+        .DFS_CONTAINER_IPC_PORT_DEFAULT);
+  }
+
 }
