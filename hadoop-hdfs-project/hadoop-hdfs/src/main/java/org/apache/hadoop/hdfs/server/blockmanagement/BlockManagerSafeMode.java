@@ -36,6 +36,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,8 +128,8 @@ class BlockManagerSafeMode {
     this.threshold = conf.getFloat(DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
         DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT);
     if (this.threshold > 1.0) {
-      LOG.warn("The threshold value should't be greater than 1, threshold: {}",
-          threshold);
+      LOG.warn("The threshold value shouldn't be greater than 1, " +
+          "threshold: {}", threshold);
     }
     this.datanodeThreshold = conf.getInt(
         DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
@@ -171,7 +172,8 @@ class BlockManagerSafeMode {
     startTime = monotonicNow();
     setBlockTotal(total);
     if (areThresholdsMet()) {
-      leaveSafeMode(true);
+      boolean exitResult = leaveSafeMode(false);
+      Preconditions.checkState(exitResult, "Failed to leave safe mode.");
     } else {
       // enter safe mode
       status = BMSafeModeStatus.PENDING_THRESHOLD;
