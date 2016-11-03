@@ -98,8 +98,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   private static final String ANONYMOUS_REQUESTS_DISALLOWED = "Anonymous requests are disallowed";
 
-  public static final String TOKEN_KIND_STR = "kms-dt";
-  public static final Text TOKEN_KIND = new Text(TOKEN_KIND_STR);
+  public static final String TOKEN_KIND_STR = KMSDelegationToken.TOKEN_KIND_STR;
+  public static final Text TOKEN_KIND = KMSDelegationToken.TOKEN_KIND;
 
   public static final String SCHEME_NAME = "kms";
 
