@@ -73,6 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
@@ -909,16 +910,18 @@ public abstract class AbstractYarnScheduler
    * Process completed container list.
    * @param completedContainers Extracted list of completed containers
    * @param releasedResources Reference resource object for completed containers
+   * @param nodeId NodeId corresponding to the NodeManager
    * @return The total number of released containers
    */
   protected int updateCompletedContainers(List<ContainerStatus>
-      completedContainers, Resource releasedResources) {
+      completedContainers, Resource releasedResources, NodeId nodeId) {
     int releasedContainers = 0;
+    List<ContainerId> untrackedContainerIdList = new ArrayList<ContainerId>();
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
       LOG.debug("Container FINISHED: " + containerId);
       RMContainer container = getRMContainer(containerId);
-      completedContainer(getRMContainer(containerId),
+      completedContainer(container,
           completedContainer, RMContainerEventType.FINISHED);
       if (container != null) {
         releasedContainers++;
@@ -930,8 +933,19 @@ public abstract class AbstractYarnScheduler
         if (rrs != null) {
           Resources.addTo(releasedResources, rrs);
         }
+      } else {
+        // Add containers which are untracked by RM.
+        untrackedContainerIdList.add(containerId);
       }
     }
+
+    // Acknowledge NM to remove RM-untracked-containers from NM context.
+    if (!untrackedContainerIdList.isEmpty()) {
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMNodeFinishedContainersPulledByAMEvent(nodeId,
+              untrackedContainerIdList));
+    }
+
     return releasedContainers;
   }
 
@@ -977,7 +991,7 @@ public abstract class AbstractYarnScheduler
     // Process completed containers
     Resource releasedResources = Resource.newInstance(0, 0);
     int releasedContainers = updateCompletedContainers(completedContainers,
-        releasedResources);
+        releasedResources, nm.getNodeID());
 
     // If the node is decommissioning, send an update to have the total
     // resource equal to the used resource, so no available resource to
@@ -1004,4 +1018,5 @@ public abstract class AbstractYarnScheduler
           " availableResource: " + node.getUnallocatedResource());
     }
   }
+
 }

@@ -141,6 +141,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final Set<ContainerId> launchedContainers =
     new HashSet<ContainerId>();
 
+  /* track completed container globally */
+  private final Set<ContainerId> completedContainers =
+      new HashSet<ContainerId>();
+
   /* set of containers that need to be cleaned */
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
       new ContainerIdComparator());
@@ -578,6 +582,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       response.addContainersToBeRemovedFromNM(
           new ArrayList<ContainerId>(this.containersToBeRemovedFromNM));
       response.addAllContainersToSignal(this.containersToSignal);
+      this.completedContainers.removeAll(this.containersToBeRemovedFromNM);
       this.containersToClean.clear();
       this.finishedApplications.clear();
       this.containersToSignal.clear();
@@ -1287,6 +1292,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     return this.launchedContainers;
   }
 
+  @VisibleForTesting
+  public Set<ContainerId> getCompletedContainers() {
+    return this.completedContainers;
+  }
+
   @Override
   public Set<String> getNodeLabels() {
     RMNodeLabelsManager nlm = context.getNodeLabelManager();
@@ -1329,7 +1339,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     // containers.
     List<ContainerStatus> newlyLaunchedContainers =
         new ArrayList<ContainerStatus>();
-    List<ContainerStatus> completedContainers =
+    List<ContainerStatus> newlyCompletedContainers =
         new ArrayList<ContainerStatus>();
     int numRemoteRunningContainers = 0;
     for (ContainerStatus remoteContainer : containerStatuses) {
@@ -1385,15 +1395,25 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         }
         // Completed containers should also include the OPPORTUNISTIC containers
         // so that the AM gets properly notified.
-        completedContainers.add(remoteContainer);
+        if (completedContainers.add(containerId)) {
+          newlyCompletedContainers.add(remoteContainer);
+        }
       }
     }
-    completedContainers.addAll(findLostContainers(
-          numRemoteRunningContainers, containerStatuses));
 
-    if (newlyLaunchedContainers.size() != 0 || completedContainers.size() != 0) {
+    List<ContainerStatus> lostContainers =
+        findLostContainers(numRemoteRunningContainers, containerStatuses);
+    for (ContainerStatus remoteContainer : lostContainers) {
+      ContainerId containerId = remoteContainer.getContainerId();
+      if (completedContainers.add(containerId)) {
+        newlyCompletedContainers.add(remoteContainer);
+      }
+    }
+
+    if (newlyLaunchedContainers.size() != 0
+        || newlyCompletedContainers.size() != 0) {
       nodeUpdateQueue.add(new UpdatedContainerInfo(newlyLaunchedContainers,
-          completedContainers));
+          newlyCompletedContainers));
     }
   }
 
