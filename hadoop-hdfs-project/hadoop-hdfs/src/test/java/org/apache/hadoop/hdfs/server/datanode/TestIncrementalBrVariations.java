@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.*;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -172,7 +173,8 @@ public class TestIncrementalBrVariations {
 
         assertTrue(foundBlockOnStorage);
         reports[i] =
-            new StorageReceivedDeletedBlocks(volume.getStorageID(), rdbi);
+            new StorageReceivedDeletedBlocks(
+                new DatanodeStorage(volume.getStorageID()), rdbi);
 
         if (splitReports) {
           // If we are splitting reports then send the report for this storage now.

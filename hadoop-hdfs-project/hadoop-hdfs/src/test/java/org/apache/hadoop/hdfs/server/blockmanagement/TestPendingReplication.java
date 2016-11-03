@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
@@ -311,8 +312,9 @@ public class TestPendingReplication {
         if (!datanodes.get(i).getDatanodeId().equals(existingDn)) {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
-          StorageReceivedDeletedBlocks[] report = { 
-              new StorageReceivedDeletedBlocks("Fake-storage-ID-Ignored",
+          StorageReceivedDeletedBlocks[] report = {
+              new StorageReceivedDeletedBlocks(
+                  new DatanodeStorage("Fake-storage-ID-Ignored"),
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
@@ -329,10 +331,12 @@ public class TestPendingReplication {
         if (!datanodes.get(i).getDatanodeId().equals(existingDn)) {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
-          StorageReceivedDeletedBlocks[] report = 
-            { new StorageReceivedDeletedBlocks("Fake-storage-ID-Ignored",
-              new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
-                  blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
+          StorageReceivedDeletedBlocks[] report =
+            { new StorageReceivedDeletedBlocks(
+                new DatanodeStorage("Fake-storage-ID-Ignored"),
+                new ReceivedDeletedBlockInfo[] {
+                  new ReceivedDeletedBlockInfo(
+                      blocks[0], BlockStatus.RECEIVED_BLOCK, "")}) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
           reportDnNum++;
         }

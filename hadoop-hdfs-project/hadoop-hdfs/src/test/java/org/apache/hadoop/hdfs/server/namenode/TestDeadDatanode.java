@@ -102,7 +102,8 @@ public class TestDeadDatanode {
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
         null) };
     StorageReceivedDeletedBlocks[] storageBlocks = { 
-        new StorageReceivedDeletedBlocks(reg.getDatanodeUuid(), blocks) };
+        new StorageReceivedDeletedBlocks(
+            new DatanodeStorage(reg.getDatanodeUuid()), blocks) };
 
     // Ensure blockReceived call from dead datanode is not rejected with
     // IOException, since it's async, but the node remains unregistered.
