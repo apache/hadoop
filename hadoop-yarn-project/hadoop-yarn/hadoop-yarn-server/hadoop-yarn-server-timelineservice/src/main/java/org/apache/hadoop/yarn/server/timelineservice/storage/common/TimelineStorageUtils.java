@@ -18,6 +18,8 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,14 +31,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareFilter;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineCompareOp;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineExistsFilter;
@@ -563,4 +568,41 @@ public final class TimelineStorageUtils {
     }
     return appId;
   }
+
+
+  /**
+   * @param conf Yarn configuration. Used to see if there is an explicit config
+   *          pointing to the HBase config file to read. If null then a new
+   *          HBase configuration will be returned.
+   * @return a configuration with the HBase configuration from the classpath,
+   *         optionally overwritten by the timeline service configuration URL if
+   *         specified.
+   * @throws MalformedURLException if a timeline service HBase configuration URL
+   *           is specified but is a malformed URL.
+   */
+  public static Configuration getTimelineServiceHBaseConf(Configuration conf)
+      throws MalformedURLException {
+    Configuration hbaseConf;
+
+    if (conf == null) {
+      return HBaseConfiguration.create();
+    }
+
+    String timelineServiceHBaseConfFileURL =
+        conf.get(YarnConfiguration.TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE);
+    if (timelineServiceHBaseConfFileURL != null
+        && timelineServiceHBaseConfFileURL.length() > 0) {
+      // create a clone so that we don't mess with out input one
+      hbaseConf = new Configuration(conf);
+      Configuration plainHBaseConf = new Configuration(false);
+      URL hbaseSiteXML = new URL(timelineServiceHBaseConfFileURL);
+      plainHBaseConf.addResource(hbaseSiteXML);
+      HBaseConfiguration.merge(hbaseConf, plainHBaseConf);
+    } else {
+      // default to what is on the classpath
+      hbaseConf = HBaseConfiguration.create(conf);
+    }
+    return hbaseConf;
+  }
+
 }

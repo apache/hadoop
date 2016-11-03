@@ -2366,6 +2366,18 @@
     <value>prod.</value>
   </property>
 
+  <property>
+    <description> Optional URL to an hbase-site.xml configuration file to be
+    used to connect to the timeline-service hbase cluster. If empty or not
+    specified, then the HBase configuration will be loaded from the classpath.
+    When specified the values in the specified configuration file will override
+    those from the ones that are present on the classpath.
+    </description>
+    <name>yarn.timeline-service.hbase.configuration.file
+    </name>
+    <value></value>
+  </property>
+
   <!--  Shared Cache Configuration -->
 
   <property>

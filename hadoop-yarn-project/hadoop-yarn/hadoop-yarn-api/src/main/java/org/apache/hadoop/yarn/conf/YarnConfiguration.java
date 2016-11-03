@@ -2228,6 +2228,15 @@ public class YarnConfiguration extends Configuration {
       + "hbase.coprocessor.app-final-value-retention-milliseconds";
 
   /**
+   * The name for setting that points to an optional HBase configuration
+   * (hbase-site.xml file) with settings that will override the ones found on
+   * the classpath.
+   */
+  public static final String TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE =
+      TIMELINE_SERVICE_PREFIX
+      + "hbase.configuration.file";
+
+  /**
    * The setting that controls how long the final value of a metric of a
    * completed app is retained before merging into the flow sum. Up to this time
    * after an application is completed out-of-order values that arrive can be

@@ -153,6 +153,7 @@ New configuration parameters that are introduced with v.2 are marked bold.
 | `yarn.timeline-service.address` | Address for the Timeline server to start the RPC server. Defaults to `${yarn.timeline-service.hostname}:10200`. |
 | `yarn.timeline-service.webapp.address` | The http address of the Timeline service web application. Defaults to `${yarn.timeline-service.hostname}:8188`. |
 | `yarn.timeline-service.webapp.https.address` | The https address of the Timeline service web application. Defaults to `${yarn.timeline-service.hostname}:8190`. |
+| **`yarn.timeline-service.hbase.configuration.file`** | Optional URL to an hbase-site.xml configuration file to be used to connect to the timeline-service hbase cluster. If empty or not specified, then the HBase configuration will be loaded from the classpath. When specified the values in the specified configuration file will override those from the ones that are present on the classpath. Defaults to `null`. |
 | **`yarn.timeline-service.writer.flush-interval-seconds`** | The setting that controls how often the timeline collector flushes the timeline writer. Defaults to `60`. |
 | **`yarn.timeline-service.app-collector.linger-period.ms`** | Time period till which the application collector will be alive in NM, after the  application master container finishes. Defaults to `1000` (1 second). |
 | **`yarn.timeline-service.timeline-client.number-of-async-entities-to-merge`** | Time line V2 client tries to merge these many number of async entities (if available) and then call the REST ATS V2 API to submit. Defaults to `10`. |
@@ -249,7 +250,22 @@ are using multiple clusters to store data in the same Apache HBase storage:
 ```
 
 Also, add the `hbase-site.xml` configuration file to the client Hadoop cluster configuration so
-that it can write data to the Apache HBase cluster you are using.
+that it can write data to the Apache HBase cluster you are using, or set
+`yarn.timeline-service.hbase.configuration.file` to the file URL pointing to
+`hbase-site.xml` for the same. For example:
+
+```
+<property>
+  <description> Optional URL to an hbase-site.xml configuration file to be
+  used to connect to the timeline-service hbase cluster. If empty or not
+  specified, then the HBase configuration will be loaded from the classpath.
+  When specified the values in the specified configuration file will override
+  those from the ones that are present on the classpath.
+  </description>
+  <name>yarn.timeline-service.hbase.configuration.file</name>
+  <value>file:/etc/hbase/hbase-ats-dc1/hbase-site.xml</value>
+</property>
+```
 
 #### Running Timeline Service v.2
 Restart the resource manager as well as the node managers to pick up the new configuration. The
