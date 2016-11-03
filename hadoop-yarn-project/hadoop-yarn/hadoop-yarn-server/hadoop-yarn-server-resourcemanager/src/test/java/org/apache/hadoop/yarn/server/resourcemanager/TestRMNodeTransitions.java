@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeReconnectEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
@@ -1064,5 +1065,44 @@ public class TestRMNodeTransitions {
         1, node.getLaunchedContainers().size());
     Assert.assertTrue("second container not running",
         node.getLaunchedContainers().contains(cid2));
+  }
+
+  @Test
+  public void testForHandlingDuplicatedCompltedContainers() {
+    // Start the node
+    node.handle(new RMNodeStartedEvent(null, null, null));
+    // Add info to the queue first
+    node.setNextHeartBeat(false);
+
+    ContainerId completedContainerId1 = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(BuilderUtils.newApplicationId(0, 0), 0), 0);
+
+    RMNodeStatusEvent statusEvent1 = getMockRMNodeStatusEvent(null);
+
+    ContainerStatus containerStatus1 = mock(ContainerStatus.class);
+
+    doReturn(completedContainerId1).when(containerStatus1).getContainerId();
+    doReturn(Collections.singletonList(containerStatus1)).when(statusEvent1)
+        .getContainers();
+
+    verify(scheduler, times(1)).handle(any(NodeUpdateSchedulerEvent.class));
+    node.handle(statusEvent1);
+    verify(scheduler, times(1)).handle(any(NodeUpdateSchedulerEvent.class));
+    Assert.assertEquals(1, node.getQueueSize());
+    Assert.assertEquals(1, node.getCompletedContainers().size());
+
+    // test for duplicate entries
+    node.handle(statusEvent1);
+    Assert.assertEquals(1, node.getQueueSize());
+
+    // send clean up container event
+    node.handle(new RMNodeFinishedContainersPulledByAMEvent(node.getNodeID(),
+        Collections.singletonList(completedContainerId1)));
+
+    NodeHeartbeatResponse hbrsp =
+        Records.newRecord(NodeHeartbeatResponse.class);
+    node.updateNodeHeartbeatResponseForCleanup(hbrsp);
+    Assert.assertEquals(1, hbrsp.getContainersToBeRemovedFromNM().size());
+    Assert.assertEquals(0, node.getCompletedContainers().size());
   }
 }
