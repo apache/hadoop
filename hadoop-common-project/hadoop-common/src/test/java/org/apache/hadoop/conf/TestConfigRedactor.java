@@ -47,6 +47,7 @@ public class TestConfigRedactor {
         "dfs.webhdfs.oauth2.refresh.token",
         "ssl.server.keystore.keypassword",
         "ssl.server.keystore.password",
+        "httpfs.ssl.keystore.pass",
         "hadoop.security.sensitive-config-keys"
     );
     for (String key : sensitiveKeys) {
@@ -60,6 +61,7 @@ public class TestConfigRedactor {
         "fs.defaultFS",
         "dfs.replication",
         "ssl.server.keystore.location",
+        "httpfs.config.dir",
         "hadoop.security.credstore.java-keystore-provider.password-file"
     );
     for (String key : normalKeys) {
