@@ -73,17 +73,24 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import com.google.common.base.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
+
+import com.google.common.base.Supplier;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Fine-grain testing of block files and locations after volume failure.
  */
 public class TestDataNodeVolumeFailure {
+  private final static Logger LOG = LoggerFactory.getLogger(
+      TestDataNodeVolumeFailure.class);
   final private int block_size = 512;
   MiniDFSCluster cluster = null;
   private Configuration conf;
@@ -411,6 +418,108 @@ public class TestDataNodeVolumeFailure {
             cluster.getNamesystem(), bm);
     assertTrue("There is no under replicated block after volume failure",
         underReplicatedBlocks > 0);
+  }
+
+  /**
+   * Test if there is volume failure, the DataNode will fail to start.
+   *
+   * We fail a volume by setting the parent directory non-writable.
+   */
+  @Test (timeout = 120000)
+  public void testDataNodeFailToStartWithVolumeFailure() throws Exception {
+    // Method to simulate volume failures is currently not supported on Windows.
+    assumeNotWindows();
+
+    failedDir = new File(dataDir, "failedDir");
+    assertTrue("Failed to fail a volume by setting it non-writable",
+        failedDir.mkdir() && failedDir.setReadOnly());
+
+    startNewDataNodeWithDiskFailure(new File(failedDir, "newDir1"), false);
+  }
+
+  /**
+   * DataNode will start and tolerate one failing disk according to config.
+   *
+   * We fail a volume by setting the parent directory non-writable.
+   */
+  @Test (timeout = 120000)
+  public void testDNStartAndTolerateOneVolumeFailure() throws Exception {
+    // Method to simulate volume failures is currently not supported on Windows.
+    assumeNotWindows();
+
+    failedDir = new File(dataDir, "failedDir");
+    assertTrue("Failed to fail a volume by setting it non-writable",
+        failedDir.mkdir() && failedDir.setReadOnly());
+
+    startNewDataNodeWithDiskFailure(new File(failedDir, "newDir1"), true);
+  }
+
+  /**
+   * Test if data directory is not readable/writable, DataNode won't start.
+   */
+  @Test (timeout = 120000)
+  public void testDNFailToStartWithDataDirNonWritable() throws Exception {
+    // Method to simulate volume failures is currently not supported on Windows.
+    assumeNotWindows();
+
+    final File readOnlyDir = new File(dataDir, "nonWritable");
+    assertTrue("Set the data dir permission non-writable",
+        readOnlyDir.mkdir() && readOnlyDir.setReadOnly());
+
+    startNewDataNodeWithDiskFailure(new File(readOnlyDir, "newDir1"), false);
+  }
+
+  /**
+   * DataNode will start and tolerate one non-writable data directory
+   * according to config.
+   */
+  @Test (timeout = 120000)
+  public void testDNStartAndTolerateOneDataDirNonWritable() throws Exception {
+    // Method to simulate volume failures is currently not supported on Windows.
+    assumeNotWindows();
+
+    final File readOnlyDir = new File(dataDir, "nonWritable");
+    assertTrue("Set the data dir permission non-writable",
+        readOnlyDir.mkdir() && readOnlyDir.setReadOnly());
+    startNewDataNodeWithDiskFailure(new File(readOnlyDir, "newDir1"), true);
+  }
+
+  /**
+   * @param badDataDir bad data dir, either disk failure or non-writable
+   * @param tolerated true if one volume failure is allowed else false
+   */
+  private void startNewDataNodeWithDiskFailure(File badDataDir,
+      boolean tolerated) throws Exception {
+    final File data5 = new File(dataDir, "data5");
+    final String newDirs = badDataDir.toString() + "," + data5.toString();
+    final Configuration newConf = new Configuration(conf);
+    newConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+    LOG.info("Setting dfs.datanode.data.dir for new DataNode as {}", newDirs);
+    newConf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
+        tolerated ? 1 : 0);
+
+    // bring up one more DataNode
+    assertEquals(repl, cluster.getDataNodes().size());
+    cluster.startDataNodes(newConf, 1, false, null, null);
+    assertEquals(repl + 1, cluster.getDataNodes().size());
+
+    if (tolerated) {
+      // create new file and it should be able to replicate to 3 nodes
+      final Path p = new Path("/test1.txt");
+      DFSTestUtil.createFile(fs, p, block_size * blocks_num, (short) 3, 1L);
+      DFSTestUtil.waitReplication(fs, p, (short) (repl + 1));
+    } else {
+      // DataNode should stop soon if it does not tolerate disk failure
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          final String bpid = cluster.getNamesystem().getBlockPoolId();
+          final BPOfferService bpos = cluster.getDataNodes().get(2)
+              .getBPOfferService(bpid);
+          return !bpos.isAlive();
+        }
+      }, 100, 30 * 1000);
+    }
   }
 
   /**

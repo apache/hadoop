@@ -3414,6 +3414,12 @@ public class DataNode extends ReconfigurableBase
       String planFile, String planData, boolean skipDateCheck)
       throws IOException {
     checkSuperuserPrivilege();
+    if (getStartupOption(getConf()) != StartupOption.REGULAR) {
+      throw new DiskBalancerException(
+          "Datanode is in special state, e.g. Upgrade/Rollback etc."
+              + " Disk balancing not permitted.",
+          DiskBalancerException.Result.DATANODE_STATUS_NOT_REGULAR);
+    }
     // TODO : Support force option
     this.diskBalancer.submitPlan(planID, planVersion, planFile, planData,
             skipDateCheck);

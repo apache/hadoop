@@ -684,35 +684,34 @@ public class TestApplicationPriority {
         (LeafQueue) ((CapacityScheduler) scheduler).getQueue("default");
 
     // wait for all applications to get added to scheduler
-    int count = 5;
+    int count = 50;
     while (count-- > 0) {
-      if ((defaultQueue.getNumActiveApplications() + defaultQueue
-          .getNumPendingApplications()) == 3) {
+      if (defaultQueue.getNumPendingApplications() == 3) {
         break;
       }
-      Thread.sleep(500);
+      Thread.sleep(50);
     }
 
     // Before NM registration, AMResourceLimit threshold is 0. So no
     // applications get activated.
     Assert.assertEquals(0, defaultQueue.getNumActiveApplications());
+    Assert.assertEquals(3, defaultQueue.getNumPendingApplications());
 
     // NM resync to new RM
     nm1.registerNode();
     dispatcher1.await();
 
-    Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
-    Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
-
-
-    // wait for activating one applications
-    count = 5;
+    // wait for activating applications
+    count = 50;
     while (count-- > 0) {
-      if (defaultQueue.getOrderingPolicy().getSchedulableEntities().size() == 2) {
+      if (defaultQueue.getNumActiveApplications() == 2) {
         break;
       }
-      Thread.sleep(500);
+      Thread.sleep(50);
     }
+
+    Assert.assertEquals(2, defaultQueue.getNumActiveApplications());
+    Assert.assertEquals(1, defaultQueue.getNumPendingApplications());
 
     // verify for order of activated applications iterator
     iterator =

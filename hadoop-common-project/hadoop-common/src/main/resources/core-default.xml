@@ -504,7 +504,7 @@
 
 <property>
   <name>hadoop.security.sensitive-config-keys</name>
-  <value>password$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
+  <value>secret$,password$,ssl.keystore.pass$,fs.s3.*[Ss]ecret.?[Kk]ey,fs.azure.account.key.*,dfs.webhdfs.oauth2.[a-z]+.token,hadoop.security.sensitive-config-keys</value>
   <description>A comma-separated list of regular expressions to match against
       configuration keys that should be redacted where appropriate, for
       example, when logging modified properties during a reconfiguration,

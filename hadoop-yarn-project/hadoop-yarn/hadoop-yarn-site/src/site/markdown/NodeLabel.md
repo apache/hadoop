@@ -89,7 +89,7 @@ Notes:
 ###Add/modify node-to-labels mapping to YARN
 
 * Configuring nodes to labels mapping in **Centralized** NodeLabel setup
-    * Executing ```yarn rmadmin -replaceLabelsOnNode “node1[:port]=label1 node2=label2”```. Added label1 to node1, label2 to node2. If user don’t specify port, it added the label to all ```NodeManagers``` running on the node.
+    * Executing ```yarn rmadmin -replaceLabelsOnNode “node1[:port]=label1 node2=label2” [-failOnUnknownNodes]```. Added label1 to node1, label2 to node2. If user don’t specify port, it adds the label to all ```NodeManagers``` running on the node. If option ```-failOnUnknownNodes``` is set, this command will fail if specified nodes are unknown.
 
 * Configuring nodes to labels mapping in **Distributed** NodeLabel setup
 

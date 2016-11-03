@@ -106,7 +106,7 @@
           <source>${maven.compile.source}</source>
           <charset>${maven.compile.encoding}</charset>
           <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
-          <destDir>api</destDir>
+          <destDir>${project.build.directory}/api</destDir>
           <groups>
             <group>
               <title>${project.name} API</title>

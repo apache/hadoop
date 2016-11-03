@@ -1792,12 +1792,18 @@ public class TestRMContainerAllocator {
 
   private ContainerRequestEvent createReq(JobId jobId, int taskAttemptId,
       int memory, String[] hosts) {
-    return createReq(jobId, taskAttemptId, memory, hosts, false, false);
+    return createReq(jobId, taskAttemptId, memory, 1, hosts, false, false);
   }
 
-  private ContainerRequestEvent
-      createReq(JobId jobId, int taskAttemptId, int memory, String[] hosts,
-          boolean earlierFailedAttempt, boolean reduce) {
+  private ContainerRequestEvent createReq(JobId jobId, int taskAttemptId,
+      int mem, String[] hosts, boolean earlierFailedAttempt, boolean reduce) {
+    return createReq(jobId, taskAttemptId, mem,
+        1, hosts, earlierFailedAttempt, reduce);
+  }
+
+  private ContainerRequestEvent createReq(JobId jobId, int taskAttemptId,
+      int memory, int vcore, String[] hosts, boolean earlierFailedAttempt,
+      boolean reduce) {
     TaskId taskId;
     if (reduce) {
       taskId = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
@@ -1806,7 +1812,7 @@ public class TestRMContainerAllocator {
     }
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId,
         taskAttemptId);
-    Resource containerNeed = Resource.newInstance(memory, 1);
+    Resource containerNeed = Resource.newInstance(memory, vcore);
     if (earlierFailedAttempt) {
       return ContainerRequestEvent
           .createContainerRequestEventForFailedContainer(attemptId,
@@ -2605,6 +2611,86 @@ public class TestRMContainerAllocator {
     rm1.stop();
     rm2.stop();
 
+  }
+
+  @Test
+  public void testUnsupportedMapContainerRequirement() throws Exception {
+    final Resource maxContainerSupported = Resource.newInstance(1, 1);
+
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    final ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    final JobId jobId =
+        MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+
+    final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
+    final Configuration conf = new Configuration();
+
+    final MyContainerAllocator allocator = new MyContainerAllocator(null,
+        conf, appAttemptId, mock(Job.class), SystemClock.getInstance()) {
+      @Override
+      protected void register() {
+      }
+      @Override
+      protected ApplicationMasterProtocol createSchedulerProxy() {
+        return mockScheduler;
+      }
+      @Override
+      protected Resource getMaxContainerCapability() {
+        return maxContainerSupported;
+      }
+    };
+
+    ContainerRequestEvent mapRequestEvt = createReq(jobId, 0,
+        (int) (maxContainerSupported.getMemorySize() + 10),
+        maxContainerSupported.getVirtualCores(),
+        new String[0], false, false);
+    allocator.sendRequests(Arrays.asList(mapRequestEvt));
+    allocator.schedule();
+
+    Assert.assertEquals(0, mockScheduler.lastAnyAskMap);
+  }
+
+  @Test
+  public void testUnsupportedReduceContainerRequirement() throws Exception {
+    final Resource maxContainerSupported = Resource.newInstance(1, 1);
+
+    final ApplicationId appId = ApplicationId.newInstance(1, 1);
+    final ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        appId, 1);
+    final JobId jobId =
+        MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+
+    final MockScheduler mockScheduler = new MockScheduler(appAttemptId);
+    final Configuration conf = new Configuration();
+
+    final MyContainerAllocator allocator = new MyContainerAllocator(null,
+        conf, appAttemptId, mock(Job.class), SystemClock.getInstance()) {
+      @Override
+      protected void register() {
+      }
+      @Override
+      protected ApplicationMasterProtocol createSchedulerProxy() {
+        return mockScheduler;
+      }
+      @Override
+      protected Resource getMaxContainerCapability() {
+        return maxContainerSupported;
+      }
+    };
+
+    ContainerRequestEvent reduceRequestEvt = createReq(jobId, 0,
+        (int) (maxContainerSupported.getMemorySize() + 10),
+        maxContainerSupported.getVirtualCores(),
+        new String[0], false, true);
+    allocator.sendRequests(Arrays.asList(reduceRequestEvt));
+    // Reducer container requests are added to the pending queue upon request,
+    // schedule all reducers here so that we can observe if reducer requests
+    // are accepted by RMContainerAllocator on RM side.
+    allocator.scheduleAllReduces();
+    allocator.schedule();
+
+    Assert.assertEquals(0, mockScheduler.lastAnyAskReduce);
   }
 
   @Test
