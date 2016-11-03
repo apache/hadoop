@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -61,7 +60,7 @@ public class FSParentQueue extends FSQueue {
     super(name, scheduler, parent);
   }
   
-  public void addChildQueue(FSQueue child) {
+  void addChildQueue(FSQueue child) {
     writeLock.lock();
     try {
       childQueues.add(child);
@@ -70,7 +69,7 @@ public class FSParentQueue extends FSQueue {
     }
   }
 
-  public void removeChildQueue(FSQueue child) {
+  void removeChildQueue(FSQueue child) {
     writeLock.lock();
     try {
       childQueues.remove(child);
@@ -93,7 +92,7 @@ public class FSParentQueue extends FSQueue {
     }
   }
 
-  public void recomputeSteadyShares() {
+  void recomputeSteadyShares() {
     readLock.lock();
     try {
       policy.computeSteadyShares(childQueues, getSteadyFairShare());
@@ -188,7 +187,7 @@ public class FSParentQueue extends FSQueue {
   
   @Override
   public List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user) {
-    List<QueueUserACLInfo> userAcls = new ArrayList<QueueUserACLInfo>();
+    List<QueueUserACLInfo> userAcls = new ArrayList<>();
     
     // Add queue acls
     userAcls.add(getUserAclInfo(user));
@@ -246,39 +245,6 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public RMContainer preemptContainer() {
-    RMContainer toBePreempted = null;
-
-    // Find the childQueue which is most over fair share
-    FSQueue candidateQueue = null;
-    Comparator<Schedulable> comparator = policy.getComparator();
-
-    readLock.lock();
-    try {
-      for (FSQueue queue : childQueues) {
-        // Skip selection for non-preemptable queue
-        if (!queue.isPreemptable()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("skipping from queue=" + getName()
-                + " because it's a non-preemptable queue");
-          }
-        } else if (candidateQueue == null ||
-                  comparator.compare(queue, candidateQueue) > 0) {
-          candidateQueue = queue;
-        }
-      }
-    } finally {
-      readLock.unlock();
-    }
-
-    // Let the selected queue choose which of its container to preempt
-    if (candidateQueue != null) {
-      toBePreempted = candidateQueue.preemptContainer();
-    }
-    return toBePreempted;
-  }
-
-  @Override
   public List<FSQueue> getChildQueues() {
     readLock.lock();
     try {
@@ -301,7 +267,7 @@ public class FSParentQueue extends FSQueue {
     super.policy = policy;
   }
 
-  public void incrementRunnableApps() {
+  void incrementRunnableApps() {
     writeLock.lock();
     try {
       runnableApps++;
@@ -310,7 +276,7 @@ public class FSParentQueue extends FSQueue {
     }
   }
   
-  public void decrementRunnableApps() {
+  void decrementRunnableApps() {
     writeLock.lock();
     try {
       runnableApps--;

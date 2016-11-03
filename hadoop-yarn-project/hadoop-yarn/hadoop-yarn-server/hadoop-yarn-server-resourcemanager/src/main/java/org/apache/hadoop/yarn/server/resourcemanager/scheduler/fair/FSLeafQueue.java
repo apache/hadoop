@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -72,7 +71,7 @@ public class FSLeafQueue extends FSQueue {
   private Resource amResourceUsage;
 
   private final ActiveUsersManager activeUsersManager;
-  public static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
+  private static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
   public FSLeafQueue(String name, FairScheduler scheduler,
       FSParentQueue parent) {
@@ -84,7 +83,7 @@ public class FSLeafQueue extends FSQueue {
     amResourceUsage = Resource.newInstance(0, 0);
   }
   
-  public void addApp(FSAppAttempt app, boolean runnable) {
+  void addApp(FSAppAttempt app, boolean runnable) {
     writeLock.lock();
     try {
       if (runnable) {
@@ -111,7 +110,7 @@ public class FSLeafQueue extends FSQueue {
    * Removes the given app from this queue.
    * @return whether or not the app was runnable
    */
-  public boolean removeApp(FSAppAttempt app) {
+  boolean removeApp(FSAppAttempt app) {
     boolean runnable = false;
 
     // Remove app from runnable/nonRunnable list while holding the write lock
@@ -142,7 +141,7 @@ public class FSLeafQueue extends FSQueue {
    * Removes the given app if it is non-runnable and belongs to this queue
    * @return true if the app is removed, false otherwise
    */
-  public boolean removeNonRunnableApp(FSAppAttempt app) {
+  boolean removeNonRunnableApp(FSAppAttempt app) {
     writeLock.lock();
     try {
       return nonRunnableApps.remove(app);
@@ -151,7 +150,7 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
-  public boolean isRunnableApp(FSAppAttempt attempt) {
+  boolean isRunnableApp(FSAppAttempt attempt) {
     readLock.lock();
     try {
       return runnableApps.contains(attempt);
@@ -160,7 +159,7 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
-  public boolean isNonRunnableApp(FSAppAttempt attempt) {
+  boolean isNonRunnableApp(FSAppAttempt attempt) {
     readLock.lock();
     try {
       return nonRunnableApps.contains(attempt);
@@ -169,30 +168,8 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
-  public void resetPreemptedResources() {
-    readLock.lock();
-    try {
-      for (FSAppAttempt attempt : runnableApps) {
-        attempt.resetPreemptedResources();
-      }
-    } finally {
-      readLock.unlock();
-    }
-  }
-
-  public void clearPreemptedResources() {
-    readLock.lock();
-    try {
-      for (FSAppAttempt attempt : runnableApps) {
-        attempt.clearPreemptedResources();
-      }
-    } finally {
-      readLock.unlock();
-    }
-  }
-
-  public List<FSAppAttempt> getCopyOfNonRunnableAppSchedulables() {
-    List<FSAppAttempt> appsToReturn = new ArrayList<FSAppAttempt>();
+  List<FSAppAttempt> getCopyOfNonRunnableAppSchedulables() {
+    List<FSAppAttempt> appsToReturn = new ArrayList<>();
     readLock.lock();
     try {
       appsToReturn.addAll(nonRunnableApps);
@@ -320,7 +297,7 @@ public class FSLeafQueue extends FSQueue {
     return usage;
   }
 
-  public Resource getAmResourceUsage() {
+  Resource getAmResourceUsage() {
     return amResourceUsage;
   }
 
@@ -407,42 +384,6 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public RMContainer preemptContainer() {
-    RMContainer toBePreempted = null;
-
-    // If this queue is not over its fair share, reject
-    if (!preemptContainerPreCheck()) {
-      return toBePreempted;
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Queue " + getName() + " is going to preempt a container " +
-          "from its applications.");
-    }
-
-    // Choose the app that is most over fair share
-    Comparator<Schedulable> comparator = policy.getComparator();
-    FSAppAttempt candidateSched = null;
-    readLock.lock();
-    try {
-      for (FSAppAttempt sched : runnableApps) {
-        if (candidateSched == null ||
-            comparator.compare(sched, candidateSched) > 0) {
-          candidateSched = sched;
-        }
-      }
-    } finally {
-      readLock.unlock();
-    }
-
-    // Preempt from the selected app
-    if (candidateSched != null) {
-      toBePreempted = candidateSched.preemptContainer();
-    }
-    return toBePreempted;
-  }
-
-  @Override
   public List<FSQueue> getChildQueues() {
     return EMPTY_LIST;
   }
@@ -451,7 +392,7 @@ public class FSLeafQueue extends FSQueue {
   public List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user) {
     QueueUserACLInfo userAclInfo =
       recordFactory.newRecordInstance(QueueUserACLInfo.class);
-    List<QueueACL> operations = new ArrayList<QueueACL>();
+    List<QueueACL> operations = new ArrayList<>();
     for (QueueACL operation : QueueACL.values()) {
       if (hasAccess(operation, user)) {
         operations.add(operation);
@@ -463,10 +404,6 @@ public class FSLeafQueue extends FSQueue {
     return Collections.singletonList(userAclInfo);
   }
   
-  public long getLastTimeAtMinShare() {
-    return lastTimeAtMinShare;
-  }
-
   private void setLastTimeAtMinShare(long lastTimeAtMinShare) {
     this.lastTimeAtMinShare = lastTimeAtMinShare;
   }
@@ -481,7 +418,7 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
-  public int getNumNonRunnableApps() {
+  int getNumNonRunnableApps() {
     readLock.lock();
     try {
       return nonRunnableApps.size();
@@ -533,10 +470,11 @@ public class FSLeafQueue extends FSQueue {
   /**
    * Check whether this queue can run this application master under the
    * maxAMShare limit.
-   * @param amResource
+   *
+   * @param amResource resources required to run the AM
    * @return true if this queue can run
    */
-  public boolean canRunAppAM(Resource amResource) {
+  boolean canRunAppAM(Resource amResource) {
     if (Math.abs(maxAMShare - -1.0f) < 0.0001) {
       return true;
     }
@@ -561,7 +499,7 @@ public class FSLeafQueue extends FSQueue {
     return Resources.fitsIn(ifRunAMResource, maxAMResource);
   }
 
-  public void addAMResourceUsage(Resource amResource) {
+  void addAMResourceUsage(Resource amResource) {
     if (amResource != null) {
       Resources.addTo(amResourceUsage, amResource);
     }
@@ -580,16 +518,6 @@ public class FSLeafQueue extends FSQueue {
    */
   public void setWeights(float weight) {
     this.weights = new ResourceWeights(weight);
-  }
-
-  /**
-   * Helper method to check if the queue should preempt containers
-   *
-   * @return true if check passes (can preempt) or false otherwise
-   */
-  private boolean preemptContainerPreCheck() {
-    return parent.getPolicy().checkIfUsageOverFairShare(getResourceUsage(),
-        getFairShare());
   }
 
   /**
