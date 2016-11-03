@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailur
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportContextProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockStorageMovementCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockStorageMovementProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlocksStorageMovementResultProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.BlockECReconstructionInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -102,6 +103,8 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringStr
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult.Status;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.StripedBlockWithLocations;
@@ -954,6 +957,55 @@ public class PBHelper {
       slowDisksMap.put(proto.getBasePath(), latencyMap);
     }
     return SlowDiskReports.create(slowDisksMap);
+  }
+
+  public static BlocksStorageMovementResult[] convertBlksMovResults(
+      List<BlocksStorageMovementResultProto> protos) {
+    BlocksStorageMovementResult[] results =
+        new BlocksStorageMovementResult[protos.size()];
+    for (int i = 0; i < protos.size(); i++) {
+      BlocksStorageMovementResultProto resultProto = protos.get(i);
+      BlocksStorageMovementResult.Status status;
+      switch (resultProto.getStatus()) {
+      case SUCCESS:
+        status = Status.SUCCESS;
+        break;
+      case FAILURE:
+        status = Status.FAILURE;
+        break;
+      default:
+        throw new AssertionError("Unknown status: " + resultProto.getStatus());
+      }
+      results[i] = new BlocksStorageMovementResult(resultProto.getTrackID(),
+          status);
+    }
+    return results;
+  }
+
+  public static List<BlocksStorageMovementResultProto> convertBlksMovResults(
+      BlocksStorageMovementResult[] blocksMovementResults) {
+    List<BlocksStorageMovementResultProto> blocksMovementResultsProto =
+        new ArrayList<>();
+    BlocksStorageMovementResultProto.Builder builder =
+        BlocksStorageMovementResultProto.newBuilder();
+    for (int i = 0; i < blocksMovementResults.length; i++) {
+      BlocksStorageMovementResult report = blocksMovementResults[i];
+      builder.setTrackID(report.getTrackId());
+      BlocksStorageMovementResultProto.Status status;
+      switch (report.getStatus()) {
+      case SUCCESS:
+        status = BlocksStorageMovementResultProto.Status.SUCCESS;
+        break;
+      case FAILURE:
+        status = BlocksStorageMovementResultProto.Status.FAILURE;
+        break;
+      default:
+        throw new AssertionError("Unknown status: " + report.getStatus());
+      }
+      builder.setStatus(status);
+      blocksMovementResultsProto.add(builder.build());
+    }
+    return blocksMovementResultsProto;
   }
 
   public static JournalInfo convert(JournalInfoProto info) {

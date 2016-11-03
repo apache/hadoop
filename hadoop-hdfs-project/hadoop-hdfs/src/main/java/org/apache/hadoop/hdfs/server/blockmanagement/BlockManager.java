@@ -5000,4 +5000,8 @@ public class BlockManager implements BlockStatsMXBean {
   public void satisfyStoragePolicy(long id) {
     storageMovementNeeded.add(id);
   }
+
+  public StoragePolicySatisfier getStoragePolicySatisfier() {
+    return sps;
+  }
 }

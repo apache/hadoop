@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -218,7 +220,8 @@ public class StoragePolicySatisfyWorker {
         OutputStream unbufOut = sock.getOutputStream();
         InputStream unbufIn = sock.getInputStream();
         Token<BlockTokenIdentifier> accessToken = datanode.getBlockAccessToken(
-            extendedBlock, EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE));
+            extendedBlock, EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
+            new StorageType[]{targetStorageType}, new String[0]);
 
         DataEncryptionKeyFactory keyFactory = datanode
             .getDataEncryptionKeyFactoryForBlock(extendedBlock);
@@ -257,7 +260,7 @@ public class StoragePolicySatisfyWorker {
         Token<BlockTokenIdentifier> accessToken, DatanodeInfo srcDn,
         StorageType destinStorageType) throws IOException {
       new Sender(out).replaceBlock(eb, destinStorageType, accessToken,
-          srcDn.getDatanodeUuid(), srcDn);
+          srcDn.getDatanodeUuid(), srcDn, null);
     }
 
     /** Receive a reportedBlock copy response from the input stream. */
@@ -276,7 +279,7 @@ public class StoragePolicySatisfyWorker {
   /**
    * Block movement status code.
    */
-  enum BlockMovementStatus {
+  public static enum BlockMovementStatus {
     /** Success. */
     DN_BLK_STORAGE_MOVEMENT_SUCCESS(0),
     /**
@@ -343,26 +346,72 @@ public class StoragePolicySatisfyWorker {
 
   /**
    * Blocks movements completion handler, which is used to collect details of
-   * the completed list of block movements and notify the namenode about the
-   * success or failures.
+   * the completed list of block movements and this status(success or failure)
+   * will be send to the namenode via heartbeat.
    */
   static class BlocksMovementsCompletionHandler {
-    private final List<BlockMovementResult> completedBlocks = new ArrayList<>();
+    private final List<BlocksStorageMovementResult> trackIdVsMovementStatus =
+        new ArrayList<>();
 
     /**
-     * Collect all the block movement results and notify namenode.
+     * Collect all the block movement results. Later this will be send to
+     * namenode via heart beat.
      *
      * @param results
      *          result of all the block movements per trackId
      */
-    void handle(List<BlockMovementResult> results) {
-      completedBlocks.addAll(results);
-      // TODO: notify namenode about the success/failures.
+    void handle(List<BlockMovementResult> resultsPerTrackId) {
+      BlocksStorageMovementResult.Status status =
+          BlocksStorageMovementResult.Status.SUCCESS;
+      long trackId = -1;
+      for (BlockMovementResult blockMovementResult : resultsPerTrackId) {
+        trackId = blockMovementResult.getTrackId();
+        if (blockMovementResult.status ==
+            BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE) {
+          status = BlocksStorageMovementResult.Status.FAILURE;
+          // If any of the block movement is failed, then mark as failure so
+          // that namenode can take a decision to retry the blocks associated to
+          // the given trackId.
+          break;
+        }
+      }
+
+      // Adding to the tracking results list. Later this will be send to
+      // namenode via datanode heartbeat.
+      synchronized (trackIdVsMovementStatus) {
+        trackIdVsMovementStatus.add(
+            new BlocksStorageMovementResult(trackId, status));
+      }
     }
 
-    @VisibleForTesting
-    List<BlockMovementResult> getCompletedBlocks() {
-      return completedBlocks;
+    /**
+     * @return unmodifiable list of blocks storage movement results.
+     */
+    List<BlocksStorageMovementResult> getBlksMovementResults() {
+      synchronized (trackIdVsMovementStatus) {
+        if (trackIdVsMovementStatus.size() <= 0) {
+          return new ArrayList<>();
+        }
+        List<BlocksStorageMovementResult> results = Collections
+            .unmodifiableList(trackIdVsMovementStatus);
+        return results;
+      }
+    }
+
+    /**
+     * Remove the blocks storage movement results.
+     *
+     * @param results
+     *          set of blocks storage movement results
+     */
+    void remove(BlocksStorageMovementResult[] results) {
+      if (results != null) {
+        synchronized (trackIdVsMovementStatus) {
+          for (BlocksStorageMovementResult blocksMovementResult : results) {
+            trackIdVsMovementStatus.remove(blocksMovementResult);
+          }
+        }
+      }
     }
   }
 

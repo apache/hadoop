@@ -34,10 +34,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementResult;
-import org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker.BlockMovementStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -191,12 +190,12 @@ public class TestStoragePolicySatisfyWorker {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        List<BlockMovementResult> completedBlocks = worker
-            .getBlocksMovementsCompletionHandler().getCompletedBlocks();
+        List<BlocksStorageMovementResult> completedBlocks = worker
+            .getBlocksMovementsCompletionHandler().getBlksMovementResults();
         int failedCount = 0;
-        for (BlockMovementResult blockMovementResult : completedBlocks) {
-          if (BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE ==
-              blockMovementResult.getStatus()) {
+        for (BlocksStorageMovementResult blkMovementResult : completedBlocks) {
+          if (blkMovementResult.getStatus() ==
+              BlocksStorageMovementResult.Status.FAILURE) {
             failedCount++;
           }
         }

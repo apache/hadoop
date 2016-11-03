@@ -39,10 +39,13 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockStorageMovementCommand.BlockMovingInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlocksStorageMovementResult;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Setting storagePolicy on a file after the file write will only update the new
@@ -393,5 +396,25 @@ public class StoragePolicySatisfier implements Runnable {
     private List<DatanodeDescriptor> getNodesWithStorages(StorageType type) {
       return typeNodeMap.get(type);
     }
+  }
+
+  // TODO: Temporarily keeping the results for assertion. This has to be
+  // revisited as part of HDFS-11029.
+  @VisibleForTesting
+  List<BlocksStorageMovementResult> results = new ArrayList<>();
+
+  /**
+   * Receives the movement results of collection of blocks associated to a
+   * trackId.
+   *
+   * @param blksMovementResults
+   *          movement status of the set of blocks associated to a trackId.
+   */
+  void handleBlocksStorageMovementResults(
+      BlocksStorageMovementResult[] blksMovementResults) {
+    if (blksMovementResults.length <= 0) {
+      return;
+    }
+    results.addAll(Arrays.asList(blksMovementResults));
   }
 }
