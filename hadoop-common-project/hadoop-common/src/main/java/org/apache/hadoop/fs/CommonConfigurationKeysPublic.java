@@ -569,6 +569,12 @@ public class CommonConfigurationKeysPublic {
   /** Only used by HttpServer. */
   public static final boolean HADOOP_SSL_ENABLED_DEFAULT = false;
 
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
+      "hadoop.kerberos.min.seconds.before.relogin";
+  /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
+  public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
+      60;
 
   // HTTP policies to be used in configuration
   // Use HttpPolicy.name() instead
