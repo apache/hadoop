@@ -188,7 +188,11 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the uri of the default filesystem
    */
   public static URI getDefaultUri(Configuration conf) {
-    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
+    URI uri = URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, DEFAULT_FS)));
+    if (uri.getScheme() == null) {
+      throw new IllegalArgumentException("No scheme in default FS: " + uri);
+    }
+    return uri;
   }
 
   /** Set the default filesystem URI in a configuration.
