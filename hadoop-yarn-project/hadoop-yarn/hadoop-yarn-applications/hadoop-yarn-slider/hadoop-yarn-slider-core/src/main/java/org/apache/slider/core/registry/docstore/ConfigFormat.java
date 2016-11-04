@@ -18,6 +18,8 @@
 
 package org.apache.slider.core.registry.docstore;
 
+import java.util.Locale;
+
 public enum ConfigFormat {
 
   JSON("json"),
@@ -51,7 +53,7 @@ public enum ConfigFormat {
    */
   public static ConfigFormat resolve(String type) {
     for (ConfigFormat format: values()) {
-      if (format.getSuffix().equals(type)) {
+      if (format.getSuffix().equals(type.toLowerCase(Locale.ENGLISH))) {
         return format;
       }
     }

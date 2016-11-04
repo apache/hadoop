@@ -611,7 +611,7 @@ public class ProviderUtils implements RoleKeys, SliderKeys {
       }
       ConfigFormat configFormat = ConfigFormat.resolve(configFileType);
       if (configFormat == null) {
-        throw new BadConfigException("Config format " + configFormat +
+        throw new BadConfigException("Config format " + configFileType +
             " doesn't exist");
       }
       localizeConfigFile(launcher, roleName, roleGroup, configEntry.getKey(),
