@@ -239,7 +239,7 @@ public class TestNMClient {
       AMRMClientImpl<ContainerRequest> rmClient, int num)
       throws YarnException, IOException {
     // setup container request
-    Resource capability = Resource.newInstance(1024, 0);
+    Resource capability = Resource.newInstance(1024, 0, 0);
     Priority priority = Priority.newInstance(0);
     String node = nodeReports.get(0).getNodeId().getHost();
     String rack = nodeReports.get(0).getRackName();
