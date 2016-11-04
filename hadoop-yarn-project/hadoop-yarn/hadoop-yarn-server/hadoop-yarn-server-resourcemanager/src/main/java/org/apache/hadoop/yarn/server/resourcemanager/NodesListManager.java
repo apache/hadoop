@@ -32,6 +32,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -142,7 +143,8 @@ public class NodesListManager extends AbstractService implements
     for (final String host : excludeList) {
       NodeId nodeId = createUnknownNodeId(host);
       RMNodeImpl rmNode = new RMNodeImpl(nodeId,
-          rmContext, host, -1, -1, new UnknownNode(host), null, null);
+          rmContext, host, -1, -1, new UnknownNode(host),
+          Resource.newInstance(0, 0), "unknown");
       rmContext.getInactiveRMNodes().put(nodeId.getHost(), rmNode);
       rmNode.handle(new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
     }

@@ -59,6 +59,9 @@ Release 2.7.4 - UNRELEASED
     YARN-5001. Aggregated Logs root directory is created with wrong group if
     nonexistent (Haibo Chen via jlowe)
 
+    YARN-5837. NPE when getting node status of a decommissioned node after an
+    RM restart (Robert Kanter via jlowe)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
