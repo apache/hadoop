@@ -46,6 +46,7 @@ public class ContainerInfo {
   protected String user;
   protected long totalMemoryNeededMB;
   protected long totalVCoresNeeded;
+  private String executionType;
   protected String containerLogsLink;
   protected String nodeId;
   @XmlTransient
@@ -84,6 +85,8 @@ public class ContainerInfo {
       this.totalMemoryNeededMB = res.getMemorySize();
       this.totalVCoresNeeded = res.getVirtualCores();
     }
+    this.executionType =
+        container.getContainerTokenIdentifier().getExecutionType().name();
     this.containerLogsShortLink = ujoin("containerlogs", this.id,
         container.getUser());
 
@@ -141,6 +144,10 @@ public class ContainerInfo {
 
   public long getVCoresNeeded() {
     return this.totalVCoresNeeded;
+  }
+
+  public String getExecutionType() {
+    return this.executionType;
   }
 
   public List<String> getContainerLogFiles() {

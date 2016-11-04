@@ -24,7 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
@@ -195,11 +195,11 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   @Override
   public void updateNode(RMNode rmNode) {
     LOG.debug("Node update event from: " + rmNode.getNodeID());
-    QueuedContainersStatus queuedContainersStatus =
-        rmNode.getQueuedContainersStatus();
+    OpportunisticContainersStatus opportunisticContainersStatus =
+        rmNode.getOpportunisticContainersStatus();
     int estimatedQueueWaitTime =
-        queuedContainersStatus.getEstimatedQueueWaitTime();
-    int waitQueueLength = queuedContainersStatus.getWaitQueueLength();
+        opportunisticContainersStatus.getEstimatedQueueWaitTime();
+    int waitQueueLength = opportunisticContainersStatus.getWaitQueueLength();
     // Add nodes to clusterNodes. If estimatedQueueTime is -1, ignore node
     // UNLESS comparator is based on queue length.
     ReentrantReadWriteLock.WriteLock writeLock = clusterNodesLock.writeLock();

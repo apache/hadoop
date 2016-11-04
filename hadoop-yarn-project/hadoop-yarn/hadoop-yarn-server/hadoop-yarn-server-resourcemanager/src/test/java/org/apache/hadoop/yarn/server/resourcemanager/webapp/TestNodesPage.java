@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock;
@@ -49,6 +50,7 @@ public class TestNodesPage {
   // future. In that case this value should be adjusted to the new value.
   final int numberOfThInMetricsTable = 23;
   final int numberOfActualTableHeaders = 13;
+  private final int numberOfThForOpportunisticContainers = 4;
 
   private Injector injector;
   
@@ -132,6 +134,37 @@ public class TestNodesPage {
     PrintWriter writer = injector.getInstance(PrintWriter.class);
     WebAppTests.flushOutput(injector);
 
+    Mockito.verify(writer, Mockito.times(numberOfThInMetricsTable))
+        .print("<td");
+  }
+
+  @Test
+  public void testNodesBlockRenderForOpportunisticContainers() {
+    final RMContext mockRMContext =
+        TestRMWebApp.mockRMContext(3, numberOfRacks, numberOfNodesPerRack,
+            8 * TestRMWebApp.GiB);
+    mockRMContext.getYarnConfiguration().setBoolean(
+        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
+    injector =
+        WebAppTests.createMockInjector(RMContext.class, mockRMContext,
+            new Module() {
+              @Override
+              public void configure(Binder binder) {
+                try {
+                  binder.bind(ResourceManager.class).toInstance(
+                      TestRMWebApp.mockRm(mockRMContext));
+                } catch (IOException e) {
+                  throw new IllegalStateException(e);
+                }
+              }
+            });
+    injector.getInstance(NodesBlock.class).render();
+    PrintWriter writer = injector.getInstance(PrintWriter.class);
+    WebAppTests.flushOutput(injector);
+
+    Mockito.verify(writer, Mockito.times(
+        numberOfActualTableHeaders + numberOfThInMetricsTable +
+            numberOfThForOpportunisticContainers)).print("<th");
     Mockito.verify(writer, Mockito.times(numberOfThInMetricsTable))
         .print("<td");
   }

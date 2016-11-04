@@ -61,7 +61,7 @@ import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
@@ -137,7 +137,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private volatile Resource physicalResource;
 
   /* Container Queue Information for the node.. Used by Distributed Scheduler */
-  private QueuedContainersStatus queuedContainersStatus;
+  private OpportunisticContainersStatus opportunisticContainersStatus;
 
   private final ContainerAllocationExpirer containerAllocationExpirer;
   /* set of containers that have just launched */
@@ -1190,7 +1190,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
-      rmNode.setQueuedContainersStatus(statusEvent.getContainerQueueInfo());
+      rmNode.setOpportunisticContainersStatus(
+          statusEvent.getOpportunisticContainersStatus());
       NodeHealthStatus remoteNodeHealthStatus = updateRMNodeFromStatusEvents(
           rmNode, statusEvent);
       NodeState initialState = rmNode.getState();
@@ -1511,23 +1512,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.timeStamp = ts;
   }
 
-  @Override
-  public QueuedContainersStatus getQueuedContainersStatus() {
+  public OpportunisticContainersStatus getOpportunisticContainersStatus() {
     this.readLock.lock();
 
     try {
-      return this.queuedContainersStatus;
+      return this.opportunisticContainersStatus;
     } finally {
       this.readLock.unlock();
     }
   }
 
-  public void setQueuedContainersStatus(QueuedContainersStatus
-      queuedContainersStatus) {
+  public void setOpportunisticContainersStatus(
+      OpportunisticContainersStatus opportunisticContainersStatus) {
     this.writeLock.lock();
 
     try {
-      this.queuedContainersStatus = queuedContainersStatus;
+      this.opportunisticContainersStatus = opportunisticContainersStatus;
     } finally {
       this.writeLock.unlock();
     }
