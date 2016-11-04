@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -103,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -1894,6 +1896,9 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       rm1.start();
       MockNM nm1 = rm1.registerNode("localhost:1234", 8000);
       MockNM nm2 = rm1.registerNode("host2:1234", 8000);
+      Resource expectedCapability =
+          Resource.newInstance(nm1.getMemory(), nm1.getvCores());
+      String expectedVersion = nm1.getVersion();
       Assert
           .assertEquals(0,
               ClusterMetrics.getMetrics().getNumDecommisionedNMs());
@@ -1915,6 +1920,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       Assert
           .assertEquals(2,
               ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+      verifyNodesAfterDecom(rm1, 2, expectedCapability, expectedVersion);
       rm1.stop();
       rm1 = null;
       Assert
@@ -1928,6 +1934,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       Assert
           .assertEquals(2,
               ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+      verifyNodesAfterDecom(rm2, 2, Resource.newInstance(0, 0), "unknown");
     } finally {
       if (rm1 != null) {
         rm1.stop();
@@ -1935,6 +1942,18 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       if (rm2 != null) {
         rm2.stop();
       }
+    }
+  }
+
+  private void verifyNodesAfterDecom(MockRM rm, int numNodes,
+                                     Resource expectedCapability,
+                                     String expectedVersion) {
+    ConcurrentMap<NodeId, RMNode> inactiveRMNodes =
+        rm.getRMContext().getInactiveRMNodes();
+    Assert.assertEquals(numNodes, inactiveRMNodes.size());
+    for (RMNode rmNode : inactiveRMNodes.values()) {
+      Assert.assertEquals(expectedCapability, rmNode.getTotalCapability());
+      Assert.assertEquals(expectedVersion, rmNode.getNodeManagerVersion());
     }
   }
 
