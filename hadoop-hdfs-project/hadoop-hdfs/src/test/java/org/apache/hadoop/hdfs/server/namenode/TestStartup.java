@@ -19,8 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption.IMPORT;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -29,6 +33,8 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
+import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -49,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -108,7 +115,7 @@ public class TestStartup {
         fileAsURI(new File(hdfsDir, "secondary")).toString());
     config.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
 	       WILDCARD_HTTP_HOST + "0");
-    
+
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
   }
 
@@ -645,6 +652,52 @@ public class TestStartup {
     }
   }
 
+  @Test(timeout = 30000)
+  public void testNNFailToStartOnReadOnlyNNDir() throws Exception {
+    /* set NN dir */
+    final String nnDirStr = Paths.get(
+        hdfsDir.toString(),
+        GenericTestUtils.getMethodName(), "name").toString();
+    config.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nnDirStr);
+
+    try(MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(1)
+        .manageNameDfsDirs(false)
+        .build()) {
+      cluster.waitActive();
+
+      /* get and verify NN dir */
+      final Collection<URI> nnDirs = FSNamesystem.getNamespaceDirs(config);
+      assertNotNull(nnDirs);
+      assertTrue(nnDirs.iterator().hasNext());
+      assertEquals(
+          "NN dir should be created after NN startup.",
+          nnDirStr,
+          nnDirs.iterator().next().getPath());
+      final File nnDir = new File(nnDirStr);
+      assertTrue(nnDir.exists());
+      assertTrue(nnDir.isDirectory());
+
+      try {
+        /* set read only */
+        assertTrue(
+            "Setting NN dir read only should succeed.",
+            nnDir.setReadOnly());
+        cluster.restartNameNodes();
+        fail("Restarting NN should fail on read only NN dir.");
+      } catch (InconsistentFSStateException e) {
+        assertThat(e.toString(), is(allOf(
+            containsString("InconsistentFSStateException"),
+            containsString(nnDirStr),
+            containsString("in an inconsistent state"),
+            containsString(
+                "storage directory does not exist or is not accessible."))));
+      } finally {
+        /* set back to writable in order to clean it */
+        assertTrue("Setting NN dir should succeed.", nnDir.setWritable(true));
+      }
+    }
+  }
 
   /**
    * Verify the following scenario.
