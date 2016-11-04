@@ -241,7 +241,10 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             queueMaxResourcesAvailable.getMemory()),
         min(queueStarvation.getVirtualCores(),
             clusterAvailable.getVirtualCores(),
-            queueMaxResourcesAvailable.getVirtualCores())
+            queueMaxResourcesAvailable.getVirtualCores()),
+        min(queueStarvation.getGPUs(),
+            clusterAvailable.getGPUs(),
+            queueMaxResourcesAvailable.getGPUs())
     );
 
     // Fair and Fifo ignore CPU of queue, so use cluster available CPU
@@ -253,7 +256,10 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
-            queueMaxResourcesAvailable.getVirtualCores())
+            queueMaxResourcesAvailable.getVirtualCores()),
+        Math.min(
+            clusterAvailable.getGPUs(),
+            queueMaxResourcesAvailable.getGPUs())
     );
 
     Mockito.when(mockQueue.getPolicy()).thenReturn(SchedulingPolicy
@@ -264,7 +270,10 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
             queueMaxResourcesAvailable.getMemory()),
         Math.min(
             clusterAvailable.getVirtualCores(),
-            queueMaxResourcesAvailable.getVirtualCores())
+            queueMaxResourcesAvailable.getVirtualCores()),
+        Math.min(
+            clusterAvailable.getGPUs(),
+            queueMaxResourcesAvailable.getGPUs())
     );
   }
 
@@ -273,9 +282,10 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
   }
 
   protected void verifyHeadroom(FSAppAttempt schedulerApp,
-                                int expectedMemory, int expectedCPU) {
+                                int expectedMemory, int expectedCPU, int expectedGPU) {
     Resource headroom = schedulerApp.getHeadroom();
     assertEquals(expectedMemory, headroom.getMemory());
     assertEquals(expectedCPU, headroom.getVirtualCores());
+    assertEquals(expectedGPU, headroom.getGPUs());
   }
 }
