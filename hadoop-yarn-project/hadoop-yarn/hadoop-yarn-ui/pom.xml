@@ -30,7 +30,7 @@
   <packaging>${packaging.type}</packaging>
 
   <properties>
-    <packaging.type>war</packaging.type>
+    <packaging.type>pom</packaging.type>
     <webappTgtDir>${basedir}/target/src/main/webapp</webappTgtDir>
     <node.executable>node</node.executable>
     <nodeVersion>v0.12.2</nodeVersion>

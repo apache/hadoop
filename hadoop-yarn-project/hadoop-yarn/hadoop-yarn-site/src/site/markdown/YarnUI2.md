@@ -18,6 +18,10 @@
 Hadoop: YARN-UI V2
 =================
 
+Prerequisites
+-------------
+Please make sure Hadoop is built by passing -Pyarn-ui to Maven (reference to BUILDING.txt for more details)
+
 Configurations
 -------------
 
