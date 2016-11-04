@@ -86,6 +86,7 @@ public class ContainerPage extends NMView implements YarnWebParams {
         ._("User", info.getUser())
         ._("TotalMemoryNeeded", info.getMemoryNeeded())
         ._("TotalVCoresNeeded", info.getVCoresNeeded())
+        ._("ExecutionType", info.getExecutionType())
         ._("logs", info.getShortLogLink(), "Link to logs");
       html._(InfoBlock.class);
     }

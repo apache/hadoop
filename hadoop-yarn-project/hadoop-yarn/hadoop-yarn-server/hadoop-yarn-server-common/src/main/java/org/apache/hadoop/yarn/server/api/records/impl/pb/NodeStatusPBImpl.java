@@ -41,9 +41,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.QueuedContainersStatusProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.OpportunisticContainersStatusProto;
 
-import org.apache.hadoop.yarn.server.api.records.QueuedContainersStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 
@@ -404,25 +404,25 @@ public class NodeStatusPBImpl extends NodeStatus {
   }
 
   @Override
-  public synchronized QueuedContainersStatus getQueuedContainersStatus() {
-    NodeStatusProtoOrBuilder p =
-        this.viaProto ? this.proto : this.builder;
-    if (!p.hasQueuedContainerStatus()) {
+  public synchronized OpportunisticContainersStatus
+      getOpportunisticContainersStatus() {
+    NodeStatusProtoOrBuilder p = this.viaProto ? this.proto : this.builder;
+    if (!p.hasOpportunisticContainersStatus()) {
       return null;
     }
-    return convertFromProtoFormat(p.getQueuedContainerStatus());
+    return convertFromProtoFormat(p.getOpportunisticContainersStatus());
   }
 
   @Override
-  public synchronized void setQueuedContainersStatus(
-      QueuedContainersStatus queuedContainersStatus) {
+  public synchronized void setOpportunisticContainersStatus(
+      OpportunisticContainersStatus opportunisticContainersStatus) {
     maybeInitBuilder();
-    if (queuedContainersStatus == null) {
-      this.builder.clearQueuedContainerStatus();
+    if (opportunisticContainersStatus == null) {
+      this.builder.clearOpportunisticContainersStatus();
       return;
     }
-    this.builder.setQueuedContainerStatus(
-        convertToProtoFormat(queuedContainersStatus));
+    this.builder.setOpportunisticContainersStatus(
+        convertToProtoFormat(opportunisticContainersStatus));
   }
 
   private NodeIdProto convertToProtoFormat(NodeId nodeId) {
@@ -468,14 +468,14 @@ public class NodeStatusPBImpl extends NodeStatus {
     return new ResourceUtilizationPBImpl(p);
   }
 
-  private QueuedContainersStatusProto convertToProtoFormat(
-      QueuedContainersStatus r) {
-    return ((QueuedContainersStatusPBImpl) r).getProto();
+  private OpportunisticContainersStatusProto convertToProtoFormat(
+      OpportunisticContainersStatus r) {
+    return ((OpportunisticContainersStatusPBImpl) r).getProto();
   }
 
-  private QueuedContainersStatus convertFromProtoFormat(
-      QueuedContainersStatusProto p) {
-    return new QueuedContainersStatusPBImpl(p);
+  private OpportunisticContainersStatus convertFromProtoFormat(
+      OpportunisticContainersStatusProto p) {
+    return new OpportunisticContainersStatusPBImpl(p);
   }
 
   private ContainerPBImpl convertFromProtoFormat(

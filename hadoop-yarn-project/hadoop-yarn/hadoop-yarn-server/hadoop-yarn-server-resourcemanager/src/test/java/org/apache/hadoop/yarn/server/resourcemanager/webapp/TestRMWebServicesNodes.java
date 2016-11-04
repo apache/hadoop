@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -722,13 +723,17 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
               "aggregatedContainersPhysicalMemoryMB"),
           WebServicesTestUtils.getXmlInt(element,
               "aggregatedContainersVirtualMemoryMB"),
-          WebServicesTestUtils.getXmlFloat(element, "containersCPUUsage"));
+          WebServicesTestUtils.getXmlFloat(element, "containersCPUUsage"),
+          WebServicesTestUtils.getXmlInt(element, "numRunningOpportContainers"),
+          WebServicesTestUtils.getXmlLong(element, "usedMemoryOpport"),
+          WebServicesTestUtils.getXmlInt(element, "usedVirtualCoresOpport"),
+          WebServicesTestUtils.getXmlInt(element, "numQueuedContainers"));
     }
   }
 
   public void verifyNodeInfo(JSONObject nodeInfo, RMNode nm)
       throws JSONException, Exception {
-    assertEquals("incorrect number of elements", 14, nodeInfo.length());
+    assertEquals("incorrect number of elements", 18, nodeInfo.length());
 
     JSONObject resourceInfo = nodeInfo.getJSONObject("resourceUtilization");
     verifyNodeInfoGeneric(nm, nodeInfo.getString("state"),
@@ -745,21 +750,29 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         resourceInfo.getDouble("nodeCPUUsage"),
         resourceInfo.getInt("aggregatedContainersPhysicalMemoryMB"),
         resourceInfo.getInt("aggregatedContainersVirtualMemoryMB"),
-        resourceInfo.getDouble("containersCPUUsage"));
+        resourceInfo.getDouble("containersCPUUsage"),
+        nodeInfo.getInt("numRunningOpportContainers"),
+        nodeInfo.getLong("usedMemoryOpport"),
+        nodeInfo.getInt("usedVirtualCoresOpport"),
+        nodeInfo.getInt("numQueuedContainers"));
   }
 
   public void verifyNodeInfoGeneric(RMNode node, String state, String rack,
       String id, String nodeHostName,
       String nodeHTTPAddress, long lastHealthUpdate, String healthReport,
-      int numContainers, long usedMemoryMB, long availMemoryMB, long usedVirtualCores, 
-      long availVirtualCores, String version, int nodePhysicalMemoryMB,
-      int nodeVirtualMemoryMB, double nodeCPUUsage,
+      int numContainers, long usedMemoryMB, long availMemoryMB,
+      long usedVirtualCores, long availVirtualCores, String version,
+      int nodePhysicalMemoryMB, int nodeVirtualMemoryMB, double nodeCPUUsage,
       int containersPhysicalMemoryMB, int containersVirtualMemoryMB,
-      double containersCPUUsage)
+      double containersCPUUsage, int numRunningOpportContainers,
+      long usedMemoryOpport, int usedVirtualCoresOpport,
+      int numQueuedContainers)
       throws JSONException, Exception {
 
     ResourceScheduler sched = rm.getResourceScheduler();
     SchedulerNodeReport report = sched.getNodeReport(node.getNodeID());
+    OpportunisticContainersStatus opportunisticStatus =
+        node.getOpportunisticContainersStatus();
 
     WebServicesTestUtils.checkStringMatch("state", node.getState().toString(),
         state);
@@ -806,6 +819,20 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
           .getUsedResource().getVirtualCores(), usedVirtualCores);
       assertEquals("availVirtualCores doesn't match: " + availVirtualCores, report
           .getAvailableResource().getVirtualCores(), availVirtualCores);
+    }
+
+    if (opportunisticStatus != null) {
+      assertEquals("numRunningOpportContainers doesn't match: " +
+              numRunningOpportContainers,
+          opportunisticStatus.getRunningOpportContainers(),
+          numRunningOpportContainers);
+      assertEquals("usedMemoryOpport doesn't match: " + usedMemoryOpport,
+          opportunisticStatus.getOpportMemoryUsed(), usedMemoryOpport);
+      assertEquals(
+          "usedVirtualCoresOpport doesn't match: " + usedVirtualCoresOpport,
+          opportunisticStatus.getOpportCoresUsed(), usedVirtualCoresOpport);
+      assertEquals("numQueuedContainers doesn't match: " + numQueuedContainers,
+          opportunisticStatus.getQueuedOpportContainers(), numQueuedContainers);
     }
   }
 

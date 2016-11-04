@@ -18,17 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
-
-import java.util.Collection;
-
+import com.google.inject.Inject;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -42,18 +35,29 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import com.google.inject.Inject;
+import java.util.Collection;
+
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 class NodesPage extends RmView {
 
   static class NodesBlock extends HtmlBlock {
     final ResourceManager rm;
     private static final long BYTES_IN_MB = 1024 * 1024;
+    private static boolean opportunisticContainersEnabled;
 
     @Inject
     NodesBlock(ResourceManager rm, ViewContext ctx) {
       super(ctx);
       this.rm = rm;
+      this.opportunisticContainersEnabled = YarnConfiguration
+          .isOpportunisticContainerAllocationEnabled(
+              this.rm.getRMContext().getYarnConfiguration());
     }
 
     @Override
@@ -61,9 +65,10 @@ class NodesPage extends RmView {
       html._(MetricsOverviewTable.class);
 
       ResourceScheduler sched = rm.getResourceScheduler();
+
       String type = $(NODE_STATE);
       String labelFilter = $(NODE_LABEL, CommonNodeLabelsManager.ANY).trim();
-      TBODY<TABLE<Hamlet>> tbody =
+      Hamlet.TR<Hamlet.THEAD<TABLE<Hamlet>>> trbody =
           html.table("#nodes").thead().tr()
               .th(".nodelabels", "Node Labels")
               .th(".rack", "Rack")
@@ -71,13 +76,29 @@ class NodesPage extends RmView {
               .th(".nodeaddress", "Node Address")
               .th(".nodehttpaddress", "Node HTTP Address")
               .th(".lastHealthUpdate", "Last health-update")
-              .th(".healthReport", "Health-report")
-              .th(".containers", "Containers")
-              .th(".mem", "Mem Used")
-              .th(".mem", "Mem Avail")
-              .th(".vcores", "VCores Used")
-              .th(".vcores", "VCores Avail")
-              .th(".nodeManagerVersion", "Version")._()._().tbody();
+              .th(".healthReport", "Health-report");
+
+      if (!this.opportunisticContainersEnabled) {
+        trbody.th(".containers", "Containers")
+            .th(".mem", "Mem Used")
+            .th(".mem", "Mem Avail")
+            .th(".vcores", "VCores Used")
+            .th(".vcores", "VCores Avail");
+      } else {
+        trbody.th(".containers", "Running Containers (G)")
+            .th(".mem", "Mem Used (G)")
+            .th(".mem", "Mem Avail (G)")
+            .th(".vcores", "VCores Used (G)")
+            .th(".vcores", "VCores Avail (G)")
+            .th(".containers", "Running Containers (O)")
+            .th(".mem", "Mem Used (O)")
+            .th(".vcores", "VCores Used (O)")
+            .th(".containers", "Queued Containers");
+      }
+
+      TBODY<TABLE<Hamlet>> tbody =
+          trbody.th(".nodeManagerVersion", "Version")._()._().tbody();
+
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
         stateFilter = NodeState.valueOf(StringUtils.toUpperCase(type));
@@ -153,7 +174,23 @@ class NodesPage extends RmView {
             .append("\",\"").append(String.valueOf(info.getUsedVirtualCores()))
             .append("\",\"")
             .append(String.valueOf(info.getAvailableVirtualCores()))
-            .append("\",\"").append(ni.getNodeManagerVersion())
+            .append("\",\"");
+
+        // If opportunistic containers are enabled, add extra fields.
+        if (this.opportunisticContainersEnabled) {
+          nodeTableData
+              .append(String.valueOf(info.getNumRunningOpportContainers()))
+              .append("\",\"").append("<br title='")
+              .append(String.valueOf(info.getUsedMemoryOpport())).append("'>")
+              .append(StringUtils.byteDesc(info.getUsedMemoryOpport()))
+              .append("\",\"")
+              .append(String.valueOf(info.getUsedVirtualCoresOpport()))
+              .append("\",\"")
+              .append(String.valueOf(info.getNumQueuedContainers()))
+              .append("\",\"");
+        }
+
+        nodeTableData.append(ni.getNodeManagerVersion())
             .append("\"],\n");
       }
       if (nodeTableData.charAt(nodeTableData.length() - 2) == ',') {

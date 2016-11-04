@@ -39,12 +39,16 @@ message NodeStatusProto {
   optional ResourceUtilizationProto containers_utilization = 6;
   optional ResourceUtilizationProto node_utilization = 7;
   repeated ContainerProto increased_containers = 8;
-  optional QueuedContainersStatusProto queued_container_status = 9;
+  optional OpportunisticContainersStatusProto opportunistic_containers_status = 9;
 }
 
-message QueuedContainersStatusProto {
-  optional int32 estimated_queue_wait_time = 1;
-  optional int32 wait_queue_length = 2;
+message OpportunisticContainersStatusProto {
+  optional int32 running_opport_containers = 1;
+  optional int64 opport_memory_used = 2;
+  optional int32 opport_cores_used = 3;
+  optional int32 queued_opport_containers = 4;
+  optional int32 wait_queue_length = 5;
+  optional int32 estimated_queue_wait_time = 6;
 }
 
 message MasterKeyProto {
