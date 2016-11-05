@@ -40,6 +40,8 @@ HttpFS HTTP web-service API calls are HTTP REST calls that map to a HDFS file sy
 
 * `$ curl http://httpfs-host:14000/webhdfs/v1/user/foo?op=list` returns the contents of the HDFS `/user/foo` directory in JSON format.
 
+* `$ curl http://httpfs-host:14000/webhdfs/v1/user/foo?op=GETTRASHROOT` returns the path `/user/foo/.Trash`, if `/` is an encrypted zone, returns the path `/.Trash/foo`. See [more details](../hadoop-project-dist/hadoop-hdfs/TransparentEncryption.html#Rename_and_Trash_considerations) about trash path in an encrypted zone.
+
 * `$ curl -X POST http://httpfs-host:14000/webhdfs/v1/user/foo/bar?op=mkdirs` creates the HDFS `/user/foo.bar` directory.
 
 User and Developer Documentation

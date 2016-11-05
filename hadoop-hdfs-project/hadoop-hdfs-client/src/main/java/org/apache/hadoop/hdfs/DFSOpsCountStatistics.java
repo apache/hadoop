@@ -64,6 +64,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     GET_STATUS(CommonStatisticNames.OP_GET_STATUS),
     GET_STORAGE_POLICIES("op_get_storage_policies"),
     GET_STORAGE_POLICY("op_get_storage_policy"),
+    GET_TRASH_ROOT("op_get_trash_root"),
     GET_XATTR("op_get_xattr"),
     LIST_LOCATED_STATUS(CommonStatisticNames.OP_LIST_LOCATED_STATUS),
     LIST_STATUS(CommonStatisticNames.OP_LIST_STATUS),
