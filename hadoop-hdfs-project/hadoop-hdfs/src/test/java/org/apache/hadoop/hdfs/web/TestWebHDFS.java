@@ -1072,4 +1072,26 @@ public class TestWebHDFS {
       }
     }
   }
+
+  @Test
+  public void testGetTrashRoot() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final String currentUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+
+      Path trashPath = webFS.getTrashRoot(new Path("/"));
+      Path expectedPath = new Path(FileSystem.USER_HOME_PREFIX,
+          new Path(currentUser, FileSystem.TRASH_PREFIX));
+      assertEquals(expectedPath.toUri().getPath(), trashPath.toUri().getPath());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

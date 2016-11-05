@@ -1622,6 +1622,27 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public Path getTrashRoot(Path path) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETTRASHROOT;
+    try {
+      String strTrashPath = new FsPathResponseRunner<String>(op, path) {
+        @Override
+        String decodeResponse(Map<?, ?> json) throws IOException {
+          return JsonUtilClient.getPath(json);
+        }
+      }.run();
+      return new Path(strTrashPath).makeQualified(getUri(), null);
+    } catch(IOException e) {
+      LOG.warn("Cannot find trash root of " + path, e);
+      // keep the same behavior with dfs
+      return super.getTrashRoot(path).makeQualified(getUri(), null);
+    }
+  }
+
+  @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.CHECKACCESS;
     new FsPathRunner(op, path, new FsActionParam(mode)).run();

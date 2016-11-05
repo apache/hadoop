@@ -113,6 +113,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
   public static final String TRASH_PREFIX = ".Trash";
+  public static final String USER_HOME_PREFIX = "/user";
 
   /** FileSystem cache */
   static final Cache CACHE = new Cache();
@@ -1965,7 +1966,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public Path getHomeDirectory() {
     return this.makeQualified(
-        new Path("/user/"+System.getProperty("user.name")));
+        new Path(USER_HOME_PREFIX + "/" + System.getProperty("user.name")));
   }
 
 

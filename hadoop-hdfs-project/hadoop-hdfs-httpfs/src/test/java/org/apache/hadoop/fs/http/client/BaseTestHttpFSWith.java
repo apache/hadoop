@@ -430,6 +430,35 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         new Path("/tmp").toUri().getPath());
   }
 
+  private void testTrashRoot() throws Exception {
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+
+      final Path rootDir = new Path("/");
+      final Path fooPath = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(fooPath);
+      os.write(1);
+      os.close();
+
+      Path trashPath = fs.getTrashRoot(rootDir);
+      Path fooTrashPath = fs.getTrashRoot(fooPath);
+      fs.close();
+
+      fs = getHttpFSFileSystem();
+      Path httpFSTrashPath = fs.getTrashRoot(rootDir);
+      Path httpFSFooTrashPath = fs.getTrashRoot(fooPath);
+      fs.close();
+
+      assertEquals(trashPath.toUri().getPath(),
+          httpFSTrashPath.toUri().getPath());
+      assertEquals(fooTrashPath.toUri().getPath(),
+          httpFSFooTrashPath.toUri().getPath());
+      // trash path is related to USER, not path
+      assertEquals(trashPath.toUri().getPath(),
+          fooTrashPath.toUri().getPath());
+    }
+  }
+
   private void testMkdirs() throws Exception {
     Path path = new Path(getProxiedFSTestDir(), "foo");
     FileSystem fs = getHttpFSFileSystem();
@@ -916,86 +945,90 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
-    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH
+    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
+    GETTRASHROOT
   }
 
   private void operation(Operation op) throws Exception {
     switch (op) {
-      case GET:
-        testGet();
-        break;
-      case OPEN:
-        testOpen();
-        break;
-      case CREATE:
-        testCreate();
-        break;
-      case APPEND:
-        testAppend();
-        break;
-      case TRUNCATE:
-        testTruncate();
-        break;
-      case CONCAT:
-        testConcat();
-        break;
-      case RENAME:
-        testRename();
-        break;
-      case DELETE:
-        testDelete();
-        break;
-      case LIST_STATUS:
-        testListStatus();
-        break;
-      case WORKING_DIRECTORY:
-        testWorkingdirectory();
-        break;
-      case MKDIRS:
-        testMkdirs();
-        break;
-      case SET_TIMES:
-        testSetTimes();
-        break;
-      case SET_PERMISSION:
-        testSetPermission();
-        break;
-      case SET_OWNER:
-        testSetOwner();
-        break;
-      case SET_REPLICATION:
-        testSetReplication();
-        break;
-      case CHECKSUM:
-        testChecksum();
-        break;
-      case CONTENT_SUMMARY:
-        testContentSummary();
-        break;
-      case FILEACLS:
-        testFileAcls();
-        break;
-      case DIRACLS:
-        testDirAcls();
-        break;
-      case SET_XATTR:
-        testSetXAttr();
-        break;
-      case REMOVE_XATTR:
-        testRemoveXAttr();
-        break;
-      case GET_XATTRS:
-        testGetXAttrs();
-        break;
-      case LIST_XATTRS:
-        testListXAttrs();
-        break;
-      case ENCRYPTION:
-        testEncryption();
-        break;
-      case LIST_STATUS_BATCH:
-        testListStatusBatch();
-        break;
+    case GET:
+      testGet();
+      break;
+    case OPEN:
+      testOpen();
+      break;
+    case CREATE:
+      testCreate();
+      break;
+    case APPEND:
+      testAppend();
+      break;
+    case TRUNCATE:
+      testTruncate();
+      break;
+    case CONCAT:
+      testConcat();
+      break;
+    case RENAME:
+      testRename();
+      break;
+    case DELETE:
+      testDelete();
+      break;
+    case LIST_STATUS:
+      testListStatus();
+      break;
+    case WORKING_DIRECTORY:
+      testWorkingdirectory();
+      break;
+    case MKDIRS:
+      testMkdirs();
+      break;
+    case SET_TIMES:
+      testSetTimes();
+      break;
+    case SET_PERMISSION:
+      testSetPermission();
+      break;
+    case SET_OWNER:
+      testSetOwner();
+      break;
+    case SET_REPLICATION:
+      testSetReplication();
+      break;
+    case CHECKSUM:
+      testChecksum();
+      break;
+    case CONTENT_SUMMARY:
+      testContentSummary();
+      break;
+    case FILEACLS:
+      testFileAcls();
+      break;
+    case DIRACLS:
+      testDirAcls();
+      break;
+    case SET_XATTR:
+      testSetXAttr();
+      break;
+    case REMOVE_XATTR:
+      testRemoveXAttr();
+      break;
+    case GET_XATTRS:
+      testGetXAttrs();
+      break;
+    case LIST_XATTRS:
+      testListXAttrs();
+      break;
+    case ENCRYPTION:
+      testEncryption();
+      break;
+    case LIST_STATUS_BATCH:
+      testListStatusBatch();
+      break;
+    case GETTRASHROOT:
+      testTrashRoot();
+      break;
     }
   }
 

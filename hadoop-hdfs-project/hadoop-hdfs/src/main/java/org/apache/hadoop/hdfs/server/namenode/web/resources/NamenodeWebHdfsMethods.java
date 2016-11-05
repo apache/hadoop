@@ -1057,6 +1057,11 @@ public class NamenodeWebHdfsMethods {
       np.checkAccess(fullpath, FsAction.getFsAction(fsAction.getValue()));
       return Response.ok().build();
     }
+    case GETTRASHROOT: {
+      final String trashPath = getTrashRoot(fullpath, conf);
+      final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
+      return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
+    }
     case LISTSTATUS_BATCH:
     {
       byte[] start = HdfsFileStatus.EMPTY_NAME;
@@ -1070,6 +1075,13 @@ public class NamenodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+  }
+
+  private static String getTrashRoot(String fullPath,
+      Configuration conf) throws IOException {
+    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
+    return fs.getTrashRoot(
+        new org.apache.hadoop.fs.Path(fullPath)).toUri().getPath();
   }
 
   private static DirectoryListing getDirectoryListing(final NamenodeProtocols np,
