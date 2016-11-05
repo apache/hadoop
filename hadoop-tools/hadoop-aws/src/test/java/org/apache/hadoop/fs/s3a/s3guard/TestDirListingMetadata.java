@@ -37,6 +37,8 @@ import org.junit.rules.ExpectedException;
  */
 public class TestDirListingMetadata {
 
+  private static final String TEST_OWNER = "hadoop";
+
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -72,11 +74,11 @@ public class TestDirListingMetadata {
   public void testListing() {
     Path path = new Path("/path");
     PathMetadata pathMeta1 = new PathMetadata(
-        new S3AFileStatus(true, true, new Path(path, "dir1")));
+        new S3AFileStatus(true, new Path(path, "dir1"), TEST_OWNER));
     PathMetadata pathMeta2 = new PathMetadata(
-        new S3AFileStatus(true, false, new Path(path, "dir2")));
+        new S3AFileStatus(true, new Path(path, "dir2"), TEST_OWNER));
     PathMetadata pathMeta3 = new PathMetadata(
-        new S3AFileStatus(123, 456, new Path(path, "file1"), 789));
+        new S3AFileStatus(123, 456, new Path(path, "file1"), 8192, TEST_OWNER));
     List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
     DirListingMetadata meta = new DirListingMetadata(path, listing, false);
     assertEquals(path, meta.getPath());
@@ -91,14 +93,7 @@ public class TestDirListingMetadata {
   @Test
   public void testListingUnmodifiable() {
     Path path = new Path("/path");
-    PathMetadata pathMeta1 = new PathMetadata(
-        new S3AFileStatus(true, true, new Path(path, "dir1")));
-    PathMetadata pathMeta2 = new PathMetadata(
-        new S3AFileStatus(true, false, new Path(path, "dir2")));
-    PathMetadata pathMeta3 = new PathMetadata(
-        new S3AFileStatus(123, 456, new Path(path, "file1"), 789));
-    List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
-    DirListingMetadata meta = new DirListingMetadata(path, listing, false);
+    DirListingMetadata meta = makeTwoDirsOneFile(path);
     assertNotNull(meta.getListing());
     exception.expect(UnsupportedOperationException.class);
     meta.getListing().clear();
@@ -130,11 +125,11 @@ public class TestDirListingMetadata {
   public void testGet() {
     Path path = new Path("/path");
     PathMetadata pathMeta1 = new PathMetadata(
-        new S3AFileStatus(true, true, new Path(path, "dir1")));
+        new S3AFileStatus(true, new Path(path, "dir1"), TEST_OWNER));
     PathMetadata pathMeta2 = new PathMetadata(
-        new S3AFileStatus(true, false, new Path(path, "dir2")));
+        new S3AFileStatus(true, new Path(path, "dir2"), TEST_OWNER));
     PathMetadata pathMeta3 = new PathMetadata(
-        new S3AFileStatus(123, 456, new Path(path, "file1"), 789));
+        new S3AFileStatus(123, 456, new Path(path, "file1"), 8192, TEST_OWNER));
     List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
     DirListingMetadata meta = new DirListingMetadata(path, listing, false);
     assertEquals(path, meta.getPath());
@@ -181,11 +176,11 @@ public class TestDirListingMetadata {
   public void testPut() {
     Path path = new Path("/path");
     PathMetadata pathMeta1 = new PathMetadata(
-        new S3AFileStatus(true, true, new Path(path, "dir1")));
+        new S3AFileStatus(true, new Path(path, "dir1"), TEST_OWNER));
     PathMetadata pathMeta2 = new PathMetadata(
-        new S3AFileStatus(true, false, new Path(path, "dir2")));
+        new S3AFileStatus(true, new Path(path, "dir2"), TEST_OWNER));
     PathMetadata pathMeta3 = new PathMetadata(
-        new S3AFileStatus(123, 456, new Path(path, "file1"), 789));
+        new S3AFileStatus(123, 456, new Path(path, "file1"), 8192, TEST_OWNER));
     List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
     DirListingMetadata meta = new DirListingMetadata(path, listing, false);
     assertEquals(path, meta.getPath());
@@ -196,7 +191,7 @@ public class TestDirListingMetadata {
     assertTrue(meta.getListing().contains(pathMeta3));
     assertFalse(meta.isAuthoritative());
     PathMetadata pathMeta4 = new PathMetadata(
-        new S3AFileStatus(true, true, new Path(path, "dir3")));
+        new S3AFileStatus(true, new Path(path, "dir3"), TEST_OWNER));
     meta.put(pathMeta4.getFileStatus());
     assertTrue(meta.getListing().contains(pathMeta4));
     assertEquals(pathMeta4, meta.get(pathMeta4.getFileStatus().getPath()));
@@ -217,7 +212,7 @@ public class TestDirListingMetadata {
     DirListingMetadata meta = new DirListingMetadata(path, null, false);
     exception.expect(NullPointerException.class);
     exception.expectMessage(notNullValue(String.class));
-    meta.put(new S3AFileStatus(true, true, null));
+    meta.put(new S3AFileStatus(true, null, TEST_OWNER));
   }
 
   @Test
@@ -226,7 +221,7 @@ public class TestDirListingMetadata {
     DirListingMetadata meta = new DirListingMetadata(path, null, false);
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage(notNullValue(String.class));
-    meta.put(new S3AFileStatus(true, true, new Path("/")));
+    meta.put(new S3AFileStatus(true, new Path("/"), TEST_OWNER));
   }
 
   @Test
@@ -235,18 +230,19 @@ public class TestDirListingMetadata {
     DirListingMetadata meta = new DirListingMetadata(path, null, false);
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage(notNullValue(String.class));
-    meta.put(new S3AFileStatus(true, true, new Path("/different/ancestor")));
+    meta.put(new S3AFileStatus(true, new Path("/different/ancestor"),
+        TEST_OWNER));
   }
 
   @Test
   public void testRemove() {
     Path path = new Path("/path");
     PathMetadata pathMeta1 = new PathMetadata(
-        new S3AFileStatus(true, true, new Path(path, "dir1")));
+        new S3AFileStatus(true, new Path(path, "dir1"), TEST_OWNER));
     PathMetadata pathMeta2 = new PathMetadata(
-        new S3AFileStatus(true, false, new Path(path, "dir2")));
+        new S3AFileStatus(true, new Path(path, "dir2"), TEST_OWNER));
     PathMetadata pathMeta3 = new PathMetadata(
-        new S3AFileStatus(123, 456, new Path(path, "file1"), 789));
+        new S3AFileStatus(123, 456, new Path(path, "file1"), 8192, TEST_OWNER));
     List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
     DirListingMetadata meta = new DirListingMetadata(path, listing, false);
     assertEquals(path, meta.getPath());
@@ -286,5 +282,20 @@ public class TestDirListingMetadata {
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage(notNullValue(String.class));
     meta.remove(new Path("/different/ancestor"));
+  }
+
+  /*
+   * Create DirListingMetadata with two dirs and one file living in directory
+   * 'parent'
+   */
+  private static DirListingMetadata makeTwoDirsOneFile(Path parent) {
+    PathMetadata pathMeta1 = new PathMetadata(
+        new S3AFileStatus(true, new Path(parent, "dir1"), TEST_OWNER));
+    PathMetadata pathMeta2 = new PathMetadata(
+        new S3AFileStatus(true, new Path(parent, "dir2"), TEST_OWNER));
+    PathMetadata pathMeta3 = new PathMetadata(
+        new S3AFileStatus(123, 456, new Path(parent, "file1"), 8192, TEST_OWNER));
+    List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
+    return new DirListingMetadata(parent, listing, false);
   }
 }
