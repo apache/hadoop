@@ -2067,14 +2067,19 @@ public class CapacityScheduler extends
     // priority then reinsert back to make order correct.
     LeafQueue queue = (LeafQueue) getQueue(rmApp.getQueue());
     synchronized (queue) {
-      queue.getOrderingPolicy().removeSchedulableEntity(
-          application.getCurrentAppAttempt());
-
+      FiCaSchedulerApp attempt = application.getCurrentAppAttempt();
+      boolean isActive =
+          queue.getOrderingPolicy().removeSchedulableEntity(attempt);
+      if (!isActive) {
+        queue.getPendingAppsOrderingPolicy().removeSchedulableEntity(attempt);
+      }
       // Update new priority in SchedulerApplication
       application.setPriority(appPriority);
-
-      queue.getOrderingPolicy().addSchedulableEntity(
-          application.getCurrentAppAttempt());
+      if (isActive) {
+        queue.getOrderingPolicy().addSchedulableEntity(attempt);
+      } else {
+        queue.getPendingAppsOrderingPolicy().addSchedulableEntity(attempt);
+      }
     }
 
     // Update the changed application state to timeline server

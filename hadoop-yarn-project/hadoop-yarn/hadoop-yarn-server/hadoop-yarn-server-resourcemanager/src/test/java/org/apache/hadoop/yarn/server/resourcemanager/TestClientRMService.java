@@ -1618,6 +1618,32 @@ public class TestClientRMService {
   }
 
   @Test(timeout = 120000)
+  public void testUpdatePriorityAndKillAppWithZeroClusterResource()
+      throws Exception {
+    int maxPriority = 10;
+    int appPriority = 5;
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
+        maxPriority);
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    ClientRMService rmService = rm.getClientRMService();
+    // Update application priority
+    UpdateApplicationPriorityRequest updateRequest =
+        UpdateApplicationPriorityRequest.newInstance(app1.getApplicationId(),
+            Priority.newInstance(appPriority));
+    rmService.updateApplicationPriority(updateRequest);
+    Assert.assertEquals(
+        "Application priority should be updated to " + appPriority, appPriority,
+        app1.getApplicationSubmissionContext().getPriority().getPriority());
+    rm.killApp(app1.getApplicationId());
+    rm.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    rm.stop();
+  }
+
+  @Test(timeout = 120000)
   public void testUpdateApplicationPriorityRequest() throws Exception {
     int maxPriority = 10;
     int appPriority = 5;
